@@ -63,7 +63,7 @@ def migrate_infer_calculation_entry_point(connection):
 
         connection.execute(
             DbNode.update().where(DbNode.c.type == op.inline_literal(type_string)
-                                 ).values(process_type=op.inline_literal(entry_point_string))
+                                  ).values(process_type=op.inline_literal(entry_point_string))
         )
 
     if fallback_cases:

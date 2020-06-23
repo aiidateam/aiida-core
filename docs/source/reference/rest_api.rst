@@ -1135,4 +1135,3 @@ Examples:
             http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
 
     would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
-

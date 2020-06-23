@@ -9,7 +9,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
-
 import os
 import sys
 import re
@@ -125,7 +124,7 @@ def _generate_rtd_requirement_set():
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()
     install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
+    for key in ('tests', 'docs', 'rest', 'atomic_tools'):
         install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
 
     return install_requirements
@@ -176,12 +175,10 @@ def generate_environment_yml():
 @cli.command('generate-rtd-reqs')
 def generate_requirements_for_rtd():
     """Generate 'docs/requirements_for_rtd.txt' file."""
-
     install_requirements = _generate_rtd_requirement_set()
 
-    # pylint: disable=bad-continuation
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as reqs_file:
-        reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
+    with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as handle:
+        handle.write('{}\n'.format('\n'.join(sorted(map(str, install_requirements)))))
 
 
 @cli.command()
@@ -375,12 +372,12 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
     match all the dependencies specified in 'setup.json.
 
     The arguments allow to specify which 'extra' requirements to expect.
-    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'testing'.
+    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'tests'.
 
     """
 
     if len(extras) == 1 and extras[0] == 'DEFAULT':
-        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'testing']
+        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()

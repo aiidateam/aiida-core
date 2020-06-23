@@ -1,184 +1,198 @@
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.2.3
-  hooks:
-  - id: trailing-whitespace
-  - id: double-quote-string-fixer
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.5.0
+    hooks:
+    -   id: double-quote-string-fixer
+    -   id: end-of-file-fixer
+    -   id: fix-encoding-pragma
+    -   id: mixed-line-ending
+    -   id: trailing-whitespace
 
-- repo: local
-  hooks:
-  - id: yapf
-    name: yapf
-    entry: yapf
-    language: system
-    types: [python]
-    args: ["-i"]
-    exclude: &exclude_files >
-      (?x)^(
-        .ci/workchains.py|
-        aiida/backends/djsite/queries.py|
-        aiida/backends/djsite/db/models.py|
-        aiida/backends/djsite/db/migrations/0001_initial.py|
-        aiida/backends/djsite/db/migrations/0002_db_state_change.py|
-        aiida/backends/djsite/db/migrations/0003_add_link_type.py|
-        aiida/backends/djsite/db/migrations/0004_add_daemon_and_uuid_indices.py|
-        aiida/backends/djsite/db/migrations/0005_add_cmtime_indices.py|
-        aiida/backends/djsite/db/migrations/0006_delete_dbpath.py|
-        aiida/backends/djsite/db/migrations/0007_update_linktypes.py|
-        aiida/backends/djsite/db/migrations/0008_code_hidden_to_extra.py|
-        aiida/backends/djsite/db/migrations/0009_base_data_plugin_type_string.py|
-        aiida/backends/djsite/db/migrations/0010_process_type.py|
-        aiida/backends/djsite/db/migrations/0011_delete_kombu_tables.py|
-        aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
-        aiida/backends/djsite/db/migrations/0013_django_1_8.py|
-        aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
-        aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
-        aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
-        aiida/backends/sqlalchemy/migrations/versions/0aebbeab274d_base_data_plugin_type_string.py|
-        aiida/backends/sqlalchemy/migrations/versions/35d4ee9a1b0e_code_hidden_attr_to_extra.py|
-        aiida/backends/sqlalchemy/migrations/versions/59edaf8a8b79_adding_indexes_and_constraints_to_the_.py|
-        aiida/backends/sqlalchemy/migrations/versions/6c629c886f84_process_type.py|
-        aiida/backends/sqlalchemy/migrations/versions/70c7d732f1b2_delete_dbpath.py|
-        aiida/backends/sqlalchemy/migrations/versions/89176227b25_add_indexes_to_dbworkflowdata_table.py|
-        aiida/backends/sqlalchemy/migrations/versions/a514d673c163_drop_dblock.py|
-        aiida/backends/sqlalchemy/migrations/versions/a6048f0ffca8_update_linktypes.py|
-        aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
-        aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
-        aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
-        aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
-        aiida/backends/sqlalchemy/migrations/versions/162b99bca4a2_drop_dbcalcstate.py|
-        aiida/backends/sqlalchemy/models/computer.py|
-        aiida/backends/sqlalchemy/models/settings.py|
-        aiida/backends/sqlalchemy/models/node.py|
-        aiida/backends/utils.py|
-        aiida/common/datastructures.py|
-        aiida/engine/daemon/execmanager.py|
-        aiida/engine/processes/calcjobs/tasks.py|
-        aiida/orm/querybuilder.py|
-        aiida/orm/nodes/data/array/bands.py|
-        aiida/orm/nodes/data/array/projection.py|
-        aiida/orm/nodes/data/array/xy.py|
-        aiida/orm/nodes/data/code.py|
-        aiida/orm/nodes/data/orbital.py|
-        aiida/orm/nodes/data/remote.py|
-        aiida/orm/nodes/data/structure.py|
-        aiida/orm/utils/remote.py|
-        aiida/parsers/plugins/arithmetic/add.py|
-        aiida/parsers/plugins/templatereplacer/doubler.py|
-        aiida/parsers/plugins/templatereplacer/__init__.py|
-        aiida/plugins/entry.py|
-        aiida/plugins/info.py|
-        aiida/plugins/registry.py|
-        aiida/tools/data/array/kpoints/legacy.py|
-        aiida/tools/data/array/kpoints/seekpath.py|
-        aiida/tools/data/__init__.py|
-        aiida/tools/dbexporters/__init__.py|
-        aiida/tools/dbimporters/baseclasses.py|
-        aiida/tools/dbimporters/__init__.py|
-        aiida/tools/dbimporters/plugins/cod.py|
-        aiida/tools/dbimporters/plugins/icsd.py|
-        aiida/tools/dbimporters/plugins/__init__.py|
-        aiida/tools/dbimporters/plugins/mpds.py|
-        aiida/tools/dbimporters/plugins/mpod.py|
-        aiida/tools/dbimporters/plugins/nninc.py|
-        aiida/tools/dbimporters/plugins/oqmd.py|
-        aiida/tools/dbimporters/plugins/pcod.py|
-        docs/.*|
-        examples/.*|
-        tests/engine/test_work_chain.py|
-        tests/schedulers/test_direct.py|
-        tests/schedulers/test_lsf.py|
-        tests/schedulers/test_pbspro.py|
-        tests/schedulers/test_sge.py|
-        tests/schedulers/test_torque.py|
-        tests/sphinxext/workchain_source/conf.py|
-        tests/sphinxext/workchain_source_broken/conf.py|
-        tests/transports/test_all_plugins.py|
-        tests/transports/test_local.py|
-        tests/transports/test_ssh.py|
-        tests/test_dataclasses.py|
-        tests/test_nodes.py|
-      )$
+-   repo: https://github.com/PyCQA/pylint
+    rev: pylint-2.5.2
+    hooks:
+    -   id: pylint
+        language: system
+        exclude: &exclude_files >
+            (?x)^(
+                .ci/workchains.py|
+                aiida/backends/djsite/queries.py|
+                aiida/backends/djsite/db/models.py|
+                aiida/backends/djsite/db/migrations/0001_initial.py|
+                aiida/backends/djsite/db/migrations/0002_db_state_change.py|
+                aiida/backends/djsite/db/migrations/0003_add_link_type.py|
+                aiida/backends/djsite/db/migrations/0004_add_daemon_and_uuid_indices.py|
+                aiida/backends/djsite/db/migrations/0005_add_cmtime_indices.py|
+                aiida/backends/djsite/db/migrations/0006_delete_dbpath.py|
+                aiida/backends/djsite/db/migrations/0007_update_linktypes.py|
+                aiida/backends/djsite/db/migrations/0008_code_hidden_to_extra.py|
+                aiida/backends/djsite/db/migrations/0009_base_data_plugin_type_string.py|
+                aiida/backends/djsite/db/migrations/0010_process_type.py|
+                aiida/backends/djsite/db/migrations/0011_delete_kombu_tables.py|
+                aiida/backends/djsite/db/migrations/0012_drop_dblock.py|
+                aiida/backends/djsite/db/migrations/0013_django_1_8.py|
+                aiida/backends/djsite/db/migrations/0014_add_node_uuid_unique_constraint.py|
+                aiida/backends/djsite/db/migrations/0016_code_sub_class_of_data.py|
+                aiida/backends/djsite/db/migrations/0017_drop_dbcalcstate.py|
+                aiida/backends/sqlalchemy/migrations/versions/0aebbeab274d_base_data_plugin_type_string.py|
+                aiida/backends/sqlalchemy/migrations/versions/35d4ee9a1b0e_code_hidden_attr_to_extra.py|
+                aiida/backends/sqlalchemy/migrations/versions/59edaf8a8b79_adding_indexes_and_constraints_to_the_.py|
+                aiida/backends/sqlalchemy/migrations/versions/6c629c886f84_process_type.py|
+                aiida/backends/sqlalchemy/migrations/versions/70c7d732f1b2_delete_dbpath.py|
+                aiida/backends/sqlalchemy/migrations/versions/89176227b25_add_indexes_to_dbworkflowdata_table.py|
+                aiida/backends/sqlalchemy/migrations/versions/a514d673c163_drop_dblock.py|
+                aiida/backends/sqlalchemy/migrations/versions/a6048f0ffca8_update_linktypes.py|
+                aiida/backends/sqlalchemy/migrations/versions/e15ef2630a1b_initial_schema.py|
+                aiida/backends/sqlalchemy/migrations/versions/f9a69de76a9a_delete_kombu_tables.py|
+                aiida/backends/sqlalchemy/migrations/versions/62fe0d36de90_add_node_uuid_unique_constraint.py|
+                aiida/backends/sqlalchemy/migrations/versions/a603da2cc809_code_sub_class_of_data.py|
+                aiida/backends/sqlalchemy/migrations/versions/162b99bca4a2_drop_dbcalcstate.py|
+                aiida/backends/sqlalchemy/models/computer.py|
+                aiida/backends/sqlalchemy/models/settings.py|
+                aiida/backends/sqlalchemy/models/node.py|
+                aiida/backends/utils.py|
+                aiida/common/datastructures.py|
+                aiida/engine/daemon/execmanager.py|
+                aiida/engine/processes/calcjobs/tasks.py|
+                aiida/orm/querybuilder.py|
+                aiida/orm/nodes/data/array/bands.py|
+                aiida/orm/nodes/data/array/projection.py|
+                aiida/orm/nodes/data/array/xy.py|
+                aiida/orm/nodes/data/code.py|
+                aiida/orm/nodes/data/orbital.py|
+                aiida/orm/nodes/data/remote.py|
+                aiida/orm/nodes/data/structure.py|
+                aiida/orm/utils/remote.py|
+                aiida/parsers/plugins/arithmetic/add.py|
+                aiida/parsers/plugins/templatereplacer/doubler.py|
+                aiida/parsers/plugins/templatereplacer/__init__.py|
+                aiida/plugins/entry.py|
+                aiida/plugins/info.py|
+                aiida/plugins/registry.py|
+                aiida/tools/data/array/kpoints/legacy.py|
+                aiida/tools/data/array/kpoints/seekpath.py|
+                aiida/tools/data/__init__.py|
+                aiida/tools/dbexporters/__init__.py|
+                aiida/tools/dbimporters/baseclasses.py|
+                aiida/tools/dbimporters/__init__.py|
+                aiida/tools/dbimporters/plugins/cod.py|
+                aiida/tools/dbimporters/plugins/icsd.py|
+                aiida/tools/dbimporters/plugins/__init__.py|
+                aiida/tools/dbimporters/plugins/mpds.py|
+                aiida/tools/dbimporters/plugins/mpod.py|
+                aiida/tools/dbimporters/plugins/nninc.py|
+                aiida/tools/dbimporters/plugins/oqmd.py|
+                aiida/tools/dbimporters/plugins/pcod.py|
+                docs/.*|
+                examples/.*|
+                tests/engine/test_work_chain.py|
+                tests/schedulers/test_direct.py|
+                tests/schedulers/test_lsf.py|
+                tests/schedulers/test_pbspro.py|
+                tests/schedulers/test_sge.py|
+                tests/schedulers/test_torque.py|
+                tests/sphinxext/workchain_source/conf.py|
+                tests/sphinxext/workchain_source_broken/conf.py|
+                tests/transports/test_all_plugins.py|
+                tests/transports/test_local.py|
+                tests/transports/test_ssh.py|
+                tests/test_dataclasses.py|
+            )$
 
-  # prospector: collection of linters
-  - id: prospector
-    language: system
-    types: [file, python]
-    exclude: *exclude_files
-    name: prospector
-    description: "This hook runs Prospector: https://github.com/landscapeio/prospector"
-    entry: prospector
+-   repo: https://github.com/pre-commit/mirrors-yapf
+    rev: v0.30.0
+    hooks:
+    -   id: yapf
+        name: yapf
+        types: [python]
+        exclude: *exclude_files
+        args: ['-i']
 
-  - id: dm-generate-all
-    name: Update all requirements files
-    entry: python ./utils/dependency_management.py generate-all
-    language: system
-    files: >-
-      (?x)^(
-        setup.py|
-        setup.json|
-        utils/dependency_management.py
-        )$
-    pass_filenames: false
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.780
+    hooks:
+    -   id: mypy
+        pass_filenames: true
+        files: >-
+            (?x)^(
+                aiida/engine/processes/calcjobs/calcjob.py|
+                aiida/tools/groups/paths.py
+            )$
 
-  - id: rtd-requirements
-    name: Validate docs/requirements_for_rtd.txt
-    entry: python ./utils/dependency_management.py validate-rtd-reqs
-    language: system
-    files: >-
-      (?x)^(
-        setup.json|
-        setup.py|
-        utils/dependency_management.py|
-        docs/requirements_for_rtd.txt|
-      )$
-    pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: dm-generate-all
+        name: Update all requirements files
+        entry: python ./utils/dependency_management.py generate-all
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                setup.py|
+                setup.json|
+                utils/dependency_management.py
+            )$
 
-  - id: pyproject
-    name: Validate pyproject.toml
-    entry: python ./utils/dependency_management.py validate-pyproject-toml
-    language: system
-    files: >-
-      (?x)^(
-        setup.json|
-        setup.py|
-        utils/dependency_management.py|
-        pyproject.toml
-      )$
-    pass_filenames: false
-  - id: dependencies
-    name: Validate environment.yml
-    entry: python ./utils/dependency_management.py validate-environment-yml
-    language: system
-    files: >-
-      (?x)^(
-        setup.json|
-        setup.py|
-        utils/dependency_management.py|
-        environment.yml|
-      )$
-    pass_filenames: false
+    -   id: rtd-requirements
+        name: Validate docs/requirements_for_rtd.txt
+        entry: python ./utils/dependency_management.py validate-rtd-reqs
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                setup.json|
+                setup.py|
+                utils/dependency_management.py|
+                docs/requirements_for_rtd.txt|
+            )$
 
-  - id: verdi-autodocs
-    name: Automatically generating verdi docs
-    entry: python ./utils/validate_consistency.py verdi-autodocs
-    language: system
-    files: >-
-      (?x)^(
-        aiida/cmdline/commands/.*|
-        aiida/cmdline/params/.*|
-        aiida/cmdline/params/types/.*|
-        utils/validate_consistency.py|
-      )$
-    pass_filenames: false
+    -   id: pyproject
+        name: Validate pyproject.toml
+        entry: python ./utils/dependency_management.py validate-pyproject-toml
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                setup.json|
+                setup.py|
+                utils/dependency_management.py|
+                pyproject.toml
+            )$
 
-  - id: version-number
-    name: Check version numbers
-    entry: python ./utils/validate_consistency.py version
-    language: system
-    files: >-
-      (?x)^(
-        setup.json|
-        utils/validate_consistency.py|
-        aiida/__init__.py
-      )$
-    pass_filenames: false
+    -   id: dependencies
+        name: Validate environment.yml
+        entry: python ./utils/dependency_management.py validate-environment-yml
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                setup.json|
+                setup.py|
+                utils/dependency_management.py|
+                environment.yml|
+            )$
+
+    -   id: verdi-autodocs
+        name: Automatically generating verdi docs
+        entry: python ./utils/validate_consistency.py verdi-autodocs
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                aiida/cmdline/commands/.*|
+                aiida/cmdline/params/.*|
+                aiida/cmdline/params/types/.*|
+                utils/validate_consistency.py|
+            )$
+
+    -   id: version-number
+        name: Check version numbers
+        entry: python ./utils/validate_consistency.py version
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                setup.json|
+                utils/validate_consistency.py|
+                aiida/__init__.py
+            )$

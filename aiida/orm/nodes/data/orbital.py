@@ -116,4 +116,3 @@ class OrbitalData(Data):
 #
 #    def set_realhydrogenorbitals_from_structure(self, structure, pseudo_family=None):
 #        raise NotImplementedError
-

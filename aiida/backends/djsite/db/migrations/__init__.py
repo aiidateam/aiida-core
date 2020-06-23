@@ -590,7 +590,13 @@ class ModelModifierV0025:
         cls.objects.filter(query).delete()
 
     def set_value(
-        self, key, value, with_transaction=False, subspecifier_value=None, other_attribs=None, stop_if_existing=False
+        self,
+        key,
+        value,
+        with_transaction=False,
+        subspecifier_value=None,
+        other_attribs=None,
+        stop_if_existing=False
     ):  # pylint: disable=too-many-arguments
         """
         Set a new value in the DB, possibly associated to the given subspecifier.

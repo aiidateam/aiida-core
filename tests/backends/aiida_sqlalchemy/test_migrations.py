@@ -772,8 +772,8 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
                 # Getting the serialized Dict logs
                 param_data = session.query(DbLog).filter(DbLog.objpk == param.id
-                                                        ).filter(DbLog.objname == 'something.else.'
-                                                                ).with_entities(*cols_to_project).one()
+                                                         ).filter(DbLog.objname == 'something.else.'
+                                                                  ).with_entities(*cols_to_project).one()
                 serialized_param_data = dumps_json([(dict(list(zip(param_data.keys(), param_data))))])
                 # Getting the serialized logs for the unknown entity logs (as the export migration fuction
                 # provides them) - this should coincide to the above

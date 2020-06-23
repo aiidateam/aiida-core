@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine import CalcJob
 

@@ -88,5 +88,3 @@ executable that is run using AiiDA. A simple example could be::
 
   import aiida
   print "AiiDA version is: {}".format(aiida.get_version())
-
-

@@ -174,5 +174,3 @@ RemoteData
 * **What is stored in the database**: the path of the folder (and the remote computer
   as a `.computer` property, not as an attribute)
 * **What is stored in the file repository**: ---
-
-

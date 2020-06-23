@@ -143,7 +143,7 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
         'enabled': ['aiida.calculations:arithmetic.add'],
         'disabled': ['aiida.calculations:templatereplacer']
     }, ['some_identifier', 'aiida.calculations:arithmetic.add', 'aiida.calculations:TEMPLATEREPLACER'
-       ], ['aiida.calculations:templatereplacer']),
+        ], ['aiida.calculations:templatereplacer']),
     ({
         'default': False,
         'enabled': ['aiida.calculations:arithmetic.add'],
@@ -162,13 +162,13 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
         'enabled': ['aiida.calculations:*'],
         'disabled': ['aiida.calculations:arithmetic.add']
     }, ['aiida.calculations:templatereplacer', 'aiida.calculations:ARIthmetic.add'
-       ], ['some_identifier', 'aiida.calculations:arithmetic.add']),
+        ], ['some_identifier', 'aiida.calculations:arithmetic.add']),
     ({
         'default': False,
         'enabled': ['aiida.calculations:ar*thmetic.add'],
         'disabled': ['aiida.calculations:*'],
     }, ['aiida.calculations:arithmetic.add', 'aiida.calculations:arblarghthmetic.add'
-       ], ['some_identifier', 'aiida.calculations:templatereplacer']),
+        ], ['some_identifier', 'aiida.calculations:templatereplacer']),
 ])
 def test_configuration(configure_caching, config_dict, enabled, disabled):
     """Check that different caching configurations give the expected result.

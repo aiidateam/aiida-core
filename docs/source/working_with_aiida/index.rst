@@ -134,4 +134,3 @@ Cookbook
     :maxdepth: 4
 
     cookbook.rst
-

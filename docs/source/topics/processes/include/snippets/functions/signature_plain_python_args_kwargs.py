@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 def add(*args, **kwargs):
     return sum(args) + sum(kwargs.values())

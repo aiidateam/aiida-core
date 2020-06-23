@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the `aiida.restapi.translator` module."""
 # pylint: disable=invalid-name
 from aiida.restapi.translator.nodes.node import NodeTranslator

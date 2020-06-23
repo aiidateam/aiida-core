@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 def add_multiply(x, y=1, z):
     return (x + y) * z

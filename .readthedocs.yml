@@ -1,14 +1,22 @@
-# Configuration for readthedocs
+version: 2
 
 # Important: we need to disable all unneeded formats.
-# Note that HTML and JSON are always built:
-# https://docs.readthedocs.io/en/latest/yaml-config.html#formats
-# Especially, the 'htmlzip' format takes a LOT of memory and causes
-# the build to fail - see our issue #1472:
+# Note that HTML and JSON are always built: https://docs.readthedocs.io/en/latest/yaml-config.html#formats
+# Especially, the 'htmlzip' format takes a LOT of memory and causes the build to fail - see our issue #1472:
 # https://github.com/aiidateam/aiida-core/issues/1472
 formats: []
 
-## For now I don't specify any other parameter, that is
-## currently setup in the web page of Read the Docs.
-## For other parameters see
-## https://docs.readthedocs.io/en/latest/yaml-config.html
+# Need to install the package itself such that the entry points are installed and the API doc can build properly
+python:
+    version: 3.8
+    install:
+        - method: pip
+          path: .
+          extra_requirements:
+            - docs
+            - tests
+
+# Let the build fail if there are any warnings
+sphinx:
+    builder: html
+    fail_on_warning: true

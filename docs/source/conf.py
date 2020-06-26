@@ -27,15 +27,9 @@ sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
 import aiida
 from aiida.manage.configuration import load_documentation_profile
 
-# a reentry scan is required in RTD, to ensure all the API can be imported
-import reentry
-reentry.manager.scan()
-
 # Load the dummy profile even if we are running locally, this way the documentation will succeed even if the current
 # default profile of the AiiDA installation does not use a Django backend.
 load_documentation_profile()
-
-ON_RTD = os.environ.get('READTHEDOCS', None)
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the

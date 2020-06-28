@@ -118,18 +118,6 @@ def _parse_working_set(entries):
         yield _Entry(req)
 
 
-def _generate_rtd_requirement_set():
-    """Generate content of docs/requirements_for_rtd.txt file."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('tests', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
-
-    return install_requirements
-
-
 @click.group()
 def cli():
     """Manage dependencies of the aiida-core package."""
@@ -172,15 +160,6 @@ def generate_environment_yml():
         )
 
 
-@cli.command('generate-rtd-reqs')
-def generate_requirements_for_rtd():
-    """Generate 'docs/requirements_for_rtd.txt' file."""
-    install_requirements = _generate_rtd_requirement_set()
-
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as handle:
-        handle.write('{}\n'.format('\n'.join(sorted(map(str, install_requirements)))))
-
-
 @cli.command()
 def generate_pyproject_toml():
     """Generate 'pyproject.toml' file."""
@@ -211,7 +190,6 @@ def generate_pyproject_toml():
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(generate_requirements_for_rtd)
     ctx.invoke(generate_pyproject_toml)
 
 
@@ -287,23 +265,6 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     click.secho('Conda dependency specification is consistent.', fg='green')
 
 
-@cli.command('validate-rtd-reqs', help="Validate 'docs/requirements_for_rtd.txt'.")
-def validate_requirements_for_rtd():
-    """Validate that 'docs/requirements_for_rtd.txt' is consistent with 'setup.json'."""
-
-    # Read the requirements from 'setup.json'
-    install_requirements = _generate_rtd_requirement_set()
-
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
-        reqs = {Requirement.parse(r) for r in reqs_file}
-
-    if reqs != install_requirements:
-        click.echo('{}'.format(reqs - install_requirements))
-        raise DependencySpecificationError("The requirements for RTD are inconsistent with 'setup.json'.")
-
-    click.secho('RTD requirements specification is consistent.', fg='green')
-
-
 @cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
 def validate_pyproject_toml():
     """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
@@ -347,11 +308,9 @@ def validate_all(ctx):
     - setup.json
     - environment.yml
     - pyproject.toml
-    - docs/requirements_for_rtd.txt
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_requirements_for_rtd)
     ctx.invoke(validate_pyproject_toml)
 
 

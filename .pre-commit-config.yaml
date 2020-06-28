@@ -133,19 +133,6 @@ repos:
                 utils/dependency_management.py
             )$
 
-    -   id: rtd-requirements
-        name: Validate docs/requirements_for_rtd.txt
-        entry: python ./utils/dependency_management.py validate-rtd-reqs
-        language: system
-        pass_filenames: false
-        files: >-
-            (?x)^(
-                setup.json|
-                setup.py|
-                utils/dependency_management.py|
-                docs/requirements_for_rtd.txt|
-            )$
-
     -   id: pyproject
         name: Validate pyproject.toml
         entry: python ./utils/dependency_management.py validate-pyproject-toml

@@ -45,7 +45,7 @@ if __name__ == '__main__':
     EXTRAS_REQUIRE['all'] = list({item for sublist in EXTRAS_REQUIRE.values() for item in sublist if item != 'bpython'})
 
     setup(
-        packages=find_packages(),
+        packages=find_packages(include=['aiida', 'aiida.*']),
         long_description=open(os.path.join(THIS_FOLDER, 'README.md')).read(),
         long_description_content_type='text/markdown',
         **SETUP_JSON

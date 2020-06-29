@@ -13,7 +13,12 @@ import json
 import os
 import sys
 
-from utils import fastentrypoints  # pylint: disable=unused-import
+try:
+    import fastentrypoints  # pylint: disable=unused-import
+except ImportError:
+    # This should only occur when building the package, i.e. when
+    # executing 'python setup.py sdist' or 'python setup.py bdist_wheel'
+    pass
 from setuptools import setup, find_packages
 
 if (sys.version_info.major, sys.version_info.minor) == (3, 5):

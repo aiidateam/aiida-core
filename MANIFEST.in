@@ -1,6 +1,5 @@
 include aiida/cmdline/templates/*.tpl
 include aiida/manage/backup/backup_info.json.tmpl
-include utils/fastentrypoints.py
 include setup.json
 include AUTHORS.txt
 include CHANGELOG.md

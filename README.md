@@ -1,4 +1,4 @@
-# <img src="docs/source/images/logo_aiida_main.png" alt="AiiDA" width="200"/>
+# <img src="http://www.aiida.net/wp-content/uploads/2020/06/logo_aiida.png" alt="AiiDA" width="200"/>
 
 AiiDA (www.aiida.net) is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 

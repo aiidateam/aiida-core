@@ -7,17 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name
+"""Database migration."""
 from django.db import models, migrations
 import aiida.common.timezone
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
 
 REVISION = '1.0.3'
 DOWN_REVISION = '1.0.2'
 
 
 class Migration(migrations.Migration):
+    """Database migration."""
 
     dependencies = [
         ('db', '0002_db_state_change'),

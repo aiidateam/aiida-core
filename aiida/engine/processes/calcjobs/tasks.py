@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Transport tasks for calculation jobs."""
 import functools
 import logging
 import tempfile
@@ -87,7 +88,8 @@ def task_upload_job(process, transport_queue, cancellable):
         logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
         ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
         result = yield exponential_backoff_retry(
-            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions)
+            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+        )
     except PreSubmitException:
         raise
     except plumpy.CancelledError:
@@ -136,7 +138,8 @@ def task_submit_job(node, transport_queue, cancellable):
     try:
         logger.info('scheduled request to submit CalcJob<{}>'.format(node.pk))
         result = yield exponential_backoff_retry(
-            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+        )
     except plumpy.Interruption:
         pass
     except Exception:
@@ -195,7 +198,8 @@ def task_update_job(node, job_manager, cancellable):
     try:
         logger.info('scheduled request to update CalcJob<{}>'.format(node.pk))
         job_done = yield exponential_backoff_retry(
-            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+        )
     except plumpy.Interruption:
         raise
     except Exception:
@@ -257,8 +261,9 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
 
     try:
         logger.info('scheduled request to retrieve CalcJob<{}>'.format(node.pk))
-        result = yield exponential_backoff_retry(
-            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+        yield exponential_backoff_retry(
+            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+        )
     except plumpy.Interruption:
         raise
     except Exception:
@@ -333,7 +338,8 @@ class Waiting(plumpy.Waiting):
 
     @coroutine
     def execute(self):
-
+        """Override the execute coroutine of the base `Waiting` state."""
+        # pylint: disable=too-many-branches
         node = self.process.node
         transport_queue = self.process.runner.transport
         command = self.data
@@ -393,6 +399,7 @@ class Waiting(plumpy.Waiting):
 
     @coroutine
     def _launch_task(self, coro, *args, **kwargs):
+        """Launch a coroutine as a task, making sure to make it interruptable."""
         task_fn = functools.partial(coro, *args, **kwargs)
         try:
             self._task = interruptable_task(task_fn)

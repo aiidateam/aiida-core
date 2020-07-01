@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=inconsistent-return-statements,no-member
+# pylint: disable=no-member
 # start-marker for docs
 """Implementation of the MultiplyAddWorkChain for testing and demonstration purposes."""
 from aiida.orm import Code, Int

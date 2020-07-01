@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Drop the `transport_params` from the `Computer` database model.
 
 Revision ID: 07fac78e6209

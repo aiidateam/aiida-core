@@ -7,11 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-lines
 """
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
-
 from string import Template
 
 import numpy
@@ -22,6 +22,7 @@ from .kpoints import KpointsData
 
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
+    """Prepare the header."""
     from aiida import get_file_header
 
     filetext = []
@@ -32,13 +33,10 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
     filetext.append('\t{}\t{}'.format(*plot_info['y'].shape))
     filetext.append('')
     filetext.append('\tlabel\tpoint')
-    for l in plot_info['raw_labels']:
-        filetext.append('\t{}\t{:.8f}'.format(l[1], l[0]))
+    for label in plot_info['raw_labels']:
+        filetext.append('\t{}\t{:.8f}'.format(label[1], label[0]))
 
-    return '\n'.join('{} {}'.format(comment_char, l) for l in filetext)
-
-
-# TODO: set and get bands could have more functionalities: how do I know the number of bands for example?
+    return '\n'.join('{} {}'.format(comment_char, line) for line in filetext)
 
 
 def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
@@ -71,14 +69,15 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
              equal to the lumo (e.g. in semi-metals).
     """
 
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,no-else-return
+
     def nint(num):
         """
         Stable rounding function
         """
-        if (num > 0):
+        if num > 0:
             return int(num + .5)
-        else:
-            return int(num - .5)
+        return int(num - .5)
 
     if fermi_energy and number_electrons:
         raise ValueError('Specify either the number of electrons or the Fermi energy, but not both')
@@ -89,11 +88,9 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
         raise KeyError('Cannot do much of a band analysis without bands')
 
     if len(stored_bands.shape) == 3:
-        # I write the algorithm for the generic case of having both the
-        # spin up and spin down array
-
+        # I write the algorithm for the generic case of having both the spin up and spin down array
         # put all spins on one band per kpoint
-        bands = numpy.concatenate([_ for _ in stored_bands], axis=1)
+        bands = numpy.concatenate(stored_bands, axis=1)
     else:
         bands = stored_bands
 
@@ -114,7 +111,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 # spin up and spin down array
 
                 # put all spins on one band per kpoint
-                occupations = numpy.concatenate([_ for _ in stored_occupations], axis=1)
+                occupations = numpy.concatenate(stored_occupations, axis=1)
             else:
                 occupations = stored_occupations
 
@@ -124,23 +121,29 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             # sort the bands by energy, and reorder the occupations accordingly
             # since after joining the two spins, I might have unsorted stuff
             bands, occupations = [
-                numpy.array(y) for y in zip(*[
-                    list(zip(*j)) for j in
-                    [sorted(zip(i[0].tolist(), i[1].tolist()), key=lambda x: x[0]) for i in zip(bands, occupations)]
-                ])
+                numpy.array(y) for y in zip(
+                    *[
+                        list(zip(*j)) for j in [
+                            sorted(zip(i[0].tolist(), i[1].tolist()), key=lambda x: x[0])
+                            for i in zip(bands, occupations)
+                        ]
+                    ]
+                )
             ]
             number_electrons = int(round(sum([sum(i) for i in occupations]) / num_kpoints))
 
             homo_indexes = [numpy.where(numpy.array([nint(_) for _ in x]) > 0)[0][-1] for x in occupations]
             if len(set(homo_indexes)) > 1:  # there must be intersections of valence and conduction bands
                 return False, None
-            else:
-                homo = [_[0][_[1]] for _ in zip(bands, homo_indexes)]
-                try:
-                    lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
-                except IndexError:
-                    raise ValueError('To understand if it is a metal or insulator, '
-                                     'need more bands than n_band=number_electrons')
+
+            homo = [_[0][_[1]] for _ in zip(bands, homo_indexes)]
+            try:
+                lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
+            except IndexError:
+                raise ValueError(
+                    'To understand if it is a metal or insulator, '
+                    'need more bands than n_band=number_electrons'
+                )
 
         else:
             bands = numpy.sort(bands)
@@ -155,8 +158,10 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 # gather the energies of the lumo band, for every kpoint
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
-                raise ValueError('To understand if it is a metal or insulator, '
-                                 'need more bands than n_band=number_electrons')
+                raise ValueError(
+                    'To understand if it is a metal or insulator, '
+                    'need more bands than n_band=number_electrons'
+                )
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:
             # if #electrons is odd and we have a non spin polarized calculation
@@ -167,10 +172,11 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
         gap = min(lumo) - max(homo)
         if gap == 0.:
             return False, 0.
-        elif gap < 0.:
+
+        if gap < 0.:
             return False, None
-        else:
-            return True, gap
+
+        return True, gap
 
     # analysis on the fermi energy
     else:
@@ -188,38 +194,28 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             raise ValueError("The Fermi energy is below all band energies, don't know what to do.")
 
         # one band is crossed by the fermi energy
-        if any(i[1] < fermi_energy and fermi_energy < i[0] for i in max_mins):
+        if any(i[1] < fermi_energy and fermi_energy < i[0] for i in max_mins):  # pylint: disable=chained-comparison
             return False, None
 
         # case of semimetals, fermi energy at the crossing of two bands
         # this will only work if the dirac point is computed!
-        elif (any(i[0] == fermi_energy for i in max_mins) and any(i[1] == fermi_energy for i in max_mins)):
+        if (any(i[0] == fermi_energy for i in max_mins) and any(i[1] == fermi_energy for i in max_mins)):
             return False, 0.
-        # insulating case
-        else:
-            # take the max of the band maxima below the fermi energy
-            homo = max([i[0] for i in max_mins if i[0] < fermi_energy])
-            # take the min of the band minima above the fermi energy
-            lumo = min([i[1] for i in max_mins if i[1] > fermi_energy])
-            gap = lumo - homo
-            if gap <= 0.:
-                raise Exception('Something wrong has been implemented. Revise the code!')
-            return True, gap
+
+        # insulating case, take the max of the band maxima below the fermi energy
+        homo = max([i[0] for i in max_mins if i[0] < fermi_energy])
+        # take the min of the band minima above the fermi energy
+        lumo = min([i[1] for i in max_mins if i[1] > fermi_energy])
+        gap = lumo - homo
+        if gap <= 0.:
+            raise Exception('Something wrong has been implemented. Revise the code!')
+        return True, gap
 
 
 class BandsData(KpointsData):
     """
     Class to handle bands data
     """
-
-    # Associate file extensions to default plotting formats
-    _custom_export_format_replacements = {
-        'dat': 'dat_multicolumn',
-        'png': 'mpl_png',
-        'pdf': 'mpl_pdf',
-        'py': 'mpl_singlefile',
-        'gnu': 'gnuplot'
-    }
 
     def set_kpointsdata(self, kpointsdata):
         """
@@ -258,6 +254,7 @@ class BandsData(KpointsData):
         Nkpoints x Nbands floats or Nspins x Nkpoints x Nbands; Nkpoints must
         correspond to the number of kpoints.
         """
+        # pylint: disable=too-many-branches
         try:
             kpoints = self.get_kpoints()
         except AttributeError:
@@ -266,9 +263,11 @@ class BandsData(KpointsData):
         the_bands = numpy.array(bands)
 
         if len(the_bands.shape) not in [2, 3]:
-            raise ValueError('Bands must be an array of dimension 2'
-                             '([N_kpoints, N_bands]) or of dimension 3 '
-                             ' ([N_arrays, N_kpoints, N_bands]), found instead {}'.format(len(the_bands.shape)))
+            raise ValueError(
+                'Bands must be an array of dimension 2'
+                '([N_kpoints, N_bands]) or of dimension 3 '
+                ' ([N_arrays, N_kpoints, N_bands]), found instead {}'.format(len(the_bands.shape))
+            )
 
         list_of_arrays_to_be_checked = []
 
@@ -280,8 +279,10 @@ class BandsData(KpointsData):
         if occupations is not None:
             the_occupations = numpy.array(occupations)
             if the_occupations.shape != the_bands.shape:
-                raise ValueError('Shape of occupations {} different from shape'
-                                 'shape of bands {}'.format(the_occupations.shape, the_bands.shape))
+                raise ValueError(
+                    'Shape of occupations {} different from shape'
+                    'shape of bands {}'.format(the_occupations.shape, the_bands.shape)
+                )
 
             if not the_bands.dtype.type == numpy.float64:
                 list_of_arrays_to_be_checked.append([the_occupations, 'occupations'])
@@ -306,8 +307,10 @@ class BandsData(KpointsData):
             elif isinstance(labels, (tuple, list)) and all([isinstance(_, str) for _ in labels]):
                 the_labels = [str(_) for _ in labels]
             else:
-                raise ValidationError('Band labels have an unrecognized type ({})'
-                                      'but should be a string or a list of strings'.format(labels.__class__))
+                raise ValidationError(
+                    'Band labels have an unrecognized type ({})'
+                    'but should be a string or a list of strings'.format(labels.__class__)
+                )
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:
                 raise ValidationError('More array labels than the number of arrays')
@@ -405,8 +408,8 @@ class BandsData(KpointsData):
 
         if len(to_return) == 1:
             return bands
-        else:
-            return to_return
+
+        return to_return
 
     def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None, get_segments=False, y_origin=0.):
         """
@@ -432,6 +435,7 @@ class BandsData(KpointsData):
            depending on the type of spin; the length is always equalt to the total
            number of bands per kpoint).
         """
+        # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         # load the x and y's of the graph
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
@@ -439,7 +443,7 @@ class BandsData(KpointsData):
             band_type_idx = numpy.array([0] * stored_bands.shape[1])
             two_band_types = False
         elif len(stored_bands.shape) == 3:
-            bands = numpy.concatenate([_ for _ in stored_bands], axis=1)
+            bands = numpy.concatenate(stored_bands, axis=1)
             band_type_idx = numpy.array([0] * stored_bands.shape[2] + [1] * stored_bands.shape[2])
             two_band_types = True
         else:
@@ -468,8 +472,9 @@ class BandsData(KpointsData):
         # as a result, where there are discontinuities in the path,
         # I have two consecutive points with the same x coordinate
         distances = [
-            numpy.linalg.norm(kpoints[i] - kpoints[i - 1])
-            if not (i in labels_indices and i - 1 in labels_indices) else 0. for i in range(1, len(kpoints))
+            numpy.linalg.norm(kpoints[i] -
+                              kpoints[i - 1]) if not (i in labels_indices and i - 1 in labels_indices) else 0.
+            for i in range(1, len(kpoints))
         ]
         x = [float(sum(distances[:i])) for i in range(len(distances) + 1)]
 
@@ -499,8 +504,8 @@ class BandsData(KpointsData):
                 if labels[0][0] != 0:
                     labels.insert(0, (0, ''))
                 # I add an empty label that points to the last band if the last label does not do it
-                if labels[-1][0] != len(bands)-1 :
-                    labels.append((len(bands)-1, ''))
+                if labels[-1][0] != len(bands) - 1:
+                    labels.append((len(bands) - 1, ''))
                 for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
                     if position_to - position_from > 1:
                         # Create a new path line only if there are at least two points,
@@ -547,6 +552,7 @@ class BandsData(KpointsData):
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
         """
+        # pylint: disable=too-many-locals
         import os
 
         dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
@@ -561,7 +567,6 @@ class BandsData(KpointsData):
         x = plot_info['x']
         labels = plot_info['labels']
 
-        num_labels = len(labels)
         num_bands = bands.shape[1]
 
         # axis limits
@@ -572,14 +577,6 @@ class BandsData(KpointsData):
 
         # first prepare the xy coordinates of the sets
         raw_data, _ = self._prepare_dat_blocks(plot_info)
-
-        ## Manually add the xy coordinates of the vertical lines - not needed! Use gridlines
-        #new_block = []
-        #for l in labels:
-        #    new_block.append("{}\t{}".format(l[0], y_min_lim))
-        #    new_block.append("{}\t{}".format(l[0], y_max_lim))
-        #    new_block.append("")
-        #raw_data += "\n".join(new_block)
 
         batch = []
         if comments:
@@ -598,9 +595,9 @@ class BandsData(KpointsData):
         batch.append('xaxis  tick spec type both')
         batch.append('xaxis  tick spec {}'.format(len(labels)))
         # set the name of the special points
-        for i, l in enumerate(labels):
-            batch.append('xaxis  tick major {}, {}'.format(i, l[0]))
-            batch.append('xaxis  ticklabel {}, "{}"'.format(i, l[1]))
+        for index, label in enumerate(labels):
+            batch.append('xaxis  tick major {}, {}'.format(index, label[0]))
+            batch.append('xaxis  ticklabel {}, "{}"'.format(index, label[1]))
         batch.append('xaxis  tick major color 7')
         batch.append('xaxis  tick major grid on')
 
@@ -614,20 +611,16 @@ class BandsData(KpointsData):
         batch.append('xaxis  label font 4')
 
         # set color and linewidths of bands
-        for i in range(num_bands):
-            batch.append('s{} line color 1'.format(i))
-            batch.append('s{} linewidth 1'.format(i))
-
-        ## set color and linewidths of label lines - not needed! use gridlines
-        #for i in range(num_bands, num_bands + num_labels):
-        #    batch.append("s{} hidden true".format(i))
+        for index in range(num_bands):
+            batch.append('s{} line color 1'.format(index))
+            batch.append('s{} linewidth 1'.format(index))
 
         batch_data = '\n'.join(batch) + '\n'
         extra_files = {dat_filename: raw_data}
 
         return batch_data.encode('utf-8'), extra_files
 
-    def _prepare_dat_multicolumn(self, main_file_name='', comments=True):
+    def _prepare_dat_multicolumn(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
         """
         Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
@@ -651,7 +644,7 @@ class BandsData(KpointsData):
 
         return ('\n'.join(return_text) + '\n').encode('utf-8'), {}
 
-    def _prepare_dat_blocks(self, main_file_name='', comments=True):
+    def _prepare_dat_blocks(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
         """
         Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
@@ -669,10 +662,8 @@ class BandsData(KpointsData):
         if comments:
             return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char='#'))
 
-        the_bands = numpy.transpose(bands)
-
-        for b in the_bands:
-            for i in zip(x, b):
+        for band in numpy.transpose(bands):
+            for i in zip(x, band):
                 line = ['{:.8f}'.format(i[0]), '{:.8f}'.format(i[1])]
                 return_text.append('\t'.join(line))
             return_text.append('')
@@ -680,17 +671,19 @@ class BandsData(KpointsData):
 
         return '\n'.join(return_text).encode('utf-8'), {}
 
-    def _matplotlib_get_dict(self,
-                             main_file_name='',
-                             comments=True,
-                             title='',
-                             legend=None,
-                             legend2=None,
-                             y_max_lim=None,
-                             y_min_lim=None,
-                             y_origin=0.,
-                             prettify_format=None,
-                             **kwargs):
+    def _matplotlib_get_dict(
+        self,
+        main_file_name='',
+        comments=True,
+        title='',
+        legend=None,
+        legend2=None,
+        y_max_lim=None,
+        y_min_lim=None,
+        y_origin=0.,
+        prettify_format=None,
+        **kwargs
+    ):  # pylint: disable=unused-argument
         """
         Prepare the data to send to the python-matplotlib plotting script.
 
@@ -700,7 +693,7 @@ class BandsData(KpointsData):
         :param setnumber_offset: an offset to be applied to all set numbers
             (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
         :param color_number: the color number for lines, symbols, error bars
-            and filling (should be less than the parameter max_num_agr_colors
+            and filling (should be less than the parameter MAX_NUM_AGR_COLORS
             defined below)
         :param title: the title
         :param legend: the legend (applied only to the first of the set)
@@ -717,7 +710,7 @@ class BandsData(KpointsData):
         :param kwargs: additional customization variables; only a subset is
             accepted, see internal variable 'valid_additional_keywords
         """
-        #import math
+        # pylint: disable=too-many-arguments,too-many-locals
 
         # Only these keywords are accepted in kwargs, and then set into the json
         valid_additional_keywords = [
@@ -763,7 +756,8 @@ class BandsData(KpointsData):
             prettify_format=prettify_format,
             join_symbol=join_symbol,
             get_segments=True,
-            y_origin=y_origin)
+            y_origin=y_origin
+        )
 
         all_data = {}
 
@@ -777,10 +771,8 @@ class BandsData(KpointsData):
             tick_pos = []
             tick_labels = []
 
-        #all_data['bands'] = the_bands.tolist()
         all_data['paths'] = plot_info['paths']
         all_data['band_type_idx'] = plot_info['band_type_idx'].tolist()
-        #all_data['x'] = x
 
         all_data['tick_pos'] = tick_pos
         all_data['tick_labels'] = tick_labels
@@ -798,17 +790,15 @@ class BandsData(KpointsData):
             y_min_lim = numpy.array(bands).min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
-        #ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
         all_data['x_min_lim'] = x_min_lim
         all_data['x_max_lim'] = x_max_lim
         all_data['y_min_lim'] = y_min_lim
         all_data['y_max_lim'] = y_max_lim
-        #all_data['ytick_spacing'] = ytick_spacing
 
-        for k, v in kwargs.items():
-            if k not in valid_additional_keywords:
-                raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(k))
-            all_data[k] = v
+        for key, value in kwargs.items():
+            if key not in valid_additional_keywords:
+                raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(key))
+            all_data[key] = value
 
         return all_data
 
@@ -823,16 +813,16 @@ class BandsData(KpointsData):
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
-        s_header = matplotlib_header_template.substitute()
-        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
+        s_header = MATPLOTLIB_HEADER_TEMPLATE.substitute()
+        s_import = MATPLOTLIB_IMPORT_DATA_INLINE_TEMPLATE.substitute(all_data_json=json.dumps(all_data, indent=2))
         s_body = self._get_mpl_body_template(all_data['paths'])
-        s_footer = matplotlib_footer_template_show.substitute()
+        s_footer = MATPLOTLIB_FOOTER_TEMPLATE_SHOW.substitute()
 
-        s = s_header + s_import + s_body + s_footer
+        string = s_header + s_import + s_body + s_footer
 
-        return s.encode('utf-8'), {}
+        return string.encode('utf-8'), {}
 
-    def _prepare_mpl_withjson(self, main_file_name='', *args, **kwargs):
+    def _prepare_mpl_withjson(self, main_file_name='', *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -852,16 +842,16 @@ class BandsData(KpointsData):
 
         ext_files = {json_fname: json.dumps(all_data, indent=2).encode('utf-8')}
 
-        s_header = matplotlib_header_template.substitute()
-        s_import = matplotlib_import_data_fromfile_template.substitute(json_fname=json_fname)
+        s_header = MATPLOTLIB_HEADER_TEMPLATE.substitute()
+        s_import = MATPLOTLIB_IMPORT_DATA_FROMFILE_TEMPLATE.substitute(json_fname=json_fname)
         s_body = self._get_mpl_body_template(all_data['paths'])
-        s_footer = matplotlib_footer_template_show.substitute()
+        s_footer = MATPLOTLIB_FOOTER_TEMPLATE_SHOW.substitute()
 
-        s = s_header + s_import + s_body + s_footer
+        string = s_header + s_import + s_body + s_footer
 
-        return s.encode('utf-8'), ext_files
+        return string.encode('utf-8'), ext_files
 
-    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):
+    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg,unused-argument
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -879,8 +869,8 @@ class BandsData(KpointsData):
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
         # Use the Agg backend
-        s_header = matplotlib_header_agg_template.substitute()
-        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
+        s_header = MATPLOTLIB_HEADER_AGG_TEMPLATE.substitute()
+        s_import = MATPLOTLIB_IMPORT_DATA_INLINE_TEMPLATE.substitute(all_data_json=json.dumps(all_data, indent=2))
         s_body = self._get_mpl_body_template(all_data['paths'])
 
         # I get a temporary file name
@@ -890,30 +880,28 @@ class BandsData(KpointsData):
 
         escaped_fname = filename.replace('"', '\"')
 
-        s_footer = matplotlib_footer_template_exportfile.substitute(fname=escaped_fname, format='pdf')
+        s_footer = MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE.substitute(fname=escaped_fname, format='pdf')
 
-        s = s_header + s_import + s_body + s_footer
+        string = s_header + s_import + s_body + s_footer
 
         # I don't exec it because I might mess up with the matplotlib backend etc.
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
-        #exec s
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write(s)
-            f.flush()
-
-            subprocess.check_output([sys.executable, f.name])
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(string)
+            handle.flush()
+            subprocess.check_output([sys.executable, handle.name])
 
         if not os.path.exists(filename):
             raise RuntimeError('Unable to generate the PDF...')
 
-        with open(filename, 'rb', encoding=None) as f:
-            imgdata = f.read()
+        with open(filename, 'rb', encoding=None) as handle:
+            imgdata = handle.read()
         os.remove(filename)
 
         return imgdata, {}
 
-    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):
+    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg,unused-argument
         """
         Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
@@ -930,8 +918,8 @@ class BandsData(KpointsData):
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
         # Use the Agg backend
-        s_header = matplotlib_header_agg_template.substitute()
-        s_import = matplotlib_import_data_inline_template.substitute(all_data_json=json.dumps(all_data, indent=2))
+        s_header = MATPLOTLIB_HEADER_AGG_TEMPLATE.substitute()
+        s_import = MATPLOTLIB_IMPORT_DATA_INLINE_TEMPLATE.substitute(all_data_json=json.dumps(all_data, indent=2))
         s_body = self._get_mpl_body_template(all_data['paths'])
 
         # I get a temporary file name
@@ -941,24 +929,23 @@ class BandsData(KpointsData):
 
         escaped_fname = filename.replace('"', '\"')
 
-        s_footer = matplotlib_footer_template_exportfile_with_dpi.substitute(fname=escaped_fname, format='png', dpi=300)
+        s_footer = MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE_WITH_DPI.substitute(fname=escaped_fname, format='png', dpi=300)
 
-        s = s_header + s_import + s_body + s_footer
+        string = s_header + s_import + s_body + s_footer
 
         # I don't exec it because I might mess up with the matplotlib backend etc.
         # I run instead in a different process, with the same executable
         # (so it should work properly with virtualenvs)
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write(s)
-            f.flush()
-
-            subprocess.check_output([sys.executable, f.name])
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(string)
+            handle.flush()
+            subprocess.check_output([sys.executable, handle.name])
 
         if not os.path.exists(filename):
             raise RuntimeError('Unable to generate the PNG...')
 
-        with open(filename, 'rb', encoding=None) as f:
-            imgdata = f.read()
+        with open(filename, 'rb', encoding=None) as handle:
+            imgdata = handle.read()
         os.remove(filename)
 
         return imgdata, {}
@@ -969,9 +956,9 @@ class BandsData(KpointsData):
         :param paths: paths of k-points
         """
         if len(paths) == 1:
-            s_body = matplotlib_body_template.substitute(plot_code=single_kp)
+            s_body = MATPLOTLIB_BODY_TEMPLATE.substitute(plot_code=SINGLE_KP)
         else:
-            s_body = matplotlib_body_template.substitute(plot_code=multi_kp)
+            s_body = MATPLOTLIB_BODY_TEMPLATE.substitute(plot_code=MULTI_KP)
         return s_body
 
     def show_mpl(self, **kwargs):
@@ -984,14 +971,16 @@ class BandsData(KpointsData):
         """
         exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
 
-    def _prepare_gnuplot(self,
-                         main_file_name=None,
-                         title='',
-                         comments=True,
-                         prettify_format=None,
-                         y_max_lim=None,
-                         y_min_lim=None,
-                         y_origin=0.):
+    def _prepare_gnuplot(
+        self,
+        main_file_name=None,
+        title='',
+        comments=True,
+        prettify_format=None,
+        y_max_lim=None,
+        y_min_lim=None,
+        y_origin=0.
+    ):
         """
         Prepare an gnuplot script to plot the bands, with the .dat file
         returned as an independent file.
@@ -1006,6 +995,7 @@ class BandsData(KpointsData):
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
         """
+        # pylint: disable=too-many-arguments,too-many-locals
         import os
 
         main_file_name = main_file_name or 'band.dat'
@@ -1016,14 +1006,11 @@ class BandsData(KpointsData):
             prettify_format = 'gnuplot_seekpath'
 
         plot_info = self._get_bandplot_data(
-            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin)
+            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin
+        )
 
         bands = plot_info['y']
         x = plot_info['x']
-        labels = plot_info['labels']
-
-        num_labels = len(labels)
-        num_bands = bands.shape[1]
 
         # axis limits
         if y_max_lim is None:
@@ -1045,7 +1032,8 @@ class BandsData(KpointsData):
             script.append(prepare_header_comment(self.uuid, plot_info=plot_info, comment_char='# '))
         script.append('')
 
-        script.append(u"""## Uncomment the next two lines to write directly to PDF
+        script.append(
+            """## Uncomment the next two lines to write directly to PDF
 ## Note: You need to have gnuplot installed with pdfcairo support!
 #set term pdfcairo
 #set output 'out.pdf'
@@ -1060,18 +1048,15 @@ class BandsData(KpointsData):
 #set termopt font "CMU Sans Serif, 12"
 ## Classical Times New Roman
 #set termopt font "Times New Roman, 12"
-""")
+"""
+        )
 
         # Actual logic
         script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
         script.append('set encoding utf8')  # To deal with Greek letters
         script.append('set xtics ({})'.format(xtics_string))
-
         script.append('unset key')
-
-
         script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
-
         script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
 
         if title:
@@ -1084,25 +1069,31 @@ class BandsData(KpointsData):
             script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
         else:
             script.append('set xrange [-1.0:1.0]')
-            script.append('plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+            script.append(
+                'plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(
+                    os.path.basename(dat_filename).replace('"', '\"')
+                )
+            )
 
         script_data = '\n'.join(script) + '\n'
         extra_files = {dat_filename: raw_data}
 
         return script_data.encode('utf-8'), extra_files
 
-    def _prepare_agr(self,
-                     main_file_name='',
-                     comments=True,
-                     setnumber_offset=0,
-                     color_number=1,
-                     color_number2=2,
-                     legend='',
-                     title='',
-                     y_max_lim=None,
-                     y_min_lim=None,
-                     y_origin=0.,
-                     prettify_format=None):
+    def _prepare_agr(
+        self,
+        main_file_name='',
+        comments=True,
+        setnumber_offset=0,
+        color_number=1,
+        color_number2=2,
+        legend='',
+        title='',
+        y_max_lim=None,
+        y_min_lim=None,
+        y_origin=0.,
+        prettify_format=None
+    ):
         """
         Prepare an xmgrace agr file.
 
@@ -1112,11 +1103,11 @@ class BandsData(KpointsData):
         :param setnumber_offset: an offset to be applied to all set numbers
             (i.e. s0 is replaced by s[offset], s1 by s[offset+1], etc.)
         :param color_number: the color number for lines, symbols, error bars
-            and filling (should be less than the parameter max_num_agr_colors
+            and filling (should be less than the parameter MAX_NUM_AGR_COLORS
             defined below)
         :param color_number2: the color number for lines, symbols, error bars
             and filling for the second-type spins (should be less than the
-            parameter max_num_agr_colors defined below)
+            parameter MAX_NUM_AGR_COLORS defined below)
         :param legend: the legend (applied only to the first set)
         :param title: the title
         :param y_max_lim: the maximum on the y axis (if None, put the
@@ -1130,19 +1121,21 @@ class BandsData(KpointsData):
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
         """
+        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,unused-argument
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'agr_seekpath'
 
         plot_info = self._get_bandplot_data(
-            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin)
+            cartesian=True, prettify_format=prettify_format, join_symbol='|', y_origin=y_origin
+        )
 
         import math
         # load the x and y of every set
-        if color_number > max_num_agr_colors:
-            raise ValueError('Color number is too high (should be less than {})'.format(max_num_agr_colors))
-        if color_number2 > max_num_agr_colors:
-            raise ValueError('Color number 2 is too high (should be less than {})'.format(max_num_agr_colors))
+        if color_number > MAX_NUM_AGR_COLORS:
+            raise ValueError('Color number is too high (should be less than {})'.format(MAX_NUM_AGR_COLORS))
+        if color_number2 > MAX_NUM_AGR_COLORS:
+            raise ValueError('Color number 2 is too high (should be less than {})'.format(MAX_NUM_AGR_COLORS))
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -1161,22 +1154,22 @@ class BandsData(KpointsData):
 
         # prepare xticks labels
         sx1 = ''
-        for i, l in enumerate(labels):
-            sx1 += agr_single_xtick_template.substitute(
+        for i, label in enumerate(labels):
+            sx1 += AGR_SINGLE_XTICK_TEMPLATE.substitute(
                 index=i,
-                coord=l[0],
-                name=l[1],
+                coord=label[0],
+                name=label[1],
             )
-        xticks = agr_xticks_template.substitute(
+        xticks = AGR_XTICKS_TEMPLATE.substitute(
             num_labels=num_labels,
             single_xtick_templates=sx1,
         )
 
         # build the arrays with the xy coordinates
         all_sets = []
-        for b in the_bands:
+        for band in the_bands:
             this_set = ''
-            for i in zip(x, b):
+            for i in zip(x, band):
                 line = '{:.8f}'.format(i[0]) + '\t' + '{:.8f}'.format(i[1]) + '\n'
                 this_set += line
             all_sets.append(this_set)
@@ -1188,15 +1181,16 @@ class BandsData(KpointsData):
             else:
                 linecolor = color_number2
             width = str(2.0)
-            set_descriptions += agr_set_description_template.substitute(
+            set_descriptions += AGR_SET_DESCRIPTION_TEMPLATE.substitute(
                 set_number=i + setnumber_offset,
                 linewidth=width,
                 color_number=linecolor,
-                legend=legend if i == 0 else '')
+                legend=legend if i == 0 else ''
+            )
 
         units = self.units
 
-        graphs = agr_graph_template.substitute(
+        graphs = AGR_GRAPH_TEMPLATE.substitute(
             x_min_lim=x_min_lim,
             y_min_lim=y_min_lim,
             x_max_lim=x_max_lim,
@@ -1209,19 +1203,21 @@ class BandsData(KpointsData):
         )
         sets = []
         for i, this_set in enumerate(all_sets):
-            sets.append(agr_singleset_template.substitute(set_number=i + setnumber_offset, xydata=this_set))
+            sets.append(AGR_SINGLESET_TEMPLATE.substitute(set_number=i + setnumber_offset, xydata=this_set))
         the_sets = '&\n'.join(sets)
 
-        s = agr_template.substitute(graphs=graphs, sets=the_sets)
+        string = AGR_TEMPLATE.substitute(graphs=graphs, sets=the_sets)
 
         if comments:
-            s = prepare_header_comment(self.uuid, plot_info, comment_char='#') + '\n' + s
+            string = prepare_header_comment(self.uuid, plot_info, comment_char='#') + '\n' + string
 
-        return s.encode('utf-8'), {}
+        return string.encode('utf-8'), {}
 
     def _get_band_segments(self, cartesian):
+        """Return the band segments."""
         plot_info = self._get_bandplot_data(
-            cartesian=cartesian, prettify_format=None, join_symbol=None, get_segments=True)
+            cartesian=cartesian, prettify_format=None, join_symbol=None, get_segments=True
+        )
 
         out_dict = {'label': self.label}
 
@@ -1230,7 +1226,7 @@ class BandsData(KpointsData):
 
         return out_dict
 
-    def _prepare_json(self, main_file_name='', comments=True):
+    def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
         """
         Prepare a json file in a format compatible with the AiiDA band visualizer
 
@@ -1249,9 +1245,10 @@ class BandsData(KpointsData):
         return json.dumps(json_dict).encode('utf-8'), {}
 
 
-max_num_agr_colors = 15
+MAX_NUM_AGR_COLORS = 15
 
-agr_template = Template("""
+AGR_TEMPLATE = Template(
+    """
     # Grace project file
     #
     @version 50122
@@ -1376,19 +1373,23 @@ agr_template = Template("""
     @r4 line 0, 0, 0, 0
     $graphs
     $sets
-    """)
+    """
+)
 
-agr_xticks_template = Template("""
+AGR_XTICKS_TEMPLATE = Template("""
     @    xaxis  tick spec $num_labels
     $single_xtick_templates
     """)
 
-agr_single_xtick_template = Template("""
+AGR_SINGLE_XTICK_TEMPLATE = Template(
+    """
     @    xaxis  tick major $index, $coord
     @    xaxis  ticklabel $index, "$name"
-    """)
+    """
+)
 
-agr_graph_template = Template("""
+AGR_GRAPH_TEMPLATE = Template(
+    """
     @g0 on
     @g0 hidden false
     @g0 type XY
@@ -1545,9 +1546,11 @@ agr_graph_template = Template("""
     @    frame background color 0
     @    frame background pattern 0
     $set_descriptions
-    """)
+    """
+)
 
-agr_set_description_template = Template("""
+AGR_SET_DESCRIPTION_TEMPLATE = Template(
+    """
     @    s$set_number hidden false
     @    s$set_number type xy
     @    s$set_number symbol 0
@@ -1597,9 +1600,10 @@ agr_set_description_template = Template("""
     @    s$set_number errorbar riser clip length 0.100000
     @    s$set_number comment "Cols 1:2"
     @    s$set_number legend "$legend"
-    """)
+    """
+)
 
-agr_singleset_template = Template("""
+AGR_SINGLESET_TEMPLATE = Template("""
     @target G0.S$set_number
     @type xy
     $xydata
@@ -1608,7 +1612,8 @@ agr_singleset_template = Template("""
 # text.latex.preview=True is needed to have a proper alignment of
 # tick marks with and without subscripts
 # see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
-matplotlib_header_agg_template = Template('''# -*- coding: utf-8 -*-
+MATPLOTLIB_HEADER_AGG_TEMPLATE = Template(
+    """# -*- coding: utf-8 -*-
 
 import matplotlib
 matplotlib.use('Agg')
@@ -1630,12 +1635,14 @@ import pylab as pl
 import json
 
 print_comment = False
-''')
+"""
+)
 
 # text.latex.preview=True is needed to have a proper alignment of
 # tick marks with and without subscripts
 # see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
-matplotlib_header_template = Template('''# -*- coding: utf-8 -*-
+MATPLOTLIB_HEADER_TEMPLATE = Template(
+    """# -*- coding: utf-8 -*-
 
 from matplotlib import rc
 # Uncomment to change default font
@@ -1654,16 +1661,19 @@ import pylab as pl
 import json
 
 print_comment = False
+"""
+)
+
+MATPLOTLIB_IMPORT_DATA_INLINE_TEMPLATE = Template('''all_data_str = r"""$all_data_json"""
 ''')
 
-matplotlib_import_data_inline_template = Template('''all_data_str = r"""$all_data_json"""
-''')
-
-matplotlib_import_data_fromfile_template = Template('''with open("$json_fname", encoding='utf8') as f:
+MATPLOTLIB_IMPORT_DATA_FROMFILE_TEMPLATE = Template(
+    """with open("$json_fname", encoding='utf8') as f:
     all_data_str = f.read()
-''')
+"""
+)
 
-multi_kp = '''
+MULTI_KP = """
 for path in paths:
     if path['length'] <= 1:
         # Avoid printing empty lines
@@ -1690,16 +1700,17 @@ for path in paths:
         p.plot(x, band, label=label,
                **further_plot_options
         )
-'''
+"""
 
-single_kp = '''
+SINGLE_KP = """
 path = paths[0]
 values = path['values']
 x = [path['x'] for _ in values]
 p.scatter(x, values, marker="_")
-'''
+"""
 
-matplotlib_body_template = Template('''all_data = json.loads(all_data_str)
+MATPLOTLIB_BODY_TEMPLATE = Template(
+    """all_data = json.loads(all_data_str)
 
 if not all_data.get('use_latex', False):
     rc('text', usetex=False)
@@ -1779,13 +1790,11 @@ try:
         print(all_data['comment'])
 except KeyError:
     pass
-''')
+"""
+)
 
-matplotlib_footer_template_show = Template('''pl.show()
-''')
+MATPLOTLIB_FOOTER_TEMPLATE_SHOW = Template("""pl.show()""")
 
-matplotlib_footer_template_exportfile = Template('''pl.savefig("$fname", format="$format")
-''')
+MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE = Template("""pl.savefig("$fname", format="$format")""")
 
-matplotlib_footer_template_exportfile_with_dpi = Template('''pl.savefig("$fname", format="$format", dpi=$dpi)
-''')
+MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE_WITH_DPI = Template("""pl.savefig("$fname", format="$format", dpi=$dpi)""")

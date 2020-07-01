@@ -95,7 +95,7 @@ class InvalidateCaching(Process):
             123, 'GENERIC_EXIT_CODE', message='This process should not be used as cache.', invalidates_cache=True
         )
 
-    def run(self):  # pylint: disable=inconsistent-return-statements
+    def run(self):
         if self.inputs.return_exit_code:
             return self.exit_codes.GENERIC_EXIT_CODE  # pylint: disable=no-member
 

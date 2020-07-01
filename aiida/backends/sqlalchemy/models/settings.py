@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Module to manage node settings for the SQLA backend."""
-
 from pytz import UTC
 
 from sqlalchemy import Column
@@ -40,9 +39,7 @@ class DbSetting(Base):
         return "'{}'={}".format(self.key, self.getvalue())
 
     @classmethod
-    def set_value(
-        cls, key, value, with_transaction=True, subspecifier_value=None, other_attribs=None, stop_if_existing=False
-    ):
+    def set_value(cls, key, value, other_attribs=None, stop_if_existing=False):
         """Set a setting value."""
         other_attribs = other_attribs if other_attribs is not None else {}
         setting = sa.get_scoped_session().query(DbSetting).filter_by(key=key).first()

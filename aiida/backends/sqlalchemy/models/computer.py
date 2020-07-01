@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Module to manage computers for the SQLA backend."""
-
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Text
@@ -34,7 +33,6 @@ class DbComputer(Base):
     def __init__(self, *args, **kwargs):
         """Provide _metadata and description attributes to the class."""
         self._metadata = {}
-        # TODO SP: it's supposed to be nullable, but there is a NOT constraint inside the DB.
         self.description = ''
 
         # If someone passes metadata in **kwargs we change it to _metadata

@@ -53,6 +53,7 @@ class DbNode(Base):
         Integer, ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'), nullable=False
     )
 
+    # pylint: disable=fixme
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
     # isn't exactly the same behaviour than with Django. The solution to
@@ -108,7 +109,7 @@ class DbNode(Base):
 
     @property
     def inputs(self):
-        return self.inputs_q.all()
+        return self.inputs_q.all()  # pylint: disable=no-member
 
     def get_simple_name(self, invalid_result=None):
         """

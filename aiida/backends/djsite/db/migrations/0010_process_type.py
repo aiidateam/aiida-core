@@ -7,16 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name
+"""Database migration."""
 from django.db import models, migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
 
 REVISION = '1.0.10'
 DOWN_REVISION = '1.0.9'
 
 
 class Migration(migrations.Migration):
+    """Database migration."""
 
     dependencies = [
         ('db', '0009_base_data_plugin_type_string'),
@@ -24,9 +25,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
-            model_name='dbnode',
-            name='process_type',
-            field=models.CharField(max_length=255, db_index=True, null=True)
+            model_name='dbnode', name='process_type', field=models.CharField(max_length=255, db_index=True, null=True)
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

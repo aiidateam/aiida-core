@@ -7,11 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
-
-from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
-                                                 UpfEntry)
+# pylint: disable=no-self-use
+""""Implementation of `DbImporter` for the NNIN/C database."""
+from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, UpfEntry
 
 
 class NnincDbImporter(DbImporter):
@@ -24,14 +22,18 @@ class NnincDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str):
-            raise ValueError("incorrect value for keyword '{}' -- only "
-                             'strings and integers are accepted'.format(alias))
+            raise ValueError(
+                "incorrect value for keyword '{}' -- only "
+                'strings and integers are accepted'.format(alias)
+            )
         return '{}={}'.format(key, values)
 
-    _keywords = {'xc_approximation': ['frmxcprox', _str_clause],
-                 'xc_type': ['frmxctype', _str_clause],
-                 'pseudopotential_class': ['frmspclass', _str_clause],
-                 'element': ['element', None]}
+    _keywords = {
+        'xc_approximation': ['frmxcprox', _str_clause],
+        'xc_type': ['frmxctype', _str_clause],
+        'pseudopotential_class': ['frmspclass', _str_clause],
+        'element': ['element', None]
+    }
 
     def __init__(self, **kwargs):
         self._query_url = 'http://nninc.cnf.cornell.edu/dd_search.php'
@@ -45,20 +47,14 @@ class NnincDbImporter(DbImporter):
         :return: a string with HTTP GET statement.
         """
         get_parts = []
-        for key in self._keywords.keys():
-            if key in kwargs.keys():
+        for key in self._keywords:
+            if key in kwargs:
                 values = kwargs.pop(key)
                 if self._keywords[key][1] is not None:
-                    get_parts.append(
-                        self._keywords[key][1](self,
-                                               self._keywords[key][0],
-                                               key,
-                                               values))
+                    get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
 
-        if kwargs.keys():
-            raise NotImplementedError("search keyword(s) '"
-                                      "', '".join(kwargs.keys()) + \
-                                      "' is(are) not implemented for NNIN/C")
+        if kwargs:
+            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
 
         return self._query_url + '?' + '&'.join(get_parts)
 
@@ -91,7 +87,7 @@ class NnincDbImporter(DbImporter):
 
         return NnincSearchResults([{'id': x} for x in results])
 
-    def setup_db(self, query_url=None, **kwargs):
+    def setup_db(self, query_url=None, **kwargs):  # pylint: disable=arguments-differ
         """
         Changes the database connection details.
         """
@@ -113,7 +109,7 @@ class NnincDbImporter(DbImporter):
         return self._keywords.keys()
 
 
-class NnincSearchResults(DbSearchResults):
+class NnincSearchResults(DbSearchResults):  # pylint: disable=abstract-method
     """
     Results of the search, performed on NNIN/C Pseudopotential Virtual
     Vault.
@@ -156,7 +152,6 @@ class NnincEntry(UpfEntry):
         :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincEntry`, related
         to the supplied URI.
         """
-        super().__init__(db_name='NNIN/C Pseudopotential Virtual Vault',
-                                         db_uri='http://nninc.cnf.cornell.edu',
-                                         uri=uri,
-                                         **kwargs)
+        super().__init__(
+            db_name='NNIN/C Pseudopotential Virtual Vault', db_uri='http://nninc.cnf.cornell.edu', uri=uri, **kwargs
+        )

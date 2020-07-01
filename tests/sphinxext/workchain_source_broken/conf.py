@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-builtin,invalid-name,missing-module-docstring
 #
 # sphinx-aiida-demo documentation build configuration file, created by
 # sphinx-quickstart on Mon Oct  2 13:04:07 2017.

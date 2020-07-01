@@ -58,7 +58,7 @@ except NotImplementedError:
     using_sysrandom = False  # pylint: disable=invalid-name
 
 
-def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
+def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
     """
     Returns a securely generated random string.
 

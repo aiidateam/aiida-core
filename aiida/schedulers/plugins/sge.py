@@ -322,14 +322,14 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             try:
                 xmldata = xml.dom.minidom.parseString(stdout)
             except xml.parsers.expat.ExpatError:
-                self.logger.error('in sge._parse_joblist_output: xml parsing of stdout failed:' '{}'.format(stdout))
-                raise SchedulerParsingError('Error during joblist retrieval,' 'xml parsing of stdout failed')
+                self.logger.error('in sge._parse_joblist_output: xml parsing of stdout failed: {}'.format(stdout))
+                raise SchedulerParsingError('Error during joblist retrieval, xml parsing of stdout failed')
         else:
             self.logger.error(
                 'Error in sge._parse_joblist_output: retval={}; '
                 'stdout={}; stderr={}'.format(retval, stdout, stderr)
             )
-            raise SchedulerError('Error during joblist retrieval,' 'no stdout produced')
+            raise SchedulerError('Error during joblist retrieval, no stdout produced')
 
         try:
             first_child = xmldata.firstChild
@@ -381,12 +381,12 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 self.logger.error('Error in sge._parse_joblist_output:'
                                   'no job id is given, stdout={}' \
                                   .format(stdout))
-                raise SchedulerError('Error in sge._parse_joblist_output:' 'no job id is given')
+                raise SchedulerError('Error in sge._parse_joblist_output: no job id is given')
             except IndexError:
                 self.logger.error("No 'job_number' given for job index {} in "
                                   'job list, stdout={}'.format(jobs.index(job) \
                                                                , stdout))
-                raise IndexError('Error in sge._parse_joblist_output:' 'no job id is given')
+                raise IndexError('Error in sge._parse_joblist_output: no job id is given')
 
             try:
                 job_element = job.getElementsByTagName('state').pop(0)

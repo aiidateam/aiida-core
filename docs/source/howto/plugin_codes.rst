@@ -18,15 +18,15 @@ Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
 3. Parse the output of the code.
 
-This howto takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for a dummy executable that sums two numbers, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
+This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for a dummy executable that sums two numbers, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
 
-In the following, our |Code| will be the `bash` executable, and our "input file" will be a `bash` script ``aiida.in`` that sums two numbers and prints the result:
+In the following, as an example, our |Code| will be the `bash` executable, and our "input file" will be a `bash` script ``aiida.in`` that sums two numbers and prints the result:
 
 .. code-block:: bash
 
    echo $(( numx + numy ))
 
-We will run this is as:
+We will run this as:
 
 .. code-block:: bash
 
@@ -75,17 +75,17 @@ Once a calculation finishes, any output node specified here will be attached to 
 
 .. tip::
 
-    In real-world plugins, popular types of input nodes are python dictionaries (:py:class:`~aiida.orm.nodes.data.dict.Dict`) and files (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`).
+    In real-world plugins, popular types of input nodes are Python dictionaries (:py:class:`~aiida.orm.nodes.data.dict.Dict`) and files (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`).
 
 Finally, we set a couple of default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
-These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and their values can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
+These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
 
 .. note::
 
     One more important input required by any |CalcJob| is which external executable to use.
     External executables are represented by |Code|  instances that contain information about the computer they reside on, their path in the file system and more.
 
-    They are passed to a |CalcJob| via the ``code`` input (defined in the |CalcJob| base class, so you won't need to)::
+    They are passed to a |CalcJob| via the ``code`` input (defined in the |CalcJob| base class, so you don't have to)::
 
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
 
@@ -106,7 +106,7 @@ For example:
     :language: python
     :pyobject: ArithmeticAddCalculation.prepare_for_submission
 
-.. Note that, unlike the |define| method, this one is implemented from scratch and so there is no super call.
+.. note:: Unlike the |define| method, the ``prepare_for_submission`` method is implemented from scratch and so there is no super call.
 
 We start by writing our simple bash script that sums the two numbers ``x`` and ``y``, using Python's string interpolation to replace the ``x`` and ``y`` placeholders with the actual values ``self.inputs.x`` and ``self.inputs.y`` that were passed by the user.
 
@@ -137,19 +137,19 @@ We want to pass our input file to the executable via standard input, and record 
 
 .. tip::
 
-     Many executables don't read from standard input but require the path to an input file to be passed via command line parameters (potentially including further configuration options) instead.
+     Many executables don't read from standard input but instead require the path to an input file to be passed via command line parameters (potentially including further configuration options).
      In that case, use the |CodeInfo| ``cmdline_params`` attribute:
 
      .. code-block:: python
 
-         codeinfo.cmdline_params = [ '--input', self.inputs.input_filename ]
+         codeinfo.cmdline_params = ['--input', self.inputs.input_filename]
 
 .. tip::
 
    The dot-notation ``self.options.input_filename`` and the key-notation ``self.options['input_filename']`` are equivalent for *accessing* the value of an option, but the key-notation provides more control when *setting* values (e.g. overriding the default value while preserving the ``valid_type``).
    That is why we used the key-notation in the ``define`` method.
 
-Finally, we pass the |CodeInfo| to a |CalcInfo| object (one CalcJob can involve more than one executable, so ``codes_info`` is a list).
+Finally, we pass the |CodeInfo| to a |CalcInfo| object (one calculation job can involve more than one executable, so ``codes_info`` is a list).
 We define the ``retrieve_list`` of filenames that the engine should retrieve from the directory where the job ran after it has finished.
 The engine will store these files in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node that will be attached as an output node to the calculation with the label ``retrieved``.
 There are :ref:`other file lists available<topics:calculations:usage:calcjobs:file_lists>` that allow you to easily customize how to move files to and from the remote working directory in order to prevent the creation of unnecessary copies.
@@ -195,8 +195,8 @@ The first argument is the name of the output, which will be used as the label fo
 Note that the type of the output should match the type that is specified by the process specification of the corresponding |CalcJob|.
 If any of the registered outputs do not match the specification, the calculation will be marked as failed.
 
-In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when submitting the job.
-If a particular parser should *always* be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as we did above:
+In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when launching the job.
+If a particular parser should *always* be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as we did in the :ref:`previous section <how-to:codes:interfacing>`:
 
 .. code-block:: python
 
@@ -214,9 +214,9 @@ How to register your parser class as an entry point is explained in the how-to s
 Handling parsing errors
 -----------------------
 
-So far, our we have not spent much attention on dealing with potential errors that can arise when running external codes.
+So far, we have not spent much attention on dealing with potential errors that can arise when running external codes.
 However, there are lots of ways in which codes can fail to execute nominally.
-A |Parser| can play an important role in detecting such errors and reporting them to AiiDA, where :ref:`workflows <how-to:workflows>` can then decide how to proceed further, e.g. by modifying input parameters and resubmitting the calculation.
+A |Parser| can play an important role in detecting such errors and reporting them to AiiDA, where :ref:`workflows <how-to:workflows>` can then decide how to proceed, e.g. by modifying input parameters and resubmitting the calculation.
 
 Parsers communicate errors through :ref:`exit codes<topics:processes:concepts:exit_codes>`, which are defined in the |spec| of the |CalcJob| they parse.
 Our :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` example, defines the following exit codes:
@@ -233,7 +233,7 @@ Each ``exit_code`` defines
  * a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
  * a message that provides a more detailed description of the problem.
 
-In order to inform AiiDA about a failed calculation, simply return the corresponding exit codes in the ``parse`` method, when you detect the corresponding issue.
+In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of our |Parser|:
 
 .. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
@@ -353,8 +353,8 @@ You can do so by specifying to use a ``dry_run``, which will create all the inpu
     run(calculation_builder)
 
 
-This marks the end of this how-to, and you should now be fully equipped to wrap your own code in an AiiDA plugin.
-For further reading, you may want to consult the :ref:`guidelines on plugin design <topics:plugins:guidelines>` or the how to on `packaging plugins <how-to:plugins>`.
+This marks the end of this how-to, and you should now be fully equipped to wrap your own code in an AiiDA calculation plugin.
+For further reading, you may want to consult the :ref:`guidelines on plugin design <topics:plugins:guidelines>` or the how to on :ref:`packaging plugins <how-to:plugins>`.
 
 
 .. todo::

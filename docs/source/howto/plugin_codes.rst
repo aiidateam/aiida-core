@@ -35,11 +35,11 @@ We will run this as:
 thus writing the sum of the two numbers ``numx`` and ``numy`` (provided by the user) to the output file ``aiida.out``.
 
 
-.. _how-to:plugin-codes:interfacing:
-
 .. todo::
 
     Add to preceding sentence: :ref:`the communication with external machines<how-to:plugin-codes:transport>` and the interaction with its :ref:`scheduling software<how-to:plugin-codes:scheduler>`.
+
+.. _how-to:plugin-codes:interfacing:
 
 
 Interfacing external codes
@@ -71,7 +71,7 @@ The first line of the method calls the |define| method of the |CalcJob| parent c
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
 
 Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the ``sum`` as an output of the calculation.
-Once a calculation finishes, any output node specified here will be attached to the calculation node with the label ``retrieved``.
+Once a calculation finishes, a |FolderData| node will be attached as an output to the calculation node with the label ``retrieved``.
 
 .. tip::
 
@@ -146,12 +146,11 @@ We want to pass our input file to the executable via standard input, and record 
 
 .. tip::
 
-   The dot-notation ``self.options.input_filename`` and the key-notation ``self.options['input_filename']`` are equivalent for *accessing* the value of an option, but the key-notation provides more control when *setting* values (e.g. overriding the default value while preserving the ``valid_type``).
-   That is why we used the key-notation in the ``define`` method.
+    ``self.inputs.input_filename`` is just a shorthand for ``self.inputs.metadata['options']['input_filename']``.
 
 Finally, we pass the |CodeInfo| to a |CalcInfo| object (one calculation job can involve more than one executable, so ``codes_info`` is a list).
 We define the ``retrieve_list`` of filenames that the engine should retrieve from the directory where the job ran after it has finished.
-The engine will store these files in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node that will be attached as an output node to the calculation with the label ``retrieved``.
+The engine will store these files in a |FolderData| node that will be attached as an output node to the calculation with the label ``retrieved``.
 There are :ref:`other file lists available<topics:calculations:usage:calcjobs:file_lists>` that allow you to easily customize how to move files to and from the remote working directory in order to prevent the creation of unnecessary copies.
 
 This was an example of how to implement the |CalcJob| class to interface AiiDA with an external code.
@@ -182,7 +181,7 @@ We start our ``parser.py`` plugin by subclassing the |Parser| class and implemen
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
-  1. ``self.retrieved``: An instance of :py:class:`~aiida.orm.nodes.data.folder.FolderData`, which points to the folder containing all output files produced by the code and provides the means to :py:meth:`~aiida.orm.nodes.node.Node.open` any file it contains.
+  1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files produced by the code and provides the means to :py:meth:`~aiida.orm.nodes.node.Node.open` any file it contains.
 
   2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which e.g. provides access to all of its inputs (``self.node.inputs``).
 
@@ -243,8 +242,7 @@ Here is a more complete version of our |Parser|:
 It checks:
 
  1. Whether a retrieved folder is present.
- 2. Whether the output file can be read (whether ``read()`` will throw an ``OSError``).
-
+ 2. Whether the output file can be read (whether ``open()`` or ``read()`` will throw an ``OSError``).
  3. Whether the output file contains an integer.
  4. Whether the sum is negative.
 
@@ -389,6 +387,7 @@ For further reading, you may want to consult the :ref:`guidelines on plugin desi
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
 .. |CalcInfo| replace:: :py:class:`~aiida.common.CalcInfo`
 .. |CodeInfo| replace:: :py:class:`~aiida.common.CodeInfo`
+.. |FolderData| replace:: :py:class:`~aiida.orm.nodes.data.folder.FolderData`
 .. |spec| replace:: ``spec``
 .. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
 .. |prepare_for_submission| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`

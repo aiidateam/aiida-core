@@ -39,7 +39,10 @@ If you find yourself in a situation where you feel like you need to do any of th
 Guidelines for plugin design
 ============================
 
-The following guidelines are useful to keep in mind when wrapping external codes, i.e. writing calculation and parser plugins:
+CalcJob & Parser plugins
+------------------------
+
+The following guidelines are useful to keep in mind when wrapping external codes:
 
  * | **Start simple.**
    | Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...

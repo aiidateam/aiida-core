@@ -48,8 +48,8 @@ class TestComments(AiidaTestCase):
         comment_uuids = [c.uuid for c in [comment_one, comment_two]]
 
         # Export as "EXISTING" DB
-        export_file_existing = os.path.join(temp_dir, 'export_EXISTING.tar.gz')
-        export([node], outfile=export_file_existing, silent=True)
+        export_file_existing = os.path.join(temp_dir, 'export_EXISTING.aiida')
+        export([node], filename=export_file_existing, silent=True)
 
         # Add 2 more Comments and save UUIDs prior to export
         comment_three = orm.Comment(node, user, self.comments[2]).store()
@@ -57,8 +57,8 @@ class TestComments(AiidaTestCase):
         comment_uuids += [c.uuid for c in [comment_three, comment_four]]
 
         # Export as "FULL" DB
-        export_file_full = os.path.join(temp_dir, 'export_FULL.tar.gz')
-        export([node], outfile=export_file_full, silent=True)
+        export_file_full = os.path.join(temp_dir, 'export_FULL.aiida')
+        export([node], filename=export_file_full, silent=True)
 
         # Clean database and reimport "EXISTING" DB
         self.reset_database()
@@ -124,8 +124,8 @@ class TestComments(AiidaTestCase):
         self.assertEqual(node.user.email, users_email[0])
 
         # Export nodes, excluding comments
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([node], outfile=export_file, silent=True, include_comments=False)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([node], filename=export_file, silent=True, include_comments=False)
 
         # Clean database and reimport exported file
         self.reset_database()
@@ -168,8 +168,8 @@ class TestComments(AiidaTestCase):
         data_comments_uuid = [c.uuid for c in [comment_three, comment_four]]
 
         # Export nodes
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([calc_node, data_node], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([calc_node, data_node], filename=export_file, silent=True)
 
         # Clean database and reimport exported file
         self.reset_database()
@@ -219,8 +219,8 @@ class TestComments(AiidaTestCase):
         user_two_comments_uuid = [str(c.uuid) for c in [comment_three, comment_four]]
 
         # Export node, along with comments and users recursively
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([node], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([node], filename=export_file, silent=True)
 
         # Clean database and reimport exported file
         self.reset_database()
@@ -307,8 +307,8 @@ class TestComments(AiidaTestCase):
         calc_mtime = builder[0][1]
 
         # Export, reset database and reimport
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([calc], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([calc], filename=export_file, silent=True)
         self.reset_database()
         import_data(export_file, silent=True)
 
@@ -357,8 +357,8 @@ class TestComments(AiidaTestCase):
         cmt_uuid = cmt.uuid
 
         # Export calc and comment
-        export_file = os.path.join(temp_dir, 'export_file.tar.gz')
-        export([calc], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export_file.aiida')
+        export([calc], filename=export_file, silent=True)
 
         # Update comment
         cmt.set_content(self.comments[1])
@@ -370,8 +370,8 @@ class TestComments(AiidaTestCase):
         self.assertEqual(export_comments.all()[0][1], self.comments[1])
 
         # Export calc and UPDATED comment
-        export_file_updated = os.path.join(temp_dir, 'export_file_updated.tar.gz')
-        export([calc], outfile=export_file_updated, silent=True)
+        export_file_updated = os.path.join(temp_dir, 'export_file_updated.aiida')
+        export([calc], filename=export_file_updated, silent=True)
 
         # Reimport exported 'old' calc and comment
         import_data(export_file, silent=True, comment_mode='newest')
@@ -474,7 +474,7 @@ class TestComments(AiidaTestCase):
 
         # Export "EXISTING" DB
         export_file_existing = os.path.join(temp_dir, export_filenames['EXISTING'])
-        export([calc], outfile=export_file_existing, silent=True)
+        export([calc], filename=export_file_existing, silent=True)
 
         # Add remaining Comments
         for comment in self.comments[1:]:
@@ -494,7 +494,7 @@ class TestComments(AiidaTestCase):
 
         # Export "FULL" DB
         export_file_full = os.path.join(temp_dir, export_filenames['FULL'])
-        export([calc], outfile=export_file_full, silent=True)
+        export([calc], filename=export_file_full, silent=True)
 
         # Clean database
         self.reset_database()
@@ -533,7 +533,7 @@ class TestComments(AiidaTestCase):
 
         # Export "NEW" DB
         export_file_new = os.path.join(temp_dir, export_filenames['NEW'])
-        export([calc], outfile=export_file_new, silent=True)
+        export([calc], filename=export_file_new, silent=True)
 
         # Clean database
         self.reset_database()

@@ -211,7 +211,7 @@ def process_pause(processes, all_entries, timeout, wait):
     if not processes and all_entries:
         active_states = options.active_process_states()
         builder = QueryBuilder().append(ProcessNode, filters={'attributes.process_state': {'in': active_states}})
-        processes = [entry[0] for entry in builder.all()]
+        processes = builder.all(flat=True)
 
     futures = {}
     for process in processes:
@@ -248,7 +248,7 @@ def process_play(processes, all_entries, timeout, wait):
 
     if not processes and all_entries:
         builder = QueryBuilder().append(ProcessNode, filters={'attributes.paused': True})
-        processes = [entry[0] for entry in builder.all()]
+        processes = builder.all(flat=True)
 
     futures = {}
     for process in processes:

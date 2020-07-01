@@ -58,8 +58,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         export_nodes.append(list_node)
 
         # Export nodes
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export(export_nodes, outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export(export_nodes, filename=filename, silent=True)
 
         # Clean the database
         self.reset_database()
@@ -107,8 +107,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         self.assertEqual(node.process_type, node_process_type)
 
         # Export nodes
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([node], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([node], filename=filename, silent=True)
 
         # Clean the database and reimport data
         self.reset_database()
@@ -150,8 +150,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         self.assertEqual(code_type, 'data.code.Code.')
 
         # Export node
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([code], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([code], filename=filename, silent=True)
 
         # Clean the database and reimport
         self.reset_database()
@@ -232,8 +232,8 @@ class TestProvenanceRedesign(AiidaTestCase):
         self.assertListEqual(groups_type_string, ['core', 'core.upf'])
 
         # Export node
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([group_user, group_upf], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([group_user, group_upf], filename=filename, silent=True)
 
         # Clean the database and reimport
         self.reset_database()

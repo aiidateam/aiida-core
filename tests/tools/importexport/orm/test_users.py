@@ -80,9 +80,9 @@ class TestUsers(AiidaTestCase):
         uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
         uuids_u2 = [jc2.uuid, sd3.uuid]
 
-        filename = os.path.join(temp_dir, 'export.tar.gz')
+        filename = os.path.join(temp_dir, 'export.aiida')
 
-        export([sd3], outfile=filename, silent=True)
+        export([sd3], filename=filename, silent=True)
         self.clean_db()
         self.create_user()
         import_data(filename, silent=True)
@@ -137,8 +137,8 @@ class TestUsers(AiidaTestCase):
         sd2_uuid = sd2.uuid
 
         # At this point we export the generated data
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([sd2], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiidaz')
+        export([sd2], filename=filename1, silent=True)
         uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
         self.clean_db()
         self.insert_data()
@@ -170,8 +170,8 @@ class TestUsers(AiidaTestCase):
         # if they can be imported correctly.
         uuids2 = [jc2.uuid, sd3.uuid]
 
-        filename2 = os.path.join(temp_dir, 'export2.tar.gz')
-        export([sd3], outfile=filename2, silent=True)
+        filename2 = os.path.join(temp_dir, 'export2.aiida')
+        export([sd3], filename=filename2, silent=True)
         self.clean_db()
         self.insert_data()
         import_data(filename2, silent=True)

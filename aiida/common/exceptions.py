@@ -10,14 +10,14 @@
 """Module that define the exceptions that are thrown by AiiDA's internal code."""
 
 __all__ = (
-    'AiidaException', 'NotExistent', 'MultipleObjectsError', 'RemoteOperationError', 'ContentNotExistent',
-    'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed', 'IntegrityError', 'UniquenessError',
-    'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError', 'LoadingEntryPointError',
-    'InvalidEntryPointTypeError', 'InvalidOperation', 'ParsingError', 'InternalError', 'PluginInternalError',
-    'ValidationError', 'ConfigurationError', 'ProfileConfigurationError', 'MissingConfigurationError',
-    'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError', 'InputValidationError',
-    'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError', 'UnsupportedSpeciesError',
-    'TransportTaskException', 'OutputParsingError'
+    'AiidaException', 'NotExistent', 'NotExistentAttributeError', 'NotExistentKeyError', 'MultipleObjectsError',
+    'RemoteOperationError', 'ContentNotExistent', 'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed',
+    'IntegrityError', 'UniquenessError', 'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError',
+    'LoadingEntryPointError', 'InvalidEntryPointTypeError', 'InvalidOperation', 'ParsingError', 'InternalError',
+    'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
+    'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
+    'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError'
 )
 
 
@@ -33,6 +33,18 @@ class AiidaException(Exception):
 class NotExistent(AiidaException):
     """
     Raised when the required entity does not exist.
+    """
+
+
+class NotExistentAttributeError(AttributeError, NotExistent):
+    """
+    Raised when the required entity does not exist, when fetched as an attribute.
+    """
+
+
+class NotExistentKeyError(KeyError, NotExistent):
+    """
+    Raised when the required entity does not exist, when fetched as a dictionary key.
     """
 
 

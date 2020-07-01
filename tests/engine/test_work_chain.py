@@ -11,7 +11,6 @@ import inspect
 import unittest
 
 import plumpy
-import plumpy.test_utils
 import pytest
 from tornado import gen
 
@@ -758,12 +757,6 @@ class TestWorkchain(AiidaTestCase):
                 test_case.assertEqual(self.ctx.result_b.outputs.result, val)
 
         run_and_check_success(Workchain)
-
-    def test_persisting(self):
-        persister = plumpy.test_utils.TestPersister()
-        runner = get_manager().get_runner()
-        workchain = Wf(runner=runner)
-        launch.run(workchain)
 
     def test_namespace_nondb_mapping(self):
         """

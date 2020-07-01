@@ -334,7 +334,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
             with_incoming='workcalculation',
             tag='subworkchains'
         )
-        result = list(itertools.chain(*builder.distinct().all()))
+        result = builder.all(flat=True)
 
         # This will return a single flat list of tuples, where the first element
         # corresponds to the WorkChain pk and the second element is an integer

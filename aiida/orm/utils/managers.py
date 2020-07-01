@@ -14,6 +14,7 @@ to access members of other classes via TAB-completable attributes
 """
 
 from aiida.common.links import LinkType
+from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 
 __all__ = ('NodeLinksManager', 'AttributeManager')
 
@@ -80,8 +81,13 @@ class NodeLinksManager:  # pylint: disable=too-few-public-methods
         """
         try:
             return self._get_node_by_link_label(label=name)
-        except KeyError:
-            raise AttributeError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
+        except NotExistent:
+            # Note: in order for TAB-completion to work, we need to raise an exception that also inherits from
+            # `AttributeError`, so that `getattr(node.inputs, 'some_label', some_default)` returns `some_default`.
+            # Otherwise, the exception is not caught by `getattr` and is propagated, instead of returning the default.
+            raise NotExistentAttributeError(
+                "Node '{}' does not have an input with link '{}'".format(self._node.pk, name)
+            )
 
     def __getitem__(self, name):
         """
@@ -91,8 +97,11 @@ class NodeLinksManager:  # pylint: disable=too-few-public-methods
         """
         try:
             return self._get_node_by_link_label(label=name)
-        except KeyError:
-            raise KeyError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
+        except NotExistent:
+            # Note: in order for this class to behave as a dictionary, we raise an exception that also inherits from
+            # `KeyError` - in this way, users can use the standard construct `try/except KeyError` and this will behave
+            # like a standard dictionary.
+            raise NotExistentKeyError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
 
     def __str__(self):
         """Return a string representation of the manager"""
@@ -125,7 +134,7 @@ class AttributeManager:  # pylint: disable=too-few-public-methods
         """
         Allow to list the keys of the dictionary
         """
-        return sorted(self._node.attributes_items())
+        return sorted(self._node.attributes_keys())
 
     def __iter__(self):
         """

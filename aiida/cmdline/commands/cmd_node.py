@@ -41,12 +41,18 @@ def verdi_node_repo():
 @with_dbenv()
 def repo_cat(node, relative_path):
     """Output the content of a file in the node repository folder."""
+    from shutil import copyfileobj
+    import sys
+    import errno
+
     try:
-        content = node.get_object_content(relative_path)
-    except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
-    else:
-        echo.echo(content)
+        with node.open(relative_path, mode='rb') as fhandle:
+            copyfileobj(fhandle, sys.stdout.buffer)
+    except OSError as exception:
+        # The sepcial case is breakon pipe error, which is usually OK.
+        if exception.errno != errno.EPIPE:
+            # Incorrect path or file not readable
+            echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
 
 
 @verdi_node_repo.command('ls')
@@ -60,8 +66,8 @@ def repo_ls(node, relative_path, color):
 
     try:
         list_repository_contents(node, relative_path, color)
-    except ValueError as exception:
-        echo.echo_critical(exception)
+    except FileNotFoundError:
+        echo.echo_critical('the path `{}` does not exist for the given node'.format(relative_path))
 
 
 @verdi_node_repo.command('dump')
@@ -418,11 +424,20 @@ def verdi_graph():
     default='dot'
 )
 @click.option('-f', '--output-format', help="The output format used for rendering ('pdf', 'png', etc.).", default='pdf')
+@click.option(
+    '-c',
+    '--highlight-classes',
+    help=
+    "Only color nodes of specific class label (as displayed in the graph, e.g. 'StructureData', 'FolderData', etc.).",
+    type=click.STRING,
+    default=None,
+    multiple=True
+)
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
 @decorators.with_dbenv()
 def graph_generate(
     root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-    output_format, show
+    output_format, highlight_classes, show
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -435,12 +450,14 @@ def graph_generate(
     echo.echo_info('Initiating graphviz engine: {}'.format(engine))
     graph = Graph(engine=engine, node_id_type=identifier)
     echo.echo_info('Recursing ancestors, max depth={}'.format(ancestor_depth))
+
     graph.recurse_ancestors(
         root_node,
         depth=ancestor_depth,
         link_types=link_types,
         annotate_links='both',
         include_process_outputs=process_out,
+        highlight_classes=highlight_classes,
         print_func=print_func
     )
     echo.echo_info('Recursing descendants, max depth={}'.format(descendant_depth))
@@ -450,6 +467,7 @@ def graph_generate(
         link_types=link_types,
         annotate_links='both',
         include_process_inputs=process_in,
+        highlight_classes=highlight_classes,
         print_func=print_func
     )
     output_file_name = graph.graphviz.render(

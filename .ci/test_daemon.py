@@ -19,7 +19,7 @@ from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
-from aiida.plugins import CalculationFactory
+from aiida.plugins import CalculationFactory, WorkflowFactory
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
@@ -261,6 +261,23 @@ def create_calculation_process(code, inputval):
     return TemplatereplacerCalculation, inputs, expected_result
 
 
+def run_arithmetic_add():
+    """Run the `ArithmeticAddCalculation`."""
+    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+
+    code = load_code(CODENAME_ADD)
+    inputs = {
+        'x': Int(1),
+        'y': Int(2),
+        'code': code,
+    }
+
+    # Normal inputs should run just fine
+    results, node = run.get_node(ArithmeticAddCalculation, **inputs)
+    assert node.is_finished_ok, node.exit_status
+    assert results['sum'] == 3
+
+
 def run_base_restart_workchain():
     """Run the `AddArithmeticBaseWorkChain` a few times for various inputs."""
     code = load_code(CODENAME_ADD)
@@ -269,15 +286,6 @@ def run_base_restart_workchain():
             'x': Int(1),
             'y': Int(2),
             'code': code,
-            'settings': Dict(dict={'allow_negative': False}),
-            'metadata': {
-                'options': {
-                    'resources': {
-                        'num_machines': 1,
-                        'num_mpiprocs_per_machine': 1
-                    }
-                }
-            }
         }
     }
 
@@ -313,6 +321,26 @@ def run_base_restart_workchain():
     assert len(node.called) == 1
 
 
+def run_multiply_add_workchain():
+    """Run the `MultiplyAddWorkChain`."""
+    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+
+    code = load_code(CODENAME_ADD)
+    inputs = {
+        'x': Int(1),
+        'y': Int(2),
+        'z': Int(3),
+        'code': code,
+    }
+
+    # Normal inputs should run just fine
+    results, node = run.get_node(MultiplyAddWorkChain, **inputs)
+    assert node.is_finished_ok, node.exit_status
+    assert len(node.called) == 2
+    assert 'result' in results
+    assert results['result'].value == 5
+
+
 def main():
     """Launch a bunch of calculation jobs and workchains."""
     # pylint: disable=too-many-locals,too-many-statements
@@ -320,9 +348,17 @@ def main():
     expected_results_workchains = {}
     code_doubler = load_code(CODENAME_DOUBLER)
 
+    # Run the `ArithmeticAddCalculation`
+    print('Running the `ArithmeticAddCalculation`')
+    run_arithmetic_add()
+
     # Run the `AddArithmeticBaseWorkChain`
     print('Running the `AddArithmeticBaseWorkChain`')
     run_base_restart_workchain()
+
+    # Run the `MultiplyAddWorkChain`
+    print('Running the `MultiplyAddWorkChain`')
+    run_multiply_add_workchain()
 
     # Submitting the Calculations the new way directly through the launchers
     print('Submitting {} calculations to the daemon'.format(NUMBER_CALCULATIONS))

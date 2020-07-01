@@ -1,0 +1,117 @@
+/* Fix CSS of top bar link icons */
+a.nav-link.nav-external i {
+    padding-left: 0.3em !important;
+    font-size: inherit !important;
+    vertical-align: inherit !important;
+}
+/* Current fix for https://github.com/pandas-dev/pydata-sphinx-theme/issues/193 */
+dl.field-list {
+    display: grid;
+    grid-template-columns: fit-content(30%) minmax(0, 1fr);
+}
+/* For icon unicodes see https://fontawesome.com/v4.7.0/icons/  */
+.title-icon-rocket .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f135"
+}
+.title-icon-info-circle .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f05a"
+}
+.title-icon-question-circle .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f059"
+}
+.title-icon-download .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f019"
+}
+.title-icon-external-link .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f08e"
+}
+.title-icon-lightbulb .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f0eb"
+}
+.title-icon-wrench .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f0ad"
+}
+.title-icon-cog .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f013"
+}
+.title-icon-cogs .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f085"
+}
+.title-icon-code-fork .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f126"
+}
+/* Semantic icon names */
+.title-icon-launch-software .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f135" /* rocket */
+}
+.title-icon-install-software .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f019" /* download */
+}
+.title-icon-information .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f05a" /* info-circle */
+}
+.title-icon-tip .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f0eb" /* lightbulb */
+}
+.title-icon-important .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f06a" /* exclamation-circle */
+}
+.title-icon-warning .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f071" /* exclamation-triangle */
+}
+.title-icon-troubleshoot .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f0ad"  /* wrench */
+}
+.title-icon-read-more .admonition-title:before {
+    margin-right:.5rem;
+    content: "\f518"  /* external-link */
+}
+
+.dropdown-group .dropdown .summary-title {
+    border-bottom: 0 !important;
+    font-weight:700 !important;
+}
+.dropdown-group .dropdown:not(:last-child) {
+    margin-bottom: 0 !important;
+    border-radius: 0 !important;
+}
+.dropdown-group .dropdown:first-child,
+.dropdown-group .dropdown:first-child .summary-title {
+    border-radius: 1rem 1rem 0rem 0rem !important;
+}
+.dropdown-group .dropdown:last-child,
+.dropdown-group .dropdown:last-child .summary-title {
+    border-radius: 0rem 0rem 1rem 1rem !important;
+}
+
+.dropdown-group .dropdown:last-child {
+    margin-bottom: 24px !important;
+}
+
+div.admonition :last-child {
+    margin-bottom: 0
+}
+
+div.highlight-bash div.highlight {
+    background-color: aliceblue;
+}
+div.highlight-console div.highlight {
+    background-color: aliceblue;
+}

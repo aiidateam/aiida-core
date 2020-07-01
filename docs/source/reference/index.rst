@@ -1,57 +1,11 @@
-==========
-Provenance
-==========
-
-.. toctree::
-   :maxdepth: 4
-
-   ../concepts/provenance
-
-
-====
-Data
-====
-
-.. toctree::
-   :maxdepth: 4
-
-   ../working/data
-
 =========
-Processes
+Reference
 =========
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 1
 
-   ../concepts/processes
-   ../working/processes
-
-=================
-Process functions
-=================
-
-.. toctree::
-   :maxdepth: 4
-
-   ../working/functions
-
-============
-Calculations
-============
-
-.. toctree::
-   :maxdepth: 4
-
-   ../concepts/calculations
-   ../working/calculations
-
-=========
-Workflows
-=========
-
-.. toctree::
-   :maxdepth: 4
-
-   ../concepts/workflows
-   ../working/workflows
+   command_line
+   apidoc/aiida.rst
+   rest_api
+   backup_script

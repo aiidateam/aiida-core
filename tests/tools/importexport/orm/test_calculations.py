@@ -53,8 +53,8 @@ class TestCalculations(AiidaTestCase):
         # These are the uuids that shouldn't be exported since it's a selection.
         not_wanted_uuids = [v.uuid for v in (b, c, d)]
         # At this point we export the generated data
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([res], outfile=filename1, silent=True, return_backward=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([res], filename=filename1, silent=True, return_backward=True)
         self.clean_db()
         self.insert_data()
         import_data(filename1, silent=True)
@@ -90,8 +90,8 @@ class TestCalculations(AiidaTestCase):
         slave.seal()
 
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
-        filename1 = os.path.join(temp_dir, 'export1.tar.gz')
-        export([output_1], outfile=filename1, silent=True)
+        filename1 = os.path.join(temp_dir, 'export1.aiida')
+        export([output_1], filename=filename1, silent=True)
         self.clean_db()
         self.insert_data()
         import_data(filename1, silent=True)

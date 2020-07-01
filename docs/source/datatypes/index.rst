@@ -25,7 +25,7 @@ the methods provided, how to access them, and so on.
 
 If you need to work with some specific type of data, first check the list of data types/plugins
 below, and if you don't find what you need, give a look to
-:ref:`how to write a new data plugin <working_data_creating_new_types>`.
+:ref:`how to write a new data plugin <how-to:data:plugin:create>`.
 
 Base types
 ++++++++++
@@ -174,5 +174,3 @@ RemoteData
 * **What is stored in the database**: the path of the folder (and the remote computer
   as a `.computer` property, not as an attribute)
 * **What is stored in the file repository**: ---
-
-

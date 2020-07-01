@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for command line commands operating on the repository."""
-
 import click
 
 
@@ -17,13 +16,11 @@ def list_repository_contents(node, path, color):
 
     :param node: the node
     :param path: directory path
+    :raises FileNotFoundError: if the `path` does not exist in the repository of the given node
     """
     from aiida.orm.utils.repository import FileType
 
     for entry in node.list_objects(path):
         bold = bool(entry.type == FileType.DIRECTORY)
-
-        if color:
-            click.secho(entry.name, bold=bold, fg='blue')
-        else:
-            click.secho(entry.name, bold=bold)
+        fg = 'blue' if color and entry.type == FileType.DIRECTORY else None
+        click.secho(entry.name, bold=bold, fg=fg)

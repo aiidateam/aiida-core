@@ -149,7 +149,7 @@ class Collection(typing.Generic[EntityType]):
         :rtype: list
         """
         query = self.query(filters=filters, order_by=order_by, limit=limit)
-        return [_[0] for _ in query.all()]
+        return query.all(flat=True)
 
     def all(self):
         """
@@ -158,7 +158,7 @@ class Collection(typing.Generic[EntityType]):
         :return: A list of all entities
         :rtype: list
         """
-        return [_[0] for _ in self.query().all()]
+        return self.query().all(flat=True)  # pylint: disable=no-member
 
     def count(self, filters=None):
         """Count entities in this collection according to criteria

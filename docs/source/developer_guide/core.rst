@@ -11,7 +11,4 @@ Core development
     core/extend_restapi
     core/caching
     core/plugin_system
-    tools/sphinx_cheatsheet
-    tools/visual_aids
     design/changes
-

@@ -45,8 +45,8 @@ class TestLinks(AiidaTestCase):
         struct.store()
         struct_uuid = struct.uuid
 
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([struct], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([struct], filename=filename, file_format='tar.gz', silent=True)
 
         unpack = SandboxFolder()
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
@@ -93,8 +93,8 @@ class TestLinks(AiidaTestCase):
         node_work.seal()
 
         export_links = get_all_node_links()
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([node_output], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([node_output], filename=export_file, silent=True)
 
         self.reset_database()
 
@@ -264,8 +264,8 @@ class TestLinks(AiidaTestCase):
         )
         export_links = builder.all()
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export(graph_nodes, outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export(graph_nodes, filename=export_file, silent=True)
 
         self.reset_database()
 
@@ -285,8 +285,8 @@ class TestLinks(AiidaTestCase):
             _, (export_node, export_target) = self.construct_complex_graph(export_conf)
             export_target_uuids = set(_.uuid for _ in export_target)
 
-            export_file = os.path.join(temp_dir, 'export.tar.gz')
-            export([export_node], outfile=export_file, silent=True, overwrite=True)
+            export_file = os.path.join(temp_dir, 'export.aiida')
+            export([export_node], filename=export_file, silent=True, overwrite=True)
             export_node_str = str(export_node)
 
             self.reset_database()
@@ -350,8 +350,8 @@ class TestLinks(AiidaTestCase):
 
                 export_links = builder.all()
 
-                export_file = os.path.join(temp_dir, 'export.tar.gz')
-                export(graph_nodes, outfile=export_file, silent=True, overwrite=True)
+                export_file = os.path.join(temp_dir, 'export.aiida')
+                export(graph_nodes, filename=export_file, silent=True, overwrite=True)
 
                 self.reset_database()
 
@@ -377,7 +377,7 @@ class TestLinks(AiidaTestCase):
 
         for export_file, rule_changes, expected_nodes in test_data.values():
             traversal_rules.update(rule_changes)
-            export(nodes_to_export[0], outfile=export_file, silent=True, **traversal_rules)
+            export(nodes_to_export[0], filename=export_file, silent=True, **traversal_rules)
 
             for node_type in nodes_to_export[1]:
                 if node_type in expected_nodes:
@@ -597,8 +597,8 @@ class TestLinks(AiidaTestCase):
         uuids_wanted = set(_.uuid for _ in (work1, data_out, data_in, work2))
         links_wanted = get_all_node_links()
 
-        export_file = os.path.join(temp_dir, 'export.tar.gz')
-        export([data_out, work1, work2, data_in], outfile=export_file, silent=True)
+        export_file = os.path.join(temp_dir, 'export.aiida')
+        export([data_out, work1, work2, data_in], filename=export_file, silent=True)
 
         self.reset_database()
 
@@ -627,8 +627,8 @@ class TestLinks(AiidaTestCase):
         calc.seal()
         calc_uuid = calc.uuid
 
-        filename = os.path.join(temp_dir, 'export.tar.gz')
-        export([struct], outfile=filename, silent=True)
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([struct], filename=filename, file_format='tar.gz', silent=True)
 
         unpack = SandboxFolder()
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
@@ -693,8 +693,8 @@ class TestLinks(AiidaTestCase):
         data_provenance = os.path.join(temp_dir, 'data.aiida')
         all_provenance = os.path.join(temp_dir, 'all.aiida')
 
-        export([data], outfile=data_provenance, silent=True, return_backward=False)
-        export([data], outfile=all_provenance, silent=True, return_backward=True)
+        export([data], filename=data_provenance, silent=True, return_backward=False)
+        export([data], filename=all_provenance, silent=True, return_backward=True)
 
         self.reset_database()
 

@@ -340,21 +340,12 @@ class Group(entities.Entity, metaclass=GroupMeta):
         """
         from aiida.orm import QueryBuilder
 
-        filters = {}
         if 'type_string' in kwargs:
+            message = '`type_string` is deprecated because it is determined automatically'
+            warnings.warn(message)  # pylint: disable=no-member
             type_check(kwargs['type_string'], str)
 
-        query = QueryBuilder()
-        for key, val in kwargs.items():
-            filters[key] = val
-
-        query.append(cls, filters=filters)
-        results = query.all()
-        if len(results) > 1:
-            raise exceptions.MultipleObjectsError("Found {} groups matching criteria '{}'".format(len(results), kwargs))
-        if not results:
-            raise exceptions.NotExistent("No group found matching criteria '{}'".format(kwargs))
-        return results[0][0]
+        return QueryBuilder().append(cls, filters=kwargs).one()[0]
 
     def is_user_defined(self):
         """

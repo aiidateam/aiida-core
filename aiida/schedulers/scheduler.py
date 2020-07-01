@@ -8,18 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of `Scheduler` base class."""
-from abc import abstractmethod
+import abc
 
-import aiida.common
-from aiida.common.lang import classproperty
+from aiida.common import exceptions, log
 from aiida.common.escaping import escape_for_bash
-from aiida.common.exceptions import AiidaException, FeatureNotAvailable
-from aiida.schedulers.datastructures import JobTemplate
+from aiida.common.lang import classproperty
+from aiida.schedulers.datastructures import JobResource, JobTemplate
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
 
 
-class SchedulerError(AiidaException):
+class SchedulerError(exceptions.AiidaException):
     pass
 
 
@@ -27,12 +26,10 @@ class SchedulerParsingError(SchedulerError):
     pass
 
 
-class Scheduler:
-    """
-    Base class for all schedulers.
-    """
+class Scheduler(metaclass=abc.ABCMeta):
+    """Base class for a job scheduler."""
 
-    _logger = aiida.common.AIIDA_LOGGER.getChild('scheduler')
+    _logger = log.AIIDA_LOGGER.getChild('scheduler')
 
     # A list of features
     # Features that should be defined in the plugins:
@@ -44,27 +41,58 @@ class Scheduler:
     # The class to be used for the job resource.
     _job_resource_class = None
 
+    @classmethod
+    def preprocess_resources(cls, resources, default_mpiprocs_per_machine=None):
+        """Pre process the resources.
+
+        Add the `num_mpiprocs_per_machine` key to the `resources` if it is not already defined and it cannot be deduced
+        from the `num_machines` and `tot_num_mpiprocs` being defined. The value is also not added if the job resource
+        class of this scheduler does not accept the `num_mpiprocs_per_machine` keyword. Note that the changes are made
+        in place to the `resources` argument passed.
+        """
+        num_machines = resources.get('num_machines', None)
+        tot_num_mpiprocs = resources.get('tot_num_mpiprocs', None)
+        num_mpiprocs_per_machine = resources.get('num_mpiprocs_per_machine', None)
+
+        if (
+            num_mpiprocs_per_machine is None and cls.job_resource_class.accepts_default_mpiprocs_per_machine()  # pylint: disable=no-member
+            and (num_machines is None or tot_num_mpiprocs is None)
+        ):
+            resources['num_mpiprocs_per_machine'] = default_mpiprocs_per_machine
+
+    @classmethod
+    def validate_resources(cls, **resources):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param resources: keyword arguments to define the job resources
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        cls._job_resource_class.validate_resources(**resources)
+
     def __init__(self):
         self._transport = None
 
-    def set_transport(self, transport):
-        """
-        Set the transport to be used to query the machine or to submit scripts.
-        This class assumes that the transport is open and active.
-        """
-        self._transport = transport
+        if not issubclass(self._job_resource_class, JobResource):
+            raise RuntimeError('the class attribute `_job_resource_class` is not a subclass of `JobResource`.')
 
     @classmethod
     def get_valid_schedulers(cls):
-        from aiida.plugins.entry_point import get_entry_point_names
+        """Return all available scheduler plugins.
 
+        .. deprecated:: 1.3.0
+
+            Will be removed in `2.0.0`, use `aiida.plugins.entry_point.get_entry_point_names` instead
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning
+        from aiida.plugins.entry_point import get_entry_point_names
+        message = 'method is deprecated, use `aiida.plugins.entry_point.get_entry_point_names` instead'
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
         return get_entry_point_names('aiida.schedulers')
 
     @classmethod
     def get_short_doc(cls):
-        """
-        Return the first non-empty line of the class docstring, if available
-        """
+        """Return the first non-empty line of the class docstring, if available."""
         # Remove empty lines
         docstring = cls.__doc__
         if not docstring:
@@ -84,36 +112,26 @@ class Scheduler:
 
     @property
     def logger(self):
-        """
-        Return the internal logger.
-        """
+        """Return the internal logger."""
         try:
             return self._logger
         except AttributeError:
-            from aiida.common.exceptions import InternalError
-
-            raise InternalError('No self._logger configured for {}!')
+            raise exceptions.InternalError('No self._logger configured for {}!')
 
     @classproperty
-    def job_resource_class(self):
-        return self._job_resource_class
+    def job_resource_class(cls):  # pylint: disable=no-self-argument
+        return cls._job_resource_class
 
     @classmethod
     def create_job_resource(cls, **kwargs):
-        """
-        Create a suitable job resource from the kwargs specified
-        """
+        """Create a suitable job resource from the kwargs specified."""
         # pylint: disable=not-callable
-
-        if cls._job_resource_class is None:
-            raise NotImplementedError
-
         return cls._job_resource_class(**kwargs)
 
     def get_submit_script(self, job_tmpl):
-        """
-        Return the submit script as a string.
-        :parameter job_tmpl: a aiida.schedulers.datastrutures.JobTemplate object.
+        """Return the submit script as a string.
+
+        :parameter job_tmpl: a `aiida.schedulers.datastrutures.JobTemplate` instance.
 
         The plugin returns something like
 
@@ -125,11 +143,8 @@ class Scheduler:
         postpend_code
         postpend_computer
         """
-
-        from aiida.common.exceptions import InternalError
-
         if not isinstance(job_tmpl, JobTemplate):
-            raise InternalError('job_tmpl should be of type JobTemplate')
+            raise exceptions.InternalError('job_tmpl should be of type JobTemplate')
 
         empty_line = ''
 
@@ -167,55 +182,30 @@ class Scheduler:
 
         return '\n'.join(script_lines)
 
-    @abstractmethod
+    @abc.abstractmethod
     def _get_submit_script_header(self, job_tmpl):
-        """
-        Return the submit script header, using the parameters from the
-        job_tmpl.
+        """Return the submit script header, using the parameters from the job template.
 
-        :param job_tmpl: a JobTemplate instance with relevant parameters set.
+        :param job_tmpl: a `JobTemplate` instance with relevant parameters set.
         """
-        raise NotImplementedError
 
     def _get_submit_script_footer(self, job_tmpl):
-        """
-        Return the submit script final part, using the parameters from the
-        job_tmpl.
+        """Return the submit script final part, using the parameters from the job template.
 
-        :param job_tmpl: a JobTemplate instance with relevant parameters set.
+        :param job_tmpl: a `JobTemplate` instance with relevant parameters set.
         """
-        # pylint: disable=no-self-use, unused-argument
+        # pylint: disable=no-self-use,unused-argument
         return None
 
     def _get_run_line(self, codes_info, codes_run_mode):
-        """
-        Return a string with the line to execute a specific code with
-        specific arguments.
+        """Return a string with the line to execute a specific code with specific arguments.
 
-        :parameter codes_info: a list of aiida.common.datastructures.CodeInfo
-          objects. Each contains the information needed to run the code. I.e.
-          cmdline_params, stdin_name, stdout_name, stderr_name, join_files.
-          See the documentation of JobTemplate and CodeInfo
-        :parameter codes_run_mode: contains the information on how to launch the
-          multiple codes. As described in aiida.common.datastructures.CodeRunMode
-
-
-            argv: an array with the executable and the command line arguments.
-              The first argument is the executable. This should contain
-              everything, including the mpirun command etc.
-            stdin_name: the filename to be used as stdin, relative to the
-              working dir, or None if no stdin redirection is required.
-            stdout_name: the filename to be used to store the standard output,
-              relative to the working dir,
-              or None if no stdout redirection is required.
-            stderr_name: the filename to be used to store the standard error,
-              relative to the working dir,
-              or None if no stderr redirection is required.
-            join_files: if True, stderr is redirected to stdout; the value of
-              stderr_name is ignored.
-
-        Return a string with the following format:
-        [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
+        :parameter codes_info: a list of `aiida.common.datastructures.CodeInfo` objects. Each contains the information
+            needed to run the code. I.e. `cmdline_params`, `stdin_name`, `stdout_name`, `stderr_name`, `join_files`. See
+            the documentation of `JobTemplate` and `CodeInfo`.
+        :parameter codes_run_mode: instance of `aiida.common.datastructures.CodeRunMode` contains the information on how
+            to launch the multiple codes.
+        :return: string with format: [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
         from aiida.common.datastructures import CodeRunMode
 
@@ -251,40 +241,30 @@ class Scheduler:
 
         raise NotImplementedError('Unrecognized code run mode')
 
-    @abstractmethod
+    @abc.abstractmethod
     def _get_joblist_command(self, jobs=None, user=None):
+        """Return the command to get the most complete description possible of currently active jobs.
+
+        .. note::
+
+            Typically one can pass only either jobs or user, depending on the specific plugin. The choice can be done
+            according to the value returned by `self.get_feature('can_query_by_user')`
+
+        :param jobs: either None to get a list of all jobs in the machine, or a list of jobs.
+        :param user: either None, or a string with the username (to show only jobs of the specific user).
         """
-        Return the qstat (or equivalent) command to run with the required
-        command-line parameters to get the most complete description possible;
-        also specifies the output format of qsub to be the one to be used
-        by the parse_queue_output method.
-
-        Must be implemented in the plugin.
-
-        :param jobs: either None to get a list of all jobs in the machine,
-               or a list of jobs.
-        :param user: either None, or a string with the username (to show only
-                     jobs of the specific user).
-
-        Note: typically one can pass only either jobs or user, depending on the
-            specific plugin. The choice can be done according to the value
-            returned by self.get_feature('can_query_by_user')
-        """
-        raise NotImplementedError
 
     def _get_detailed_job_info_command(self, job_id):
-        """
-        Return the command to run to get the detailed information on a job.
-        This is typically called after the job has finished, to retrieve
-        the most detailed information possible about the job. This is done
-        because most schedulers just make finished jobs disappear from the
-        'qstat' command, and instead sometimes it is useful to know some
-        more detailed information about the job exit status, etc.
+        """Return the command to run to get detailed information for a given job.
+
+        This is typically called after the job has finished, to retrieve the most detailed information possible about
+        the job. This is done because most schedulers just make finished jobs disappear from the `qstat` command, and
+        instead sometimes it is useful to know some more detailed information about the job exit status, etc.
 
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
         # pylint: disable=no-self-use,not-callable,unused-argument
-        raise FeatureNotAvailable('Cannot get detailed job info')
+        raise exceptions.FeatureNotAvailable('Cannot get detailed job info')
 
     def get_detailed_job_info(self, job_id):
         """Return the detailed job info.
@@ -327,7 +307,7 @@ class Scheduler:
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
 
-        return u"""Detailed jobinfo obtained with command '{}'
+        return """Detailed jobinfo obtained with command '{}'
 Return Code: {}
 -------------------------------------------------------------
 stdout:
@@ -336,33 +316,23 @@ stderr:
 {}
 """.format(command, retval, stdout, stderr)
 
-    @abstractmethod
+    @abc.abstractmethod
     def _parse_joblist_output(self, retval, stdout, stderr):
-        """
-        Parse the joblist output ('qstat'), as returned by executing the
-        command returned by _get_joblist_command method.
+        """Parse the joblist output as returned by executing the command returned by `_get_joblist_command` method.
 
-        To be implemented by the plugin.
-
-        Return a list of JobInfo objects, one of each job,
-        each with at least its default params implemented.
+        :return: list of `JobInfo` objects, one of each job each with at least its default params implemented.
         """
-        raise NotImplementedError
 
     def get_jobs(self, jobs=None, user=None, as_dict=False):
-        """
-        Get the list of jobs and return it.
+        """Return the list of currently active jobs.
 
-        Typically, this function does not need to be modified by the plugins.
+        .. note:: typically, only either jobs or user can be specified. See also comments in `_get_joblist_command`.
 
         :param list jobs: a list of jobs to check; only these are checked
         :param str user: a string with a user: only jobs of this user are checked
-        :param list as_dict: if False (default), a list of JobInfo objects is
-             returned. If True, a dictionary is returned, having as key the
-             job_id and as value the JobInfo object.
-
-        Note: typically, only either jobs or user can be specified. See also
-        comments in _get_joblist_command.
+        :param list as_dict: if False (default), a list of JobInfo objects is returned. If True, a dictionary is
+            returned, having as key the job_id and as value the JobInfo object.
+        :return: list of active jobs
         """
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
@@ -378,85 +348,66 @@ stderr:
 
     @property
     def transport(self):
-        """
-        Return the transport set for this scheduler.
-        """
+        """Return the transport set for this scheduler."""
         if self._transport is None:
             raise SchedulerError('Use the set_transport function to set the transport for the scheduler first.')
 
         return self._transport
 
-    @abstractmethod
-    def _get_submit_command(self, submit_script):
+    def set_transport(self, transport):
+        """Set the transport to be used to query the machine or to submit scripts.
+
+        This class assumes that the transport is open and active.
         """
-        Return the string to execute to submit a given script.
+        self._transport = transport
 
-        To be implemented by the plugin.
+    @abc.abstractmethod
+    def _get_submit_command(self, submit_script):
+        """Return the string to execute to submit a given script.
 
-        :param str submit_script: the path of the submit script relative to the
-            working directory.
-            IMPORTANT: submit_script should be already escaped.
+        .. warning:: the `submit_script` should already have been bash-escaped
+
+        :param submit_script: the path of the submit script relative to the working directory.
         :return: the string to execute to submit a given script.
         """
-        raise NotImplementedError
 
-    @abstractmethod
+    @abc.abstractmethod
     def _parse_submit_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the submit command, as returned by executing the
-        command returned by _get_submit_command command.
+        """Parse the output of the submit command returned by calling the `_get_submit_command` command.
 
-        To be implemented by the plugin.
-
-        :return: a string with the JobID.
+        :return: a string with the job ID.
         """
-        raise NotImplementedError
 
     def submit_from_script(self, working_directory, submit_script):
+        """Submit the submission script to the scheduler.
+
+        :return: return a string with the job ID in a valid format to be used for querying.
         """
-        Goes in the working directory and submits the submit_script.
-
-        Return a string with the JobID in a valid format to be used for
-        querying.
-
-        Typically, this function does not need to be modified by the plugins.
-        """
-
         self.transport.chdir(working_directory)
-        retval, stdout, stderr = self.transport.exec_command_wait(
-            self._get_submit_command(escape_for_bash(submit_script))
-        )
-        return self._parse_submit_output(retval, stdout, stderr)
+        result = self.transport.exec_command_wait(self._get_submit_command(escape_for_bash(submit_script)))
+        return self._parse_submit_output(*result)
 
     def kill(self, jobid):
-        """
-        Kill a remote job, and try to parse the output message of the scheduler
-        to check if the scheduler accepted the command.
+        """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
 
-        ..note:: On some schedulers, even if the command is accepted, it may
-        take some seconds for the job to actually disappear from the queue.
+        ..note::
 
-        :param str jobid: the job id to be killed
+            On some schedulers, even if the command is accepted, it may take some seconds for the job to actually
+            disappear from the queue.
 
+        :param jobid: the job ID to be killed
         :return: True if everything seems ok, False otherwise.
         """
         retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
         return self._parse_kill_output(retval, stdout, stderr)
 
+    @abc.abstractmethod
     def _get_kill_command(self, jobid):
-        """
-        Return the command to kill the job with specified jobid.
+        """Return the command to kill the job with specified jobid."""
 
-        To be implemented by the plugin.
-        """
-        raise NotImplementedError
-
+    @abc.abstractmethod
     def _parse_kill_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the kill command.
-
-        To be implemented by the plugin.
+        """Parse the output of the kill command.
 
         :return: True if everything seems ok, False otherwise.
         """
-        raise NotImplementedError

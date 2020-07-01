@@ -15,12 +15,11 @@ from flask_restful import Resource
 
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
-from aiida.restapi.common.utils import Utils
+from aiida.restapi.common.utils import Utils, close_session
 
 
 class ServerInfo(Resource):
-    # pylint: disable=fixme
-    """Endpointd to return general server info"""
+    """Endpoint to return general server info"""
 
     def __init__(self, **kwargs):
         # Configure utils
@@ -33,8 +32,7 @@ class ServerInfo(Resource):
         It returns the general info about the REST API
         :return: returns current AiiDA version defined in aiida/__init__.py
         """
-
-        ## Decode url parts
+        # Decode url parts
         path = unquote(request.path)
         url = unquote(request.url)
         url_root = unquote(request.url_root)
@@ -97,6 +95,8 @@ class BaseResource(Resource):
     _translator_class = BaseTranslator
     _parse_pk_uuid = None  # Flag to tell the path parser whether to expect a pk or a uuid pattern
 
+    method_decorators = [close_session]  # Close SQLA session after any method call
+
     ## TODO add the caching support. I cache total count, results, and possibly
 
     def __init__(self, **kwargs):
@@ -106,11 +106,13 @@ class BaseResource(Resource):
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
         self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in kwargs}
         self.utils = Utils(**self.utils_confs)
-        self.method_decorators = {'get': kwargs.get('get_decorators', [])}
+
+        # HTTP Request method decorators
+        if 'get_decorators' in kwargs and isinstance(kwargs['get_decorators'], (tuple, list, set)):
+            self.method_decorators = {'get': list(kwargs['get_decorators'])}
 
     @classproperty
-    def parse_pk_uuid(cls):
-        # pylint: disable=no-self-argument
+    def parse_pk_uuid(cls):  # pylint: disable=no-self-argument
         return cls._parse_pk_uuid
 
     def _load_and_verify(self, node_id=None):
@@ -118,7 +120,7 @@ class BaseResource(Resource):
         from aiida.orm import load_node
         node = load_node(node_id)
 
-        if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access
+        if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access,isinstance-second-argument-not-valid-type
             raise RestInputValidationError(
                 'node {} is not of the required type {}'.format(node_id, self.trans._aiida_class)  # pylint: disable=protected-access
             )
@@ -211,17 +213,6 @@ class Node(BaseResource):
 
     _translator_class = NodeTranslator
     _parse_pk_uuid = 'uuid'  # Parse a uuid pattern in the URL path (not a pk)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        from aiida.orm import Node as tNode
-        self.tclass = tNode
-
-        # Configure utils
-        utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
-        self.utils_confs = {k: kwargs[k] for k in utils_conf_keys if k in kwargs}
-        self.utils = Utils(**self.utils_confs)
-        self.method_decorators = {'get': kwargs.get('get_decorators', [])}
 
     def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches,fixme,unused-variable

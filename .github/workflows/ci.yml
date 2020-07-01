@@ -4,37 +4,6 @@ on: [push, pull_request]
 
 jobs:
 
-  docs:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-
-    - name: Install system dependencies
-      # remove occasionally problematic repositories we don't use anyway
-      run: |
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
-        sudo apt update
-        sudo apt install texlive-base texlive-generic-recommended texlive-fonts-recommended texlive-latex-base texlive-latex-recommended texlive-latex-extra dvipng dvidvi
-
-    - name: Install python dependencies
-      run: |
-        pip install numpy==1.17.4
-        pip install -e .[docs,testing]
-
-    - name: Build documentation
-      env:
-        READTHEDOCS: 'True'
-      run:
-        SPHINXOPTS='-nW' make -C docs html
-
   pre-commit:
 
     runs-on: ubuntu-latest
@@ -81,25 +50,22 @@ jobs:
       run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
 
     - name: Check requirements files
+      id: check_reqs
       run: python ./utils/dependency_management.py check-requirements DEFAULT
 
     - name: Create commit comment
-      if: failure()
+      if: failure() && steps.check_reqs.outputs.error
       uses: peter-evans/commit-comment@v1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         path: setup.json
         body: |
-          It appears that at least one of the environments defined in the requirements files
-          ('requirements/*.txt') is not meeting the dependencies specified in the 'setup.json' file.
-          These files define the environment for continuous integration tests, so it is important that they are updated.
+          ${{ steps.check_reqs.outputs.error }}
 
-          If this commit is part of a pull request, you can automatically update the requirements by
-          commenting with '/update-requirements'.
-
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information on dependency management.
 
   tests:
+
+    needs: [check-requirements]
 
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -150,7 +116,7 @@ jobs:
 
     - name: upgrade setuptools [py35]
       if: matrix.python-version == 3.5
-      run: pip install -I setuptools==38.2.0  # Minimally required version for Python 3.5.
+      run: pip install -I setuptools==42.0.0  # Minimally required version for Python 3.5.
 
     - name: Install aiida-core
       run: |

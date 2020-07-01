@@ -114,7 +114,7 @@ def get_regex_pattern_from_sql(sql_pattern):
                 # Instead, for the first part, we know that we found the FIRST occurrence of tokens_to_apply[0]
                 # so I pass the list without the first element
                 return tokenizer(first, tokens_to_apply=tokens_to_apply[1:]
-                                ) + dict(SQL_TO_REGEX_TOKENS)[sep] + tokenizer(rest, tokens_to_apply=tokens_to_apply)
+                                 ) + dict(SQL_TO_REGEX_TOKENS)[sep] + tokenizer(rest, tokens_to_apply=tokens_to_apply)
             # Here sep is empty: it means also rest is empty, and we just
             # return (recursively) the tokenizer on the first part, avoiding
             # infinite loops

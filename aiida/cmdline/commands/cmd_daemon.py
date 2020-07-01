@@ -71,7 +71,7 @@ def start(foreground, number):
         subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
         click.secho('FAILED', fg='red', bold=True)
-        echo.echo_critical(exception.output)
+        echo.echo_critical(str(exception))
 
     # We add a small timeout to give the pid-file a chance to be created
     with spinner():
@@ -214,7 +214,12 @@ def restart(ctx, reset, no_wait):
 
     if reset:
         ctx.invoke(stop)
-        ctx.invoke(start)
+        # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
+        # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
+        # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
+        # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
+        number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
+        ctx.invoke(start, number=number)
     else:
 
         if wait:

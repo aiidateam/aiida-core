@@ -9,13 +9,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
-
+import os
 import sys
 import re
 import json
 import subprocess
 from pathlib import Path
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from pkg_resources import Requirement, parse_requirements
 from packaging.utils import canonicalize_name
 
@@ -31,6 +31,8 @@ SETUPTOOLS_CONDA_MAPPINGS = {
 }
 
 CONDA_IGNORE = ['pyblake2', r'.*python_version == \"3\.5\"']
+
+GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS') == 'true'
 
 
 class DependencySpecificationError(click.ClickException):
@@ -76,6 +78,26 @@ def _setuptools_to_conda(req):
 
     # We need to parse the modified required again, to ensure consistency.
     return Requirement.parse(str(req))
+
+
+def _find_linenos_of_requirements_in_setup_json(requirements):
+    """Determine the line numbers of requirements specified in 'setup.json'.
+
+    Returns a dict that maps a requirement, e.g., `numpy~=1.15.0` to the
+    line numbers at which said requirement is defined within the 'setup.json'
+    file.
+    """
+    linenos = defaultdict(list)
+
+    with open(ROOT / 'setup.json') as setup_json_file:
+        lines = list(setup_json_file)
+
+    # Determine the lines that correspond to affected requirements in setup.json.
+    for requirement in requirements:
+        for lineno, line in enumerate(lines):
+            if str(requirement) in line:
+                linenos[requirement].append(lineno)
+    return linenos
 
 
 class _Entry:
@@ -138,21 +160,6 @@ def generate_environment_yml():
         )
 
 
-@cli.command('generate-rtd-reqs')
-def generate_requirements_for_rtd():
-    """Generate 'docs/requirements_for_rtd.txt' file."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
-
-    # pylint: disable=bad-continuation
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as reqs_file:
-        reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
-
-
 @cli.command()
 def generate_pyproject_toml():
     """Generate 'pyproject.toml' file."""
@@ -170,7 +177,8 @@ def generate_pyproject_toml():
 
     pyproject = {
         'build-system': {
-            'requires': ['setuptools>=40.8.0', 'wheel', str(reentry_requirement)],
+            'requires': ['setuptools>=40.8.0', 'wheel',
+                         str(reentry_requirement), 'fastentrypoints~=0.12'],
             'build-backend': 'setuptools.build_meta:__legacy__',
         }
     }
@@ -183,7 +191,6 @@ def generate_pyproject_toml():
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(generate_requirements_for_rtd)
     ctx.invoke(generate_pyproject_toml)
 
 
@@ -259,25 +266,6 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     click.secho('Conda dependency specification is consistent.', fg='green')
 
 
-@cli.command('validate-rtd-reqs', help="Validate 'docs/requirements_for_rtd.txt'.")
-def validate_requirements_for_rtd():
-    """Validate that 'docs/requirements_for_rtd.txt' is consistent with 'setup.json'."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
-
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
-        reqs = {Requirement.parse(r) for r in reqs_file}
-
-    if reqs != install_requirements:
-        raise DependencySpecificationError("The requirements for RTD are inconsistent with 'setup.json'.")
-
-    click.secho('RTD requirements specification is consistent.', fg='green')
-
-
 @cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
 def validate_pyproject_toml():
     """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
@@ -321,29 +309,35 @@ def validate_all(ctx):
     - setup.json
     - environment.yml
     - pyproject.toml
-    - docs/requirements_for_rtd.txt
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_requirements_for_rtd)
     ctx.invoke(validate_pyproject_toml)
 
 
 @cli.command()
 @click.argument('extras', nargs=-1)
-def check_requirements(extras):
+@click.option(
+    '--github-annotate/--no-github-annotate',
+    default=True,
+    hidden=True,
+    help='Control whether to annotate files with context-specific warnings '
+    'as part of a GitHub actions workflow. Note: Requires environment '
+    'variable GITHUB_ACTIONS=true .'
+)
+def check_requirements(extras, github_annotate):  # pylint disable: too-many-locals-too-many-branches
     """Check the 'requirements/*.txt' files.
 
     Checks that the environments specified in the requirements files
     match all the dependencies specified in 'setup.json.
 
     The arguments allow to specify which 'extra' requirements to expect.
-    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'testing'.
+    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'tests'.
 
     """
 
     if len(extras) == 1 and extras[0] == 'DEFAULT':
-        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'testing']
+        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()
@@ -352,20 +346,47 @@ def check_requirements(extras):
         install_requires.extend(setup_cfg['extras_require'][extra])
     install_requires = set(parse_requirements(install_requires))
 
+    not_installed = defaultdict(list)
     for fn_req in (ROOT / 'requirements').iterdir():
-        env = {'python_version': re.match(r'.*-py-(.*)\.txt', str(fn_req)).groups()[0]}
+        match = re.match(r'.*-py-(.*)\.txt', str(fn_req))
+        if not match:
+            continue
+        env = {'python_version': match.groups()[0]}
         required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
 
         with open(fn_req) as req_file:
             working_set = list(_parse_working_set(req_file))
             installed = {req for req in required for entry in working_set if entry.fulfills(req)}
 
-        not_installed = required.difference(installed)
-        if not_installed:  # switch to assignment expression after yapf supports 3.8
-            raise DependencySpecificationError(
-                f"Environment specified in '{fn_req.relative_to(ROOT)}' misses matches for:\n" +
-                '\n'.join(' - ' + str(f) for f in not_installed)
-            )
+        for dependency in required.difference(installed):
+            not_installed[dependency].append(fn_req)
+
+    if any(not_installed.values()):
+        setup_json_linenos = _find_linenos_of_requirements_in_setup_json(not_installed)
+
+        # Format error message to be presented to user.
+        error_msg = ["The requirements/ files are missing dependencies specified in the 'setup.json' file.", '']
+        for dependency, fn_reqs in not_installed.items():
+            src = 'setup.json:' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
+            error_msg.append(f'{src}: No match for dependency `{dependency}` in:')
+            for fn_req in sorted(fn_reqs):
+                error_msg.append(f' - {fn_req.relative_to(ROOT)}')
+
+        if GITHUB_ACTIONS:
+            # Set the step ouput error message which can be used, e.g., for display as part of an issue comment.
+            print('::set-output name=error::' + '%0A'.join(error_msg))
+
+        if GITHUB_ACTIONS and github_annotate:
+            # Annotate the setup.json file with specific warnings.
+            for dependency, fn_reqs in not_installed.items():
+                for lineno in setup_json_linenos[dependency]:
+                    print(
+                        f'::warning file=setup.json,line={lineno+1}::'
+                        f"No match for dependency '{dependency}' in: " +
+                        ','.join(str(fn_req.relative_to(ROOT)) for fn_req in fn_reqs)
+                    )
+
+        raise DependencySpecificationError('\n'.join(error_msg))
 
     click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
 

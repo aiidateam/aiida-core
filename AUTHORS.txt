@@ -7,6 +7,7 @@ including both the members of the AiiDA team at EPFL and external contributors.
 
 * Carl S. Adorf
 * Casper W. Andersen
+* Marnik Bercx
 * Sebastiaan P. Huber
 * Leonid Kahle
 * Snehal Kumbhar
@@ -14,6 +15,7 @@ including both the members of the AiiDA team at EPFL and external contributors.
 * Elsa Passaro
 * Giovanni Pizzi
 * Francisco F. Ramirez
+* Chris Sewell
 * Leopold Talirz
 * Aliaksandr Yakutovich
 
@@ -36,7 +38,7 @@ including both the members of the AiiDA team at EPFL and external contributors.
 We would like to thank
 
 * Dominik Gresch: for the caching mechanism and contributions to the workflow engine
-* Tiziano Müller: for the first implementation of the plugin system and making the code python 3 compatible
+* Tiziano Müller: for the first implementation of the plugin system and making the code Python 3 compatible
 
 and the following people for code contributions, bug fixes, improvements of the documentation and useful suggestions:
 
@@ -65,7 +67,6 @@ and the following people for code contributions, bug fixes, improvements of the 
 * Philipp Rüßmann
 * Philippe Schwaller
 * Ole Schütt
-* Chris Sewell
 * Andreas Stamminger
 * Atsushi Togo
 * Daniele Tomerini

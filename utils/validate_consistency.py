@@ -62,8 +62,8 @@ def dump_setup_json(data):
     :param data: the dictionary to write to the `setup.json`
     """
     with open(FILEPATH_SETUP_JSON, 'w') as handle:
-        # Write with indentation of two spaces and explicitly define separators to not have spaces at end of lines
-        return json.dump(data, handle, indent=2, separators=(',', ': '))
+        # Write with indentation of four spaces and explicitly define separators to not have spaces at end of lines
+        return json.dump(data, handle, indent=4, separators=(',', ': '))
 
 
 def determine_block_positions(lines, block_start_marker, block_end_marker):
@@ -148,26 +148,9 @@ def validate_verdi_documentation():
     command = verdi.get_command(ctx, 'data')
     command.set_exclude_external_plugins(True)
 
-    # Replacing the block with the overview of `verdi`
-    filepath_verdi_overview = os.path.join(ROOT_DIR, 'docs', 'source', 'working_with_aiida', 'index.rst')
-    overview_block_start_marker = '.. _verdi_overview:'
-    overview_block_end_marker = '.. END_OF_VERDI_OVERVIEW_MARKER'
-
-    # Generate the new block with the command index
-    block = []
-    for name, command in sorted(verdi.commands.items()):
-        short_help = command.help.split('\n')[0]
-        block.append('* :ref:`{name:}<verdi_{name:}>`:  {help:}\n'.format(name=name, help=short_help))
-
-    # New block should start and end with an empty line after and before the literal block marker
-    block.insert(0, '\n')
-    block.append('\n')
-
-    replace_block_in_file(filepath_verdi_overview, overview_block_start_marker, overview_block_end_marker, block)
-
     # Replacing the block with the commands of `verdi`
-    filepath_verdi_commands = os.path.join(ROOT_DIR, 'docs', 'source', 'verdi', 'verdi_user_guide.rst')
-    commands_block_start_marker = '.. _verdi_commands:'
+    filepath_verdi_commands = os.path.join(ROOT_DIR, 'docs', 'source', 'reference', 'command_line.rst')
+    commands_block_start_marker = '.. _reference:command-line:verdi:'
     commands_block_end_marker = '.. END_OF_VERDI_COMMANDS_MARKER'
 
     # Generate the new block with the command help strings
@@ -178,7 +161,7 @@ def validate_verdi_documentation():
     for name, command in sorted(verdi.commands.items()):
         ctx = click.Context(command)
 
-        header_label = '.. _verdi_{name:}:'.format(name=name)
+        header_label = '.. _reference:command-line:verdi-{name:}:'.format(name=name)
         header_string = '``verdi {name:}``'.format(name=name)
         header_underline = '-' * len(header_string)
 

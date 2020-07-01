@@ -36,8 +36,6 @@ class IcsdDbImporter(DbImporter):
     """
     Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
-    See the :ref:`DbImporter documentation and
-    tutorial page <ICSD_importer_guide>` for more information.
 
     :param server: Server URL, the web page of the database. It is
         required in order to have access to the full database.
@@ -722,4 +720,3 @@ def correct_cif(cif):
             else:
                 lines[author_index + inc] = "'" + lines[author_index + inc] + "'"
                 inc = inc + 1
-

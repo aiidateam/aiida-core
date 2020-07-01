@@ -56,7 +56,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
     # pylint: disable=too-many-public-methods
 
     class Collection(EntityCollection):
-        """The collection of AuthInfo entries."""
+        """The collection of nodes."""
 
         def delete(self, node_id):
             """Delete a `Node` from the collection with the given id
@@ -68,8 +68,15 @@ class Node(Entity, metaclass=AbstractNodeMeta):
             if not node.is_stored:
                 return
 
+            if node.get_incoming().all():
+                raise exceptions.InvalidOperation(
+                    'cannot delete Node<{}> because it has incoming links'.format(node.pk)
+                )
+
             if node.get_outgoing().all():
-                raise exceptions.InvalidOperation('cannot delete Node<{}> because it has output links'.format(node.pk))
+                raise exceptions.InvalidOperation(
+                    'cannot delete Node<{}> because it has outgoing links'.format(node.pk)
+                )
 
             repository = node._repository  # pylint: disable=protected-access
             self._backend.nodes.delete(node_id)
@@ -628,6 +635,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
 
         :param key: fully qualified identifier for the object within the repository
         :return: a list of `File` named tuples representing the objects present in directory with the given key
+        :raises FileNotFoundError: if the `path` does not exist in the repository of this node
         """
         return self._repository.list_objects(key)
 
@@ -798,7 +806,7 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         """Validate adding a link of the given type from a given node to ourself.
 
         This function will first validate the types of the inputs, followed by the node and link types and validate
-        whether in principle a link of that type between the nodes of these types is allowed.the
+        whether in principle a link of that type between the nodes of these types is allowed.
 
         Subsequently, the validity of the "degree" of the proposed link is validated, which means validating the
         number of links of the given type from the given node type is allowed.

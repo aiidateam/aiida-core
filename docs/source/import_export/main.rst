@@ -15,7 +15,7 @@ See ``verdi export create -h`` for a full list of available options.
   It is often convenient to first put the nodes you would like to export into a :py:class:`~aiida.orm.Group` and then to export the group using ``verdi export create -G <group-name>``.
 * **Augmentation:** By default, the export function automatically augments your selection of nodes by their provenance (and calculations by their direct outputs).
   You can customize this behavior using command line options.
-  For details on how the provenance graph is traversed, see the section on :ref:`data consistency<consistency>`.
+  For details on how the provenance graph is traversed, see the section on :ref:`data consistency<topics:provenance:consistency>`.
 * **File content:** The export file contains all information pertaining to the exported nodes: both the information stored in the database and files stored in the AiiDA repository.
 * **Compression:** By default, the export file is a compressed ``zip`` archive.
   Use the command line options to disable compression or to switch to a different format (gzipped tar ball or uncompressed zip).

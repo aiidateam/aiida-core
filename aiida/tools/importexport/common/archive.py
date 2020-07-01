@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-branches
 """Utility functions and classes to interact with AiiDA export archives."""
 
 import os
@@ -19,8 +20,10 @@ from wrapt import decorator
 from aiida.common import json
 from aiida.common.exceptions import ContentNotExistent, InvalidOperation
 from aiida.common.folders import SandboxFolder
+
 from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
+from aiida.tools.importexport.common.progress_bar import get_progress_bar, close_progress_bar
 
 __all__ = ('Archive', 'extract_zip', 'extract_tar', 'extract_tree')
 
@@ -40,8 +43,9 @@ class Archive:
     FILENAME_DATA = 'data.json'
     FILENAME_METADATA = 'metadata.json'
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, silent=True):
         self._filepath = filepath
+        self._silent = silent
         self._folder = None
         self._unpacked = False
         self._data = None
@@ -79,9 +83,9 @@ class Archive:
         if os.path.isdir(self.filepath):
             extract_tree(self.filepath, self.folder)
         elif tarfile.is_tarfile(self.filepath):
-            extract_tar(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            extract_tar(self.filepath, self.folder, silent=self._silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         elif zipfile.is_zipfile(self.filepath):
-            extract_zip(self.filepath, self.folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            extract_zip(self.filepath, self.folder, silent=self._silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
         else:
             raise CorruptArchive('unrecognized archive format')
 
@@ -218,9 +222,70 @@ class Archive:
             return json.load(fhandle)
 
 
-def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
+def update_description(path, refresh: bool = False):
+    """Update description for a progress bar given path
+
+    :param path: path of file or directory
+    :type path: str
+    :param refresh: Whether or not to refresh the progress bar with the new description. Default: False.
+    :type refresh: bool
     """
-    Extract the nodes to be imported from a zip file.
+    (path, description) = os.path.split(path)
+    while description == '':
+        (path, description) = os.path.split(path)
+    description = 'EXTRACTING: {}'.format(description)
+
+    progress_bar = get_progress_bar()
+    progress_bar.set_description_str(description, refresh=refresh)
+
+
+def get_file_iterator(file_handle, folderpath, silent=True, **kwargs):  # pylint: disable=unused-argument
+    """Go through JSON files and then return new file_iterator
+
+    :param file_handle: A file handle returned from `with open() as file_handle:`.
+    :type file_handle: `tarfile.TarFile`, `zipfile.ZipFile`
+
+    :param folderpath: Path to folder.
+    :type folderpath: str
+
+    :param silent: suppress progress bar.
+    :type silent: bool
+
+    :return: List of filenames in the archive, wrapped in the `tqdm` progress bar.
+    :rtype: `tqdm.tqdm`
+    """
+    json_files = {'metadata.json', 'data.json'}
+
+    if isinstance(file_handle, tarfile.TarFile):
+        file_format = 'tar'
+    elif isinstance(file_handle, zipfile.ZipFile):
+        file_format = 'zip'
+    else:
+        raise TypeError('Can only handle Tar or Zip files.')
+
+    close_progress_bar(leave=False)
+    file_iterator = get_progress_bar(iterable=json_files, leave=False, disable=silent)
+
+    for json_file in file_iterator:
+        update_description(json_file, file_iterator)
+
+        try:
+            if file_format == 'tar':
+                file_handle.extract(path=folderpath, member=file_handle.getmember(json_file))
+            else:
+                file_handle.extract(path=folderpath, member=json_file)
+        except KeyError:
+            raise CorruptArchive('required file `{}` is not included'.format(json_file))
+
+    close_progress_bar(leave=False)
+    if file_format == 'tar':
+        return get_progress_bar(iterable=file_handle.getmembers(), unit='files', leave=False, disable=silent)
+    # zip
+    return get_progress_bar(iterable=file_handle.namelist(), unit='files', leave=False, disable=silent)
+
+
+def extract_zip(infile, folder, nodes_export_subfolder=None, **kwargs):
+    """Extract the nodes to be imported from a zip file.
 
     :param infile: file path
     :type infile: str
@@ -231,7 +296,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :type nodes_export_subfolder: str
 
-    :param silent: suppress debug print
+    :param silent: suppress progress bar
     :type silent: bool
 
     :raises TypeError: if parameter types are not respected
@@ -239,9 +304,6 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
         incorrect formats
     """
     # pylint: disable=fixme
-    if not silent:
-        print('READING DATA AND METADATA...')
-
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
             raise TypeError('nodes_export_subfolder must be a string')
@@ -252,33 +314,26 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, silent=False):
         with zipfile.ZipFile(infile, 'r', allowZip64=True) as handle:
 
             if not handle.namelist():
-                raise CorruptArchive('no files detected')
+                raise CorruptArchive('no files detected in archive')
 
-            try:
-                handle.extract(path=folder.abspath, member='metadata.json')
-            except KeyError:
-                raise CorruptArchive('required file `metadata.json` is not included')
+            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, **kwargs)
 
-            try:
-                handle.extract(path=folder.abspath, member='data.json')
-            except KeyError:
-                raise CorruptArchive('required file `data.json` is not included')
-
-            if not silent:
-                print('EXTRACTING NODE DATA...')
-
-            for membername in handle.namelist():
+            for membername in file_iterator:
                 # Check that we are only exporting nodes within the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
                 if not membername.startswith(nodes_export_subfolder + os.sep):
                     continue
+
+                update_description(membername, file_iterator)
+
                 handle.extract(path=folder.abspath, member=membername)
     except zipfile.BadZipfile:
         raise ValueError('The input file format for import is not valid (not a zip file)')
+    close_progress_bar(leave=False)
 
 
-def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
+def extract_tar(infile, folder, nodes_export_subfolder=None, **kwargs):
     """
     Extract the nodes to be imported from a (possibly zipped) tar file.
 
@@ -291,7 +346,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     :param nodes_export_subfolder: name of the subfolder for AiiDA nodes
     :type nodes_export_subfolder: str
 
-    :param silent: suppress debug print
+    :param silent: suppress progress bar
     :type silent: bool
 
     :raises TypeError: if parameter types are not respected
@@ -299,9 +354,6 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
         incorrect formats
     """
     # pylint: disable=fixme
-    if not silent:
-        print('READING DATA AND METADATA...')
-
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
             raise TypeError('nodes_export_subfolder must be a string')
@@ -311,20 +363,12 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
     try:
         with tarfile.open(infile, 'r:*', format=tarfile.PAX_FORMAT) as handle:
 
-            try:
-                handle.extract(path=folder.abspath, member=handle.getmember('metadata.json'))
-            except KeyError:
-                raise CorruptArchive('required file `metadata.json` is not included')
+            if len(handle.getmembers()) == 1 and handle.getmembers()[0].size == 0:
+                raise CorruptArchive('no files detected in archive')
 
-            try:
-                handle.extract(path=folder.abspath, member=handle.getmember('data.json'))
-            except KeyError:
-                raise CorruptArchive('required file `data.json` is not included')
+            file_iterator = get_file_iterator(file_handle=handle, folderpath=folder.abspath, **kwargs)
 
-            if not silent:
-                print('EXTRACTING NODE DATA...')
-
-            for member in handle.getmembers():
+            for member in file_iterator:
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
                     print('WARNING, device found inside the import file: {}'.format(member.name), file=sys.stderr)
@@ -332,16 +376,20 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, silent=False):
                 if member.issym() or member.islnk():
                     # safety: in export, I set dereference=True therefore
                     # there should be no symbolic or hard links.
-                    print('WARNING, link found inside the import file: {}'.format(member.name), file=sys.stderr)
+                    print('WARNING, symlink found inside the import file: {}'.format(member.name), file=sys.stderr)
                     continue
                 # Check that we are only exporting nodes within the subfolder!
                 # TODO: better check such that there are no .. in the
                 # path; use probably the folder limit checks
                 if not member.name.startswith(nodes_export_subfolder + os.sep):
                     continue
+
+                update_description(member.name, file_iterator)
+
                 handle.extract(path=folder.abspath, member=member)
     except tarfile.ReadError:
-        raise ValueError('The input file format for import is not valid (1)')
+        raise ValueError('The input file format for import is not valid (not a tar file)')
+    close_progress_bar(leave=False)
 
 
 def extract_tree(infile, folder):

@@ -30,7 +30,7 @@ __all__ = (
     'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
     'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
     'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
-    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE'
+    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -497,8 +497,8 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
 
 CONFIG_FILE = ConfigFileOption(
     '--config',
-    type=click.Path(exists=True, dir_okay=False),
-    help='Load option values from configuration file in yaml format.'
+    type=types.FileOrUrl(),
+    help='Load option values from configuration file in yaml format (local path or URL).'
 )
 
 IDENTIFIER = OverridableOption(
@@ -521,4 +521,8 @@ DICT_FORMAT = OverridableOption(
 
 DICT_KEYS = OverridableOption(
     '-k', '--keys', type=click.STRING, cls=MultipleValueOption, help='Filter the output by one or more keys.'
+)
+
+DEBUG = OverridableOption(
+    '--debug', is_flag=True, default=False, help='Show debug messages. Mostly relevant for developers.', hidden=True
 )

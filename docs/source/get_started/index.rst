@@ -44,4 +44,3 @@ After installing new plugin packages, update the reentry cache using ``reentry s
     For further details, see the Python `packaging user guide`_.
 
 .. _packaging user guide: https://packaging.python.org/distributing/#configuring-your-project
-

@@ -26,7 +26,7 @@ class VerdiRunner(CliRunner):
         super().__init__(**kwargs)
         self.obj = AttributeDict({'config': config, 'profile': profile})
 
-    def invoke(self, *args, **extra):  # pylint: disable=arguments-differ
+    def invoke(self, *args, **extra):  # pylint: disable=signature-differs
         """Invoke the command but add the `obj` to the `extra` keywords.
 
         The `**extra` keywords will be forwarded all the way to the `Context` that finally invokes the command. Some
@@ -50,6 +50,29 @@ class TestVerdiDaemon(AiidaTestCase):
         """Test `verdi daemon start`."""
         try:
             result = self.cli_runner.invoke(cmd_daemon.start, [])
+            self.assertClickResultNoException(result)
+
+            daemon_response = self.daemon_client.get_daemon_info()
+            worker_response = self.daemon_client.get_worker_info()
+
+            self.assertIn('status', daemon_response, daemon_response)
+            self.assertEqual(daemon_response['status'], 'ok', daemon_response)
+
+            self.assertIn('info', worker_response, worker_response)
+            self.assertEqual(len(worker_response['info']), 1, worker_response)
+        finally:
+            self.daemon_client.stop_daemon(wait=True)
+
+    def test_daemon_restart(self):
+        """Test `verdi daemon restart` both with and without `--reset` flag."""
+        try:
+            result = self.cli_runner.invoke(cmd_daemon.start, [])
+            self.assertClickResultNoException(result)
+
+            result = self.cli_runner.invoke(cmd_daemon.restart, [])
+            self.assertClickResultNoException(result)
+
+            result = self.cli_runner.invoke(cmd_daemon.restart, ['--reset'])
             self.assertClickResultNoException(result)
 
             daemon_response = self.daemon_client.get_daemon_info()

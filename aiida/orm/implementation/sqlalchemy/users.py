@@ -75,7 +75,7 @@ class SqlaUserCollection(BackendUserCollection):
         """
         return SqlaUser(self.backend, email, first_name, last_name, institution)
 
-    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
+    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin,invalid-name
         """
         Find a user in matching the given criteria
 
@@ -84,9 +84,8 @@ class SqlaUserCollection(BackendUserCollection):
         :return: the matching user
         :rtype: :class:`aiida.orm.implementation.sqlalchemy.users.SqlaUser`
         """
-
         # Constructing the default query
-        dbuser_query = DbUser.query
+        dbuser_query = DbUser.query  # pylint: disable=no-member
 
         # If an id is specified then we add it to the query
         if id is not None:

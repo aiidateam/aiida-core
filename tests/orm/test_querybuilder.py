@@ -114,6 +114,22 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(classifiers['ormclass_type_string'], 'process.calculation.calcjob.CalcJobNode.')
         self.assertEqual(classifiers['process_type_string'], 'aiida.calculations:arithmetic.add')
 
+    def test_get_group_type_filter(self):
+        """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
+        from aiida.orm.querybuilder import get_group_type_filter
+
+        classifiers = {'ormclass_type_string': 'group.core'}
+        self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'core'})
+        self.assertEqual(get_group_type_filter(classifiers, True), {'like': '%'})
+
+        classifiers = {'ormclass_type_string': 'group.core.auto'}
+        self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'core.auto'})
+        self.assertEqual(get_group_type_filter(classifiers, True), {'like': 'core.auto%'})
+
+        classifiers = {'ormclass_type_string': 'group.pseudo.family'}
+        self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'pseudo.family'})
+        self.assertEqual(get_group_type_filter(classifiers, True), {'like': 'pseudo.family%'})
+
     def test_process_query(self):
         """
         Test querying for a process class.
@@ -538,8 +554,9 @@ class TestQueryBuilder(AiidaTestCase):
 
         # Now I am testing the default tags,
         qb = orm.QueryBuilder().append(orm.StructureData
-                                      ).append(orm.ProcessNode).append(orm.StructureData
-                                                                      ).append(orm.Dict, with_outgoing=orm.ProcessNode)
+                                       ).append(orm.ProcessNode
+                                                ).append(orm.StructureData
+                                                         ).append(orm.Dict, with_outgoing=orm.ProcessNode)
         self.assertEqual(
             qb.get_used_tags(), [
                 'StructureData_1', 'ProcessNode_1', 'StructureData_1--ProcessNode_1', 'StructureData_2',
@@ -628,6 +645,32 @@ class TestQueryBuilder(AiidaTestCase):
         qb.append(orm.Data, direction=4, project='id')
         res2 = {item[1] for item in qb.all()}
         self.assertEqual(res2, {d2.id, d4.id})
+
+    @staticmethod
+    def test_flat():
+        """Test the `flat` keyword for the `QueryBuilder.all()` method."""
+        from itertools import chain
+
+        pks = []
+        uuids = []
+        for _ in range(10):
+            node = orm.Data().store()
+            pks.append(node.pk)
+            uuids.append(node.uuid)
+
+        # Single projected property
+        builder = orm.QueryBuilder().append(orm.Data, project='id').order_by({orm.Data: 'id'})
+        result = builder.all(flat=True)
+        assert isinstance(result, list)
+        assert len(result) == 10
+        assert result == pks
+
+        # Mutltiple projections
+        builder = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
+        result = builder.all(flat=True)
+        assert isinstance(result, list)
+        assert len(result) == 20
+        assert result == list(chain.from_iterable(zip(pks, uuids)))
 
 
 class TestMultipleProjections(AiidaTestCase):

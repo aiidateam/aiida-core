@@ -10,6 +10,7 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
 """Tools for handling Crystallographic Information Files (CIF)"""
 
+import re
 from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
@@ -196,27 +197,46 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
 
 def parse_formula(formula):
     """
-    Parses the Hill formulae, written with spaces for separators.
+    Parses the Hill formulae. Does not need spaces as separators.
+    Works also for partial occupancies and for chemical groups enclosed in round/square/curly brackets.
+    Elements are counted and a dictionary is returned.
+    e.g.  'C[NH2]3NO3'  -->  {'C': 1, 'N': 4, 'H': 6, 'O': 3}
     """
-    import re
 
-    contents = {}
-    for part in re.split(r'\s+', formula):
-        m = re.match(r'(\D+)([\.\d]+)?', part)
-
-        if m is None:
-            continue
-
-        specie = m.group(1)
-        quantity = m.group(2)
-        if quantity is None:
+    def chemcount_str_to_number(string):
+        if not string:
             quantity = 1
         else:
-            if re.match(r'^\d+$', quantity):
+            quantity = float(string)
+            if quantity.is_integer():
                 quantity = int(quantity)
-            else:
-                quantity = float(quantity)
-        contents[specie] = quantity
+        return quantity
+
+    contents = {}
+
+    # split blocks with parentheses
+    for block in re.split(r'(\([^\)]*\)[^A-Z\(\[\{]*|\[[^\]]*\][^A-Z\(\[\{]*|\{[^\}]*\}[^A-Z\(\[\{]*)', formula):
+        if not block:  # block is void
+            continue
+
+        # get molecular formula (within parentheses) & count
+        group = re.search(r'[\{\[\(](.+)[\}\]\)]([\.\d]*)', block)
+        if group is None:  # block does not contain parentheses
+            molformula = block
+            molcount = 1
+        else:
+            molformula = group.group(1)
+            molcount = chemcount_str_to_number(group.group(2))
+
+        for part in re.findall(r'[A-Z][^A-Z\s]*', molformula.replace(' ', '')):  # split at uppercase letters
+            match = re.match(r'(\D+)([\.\d]+)?', part)  # separates element and count
+
+            if match is None:
+                continue
+
+            species = match.group(1)
+            quantity = chemcount_str_to_number(match.group(2)) * molcount
+            contents[species] = contents.get(species, 0) + quantity
     return contents
 
 
@@ -242,7 +262,15 @@ class CifData(SinglefileData):
     _ase = None
 
     def __init__(
-        self, ase=None, file=None, filename=None, values=None, source=None, scan_type=None, parse_policy=None, **kwargs
+        self,
+        ase=None,
+        file=None,
+        filename=None,
+        values=None,
+        source=None,
+        scan_type=None,
+        parse_policy=None,
+        **kwargs
     ):
         """Construct a new instance and set the contents to that of the file.
 
@@ -322,9 +350,9 @@ class CifData(SinglefileData):
             otherwise the CIF file will not be found.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        qb = QueryBuilder()
-        qb.append(cls, filters={'attributes.md5': {'==': md5}})
-        return [_ for [_] in qb.all()]
+        builder = QueryBuilder()
+        builder.append(cls, filters={'attributes.md5': {'==': md5}})
+        return builder.all(flat=True)
 
     @classmethod
     def get_or_create(cls, filename, use_first=False, store_cif=True):
@@ -465,8 +493,7 @@ class CifData(SinglefileData):
         self.set_attribute('formulae', self.get_formulae())
         self.set_attribute('spacegroup_numbers', self.get_spacegroup_numbers())
 
-    # pylint: disable=arguments-differ
-    def store(self, *args, **kwargs):
+    def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """
         Store the node.
         """
@@ -527,7 +554,7 @@ class CifData(SinglefileData):
         else:
             raise ValueError('Got unknown parse_policy {}'.format(parse_policy))
 
-    def get_formulae(self, mode='sum'):
+    def get_formulae(self, mode='sum', custom_tags=None):
         """
         Return chemical formulae specified in CIF file.
 
@@ -536,12 +563,19 @@ class CifData(SinglefileData):
         """
         # note: If formulae are not None, they could be returned
         # directly (but the function is very cheap anyhow).
-        formula_tag = '_chemical_formula_{}'.format(mode)
+        formula_tags = ['_chemical_formula_{}'.format(mode)]
+        if custom_tags:
+            if not isinstance(custom_tags, (list, tuple)):
+                custom_tags = [custom_tags]
+            formula_tags.extend(custom_tags)
+
         formulae = []
         for datablock in self.values.keys():
             formula = None
-            if formula_tag in self.values[datablock].keys():
-                formula = self.values[datablock][formula_tag]
+            for formula_tag in formula_tags:
+                if formula_tag in self.values[datablock].keys():
+                    formula = self.values[datablock][formula_tag]
+                    break
             formulae.append(formula)
 
         return formulae
@@ -577,8 +611,6 @@ class CifData(SinglefileData):
 
         :return: True if there are partial occupancies, False otherwise
         """
-        import re
-
         tag = '_atom_site_occupancy'
 
         epsilon = 1e-6
@@ -628,8 +660,6 @@ class CifData(SinglefileData):
         :return: boolean, True if no atomic sites are defined or if any of the defined sites contain undefined positions
             and False otherwise
         """
-        import re
-
         tag_x = '_atom_site_fract_x'
         tag_y = '_atom_site_fract_y'
         tag_z = '_atom_site_fract_z'

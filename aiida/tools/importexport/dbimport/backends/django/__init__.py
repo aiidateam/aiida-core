@@ -7,10 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,fixme,inconsistent-return-statements,too-many-arguments,too-many-locals,too-many-statements,too-many-branches
+# pylint: disable=protected-access,fixme,too-many-arguments,too-many-locals,too-many-statements,too-many-branches,too-many-nested-blocks
 """ Django-specific import of AiiDA entities """
 
 from distutils.version import StrictVersion
+import logging
 import os
 import tarfile
 import zipfile
@@ -19,21 +20,26 @@ from itertools import chain
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
+from aiida.common.log import override_log_formatter
 from aiida.common.utils import grouper, get_object_from_string
+from aiida.manage.configuration import get_config_option
 from aiida.orm.utils.repository import Repository
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
-from aiida.tools.importexport.common import exceptions
+
+from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
 from aiida.tools.importexport.common.config import entity_names_to_signatures
 from aiida.tools.importexport.common.utils import export_shard_uuid
-from aiida.tools.importexport.dbimport.backends.utils import deserialize_field, merge_comment, merge_extras
-from aiida.manage.configuration import get_config_option
+from aiida.tools.importexport.dbimport.utils import (
+    deserialize_field, merge_comment, merge_extras, start_summary, result_summary, IMPORT_LOGGER
+)
 
 
+@override_log_formatter('%(message)s')
 def import_data_dj(
     in_path,
     group=None,
@@ -41,7 +47,8 @@ def import_data_dj(
     extras_mode_existing='kcl',
     extras_mode_new='import',
     comment_mode='newest',
-    silent=False
+    silent=False,
+    **kwargs
 ):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
@@ -81,7 +88,7 @@ def import_data_dj(
         'overwrite' (will overwrite existing Comments with the ones from the import file).
     :type comment_mode: str
 
-    :param silent: suppress prints.
+    :param silent: suppress progress bar and summary.
     :type silent: bool
 
     :return: New and existing Nodes and Links.
@@ -114,6 +121,9 @@ def import_data_dj(
         elif not group.is_stored:
             group.store()
 
+    if silent:
+        logging.disable(level=logging.CRITICAL)
+
     ################
     # EXTRACT DATA #
     ################
@@ -123,17 +133,13 @@ def import_data_dj(
             extract_tree(in_path, folder)
         else:
             if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             elif zipfile.is_zipfile(in_path):
-                try:
-                    extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-                except ValueError as exc:
-                    print('The following problem occured while processing the provided file: {}'.format(exc))
-                    return
+                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
             else:
                 raise exceptions.ImportValidationError(
                     'Unable to detect the input file format, it is neither a '
-                    '(possibly compressed) tar file, nor a zip file.'
+                    'tar file, nor a (possibly compressed) zip file.'
                 )
 
         if not folder.get_content_list():
@@ -163,6 +169,8 @@ def import_data_dj(
 
             raise exceptions.IncompatibleArchiveVersionError(msg)
 
+        start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)
+
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
         ##########################################################################
@@ -189,7 +197,6 @@ def import_data_dj(
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model relationships.
-
         model_order = (
             USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
             COMMENT_ENTITY_NAME
@@ -230,6 +237,7 @@ def import_data_dj(
         # IMPORT DATA #
         ###############
         # DO ALL WITH A TRANSACTION
+        # !!! EXCEPT: Creating final import Group containing all Nodes in archive
 
         # batch size for bulk create operations
         batch_size = get_config_option('db.batch_size')
@@ -238,6 +246,16 @@ def import_data_dj(
             foreign_ids_reverse_mappings = {}
             new_entries = {}
             existing_entries = {}
+
+            IMPORT_LOGGER.debug('GENERATING LIST OF DATA...')
+
+            # Instantiate progress bar
+            progress_bar = get_progress_bar(total=1, leave=False, disable=silent)
+            pbar_base_str = 'Generating list of data - '
+
+            # Get total entities from data.json
+            # To be used with progress bar
+            number_of_entities = 0
 
             # I first generate the list of data
             for model_name in model_order:
@@ -254,41 +272,102 @@ def import_data_dj(
                 # Not necessarily all models are exported
                 if model_name in data['export_data']:
 
+                    IMPORT_LOGGER.debug('  %s...', model_name)
+
+                    progress_bar.set_description_str(pbar_base_str + model_name, refresh=False)
+                    number_of_entities += len(data['export_data'][model_name])
+
                     # skip nodes that are already present in the DB
                     if unique_identifier is not None:
                         import_unique_ids = set(v[unique_identifier] for v in data['export_data'][model_name].values())
 
-                        relevant_db_entries_result = model.objects.filter(
-                            **{'{}__in'.format(unique_identifier): import_unique_ids}
-                        )
-                        # Note: uuids need to be converted to strings
-                        relevant_db_entries = {
-                            str(getattr(n, unique_identifier)): n for n in relevant_db_entries_result
-                        }
+                        relevant_db_entries = {}
+                        if import_unique_ids:
+                            relevant_db_entries_result = model.objects.filter(
+                                **{'{}__in'.format(unique_identifier): import_unique_ids}
+                            )
+
+                            # Note: UUIDs need to be converted to strings
+                            if relevant_db_entries_result.count():
+                                progress_bar = get_progress_bar(
+                                    total=relevant_db_entries_result.count(), disable=silent
+                                )
+                                # Imitating QueryBuilder.iterall() with default settings
+                                for object_ in relevant_db_entries_result.iterator(chunk_size=100):
+                                    progress_bar.update()
+                                    relevant_db_entries.update({str(getattr(object_, unique_identifier)): object_})
 
                         foreign_ids_reverse_mappings[model_name] = {k: v.pk for k, v in relevant_db_entries.items()}
+
+                        IMPORT_LOGGER.debug('    GOING THROUGH ARCHIVE...')
+
+                        imported_comp_names = set()
                         for key, value in data['export_data'][model_name].items():
-                            if value[unique_identifier] in relevant_db_entries.keys():
+                            if model_name == GROUP_ENTITY_NAME:
+                                # Check if there is already a group with the same name
+                                dupl_counter = 0
+                                orig_label = value['label']
+                                while model.objects.filter(label=value['label']):
+                                    value['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.ImportUniquenessError(
+                                            'A group of that label ( {} ) already exists and I could not create a new '
+                                            'one'.format(orig_label)
+                                        )
+
+                            elif model_name == COMPUTER_ENTITY_NAME:
+                                # Check if there is already a computer with the same name in the database
+                                dupl = (
+                                    model.objects.filter(name=value['name']) or value['name'] in imported_comp_names
+                                )
+                                orig_name = value['name']
+                                dupl_counter = 0
+                                while dupl:
+                                    # Rename the new computer
+                                    value['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                                    dupl = (
+                                        model.objects.filter(name=value['name']) or value['name'] in imported_comp_names
+                                    )
+                                    dupl_counter += 1
+                                    if dupl_counter == 100:
+                                        raise exceptions.ImportUniquenessError(
+                                            'A computer of that name ( {} ) already exists and I could not create a '
+                                            'new one'.format(orig_name)
+                                        )
+
+                                imported_comp_names.add(value['name'])
+
+                            if value[unique_identifier] in relevant_db_entries:
                                 # Already in DB
                                 existing_entries[model_name][key] = value
                             else:
                                 # To be added
                                 new_entries[model_name][key] = value
                     else:
-                        new_entries[model_name] = data['export_data'][model_name].copy()
+                        new_entries[model_name] = data['export_data'][model_name]
 
-            # Show Comment mode if not silent
-            if not silent:
-                print('Comment mode: {}'.format(comment_mode))
+            # Reset for import
+            progress_bar = get_progress_bar(total=number_of_entities, disable=silent)
 
             # I import data from the given model
             for model_name in model_order:
+                # Progress bar initialization - Model
+                pbar_base_str = '{}s - '.format(model_name)
+                progress_bar.set_description_str(pbar_base_str + 'Initializing', refresh=True)
+
                 cls_signature = entity_names_to_signatures[model_name]
                 model = get_object_from_string(cls_signature)
                 fields_info = metadata['all_fields_info'].get(model_name, {})
                 unique_identifier = metadata['unique_identifiers'].get(model_name, None)
 
                 # EXISTING ENTRIES
+                if existing_entries[model_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} existing entries'.format(len(existing_entries[model_name])), refresh=True
+                    )
+
                 for import_entry_pk, entry_data in existing_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
@@ -312,18 +391,24 @@ def import_data_dj(
                     if model_name not in ret_dict:
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
-                    if not silent:
-                        print('existing %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, existing_entry_id))
-                        # print("  `-> WARNING: NO DUPLICITY CHECK DONE!")
-                        # CHECK ALSO FILES!
+                    IMPORT_LOGGER.debug(
+                        'Existing %s: %s (%s->%s)', model_name, unique_id, import_entry_pk, existing_entry_id
+                    )
+                    # print('  `-> WARNING: NO DUPLICITY CHECK DONE!')
+                    # CHECK ALSO FILES!
 
                 # Store all objects for this model in a list, and store them all in once at the end.
                 objects_to_create = []
                 # This is needed later to associate the import entry with the new pk
                 import_new_entry_pks = {}
-                imported_comp_names = set()
 
                 # NEW ENTRIES
+                if new_entries[model_name]:
+                    # Progress bar update - Model
+                    progress_bar.set_description_str(
+                        pbar_base_str + '{} new entries'.format(len(new_entries[model_name])), refresh=True
+                    )
+
                 for import_entry_pk, entry_data in new_entries[model_name].items():
                     unique_id = entry_data[unique_identifier]
                     import_data = dict(
@@ -336,53 +421,20 @@ def import_data_dj(
                         ) for k, v in entry_data.items()
                     )
 
-                    if model is models.DbGroup:
-                        # Check if there is already a group with the same name
-                        dupl_counter = 0
-                        orig_label = import_data['label']
-                        while model.objects.filter(label=import_data['label']):
-                            import_data['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
-                            dupl_counter += 1
-                            if dupl_counter == 100:
-                                raise exceptions.ImportUniquenessError(
-                                    'A group of that label ( {} ) already exists and I could not create a new one'
-                                    ''.format(orig_label)
-                                )
-
-                    elif model is models.DbComputer:
-                        # Check if there is already a computer with the same name in the database
-                        dupl = (
-                            model.objects.filter(name=import_data['name']) or import_data['name'] in imported_comp_names
-                        )
-                        orig_name = import_data['name']
-                        dupl_counter = 0
-                        while dupl:
-                            # Rename the new computer
-                            import_data['name'] = (orig_name + DUPL_SUFFIX.format(dupl_counter))
-                            dupl = (
-                                model.objects.filter(name=import_data['name']) or
-                                import_data['name'] in imported_comp_names
-                            )
-                            dupl_counter += 1
-                            if dupl_counter == 100:
-                                raise exceptions.ImportUniquenessError(
-                                    'A computer of that name ( {} ) already exists and I could not create a new one'
-                                    ''.format(orig_name)
-                                )
-
-                        imported_comp_names.add(import_data['name'])
-
                     objects_to_create.append(model(**import_data))
                     import_new_entry_pks[unique_id] = import_entry_pk
 
                 if model_name == NODE_ENTITY_NAME:
-                    if not silent:
-                        print('STORING NEW NODE REPOSITORY FILES...')
+                    IMPORT_LOGGER.debug('STORING NEW NODE REPOSITORY FILES...')
 
                     # NEW NODES
                     for object_ in objects_to_create:
                         import_entry_uuid = object_.uuid
                         import_entry_pk = import_new_entry_pks[import_entry_uuid]
+
+                        # Progress bar initialization - Node
+                        progress_bar.update()
+                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
 
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
@@ -397,11 +449,12 @@ def import_data_dj(
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
+                        progress_bar.set_description_str(pbar_node_base_str + 'Repository', refresh=True)
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For DbNodes, we also have to store its attributes
-                        if not silent:
-                            print('STORING NEW NODE ATTRIBUTES...')
+                        IMPORT_LOGGER.debug('STORING NEW NODE ATTRIBUTES...')
+                        progress_bar.set_description_str(pbar_node_base_str + 'Attributes', refresh=True)
 
                         # Get attributes from import file
                         try:
@@ -413,8 +466,8 @@ def import_data_dj(
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
-                            if not silent:
-                                print('STORING NEW NODE EXTRAS...')
+                            IMPORT_LOGGER.debug('STORING NEW NODE EXTRAS...')
+                            progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=True)
 
                             # Get extras from import file
                             try:
@@ -431,8 +484,7 @@ def import_data_dj(
                             # till here
                             object_.extras = extras
                         elif extras_mode_new == 'none':
-                            if not silent:
-                                print('SKIPPING NEW NODE EXTRAS...')
+                            IMPORT_LOGGER.debug('SKIPPING NEW NODE EXTRAS...')
                         else:
                             raise exceptions.ImportValidationError(
                                 "Unknown extras_mode_new value: {}, should be either 'import' or 'none'"
@@ -441,8 +493,7 @@ def import_data_dj(
 
                     # EXISTING NODES (Extras)
                     # For the existing nodes that are also in the imported list we also update their extras if necessary
-                    if not silent:
-                        print('UPDATING EXISTING NODE EXTRAS (mode: {})'.format(extras_mode_existing))
+                    IMPORT_LOGGER.debug('UPDATING EXISTING NODE EXTRAS...')
 
                     import_existing_entry_pks = {
                         entry_data[unique_identifier]: import_entry_pk
@@ -452,24 +503,38 @@ def import_data_dj(
                         import_entry_uuid = str(node.uuid)
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
+                        # Progress bar initialization - Node
+                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+                        progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=False)
+                        progress_bar.update()
+
                         # Get extras from import file
                         try:
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                'Unable to find extra info for ode with UUID={}'.format(import_entry_uuid)
+                                'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
                             )
 
+                        old_extras = node.extras.copy()
                         # TODO: remove when aiida extras will be moved somewhere else
                         # from here
                         extras = {key: value for key, value in extras.items() if not key.startswith('_aiida_')}
                         if node.node_type.endswith('code.Code.'):
                             extras = {key: value for key, value in extras.items() if not key == 'hidden'}
                         # till here
-                        node.extras = merge_extras(node.extras, extras, extras_mode_existing)
+                        new_extras = merge_extras(node.extras, extras, extras_mode_existing)
 
-                        # Already saving existing node here to update its extras
-                        node.save()
+                        if new_extras != old_extras:
+                            # Already saving existing node here to update its extras
+                            node.extras = new_extras
+                            node.save()
+
+                else:
+                    # Update progress bar with new non-Node entries
+                    progress_bar.update(n=len(existing_entries[model_name]) + len(new_entries[model_name]))
+
+                progress_bar.set_description_str(pbar_base_str + 'Storing', refresh=True)
 
                 # If there is an mtime in the field, disable the automatic update
                 # to keep the mtime that we have set here
@@ -498,11 +563,9 @@ def import_data_dj(
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
 
-                    if not silent:
-                        print('NEW %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, new_pk))
+                    IMPORT_LOGGER.debug('New %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, new_pk))
 
-            if not silent:
-                print('STORING NODE LINKS...')
+            IMPORT_LOGGER.debug('STORING NODE LINKS...')
             import_links = data['links_uuid']
             links_to_store = []
 
@@ -527,8 +590,15 @@ def import_data_dj(
                 LinkType.RETURN: (workflow_node_types, data_node_types, 'unique_pair', 'unique_triple'),
             }
 
+            if import_links:
+                progress_bar = get_progress_bar(total=len(import_links), disable=silent)
+                pbar_base_str = 'Links - '
+
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
+                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']), refresh=False)
+                progress_bar.update()
+
                 try:
                     in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
                     out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
@@ -627,20 +697,27 @@ def import_data_dj(
 
             # Store new links
             if links_to_store:
-                if not silent:
-                    print('   ({} new links...)'.format(len(links_to_store)))
+                IMPORT_LOGGER.debug('   (%d new links...)', len(links_to_store))
 
                 models.DbLink.objects.bulk_create(links_to_store, batch_size=batch_size)
             else:
-                if not silent:
-                    print('   (0 new links...)')
+                IMPORT_LOGGER.debug('   (0 new links...)')
 
-            if not silent:
-                print('STORING GROUP ELEMENTS...')
+            IMPORT_LOGGER.debug('STORING GROUP ELEMENTS...')
+
             import_groups = data['groups_uuid']
+
+            if import_groups:
+                progress_bar = get_progress_bar(total=len(import_groups), disable=silent)
+                pbar_base_str = 'Groups - '
+
             for groupuuid, groupnodes in import_groups.items():
                 # TODO: cache these to avoid too many queries
                 group_ = models.DbGroup.objects.get(uuid=groupuuid)
+
+                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(group_.label), refresh=False)
+                progress_bar.update()
+
                 nodes_to_store = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes]
                 if nodes_to_store:
                     group_.dbnodes.add(*nodes_to_store)
@@ -676,17 +753,32 @@ def import_data_dj(
                 group = ImportGroup(label=group_label).store()
 
             # Add all the nodes to the new group
-            # TODO: decide if we want to return the group label
-            nodes = [entry[0] for entry in QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}}).all()]
+            builder = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}})
+
+            progress_bar = get_progress_bar(total=len(pks_for_group), disable=silent)
+            progress_bar.set_description_str('Creating import Group - Preprocessing', refresh=True)
+            first = True
+
+            nodes = []
+            for entry in builder.iterall():
+                if first:
+                    progress_bar.set_description_str('Creating import Group', refresh=False)
+                    first = False
+                progress_bar.update()
+                nodes.append(entry[0])
             group.add_nodes(nodes)
-
-            if not silent:
-                print("IMPORTED NODES ARE GROUPED IN THE IMPORT GROUP LABELED '{}'".format(group.label))
+            progress_bar.set_description_str('Done (cleaning up)', refresh=True)
         else:
-            if not silent:
-                print('NO NODES TO IMPORT, SO NO GROUP CREATED, IF IT DID NOT ALREADY EXIST')
+            IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
 
-    if not silent:
-        print('DONE.')
+    # Finalize Progress bar
+    close_progress_bar(leave=False)
+
+    # Summarize import
+    result_summary(ret_dict, getattr(group, 'label', None))
+
+    # Reset logging level
+    if silent:
+        logging.disable(level=logging.NOTSET)
 
     return ret_dict

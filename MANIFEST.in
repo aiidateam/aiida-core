@@ -1,9 +1,5 @@
-include aiida/backends/tests/export_import_test_files/*.aiida
-include aiida/backends/sqlalchemy/migrations/script.py.mako
 include aiida/cmdline/templates/*.tpl
 include aiida/manage/backup/backup_info.json.tmpl
-include docs/source/images/*.png
-include utils/*
 include setup.json
 include AUTHORS.txt
 include CHANGELOG.md

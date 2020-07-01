@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Functions to dynamically generate reversed polish notation expressions."""
-
 import collections
 import operator as operators
 import random
@@ -47,7 +46,7 @@ def generate(min_operator_count=3, max_operator_count=5, min_operand_value=-5, m
     for _ in range(operator_count):
         operator = random.choice(OPERATORS.keys())
 
-        if OPERATORS[operator] == operators.pow:
+        if OPERATORS[operator] is operators.pow:
             operand = random.choice(operand_range_pow)
         else:
             operand = random.choice(operand_range)
@@ -91,7 +90,7 @@ def validate(expression):
         if operator not in OPERATORS.keys():
             return False, 'the operator {} is not supported'.format(operator)
 
-        if OPERATORS[operator] == operators.pow and operand < 0:
+        if OPERATORS[operator] is operators.pow and operand < 0:
             return False, 'a negative operand {} was found for the ^ operator, which is not allowed'.format(operand)
 
     # At this point the symbols list should only contain the initial operand

@@ -48,7 +48,7 @@ class TestAttributes(AiidaTestCase):
 
         # Export
         self.export_file = os.path.join(temp_dir, 'export.aiida')
-        export([self.data], outfile=self.export_file, silent=True)
+        export([self.data], filename=self.export_file, silent=True)
 
         # Clean db
         self.reset_database()

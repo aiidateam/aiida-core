@@ -10,60 +10,37 @@
 """Tests for Path types"""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types import ImportPath
+from aiida.cmdline.params.types.path import PathOrUrl, _check_timeout_seconds
 
 
-class TestImportPath(AiidaTestCase):
-    """Tests `ImportPath`"""
+class TestPath(AiidaTestCase):
+    """Tests for `PathOrUrl` and `FileOrUrl`"""
 
     def test_default_timeout(self):
         """Test the default timeout_seconds value is correct"""
         from aiida.cmdline.params.types.path import URL_TIMEOUT_SECONDS
 
-        import_path = ImportPath()
+        import_path = PathOrUrl()
 
         self.assertEqual(import_path.timeout_seconds, URL_TIMEOUT_SECONDS)
 
-    def test_valid_timeout(self):
-        """Test a valid timeout_seconds value"""
+    def test_timeout_checks(self):
+        """Test that timeout check handles different values.
 
+         * valid
+         * none
+         * wrong type
+         * outside range
+        """
         valid_values = [42, '42']
 
         for value in valid_values:
-            import_path = ImportPath(timeout_seconds=value)
+            self.assertEqual(_check_timeout_seconds(value), int(value))
 
-            self.assertEqual(import_path.timeout_seconds, int(value))
+        for invalid in [None, 'test']:
+            with self.assertRaises(TypeError):
+                _check_timeout_seconds(invalid)
 
-    def test_none_timeout(self):
-        """Test a TypeError is raised when a None value is given for timeout_seconds"""
-
-        with self.assertRaises(TypeError):
-            ImportPath(timeout_seconds=None)
-
-    def test_wrong_type_timeout(self):
-        """Test a TypeError is raised when wrong type is given for timeout_seconds"""
-
-        with self.assertRaises(TypeError):
-            ImportPath(timeout_seconds='test')
-
-    def test_range_timeout(self):
-        """Test timeout_seconds defines extrema when out of range
-        Range of timeout_seconds is [0;60], extrema included.
-        """
-
-        range_timeout = [0, 60]
-        lower = range_timeout[0] - 5
-        upper = range_timeout[1] + 5
-
-        lower_path = ImportPath(timeout_seconds=lower)
-        upper_path = ImportPath(timeout_seconds=upper)
-
-        msg_lower = "timeout_seconds should have been corrected to the lower bound: '{}', but instead it is {}".format(
-            range_timeout[0], lower_path.timeout_seconds
-        )
-        self.assertEqual(lower_path.timeout_seconds, range_timeout[0], msg_lower)
-
-        msg_upper = "timeout_seconds should have been corrected to the upper bound: '{}', but instead it is {}".format(
-            range_timeout[1], upper_path.timeout_seconds
-        )
-        self.assertEqual(upper_path.timeout_seconds, range_timeout[1], msg_upper)
+        for invalid in [-5, 65]:
+            with self.assertRaises(ValueError):
+                _check_timeout_seconds(invalid)

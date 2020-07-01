@@ -1,4 +1,4 @@
-# <img src="docs/source/images/AiiDA_transparent_logo.png" alt="AiiDA" width="200"/>
+# <img src="http://www.aiida.net/wp-content/uploads/2020/06/logo_aiida.png" alt="AiiDA" width="200"/>
 
 AiiDA (www.aiida.net) is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 
@@ -45,6 +45,10 @@ Small improvements of the documentation or minor bug fixes are always welcome.
 
 Please see the [Contributor wiki](https://github.com/aiidateam/aiida-core/wiki) on how to get started.
 
+## Frequently Asked Questions
+
+If you are experiencing problems with your AiiDA installation, please refer to the [FAQ page of the documentation](https://aiida-core.readthedocs.io/en/latest/howto/faq.html).
+
 ## How to cite
 
 If you use AiiDA in your research, please consider citing the AiiDA paper:
@@ -58,16 +62,8 @@ If you use AiiDA in your research, please consider citing the AiiDA paper:
 ## License
 
 AiiDA is distributed under the MIT open source license (see [`LICENSE.txt`](LICENSE.txt)).
-
 For a list of other open source components included in AiiDA, see [`open_source_licenses.txt`](open_source_licenses.txt).
 
 ## Acknowledgements
 
-This work is supported by:
-* the [MARVEL National Centre for Competency in Research](http://nccr-marvel.ch) funded by the [Swiss National Science Foundation](http://www.snf.ch/en);
-* the [MaX European Centre of Excellence](http://www.max-centre.eu/) funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
-* the [swissuniversities P-5 project "Materials Cloud"](https://www.materialscloud.org/swissuniversities).
-
-<img src="docs/source/images/MARVEL.png" alt="MARVEL" style="padding:10px;" width="150"/>
-<img src="docs/source/images/MaX.png" alt="MaX" style="padding:10px;" width="250"/>
-<img src="docs/source/images/swissuniversities.png" alt="swissuniversities" style="padding:10px;" width="250"/>
+AiiDA is a [NumFOCUS Affiliated Project](https://www.numfocus.org) and supported by the [MARVEL National Centre of Competence in Research](http://www.marvel-nccr.ch), the [MaX European Centre of Excellence](http://www.max-centre.eu) and by a number of other supporting projects, partners and institutions, whose complete list is available on the [AiiDA website acknowledgements page](http://www.aiida.net/acknowledgements/).

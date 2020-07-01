@@ -21,21 +21,12 @@
 import os
 import sys
 
-# Add `aiida` to the path so it can be imported without installing it
-sys.path.append(os.path.join(os.path.split(__file__)[0], os.pardir, os.pardir))
-
 import aiida
 from aiida.manage.configuration import load_documentation_profile
 
 # Load the dummy profile even if we are running locally, this way the documentation will succeed even if the current
 # default profile of the AiiDA installation does not use a Django backend.
 load_documentation_profile()
-
-# If we are not on READTHEDOCS load the Sphinx theme manually
-if not os.environ.get('READTHEDOCS', None):
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -51,12 +42,15 @@ needs_sphinx = '1.5.0'
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
-    'sphinx.ext.imgmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'sphinxcontrib.contentui', 'aiida.sphinxext'
+    'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
+    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton'
 ]
 ipython_mplbackend = ''
+copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
+copybutton_prompt_text = '>>> |\\\\$ |In \\\\[\\\\d\\\\]: |\\\\s+\\.\\.\\.: '
+copybutton_prompt_is_regexp = True
 
-todo_include_todos = True
+todo_include_todos = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -72,7 +66,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'AiiDA'
-copyright = '2019, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved'
+copyright = '2014-2020, ECOLE POLYTECHNIQUE FEDERALE DE LAUSANNE (Theory and Simulation of Materials (THEOS) and National Centre for Computational Design and Discovery of Novel Materials (NCCR MARVEL)), Switzerland and ROBERT BOSCH LLC, USA. All rights reserved'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -97,7 +91,23 @@ author = 'The AiiDA team.'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = [
+    'datatypes/**',
+    'developer_guide/**',
+    'get_started/**',
+    'howto/installation_more/index.rst',
+    'import_export/**',
+    'internals/data_storage.rst',
+    'internals/engine.rst',
+    'internals/global_design.rst',
+    'internals/orm.rst',
+    'internals/rest_api.rst',
+    'restapi/**',
+    'scheduler/index.rst',
+    'topics/daemon.rst',
+    'topics/repository.rst',
+    'working_with_aiida/**',
+]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
@@ -124,6 +134,7 @@ intersphinx_mapping = {
     'flask': ('http://flask.pocoo.org/docs/latest/', None),
     'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),
     'kiwipy': ('https://kiwipy.readthedocs.io/en/latest/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
     'plumpy': ('https://plumpy.readthedocs.io/en/latest/', None),
     'python': ('https://docs.python.org/3', None),
 }
@@ -132,7 +143,8 @@ intersphinx_mapping = {
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-# html_theme = 'default'
+html_theme = 'pydata_sphinx_theme'
+
 
 # Enable labeling for figures
 numfig = True
@@ -140,9 +152,21 @@ numfig = True
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#html_theme_options = {
-#    "navigation_depth": 5,
-#}
+html_theme_options = {
+    'external_links': [
+        {'url': 'http://www.aiida.net/', 'name': 'AiiDA Home'}
+    ],
+    'github_url': 'https://github.com/aiidateam/aiida-core',
+    'twitter_url': 'https://twitter.com/aiidateam',
+    'use_edit_page_button': True,
+}
+html_context = {
+    'github_user': 'aiidateam',
+    'github_repo': 'aiida-core',
+    'github_version': 'master',
+    'doc_path': 'docs/source',
+}
+panels_add_boostrap_css = False  # pydata-sphinx-theme already loads this
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -156,7 +180,7 @@ numfig = True
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = 'images/logo_aiida_docs.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -166,8 +190,8 @@ numfig = True
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# TEMPORARILY DISABLED
-#html_static_path = ['_static']
+html_static_path = ['_static']
+html_css_files = ['aiida-custom.css']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -197,10 +221,10 @@ numfig = True
 #html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
-#html_show_sphinx = True
+html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-#html_show_copyright = True
+html_show_copyright = False
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
@@ -263,7 +287,7 @@ def run_apidoc(_):
     See also https://github.com/rtfd/readthedocs.org/issues/1139
     """
     source_dir = os.path.abspath(os.path.dirname(__file__))
-    apidoc_dir = os.path.join(source_dir, 'apidoc')
+    apidoc_dir = os.path.join(source_dir, 'reference', 'apidoc')
     package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'aiida')
 
     # In #1139, they suggest the route below, but for me this ended up

@@ -9,9 +9,13 @@ export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/.ci"
 # - pytest-cov configuration taken from top-level .coveragerc
 # - coverage is reported as XML and in terminal,
 #   including the numbers/ranges of lines which are not covered
-# - coverage results of multiple tests are collected
+# - coverage results of multiple tests (within a single GH Actions CI job) are collected
 # - coverage is reported on files in aiida/
+export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --durations=50"
+export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-config=${GITHUB_WORKSPACE}/.coveragerc"
+export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-report xml"
 export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-append"
+export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov=aiida"
 
 # daemon tests
 verdi daemon start 4

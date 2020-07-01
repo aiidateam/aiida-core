@@ -103,49 +103,41 @@ _FIELD_SEPARATOR = '^^^'
 
 
 class SlurmJobResource(NodeNumberJobResource):
-    """
-    Slurm job resources object
-    """
+    """Class for SLURM job resources."""
 
-    def __init__(self, *args, **kwargs):
+    @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        This extends the base class validator to check that the `num_cores_per_machine` are a multiple of
+        `num_cores_per_mpiproc` and/or `num_mpiprocs_per_machine`.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
         """
-        It extends the base class init method and calculates the
-        num_cores_per_mpiproc fields to pass to Slurm schedulers.
+        resources = super().validate_resources(**kwargs)
 
-        Checks that num_cores_per_machine should be a multiple of
-        num_cores_per_mpiproc and/or num_mpiprocs_per_machine
+        if resources.num_cores_per_machine is not None and resources.num_cores_per_mpiproc is not None:
+            if resources.num_cores_per_machine != resources.num_cores_per_mpiproc * resources.num_mpiprocs_per_machine:
+                raise ValueError(
+                    '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
+                    ' particular it should be a multiple of `num_cores_per_mpiproc` and/or `num_mpiprocs_per_machine`'
+                )
 
-        Check sequence
+        elif resources.num_cores_per_machine is not None:
+            if resources.num_cores_per_machine < 1:
+                raise ValueError('num_cores_per_machine must be greater than or equal to one.')
 
-        1. If num_cores_per_mpiproc and num_cores_per_machine both are
-           specified check whether it satisfies the check
-        2. If only num_cores_per_machine is passed, calculate
-           num_cores_per_mpiproc which should always be an integer value
-        3. If only num_cores_per_mpiproc is passed, use it
-        """
-        super().__init__(*args, **kwargs)
+            # In this plugin we never used num_cores_per_machine so if it is not defined it is OK.
+            resources.num_cores_per_mpiproc = (resources.num_cores_per_machine / resources.num_mpiprocs_per_machine)
+            if isinstance(resources.num_cores_per_mpiproc, int):
+                raise ValueError(
+                    '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
+                    ' particular it should be a multiple of `num_cores_per_mpiproc` and/or `num_mpiprocs_per_machine`'
+                )
 
-        value_error = (
-            'num_cores_per_machine must be equal to '
-            'num_cores_per_mpiproc * num_mpiprocs_per_machine, '
-            'and in perticular it should be a multiple of '
-            'num_cores_per_mpiproc and/or num_mpiprocs_per_machine'
-        )
-
-        if self.num_cores_per_machine is not None and self.num_cores_per_mpiproc is not None:
-            if self.num_cores_per_machine != (self.num_cores_per_mpiproc * self.num_mpiprocs_per_machine):
-                # If user specify both values, check if specified
-                # values are correct
-                raise ValueError(value_error)
-        elif self.num_cores_per_machine is not None:
-            if self.num_cores_per_machine <= 0:
-                raise ValueError('num_cores_per_machine must be >=1')
-            # calculate num_cores_per_mpiproc
-            # In this plugin we never used num_cores_per_machine so if it
-            # is not defined it is OK.
-            self.num_cores_per_mpiproc = (self.num_cores_per_machine / self.num_mpiprocs_per_machine)
-            if isinstance(self.num_cores_per_mpiproc, int):
-                raise ValueError(value_error)
+        return resources
 
 
 class SlurmScheduler(Scheduler):

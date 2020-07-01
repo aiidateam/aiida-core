@@ -10,6 +10,7 @@
 """Tests for `verdi export`."""
 import errno
 import os
+import shutil
 import tempfile
 import tarfile
 import traceback
@@ -69,7 +70,7 @@ class TestVerdiExport(AiidaTestCase):
     @classmethod
     def tearDownClass(cls, *args, **kwargs):
         os.chdir(cls.old_cwd)
-        os.rmdir(cls.cwd)
+        shutil.rmtree(cls.cwd, ignore_errors=True)
 
     def setUp(self):
         self.cli_runner = CliRunner()
@@ -263,7 +264,7 @@ class TestVerdiExport(AiidaTestCase):
             options = ['--version', filename_input]
             result = self.cli_runner.invoke(cmd_export.inspect, options)
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(result.output.strip(), version_number)
+            self.assertEqual(result.output.strip()[-len(version_number):], version_number)
 
     def test_inspect_empty_archive(self):
         """Test the functionality of `verdi export inspect` for an empty archive."""

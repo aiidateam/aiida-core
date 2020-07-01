@@ -10,9 +10,6 @@
 """
 Defines an rst directive to auto-document AiiDA processes.
 """
-
-from typing import Mapping, Iterable
-
 from docutils import nodes
 from docutils.core import publish_doctree
 from docutils.parsers.rst import Directive, directives
@@ -209,6 +206,8 @@ class AiidaProcessDirective(Directive):
 
     def build_outline_lines(self, outline, indent):
         """Return a list of lines which describe the process outline."""
+        from collections.abc import Mapping, Iterable
+
         indent_str = ' ' * indent
         res = []
         if isinstance(outline, str):

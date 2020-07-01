@@ -81,8 +81,13 @@ class AiiDALoaderMagics(magic.Magics):
         from aiida.cmdline.utils.shell import get_start_namespace
 
         self.is_warning = False
-        load_profile()
-        self.current_state = 'Loaded AiiDA DB environment.'
+        lcontent = line.strip()
+        if lcontent:
+            profile = load_profile(lcontent)
+        else:
+            profile = load_profile()
+
+        self.current_state = 'Loaded AiiDA DB environment - profile name: {}.'.format(profile.name)
 
         user_ns = get_start_namespace()
         for key, value in user_ns.items():

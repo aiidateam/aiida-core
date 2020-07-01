@@ -304,9 +304,8 @@ class UpfData(SinglefileData):
 
         return (pseudos[0], False)
 
-    def store(self, *args, **kwargs):
+    def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
-        # pylint: disable=arguments-differ
         from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_from_filelike
 
@@ -342,7 +341,7 @@ class UpfData(SinglefileData):
         from aiida.orm.querybuilder import QueryBuilder
         builder = QueryBuilder()
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
-        return [upf for upf, in builder.all()]
+        return builder.all(flat=True)
 
     def set_file(self, file, filename=None):
         """Store the file in the repository and parse it to set the `element` and `md5` attributes.
@@ -380,7 +379,7 @@ class UpfData(SinglefileData):
         query = QueryBuilder()
         query.append(UpfFamily, tag='group', project='label')
         query.append(UpfData, filters={'id': {'==': self.id}}, with_group='group')
-        return [label for label, in query.all()]
+        return query.all(flat=True)
 
     @property
     def element(self):
@@ -484,7 +483,7 @@ class UpfData(SinglefileData):
 
         builder.order_by({UpfFamily: {'id': 'asc'}})
 
-        return [group for group, in builder.all()]
+        return builder.all(flat=True)
 
     # pylint: disable=unused-argument
     def _prepare_json(self, main_file_name=''):

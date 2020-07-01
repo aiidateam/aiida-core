@@ -154,7 +154,7 @@ class BaseRestartWorkChain(WorkChain):
             raise AttributeError('no process input dictionary was defined in `self.ctx.inputs`')
 
         # Set the `CALL` link label
-        unwrapped_inputs['metadata']['call_link_label'] = 'iteration_{:02d}'.format(self.ctx.iteration)
+        unwrapped_inputs.setdefault('metadata', {})['call_link_label'] = 'iteration_{:02d}'.format(self.ctx.iteration)
 
         inputs = self._wrap_bare_dict_inputs(self._process_class.spec().inputs, unwrapped_inputs)
         node = self.submit(self._process_class, **inputs)

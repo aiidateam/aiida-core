@@ -18,7 +18,7 @@ Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
 3. Parse the output of the code.
 
-This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for a dummy executable that sums two numbers, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
+This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for a simple executable that sums two numbers, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
 
 In the following, as an example, our |Code| will be the `bash` executable, and our "input file" will be a `bash` script ``aiida.in`` that sums two numbers and prints the result:
 
@@ -91,7 +91,7 @@ These ``options`` have already been defined on the |spec| by the ``super().defin
 
 
 
-Note that there is no ``return`` statement in ``define``: the ``define`` method directly modifies the |spec| object it receives.
+There is no ``return`` statement in ``define``: the ``define`` method directly modifies the |spec| object it receives.
 For more details on setting up your `inputs` and `outputs` (covering validation, dynamic number of inputs, etc.) see the :ref:`Defining Processes <topics:processes:usage:defining>` topic.
 
 Preparing for submission

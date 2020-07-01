@@ -70,8 +70,8 @@ For example:
 The first line of the method calls the |define| method of the |CalcJob| parent class.
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
 
-Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the ``sum`` as an output of the calculation.
-Once a calculation finishes, a |FolderData| node will be attached as an output to the calculation node with the label ``retrieved``.
+Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define an output of the calculation with label ``'sum'``.
+Once a calculation finishes, any output node specified here will be linked to the calculation node with the specified link label.
 
 .. tip::
 

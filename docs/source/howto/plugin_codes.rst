@@ -11,8 +11,8 @@ How to write a plugin for an external code
 
 To run an external code with AiiDA, you need a corresponding *calculation* plugin, which tells AiiDA how to:
 
-1. Prepare the required input files
-2. Run the code with the correct command line parameters
+1. Prepare the required input files.
+2. Run the code with the correct command line parameters.
 
 Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
@@ -45,7 +45,7 @@ thus writing the sum of the two numbers ``numx`` and ``numy`` (provided by the u
 Interfacing external codes
 ==========================
 
-We start our ``calcjob.py`` script by subclassing the |CalcJob| class:
+Start your ``calcjob.py`` script by subclassing the |CalcJob| class:
 
 .. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
     :language: python
@@ -351,7 +351,6 @@ You can do so by specifying to use a ``dry_run``, which will create all the inpu
     run(calculation_builder)
 
 
-This marks the end of this how-to, and you should now be fully equipped to wrap your own code in an AiiDA calculation plugin.
 For further reading, you may want to consult the :ref:`guidelines on plugin design <topics:plugins:guidelines>` or the how to on :ref:`packaging plugins <how-to:plugins>`.
 
 

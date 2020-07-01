@@ -162,6 +162,10 @@ class TestVerdiProcess(AiidaTestCase):
             if state == ProcessState.FINISHED:
                 calc.set_exit_status(1)
 
+            # Set the waiting work chain as paused as well
+            if state == ProcessState.WAITING:
+                calc.pause()
+
             calc.store()
             cls.calcs.append(calc)
 
@@ -194,13 +198,13 @@ class TestVerdiProcess(AiidaTestCase):
             flag_value = 'asc'
             result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
             self.assertIsNone(result.exception, result.output)
-            result_num_asc = [l.split()[0] for l in get_result_lines(result)]
+            result_num_asc = [line.split()[0] for line in get_result_lines(result)]
             self.assertEqual(len(result_num_asc), 6)
 
             flag_value = 'desc'
             result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
             self.assertIsNone(result.exception, result.output)
-            result_num_desc = [l.split()[0] for l in get_result_lines(result)]
+            result_num_desc = [line.split()[0] for line in get_result_lines(result)]
             self.assertEqual(len(result_num_desc), 6)
 
             self.assertEqual(result_num_asc, list(reversed(result_num_desc)))
@@ -261,6 +265,12 @@ class TestVerdiProcess(AiidaTestCase):
                 self.assertEqual(len(get_result_lines(result)), 3)  # Should only match the active `WorkFunctionNodes`
                 for line in get_result_lines(result):
                     self.assertIn(self.process_label, line.strip())
+
+        # There should be exactly one paused
+        for flag in ['--paused']:
+            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag])
+            self.assertClickResultNoException(result)
+            self.assertEqual(len(get_result_lines(result)), 1)
 
     def test_process_show(self):
         """Test verdi process show"""

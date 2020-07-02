@@ -14,6 +14,8 @@ import inspect
 import uuid
 import traceback
 
+from typing import Union
+
 from pika.exceptions import ConnectionClosed
 
 import plumpy
@@ -248,14 +250,11 @@ class Process(plumpy.Process):
 
         self.node.logger.info('Loaded process<{}> from saved state'.format(self.node.pk))
 
-    def kill(self, msg=None):
+    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.Future]:
         """
         Kill the process and all the children calculations it called
 
         :param msg: message
-        :type msg: str
-
-        :rtype: bool
         """
         self.node.logger.info('Request to kill Process<{}>'.format(self.node.pk))
 
@@ -282,7 +281,14 @@ class Process(plumpy.Process):
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
-                result = plumpy.gather(*killing)
+                kill_future = plumpy.gather(*killing)
+                result = self.loop().create_future()
+
+                def done(done_future: plumpy.Future):
+                    is_all_killed = all(done_future.result())
+                    result.set_result(is_all_killed)
+
+                kill_future.add_done_callback(done)
 
         return result
 

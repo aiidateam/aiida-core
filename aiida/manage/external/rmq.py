@@ -119,10 +119,11 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         from aiida.engine import ProcessState
 
         if not node.is_excepted:
-            node.logger.exception(message)
-            node.set_exception(str(exception))
-            node.set_process_state(ProcessState.EXCEPTED)
-            node.seal()
+            if not node.is_sealed:
+                node.logger.exception(message)
+                node.set_exception(str(exception))
+                node.set_process_state(ProcessState.EXCEPTED)
+                node.seal()
 
     async def _continue(self, communicator, pid, nowait, tag=None):
         """Continue the task.

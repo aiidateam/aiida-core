@@ -336,6 +336,7 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
     """
     # pylint: disable=too-many-branches
     import kiwipy
+    from plumpy.futures import unwrap_kiwi_future
     from concurrent import futures
 
     from aiida.manage.external.rmq import CommunicationTimeout
@@ -347,6 +348,8 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
             process = futures_map[future]
 
             try:
+                # unwrap is need here since LoopCommunicator will also wrap a future
+                future = unwrap_kiwi_future(future)
                 result = future.result()
             except CommunicationTimeout:
                 echo.echo_error('call to {} Process<{}> timed out'.format(infinitive, process.pk))

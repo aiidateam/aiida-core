@@ -324,6 +324,8 @@ PROCESS_STATE = OverridableOption(
     help='Only include entries with this process state.'
 )
 
+PAUSED = OverridableOption('--paused', 'paused', is_flag=True, help='Only include entries that are paused.')
+
 PROCESS_LABEL = OverridableOption(
     '-L',
     '--process-label',

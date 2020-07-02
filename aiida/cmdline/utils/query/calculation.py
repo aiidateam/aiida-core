@@ -47,6 +47,7 @@ class CalculationQueryBuilder:
         all_entries=False,
         process_state=None,
         process_label=None,
+        paused=False,
         exit_status=None,
         failed=False,
         node_types=None
@@ -58,6 +59,7 @@ class CalculationQueryBuilder:
         :param all_entries: boolean to negate filtering for process state
         :param process_state: filter for this process state attribute
         :param process_label: filter for this process label attribute
+        :param paused: boolean, if True, filter for processes that are paused
         :param exit_status: filter for this exit status
         :param failed: boolean to filter only failed processes
         :return: dictionary of filters suitable for a QueryBuilder.append() call
@@ -68,6 +70,7 @@ class CalculationQueryBuilder:
         exit_status_attribute = self.mapper.get_attribute('exit_status')
         process_label_attribute = self.mapper.get_attribute('process_label')
         process_state_attribute = self.mapper.get_attribute('process_state')
+        paused_attribute = self.mapper.get_attribute('paused')
 
         filters = {}
 
@@ -84,6 +87,9 @@ class CalculationQueryBuilder:
                 filters[process_label_attribute] = {'like': process_label}
             else:
                 filters[process_label_attribute] = process_label
+
+        if paused:
+            filters[paused_attribute] = True
 
         if failed:
             filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}

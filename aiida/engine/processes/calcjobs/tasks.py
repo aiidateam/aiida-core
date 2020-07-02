@@ -32,7 +32,7 @@ KILL_COMMAND = 'kill'
 TRANSPORT_TASK_RETRY_INITIAL_INTERVAL = 20
 TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 5
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class PreSubmitException(Exception):
@@ -83,7 +83,8 @@ async def task_upload_job(process, transport_queue, cancellable):
         logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
         ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
         result = await exponential_backoff_retry(
-            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions)
+            do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+        )
     except PreSubmitException:
         raise
     except plumpy.CancelledError:
@@ -129,7 +130,8 @@ async def task_submit_job(node, transport_queue, cancellable):
     try:
         logger.info('scheduled request to submit CalcJob<{}>'.format(node.pk))
         result = await exponential_backoff_retry(
-            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+        )
     except plumpy.Interruption:
         pass
     except Exception:
@@ -186,7 +188,8 @@ async def task_update_job(node, job_manager, cancellable):
     try:
         logger.info('scheduled request to update CalcJob<{}>'.format(node.pk))
         job_done = await exponential_backoff_retry(
-            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+        )
     except plumpy.Interruption:
         raise
     except Exception:
@@ -246,7 +249,8 @@ async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, c
     try:
         logger.info('scheduled request to retrieve CalcJob<{}>'.format(node.pk))
         result = await exponential_backoff_retry(
-            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption)
+            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+        )
     except plumpy.Interruption:
         raise
     except Exception:
@@ -255,7 +259,7 @@ async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, c
     else:
         node.set_state(CalcJobState.PARSING)
         logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
-        return
+        return result
 
 
 async def task_kill_job(node, transport_queue, cancellable):
@@ -316,7 +320,7 @@ class Waiting(plumpy.Waiting):
         self._task = None
         self._killing = None
 
-    async def execute(self):
+    async def execute(self):  # pylint: disable=invalid-overridden-method
         """Override the execute coroutine of the base `Waiting` state."""
         # pylint: disable=too-many-branches
         node = self.process.node

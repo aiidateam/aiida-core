@@ -321,7 +321,7 @@ class Manager:
     def close(self):
         """Reset the global settings entirely and release any global objects."""
         if self._communicator is not None:
-            self._communicator.stop()
+            self._communicator.close()
         if self._runner is not None:
             self._runner.stop()
 

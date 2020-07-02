@@ -49,8 +49,6 @@ py:class paramiko.proxy.ProxyCommand
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
 
-py:class topika.Connection
-
 py:class tornado.ioloop.IOLoop
 py:class tornado.concurrent.Future
 

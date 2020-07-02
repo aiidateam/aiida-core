@@ -79,6 +79,7 @@ def run_and_check_success(process_class, **kwargs):
 
     return process
 
+
 class TestPersister(plumpy.Persister):
     """
     Test persister, just creates the bundle, noting else
@@ -86,7 +87,7 @@ class TestPersister(plumpy.Persister):
 
     def save_checkpoint(self, process, tag=None):
         """ Create the checkpoint bundle """
-        persistence.Bundle(process)
+        plumpy.persistence.Bundle(process)
 
     def load_checkpoint(self, pid, tag=None):
         raise NotImplementedError
@@ -118,7 +119,7 @@ class Wf(WorkChain):
         spec.outputs.dynamic = True
         spec.outline(
             cls.step1,
-            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4),
+            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4), # pylint: disable=no-member
             cls.step5,
             while_(cls.larger_then_n)(cls.step6,),
         )
@@ -157,7 +158,7 @@ class Wf(WorkChain):
         self._set_finished(inspect.stack()[0].function)
         return self.inputs.value.value == 'A'
 
-    def is_a(self):
+    def is_b(self):
         self._set_finished(inspect.stack()[0].function)
         return self.inputs.value.value == 'B'
 
@@ -275,8 +276,8 @@ class IfTest(WorkChain):
         super().define(spec)
         spec.outline(if_(cls.condition)(cls.step1, cls.step2))
 
-    def on_create(self, *args, **kwargs):
-        super().on_create(*args, **kwargs)
+    def on_create(self):
+        super().on_create()
         self.ctx.s1 = False
         self.ctx.s2 = False
 

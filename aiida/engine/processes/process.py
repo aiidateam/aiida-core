@@ -16,7 +16,7 @@ import traceback
 
 from typing import Union
 
-from pika.exceptions import ConnectionClosed
+from aio_pika.exceptions import ConnectionClosed
 
 import plumpy
 from plumpy import ProcessState

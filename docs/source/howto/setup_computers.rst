@@ -214,7 +214,7 @@ If the cluster you are using requires authentication through a Kerberos token (t
 Then, if your ``.ssh/config`` file is configured properly (in particular includes all the necessary ``GSSAPI`` options), ``verdi computer configure`` will contain already the correct suggestions for all the gss options needed to support Kerberos.
 
 Other commands for computers
-----------------------------
+============================
 
 If you are not sure if your computer is already set up, use this command to get a list of existing computers:
 
@@ -257,7 +257,7 @@ The relevant commands are:
 
 
 Limiting requests to the remote computer
-----------------------------------------
+========================================
 
 Some machine (particularly at supercomputing centres) may not tolerate opening connections and executing scheduler commands with a high frequency.
 To limit this AiiDA currently has two settings:

@@ -228,6 +228,8 @@ It should look something like the graph shown in :numref:`fig_calcfun_graph`.
 
 .. note:: Remember that the PK of the ``CalcJob`` can be different for your database.
 
+.. _tutorial:basic:calcjob:
+
 CalcJobs
 ========
 
@@ -235,7 +237,12 @@ When running calculations that require an external code or run on a remote machi
 For this purpose, AiiDA provides the ``CalcJob`` process class.
 
 To run a ``CalcJob``, you need to set up two things: a ``code`` that is going to implement the desired calculation and a ``computer`` for the calculation to run on.
-If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below:
+
+If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below.
+
+.. seealso::
+
+    The specific how-tos in :ref:`setting up computers <how-to:setup_computer>` and :ref:`setting up codes <how-to:setup_code>`.
 
 .. dropdown:: Install localhost computer and code
 

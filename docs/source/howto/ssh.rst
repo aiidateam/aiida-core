@@ -33,7 +33,7 @@ Finally add the following lines to ~/.ssh/config (leaving an empty line before a
 
 replacing ``YOURRSAKEY`` by the path to the rsa private key you want to use (it should look like ``~/.ssh/id_rsa``).
 
-.. note:: 
+.. note::
 
   In principle you don't have to put the ``IdentityFile`` line if you have only one rsa key in your ``~/.ssh`` folder.
 
@@ -56,7 +56,7 @@ should show you a prompt without errors (possibly with a message saying ``Connec
 .. admonition:: Connection closed failures
    :class: attention title-icon-troubleshoot
 
-  If the ``ssh`` command works, but the ``sftp`` command does not (e.g. it just prints ``Connection closed``), a possible reason can be that there is a line in your ``~/.bashrc`` (on the cluster) that either produces text output or an error. 
+  If the ``ssh`` command works, but the ``sftp`` command does not (e.g. it just prints ``Connection closed``), a possible reason can be that there is a line in your ``~/.bashrc`` (on the cluster) that either produces text output or an error.
   Remove/comment it until no output or error is produced: this should make ``sftp`` work again.
 
 Finally, try also:
@@ -79,7 +79,7 @@ It should print a snapshot of the queue status, without any errors.
 
     Or, alternatively, find the path to the executables (like using ``which qsub``).
 
-.. note:: 
+.. note::
 
     If you need your remote ``.bashrc`` to be sourced before you execute the code (for instance to change the PATH) make sure the ``.bashrc`` file **does not** contain lines like:
 
@@ -104,7 +104,7 @@ It should print a snapshot of the queue status, without any errors.
         $ ssh YOURCLUSTERADDRESS 'echo $PATH'
 
 
-.. note:: 
+.. note::
 
   If you need to ssh to a computer *A* first, from which you can then connect to computer *B* you wanted to connect to, you can use the ``proxy_command`` feature of ssh, that we also support in AiiDA.
   For more information, see :ref:`how-to:ssh:proxy`.

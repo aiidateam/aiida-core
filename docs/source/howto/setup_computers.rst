@@ -52,12 +52,12 @@ Use the command:
 
 This command allows to create a new computer instance in the database.
 
-.. tip:: 
+.. tip::
 
    The code will ask you a few pieces of information.
    At every prompt, you can type the ``?`` character and press ``<enter>`` to get a more detailed explanation of what is being asked.
 
-.. tip:: 
+.. tip::
 
    You can press ``<CTRL>+C`` at any moment to abort the setup process.
    Nothing will be stored in the database.
@@ -72,7 +72,7 @@ Here is a list of what is asked, together with an explanation.
 
 * **Description**:  A human-readable description of this computer; this is useful if you have a lot of computers and you want to add some text to distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
 
-* **Enabled**: either ``True`` or ``False``; if ``False``, the computer is disabled and calculations associated with it will not be submitted. 
+* **Enabled**: either ``True`` or ``False``; if ``False``, the computer is disabled and calculations associated with it will not be submitted.
    This allows to disable temporarily a computer if it is giving problems or it is down for maintenance, without the need to delete it from the DB.
 
 * **Transport plugin**: The type of the transport to be used. A list of valid transport types can be obtained typing ``?``
@@ -112,7 +112,7 @@ These additional lines need may set up the environment on the computer, for exam
    export NEWVAR=1
    source some/file
 
-.. note:: 
+.. note::
 
    Don't specify settings here that are specific to a code, calculation or scheduler -- you can set further pre-execution commands at the ``Code`` and ``CalcJob`` level.
 
@@ -142,7 +142,7 @@ This file contains the information in a series of key:value pairs:
       module load mymodule
       export NEWVAR=1
 
-.. tip:: 
+.. tip::
 
    The list of the keys that can be used is available from the options flags of the command:
 
@@ -178,7 +178,7 @@ For ``ssh`` transport, the following will be asked:
   You can leave it empty to use the default SSH key, if you set ``look_for_keys`` to ``True``.
 * **Connection timeout**: A timeout in seconds if there is no response (e.g., the machine is down. You can leave it empty to use the default value.)
 * **Allow_ssh agent**: If ``True``, it will try to use an SSH agent.
-* **SSH proxy_command**: Leave empty if you do not need a proxy command (i.e., if you can directly connect to the machine). 
+* **SSH proxy_command**: Leave empty if you do not need a proxy command (i.e., if you can directly connect to the machine).
   If you instead need to connect to an intermediate computer first, you need to provide here the command for the proxy: see :ref:`the SSH proxy how-to <how-to:ssh:proxy>` for how to use this option, and in particular the  notes for the :ref:`format of this field <how-to:ssh:proxy:notes>`.
 * **Compress file transfer**: ``True`` to compress the traffic (recommended)
 * **GSS auth**: yes when using Kerberos token to connect
@@ -197,7 +197,7 @@ For ``ssh`` transport, the following will be asked:
 
 After setup and configuration have been completed, your computer is ready to go!
 
-.. important:: 
+.. important::
 
    To check if you set up the computer correctly, execute:
 
@@ -235,7 +235,7 @@ To rename a computer or remove it from the database:
    $ verdi computer rename OLDCOMPUTERNAME NEWCOMPUTERNAME
    $ verdi computer delete COMPUTERNAME
 
-.. note:: 
+.. note::
 
    You can delete computers **only if** no entry in the database is linked to them (as for instance ``CalcJob``, or ``RemoteData`` objects).
    Otherwise, you will get an error message.
@@ -265,7 +265,7 @@ To limit this AiiDA currently has two settings:
 * The transport safe open interval, and,
 * the minimum job poll interval
 
-Neither of these can ever be violated. 
+Neither of these can ever be violated.
 AiiDA will not try to update the jobs list on a remote machine until the job poll interval has elapsed since the last update (the first update will be immediate) at which point it will request a transport.
 Because of this the maximum possible time before a job update could be the sum of the two intervals, however this is unlikely to happen in practice.
 
@@ -280,7 +280,7 @@ The job poll interval can be set programmatically on the corresponding ``Compute
 
 This would set the transport interval on a computer called 'localhost' to 30 seconds.
 
-.. note:: 
+.. note::
 
     All of these intervals apply *per worker*, meaning that a daemon with multiple workers will not necessarily, overall, respect these limits.
     For the time being there is no way around this and if these limits must be respected then do not run with more than one worker.

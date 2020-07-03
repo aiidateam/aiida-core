@@ -51,15 +51,15 @@ and you will be guided through a process to setup your code.
 .. admonition:: Setup Help
     :class: tip title-icon-lightbulb
 
-  The setup will ask you a few pieces of information. 
+  The setup will ask you a few pieces of information.
   At every prompt, you can type the ``?`` character and press ``<enter>`` to get a more detailed explanation of what is being asked.
 
 You will be asked for:
 
-* **Label**:  A label to refer to this code. 
+* **Label**:  A label to refer to this code.
 
   .. note::
-    
+
     This label is not enforced to be unique.
     However, if you try to keep it unique, at least within the same computer, you can use it later to reference your code.
     Otherwise, you need to remember its ``PK`` or ``UUID``.
@@ -131,9 +131,9 @@ This file contains the information in a series of key:value pairs:
   Note the syntax differences: remove the ``--`` prefix and replace ``-`` within the keys by the underscore ``_``.
 
 
-.. note:: 
+.. note::
 
-  Codes are a subclass of the :py:class:`Node <aiida.orm.nodes.Node>` class and, as such, you can attach any set of attributes to the code. 
+  Codes are a subclass of the :py:class:`Node <aiida.orm.nodes.Node>` class and, as such, you can attach any set of attributes to the code.
   These can be extremely useful for querying: for instance, you can attach the version of the code as an attribute, or the code family (for instance: "pw.x code of Quantum Espresso") to later query for all runs done with a ``pw.x`` code and version more recent than 5.0.0, for instance.
   However, in the present AiiDA version you cannot add attributes from the command line using ``verdi``, but you have to do it using Python code.
 

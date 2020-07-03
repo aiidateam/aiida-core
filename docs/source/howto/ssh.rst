@@ -1,8 +1,8 @@
 .. _how-to:ssh:
 
-*************************
-How setup SSH connections
-*************************
+****************************
+How to setup SSH connections
+****************************
 
 If you plan to use the ``SSH`` transport for an :ref:`AiiDA computer <how-to:setup_computer>`, you have to configure a password-less login from your user to the cluster.
 To do so type first (only if you do not already have some keys in your local ``~/.ssh`` directory - i.e. files like ``id_rsa.pub``):

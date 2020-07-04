@@ -65,38 +65,38 @@ This command allows to create a new computer instance in the database.
 Here is a list of what is asked, together with an explanation.
 
 * **Computer label**: the (user-friendly) label of the new computer instance which is about to be created in the database (the label is used for instance when you have to pick a computer to launch a calculation on it).
-   Labels must be unique.
-   This command should be thought as a AiiDA-wise configuration of computer, independent of the AiiDA user that will actually use it.
+  Labels must be unique.
+  This command should be thought as a AiiDA-wise configuration of computer, independent of the AiiDA user that will actually use it.
 
 * **Fully-qualified hostname**: the fully-qualified hostname of the computer to which you want to connect (i.e., with all the dots: ``bellatrix.epfl.ch``, and not just ``bellatrix``). Type ``localhost`` for the local transport.
 
 * **Description**:  A human-readable description of this computer; this is useful if you have a lot of computers and you want to add some text to distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
 
 * **Enabled**: either ``True`` or ``False``; if ``False``, the computer is disabled and calculations associated with it will not be submitted.
-   This allows to disable temporarily a computer if it is giving problems or it is down for maintenance, without the need to delete it from the DB.
+  This allows to disable temporarily a computer if it is giving problems or it is down for maintenance, without the need to delete it from the DB.
 
 * **Transport plugin**: The type of the transport to be used. A list of valid transport types can be obtained typing ``?``
 
 * **Scheduler plugin**: The name of the plugin to be used to manage the job scheduler on the computer.
-   A list of valid scheduler plugins can be obtained typing ``?``.
-   See :ref:`the scheduler topic <topics:schedulers>` for a documentation of available scheduler plugins in AiiDA.
+  A list of valid scheduler plugins can be obtained typing ``?``.
+  See :ref:`the scheduler topic <topics:schedulers>` for a documentation of available scheduler plugins in AiiDA.
 
 * **shebang line** This is the first line in the beginning of the submission script.
-   The default is ``#!/bin/bash``.
-   You can change this in order, for example, to add options, such as the ``-l`` flag. Note that AiiDA only supports bash at this point!
+  The default is ``#!/bin/bash``.
+  You can change this in order, for example, to add options, such as the ``-l`` flag. Note that AiiDA only supports bash at this point!
 
 * **Work directory on the computer**: The absolute path of the directory on the remote computer where AiiDA will run the calculations (often, it is the scratch of the computer).
-   You can (should) use the ``{username}`` replacement, that will be replaced by your username on the remote computer automatically: this allows the same computer to be used by different users, without the need to setup a different computer for each one, e.g.
+  You can (should) use the ``{username}`` replacement, that will be replaced by your username on the remote computer automatically: this allows the same computer to be used by different users, without the need to setup a different computer for each one, e.g.
 
-   .. code-block:: bash
+  .. code-block:: bash
 
-      /scratch/{username}/aiida_work/
+     scratch/{username}/aiida_work/
 
 * **Mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI programs.
-   You can (should) use the ``{tot_num_mpiprocs}`` replacement, that will be replaced by the total number of cpus, or the other scheduler-dependent fields (see the :ref:`scheduler topic <topics:schedulers>` for more information).
-   Some examples:
+  You can (should) use the ``{tot_num_mpiprocs}`` replacement, that will be replaced by the total number of cpus, or the other scheduler-dependent fields (see the :ref:`scheduler topic <topics:schedulers>` for more information).
+  Some examples:
 
-   .. code-block:: bash
+  .. code-block:: bash
 
       mpirun -np {tot_num_mpiprocs}
       aprun -n {tot_num_mpiprocs}
@@ -187,11 +187,11 @@ For ``ssh`` transport, the following will be asked:
 * **GSS host**: hostname when using Kerberos token to connect (defaults to the remote computer hostname)
 * **Load system host keys**: True to load the known hosts keys from the default SSH location (recommended)
 * **key policy**: What is the policy in case the host is not known.
-   It is a string among the following:
+  It is a string among the following:
 
-   * ``RejectPolicy`` (default, recommended): reject the connection if the host is not known.
-   * ``WarningPolicy`` (*not* recommended): issue a warning if the host is not known.
-   * ``AutoAddPolicy`` (*not* recommended): automatically add the host key at the first connection to the host.
+  * ``RejectPolicy`` (default, recommended): reject the connection if the host is not known.
+  * ``WarningPolicy`` (*not* recommended): issue a warning if the host is not known.
+  * ``AutoAddPolicy`` (*not* recommended): automatically add the host key at the first connection to the host.
 
 * **Connection cooldown time (s)**: The minimum time interval between consecutive connection openings to the remote machine.
 

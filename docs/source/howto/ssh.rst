@@ -112,8 +112,8 @@ It should print a snapshot of the queue status, without any errors.
 
 .. _how-to:ssh:passphrase:
 
-Using passphrase-protected SSH keys via a ssh-agent
-===================================================
+Using passphrase-protected keys *via* an ssh-agent
+==================================================
 
 In order to connect to a remote computer using the ``SSH`` transport, AiiDA needs a password-less login (see :ref:`how-to:setup_computer`): for this reason, it is necessary to configure an authentication key pair.
 

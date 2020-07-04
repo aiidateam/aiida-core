@@ -64,45 +64,55 @@ This command allows to create a new computer instance in the database.
 
 Here is a list of what is asked, together with an explanation.
 
-* **Computer label**: the (user-friendly) label of the new computer instance which is about to be created in the database (the label is used for instance when you have to pick a computer to launch a calculation on it).
-  Labels must be unique.
-  This command should be thought as a AiiDA-wise configuration of computer, independent of the AiiDA user that will actually use it.
+Computer label
+   The (user-friendly) label of the new computer instance which is about to be created in the database (the label is used for instance when you have to pick a computer to launch a calculation on it).
+   Labels must be unique.
+   This command should be thought as a AiiDA-wise configuration of computer, independent of the AiiDA user that will actually use it.
 
-* **Fully-qualified hostname**: the fully-qualified hostname of the computer to which you want to connect (i.e., with all the dots: ``bellatrix.epfl.ch``, and not just ``bellatrix``). Type ``localhost`` for the local transport.
+Fully-qualified hostname
+   The fully-qualified hostname of the computer to which you want to connect (i.e., with all the dots: ``bellatrix.epfl.ch``, and not just ``bellatrix``). Type ``localhost`` for the local transport.
 
-* **Description**:  A human-readable description of this computer; this is useful if you have a lot of computers and you want to add some text to distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
+Description
+   A human-readable description of this computer; this is useful if you have a lot of computers and you want to add some text to distinguish them (e.g.: "cluster of computers at EPFL, installed in 2012, 2 GB of RAM per CPU")
 
-* **Enabled**: either ``True`` or ``False``; if ``False``, the computer is disabled and calculations associated with it will not be submitted.
-  This allows to disable temporarily a computer if it is giving problems or it is down for maintenance, without the need to delete it from the DB.
+Enabled
+   Either ``True`` or ``False``; if ``False``, the computer is disabled and calculations associated with it will not be submitted.
+   This allows to disable temporarily a computer if it is giving problems or it is down for maintenance, without the need to delete it from the database.
 
-* **Transport plugin**: The type of the transport to be used. A list of valid transport types can be obtained typing ``?``
+Transport plugin
+   The type of the transport to be used. A list of valid transport types can be obtained typing ``?``
 
-* **Scheduler plugin**: The name of the plugin to be used to manage the job scheduler on the computer.
-  A list of valid scheduler plugins can be obtained typing ``?``.
-  See :ref:`the scheduler topic <topics:schedulers>` for a documentation of available scheduler plugins in AiiDA.
+Scheduler plugin
+   The name of the plugin to be used to manage the job scheduler on the computer.
+   A list of valid scheduler plugins can be obtained typing ``?``.
+   See :ref:`the scheduler topic <topics:schedulers>` for a documentation of available scheduler plugins in AiiDA.
 
-* **shebang line** This is the first line in the beginning of the submission script.
-  The default is ``#!/bin/bash``.
-  You can change this in order, for example, to add options, such as the ``-l`` flag. Note that AiiDA only supports bash at this point!
+shebang line
+   This is the first line in the beginning of the submission script.
+   The default is ``#!/bin/bash``.
+   You can change this in order, for example, to add options, such as the ``-l`` flag. Note that AiiDA only supports bash at this point!
 
-* **Work directory on the computer**: The absolute path of the directory on the remote computer where AiiDA will run the calculations (often, it is the scratch of the computer).
-  You can (should) use the ``{username}`` replacement, that will be replaced by your username on the remote computer automatically: this allows the same computer to be used by different users, without the need to setup a different computer for each one, e.g.
+Work directory on the computer
+   The absolute path of the directory on the remote computer where AiiDA will run the calculations (often, it is the scratch of the computer).
+   You can (should) use the ``{username}`` replacement, that will be replaced by your username on the remote computer automatically: this allows the same computer to be used by different users, without the need to setup a different computer for each one, e.g.
 
-  .. code-block:: bash
+   .. code-block:: bash
 
-     scratch/{username}/aiida_work/
+      scratch/{username}/aiida_work/
 
-* **Mpirun command**: The ``mpirun`` command needed on the cluster to run parallel MPI programs.
-  You can (should) use the ``{tot_num_mpiprocs}`` replacement, that will be replaced by the total number of cpus, or the other scheduler-dependent fields (see the :ref:`scheduler topic <topics:schedulers>` for more information).
-  Some examples:
+Mpirun command
+   The ``mpirun`` command needed on the cluster to run parallel MPI programs.
+   You can (should) use the ``{tot_num_mpiprocs}`` replacement, that will be replaced by the total number of cpus, or the other scheduler-dependent fields (see the :ref:`scheduler topic <topics:schedulers>` for more information).
+   Some examples:
 
-  .. code-block:: bash
+   .. code-block:: bash
 
       mpirun -np {tot_num_mpiprocs}
       aprun -n {tot_num_mpiprocs}
       poe
 
-* **Default number of CPUs per machine**: The number of MPI processes per machine that should be executed if it is not otherwise specified. Use ``0`` to specify no default value.
+Default number of CPUs per machine
+   The number of MPI processes per machine that should be executed if it is not otherwise specified. Use ``0`` to specify no default value.
 
 At the end, the command will open your default editor on a file containing a summary of the configuration up to this point, and the possibility to add ``bash`` commands that will be executed either *before* the actual execution of the job (under 'pre-execution script') or *after* the script submission (under 'Post execution script').
 These additional lines need may set up the environment on the computer, for example loading modules or exporting environment variables, for example:
@@ -171,29 +181,58 @@ For ``local`` transport, the only information required is the minimum time inter
 
 For ``ssh`` transport, the following will be asked:
 
-* **User name**: your username on the remote machine
-* **port Nr**: the port to connect to (the default SSH port is 22)
-* **Look_for_keys**: automatically look for the private key in ``~/.ssh`` (Default: ``False``).
-* **SSH key file**: the absolute path to your private SSH key.
-  You can leave it empty to use the default SSH key, if you set ``look_for_keys`` to ``True``.
-* **Connection timeout**: A timeout in seconds if there is no response (e.g., the machine is down. You can leave it empty to use the default value.)
-* **Allow_ssh agent**: If ``True``, it will try to use an SSH agent.
-* **SSH proxy_command**: Leave empty if you do not need a proxy command (i.e., if you can directly connect to the machine).
-  If you instead need to connect to an intermediate computer first, you need to provide here the command for the proxy: see :ref:`the SSH proxy how-to <how-to:ssh:proxy>` for how to use this option, and in particular the  notes for the :ref:`format of this field <how-to:ssh:proxy:notes>`.
-* **Compress file transfer**: ``True`` to compress the traffic (recommended)
-* **GSS auth**: yes when using Kerberos token to connect
-* **GSS kex**: yes when using Kerberos token to connect, in some cases (depending on your ``.ssh/config`` file)
-* **GSS deleg_creds**: yes when using Kerberos token to connect, in some cases (depending on your ``.ssh/config`` file)
-* **GSS host**: hostname when using Kerberos token to connect (defaults to the remote computer hostname)
-* **Load system host keys**: True to load the known hosts keys from the default SSH location (recommended)
-* **key policy**: What is the policy in case the host is not known.
-  It is a string among the following:
+User name
+   Your username on the remote machine.
 
-  * ``RejectPolicy`` (default, recommended): reject the connection if the host is not known.
-  * ``WarningPolicy`` (*not* recommended): issue a warning if the host is not known.
-  * ``AutoAddPolicy`` (*not* recommended): automatically add the host key at the first connection to the host.
+port Nr
+   the port to connect to (the default SSH port is 22).
 
-* **Connection cooldown time (s)**: The minimum time interval between consecutive connection openings to the remote machine.
+Look_for_keys
+   Automatically look for the private key in ``~/.ssh`` (Default: ``False``).
+
+SSH key file
+   The absolute path to your private SSH key.
+   You can leave it empty to use the default SSH key, if you set ``look_for_keys`` to ``True``.
+
+Connection timeout
+   A timeout in seconds if there is no response (e.g., the machine is down).
+   You can leave it empty to use the default value.
+
+Allow_ssh agent
+   If ``True``, it will try to use an SSH agent.
+
+SSH proxy_command
+   Leave empty if you do not need a proxy command (i.e., if you can directly connect to the machine).
+   If you instead need to connect to an intermediate computer first, you need to provide here the command for the proxy: see :ref:`the SSH proxy how-to <how-to:ssh:proxy>` for how to use this option, and in particular the  notes for the :ref:`format of this field <how-to:ssh:proxy:notes>`.
+
+Compress file transfer
+   ``True`` to compress the traffic (recommended).
+
+GSS auth
+   yes when using Kerberos token to connect.
+
+GSS kex
+   yes when using Kerberos token to connect, in some cases (depending on your ``.ssh/config`` file).
+
+GSS deleg_creds
+   yes when using Kerberos token to connect, in some cases (depending on your ``.ssh/config`` file).
+
+GSS host
+   Hostname when using Kerberos token to connect (defaults to the remote computer hostname
+
+Load system host keys
+   ``True`` to load the known hosts keys from the default SSH location (recommended).
+
+key policy
+   What is the policy in case the host is not known.
+   It is a string among the following:
+
+   * ``RejectPolicy`` (default, recommended): reject the connection if the host is not known.
+   * ``WarningPolicy`` (*not* recommended): issue a warning if the host is not known.
+   * ``AutoAddPolicy`` (*not* recommended): automatically add the host key at the first connection to the host.
+
+Connection cooldown time (s)
+   The minimum time interval between consecutive connection openings to the remote machine.
 
 After setup and configuration have been completed, your computer is ready to go!
 

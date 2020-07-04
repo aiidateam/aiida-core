@@ -56,7 +56,8 @@ and you will be guided through a process to setup your code.
 
 You will be asked for:
 
-* **Label**:  A label to refer to this code.
+Label
+  A label to refer to this code.
 
   .. note::
 
@@ -64,32 +65,41 @@ You will be asked for:
     However, if you try to keep it unique, at least within the same computer, you can use it later to reference your code.
     Otherwise, you need to remember its ``PK`` or ``UUID``.
 
-* **Description**: A human-readable description of this code (for instance "Quantum Espresso v.5.0.2 with 5.0.3 patches, pw.x code, compiled with openmpi").
+Description
+  A human-readable description of this code (for instance "Quantum Espresso v.5.0.2 with 5.0.3 patches, pw.x code, compiled with openmpi").
 
-* **Default calculation input plugin**: A string that identifies the default input plugin to be used to generate new calculations to use with this code.
+Default calculation input plugin
+  A string that identifies the default input plugin to be used to generate new calculations to use with this code.
   This string has to be a valid string recognized by the ``CalculationFactory`` function.
   To get the list of all available Calculation plugin strings, use the ``verdi plugin list aiida.calculations`` command.
 
-* **Installed on target computer**: either True (for local codes) or False (for remote codes).
+Installed on target computer
+  Either True (for local codes) or False (for remote codes).
   For the meaning of the distinction, see above.
   Depending on your choice, you will be asked for:
 
   * LOCAL CODES:
 
-    * **Local directory containing the code**: The absolute path where the executable and all other files needed to run the code are stored; these will be copied over to the remote computers for every submitted calculation.
-    * **Relative path of executable inside code folder**: The relative path of the executable file inside the folder entered in the previous step.
+    Local directory containing the code
+      The absolute path where the executable and all other files needed to run the code are stored; these will be copied over to the remote computers for every submitted calculation.
+
+    Relative path of executable inside code folder
+      The relative path of the executable file inside the folder entered in the previous step.
 
   * REMOTE CODES:
 
-    * **Remote computer name**: The computer name on which the code resides, as configured and stored in the AiiDA database. See :ref:`this section <how-to:setup_computer>` for information on how to set up a remote computer.
+    Remote computer name
+      The computer name on which the code resides, as configured and stored in the AiiDA database. See :ref:`this section <how-to:setup_computer>` for information on how to set up a remote computer.
 
-    * **Remote absolute path**: The (full) absolute path of the code executable
-      on the remote machine, *including the name of the executable*.
+    Remote absolute path
+      The (full) absolute path of the code executable on the remote machine, *including the name of the executable*.
 
 At the end of these steps, you will be prompted to edit a script, and you will have the opportunity to include ``bash`` commands that will be executed *before* running the submission script (after the 'pre execution script' lines) and *after* running the submission script (after the 'Post execution script' separator).
 This is intended for code-dependent settings, for instance to load modules or set variables that are needed by the code. For example:
 
-  module load intelmpi
+.. code-block:: bash
+
+    module load intelmpi
 
 
 At the end, you will get a confirmation command, and also the ID of the code in the

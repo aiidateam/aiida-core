@@ -203,7 +203,7 @@ Allow_ssh agent
 
 SSH proxy_command
    Leave empty if you do not need a proxy command (i.e., if you can directly connect to the machine).
-   If you instead need to connect to an intermediate computer first, you need to provide here the command for the proxy: see :ref:`the SSH proxy how-to <how-to:ssh:proxy>` for how to use this option, and in particular the  notes for the :ref:`format of this field <how-to:ssh:proxy:notes>`.
+   If you instead need to connect to an intermediate computer first, you need to provide here the command for the proxy: see :ref:`the SSH proxy how-to <how-to:ssh:proxy>` for how to use this option.
 
 Compress file transfer
    ``True`` to compress the traffic (recommended).

@@ -21,7 +21,7 @@ Very briefly, first create a new private/public keypair (``aiida``/``aiida.pub``
 
 .. code-block:: console
 
-   $ ssh-keygen -t rsa -b 4096 -m PEM -f ~/.ssh/aiida
+   $ ssh-keygen -t rsa -b 4096 -f ~/.ssh/aiida
 
 Copy the public key to the remote machine, normally this will add the public key to the rmote machine's ``~/.ssh/authorized_keys``:
 

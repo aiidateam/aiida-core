@@ -27,6 +27,7 @@ from aiida.cmdline.commands.cmd_data import cmd_structure, cmd_trajectory, cmd_u
 from aiida.engine import calcfunction
 from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
+from tests.static import STATIC_DIR
 
 
 class DummyVerdiDataExportable:
@@ -897,7 +898,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         super().setUpClass()
 
     def setUp(self):
-        self.filepath_pseudos = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'fixtures', 'pseudos')
+        self.filepath_pseudos = os.path.join(STATIC_DIR, 'pseudos')
         self.cli_runner = CliRunner()
 
     def upload_family(self):

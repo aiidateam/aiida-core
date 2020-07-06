@@ -4,85 +4,72 @@
 How to setup SSH connections
 ****************************
 
-If you plan to use the ``SSH`` transport for an :ref:`AiiDA computer <how-to:setup_computer>`, you have to configure a password-less login from your user to the cluster.
-To do so type first (only if you do not already have some keys in your local ``~/.ssh`` directory - i.e. files like ``id_rsa.pub``):
+AiiDA communicates with remote computers via the SSH protocol.
+There are two ways of setting up an SSH connection for AiiDA:
+
+ 1. Using up a passwordless SSH key (easier, less safe)
+ 2. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
+
+.. _how-to:ssh:passwordless:
+
+Using a passwordless SSH key
+============================
+
+
+There are numerous tutorials on the web, see e.g. `here <https://www.redhat.com/sysadmin/passwordless-ssh>`_.
+Very briefly, first create a new private/public keypair (``aiida``/``aiida.pub``), leaving passphrase emtpy:
 
 .. code-block:: console
 
-   $ ssh-keygen -t rsa
+   $ ssh-keygen -t rsa -f ~/.ssh/aiida
 
-.. note::
-
-  Using a passphrase to encrypt the private key is not mandatory, however it is highly recommended.
-  See :ref:`this how-to <how-to:ssh:passphrase>`, for using passphrase-protected SSH keys via a ssh-agent.
-
-Then copy your keys to the remote computer (in ``~/.ssh/authorized_keys``) with:
+Copy the public key to the remote machine, normally this will add the public key to the rmote machine's ``~/.ssh/authorized_keys``:
 
 .. code-block:: console
 
-   $ ssh-copy-id YOURUSERNAME@YOURCLUSTERADDRESS
+   $ ssh-copy-id -i ~/.ssh/aiida YOURUSERNAME@YOURCLUSTERADDRESS
 
-replacing ``YOURUSERNAME`` and ``YOURCLUSTERADDRESS`` by respectively your username and cluster address.
-Finally add the following lines to ~/.ssh/config (leaving an empty line before and after):
+Add the following lines to your ``~/.ssh/config`` file (or create it, if it does not exist):
 
 .. code-block:: bash
 
-  Host YOURCLUSTERADDRESS
-    User YOURUSERNAME
-    IdentityFile YOURRSAKEY
-
-replacing ``YOURRSAKEY`` by the path to the rsa private key you want to use (it should look like ``~/.ssh/id_rsa``).
+   Host YOURCLUSTERADDRESS
+         User YOURUSERNAME
+         IdentityFile ~/.ssh/aiida
 
 .. note::
 
-  In principle you don't have to put the ``IdentityFile`` line if you have only one rsa key in your ``~/.ssh`` folder.
+  If your cluster needs you to connect to another computer *PROXY* first, you can use the ``proxy_command`` feature of ssh, see :ref:`how-to:ssh:proxy`.
 
-Before proceeding to setup the computer, be sure that you are able to connect to your cluster using:
+You should now be able to access the remote computer (without the need to type a password) *via*:
 
 .. code-block:: console
 
    $ ssh YOURCLUSTERADDRESS
-
-without the need to type a password.
-Moreover, make also sure you can connect *via* ``sftp`` (needed to copy files).
-The following command:
-
-.. code-block:: console
-
+   # this connection is used to copy files
    $ sftp YOURCLUSTERADDRESS
-
-should show you a prompt without errors (possibly with a message saying ``Connected to YOURCLUSTERADDRESS``).
 
 .. admonition:: Connection closed failures
    :class: attention title-icon-troubleshoot
 
-  If the ``ssh`` command works, but the ``sftp`` command does not (e.g. it just prints ``Connection closed``), a possible reason can be that there is a line in your ``~/.bashrc`` (on the cluster) that either produces text output or an error.
-  Remove/comment it until no output or error is produced: this should make ``sftp`` work again.
 
-Finally, try also:
+   If the ``ssh`` command works, but the ``sftp`` command prints ``Connection closed``, there may be a line in the ``~/.bashrc`` file **on the cluster** that either produces text output or an error.
+   Remove/comment lines from this file until no output or error is produced: this should make ``sftp`` work again.
+
+Finally, if you are planning to use a batch scheduler on the remote computer, try also:
 
 .. code-block:: console
 
    $ ssh YOURCLUSTERADDRESS QUEUE_VISUALIZATION_COMMAND
 
-replacing ``QUEUE_VISUALIZATION_COMMAND`` by the scheduler command that prints on screen the status of the queue on the cluster (e.g. ``qstat`` for PBSpro scheduler or ``squeue`` for SLURM).
-It should print a snapshot of the queue status, without any errors.
+replacing ``QUEUE_VISUALIZATION_COMMAND`` by ``squeue`` (SLURM), ``qstat`` (PBSpro) or the equivalent command of your scheduler and check that it prints a list of the job queue without errors.
 
 .. admonition:: Scheduler errors?
     :class: attention title-icon-troubleshoot
 
-    If there are errors with the previous command, then edit your ``~/.bashrc`` file in the remote computer and add a line at the beginning that adds the path to the scheduler commands, typically (here for PBSpro):
+    If the previous command errors with ``command not found``, while the same ``QUEUE_VISUALIZATION_COMMAND`` works fine after you've logged in via SSH, it may be that a guard in the ``.bashrc`` file on the cluster prevents necessary modules from being loaded.
 
-    .. code-block:: bash
-
-      export PATH=$PATH:/opt/pbs/default/bin
-
-    Or, alternatively, find the path to the executables (like using ``which qsub``).
-
-.. note::
-
-    If you need your remote ``.bashrc`` to be sourced before you execute the code (for instance to change the PATH) make sure the ``.bashrc`` file **does not** contain lines like:
-
+    Look for lines like:
     .. code-block:: bash
 
         [ -z "$PS1" ] && return
@@ -96,83 +83,37 @@ It should print a snapshot of the queue status, without any errors.
             *) return;;
         esac
 
-    in the beginning (these would prevent the bashrc to be executed when you ssh to the remote computer).
-    You can check that e.g. the PATH variable is correctly set upon ssh, by typing (in your local computer):
+    which will prevent any instructions that follow from being executed.
+
+    You can either move relevant instructions before these lines or delete the guards entirely.
+    If you are wondering whether the ``PATH`` environment variable is set correctly, you can check its value using:
 
     .. code-block:: bash
 
         $ ssh YOURCLUSTERADDRESS 'echo $PATH'
-
-
-.. note::
-
-  If you need to ssh to a computer *A* first, from which you can then connect to computer *B* you wanted to connect to, you can use the ``proxy_command`` feature of ssh, that we also support in AiiDA.
-  For more information, see :ref:`how-to:ssh:proxy`.
-
 
 .. _how-to:ssh:passphrase:
 
 Using passphrase-protected keys *via* an ssh-agent
 ==================================================
 
-In order to connect to a remote computer using the ``SSH`` transport, AiiDA needs a password-less login (see :ref:`how-to:setup_computer`): for this reason, it is necessary to configure an authentication key pair.
 
-Using a passphrase to encrypt the private key is not mandatory, however it is highly recommended.
-In some cases it is indispensable because it is requested by the computer center managing the remote cluster.
-To this purpose, the use of a tool like ``ssh-agent`` becomes essential, so that the private-key passphrase only needs to be supplied once (note that the key needs to be provided again after a reboot of your AiiDA machine).
+Tools like ``ssh-agent`` (available on most Linux distros and MacOS) allow you to enter the passphrase of a protected key *once* and provide access to the decrypted key for as long as the agent is running.
+This allows you to use a passphrase-protected key (required by some HPC centres), while making the decrypted key available to AiiDA for automatic SSH operations.
 
-Starting the ssh-agent
-^^^^^^^^^^^^^^^^^^^^^^
+Creating the key
+^^^^^^^^^^^^^^^^
 
-In the majority of modern Linux systems for desktops/laptops, the ``ssh-agent`` automatically starts during login.
-In some cases (e.g. virtual machines, or old distributions) it is needed to start it manually instead.
-If you are unsure, just run the command ``ssh-add``: if it displays the error ``Could not open a connection to your authentication agent``, then you need to start the agent manually as described below.
+Start by following the instructions above for :ref:`how-to:ssh:passwordless`, the only difference being that you enter a passphrase when creating the key (and when logging in to the remote computer).
 
-.. dropdown:: Start the ``ssh-agent`` manually (and reuse it across shells)
+Adding the key to the agent
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    If you have no ``ssh-agent`` running, you can start a new one with the command:
-
-    .. code:: bash
-
-        eval `ssh-agent`
-
-    However, this command will start a new agent that will be visible **only in your current shell**.
-
-    In order to use the same agent instance in every future opened shell, and most importantly to make this accessible to the AiiDA daemon, you need to make sure that the environment variables of ``ssh-agent`` are reused by *all* shells.
-
-    To make the ssh-agent persistent, downlod the script :download:`load-singlesshagent.sh <include/load-singlesshagent.sh>` and put it in a directory dedicated to the storage of your scripts (in our example will be ``~/bin``).
-
-    .. note::
-
-       You need to use this script only if a "global" ssh-agent is not available by default on your computer.
-       A global agent is available, for instance, on recent versions of Mac OS X and of Ubuntu Linux.
-
-    Then edit the file ``~/.bashrc`` and add the following lines:
-
-    .. code:: bash
-
-        if [ -f ~/bin/load-singlesshagent.sh ]; then
-            . ~/bin/load-singlesshagent.sh
-        fi
-
-    To check that it works, perform the following steps:
-
-    * Open a new shell, so that the ``~/.bashrc`` file is sourced.
-    * Run the command ``ssh-add`` as described in the following section.
-    * Logout from the current shell.
-    * Open a new shell.
-    * Check that you are able to connect to the remote computer without typing the passphrase.
-
-Adding the passphrase of your key(s) to the agent
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To provide the passphrase of your private key to the the agent use the command:
+Now provide the passphrase for your private key to the agent:
 
 .. code:: bash
 
-    ssh-add
-
-If you changed the default position or the default name of the private key, or you want to provide the passphrase only for a specific key, you need specify the path to the SSH key file as a parameter to ``ssh-add``.
+    ssh-add ~/.ssh/aiida
 
 The private key and the relative passphrase are now recorded in an instance of the agent.
 
@@ -181,126 +122,134 @@ The private key and the relative passphrase are now recorded in an instance of t
    The passphase is stored in the agent only until the next reboot.
    If you shut down or restart the AiiDA machine, before starting the AiiDA deamon remember to run the ``ssh-add`` command again.
 
-Configure AiiDA
-^^^^^^^^^^^^^^^
+Starting the ssh-agent
+^^^^^^^^^^^^^^^^^^^^^^
 
-In order to use the agent in AiiDA, you need to first make sure that you can connect to the computer via SSH without explicitly specifying a passphrase.
-Make sure that this is the case also in newly opened bash shells.
+On most modern Linux installations, the ``ssh-agent`` starts automatically at login (e.g. Ubuntu 16.04 and later or MacOS 10.5 and later).
+If you received an error ``Could not open a connection to your authentication agent``, you will need to start the agent manually instead.
 
-Then, when configuring the corresponding AiiDA computer (via ``verdi computer configure``), make sure to specify ``true`` to the question ``Allow ssh agent``.
-If you already configured the computer and just want to adapt the computer configuration, just rerun
-
-.. code:: bash
-
-    verdi computer configure ssh COMPUTERNAME
-
-After the configuration, you should verify that AiiDA can connect to the computer with:
+Check whether you can start an ``ssh-agent`` **in your current shell**:
 
 .. code:: bash
 
-    verdi computer test COMPUTERNAME
+   eval `ssh-agent`
+
+In order to reuse the same agent instance everywhere (including the AiiDA daemon), the environment variables of ``ssh-agent`` need to be reused by *all* shells.
+Download the script :download:`load-singlesshagent.sh <include/load-singlesshagent.sh>` and place it e.g. in ``~/bin``.
+Then add the following lines to your ``~/.bashrc`` file:
+
+.. code:: bash
+
+   if [ -f ~/bin/load-singlesshagent.sh ]; then
+      . ~/bin/load-singlesshagent.sh
+   fi
+
+To check that it works:
+
+* Open a new shell (``~/.bashrc`` file is sourced).
+* Run ``ssh-add``.
+* Close the shell.
+* Open a new shell and try logging in to the remote computer.
+
+Try logging in to the remote computer; it should no longer require a passphrase.
+
+The key and its corresponding passphrase are now stored by the agent until it is stopped.
+After a reboot, remember to run ``ssh-add ~/.ssh/aiida`` again before starting the AiiDA daemon.
+
+AiiDA configuration
+^^^^^^^^^^^^^^^^^^^
+
+When :ref:`configuring the computer in AiiDA <how-to:setup_computer:config>`, simply make sure that ``Allow ssh agent`` is set to ``true`` (default).
 
 .. _how-to:ssh:proxy:
 
 Connecting to a remote computer *via* a proxy server
 ====================================================
 
-This section explains how to use the ``proxy_command`` feature of ``ssh``.
-This feature is needed when you want to connect to a computer ``B``, but you are not allowed to connect directly to it; instead, you have to connect to computer ``A`` first, and then perform a further connection from ``A`` to ``B``.
+Some compute clusters require you to connect to an intermediate server *PROXY*, from which you can then connect to the cluster *TARGET* on which you run your calculations.
+This section explains how to use the ``proxy_command`` feature of ``ssh`` in order to make this jump automatically.
+
+.. tip::
+
+  This method can also be used to automatically tunnel into virtual private networks, if you have an account on a proxy/jumphost server with access to the network.
 
 Requirements
 ^^^^^^^^^^^^
 
-The idea is that you ask ``ssh`` to connect to computer ``B`` by using a proxy to create a sort of tunnel.
-One way to perform such an operation is to use ``netcat``, a tool that simply takes the standard input and
-redirects it to a given TCP port.
+The ``netcat`` tool needs to be present on the *PROXY* server (executable may be named ``netcat`` or ``nc``).
+``netcat`` simply takes the standard input and redirects it to a given TCP port.
 
-Therefore, a requirement is to install ``netcat`` on computer A.
-You can already check if the ``netcat`` or ``nc`` command is available on you computer, since some distributions include it (if it is already installed, the output of the command:
+.. dropdown:: Installing netcat
 
-.. code-block:: console
+    If neither ``netcat`` or ``nc`` are available, you will need to install it on your own.
+    You can download a `netcat distribution <http://netcat.sourceforge.net/download.php>`_, unzip the downloaded package, ``cd`` into the folder and execute something like:
 
-   $ which netcat
+    .. code-block:: console
 
-or:
+       $ ./configure --prefix=.
+       $ make
+       $ make install
 
-.. code-block:: console
+    This usually creates a subfolder ``bin``, containing the ``netcat`` and ``nc`` executables.
+    Write down the full path to ``nc`` which we will need later.
 
-   $ which nc
-
-will return the absolute path to the executable).
-
-If this is not the case, you will need to install it on your own.
-Typically, it will be sufficient to look for a netcat distribution on the web, unzip the downloaded package, ``cd`` into the folder and execute something like:
-
-.. code-block:: console
-
-   $ ./configure --prefix=.
-   $ make
-   $ make install
-
-This usually creates a subfolder ``bin``, containing the ``netcat`` and ``nc`` executables.
-Write down the full path to ``nc`` that we will need later.
 
 
 SSH configuration
 ^^^^^^^^^^^^^^^^^
 
-You can now test the proxy command with ``ssh``.
 Edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing) and add the following lines::
 
-  Host FULLHOSTNAME_B
-  Hostname FULLHOSTNAME_B
-  User USER_B
-  ProxyCommand ssh USER_A@FULLHOSTNAME_A ABSPATH_NETCAT %h %p
+  Host SHORTNAME_TARGET
+      Hostname FULLHOSTNAME_TARGET
+      User USER_TARGET
+      IdentityFile ~/.ssh/aiida
+      ProxyCommand ssh USER_PROXY@FULLHOSTNAME_PROXY ABSPATH_NETCAT %h %p
 
-where you have to replace:
+replacing the ``..._TARGET`` and ``..._PROXY`` variables with the host/user names of the respective servers, and replacing ``ABSPATH_NETCAT`` with the result of ``which netcat`` (or ``which nc``).
 
-* ``FULLHOSTNAMEA`` and ``FULLHOSTNAMEB`` with the fully-qualified hostnames of computer ``A`` and ``B`` (remembering that ``B`` is the computer you want to actually connect to, and ``A`` is the intermediate computer to which you have direct access)
-* ``USER_A`` and ``USER_B`` are the usernames on the two machines (that can possibly be the same).
-* ``ABSPATH_NETCAT`` is the absolute path to the ``nc`` executable that you obtained in the previous step.
+.. note::
 
-Remember also to configure passwordless ssh connections using ssh keys both from your computer to ``A``, and from ``A`` to ``B`` (see above).
+    If desired/necessary for your netcat implementation, hide warnings and errors  that may occur during the proxying/tunneling by redirecting stdout and stderr, e.g. by appending ``2> /dev/null`` to the ``ProxyCommand``.
 
-Once you add this lines and save the file, try to execute:
+
+This should allow you to directly connect to the *TARGET* server using
 
 .. code-block:: console
 
-   $ ssh FULLHOSTNAME_B
+   $ ssh SHORTNAME_TARGET
 
-which should allow you to directly connect to ``B``.
+For a *passwordless* connection, you need to follow the instructions :ref:`how-to:ssh:passwordless` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server.
+
 
 .. warning::
 
-   There are several versions of netcat available on the web.
-   We found at least one case in which the executable wasn't working properly.
-   At the end of the connection, the ``netcat`` executable might still be running: as a result, you may rapidly leave the cluster with hundreds of opened ``ssh`` connections, one for every time you connect to the cluster ``B``.
-   Therefore, check on both computers ``A`` and ``B`` that the number of processes ``netcat`` and ``ssh`` are disappearing if you close the connection.
-   To check if such processes are running, you can execute:
+   There are occasionally ``netcat`` implementations, which keep running after you close your SSH connection, resulting in a growing number of open SSH connections between the *PROXY* server and the *TARGET* server.
+   If you suspect an issue, it may be worth connecting to the *PROXY* server and checking how many ``netcat`` processes are running, e.g. via:
 
    .. code-block:: console
 
-      $ ps -aux | grep <username>
-
-   Remember that a cluster might have more than one login node, and the ``ssh`` connection will randomly connect to any of them.
+      $ ps -aux | grep netcat
 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-If the above steps work, setup and configure now the computer as explained in the :ref:`computer setup how-to <how-to:setup_computer>`.
+When :ref:`configuring the computer in AiiDA <how-to:setup_computer:config>`, AiiDA will automatically parse the required information from your ``~/.ssh/config`` file.
 
-If you properly set up the ``~/.ssh/config`` file in the previous step, AiiDA should properly parse the information in the file and provide the correct default value for the ``proxy_command`` during the ``verdi computer configure`` step.
+.. dropdown:: Specifying the proxy_command manually
 
-.. _how-to:ssh:proxy:notes:
+    If, for any reason, you need to specify the ``proxy_command`` option of ``verdi computer configure ssh`` manually, please note the following:
 
-Some notes on the ``proxy_command`` option
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      1. Don't use placeholders ``%h`` and ``%p`` (AiiDA replaces them only when parsing from the ``~/.ssh/config`` file) but provide the actual hostname and port.
+      2. Don't include stdout/stderr redirection (AiiDA strips it automatically, but only when parsing from the ``~/.ssh/config`` file).
 
-In the ``~/.ssh/config`` file, you can leave the ``%h`` and ``%p`` placeholders, that are then automatically replaced by ssh with the hostname and the port of the machine ``B`` when creating the proxy.
-However, in the AiiDA ``proxy_command`` option, you need to put the actual hostname and port.
-If you start from a properly configured ``~/.ssh/config`` file, AiiDA will already replace these placeholders with the correct values.
-However, if you input the ``proxy_command`` value manually, remember to write the hostname and the port and not ``%h`` and ``%p``.
 
-In the ``~/.ssh/config`` file, you can also insert stdout and stderr redirection, e.g. ``2> /dev/null`` to hide any error that may occur during the proxying/tunneling.
-However, you should only give AiiDA the actual command to be executed, without any redirection.
-Again, AiiDA will remove the redirection when it automatically reads the ``~/.ssh/config`` file, but be careful if entering manually the content in this field.
+Using kerberos tokens
+=====================
+
+If the remote machine requires authentication through a Kerberos token (that you need to obtain before using ssh), you typically need to
+
+ * install ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu)
+ * install the ``ssh_kerberos`` extra during the installation of aiida-core (see :ref:`intro:install:aiida-core`).
+
+If you provide all necessary ``GSSAPI`` options in your ``~/.ssh/config`` file, ``verdi computer configure`` should already pick up the appropriate values for all the gss-related options.

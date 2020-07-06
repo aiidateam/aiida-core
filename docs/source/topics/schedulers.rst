@@ -4,57 +4,59 @@
 Batch Job Schedulers
 ====================
 
-The sections below describes the intrinsically supported *schedulers*, i.e. the batch job schedulers that manage the job queues and execution on any given computer.
-See also :ref:`this how-to <how-to:codes:scheduler>` for adding support for custom schedulers.
+Batch job schedulers manage the job queues and execution on a compute resource.
+AiiDA ships with plugins for a range of schedulers, and this section describes the interface of these plugins.
+
+See :ref:`this how-to <how-to:plugin-codes:scheduler>` for adding support for custom schedulers.
 
 PBSPro
 ------
 
-The `PBSPro`_ scheduler is supported (and it has been tested with version 12.1).
+The `PBSPro`_ scheduler is supported (tested: version 12.1).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when setting the job resources is the :ref:`topics:schedulers:job_resources:node`.
+Use the :ref:`topics:schedulers:job_resources:node` when setting job resources.
 
 .. _PBSPro: http://www.pbsworks.com/Product.aspx?id=1
 
 SLURM
 -----
 
-The `SLURM`_ scheduler is supported (and it has been tested with version 2.5.4).
+The `SLURM`_ scheduler is supported (tested: version 2.5.4).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when setting the job resources is the :ref:`topics:schedulers:job_resources:node`.
+Use the :ref:`topics:schedulers:job_resources:node` when setting job resources.
 
 .. _SLURM: https://slurm.schedmd.com/
 
 SGE
 ---
 
-The `SGE`_ scheduler (Sun Grid Engine, now called Oracle Grid Engine) is supported (and it has been tested with version GE 6.2u3), together with some of the main variants/forks.
+The `SGE`_ scheduler (Sun Grid Engine, now called Oracle Grid Engine) and some of its main variants/forks are supported (tested: version GE 6.2u3).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when setting the job resources is the :ref:`topics:schedulers:job_resources:par`.
+Use the :ref:`topics:schedulers:job_resources:par` when setting job resources.
 
 .. _SGE: https://en.wikipedia.org/wiki/Oracle_Grid_Engine
 
 LSF
 ---
 
-The IBM `LSF`_ scheduler is supported and has been tested with version 9.1.3 on the CERN `lxplus` cluster.
+The IBM `LSF`_ scheduler is supported (tested: version 9.1.3 on the CERN `lxplus` cluster).
 
 .. _LSF: https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_welcome.html
 
 Torque
 ------
 
-`Torque`_ (based on OpenPBS) is supported (and it has been tested with Torque v.2.4.16 from Ubuntu).
+`Torque`_ (based on OpenPBS) is supported (tested: version 2.4.16 from Ubuntu).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when setting the job resources is the :ref:`topics:schedulers:job_resources:node`.
+Use the :ref:`topics:schedulers:job_resources:node` when setting job resources.
 
 .. _Torque: http://www.adaptivecomputing.com/products/open-source/torque/
 
@@ -63,25 +65,27 @@ The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when s
 Direct execution (bypassing schedulers)
 ---------------------------------------
 
-The direct scheduler, to be used mainly for debugging, is an implementation of a scheduler plugin that does not require a real scheduler installed, but instead directly executes a command, puts it in the background, and checks for its process ID (PID) to discover if the execution is completed.
+The ``direct`` scheduler plugin simply executes the command in a new bash shell, puts it in the background and checks for its process ID (PID) to determine when the execution is completed.
+
+Its main purpose is debugging on the local machine.
+Use a proper batch scheduler for any production calculations.
 
 .. warning::
 
-    The direct execution mode is very fragile.
-    Currently, it spawns a separate Bash shell to execute a job and track each shell by process ID (PID).
-    This poses following problems:
+    Compared to a proper batch scheduler, direct execution mode is fragile.
+    In particular:
 
-    * PID numeration is reset during reboots;
-    * PID numeration is different from machine to machine, thus direct execution is *not* possible in multi-machine clusters, redirecting each SSH login to a different node in round-robin fashion;
-    * there is no real queueing, hence, all calculation started will be run in parallel.
+    * There is no queueing, i.e. all calculations run in parallel.
+    * PID numeration is reset during reboots.
 
 .. warning::
 
-    Direct execution bypasses schedulers, so it should be used with care in order not to disturb the functioning of machines.
+    Do *not* use the direct scheduler for running on a supercomputer.
+    The job will end up running on the login node (which is typically forbidden), and if your centre has multiple login nodes, AiiDA may get confused if subsequent SSH connections end up at a different login node (causing AiiDA to infer that the job has completed).
 
 All the main features are supported with this scheduler.
 
-The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when setting the job resources is the :ref:`topics:schedulers:job_resources:node`
+Use the :ref:`topics:schedulers:job_resources:node` when setting job resources.
 
 
 .. _topics:schedulers:job_resources:
@@ -89,28 +93,24 @@ The :ref:`JobResource <topics:schedulers:job_resources>` class to be used when s
 Job resources
 -------------
 
-When asking a scheduler to allocate some nodes/machines for a given job, we have to specify some job resources, such as the number of required nodes or the numbers of MPI processes per node.
+Unsurprisingly, different schedulers have different ways of specifying the resources for a job (such as the number of required nodes or the numbers of MPI processes per node).
 
-Unfortunately, the way of specifying this information is different on different clusters.
-In AiiDA, this is implemented in different subclasses of the :py:class:`aiida.schedulers.datastructures.JobResource` class.
-The subclass that should be used is given by the scheduler, as described in the previous section.
+In AiiDA, these differences are accounted for by subclasses of the |JobResource|  class.
+The previous section lists which subclass to use with a given scheduler.
 
-The interfaces of these subclasses are not all exactly the same.
-Instead, specifying the resources is similar to writing a scheduler script.
-All classes define at least one method, :meth:`get_tot_num_mpiprocs <aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs>`, that returns the total number of MPI processes requested.
-
-In the following sections, the different :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclasses are described:
+All subclasses define at least the :py:meth:`~aiida.schedulers.datastructures.JobResource.get_tot_num_mpiprocs` method that returns the total number of MPI processes requested but otherwise have slightly different interfaces described in the following.
 
 .. note::
 
-    you can manually load a `specific` :class:`JobResource <aiida.schedulers.datastructures.JobResource>` subclass by directly importing it, e.g.
+    You can manually load a `specific` |JobResource| subclass by directly importing it, e.g.
 
     .. code-block:: python
 
-        from aiida.schedulers.datastructures import topics:schedulers:job_resources:node
+        from aiida.schedulers.datastructures import NodeNumberJobResource
 
-    However, in general, you will pass the fields to set directly in the ``metadata.options`` input dictionary of the :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`.
-    For instance:
+    In practice, however, the appropriate class will be inferred from scheduler configured for the relevant AiiDA computer, and you can simply set the relevant fields in the ``metadata.options`` input dictionary of the |CalcJob|.
+
+    For a scheduler with job resources of type |NodeNumberJobResource|, this could be:
 
     .. code-block:: python
 
@@ -125,26 +125,24 @@ In the following sections, the different :class:`JobResource <aiida.schedulers.d
             }
         }
 
-    This example assumes that the computer is configured to use a scheduler with job resources of type :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`.
-
 
 .. _topics:schedulers:job_resources:node:
 
 NodeNumberJobResource (PBS-like)
 ................................
 
-This is the way of specifying the job resources in PBS and SLURM.
-The class is :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`.
+The |NodeNumberJobResource| class is used for specifying job resources in PBS and SLURM.
 
-Once an instance of the class is obtained, you have the following fields that you can set:
+The class has the following attributes:
 
-* ``res.num_machines``: specify the number of machines (also called nodes) on which the code should run
+* ``res.num_machines``: the number of machines (also called nodes) on which the code should run
 * ``res.num_mpiprocs_per_machine``: number of MPI processes to use on each machine
-* ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is requesting
-* ``res.num_cores_per_machine``: specify the number of cores to use on each machine
-* ``res.num_cores_per_mpiproc``: specify the number of cores to run each MPI process
+* ``res.tot_num_mpiprocs``: the total number of MPI processes that this job requests
+* ``res.num_cores_per_machine``: the number of cores to use on each machine
+* ``res.num_cores_per_mpiproc``: the number of cores to run each MPI process on
 
-Note that you need to specify only two among the first three fields above, but they have to be defined upon construction, for instance:
+You need to specify only two among the first three fields above, but they have to be defined upon construction.
+We suggest using the first two, for instance:
 
 .. code-block:: python
 
@@ -155,38 +153,30 @@ This will automatically ask for a total of ``4*16=64`` total number of MPI proce
 
 .. note::
 
-    If you specify ``res.num_machines``, ``res.num_mpiprocs_per_machine``, and ``res.tot_num_mpiprocs`` fields (not recommended), make sure that they satisfy:
+    When creating a new computer, you will be asked for a ``default_mpiprocs_per_machine``.
+    If specified, it will automatically be used as the default value for ``num_mpiprocs_per_machine`` whenever creating the resources for that computer.
+
+.. note::
+
+    If you prefer using ``res.tot_num_mpiprocs`` instead, make sure it is a multiple of ``res.num_machines`` and/or ``res.num_mpiprocs_per_machine``.
+
+    The first three fields are related by the equation:
 
     .. code-block:: python
 
         res.num_machines * res.num_mpiprocs_per_machine = res.tot_num_mpiprocs
 
-    Moreover, if you specify ``res.tot_num_mpiprocs``, make sure that this is a multiple of ``res.num_machines`` and/or ``res.num_mpiprocs_per_machine``.
 
-.. note::
-
-    When creating a new computer, you will be asked for a ``default_mpiprocs_per_machine``.
-    If you specify it, then you can avoid to specify ``num_mpiprocs_per_machine`` when creating the resources for that computer, and the default number will be used.
-
-    Of course, all the requirements between ``num_machines``, ``num_mpiprocs_per_machine`` and ``tot_num_mpiprocs`` still apply.
-
-    Moreover, you can explicitly specify ``num_mpiprocs_per_machine`` if you want to use a value different from the default one.
-
-
-The ``num_cores_per_machine`` and ``num_cores_per_mpiproc`` fields are optional.
-If you specify ``num_mpiprocs_per_machine`` and ``num_cores_per_machine fields``, make sure that:
+The ``num_cores_per_machine`` and ``num_cores_per_mpiproc`` fields are optional and must satisfy the equation:
 
 .. code-block:: python
 
     res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
 
-If you want to specifiy single value in ``num_mpiprocs_per_machine`` and ``num_cores_per_machine``, please make sure that ``res.num_cores_per_machine`` is multiple of ``res.num_cores_per_mpiproc`` and/or ``res.num_mpiprocs_per_machine``.
 
 .. note::
 
     In PBSPro, the ``num_mpiprocs_per_machine`` and ``num_cores_per_machine`` fields are used for mpiprocs and ppn respectively.
-
-.. note::
 
     In Torque, the ``num_mpiprocs_per_machine`` field is used for ppn unless the ``num_mpiprocs_per_machine`` is specified.
 
@@ -195,18 +185,16 @@ If you want to specifiy single value in ``num_mpiprocs_per_machine`` and ``num_c
 ParEnvJobResource (SGE-like)
 ............................
 
-In SGE and similar schedulers, one has to specify a *parallel environment* and the *total number of CPUs* requested.
-The class is :py:class:`~aiida.schedulers.datastructures.ParEnvJobResource`.
+The :py:class:`~aiida.schedulers.datastructures.ParEnvJobResource` class is used for specifying the resources of SGE and similar schedulers, which require specifying a *parallel environment* and the *total number of CPUs* requested.
 
-Once an instance of the class is obtained, you have the following fields that you can set:
+The class has the following attributes:
 
-* ``res.parallel_env``: specify the parallel environment in which you want to run your job (a string)
-* ``res.tot_num_mpiprocs``: the total number of MPI processes that this job is requesting
+* ``res.parallel_env``: the parallel environment in which you want to run your job (a string)
+* ``res.tot_num_mpiprocs``: the total number of MPI processes that this job requests
 
-Remember to always specify both fields. No checks are done on the consistency between the specified parallel environment and the total number of MPI processes requested (for instance, some parallel environments may have been configured by your cluster administrator to run on a single machine).
+Both attributes are required.
+No checks are done on the consistency between the specified parallel environment and the total number of MPI processes requested (for instance, some parallel environments may have been configured by your cluster administrator to run on a single machine).
 It is your responsibility to make sure that the information is valid, otherwise the submission will fail.
-
-Some examples:
 
 Setting the fields directly in the class constructor:
 
@@ -214,7 +202,7 @@ Setting the fields directly in the class constructor:
 
     res = ParEnvJobResource(parallel_env='mpi', tot_num_mpiprocs=64)
 
-even better, you will pass the fields to set directly in the ``metadata.options`` input dictionary of the :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`:
+And setting the fields using the ``metadata.options`` input dictionary of the |CalcJob|:
 
 .. code-block:: python
 
@@ -225,3 +213,8 @@ even better, you will pass the fields to set directly in the ``metadata.options`
             }
         }
     }
+
+
+.. |NodeNumberJobResource| replace:: :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`
+.. |JobResource| replace:: :py:class:`~aiida.schedulers.datastructures.JobResource`
+.. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`

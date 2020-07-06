@@ -51,7 +51,7 @@ class Transport(abc.ABC):
         'safe_interval', {
             'type': float,
             'prompt': 'Connection cooldown time (s)',
-            'help': 'Minimum time interval in seconds between consecutive connection openings',
+            'help': 'Minimum time interval in seconds between opening new connections.',
             'callback': validate_positive_number
         }
     )]

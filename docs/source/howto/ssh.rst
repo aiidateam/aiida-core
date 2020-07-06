@@ -159,7 +159,7 @@ After a reboot, remember to run ``ssh-add ~/.ssh/aiida`` again before starting t
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-When :ref:`configuring the computer in AiiDA <how-to:setup_computer:config>`, simply make sure that ``Allow ssh agent`` is set to ``true`` (default).
+When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, simply make sure that ``Allow ssh agent`` is set to ``true`` (default).
 
 .. _how-to:ssh:proxy:
 
@@ -234,7 +234,7 @@ For a *passwordless* connection, you need to follow the instructions :ref:`how-t
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-When :ref:`configuring the computer in AiiDA <how-to:setup_computer:config>`, AiiDA will automatically parse the required information from your ``~/.ssh/config`` file.
+When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse the required information from your ``~/.ssh/config`` file.
 
 .. dropdown:: Specifying the proxy_command manually
 

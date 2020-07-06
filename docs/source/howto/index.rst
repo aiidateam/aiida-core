@@ -5,9 +5,8 @@ How-To Guides
 .. toctree::
    :maxdepth: 1
 
-   setup_computers
+   run-codes
    ssh
-   setup_codes
    plugin_codes
    workflows
    data

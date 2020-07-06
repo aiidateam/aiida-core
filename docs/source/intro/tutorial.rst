@@ -242,7 +242,7 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
 .. seealso::
 
-    The specific how-tos in :ref:`setting up computers <how-to:setup_computer>` and :ref:`setting up codes <how-to:setup_code>`.
+   More details for how to :ref:`run external codes <how-to:run-codes>`.
 
 .. dropdown:: Install localhost computer and code
 

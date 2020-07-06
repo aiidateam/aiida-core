@@ -35,20 +35,24 @@ It can either be:
 
 The second option allows managing multiple remote compute resources (including HPC clusters and cloud services) from the same AiiDA installation and moving computational jobs between them.
 
-.. tip::
+.. note::
 
-    The second option requires access through a SSH keypair.
+    The second option requires access through an SSH keypair.
     If your compute resource demands two-factor authentication, you may need to install AiiDA directly on the compute resource instead.
 
 
 Computer requirements
 ---------------------
 
-Requirements for configuring a compute resource in AiiDA are:
+Compute resources that can be used by AiiDA to run calculation come in two types:
+
+1. The computer on which AiiDA itself is installed, i.e., the `localhost`
+2. Remote computers that can be accessed over SSH (possibly :ref:`via a proxy server<how-to:ssh:proxy>`)
+
+Regardless of the type, each computer must satisfy the following requirements:
 
 * It runs a Unix-like operating system (Linux distros and MacOS should work fine)
 * It has ``bash`` installed
-* (option 2.) It is accessible *via* SSH from the machine that runs AiiDA (possibly :ref:`via a proxy server<how-to:ssh:proxy>`)
 * (optional) It has batch scheduler installed (see the :ref:`list of supported schedulers <topics:schedulers>`)
 
 If you are configuring a remote computer, start by :ref:`configuring password-less SSH access <how-to:ssh>` to it.
@@ -64,7 +68,7 @@ If you are configuring a remote computer, start by :ref:`configuring password-le
 Computer setup
 --------------
 
-The configuration of computers happens in two steps: setting up the public metadata asociated with the |Computer| in AiiDA provenance graphs, and configuring private connection details.
+The configuration of computers happens in two steps: setting up the public metadata associated with the |Computer| in AiiDA provenance graphs, and configuring private connection details.
 
 Start by creating a new computer instance in the database:
 
@@ -93,14 +97,14 @@ When you are done editing, save and quit (e.g. ``<ESC>:wq<ENTER>`` in ``vim``).
 The computer has now been created in the database but you still need to *configure* access to it using your credentials.
 
 .. tip::
-    In order to avoid having to retype the setup information the next time round, you can provide some (or all) of the information via a configuration file:
+    In order to avoid having to retype the setup information the next time around, you can provide some (or all) of the information via a configuration file:
 
     .. code-block:: console
 
        $ verdi computer setup --config computer.yml
 
     where ``computer.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`__.
-    This file contains the information in a series of key:value pairs:
+    This file contains the information in a series of key-value pairs:
 
     .. code-block:: yaml
 
@@ -122,7 +126,7 @@ The computer has now been created in the database but you still need to *configu
 
       $ verdi computer setup --help
 
-   Note: Remove the ``--`` prefix and replace ``-`` within the keys by the underscore ``_``.
+   Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
 
 .. _how-to:run-codes:computer:configuration:
 
@@ -133,40 +137,40 @@ The second step configures private connection details using:
 
 .. code-block:: console
 
-   $ verdi computer configure TRANSPORTTYPE COMPUTERNAME
+   $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-with the appropriate transport type (``local`` for option 1., ``ssh`` for option 2.) and computer label.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``local`` for the localhost computer and ``ssh`` for any remote computer.
 
-After setup and configuration have been completed, let AiiDA check if everything is working properly:
+After the setup and configuration have been completed, let's check that everything is working properly:
 
 .. code-block:: console
 
    $ verdi computer test COMPUTERNAME
 
-This will test logging in, copying files, and checking the jobs in the scheduler queue.
+This command will perform various tests to make sure that AiiDA can connect to the computer, create new files in the scratch directory, retrieve files and query the job scheduler.
 
 
 Managing your computers
 -----------------------
 
-If you are unsure whether a computer is already set up, list configured computers with:
+Fully configured computers can be listed with:
 
 .. code-block:: console
 
    $ verdi computer list
 
-To get detailed information on the specific computer named ``COMPUTERNAME``:
+To get detailed information on the specific computer named ``COMPUTERLABEL``:
 
 .. code-block:: console
 
-   $ verdi computer show COMPUTERNAME
+   $ verdi computer show COMPUTERLABEL
 
 To rename a computer or remove it from the database:
 
 .. code-block:: console
 
-   $ verdi computer rename OLDCOMPUTERNAME NEWCOMPUTERNAME
-   $ verdi computer delete COMPUTERNAME
+   $ verdi computer rename OLDCOMPUTERLABEL NEWCOMPUTERLABEL
+   $ verdi computer delete COMPUTERLABEL
 
 .. note::
 
@@ -178,8 +182,8 @@ Doing so will prevent AiiDA from connecting to the given computer to check the s
 
 .. code-block:: console
 
-   $ verdi computer disable COMPUTERNAME
-   $ verdi computer enable COMPUTERNAME
+   $ verdi computer disable COMPUTERLABEL
+   $ verdi computer enable COMPUTERLABEL
 
 For further hints on tuning the configuration of your computers, see :ref:`how-to:installation:supercomputers`
 
@@ -269,7 +273,7 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 
     $ verdi code setup --help
 
-  Note: Remove the ``--`` prefix and replace ``-`` within the keys by the underscore ``_``.
+  Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
 
 Managing codes
 --------------
@@ -340,7 +344,7 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
         from aiida.engine import submit
 
-        code = load_code(label='add@localhost')
+        code = load_code('add@localhost')
         builder = code.get_builder()
         builder.x = Int(4)
         builder.y = Int(5)

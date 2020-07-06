@@ -84,7 +84,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'look_for_keys', {
                 'switch': True,
                 'prompt': 'Look for keys',
-                'help': 'Automatically look for private keys in ~/.ssh (default: true)',
+                'help': 'Automatically look for private keys in the ~/.ssh folder.',
                 'non_interactive_default': True
             }
         ),
@@ -92,7 +92,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'key_filename', {
                 'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
                 'prompt': 'SSH key file',
-                'help': 'Absolute path to your private SSH key. Leave empty to use path set in ssh config.',
+                'help': 'Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
                 'non_interactive_default': True
             }
         ),
@@ -115,8 +115,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         (
             'proxy_command', {
                 'prompt': 'SSH proxy command',
-                'help': 'SSH ProxyCommand for tunneling through a proxy server.' +
-                ' Leave empty to parse ProxyCommand from the SSH config file.',
+                'help': 'SSH proxy command for tunneling through a proxy server.' +
+                ' Leave empty to parse the proxy command from the SSH config file.',
                 'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect

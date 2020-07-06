@@ -7,7 +7,7 @@ How to setup SSH connections
 AiiDA communicates with remote computers via the SSH protocol.
 There are two ways of setting up an SSH connection for AiiDA:
 
- 1. Using up a passwordless SSH key (easier, less safe)
+ 1. Using a passwordless SSH key (easier, less safe)
  2. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
 
 .. _how-to:ssh:passwordless:
@@ -70,6 +70,7 @@ replacing ``QUEUE_VISUALIZATION_COMMAND`` by ``squeue`` (SLURM), ``qstat`` (PBSp
     If the previous command errors with ``command not found``, while the same ``QUEUE_VISUALIZATION_COMMAND`` works fine after you've logged in via SSH, it may be that a guard in the ``.bashrc`` file on the cluster prevents necessary modules from being loaded.
 
     Look for lines like:
+
     .. code-block:: bash
 
         [ -z "$PS1" ] && return

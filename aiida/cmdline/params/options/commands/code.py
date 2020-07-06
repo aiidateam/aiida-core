@@ -30,8 +30,10 @@ ON_COMPUTER = OverridableOption(
     default=True,
     cls=InteractiveOption,
     prompt='Installed on target computer?',
-    help=
-    'Whether the code is installed on the target computer or should be copied to the target computer each time from a local path.'
+    help=(
+        'Whether the code is installed on the target computer, ' +
+        'or should be copied to the target computer each time from a local path.'
+    )
 )
 
 REMOTE_ABS_PATH = OverridableOption(
@@ -41,9 +43,7 @@ REMOTE_ABS_PATH = OverridableOption(
     prompt_fn=is_on_computer,
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
-    help=(
-        '[if --on-computer]: Absolute path to the executable on the target computer.'
-    )
+    help=('[if --on-computer]: Absolute path to the executable on the target computer.')
 )
 
 FOLDER = OverridableOption(
@@ -54,8 +54,8 @@ FOLDER = OverridableOption(
     type=click.Path(file_okay=False, exists=True, readable=True),
     cls=InteractiveOption,
     help=(
-        '[if --store-in-db]: Absolute path to directory containing the executable and all other files necessary for running it'
-        + ' (to be copied to target computer).'
+        '[if --store-in-db]: Absolute path to directory containing the executable ' +
+        'and all other files necessary for running it (to be copied to target computer).'
     )
 )
 
@@ -72,7 +72,10 @@ REL_PATH = OverridableOption(
 LABEL = options.LABEL.clone(
     prompt='Label',
     cls=InteractiveOption,
-    help="This label can be used to identify the code (using 'label@computerlabel'), as long as labels are unique per computer."
+    help=(
+        "This label can be used to identify the code (using 'label@computerlabel'), " +
+        'as long as labels are unique per computer.'
+    )
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(

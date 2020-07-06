@@ -31,7 +31,7 @@ A |Computer| in AiiDA denotes a computational resource on which you will run you
 It can either be:
 
  1. the machine where AiiDA is installed or
- 2. any machine that is accessible via `SSH <https://en.wikipedia.org/wiki/Secure_Shell>`_ from the machine where AiiDA is installed.
+ 2. any machine that is accessible via `SSH <https://en.wikipedia.org/wiki/Secure_Shell>`_ from the machine where AiiDA is installed (possibly :ref:`via a proxy server<how-to:ssh:proxy>`).
 
 The second option allows managing multiple remote compute resources (including HPC clusters and cloud services) from the same AiiDA installation and moving computational jobs between them.
 
@@ -44,12 +44,7 @@ The second option allows managing multiple remote compute resources (including H
 Computer requirements
 ---------------------
 
-Compute resources that can be used by AiiDA to run calculation come in two types:
-
-1. The computer on which AiiDA itself is installed, i.e., the `localhost`
-2. Remote computers that can be accessed over SSH (possibly :ref:`via a proxy server<how-to:ssh:proxy>`)
-
-Regardless of the type, each computer must satisfy the following requirements:
+Each computer must satisfy the following requirements:
 
 * It runs a Unix-like operating system (Linux distros and MacOS should work fine)
 * It has ``bash`` installed

@@ -364,7 +364,7 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
 After this, use ``verdi process list`` to monitor the status of the calculations.
 
-See :ref:`topics:processes:usage:launching:` and :ref:`topics:processes:usage:monitoring:` for more details.
+See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:monitoring` for more details.
 
 
 .. |Code| replace:: :py:class:`~aiida.orm.nodes.data.Code`

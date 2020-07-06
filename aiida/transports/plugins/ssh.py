@@ -187,7 +187,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'key_policy', {
                 'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
                 'prompt': 'Key policy',
-                'help': 'SSH key policy if host is not known (default: RejectPolicy).',
+                'help': 'SSH key policy if host is not known.',
                 'non_interactive_default': True
             }
         )

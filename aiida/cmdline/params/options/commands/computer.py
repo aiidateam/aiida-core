@@ -56,7 +56,7 @@ HOSTNAME = options.HOSTNAME.clone(
     prompt='Hostname',
     cls=InteractiveOption,
     required=True,
-    help='The fully qualified hostname of the computer (e.g. daint.cscs.ch); use "localhost" for local transports.',
+    help='The fully qualified hostname of the computer (e.g. daint.cscs.ch). Use "localhost" when setting up the computer that AiiDA is running on',
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(

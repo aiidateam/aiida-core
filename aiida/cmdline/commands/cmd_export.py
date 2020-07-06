@@ -11,6 +11,7 @@
 """`verdi export` command."""
 
 import os
+import tempfile
 
 import click
 import tabulate
@@ -141,9 +142,10 @@ def create(
 
 @verdi_export.command('migrate')
 @arguments.INPUT_FILE()
-@arguments.OUTPUT_FILE()
+@arguments.OUTPUT_FILE(required=False)
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
+@click.option('-i', '--in-place', is_flag=True, help='Migrate the archive in place, overwriting the original file.')
 @options.SILENT()
 @click.option(
     '-v',
@@ -151,9 +153,12 @@ def create(
     type=click.STRING,
     required=False,
     metavar='VERSION',
-    help='Specify an exact archive version to migrate to. By default the most recent version is taken.'
+    # Note: Adding aiida.tools.EXPORT_VERSION as a default value explicitly would result in a slow import of
+    # aiida.tools and, as a consequence, aiida.orm. As long as this is the case, better determine the latest export
+    # version inside the function when needed.
+    help='Archive format version to migrate to (defaults to latest version).',
 )
-def migrate(input_file, output_file, force, silent, archive_format, version):
+def migrate(input_file, output_file, force, silent, in_place, archive_format, version):
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     """Migrate an export archive to a more recent format version."""
     import tarfile
@@ -161,10 +166,20 @@ def migrate(input_file, output_file, force, silent, archive_format, version):
 
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
-    from aiida.tools.importexport import EXPORT_VERSION, migration, extract_zip, extract_tar, ArchiveMigrationError
+    from aiida.tools.importexport import migration, extract_zip, extract_tar, ArchiveMigrationError, EXPORT_VERSION
 
     if version is None:
         version = EXPORT_VERSION
+
+    if in_place:
+        if output_file:
+            echo.echo_critical('output file specified together with --in-place flag')
+        tempdir = tempfile.TemporaryDirectory()
+        output_file = os.path.join(tempdir.name, 'archive.aiida')
+    elif not output_file:
+        echo.echo_critical(
+            'no output file specified. Please add --in-place flag if you would like to migrate in place.'
+        )
 
     if os.path.exists(output_file) and not force:
         echo.echo_critical('the output file already exists')
@@ -212,5 +227,12 @@ def migrate(input_file, output_file, force, silent, archive_format, version):
             with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
                 archive.add(folder.abspath, arcname='')
 
+        if in_place:
+            os.rename(output_file, input_file)
+            tempdir.cleanup()
+
         if not silent:
-            echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
+            if new_version > old_version:
+                echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
+            else:
+                echo.echo_success('archive was already at latest version {}'.format(new_version))

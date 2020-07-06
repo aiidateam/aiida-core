@@ -179,7 +179,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'load_system_host_keys', {
                 'switch': True,
                 'prompt': 'Load system host keys',
-                'help': 'Load system host keys from default SSH location (default: true).',
+                'help': 'Load system host keys from default SSH location.',
                 'non_interactive_default': True
             }
         ),

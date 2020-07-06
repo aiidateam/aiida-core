@@ -42,7 +42,7 @@ REMOTE_ABS_PATH = OverridableOption(
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
     help=(
-        '[if --on-computer]: Full absolute path to the executable on the target computer.'
+        '[if --on-computer]: Absolute path to the executable on the target computer.'
     )
 )
 

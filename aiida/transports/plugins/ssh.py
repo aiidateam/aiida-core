@@ -108,7 +108,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'allow_agent', {
                 'switch': True,
                 'prompt': 'Allow ssh agent',
-                'help': 'Switch to allow (default) or disallow using an SSH agent.',
+                'help': 'Switch to allow or disallow using an SSH agent.',
                 'non_interactive_default': True
             }
         ),
@@ -124,7 +124,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'compress', {
                 'switch': True,
                 'prompt': 'Compress file transfers',
-                'help': 'Turn file transfer compression on (default) or off.',
+                'help': 'Turn file transfer compression on or off.',
                 'non_interactive_default': True
             }
         ),

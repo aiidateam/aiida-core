@@ -5,7 +5,7 @@ How-To Guides
 .. toctree::
    :maxdepth: 1
 
-   run-codes
+   run_codes
    ssh
    plugin_codes
    workflows

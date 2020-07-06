@@ -434,7 +434,7 @@ TRANSPORT = OverridableOption(
     '--transport',
     type=types.PluginParamType(group='transports'),
     required=True,
-    help='Transport plugin (use "?" to list available plugins).'
+    help="A transport plugin (as listed in 'verdi plugin list aiida.transports')."
 )
 
 SCHEDULER = OverridableOption(

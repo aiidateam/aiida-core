@@ -72,8 +72,7 @@ REL_PATH = OverridableOption(
 LABEL = options.LABEL.clone(
     prompt='Label',
     cls=InteractiveOption,
-    help='A label to refer to this code.' +
-    '  Uniqueness is not enforced, but is required to identify a code by its label (rather than its PK or UUID).'
+    help="This label can be used to identify the code (using 'label@computerlabel'), as long as labels are unique per computer."
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(

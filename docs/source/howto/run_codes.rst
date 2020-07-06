@@ -93,7 +93,7 @@ Use these additional lines to perform any further set up of the environment on t
 
    Don't specify settings here that are specific to a code or calculation: you can set further pre-execution commands at the ``Code`` and even ``CalcJob`` level.
 
-When you are done editing, save and quit (e.g. ``<ESC>:wq<ENTER>`` in ``vim``).
+When you are done editing, save and quit.
 The computer has now been created in the database but you still need to *configure* access to it using your credentials.
 
 .. tip::

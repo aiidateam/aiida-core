@@ -110,7 +110,7 @@ When you want to run this 'code' through AiiDA, you need to tell *how* AiiDA sho
 The :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` is a calculation job implementation that forms an interface to accomplish exactly that for the example bash script.
 A ``CalcJob`` implementation for a specific code, often referred to as a calculation plugin, essentially instructs the engine how it should be run.
 This includes how the necessary input files should be created based on the inputs that it receives, how the code executable should be called and what files should be retrieved when the calculation is complete.
-Note the files should be 'retrieved' because calculation jobs can be run not just on the localhost, but on any :ref:`computer that is configured in AiiDA<how-to:codes:computers>`, including remote machines accessible over for example SSH.
+Note the files should be 'retrieved' because calculation jobs can be run not just on the localhost, but on any :ref:`computer that is configured in AiiDA<how-to:plugin-codes:computers>`, including remote machines accessible over for example SSH.
 
 Since a ``CalcJob`` is a process just like the :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` described before, they can be run in an identical way.
 

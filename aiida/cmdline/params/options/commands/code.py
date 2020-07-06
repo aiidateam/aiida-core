@@ -30,7 +30,10 @@ ON_COMPUTER = OverridableOption(
     default=True,
     cls=InteractiveOption,
     prompt='Installed on target computer?',
-    help='Whether the code is installed on the target computer or should be copied each time from a local path.'
+    help=(
+        'Whether the code is installed on the target computer, ' +
+        'or should be copied to the target computer each time from a local path.'
+    )
 )
 
 REMOTE_ABS_PATH = OverridableOption(
@@ -40,7 +43,7 @@ REMOTE_ABS_PATH = OverridableOption(
     prompt_fn=is_on_computer,
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
-    help=('[if --on-computer]: the absolute path to the executable on the remote machine.')
+    help=('[if --on-computer]: Absolute path to the executable on the target computer.')
 )
 
 FOLDER = OverridableOption(
@@ -50,7 +53,10 @@ FOLDER = OverridableOption(
     prompt_fn=is_not_on_computer,
     type=click.Path(file_okay=False, exists=True, readable=True),
     cls=InteractiveOption,
-    help=('[if --store-in-db]: directory containing the executable and all other files necessary for running it.')
+    help=(
+        '[if --store-in-db]: Absolute path to directory containing the executable ' +
+        'and all other files necessary for running it (to be copied to target computer).'
+    )
 )
 
 REL_PATH = OverridableOption(
@@ -60,19 +66,28 @@ REL_PATH = OverridableOption(
     prompt_fn=is_not_on_computer,
     type=click.Path(dir_okay=False),
     cls=InteractiveOption,
-    help=('[if --store-in-db]: relative path of the executable inside the code-folder.')
+    help=('[if --store-in-db]: Relative path of the executable inside the code-folder.')
 )
 
-LABEL = options.LABEL.clone(prompt='Label', cls=InteractiveOption, help='A label to refer to this code.')
+LABEL = options.LABEL.clone(
+    prompt='Label',
+    cls=InteractiveOption,
+    help=(
+        "This label can be used to identify the code (using 'label@computerlabel'), " +
+        'as long as labels are unique per computer.'
+    )
+)
 
 DESCRIPTION = options.DESCRIPTION.clone(
-    prompt='Description', cls=InteractiveOption, help='A human-readable description of this code.'
+    prompt='Description',
+    cls=InteractiveOption,
+    help='A human-readable description of this code, ideally including version and compilation environment.'
 )
 
 INPUT_PLUGIN = options.INPUT_PLUGIN.clone(
     prompt='Default calculation input plugin',
     cls=InteractiveOption,
-    help='Default calculation plugin to use for this code.'
+    help="Entry point name of the default calculation plugin (as listed in 'verdi plugin list aiida.calculations')."
 )
 
 COMPUTER = options.COMPUTER.clone(
@@ -80,5 +95,5 @@ COMPUTER = options.COMPUTER.clone(
     cls=InteractiveOption,
     required_fn=is_on_computer,
     prompt_fn=is_on_computer,
-    help='Name of the computer, on which the code resides.'
+    help='Name of the computer, on which the code is installed.'
 )

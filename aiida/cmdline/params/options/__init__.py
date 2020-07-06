@@ -430,11 +430,19 @@ RAW = OverridableOption(
 HOSTNAME = OverridableOption('-H', '--hostname', type=types.HostnameType(), help='Hostname.')
 
 TRANSPORT = OverridableOption(
-    '-T', '--transport', type=types.PluginParamType(group='transports'), required=True, help='Transport type.'
+    '-T',
+    '--transport',
+    type=types.PluginParamType(group='transports'),
+    required=True,
+    help="A transport plugin (as listed in 'verdi plugin list aiida.transports')."
 )
 
 SCHEDULER = OverridableOption(
-    '-S', '--scheduler', type=types.PluginParamType(group='schedulers'), required=True, help='Scheduler type.'
+    '-S',
+    '--scheduler',
+    type=types.PluginParamType(group='schedulers'),
+    required=True,
+    help="A scheduler plugin (as listed in 'verdi plugin list aiida.schedulers')."
 )
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), help='Email address of the user.')

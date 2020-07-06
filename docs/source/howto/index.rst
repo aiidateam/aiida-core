@@ -8,7 +8,7 @@ How-To Guides
    setup_computers
    ssh
    setup_codes
-   run_codes
+   plugin_codes
    workflows
    data
    visualising_graphs/visualising_graphs

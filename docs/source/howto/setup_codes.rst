@@ -182,4 +182,4 @@ And now, you are ready to launch your calculations!
 .. admonition:: Where Next?
     :class: seealso title-icon-read-more
 
-    Try running a basic Calcjob in the :ref:`introductory tutorial <tutorial:basic:calcjob>`, or find more information about running external codes in :ref:`this howto <how-to:codes>`.
+    Try running a basic Calcjob in the :ref:`introductory tutorial <tutorial:basic:calcjob>`, or find more information about running external codes in :ref:`this howto <how-to:plugin-codes>`.

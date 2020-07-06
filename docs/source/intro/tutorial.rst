@@ -622,23 +622,23 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
-            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Tuning performance
             To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
 
         Saving computational resources
-            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:codes:caching>`.
+            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:plugin-codes:caching>`.
 
     .. dropdown:: Run computations on High Performance Computers
 
         Connecting to supercomputers
-            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:codes:transport>`.
+            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:plugin-codes:transport>`.
             AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
-            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Exploring your data
             Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
@@ -653,4 +653,4 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
 .. todo::
 
-    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
+    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:plugin-codes:scheduler>`.

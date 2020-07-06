@@ -1,8 +1,8 @@
-.. _how-to:codes:
+.. _how-to:plugin-codes:
 
-*************************
-How to run external codes
-*************************
+******************************************
+How to write a plugin for an external code
+******************************************
 
 To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>`.
 This plugin must contain the instructions necessary for the engine to be able to:
@@ -10,18 +10,18 @@ This plugin must contain the instructions necessary for the engine to be able to
 1. Prepare the required input files inside of the folder in which the code will be executed
 2. Run the code with the correct set of command line parameters
 
-The following subsections will not only take you through the process of :ref:`creating the calculation plugin<how-to:codes:interfacing>` and then using these to actually :ref:`run the code<how-to:codes:run>`.
-It will also show examples on how to implement tools that are commonly coupled with the running of a calculation, such as :ref:`the parsing of outputs<how-to:codes:parsing>`.
+The following subsections will not only take you through the process of :ref:`creating the calculation plugin<how-to:plugin-codes:interfacing>` and then using these to actually :ref:`run the code<how-to:plugin-codes:run>`.
+It will also show examples on how to implement tools that are commonly coupled with the running of a calculation, such as :ref:`the parsing of outputs<how-to:plugin-codes:parsing>`.
 
 .. todo::
 
-    Add to preceding sentence: :ref:`the communication with external machines<how-to:codes:transport>` and the interaction with its :ref:`scheduling software<how-to:codes:scheduler>`.
+    Add to preceding sentence: :ref:`the communication with external machines<how-to:plugin-codes:transport>` and the interaction with its :ref:`scheduling software<how-to:plugin-codes:scheduler>`.
 
 Some general guidelines to keep in mind are:
 
  * | **Check existing resources.**
    | Before starting to write a plugin, check on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_ whether a plugin for your code is already available.
-     If it is, there is maybe no need to write your own, and you can skip straight ahead to :ref:`running the code<how-to:codes:run>`.
+     If it is, there is maybe no need to write your own, and you can skip straight ahead to :ref:`running the code<how-to:plugin-codes:run>`.
  * | **Start simple.**
    | Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
      Write only what is necessary to pass information from and to AiiDA.
@@ -47,7 +47,7 @@ The final recipe to run this code will then be:
 
     /bin/bash < aiida.in > aiida.out
 
-.. _how-to:codes:interfacing:
+.. _how-to:plugin-codes:interfacing:
 
 Interfacing external codes
 ==========================
@@ -62,7 +62,7 @@ We will now show how each of these can be implemented.
 Defining the specifications
 ---------------------------
 
-The |define| method is where one specifies the different inputs that the caller of the |CalcJob| will have to provide in order to run the code, as well as the outputs that will be produced (exit codes will be :ref:`discussed later<how-to:codes:parsing:errors>`).
+The |define| method is where one specifies the different inputs that the caller of the |CalcJob| will have to provide in order to run the code, as well as the outputs that will be produced (exit codes will be :ref:`discussed later<how-to:plugin-codes:parsing:errors>`).
 This is done through an instance of :py:class:`~aiida.engine.processes.process_spec.CalcJobProcessSpec`, which, as can be seen in the snippet below, is passed as the |spec| argument to the |define| method.
 For the code that adds up two numbers, we will need to define those numbers as inputs (let's call them ``x`` and ``y`` to label them) and the result as an output (``sum``).
 The snippet below shows one potential implementation, as it is included in ``aiida-core``:
@@ -143,7 +143,7 @@ There are :ref:`other file lists available<topics:calculations:usage:calcjobs:fi
 This was a minimal example of how to implement the |CalcJob| class to interface AiiDA with an external code.
 For more detailed information and advanced functionality on the |CalcJob| class, refer to the Topics section on :ref:`defining calculations <topics:calculations:usage>`.
 
-.. _how-to:codes:parsing:
+.. _how-to:plugin-codes:parsing:
 
 Parsing the outputs
 ===================
@@ -161,14 +161,14 @@ It is an instance of :py:class:`~aiida.orm.nodes.data.folder.FolderData` and so 
 In this example implementation, we use it to open the output file, whose filename we get through the :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` method of the corresponding calculation node, which we obtain through the :py:attr:`~aiida.parsers.parser.Parser.node` property of the ``Parser``.
 We read the content of the file and cast it to an integer, which should contain the sum that was produced by the ``bash`` code.
 We catch any exceptions that might be thrown, for example when the file cannot be read, or if its content cannot be interpreted as an integer, and return an exit code.
-This method of dealing with potential errors of external codes is discussed in the section on :ref:`handling parsing errors<how-to:codes:parsing:errors>`.
+This method of dealing with potential errors of external codes is discussed in the section on :ref:`handling parsing errors<how-to:plugin-codes:parsing:errors>`.
 
 To attach the parsed sum as an output, use the :py:meth:`~aiida.parsers.parser.Parser.out` method.
 The first argument is the name of the output, which will be used as the label for the link that connects the calculation and data node, and the second is the node that should be recorded as an output.
 Note that the type of the output should match the type that is specified by the process specification of the corresponding |CalcJob|.
 If any of the registered outputs do not match the specification, the calculation will be marked as failed.
 
-To trigger the parsing using a |Parser| after a |CalcJob| has finished (such as the one described in the :ref:`previous section <how-to:codes:interfacing>`) it should be defined in the ``metadata.options.parser_name`` input.
+To trigger the parsing using a |Parser| after a |CalcJob| has finished (such as the one described in the :ref:`previous section <how-to:plugin-codes:interfacing>`) it should be defined in the ``metadata.options.parser_name`` input.
 If a particular parser should always be used by default for a given |CalcJob|, it can be defined as the default in the |define| method, for example:
 
 .. code-block:: python
@@ -183,7 +183,7 @@ Note, that one should not pass the |Parser| class itself, but rather the corresp
 In other words, in order to use a |Parser| you will need to register it as explained in the how-to section on :ref:`registering plugins <how-to:plugins>`.
 
 
-.. _how-to:codes:parsing:errors:
+.. _how-to:plugin-codes:parsing:errors:
 
 Handling parsing errors
 -----------------------
@@ -192,7 +192,7 @@ So far we have not spent too much attention on dealing with potential errors tha
 However, for many codes, there are lots of ways in which it can fail to execute nominally and produced the correct output.
 A |Parser| is the solution to detect these errors and report them to the caller through :ref:`exit codes<topics:processes:concepts:exit_codes>`.
 These exit codes can be defined through the |spec| of the |CalcJob| that is used for that code, just as the inputs and output are defined.
-For example, the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` introduced in :ref:`"Interfacing external codes"<how-to:codes:interfacing>`, defines the following exit codes:
+For example, the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` introduced in :ref:`"Interfacing external codes"<how-to:plugin-codes:interfacing>`, defines the following exit codes:
 
 .. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
     :language: python
@@ -202,7 +202,7 @@ For example, the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalc
 
 Each ``exit_code`` defines an exit status (a positive integer), a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as seen below), and a message that provides a more detailed description of the problem.
 To use these in the |parse| method, you just need to return the corresponding exit code which instructs the engine to store it on the node of the calculation that is being parsed.
-The snippet of the previous section on :ref:`parsing the outputs<how-to:codes:parsing>` already showed two problems that are detected and are communicated by returning the corresponding the exit code:
+The snippet of the previous section on :ref:`parsing the outputs<how-to:plugin-codes:parsing>` already showed two problems that are detected and are communicated by returning the corresponding the exit code:
 
 .. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
     :language: python
@@ -215,20 +215,20 @@ The Topics section on :ref:`defining processes <topics:processes:usage:defining>
 
 .. todo::
 
-    .. _how-to:codes:computers:
+    .. _how-to:plugin-codes:computers:
 
     title: Configuring remote computers
 
     `#4123`_
 
-.. _how-to:codes:run:
+.. _how-to:plugin-codes:run:
 
 Running external codes
 ======================
 
 To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>` that knows how to transform the input nodes into the input files that the code expects, copy everything in the code's machine, run the calculation and retrieve the results.
 You can check the `plugin registry <https://aiidateam.github.io/aiida-registry/>`_ to see if a plugin already exists for the code that you would like to run.
-If that is not the case, you can :ref:`develop your own <how-to:codes:interfacing>`.
+If that is not the case, you can :ref:`develop your own <how-to:plugin-codes:interfacing>`.
 After you have installed the plugin, you can start running the code through AiiDA.
 To check which calculation plugins you have currently installed, run:
 
@@ -259,7 +259,7 @@ Use ``verdi plugin`` to determine what inputs a specific plugin expects:
 
 You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
 If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:find>` or using ``orm.load_node(<PK>)``.
-Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:codes:computers>`):
+Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:plugin-codes:computers>`):
 
 .. code-block:: python
 
@@ -315,21 +315,21 @@ You can do so by specifying to use a ``dry_run``, which will create all the inpu
 
 .. todo::
 
-    .. _how-to:codes:caching:
+    .. _how-to:plugin-codes:caching:
 
     title: Using caching to save computational resources
 
     `#3988`_
 
 
-    .. _how-to:codes:scheduler:
+    .. _how-to:plugin-codes:scheduler:
 
     title: Adding support for a custom scheduler
 
     `#3989`_
 
 
-    .. _how-to:codes:transport:
+    .. _how-to:plugin-codes:transport:
 
     title: Adding support for a custom transport
 

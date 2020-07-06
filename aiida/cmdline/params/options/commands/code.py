@@ -54,8 +54,8 @@ FOLDER = OverridableOption(
     type=click.Path(file_okay=False, exists=True, readable=True),
     cls=InteractiveOption,
     help=(
-        '[if --store-in-db]: directory containing the executable and all other files necessary for running it.' +
-        ' (to be copied to target computer).'
+        '[if --store-in-db]: Absolute path to directory containing the executable and all other files necessary for running it'
+        + ' (to be copied to target computer).'
     )
 )
 
@@ -72,7 +72,8 @@ REL_PATH = OverridableOption(
 LABEL = options.LABEL.clone(
     prompt='Label',
     cls=InteractiveOption,
-    help='A label to refer to this code.  Uniqueness is not enforced, but is required to identify a code by its label.'
+    help='A label to refer to this code.' +
+    '  Uniqueness is not enforced, but is required to identify a code by its label (rather than its PK or UUID).'
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(

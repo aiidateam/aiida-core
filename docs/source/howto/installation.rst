@@ -201,8 +201,8 @@ For example, the directory structure in your home folder ``~/`` might look like 
     .
     ├── .aiida
     └── project_a
-        ├── .aiida
-        └── subfolder
+        ├── .aiida
+        └── subfolder
 
 If you leave the ``AIIDA_PATH`` variable unset, the default location ``~/.aiida`` will be used.
 However, if you set:
@@ -343,7 +343,7 @@ Updating from 0.x.* to 1.*
 --------------------------
 - `Additional instructions on how to migrate from 0.12.x versions <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#updating-from-0-12-to-1>`_.
 - `Additional instructions on how to migrate from versions 0.4 -- 0.11 <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#older-versions>`_.
-- For a list of breaking changes between the 0.x and the 1.x series of AiiDA, check `this page <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
+- For a list of breaking changes between the 0.x and the 1.x series of AiiDA, `see here <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
 
 
 .. _how-to:installation:backup:
@@ -474,52 +474,41 @@ In order to restore a backup, you will need to:
        After supplying your database password, the database should be restored.
        Note that, if you installed the database on Ubuntu as a system service, you need to type ``sudo su - postgres`` to become the ``postgres`` UNIX user.
 
-.. _how-to:installation:running-on-supercomputers:
+.. _how-to:installation:supercomputers:
 
 Running on supercomputers
 =========================
 
-.. _how-to:installation:running-on-supercomputers:avoiding-overloads:
+Some compute resources, particularly large supercomputing centres, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently or opening too many SSH connections.
 
-Avoiding overloads
-------------------
+  * Limit the number of jobs in the queue.
 
-If you submit to a supercomputer shared by many users (e.g., in a supercomputer center), be careful not to overload the supercomputer with too many jobs:
+    Set yourself a limit for the maximum number of workflows to submit, and submit new ones only once previous workflows start to complete (in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_).
+    The supported number of jobs depends on your supercomputer - discuss this with your supercomputer administrators (`this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ may contain useful information for them).
 
-  * limit the number of jobs in the queue (the exact number depends on the supercomputer: discuss this with your supercomputer administrators, and you can redirect them to :ref:`this page<how-to:installation:running-on-supercomputers:for_cluster_admins>` that may contain useful information for them).
-    While in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_,
-    you are responsible for this at the moment.
-    This can be achieved for instance by submitting only a maximum number of workflows to AiiDA, and submitting new ones only when the previous ones complete.
+  * Increase the time interval between polling the job queue.
 
-  * Tune the parameters that AiiDA uses to avoid overloading the supercomputer with connections or batch requests.
-    For SSH transports, the default is 30 seconds, which means that when each worker opens a SSH connection to a computer, it will reuse it as long as there are tasks to execute and then close it.
-    Opening a new connection will not happen before 30 seconds has passed from the opening of the previous one.
+    The time interval (in seconds) can be set through the python API by loading the corresponding |Computer| node, e.g. in the ``verdi shell``:
 
-    We stress that this is *per daemon worker*, so that if you have 10 workers, your supercomputer will on average see 10 connections every 30 seconds.
-    Therefore, if you are using many workers and you mostly have long-running jobs, you can set a longer time (e.g., 120 seconds) by reconfiguring the computer with ``verdi computer configure ssh <COMPUTER_NAME>`` and changing the value
-    of the *Connection cooldown time* or, alternatively, by running:
+    .. code-block:: python
+
+        load_computer('fidis').set_minimum_job_poll_interval(30.0)
+
+
+  * Increase the connection cooldown time.
+
+    This is the minimum time (in seconds) to wait between opening a new connection.
+    Modify it for an existing computer using:
 
     .. code-block:: bash
 
       verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
 
-  * In addition to the connection cooldown time described above, AiiDA also limits the frequency for retrieving the job queue from the scheduler (``squeue``, ``qstat``, ...), as this can also impact the performance of the scheduler.
-    For a given computer, you can increase how many seconds must pass between requests.
-    First load the computer in a shell with ``computer = load_computer(<COMPUTER_NAME>)``.
-    You can check the current value in seconds (by default, 10) with ``computer.get_minimum_job_poll_interval()``.
-    You can then set it to a higher value using:
 
-    .. code-block:: python
+.. important::
 
-      computer.set_minimum_job_poll_interval(<NEW_VALUE_SECONDS>)
+    The two intervals apply *per daemon worker*, i.e. doubling the number of workers may end up putting twice the load on the remote computer.
 
-.. _how-to:installation:running-on-supercomputers:for_cluster_admins:
-
-Optimising the SLURM scheduler configuration
---------------------------------------------
-
-If too many jobs are submitted at the same time to the queue, SLURM might have trouble in dealing with new submissions.
-If you are a cluster administrator, you might be interested in `some tips available in the AiiDA wiki <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_, suggested by sysadmins at the Swiss Supercomputer Centre `CSCS <http://www.cscs.ch>`_ (or you can redirect your admin to this page if your cluster is experiencing slowness related to a large number of submitted jobs).
 
 .. _how-to:installation:multi-user:
 
@@ -534,3 +523,4 @@ Data can be shared between instances using :ref:`AiiDA's export and import funct
 Sharing (subsets of) the AiiDA graph can be done as often as needed.
 
 .. _#4122: https://github.com/aiidateam/aiida-core/issues/4122
+.. |Computer| replace:: :py:class:`~aiida.orm.Computer`

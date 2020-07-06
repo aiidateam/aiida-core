@@ -71,25 +71,33 @@ def transport_option_default(name, computer):
     return default
 
 
-def interactive_default(transport_type, key, also_noninteractive=False):
-    """Create a contextual_default value callback for an auth_param key."""
+def interactive_default(key, also_non_interactive=False):
+    """Create a contextual_default value callback for an auth_param key.
+
+    :param key: the name of the option.
+    :param also_non_interactive: indicates whether this option should provide a default also in non-interactive mode. If
+        False, the option will raise `MissingParameter` if no explicit value is specified when the command is called in
+        non-interactive mode.
+    """
 
     @with_dbenv()
     def get_default(ctx):
         """Determine the default value from the context."""
         from aiida import orm
 
+        if not also_non_interactive and ctx.params['non_interactive']:
+            raise click.MissingParameter()
+
         user = ctx.params['user'] or orm.User.objects.get_default()
         computer = ctx.params['computer']
+
         try:
             authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)
         except NotExistent:
             authinfo = orm.AuthInfo(computer=computer, user=user)
-        non_interactive = ctx.params['non_interactive']
-        old_authparams = authinfo.get_auth_params()
-        if not also_noninteractive and non_interactive:
-            raise click.MissingParameter()
-        suggestion = old_authparams.get(key)
+
+        auth_params = authinfo.get_auth_params()
+        suggestion = auth_params.get(key)
         suggestion = suggestion or transport_option_default(key, computer)
         return suggestion
 
@@ -99,25 +107,25 @@ def interactive_default(transport_type, key, also_noninteractive=False):
 def create_option(name, spec):
     """Create a click option from a name and partial specs as used in transport auth_options."""
     from copy import deepcopy
+
     spec = deepcopy(spec)
     name_dashed = name.replace('_', '-')
     option_name = '--{}'.format(name_dashed)
     existing_option = spec.pop('option', None)
+
     if spec.pop('switch', False):
         option_name = '--{name}/--no-{name}'.format(name=name_dashed)
-    kwargs = {}
 
-    if 'default' in spec:
-        kwargs['show_default'] = True
-    else:
-        kwargs['contextual_default'] = interactive_default(
-            'ssh', name, also_noninteractive=spec.pop('non_interactive_default', False)
-        )
+    kwargs = {'cls': InteractiveOption, 'show_default': True}
 
-    kwargs['cls'] = InteractiveOption
+    non_interactive_default = spec.pop('non_interactive_default', False)
+    kwargs['contextual_default'] = interactive_default(name, also_non_interactive=non_interactive_default)
+
     kwargs.update(spec)
+
     if existing_option:
         return existing_option(**kwargs)
+
     return click.option(option_name, **kwargs)
 
 

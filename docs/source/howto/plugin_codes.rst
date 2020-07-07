@@ -45,7 +45,7 @@ thus writing the sum of the two numbers ``numx`` and ``numy`` (provided by the u
 Interfacing external codes
 ==========================
 
-Start your ``calcjob.py`` script by subclassing the |CalcJob| class:
+Start by creating a file ``calcjob.py`` and subclass the |CalcJob| class:
 
 .. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
     :language: python
@@ -70,7 +70,7 @@ For example:
 The first line of the method calls the |define| method of the |CalcJob| parent class.
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
 
-Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define an output of the calculation with label ``'sum'``.
+Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``sum``.
 Once a calculation finishes, any output node specified here will be linked to the calculation node with the specified link label.
 
 .. tip::
@@ -85,9 +85,10 @@ These ``options`` have already been defined on the |spec| by the ``super().defin
     One more important input required by any |CalcJob| is which external executable to use.
     External executables are represented by |Code|  instances that contain information about the computer they reside on, their path in the file system and more.
 
-    They are passed to a |CalcJob| via the ``code`` input (defined in the |CalcJob| base class, so you don't have to)::
+    They are passed to a |CalcJob| via the ``code`` input, which is defined in the |CalcJob| base class, so you don't have to:
 
-        spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+        .. code-block:: python
+            spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
 
 
 
@@ -98,8 +99,7 @@ Preparing for submission
 ------------------------
 
 The :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` method has two jobs:
-Firstly, it creates the input files in the format the external code expects.
-And secondly, it returns a :py:class:`~aiida.common.datastructures.CalcInfo` object that contains instructions for the AiiDA engine on how the code should be run.
+Creating the input files in the format the external code expects and returning a :py:class:`~aiida.common.datastructures.CalcInfo` object that contains instructions for the AiiDA engine on how the code should be run.
 For example:
 
 .. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
@@ -111,7 +111,7 @@ For example:
 The first step is writing the simple bash script mentioned in the beginning: summing the numbers ``x`` and ``y``, using Python's string interpolation to replace the ``x`` and ``y`` placeholders with the actual values ``self.inputs.x`` and ``self.inputs.y`` that were passed by the user.
 
 All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called.
-When accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can therefore safely assume that all required inputs have been set and that all inputs have a valid type.
+Therefore, when accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
 
 The ``folder`` argument (a |Folder| instance) allows us to write the input file to a sandbox folder, whose contents will be transferred to the compute resource where the actual calculation takes place.
 In this example, we only create a single input file, but you can create as many as you need, including subfolders if required.
@@ -146,7 +146,7 @@ We want to pass our input file to the executable via standard input, and record 
 
 .. tip::
 
-    ``self.inputs.input_filename`` is just a shorthand for ``self.inputs.metadata['options']['input_filename']``.
+    ``self.options.input_filename`` is just a shorthand for ``self.inputs.metadata['options']['input_filename']``.
 
 Finally, we pass the |CodeInfo| to a |CalcInfo| object (one calculation job can involve more than one executable, so ``codes_info`` is a list).
 We define the ``retrieve_list`` of filenames that the engine should retrieve from the directory where the job ran after it has finished.
@@ -161,9 +161,10 @@ For more details on the |CalcJob| class, refer to the Topics section on :ref:`de
 Parsing the outputs
 ===================
 
-Parsing the output files produced by your code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
+Parsing the output files produced by a code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
 
-We start our ``parser.py`` plugin by subclassing the |Parser| class and implementing its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
+To create a parser plugin, subclass the |Parser| class (for example in a file called ``parser.py``) and implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
+The following is an example of a simple implementation:
 
 .. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
     :language: python
@@ -171,21 +172,21 @@ We start our ``parser.py`` plugin by subclassing the |Parser| class and implemen
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
-  1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files produced by the code and provides the means to :py:meth:`~aiida.orm.nodes.node.Node.open` any file it contains.
+  1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files that the |CalcJob| instructed to retrieve, and provides the means to :py:meth:`~aiida.orm.nodes.node.Node.open` any file it contains.
 
-  2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which e.g. provides access to all of its inputs (``self.node.inputs``).
+  2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
 
 We start by opening the output file, whose filename we get from the ``self.node`` attribute via the :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method.
 
 We read the content of the file and cast it to an integer, which should contain the sum that was produced by the ``bash`` code.
 
-Finally, we use the :py:meth:`~aiida.parsers.parser.Parser.out` method to link the parsed sum as an output of the calculation.
+Finally, the :py:meth:`~aiida.parsers.parser.Parser.out` method is used to link the parsed sum as an output of the calculation.
 The first argument is the name of the output, which will be used as the label for the link that connects the calculation and data node, and the second is the node that should be recorded as an output.
 Note that the type of the output should match the type that is specified by the process specification of the corresponding |CalcJob|.
 If any of the registered outputs do not match the specification, the calculation will be marked as failed.
 
 In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when launching the job.
-If a particular parser should *always* be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as we did in the :ref:`previous section <how-to:plugin-codes:interfacing>`:
+If a particular parser should be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as was done in the :ref:`previous section <how-to:plugin-codes:interfacing>`:
 
 .. code-block:: python
 
@@ -194,8 +195,8 @@ If a particular parser should *always* be used by default, the |CalcJob| ``defin
         ...
         spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
 
-Note, that we are not passing the |Parser| class itself, but an *entry point string* under which the parser class is registered.
-How to register your parser class as an entry point is explained in the how-to section on :ref:`registering plugins <how-to:plugins>`.
+Note, that the default is not set to the |Parser| class itself, but the *entry point string* under which the parser class is registered.
+How to register a parser class through an entry point is explained in the how-to section on :ref:`registering plugins <how-to:plugins>`.
 
 
 .. _how-to:plugin-codes:parsing:errors:
@@ -205,10 +206,10 @@ Handling parsing errors
 
 So far, we have not spent much attention on dealing with potential errors that can arise when running external codes.
 However, there are lots of ways in which codes can fail to execute nominally.
-A |Parser| can play an important role in detecting such errors and reporting them to AiiDA, where :ref:`workflows <how-to:workflows>` can then decide how to proceed, e.g. by modifying input parameters and resubmitting the calculation.
+A |Parser| can play an important role in detecting and communicating such errors, where :ref:`workflows <how-to:workflows>` can then decide how to proceed, e.g., by modifying input parameters and resubmitting the calculation.
 
 Parsers communicate errors through :ref:`exit codes<topics:processes:concepts:exit_codes>`, which are defined in the |spec| of the |CalcJob| they parse.
-Our :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` example, defines the following exit codes:
+The :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` example, defines the following exit codes:
 
 .. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
     :language: python
@@ -216,14 +217,14 @@ Our :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` exam
     :end-before: end exit codes
     :dedent: 8
 
-Each ``exit_code`` defines
+Each ``exit_code`` defines:
 
  * an exit status (a positive integer),
  * a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
  * a message that provides a more detailed description of the problem.
 
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
-Here is a more complete version of our |Parser|:
+Here is a more complete version of the example |Parser| presented in the previous section:
 
 .. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
     :language: python
@@ -236,7 +237,7 @@ It checks:
  3. Whether the output file contains an integer.
  4. Whether the sum is negative.
 
-AiiDA stored the exit code returned by the |parse| method on the calculation node that is being parsed, from where it can then be inspected further down the line.
+AiiDA stores the exit code returned by the |parse| method on the calculation node that is being parsed, from where it can then be inspected further down the line.
 The Topics section on :ref:`defining processes <topics:processes:usage:defining>` provides more details on exit codes.
 
 
@@ -250,8 +251,8 @@ The Topics section on :ref:`defining processes <topics:processes:usage:defining>
 
 .. _how-to:plugin-codes:run:
 
-Running your calculation
-========================
+Running a calculation
+=====================
 
 With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your first calculation:
 
@@ -283,7 +284,7 @@ With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your fi
             'x': Int(4),
             'y': Int(5),
             'metadata': {
-                'options': { 'resources': resources},
+                'options': {'resources': resources},
                 'description': "My first calculation.",
             },
         }
@@ -294,7 +295,7 @@ With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your fi
 
         # Parsing its results
         output_dict, node = ArithmeticAddParser.parse_from_node(node)
-        print("Parsing completed. Result: {}".format(int(output_dict['sum'])))
+        print("Parsing completed. Result: {}".format(output_dict['sum'].value))
 
     .. note::
 
@@ -306,7 +307,7 @@ With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your fi
 
         $ verdi run launch.py
 
-    If everything goes well, this should print the results of your calculations, something like:
+    If everything goes well, this should print the results of your calculation, something like:
 
     .. code-block:: console
 
@@ -319,13 +320,13 @@ With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your fi
     If you encountered a parsing error, it can be helpful to make a :ref:`topics:calculations:usage:calcjobs:dry_run`, which allows you to inspect the input folder generated by AiiDA before any calculation is launched.
 
 
-So far, we have deliberately avoided to touch the concept of :ref:`entry points <how-to:plugins:entrypoints>`, which are the preferred method of announcing new calculations, parsers and other plugins to AiiDA.
+So far, we have deliberately avoided to touch the concept of :ref:`entry points <how-to:plugins:entrypoints>`, which are the preferred method of registering new calculation, parser and other plugins with AiiDA.
 Using entry points simplifies your life in a number of ways:
 
  * You can use ``verdi plugin list`` to inspect which plugins are available as well as their internal documentation.
  * You can specify a default |Parser| for a |CalcJob|, which will run automatically.
  * You can specify a default |CalcJob| for a |Code|, making it easy to set the inputs for a code.
- * You can submit calcualtions to the AiiDA daemon without having to worry about how to make sure that your calculation and parser plugins can be imported from the daemon's python environment.
+ * You can submit calculations to the AiiDA daemon without having to worry about how to make sure that your calculation and parser plugins can be imported from the daemon's Python environment.
 
 Registering entry points
 ------------------------
@@ -394,7 +395,7 @@ Launching your calculation now becomes easier:
 
         # Running the calculation & parsing results
         output_dict, node = engine.run_get_node(builder)
-        print("Parsing completed. Result: {}".format(int(output_dict['sum'])))
+        print("Parsing completed. Result: {}".format(output_dict['sum'].value))
 
     .. note::
 
@@ -410,11 +411,11 @@ Launching your calculation now becomes easier:
 
 Finally instead of running your calculation in the current shell, you can submit your calculation to the AiiDA daemon:
 
- * (Re)start the daemon to update its python environment:
+ * (Re)start the daemon to update its Python environment:
 
    .. code-block:: console
 
-      $ verdi daemon restart
+      $ verdi daemon restart --reset
 
  * Update your launch script to use:
 
@@ -443,9 +444,9 @@ You can use the verdi command line interface to :ref:`monitor<topics:processes:u
     $ verdi process list
 
 
-This marks the end of this howto.
+This marks the end of this how-to.
 
-The |CalcJob|  and |Parser| plugins are still rather basic and the ``aiida-add`` plugin package is missing a number of useful gimmicks (package metadata, documentation, tests, CI, ...).
+The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-add`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
 .. todo::

@@ -75,7 +75,7 @@ Once a calculation finishes, any output node specified here will be linked to th
 
 .. tip::
 
-    In real-world plugins, popular types of input nodes are Python dictionaries (:py:class:`~aiida.orm.nodes.data.dict.Dict`) and files (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`).
+    For the input parameters and input files of more complex simulation codes, consider using :py:class:`~aiida.orm.nodes.data.dict.Dict` (python dictionary) and :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData` (file wrapper) input nodes.
 
 Finally, we set a couple of default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
 These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
@@ -108,7 +108,7 @@ For example:
 
 .. note:: Unlike the |define| method, the ``prepare_for_submission`` method is implemented from scratch and so there is no super call.
 
-We start by writing our simple bash script that sums the two numbers ``x`` and ``y``, using Python's string interpolation to replace the ``x`` and ``y`` placeholders with the actual values ``self.inputs.x`` and ``self.inputs.y`` that were passed by the user.
+The first step is writing the simple bash script mentioned in the beginning: summing the numbers ``x`` and ``y``, using Python's string interpolation to replace the ``x`` and ``y`` placeholders with the actual values ``self.inputs.x`` and ``self.inputs.y`` that were passed by the user.
 
 All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called.
 When accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can therefore safely assume that all required inputs have been set and that all inputs have a valid type.
@@ -165,19 +165,9 @@ Parsing the output files produced by your code into AiiDA nodes is optional, but
 
 We start our ``parser.py`` plugin by subclassing the |Parser| class and implementing its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
 
-.. code-block:: python
-
-    class ArithmeticAddParser(Parser):
-        """Parser for an `ArithmeticAddCalculation` job."""
-
-        def parse(self, **kwargs):
-            """Parse the contents of the output files stored in the `retrieved` output node."""
-            output_folder = self.retrieved
-
-            with output_folder.open(self.node.get_option('output_filename'), 'r') as handle:
-                result = int(handle.read())
-
-            self.out('sum', Int(result))
+.. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
+    :language: python
+    :pyobject: SimpleArithmeticAddParser
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
@@ -195,7 +185,7 @@ Note that the type of the output should match the type that is specified by the 
 If any of the registered outputs do not match the specification, the calculation will be marked as failed.
 
 In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when launching the job.
-If a particular parser should *always* be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as we did in the :ref:`previous section <how-to:codes:interfacing>`:
+If a particular parser should *always* be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as we did in the :ref:`previous section <how-to:plugin-codes:interfacing>`:
 
 .. code-block:: python
 
@@ -260,108 +250,205 @@ The Topics section on :ref:`defining processes <topics:processes:usage:defining>
 
 .. _how-to:plugin-codes:run:
 
-Running external codes
-======================
+Running your calculation
+========================
 
-To run an external code with AiiDA, you will need to use an appropriate :ref:`calculation plugin <topics:plugins>` that knows how to transform the input nodes into the input files that the code expects, copy everything in the code's machine, run the calculation and retrieve the results.
-You can check the `plugin registry <https://aiidateam.github.io/aiida-registry/>`_ to see if a plugin already exists for the code that you would like to run.
-If that is not the case, you can :ref:`develop your own <how-to:plugin-codes:interfacing>`.
-After you have installed the plugin, you can start running the code through AiiDA.
-To check which calculation plugins you have currently installed, run:
+With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your first calculation:
 
-.. code-block:: bash
 
-    $ verdi plugin list aiida.calculations
+ 1. If you haven't already done so, set up your localhost computer:
 
-As an example, we will show how to use the ``arithmetic.add`` plugin, which is a pre-installed plugin that uses the `bash shell <https://www.gnu.org/software/bash/>`_ to sum two integers.
-You can access it with the ``CalculationFactory``:
+    .. code-block:: console
 
-.. code-block:: python
+        $ verdi computer setup -L localhost -H localhost -T local -S direct -w `echo $PWD/work` -n
+        $ verdi computer configure local tutor --safe-interval 5 -n
 
-    from aiida.plugins import CalculationFactory
-    calculation_class = CalculationFactory('arithmetic.add')
+ 2. Write a first ``launch.py`` script:
 
-Next, we provide the inputs for the code when running the calculation.
-Use ``verdi plugin`` to determine what inputs a specific plugin expects:
+    .. code-block:: python
 
-.. code-block:: bash
+        from aiida import orm, engine
+        from calcjob import ArithmeticAddCalculation
+        from parser import ArithmeticAddParser
 
-    $ verdi plugin list aiida.calculations arithmetic.add
-    ...
-        Inputs:
-               code:  required  Code        The `Code` to use for this job.
-                  x:  required  Int, Float  The left operand.
-                  y:  required  Int, Float  The right operand.
-    ...
+        # Setting up inputs
+        computer = orm.load_computer('localhost')
+        code = orm.Code(remote_computer_exec=[computer, '/bin/bash'])
+        resources = {
+            'num_machines': 1,
+            'num_mpiprocs_per_machine': 1,
+        }
+        inputs = {
+            'code': code,
+            'x': Int(4),
+            'y': Int(5),
+            'metadata': {
+                'options': { 'resources': resources},
+                'description': "My first calculation.",
+            },
+        }
 
-You will see that 3 inputs nodes are required: two containing the values to add up (``x``, ``y``) and one containing information about the specific code to execute (``code``).
-If you already have these nodes in your database, you can get them by :ref:`querying for them <how-to:data:find>` or using ``orm.load_node(<PK>)``.
-Otherwise, you will need to create them as shown below (note that you `will` need to already have the ``localhost`` computer configured, as explained in the :ref:`previous how-to<how-to:plugin-codes:computers>`):
+        # Running the calculation
+        _ , node = engine.run_get_node( ArithmeticAddCalculation, **inputs )
+        print("Calculation completed: {}".format(node))
 
-.. code-block:: python
+        # Parsing its results
+        output_dict, node = ArithmeticAddParser.parse_from_node(node)
+        print("Parsing completed. Result: {}".format(int(output_dict['sum'])))
 
-    from aiida import orm
-    bash_binary = orm.Code(remote_computer_exec=[localhost, '/bin/bash'])
-    number_x = orm.Int(17)
-    number_y = orm.Int(11)
+    .. note::
 
-To provide these as inputs to the calculations, we will now use the ``builder`` object that we can get from the class:
+        If you already have your inputs in the database, load them using ``orm.load_node()`` or find them using the :ref:`QueryBuilder <how-to:data:find>`.
 
-.. code-block:: python
+ 3. Launch the calculation:
 
-    calculation_builder = calculation_class.get_builder()
-    calculation_builder.code = bash_binary
-    calculation_builder.x = number_x
-    calculation_builder.y = number_y
+    .. code-block:: console
 
-Now everything is in place and ready to perform the calculation, which can be done in two different ways.
-The first one is blocking and will return a dictionary containing all the output nodes (keyed after their label, so in this case these should be: "remote_folder", "retrieved" and "sum") that you can safely inspect and work with:
+        $ verdi run launch.py
 
-.. code-block:: python
+    If everything goes well, this should print the results of your calculations, something like:
 
-    from aiida.engine import run
-    output_dict = run(calculation_builder)
-    sum_result = output_dict['sum']
+    .. code-block:: console
 
-The second one is non blocking, as you will be submitting it to the daemon and control is immediately returned to the interpreter.
-The return value in this case is the calculation node that is stored in the database.
+        $ verdi run launch.py
+        Calculation completed: uuid: 607d50ba-5396-411c-8bac-563b71dbaff4 (pk: 229) (calcjob.ArithmeticAddCalculation)
+        Parsing completed. Result: 9
 
-.. code-block:: python
+.. tip::
 
-    from aiida.engine import submit
-    calculation = submit(calculation_builder)
+    If you encountered a parsing error, it can be helpful to make a :ref:`topics:calculations:usage:calcjobs:dry_run`, which allows you to inspect the input folder generated by AiiDA before any calculation is launched.
 
-Note that, although you have access to the node, the underlying calculation `process` is not guaranteed to have finished when you get back control in the interpreter.
-You can use the verdi command line interface to :ref:`monitor<topics:processes:usage:monitoring>` these processes:
+
+So far, we have deliberately avoided to touch the concept of :ref:`entry points <how-to:plugins:entrypoints>`, which are the preferred method of announcing new calculations, parsers and other plugins to AiiDA.
+Using entry points simplifies your life in a number of ways:
+
+ * You can use ``verdi plugin list`` to inspect which plugins are available as well as their internal documentation.
+ * You can specify a default |Parser| for a |CalcJob|, which will run automatically.
+ * You can specify a default |CalcJob| for a |Code|, making it easy to set the inputs for a code.
+ * You can submit calcualtions to the AiiDA daemon without having to worry about how to make sure that your calculation and parser plugins can be imported from the daemon's python environment.
+
+Registering entry points
+------------------------
+
+Registering entry points is simple:
+
+ * Write a minimalistic ``setup.py`` script:
+
+    .. code-block:: python
+
+        from setuptools import setup
+
+        setup(
+            name='aiida-add',
+            packages=['aiida_add'],
+            entry_points={
+                'aiida.calculations': ["add = aiida_add.calcjob:ArithmeticAddCalculation"],
+                'aiida.parsers': ["add = aiida_add.parser:ArithmeticAddParser"],
+            }
+        )
+
+ * Move your two scripts into a subfolder ``aiida_add``:
+
+   .. code-block:: console
+
+      mkdir aiida_add
+      mv calcjob.py parser.py aiida_add/
+
+ * Install your new ``aiida-add`` plugin package:
+
+   .. code-block:: console
+
+      pip install -e .
+      reentry scan
+
+
+After this, you should already see your calculation plugin listed:
+
+   .. code-block:: console
+
+      $ verdi plugin list aiida.calculations
+      $ verdi plugin list aiida.calculations add
+
+
+Launching your calculation now becomes easier:
+
+ * In ``calcjob.py``, change the default  ``parser_name`` to ``'add'``
+
+ * Simplify your ``launch.py`` script:
+
+    .. code-block:: python
+
+        from aiida import orm, engine
+
+        # Setting up inputs
+        computer = orm.load_computer('localhost')
+        code = orm.Code(remote_computer_exec=[computer, '/bin/bash'], input_plugin_name='add')
+        builder = code.get_builder()
+        builder.x = Int(4)
+        builder.y = Int(5)
+        builder.metadata.options.withmpi = False
+        builder.metadata.options.resources = {
+            'num_machines': 1,
+            'num_mpiprocs_per_machine': 1,
+        }
+
+        # Running the calculation & parsing results
+        output_dict, node = engine.run_get_node(builder)
+        print("Parsing completed. Result: {}".format(int(output_dict['sum'])))
+
+    .. note::
+
+        ``output_dict`` is a dictionary containing all the output nodes keyed after their label.
+        In this case: "remote_folder", "retrieved" and "sum".
+
+
+ * Launch the calculation:
+
+    .. code-block:: console
+
+        $ verdi run launch.py
+
+Finally instead of running your calculation in the current shell, you can submit your calculation to the AiiDA daemon:
+
+ * (Re)start the daemon to update its python environment:
+
+   .. code-block:: console
+
+      $ verdi daemon restart
+
+ * Update your launch script to use:
+
+    .. code-block:: python
+
+        # Submitting the calculation
+        node = engine.submit(builder)
+        print("Submitted calculation {}".format(node))
+
+    .. note::
+
+        ``node`` is the |CalcJobNode| representing the state of the underlying calculation process (which may not be finished yet).
+
+
+ * Launch the calculation:
+
+    .. code-block:: console
+
+        $ verdi run launch.py
+
+
+You can use the verdi command line interface to :ref:`monitor<topics:processes:usage:monitoring>` this processes:
 
 .. code-block:: bash
 
     $ verdi process list
 
-Performing a dry-run
---------------------
 
-Additionally, you might want to check and verify your inputs before actually running or submitting a calculation.
-You can do so by specifying to use a ``dry_run``, which will create all the input files in a local directory (``submit_test/[date]-0000[x]``) so you can inspect them before actually launching the calculation:
+This marks the end of this howto.
 
-.. code-block:: python
-
-    calculation_builder.metadata.dry_run = True
-    calculation_builder.metadata.store_provenance = False
-    run(calculation_builder)
-
-
-For further reading, you may want to consult the :ref:`guidelines on plugin design <topics:plugins:guidelines>` or the how to on :ref:`packaging plugins <how-to:plugins>`.
-
+The |CalcJob|  and |Parser| plugins are still rather basic and the ``aiida-add`` plugin package is missing a number of useful gimmicks (package metadata, documentation, tests, CI, ...).
+Continue with :ref:`how-to:plugins` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
 .. todo::
-
-    .. _how-to:plugin-codes:caching:
-
-    title: Using caching to save computational resources
-
-    `#3988`_
-
 
     .. _how-to:plugin-codes:scheduler:
 
@@ -384,6 +471,7 @@ For further reading, you may want to consult the :ref:`guidelines on plugin desi
 .. |folder| replace:: :py:class:`~aiida.common.folders.Folder`
 .. |folder.open| replace:: :py:class:`~aiida.common.folders.Folder.open`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
+.. |CalcJobNode| replace:: :py:class:`~aiida.orm.CalcJobNode`
 .. |CalcInfo| replace:: :py:class:`~aiida.common.CalcInfo`
 .. |CodeInfo| replace:: :py:class:`~aiida.common.CodeInfo`
 .. |FolderData| replace:: :py:class:`~aiida.orm.nodes.data.folder.FolderData`
@@ -391,7 +479,6 @@ For further reading, you may want to consult the :ref:`guidelines on plugin desi
 .. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
 .. |prepare_for_submission| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
 
-.. _#3988: https://github.com/aiidateam/aiida-core/issues/3988
 .. _#3989: https://github.com/aiidateam/aiida-core/issues/3989
 .. _#3990: https://github.com/aiidateam/aiida-core/issues/3990
 .. _#4123: https://github.com/aiidateam/aiida-core/issues/4123

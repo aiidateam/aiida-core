@@ -628,7 +628,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
 
         Saving computational resources
-            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:plugin-codes:caching>`.
+            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:run-codes:caching>`.
 
     .. dropdown:: Run computations on High Performance Computers
 

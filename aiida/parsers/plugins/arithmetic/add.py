@@ -10,7 +10,6 @@
 # Warning: this implementation is used directly in the documentation as a literal-include, which means that if any part
 # of this code is changed, the snippets in the file `docs/source/howto/codes.rst` have to be checked for consistency.
 """Parser for an `ArithmeticAddCalculation` job."""
-from aiida.orm import Int
 from aiida.parsers.parser import Parser
 
 
@@ -19,6 +18,8 @@ class ArithmeticAddParser(Parser):
 
     def parse(self, **kwargs):
         """Parse the contents of the output files stored in the `retrieved` output node."""
+        from aiida.orm import Int
+
         try:
             output_folder = self.retrieved
         except AttributeError:
@@ -34,5 +35,20 @@ class ArithmeticAddParser(Parser):
 
         if result < 0:
             return self.exit_codes.ERROR_NEGATIVE_NUMBER
+
+        self.out('sum', Int(result))
+
+
+class SimpleArithmeticAddParser(Parser):
+    """Simple parser for an `ArithmeticAddCalculation` job (for demonstration purposes only)."""
+
+    def parse(self, **kwargs):
+        """Parse the contents of the output files stored in the `retrieved` output node."""
+        from aiida.orm import Int
+
+        output_folder = self.retrieved
+
+        with output_folder.open(self.node.get_option('output_filename'), 'r') as handle:
+            result = int(handle.read())
 
         self.out('sum', Int(result))

@@ -75,13 +75,17 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 'non_interactive_default': True
             }
         ),
-        ('port', {
-            'option': options.PORT,
-            'prompt': 'Port number',
-            'non_interactive_default': True
-        }),
+        (
+            'port',
+            {
+                'option': options.PORT,
+                'prompt': 'Port number',
+                'non_interactive_default': True,
+            },
+        ),
         (
             'look_for_keys', {
+                'default': True,
                 'switch': True,
                 'prompt': 'Look for keys',
                 'help': 'Automatically look for private keys in the ~/.ssh folder.',
@@ -106,6 +110,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'allow_agent', {
+                'default': False,
                 'switch': True,
                 'prompt': 'Allow ssh agent',
                 'help': 'Switch to allow or disallow using an SSH agent.',
@@ -115,13 +120,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         (
             'proxy_command', {
                 'prompt': 'SSH proxy command',
-                'help': 'SSH proxy command for tunneling through a proxy server.' +
+                'help': 'SSH proxy command for tunneling through a proxy server.'
                 ' Leave empty to parse the proxy command from the SSH config file.',
                 'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect
         (
             'compress', {
+                'default': True,
                 'switch': True,
                 'prompt': 'Compress file transfers',
                 'help': 'Turn file transfer compression on or off.',
@@ -130,6 +136,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'gss_auth', {
+                'default': False,
                 'type': bool,
                 'prompt': 'GSS auth',
                 'help': 'Enable when using GSS kerberos token to connect.',
@@ -138,6 +145,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'gss_kex', {
+                'default': False,
                 'type': bool,
                 'prompt': 'GSS kex',
                 'help': 'GSS kex for kerberos, if not configured in SSH config file.',
@@ -146,6 +154,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'gss_deleg_creds', {
+                'default': False,
                 'type': bool,
                 'prompt': 'GSS deleg_creds',
                 'help': 'GSS deleg_creds for kerberos, if not configured in SSH config file.',
@@ -177,6 +186,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     _valid_auth_options = _valid_connect_options + [
         (
             'load_system_host_keys', {
+                'default': True,
                 'switch': True,
                 'prompt': 'Load system host keys',
                 'help': 'Load system host keys from default SSH location.',
@@ -185,6 +195,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'key_policy', {
+                'default': 'RejectPolicy',
                 'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
                 'prompt': 'Key policy',
                 'help': 'SSH key policy if host is not known.',

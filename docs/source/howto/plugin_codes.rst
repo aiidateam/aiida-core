@@ -45,11 +45,19 @@ thus writing the sum of the two numbers ``numx`` and ``numy`` (provided by the u
 Interfacing external codes
 ==========================
 
-Start by creating a file ``calcjob.py`` and subclass the |CalcJob| class:
+Start by creating a file ``calculations.py`` and subclass the |CalcJob| class:
 
-.. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
-    :language: python
-    :lines: 10-18
+.. code-block:: python
+
+    from aiida import orm
+    from aiida.common.datastructures import CalcInfo, CodeInfo
+    from aiida.common.folders import Folder
+    from aiida.engine import CalcJob, CalcJobProcessSpec
+
+
+    class ArithmeticAddCalculation(CalcJob):
+        """`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
+
 
 In the following, we will tell AiiDA how to run our code by implementing two key methods:
 
@@ -91,8 +99,9 @@ These ``options`` have already been defined on the |spec| by the ``super().defin
 
     They are passed to a |CalcJob| via the ``code`` input, which is defined in the |CalcJob| base class, so you don't have to:
 
-        .. code-block:: python
-            spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+    .. code-block:: python
+
+        spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
 
 
 
@@ -167,7 +176,7 @@ Parsing the outputs
 
 Parsing the output files produced by a code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
 
-To create a parser plugin, subclass the |Parser| class (for example in a file called ``parser.py``) and implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
+To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``) and implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
 The following is an example of a simple implementation:
 
 .. literalinclude:: ../../../aiida/parsers/plugins/arithmetic/add.py
@@ -182,8 +191,6 @@ Before the ``parse()`` method is called, two important attributes are set on the
 
 The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file.
 Its content is cast to an integer, since the output file should contain the sum produced by the ``aiida.in`` bash script.
-
-We read the content of the file and cast it to an integer, which should contain the sum that was produced by the ``bash`` code.
 
 Finally, the :py:meth:`~aiida.parsers.parser.Parser.out` method is used to link the parsed sum as an output of the calculation.
 The first argument is the name of the output, which will be used as the label for the link that connects the calculation and data node, and the second is the node that should be recorded as an output.
@@ -254,91 +261,25 @@ The Topics section on :ref:`defining processes <topics:processes:usage:defining>
 
     `#4123`_
 
-.. _how-to:plugin-codes:run:
-
-Running a calculation
-=====================
-
-With your ``calcjob.py`` and ``parser.py`` files at hand, you can launch your first calculation:
-
-
- 1. If you haven't already done so, set up your localhost computer:
-
-    .. code-block:: console
-
-        $ verdi computer setup -L localhost -H localhost -T local -S direct -w `echo $PWD/work` -n
-        $ verdi computer configure local tutor --safe-interval 5 -n
-
- 2. Write a first ``launch.py`` script:
-
-    .. code-block:: python
-
-        from aiida import orm, engine
-        from calcjob import ArithmeticAddCalculation
-        from parser import ArithmeticAddParser
-
-        # Setting up inputs
-        computer = orm.load_computer('localhost')
-        code = orm.Code(remote_computer_exec=[computer, '/bin/bash'])
-        resources = {
-            'num_machines': 1,
-            'num_mpiprocs_per_machine': 1,
-        }
-        inputs = {
-            'code': code,
-            'x': Int(4),
-            'y': Int(5),
-            'metadata': {
-                'options': {'resources': resources},
-                'description': "My first calculation.",
-            },
-        }
-
-        # Running the calculation
-        _ , node = engine.run_get_node( ArithmeticAddCalculation, **inputs )
-        print("Calculation completed: {}".format(node))
-
-        # Parsing its results
-        output_dict, node = ArithmeticAddParser.parse_from_node(node)
-        print("Parsing completed. Result: {}".format(output_dict['sum'].value))
-
-    .. note::
-
-        If you already have your inputs in the database, load them using ``orm.load_node()`` or find them using the :ref:`QueryBuilder <how-to:data:find>`.
-
- 3. Launch the calculation:
-
-    .. code-block:: console
-
-        $ verdi run launch.py
-
-    If everything goes well, this should print the results of your calculation, something like:
-
-    .. code-block:: console
-
-        $ verdi run launch.py
-        Calculation completed: uuid: 607d50ba-5396-411c-8bac-563b71dbaff4 (pk: 229) (calcjob.ArithmeticAddCalculation)
-        Parsing completed. Result: 9
-
-.. tip::
-
-    If you encountered a parsing error, it can be helpful to make a :ref:`topics:calculations:usage:calcjobs:dry_run`, which allows you to inspect the input folder generated by AiiDA before any calculation is launched.
-
-
-So far, we have deliberately avoided to touch the concept of :ref:`entry points <how-to:plugins:entrypoints>`, which are the preferred method of registering new calculation, parser and other plugins with AiiDA.
-Using entry points simplifies your life in a number of ways:
-
- * You can use ``verdi plugin list`` to inspect which plugins are available as well as their internal documentation.
- * You can specify a default |Parser| for a |CalcJob|, which will run automatically.
- * You can specify a default |CalcJob| for a |Code|, making it easy to set the inputs for a code.
- * You can submit calculations to the AiiDA daemon without having to worry about how to make sure that your calculation and parser plugins can be imported from the daemon's Python environment.
+.. _how-to:plugin-codes:entry-points:
 
 Registering entry points
-------------------------
+========================
 
-Registering entry points is simple:
+:ref:`Entry points <how-to:plugins:entrypoints>` are the preferred method of registering new calculation, parser and other plugins with AiiDA.
 
- * Write a minimalistic ``setup.py`` script:
+With your ``calculations.py`` and ``parsers.py`` files at hand, let's register entry points for the plugins they contain:
+
+ * Move your two scripts into a subfolder ``aiida_add``:
+
+   .. code-block:: console
+
+      mkdir aiida_add
+      mv calculations.py parsers.py aiida_add/
+
+   You have just created an ``aiida_add`` Python *package*!
+
+ * Write a minimalistic ``setup.py`` script for your new package:
 
     .. code-block:: python
 
@@ -353,12 +294,10 @@ Registering entry points is simple:
             }
         )
 
- * Move your two scripts into a subfolder ``aiida_add``:
+    .. note::
+        Strictly speaking, ``aiida-add`` is the name of the *distribution*, while ``aiida_add`` is the name of the *package*.
+        The aiida-core documentation uses the term *package* a bit more loosely.
 
-   .. code-block:: console
-
-      mkdir aiida_add
-      mv calcjob.py parser.py aiida_add/
 
  * Install your new ``aiida-add`` plugin package:
 
@@ -368,27 +307,47 @@ Registering entry points is simple:
       reentry scan
 
 
-After this, you should already see your calculation plugin listed:
+After this, you should see your plugins listed:
 
    .. code-block:: console
 
       $ verdi plugin list aiida.calculations
       $ verdi plugin list aiida.calculations add
+      $ verdi plugin list aiida.parsers
 
 
-Launching your calculation now becomes easier:
 
- * In ``calcjob.py``, change the default  ``parser_name`` to ``'add'``
+.. _how-to:plugin-codes:run:
 
- * Simplify your ``launch.py`` script:
+Running a calculation
+=====================
+
+With the entry points set up, you are ready to launch your first calculation with the new plugin:
+
+
+ * If you haven't already done so, :ref:`set up your computer<how-to:run-codes:computer>`.
+   In the following we assume it to be the localhost:
+
+    .. code-block:: console
+
+        $ verdi computer setup -L localhost -H localhost -T local -S direct -w `echo $PWD/work` -n
+        $ verdi computer configure local localhost --safe-interval 5 -n
+
+ * Write a ``launch.py`` script:
 
     .. code-block:: python
 
         from aiida import orm, engine
+        from aiida.common.exceptions import NotExistent
 
         # Setting up inputs
         computer = orm.load_computer('localhost')
-        code = orm.Code(remote_computer_exec=[computer, '/bin/bash'], input_plugin_name='add')
+        try:
+          code = load_code('add@localhost')
+        except NotExistent:
+          # Setting up code via python API (or use "verdi code setup")
+          code = orm.Code(label='add', remote_computer_exec=[computer, '/bin/bash'])
+
         builder = code.get_builder()
         builder.x = Int(4)
         builder.y = Int(5)
@@ -413,6 +372,20 @@ Launching your calculation now becomes easier:
     .. code-block:: console
 
         $ verdi run launch.py
+
+
+    If everything goes well, this should print the results of your calculation, something like:
+
+    .. code-block:: console
+
+        $ verdi run launch.py
+        Calculation completed: uuid: 607d50ba-5396-411c-8bac-563b71dbaff4 (pk: 229) (calcjob.ArithmeticAddCalculation)
+        Parsing completed. Result: 9
+
+.. tip::
+
+    If you encountered a parsing error, it can be helpful to make a :ref:`topics:calculations:usage:calcjobs:dry_run`, which allows you to inspect the input folder generated by AiiDA before any calculation is launched.
+
 
 Finally instead of running your calculation in the current shell, you can submit your calculation to the AiiDA daemon:
 

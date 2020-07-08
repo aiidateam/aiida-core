@@ -71,7 +71,11 @@ The first line of the method calls the |define| method of the |CalcJob| parent c
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
 
 Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``sum``.
-Once a calculation finishes, any output node specified here will be linked to the calculation node with the specified link label.
+AiiDA will attach the outputs defined here to a (successfully) finished calculation using the link label provided.
+
+.. note::
+    This holds for *required* outputs (the default behaviour).
+    Use ``required=False`` in order to mark an output as optional.
 
 .. tip::
 
@@ -108,7 +112,7 @@ For example:
 
 .. note:: Unlike the |define| method, the ``prepare_for_submission`` method is implemented from scratch and so there is no super call.
 
-The first step is writing the simple bash script mentioned in the beginning: summing the numbers ``x`` and ``y``, using Python's string interpolation to replace the ``x`` and ``y`` placeholders with the actual values ``self.inputs.x`` and ``self.inputs.y`` that were passed by the user.
+The first step is writing the simple bash script mentioned in the beginning: summing the numbers ``x`` and ``y``, using Python's string interpolation to replace the ``x`` and ``y`` placeholders with the actual values ``self.inputs.x`` and ``self.inputs.y`` that were provided as inputs by the caller.
 
 All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called.
 Therefore, when accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
@@ -176,7 +180,8 @@ Before the ``parse()`` method is called, two important attributes are set on the
 
   2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
 
-We start by opening the output file, whose filename we get from the ``self.node`` attribute via the :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method.
+The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file.
+Its content is cast to an integer, since the output file should contain the sum produced by the ``aiida.in`` bash script.
 
 We read the content of the file and cast it to an integer, which should contain the sum that was produced by the ``bash`` code.
 

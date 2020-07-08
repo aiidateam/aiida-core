@@ -94,15 +94,6 @@ Import and Export
     ../import_export/main
     ../import_export/external_dbs
 
-=======
-Caching
-=======
-
-.. toctree::
-    :maxdepth: 4
-
-    caching.rst
-
 
 ==========
 Schedulers

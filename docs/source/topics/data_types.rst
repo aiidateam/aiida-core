@@ -264,14 +264,14 @@ or from `file-like objects <https://docs.python.org/3/glossary.html#term-file-li
 
   In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
 
-Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:class:`~aiida.orm.nodes.node.Node.get_object_content()` method:
+Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method:
 
 .. code-block:: ipython
 
   In [5]: folder.get_object_content('file1.txt')
   Out[5]: 'File 1 content\n'
 
-To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:class:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
@@ -279,14 +279,14 @@ To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.
   Out[6]: ['subdir', 'file1.txt', 'file2.txt']
 
 In this example, ``subdir`` was a sub directory of ``/absolute/path/to/directory``, whose contents where added above.
-to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
   In [7]: folder.list_object_names('subdir')
   Out[7]: ['file3.txt', 'module.py']
 
-The content can once again be shown using the :py:meth:`~aiida.orm.nodes.node.Node.get_object_content()` method by passing the correct path:
+The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method by passing the correct path:
 
 .. code-block:: ipython
 

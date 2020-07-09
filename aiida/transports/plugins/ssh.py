@@ -1243,7 +1243,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         else:
             command_to_execute = command
 
-        self.logger.debug('Command to be executed: {}'.format(command_to_execute))
+        self.logger.debug('Command to be executed: {}'.format(command_to_execute[:1000]))
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.

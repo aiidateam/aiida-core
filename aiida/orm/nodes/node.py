@@ -12,6 +12,7 @@
 import datetime
 import importlib
 from logging import Logger
+import typing
 import warnings
 import traceback
 from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple, Type, Union
@@ -344,6 +345,22 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param value: the new value to set
         """
         self.backend_entity.description = value
+
+    @property
+    def repository_metadata(self) -> typing.Dict:
+        """Return the node repository metadata.
+
+        :return: the repository metadata
+        """
+        return self.backend_entity.repository_metadata or {}
+
+    @repository_metadata.setter
+    def repository_metadata(self, value):
+        """Set the repository metadata.
+
+        :param value: the new value to set
+        """
+        self.backend_entity.repository_metadata = value
 
     @property
     def computer(self) -> Optional[Computer]:

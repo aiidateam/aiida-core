@@ -1747,3 +1747,42 @@ class TestGroupExtrasMigration(TestMigrationsSQLA):
                 self.assertEqual(group.extras, {})
             finally:
                 session.close()
+
+
+class TestNodeRepositoryMetadataMigration(TestMigrationsSQLA):
+    """Test migration adding the `repository_metadata` column to the `Node` model."""
+
+    migrate_from = '0edcdd5a30f0'  # 0edcdd5a30f0_dbgroup_extras.py
+    migrate_to = '7536a82b2cc4'  # 7536a82b2cc4_add_node_repository_metadata.py
+
+    def setUpBeforeMigration(self):
+        """Create a single node before migration."""
+        DbNode = self.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(default_user)
+                session.commit()
+
+                node = DbNode(user_id=default_user.id)
+                session.add(node)
+                session.commit()
+
+                self.node_id = node.id
+
+            finally:
+                session.close()
+
+    def test_add_node_repository_metadata(self):
+        """Test that the column is added and null by default."""
+        DbNode = self.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                node = session.query(DbNode).filter(DbNode.id == self.node_id).one()
+                assert hasattr(node, 'repository_metadata')
+                assert node.repository_metadata is None
+            finally:
+                session.close()

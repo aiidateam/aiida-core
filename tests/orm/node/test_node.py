@@ -48,6 +48,23 @@ class TestNode(AiidaTestCase):
         with self.assertRaises(exceptions.ModificationNotAllowed):
             node.user = self.user
 
+    @staticmethod
+    def test_repository_metadata():
+        """Test the basic properties for `repository_metadata`."""
+        node = Data()
+        assert node.repository_metadata == {}
+
+        node.store()
+        assert node.repository_metadata == {}
+
+        node = Data()
+        repository_metadata = {'key': 'value'}
+        node.repository_metadata = repository_metadata
+        assert node.repository_metadata == repository_metadata
+
+        node.store()
+        assert node.repository_metadata == repository_metadata
+
 
 class TestNodeAttributesExtras(AiidaTestCase):
     """Test for node attributes and extras."""

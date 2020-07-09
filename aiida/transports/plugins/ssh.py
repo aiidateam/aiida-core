@@ -454,7 +454,6 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # Set the current directory to a explicit path, and not to None
         self._sftp.chdir(self._sftp.normalize('.'))
 
-
     def close(self):
         """
         Close the SFTP channel, and the SSHClient.

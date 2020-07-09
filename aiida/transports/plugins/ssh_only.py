@@ -30,6 +30,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
     """
     Support connection, command execution and data transfer to remote computers via SSH only.
     """
+
     def __init__(self, *args, **kwargs):
         """
         Initialize the SshOnlyTransport class.
@@ -51,7 +52,6 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
     def open_file_transport(self):
         self._is_open = True
 
-
     def close(self):
         """
         Close the SSHClient.
@@ -72,7 +72,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         Return an adjusted path if we're emulating a "current working
         directory" for the server.
         """
-        b_slash = b"/"
+        b_slash = b'/'
         path = paramiko.py3compat.b(path)
         if self._cwd is None:
             return path
@@ -97,7 +97,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if path is not None:
             if not S_ISDIR(self.stat(path).st_mode):
                 code = ENOTDIR
-                raise IOError("{}: {}".format(os.strerror(code), path))
+                raise IOError('{}: {}'.format(os.strerror(code), path))
             self._cwd = paramiko.py3compat.b(self.normalize(path)).strip()
 
         # Paramiko already checked that path is a folder, otherwise I would
@@ -127,7 +127,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not path:
             raise ValueError('Input to normalize() must be a non empty string.')
 
-        command = "{} {}".format(exe, paramiko.py3compat.u(path))
+        command = '{} {}'.format(exe, paramiko.py3compat.u(path))
 
         retval, stdout, stderr = self.exec_command_wait(command)
 
@@ -150,7 +150,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         """
         return self._cwd and paramiko.py3compat.u(self._cwd)
 
-    def stat(self, path, option="--dereference"):
+    def stat(self, path, option='--dereference'):
 
         path = self._adjust_cwd(path.strip())
         command = 'stat --format "%s %u %g %f %X %Y" ' + option + " " + paramiko.py3compat.u(path)
@@ -172,7 +172,6 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
 
         raise IOError(2, 'Error while executing stat. Exit code: {}'.format(retval))
 
-
     def mkdir(self, path, ignore_existing=False):
         """
         Create a folder (directory) named path.
@@ -191,7 +190,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not path:
             raise ValueError('Input to mkdir() must be a non empty string.')
 
-        command = "mkdir " + paramiko.py3compat.u(path)
+        command = 'mkdir ' + paramiko.py3compat.u(path)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
@@ -255,7 +254,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not path:
             raise ValueError('Input to rmdir() must be a non empty string.')
 
-        command = "rmdir " + paramiko.py3compat.u(path)
+        command = 'rmdir ' + paramiko.py3compat.u(path)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
@@ -283,7 +282,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not mode:
             raise ValueError('mode for chmod() must be a non empty string.')
         #[2:] is to remove 0o prefix.
-        command = "chmod " + str(oct(mode)[2:]) + " " + paramiko.py3compat.u(path)
+        command = 'chmod ' + str(oct(mode)[2:]) + ' ' + paramiko.py3compat.u(path)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
@@ -319,10 +318,12 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
             raise OSError('Destination already exists: not overwriting it')
 
         file_size = os.stat(localpath).st_size
-        with open(localpath, "rb") as fl:
-            exe = "echo"
-            exe_post = "| cat >"
-            command = '{} {} {} {}'.format(exe, escape_for_bash(paramiko.py3compat.u(fl.read())), exe_post, paramiko.py3compat.u(remotepath))
+        with open(localpath, 'rb') as fl:
+            exe = 'echo'
+            exe_post = '| cat >'
+            command = '{} {} {} {}'.format(
+                exe, escape_for_bash(paramiko.py3compat.u(fl.read())), exe_post, paramiko.py3compat.u(remotepath)
+            )
 
             retval, stdout, stderr = self.exec_command_wait(command)
             if retval == 0:
@@ -361,7 +362,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not dereference:
             raise NotImplementedError
 
-        with open(localpath, "wb") as fl:
+        with open(localpath, 'wb') as fl:
 
             command = 'cat ' + paramiko.py3compat.u(remotepath)
 
@@ -381,7 +382,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         raise IOError('Error while executing get. Exit code: {}'.format(retval))
 
     def lstat(self, path):
-        return stat(path, option="")
+        return stat(path, option='')
 
     def listdir(self, path='.', pattern=None):
         """
@@ -394,7 +395,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not pattern:
             path = self._adjust_cwd(path.strip())
 
-            command = "ls -1 " + paramiko.py3compat.u(path)
+            command = 'ls -1 ' + paramiko.py3compat.u(path)
             retval, stdout, stderr = self.exec_command_wait(command)
 
             if retval == 0:
@@ -427,7 +428,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         if not path:
             raise ValueError('Input to remove() must be a non empty string.')
 
-        command = "rm " + paramiko.py3compat.u(path)
+        command = 'rm ' + paramiko.py3compat.u(path)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
@@ -477,14 +478,13 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         )
         raise IOError('Error while executing rename. Exit code: {}'.format(retval))
 
-
     def symlink_internal(self, source, dest):
         if not source:
             raise ValueError('Input source to symlink() must be a non empty string.')
         source = self._adjust_cwd(source.strip())
         dest = self._adjust_cwd(dest.strip())
 
-        command = "ln -s " + paramiko.py3compat.u(source) + " " + paramiko.py3compat.u(dest)
+        command = 'ln -s ' + paramiko.py3compat.u(source) + " " + paramiko.py3compat.u(dest)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:

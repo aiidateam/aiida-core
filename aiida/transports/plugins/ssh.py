@@ -545,7 +545,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     def stat(self, path):
         return self.sftp.stat(path)
 
-    def lstat(path):
+    def lstat(self, path):
         return self.sftp.lstat(path)
 
     def getcwd(self):
@@ -1329,7 +1329,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # print connect_string
         return connect_string
 
-    def symlink_internal(source, dest):
+    def symlink_internal(self, source, dest):
         self.sftp.symlink(source, dest)
 
     def symlink(self, remotesource, remotedestination):

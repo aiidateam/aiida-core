@@ -289,8 +289,8 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
             name='aiida-add',
             packages=['aiida_add'],
             entry_points={
-                'aiida.calculations': ["add = aiida_add.calcjob:ArithmeticAddCalculation"],
-                'aiida.parsers': ["add = aiida_add.parser:ArithmeticAddParser"],
+                'aiida.calculations': ["add = aiida_add.calculations:ArithmeticAddCalculation"],
+                'aiida.parsers': ["add = aiida_add.parsers:ArithmeticAddParser"],
             }
         )
 
@@ -343,10 +343,10 @@ With the entry points set up, you are ready to launch your first calculation wit
         # Setting up inputs
         computer = orm.load_computer('localhost')
         try:
-          code = load_code('add@localhost')
+            code = load_code('add@localhost')
         except NotExistent:
-          # Setting up code via python API (or use "verdi code setup")
-          code = orm.Code(label='add', remote_computer_exec=[computer, '/bin/bash'])
+            # Setting up code via python API (or use "verdi code setup")
+            code = orm.Code(label='add', remote_computer_exec=[computer, '/bin/bash'], input_plugin_name='add')
 
         builder = code.get_builder()
         builder.x = Int(4)

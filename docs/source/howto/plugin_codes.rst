@@ -379,7 +379,6 @@ With the entry points set up, you are ready to launch your first calculation wit
     .. code-block:: console
 
         $ verdi run launch.py
-        Calculation completed: uuid: 607d50ba-5396-411c-8bac-563b71dbaff4 (pk: 229) (calcjob.ArithmeticAddCalculation)
         Parsing completed. Result: 9
 
 .. tip::
@@ -414,6 +413,7 @@ Finally instead of running your calculation in the current shell, you can submit
 
         $ verdi run launch.py
 
+    This should print the UUID and the PK of the submitted calculation.
 
 You can use the verdi command line interface to :ref:`monitor<topics:processes:usage:monitoring>` this processes:
 

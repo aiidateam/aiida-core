@@ -153,7 +153,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
     def stat(self, path, option='--dereference'):
 
         path = self._adjust_cwd(path.strip())
-        command = 'stat --format "%s %u %g %f %X %Y" ' + option + " " + paramiko.py3compat.u(path)
+        command = 'stat --format "%s %u %g %f %X %Y" ' + option + ' ' + paramiko.py3compat.u(path)
 
         retval, stdout, stderr = self.exec_command_wait(command)
 
@@ -340,7 +340,6 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
             )
         raise IOError('Error while executing put. Exit code: {}'.format(retval))
 
-
     def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
         """
         Get a file from remote to local.
@@ -465,7 +464,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
             if not self.isdir(newpath):
                 raise IOError('Destination {} does not exist'.format(newpath))
 
-        command = "mv " + paramiko.py3compat.u(oldpath) + " " + paramiko.py3compat.u(newpath)
+        command = "mv " + paramiko.py3compat.u(oldpath) + ' ' + paramiko.py3compat.u(newpath)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
@@ -484,7 +483,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
         source = self._adjust_cwd(source.strip())
         dest = self._adjust_cwd(dest.strip())
 
-        command = 'ln -s ' + paramiko.py3compat.u(source) + " " + paramiko.py3compat.u(dest)
+        command = 'ln -s ' + paramiko.py3compat.u(source) + ' ' + paramiko.py3compat.u(dest)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:

@@ -437,14 +437,23 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             )
             raise
 
-        # Open also a SFTPClient
-        self._sftp = self._client.open_sftp()
+        # Open also a File transport client. SFTP by default, pure SSH in ssh_only
+        self.open_file_transport()
+
+        return self
+
+    def open_file_transport(self):
+        from aiida.common.exceptions import InvalidOperation
+
+        try:
+            self._sftp = self._client.open_sftp()
+        except Exception:
+            raise InvalidOperation('SFTP seems not functional. Try to use ssh_only transport instead ?')
+        self._is_open = True
+
         # Set the current directory to a explicit path, and not to None
         self._sftp.chdir(self._sftp.normalize('.'))
 
-        self._is_open = True
-
-        return self
 
     def close(self):
         """

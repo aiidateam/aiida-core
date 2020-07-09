@@ -464,7 +464,7 @@ class SshOnlyTransport(SshTransport):  # pylint: disable=too-many-public-methods
             if not self.isdir(newpath):
                 raise IOError('Destination {} does not exist'.format(newpath))
 
-        command = "mv " + paramiko.py3compat.u(oldpath) + ' ' + paramiko.py3compat.u(newpath)
+        command = 'mv ' + paramiko.py3compat.u(oldpath) + ' ' + paramiko.py3compat.u(newpath)
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:

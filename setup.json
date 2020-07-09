@@ -190,7 +190,8 @@
         ],
         "aiida.transports": [
             "local = aiida.transports.plugins.local:LocalTransport",
-            "ssh = aiida.transports.plugins.ssh:SshTransport"
+            "ssh = aiida.transports.plugins.ssh:SshTransport",
+            "ssh_only = aiida.transports.plugins.ssh_only:SshOnlyTransport"
         ],
         "aiida.tools.calculations": [],
         "aiida.tools.dbexporters": [],

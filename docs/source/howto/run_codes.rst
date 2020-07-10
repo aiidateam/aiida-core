@@ -153,7 +153,7 @@ Some compute resources, particularly large supercomputing centres, may not toler
 
   * Limit the number of jobs in the queue.
 
-    Set yourself a limit for the maximum number of workflows to submit, and submit new ones only once previous workflows start to complete (in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_).
+    Set yourself a limit for the maximum number of workflows to submit, and submit new ones only once previous workflows start to complete.
     The supported number of jobs depends on your supercomputer - discuss this with your supercomputer administrators (`this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ may contain useful information for them).
 
   * Increase the time interval between polling the job queue.

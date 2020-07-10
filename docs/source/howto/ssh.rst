@@ -201,7 +201,7 @@ SSH configuration
 
 Edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing) and add the following lines::
 
-  Host SHORTNAME_TARGET
+  Host FULLHOSTNAME_TARGET
       Hostname FULLHOSTNAME_TARGET
       User USER_TARGET
       IdentityFile ~/.ssh/aiida
@@ -213,12 +213,15 @@ replacing the ``..._TARGET`` and ``..._PROXY`` variables with the host/user name
 
     If desired/necessary for your netcat implementation, hide warnings and errors  that may occur during the proxying/tunneling by redirecting stdout and stderr, e.g. by appending ``2> /dev/null`` to the ``ProxyCommand``.
 
+.. note::
+
+   You need to use the ``FULLHOSTNAME_TARGET`` also in the ``Host`` line to make sure that AiiDA can automatically read this data and use it in the ``verdi computer configure`` step.
 
 This should allow you to directly connect to the *TARGET* server using
 
 .. code-block:: console
 
-   $ ssh SHORTNAME_TARGET
+   $ ssh FULLHOSTNAME_TARGET
 
 For a *passwordless* connection, you need to follow the instructions :ref:`how-to:ssh:passwordless` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server.
 

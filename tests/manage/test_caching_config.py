@@ -7,27 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the functionality that reads and modifies the caching configuration file."""
-
 # pylint: disable=redefined-outer-name
-
-import tempfile
+"""Tests for the functionality that reads and modifies the caching configuration file."""
 import contextlib
-
+import os
+import tempfile
 import yaml
+
 import pytest
 
 from aiida.common import exceptions
-from aiida.manage.configuration import get_profile
 from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.manage.caching import get_configuration, get_configuration_filepath
+from aiida.manage.configuration import get_profile
 
 
 @pytest.fixture
 def configure_caching():
-    """
-    Fixture to set the caching configuration in the test profile to
-    a specific dictionary. This is done by creating a temporary
-    caching configuration file.
+    """Fixture to set the caching configuration in the test profile to a specific dictionary.
+
+    This is done by creating a temporary caching configuration file.
     """
 
     @contextlib.contextmanager
@@ -43,10 +42,8 @@ def configure_caching():
 
 
 @pytest.fixture
-def use_default_configuration(configure_caching):  # pylint: disable=redefined-outer-name
-    """
-    Fixture to load a default caching configuration.
-    """
+def use_default_configuration(configure_caching):
+    """Fixture to load a default caching configuration."""
     with configure_caching(
         config_dict={
             'default': True,
@@ -55,6 +52,29 @@ def use_default_configuration(configure_caching):  # pylint: disable=redefined-o
         }
     ):
         yield
+
+
+def test_get_configuration_filepath():
+    """Test the `get_configuration_filepath` function."""
+    filepath = get_configuration_filepath()
+    assert isinstance(filepath, str)
+    assert os.path.abspath(filepath)
+
+
+def test_get_configuration(create_config_instance):
+    """Test the `get_configuration` function."""
+    config = create_config_instance()
+
+    with pytest.raises(FileNotFoundError):
+        get_configuration()
+
+    filename = os.path.basename(get_configuration_filepath())
+
+    with open(os.path.join(config.dirpath, filename), 'w') as handle:
+        yaml.dump({'invalid': 'key'}, handle)
+
+        with pytest.raises(exceptions.ConfigurationError):
+            get_configuration()
 
 
 def test_empty_enabled_disabled(configure_caching):
@@ -171,8 +191,7 @@ def test_default(use_default_configuration):  # pylint: disable=unused-argument
         ], ['some_identifier', 'aiida.calculations:templatereplacer']),
 ])
 def test_configuration(configure_caching, config_dict, enabled, disabled):
-    """Check that different caching configurations give the expected result.
-    """
+    """Check that different caching configurations give the expected result."""
     with configure_caching(config_dict=config_dict):
         for identifier in enabled:
             assert get_use_cache(identifier=identifier)

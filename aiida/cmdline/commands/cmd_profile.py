@@ -54,11 +54,38 @@ def profile_show(profile):
     """Show details for a profile."""
 
     if profile is None:
-        echo.echo_critical('no profile to show')
+        echo.echo_critical('no default profile is defined')
 
     echo.echo_info('Profile: {}'.format(profile.name))
     data = sorted([(k.lower(), v) for k, v in profile.dictionary.items()])
     echo.echo(tabulate.tabulate(data))
+
+
+@verdi_profile.command('caching')
+@arguments.PROFILE(default=defaults.get_default_profile)
+def profile_caching(profile):
+    """Show the caching configuration for a profile."""
+    from aiida.manage.caching import get_configuration, get_configuration_filepath
+
+    if profile is None:
+        echo.echo_critical('no default profile is defined')
+
+    try:
+        config = get_configuration()
+    except FileNotFoundError:
+        echo.echo_critical('caching configuration file `{}` does not exist'.format(get_configuration_filepath()))
+    except exceptions.ConfigurationError as exception:
+        echo.echo_critical('caching configuration is invalid: {}'.format(str(exception)))
+
+    print('PROFILE', profile)
+
+    try:
+        profile_config = config[profile.name]
+    except KeyError:
+        echo.echo_warning('caching configuration not defined for profile `{}`'.format(profile.name))
+    else:
+        echo.echo_info('caching configuration for profile: {}'.format(profile.name))
+        echo.echo_dictionary(profile_config)
 
 
 @verdi_profile.command('setdefault')
@@ -93,12 +120,10 @@ def profile_setdefault(profile):
 )
 @arguments.PROFILES(required=True)
 def profile_delete(force, include_config, include_db, include_repository, profiles):
-    """
-    Delete one or more profiles.
+    """Delete one or more profiles.
 
-    You can specify more profile names (separated by spaces).
-    These will be removed from the aiida config file,
-    and the associated databases and file repositories will also be removed.
+    The profiles will be removed from the configuration file, and the associated databases and file repositories will
+    also be deleted.
     """
     from aiida.manage.configuration.setup import delete_profile
 

@@ -440,6 +440,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      caching     Show the caching configuration for a profile.
       delete      Delete one or more profiles.
       list        Display a list of all available profiles.
       setdefault  Set a profile as the default one.

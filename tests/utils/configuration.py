@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines methods to mock an AiiDA instance complete with mock configuration and profile."""
-
 import contextlib
 import os
 import shutil

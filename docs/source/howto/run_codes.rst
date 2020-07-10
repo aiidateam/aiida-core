@@ -531,5 +531,20 @@ If you suspect a node is being reused in error (e.g. during development), you ca
    The node in question should no longer be reused.
 
 
+How to validate the configuration
+---------------------------------
+
+To check that the configuration file can be found by AiiDA and it has the correct syntax, use the following command:
+
+.. code-block:: console
+
+    $ verdi profile caching
+
+The command emits a critical error if the caching configuration file cannot be found or contains wrong syntax.
+Otherwise, it will show the parsed configuration for the current default profile.
+Pass another profile as an argument to see the corresponding caching configuration.
+If no configuration is defined for the requested profile, a warning is displayed.
+
+
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`

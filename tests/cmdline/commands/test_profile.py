@@ -8,8 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi profile`."""
+import re
 
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
@@ -171,3 +173,56 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         self.assertNotIn(self.profile_list[2], result.output)
         self.assertNotIn(self.profile_list[3], result.output)
         self.assertIsNone(result.exception, result.output)
+
+
+@pytest.mark.usefixtures('create_empty_config_instance')
+def test_caching_no_default_profile(run_cli_command):
+    """Test `verdi profile caching` fails with critical if no default profile exists."""
+    result = run_cli_command(cmd_profile.profile_caching, raises=True)
+    assert re.search(r'Critical: no default profile is defined', result.output)
+
+
+def test_caching_not_existent(run_cli_command, create_config_instance):
+    """Test `verdi profile caching` fails with critical if no caching configuration file exists."""
+    create_config_instance()
+    result = run_cli_command(cmd_profile.profile_caching, raises=True)
+    assert re.search(r'Critical: caching configuration file `.*` does not exist', result.output)
+
+
+def test_caching_invalid_config(run_cli_command, create_config_instance, create_caching_config):
+    """Test `verdi profile caching` fails with critical if the configuration content is invalid."""
+    config = create_config_instance()
+    create_caching_config({config.default_profile_name: {'wrong_key': True}})
+    result = run_cli_command(cmd_profile.profile_caching, raises=True)
+    assert re.search(r'invalid key `wrong_key` in caching configuration file', result.output)
+
+
+def test_caching_wrong_profile(run_cli_command, create_config_instance, create_caching_config):
+    """Test `verdi profile caching` prints a warning if no configuration is specified for the given profile."""
+    config = create_config_instance()
+    create_caching_config({'non_existing': {}}, config)
+    result = run_cli_command(cmd_profile.profile_caching)
+    assert re.search(r'Warning: caching configuration not defined for profile `.*`', result.output)
+
+
+def test_caching_success(run_cli_command, create_config_instance, create_caching_config):
+    """Test `verdi profile caching` works for the current default profile."""
+    config = create_config_instance()
+    create_caching_config({config.default_profile_name: {'default': True}})
+    result = run_cli_command(cmd_profile.profile_caching)
+    assert re.search(r'Info: caching configuration for profile: ' + config.default_profile_name, result.output)
+
+
+def test_caching_different_profile(run_cli_command, create_config_instance, create_profile, create_caching_config):
+    """Test `verdi profile caching` works for a profile other than the current default."""
+    config = create_config_instance()
+    profile = create_profile('alternate')
+    config.add_profile(profile)
+    config.store()
+
+    profile_name = 'alternate'
+    create_caching_config({config.default_profile_name: {'default': True}, profile_name: {'default': True}}, config)
+
+    result = run_cli_command(cmd_profile.profile_caching, [profile_name])
+    assert re.search(r'Info: caching configuration for profile: ' + profile_name, result.output)
+    assert '"default": true,' in result.output

@@ -35,6 +35,9 @@ class ConfigKeys(Enum):
     DISABLED = 'disabled'
 
 
+_CONFIG = {}
+
+FILENAME_CONFIG = 'cache_config.yml'
 DEFAULT_CONFIG = {
     ConfigKeys.DEFAULT.value: False,
     ConfigKeys.ENABLED.value: [],
@@ -42,30 +45,55 @@ DEFAULT_CONFIG = {
 }
 
 
-def _get_config(config_file):
-    """Return the caching configuration.
+def get_configuration_filepath() -> str:
+    """Return the absolute filepath to where the caching configuration file should be found.
 
-    :param config_file: the absolute path to the caching configuration file
-    :return: the configuration dictionary
+    .. note:: this is just the path where the code will expect the file to be, it doesn't have to exist.
+
+    :return: the filepath of the caching configuration.
     """
-    from aiida.manage.configuration import get_profile
+    from aiida.manage.configuration import get_config
+    config = get_config()
+    return os.path.join(config.dirpath, FILENAME_CONFIG)
 
-    profile = get_profile()
 
-    if profile is None:
-        exceptions.ConfigurationError('no profile has been loaded')
+def get_configuration() -> dict:
+    """Return the configuration.
+
+    .. note:: this will merely parse the configuration and return it. It will *not* load the configuration such that it
+        will be used by the engine. This function is therefore merely to inspect the current configuration contents.
+
+    :return: the caching configuration
+    :raises FileNotFoundError: if the caching configuration file cannot be found.
+    :raises ConfigurationError: if the caching configuration file cannot be parsed or has incorrect syntax.
+    """
+    config_file = get_configuration_filepath()
+
+    # Check manually if the file exists (instead of try-except) to be able to raise separate exception
+    if not os.path.isfile(config_file):
+        raise FileNotFoundError('the caching configuration file `{}` does not exist.'.format(config_file))
 
     try:
         with open(config_file, 'r', encoding='utf8') as handle:
-            config = yaml.safe_load(handle)[profile.name]
-    except (OSError, IOError, KeyError):
-        # No config file, or no config for this profile
-        return DEFAULT_CONFIG
+            config = yaml.safe_load(handle)
+    except OSError as exc:
+        raise exceptions.ConfigurationError('the caching configuration file could not be read or parsed.') from exc
 
-    # Validate configuration
+    for profile_config in config.values():
+        _validate_config(profile_config)
+
+    return config
+
+
+def _validate_config(config):
+    """Validate the configuration content.
+
+    :param config: the loaded configuration content.
+    :raises ConfigurationError: if the configuration content has incorrect syntax.
+    """
     for key in config:
         if key not in DEFAULT_CONFIG:
-            raise exceptions.ConfigurationError("Configuration error: Invalid key '{}' in cache_config.yml".format(key))
+            raise exceptions.ConfigurationError('invalid key `{}` in caching configuration file'.format(key))
 
     # Add defaults where key is either completely missing or specifies no values in which case it will be `None`
     for key, default_config in DEFAULT_CONFIG.items():
@@ -86,10 +114,30 @@ def _get_config(config_file):
     except ValueError as exc:
         raise exceptions.ConfigurationError('Invalid identifier pattern in enable or disable list.') from exc
 
+
+def _get_config(config_file):
+    """Return the caching configuration.
+
+    :param config_file: the absolute path to the caching configuration file
+    :return: the configuration dictionary
+    """
+    from aiida.manage.configuration import get_profile
+
+    profile = get_profile()
+
+    if profile is None:
+        exceptions.ConfigurationError('no profile has been loaded')
+
+    try:
+        with open(config_file, 'r', encoding='utf8') as handle:
+            config = yaml.safe_load(handle)[profile.name]
+    except (OSError, KeyError):
+        # No config file, or no config for this profile
+        return DEFAULT_CONFIG
+
+    _validate_config(config)
+
     return config
-
-
-_CONFIG = {}
 
 
 def configure(config_file=None):
@@ -99,7 +147,7 @@ def configure(config_file=None):
         from aiida.manage.configuration import get_config
 
         config = get_config()
-        config_file = os.path.join(config.dirpath, 'cache_config.yml')
+        config_file = os.path.join(config.dirpath, FILENAME_CONFIG)
 
     global _CONFIG
     _CONFIG.clear()

@@ -7,8 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Configuration file for pytest tests."""
 import os
+import yaml
 
 import pytest
 
@@ -190,13 +192,46 @@ def create_empty_config_instance(tmp_path) -> Config:
 
 
 @pytest.fixture
+def create_config_instance(create_empty_config_instance, create_profile) -> Config:
+    """Create a temporary configuration instance with one profile.
+
+    This creates a temporary directory with a clean `.aiida` folder and basic configuration file. The currently loaded
+    configuration and profile are stored in memory and are automatically restored at the end of this context manager.
+    This fixture differs from `create_empty_config_instance` in that here a profile will be created and set as default.
+    The defaults of the profile can be overridden in the callable, as well as whether it should be set as default. This
+    fixture should probably be used for most tests that assume a basically configured setup.
+
+    :return: a config instance with a configured profile.
+    """
+
+    def _create_config_instance(set_as_default=True, **kwargs):
+        """Create a temporary configuration instance with one profile.
+
+        :param set_as_default: whether to set the one profile as the default.
+        :param kwargs: parameters that are forwarded to the `Profile` constructor.
+        """
+        profile = create_profile(**kwargs)
+        config = create_empty_config_instance
+        config.add_profile(profile)
+
+        if set_as_default:
+            config.set_default_profile(profile.name, overwrite=True)
+
+        config.store()
+
+        return config
+
+    return _create_config_instance
+
+
+@pytest.fixture
 def create_profile() -> Profile:
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name, **kwargs):
+    def _create_profile(name='test_profile', **kwargs):
 
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
@@ -212,6 +247,32 @@ def create_profile() -> Profile:
             'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
         }
 
+        # Add remaining keyword arguments that certain tests may use to intentionally create invalid profiles
+        profile_dictionary.update(kwargs)
+
         return Profile(name, profile_dictionary)
 
     return _create_profile
+
+
+@pytest.fixture
+def create_caching_config(create_empty_config_instance):
+    """Create a caching configuration file in the current configuration folder.
+
+    :return: the config instance that was passed or created which can be used to determine the absolute filepath.
+    """
+
+    def _create_caching_config(caching_config, config=None):
+        from aiida.manage.caching import FILENAME_CONFIG
+
+        if config is None:
+            config = create_empty_config_instance
+
+        filepath = os.path.join(config.dirpath, FILENAME_CONFIG)
+
+        with open(filepath, 'w') as handle:
+            yaml.dump(caching_config, handle)
+
+        return config
+
+    return _create_caching_config

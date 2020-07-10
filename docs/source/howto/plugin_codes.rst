@@ -390,9 +390,9 @@ Finally instead of running your calculation in the current shell, you can submit
 
  * (Re)start the daemon to update its Python environment:
 
-   .. code-block:: console
+    .. code-block:: console
 
-      $ verdi daemon restart --reset
+        $ verdi daemon restart --reset
 
  * Update your launch script to use:
 
@@ -426,6 +426,7 @@ This marks the end of this how-to.
 
 The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-add`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins` in order to learn how to quickly create a feature-rich new plugin package from scratch.
+
 
 .. todo::
 

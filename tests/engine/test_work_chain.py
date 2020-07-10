@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use
+"""Tests for the `WorkChain` class."""
 import inspect
 import unittest
 
 import plumpy
-import plumpy.test_utils
-import pytest
 from tornado import gen
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -56,7 +57,7 @@ def run_until_waiting(proc):
         in_waiting.set_result(True)
     else:
 
-        def on_waiting(waiting_proc):
+        def on_waiting(_):
             in_waiting.set_result(True)
             proc.remove_process_listener(listener)
 
@@ -81,6 +82,8 @@ def run_and_check_success(process_class, **kwargs):
 
 
 class Wf(WorkChain):
+    """"Dummy work chain implementation with various steps and logical constructs in the outline."""
+
     # Keep track of which steps were completed by the workflow
     finished_steps = {}
 
@@ -91,10 +94,10 @@ class Wf(WorkChain):
         spec.input('n', default=lambda: Int(3))
         spec.outputs.dynamic = True
         spec.outline(
-            cls.s1,
-            if_(cls.isA)(cls.s2).elif_(cls.isB)(cls.s3).else_(cls.s4),
-            cls.s5,
-            while_(cls.ltN)(cls.s6),
+            cls.step1,
+            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4),
+            cls.step5,
+            while_(cls.larger_then_n)(cls.step6,),
         )
 
     def on_create(self):
@@ -102,40 +105,40 @@ class Wf(WorkChain):
         # Reset the finished step
         self.finished_steps = {
             k: False for k in [
-                self.s1.__name__, self.s2.__name__, self.s3.__name__, self.s4.__name__, self.s5.__name__,
-                self.s6.__name__, self.isA.__name__, self.isB.__name__, self.ltN.__name__
+                self.step1.__name__, self.step2.__name__, self.step3.__name__, self.step4.__name__, self.step5.__name__,
+                self.step6.__name__, self.is_a.__name__, self.is_b.__name__, self.larger_then_n.__name__
             ]
         }
 
-    def s1(self):
+    def step1(self):
         self._set_finished(inspect.stack()[0][3])
 
-    def s2(self):
+    def step2(self):
         self._set_finished(inspect.stack()[0][3])
 
-    def s3(self):
+    def step3(self):
         self._set_finished(inspect.stack()[0][3])
 
-    def s4(self):
+    def step4(self):
         self._set_finished(inspect.stack()[0][3])
 
-    def s5(self):
+    def step5(self):
         self.ctx.counter = 0
         self._set_finished(inspect.stack()[0][3])
 
-    def s6(self):
+    def step6(self):
         self.ctx.counter = self.ctx.counter + 1
         self._set_finished(inspect.stack()[0][3])
 
-    def isA(self):
+    def is_a(self):
         self._set_finished(inspect.stack()[0][3])
         return self.inputs.value.value == 'A'
 
-    def isB(self):
+    def is_b(self):
         self._set_finished(inspect.stack()[0][3])
         return self.inputs.value.value == 'B'
 
-    def ltN(self):
+    def larger_then_n(self):
         keep_looping = self.ctx.counter < self.inputs.n.value
         if not keep_looping:
             self._set_finished(inspect.stack()[0][3])
@@ -146,6 +149,8 @@ class Wf(WorkChain):
 
 
 class PotentialFailureWorkChain(WorkChain):
+    """Work chain that can finish with a non-zero exit code."""
+
     EXIT_STATUS = 1
     EXIT_MESSAGE = 'Well you did ask for it'
     OUTPUT_LABEL = 'optional_output'
@@ -169,18 +174,17 @@ class PotentialFailureWorkChain(WorkChain):
             # Returning either 0 or ExitCode with non-zero status should terminate the workchain
             if self.inputs.through_exit_code.value is False:
                 return self.EXIT_STATUS
-            else:
-                return self.exit_codes.EXIT_STATUS
-        else:
-            # Returning 0 or ExitCode with zero status should *not* terminate the workchain
-            if self.inputs.through_exit_code.value is False:
-                return 0
-            else:
-                return ExitCode()
+
+            return self.exit_codes.EXIT_STATUS  # pylint: disable=no-member
+
+        # Returning 0 or ExitCode with zero status should *not* terminate the workchain
+        if self.inputs.through_exit_code.value is False:
+            return 0
+
+        return ExitCode()
 
     def success(self):
         self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
-        return
 
 
 class TestExitStatus(AiidaTestCase):
@@ -191,7 +195,7 @@ class TestExitStatus(AiidaTestCase):
     """
 
     def test_failing_workchain_through_integer(self):
-        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False))
         self.assertEqual(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEqual(node.exit_message, None)
         self.assertEqual(node.is_finished, True)
@@ -200,7 +204,7 @@ class TestExitStatus(AiidaTestCase):
         self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
     def test_failing_workchain_through_exit_code(self):
-        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
         self.assertEqual(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEqual(node.exit_message, PotentialFailureWorkChain.EXIT_MESSAGE)
         self.assertEqual(node.is_finished, True)
@@ -209,27 +213,31 @@ class TestExitStatus(AiidaTestCase):
         self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
 
     def test_successful_workchain_through_integer(self):
-        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True))
         self.assertEqual(node.exit_status, 0)
         self.assertEqual(node.is_finished, True)
         self.assertEqual(node.is_finished_ok, True)
         self.assertEqual(node.is_failed, False)
         self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
-        self.assertEqual(node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
-                          PotentialFailureWorkChain.OUTPUT_VALUE)
+        self.assertEqual(
+            node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
+            PotentialFailureWorkChain.OUTPUT_VALUE
+        )
 
     def test_successful_workchain_through_exit_code(self):
-        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
         self.assertEqual(node.exit_status, 0)
         self.assertEqual(node.is_finished, True)
         self.assertEqual(node.is_finished_ok, True)
         self.assertEqual(node.is_failed, False)
         self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
-        self.assertEqual(node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
-                          PotentialFailureWorkChain.OUTPUT_VALUE)
+        self.assertEqual(
+            node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
+            PotentialFailureWorkChain.OUTPUT_VALUE
+        )
 
     def test_return_out_of_outline(self):
-        result, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
+        _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
         self.assertEqual(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
         self.assertEqual(node.is_finished, True)
         self.assertEqual(node.is_finished_ok, False)
@@ -269,7 +277,7 @@ class TestContext(AiidaTestCase):
 
         del wc.ctx.new_attr
         with self.assertRaises(AttributeError):
-            wc.ctx.new_attr
+            wc.ctx.new_attr  # pylint: disable=pointless-statement
 
     def test_dict(self):
         wc = IfTest()
@@ -278,10 +286,12 @@ class TestContext(AiidaTestCase):
 
         del wc.ctx['new_attr']
         with self.assertRaises(KeyError):
-            wc.ctx['new_attr']
+            wc.ctx['new_attr']  # pylint: disable=pointless-statement
 
 
 class TestWorkchain(AiidaTestCase):
+
+    # pylint: disable=too-many-public-methods
 
     def setUp(self):
         super().setUp()
@@ -318,26 +328,26 @@ class TestWorkchain(AiidaTestCase):
         launch.run(Wf, value=A, n=three)
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.items():
-            if step not in ['s3', 's4', 'isB']:
+            if step not in ['step3', 'step4', 'is_b']:
                 self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the elif(..) part
         finished_steps = launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
-            if step not in ['isA', 's2', 's4']:
+            if step not in ['is_a', 'step2', 'step4']:
                 self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the else... part
         finished_steps = launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
-            if step not in ['isA', 's2', 'isB', 's3']:
+            if step not in ['is_a', 'step2', 'is_b', 'step3']:
                 self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
     def test_incorrect_outline(self):
 
-        class Wf(WorkChain):
+        class IncorrectOutline(WorkChain):
 
             @classmethod
             def define(cls, spec):
@@ -346,7 +356,7 @@ class TestWorkchain(AiidaTestCase):
                 spec.outline(5)
 
         with self.assertRaises(TypeError):
-            Wf.spec()
+            IncorrectOutline.spec()
 
     def test_define_not_calling_super(self):
         """A `WorkChain` that does not call super in `define` classmethod should raise."""
@@ -378,11 +388,11 @@ class TestWorkchain(AiidaTestCase):
                 self.out('not_allowed', orm.Int(2))
 
         with self.assertRaises(ValueError):
-            result = launch.run(IllegalWorkChain)
+            launch.run(IllegalWorkChain)
 
     def test_same_input_node(self):
 
-        class Wf(WorkChain):
+        class SimpleWorkChain(WorkChain):
 
             @classmethod
             def define(cls, spec):
@@ -397,7 +407,7 @@ class TestWorkchain(AiidaTestCase):
                 assert 'b' in self.inputs
 
         x = Int(1)
-        run_and_check_success(Wf, a=x, b=x)
+        run_and_check_success(SimpleWorkChain, a=x, b=x)
 
     def test_context(self):
         A = Str('a').store()
@@ -427,7 +437,7 @@ class TestWorkchain(AiidaTestCase):
             def result(self):
                 self.out('res', B)
 
-        class Wf(WorkChain):
+        class OverrideContextWorkChain(WorkChain):
 
             @classmethod
             def define(cls, spec):
@@ -448,7 +458,7 @@ class TestWorkchain(AiidaTestCase):
                 test_case.assertEqual(self.ctx.r1.outputs.res, B)
                 test_case.assertEqual(self.ctx.r2.outputs.res, B)
 
-        run_and_check_success(Wf)
+        run_and_check_success(OverrideContextWorkChain)
 
     def test_unstored_nodes_in_context(self):
 
@@ -496,21 +506,21 @@ class TestWorkchain(AiidaTestCase):
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': A, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
-            if step not in ['s3', 's4', 'isB']:
+            if step not in ['step3', 'step4', 'is_b']:
                 self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the elif(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
-            if step not in ['isA', 's2', 's4']:
+            if step not in ['is_a', 'step2', 'step4']:
                 self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
         # Try the else... part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
-            if step not in ['isA', 's2', 'isB', 's3']:
+            if step not in ['is_a', 'step2', 'is_b', 'step3']:
                 self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
 
     def test_return(self):
@@ -520,12 +530,12 @@ class TestWorkchain(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(cls.s1, if_(cls.isA)(return_), cls.after)
+                spec.outline(cls.s1, if_(cls.is_a)(return_), cls.after)
 
             def s1(self):
                 pass
 
-            def isA(self):
+            def is_a(self):
                 return True
 
             def after(self):
@@ -548,12 +558,12 @@ class TestWorkchain(AiidaTestCase):
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(cls.launch)
+                spec.outline(cls.do_launch)
 
-            def launch(self):
+            def do_launch(self):
                 # "Call" a calculation function simply by running it
                 inputs = {'metadata': {'call_link_label': label_calcfunction}}
-                calculation_function(**inputs)
+                calculation_function(**inputs)  # pylint: disable=unexpected-keyword-arg
 
                 # Call a sub work chain
                 inputs = {'metadata': {'call_link_label': label_workchain}}
@@ -565,7 +575,8 @@ class TestWorkchain(AiidaTestCase):
         process = run_and_check_success(MainWorkChain)
 
         # Verify that the `CALL` link of the calculation function is there with the correct label
-        link_triple = process.node.get_outgoing(link_type=LinkType.CALL_CALC, link_label_filter=label_calcfunction).one()
+        link_triple = process.node.get_outgoing(link_type=LinkType.CALL_CALC,
+                                                link_label_filter=label_calcfunction).one()
         self.assertIsInstance(link_triple.node, orm.CalcFunctionNode)
 
         # Verify that the `CALL` link of the work chain is there with the correct label
@@ -644,7 +655,7 @@ class TestWorkchain(AiidaTestCase):
 
             def do_run(self):
                 pks = []
-                for i in range(2):
+                for _ in range(2):
                     node = self.submit(SubWorkChain)
                     pks.append(node.pk)
                     self.to_context(subwc=node)
@@ -697,7 +708,7 @@ class TestWorkchain(AiidaTestCase):
             self.assertTrue(workchain.ctx.s1)
             self.assertTrue(workchain.ctx.s2)
 
-        runner.loop.run_sync(lambda: run_async(wc))
+        runner.loop.run_sync(lambda: run_async(wc))  # pylint: disable=unnecessary-lambda
 
     def test_report_dbloghandler(self):
         """
@@ -718,7 +729,6 @@ class TestWorkchain(AiidaTestCase):
             def run(self):
                 orm.Log.objects.delete_all()
                 self.report('Testing the report function')
-                return
 
             def check(self):
                 logs = self._backend.logs.find()
@@ -758,12 +768,6 @@ class TestWorkchain(AiidaTestCase):
                 test_case.assertEqual(self.ctx.result_b.outputs.result, val)
 
         run_and_check_success(Workchain)
-
-    def test_persisting(self):
-        persister = plumpy.test_utils.TestPersister()
-        runner = get_manager().get_runner()
-        workchain = Wf(runner=runner)
-        launch.run(workchain)
 
     def test_namespace_nondb_mapping(self):
         """
@@ -828,18 +832,19 @@ class TestWorkchain(AiidaTestCase):
         self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)
 
         with self.assertRaises(AttributeError):
-            wc.exit_codes.NON_EXISTENT_ERROR
+            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=pointless-statement
 
-        self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)
-        self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)
+        self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
+        self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)  # pylint: disable=no-member
 
-        self.assertEqual(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status, status)
-        self.assertEqual(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message, message)
+        self.assertEqual(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status, status)  # pylint: disable=unsubscriptable-object
+        self.assertEqual(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message, message)  # pylint: disable=unsubscriptable-object
 
-        self.assertEqual(ExitCodeWorkChain.exit_codes[label].status, status)
-        self.assertEqual(ExitCodeWorkChain.exit_codes[label].message, message)
+        self.assertEqual(ExitCodeWorkChain.exit_codes[label].status, status)  # pylint: disable=unsubscriptable-object
+        self.assertEqual(ExitCodeWorkChain.exit_codes[label].message, message)  # pylint: disable=unsubscriptable-object
 
-    def _run_with_checkpoints(self, wf_class, inputs=None):
+    @staticmethod
+    def _run_with_checkpoints(wf_class, inputs=None):
         if inputs is None:
             inputs = {}
         proc = run_and_check_success(wf_class, **inputs)
@@ -891,7 +896,7 @@ class TestWorkChainAbort(AiidaTestCase):
                     yield process.future()
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
+        runner.loop.run_sync(lambda: run_async())  # pylint: disable=unnecessary-lambda
 
         self.assertEqual(process.node.is_finished_ok, False)
         self.assertEqual(process.node.is_excepted, True)
@@ -917,7 +922,7 @@ class TestWorkChainAbort(AiidaTestCase):
                 launch.run(process)
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
+        runner.loop.run_sync(lambda: run_async())  # pylint: disable=unnecessary-lambda
 
         self.assertEqual(process.node.is_finished_ok, False)
         self.assertEqual(process.node.is_excepted, False)
@@ -1003,7 +1008,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
                 yield process.future()
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())
+        runner.loop.run_sync(lambda: run_async())  # pylint: disable=unnecessary-lambda
 
         child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         self.assertEqual(child.is_finished_ok, False)
@@ -1034,7 +1039,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         """
         test_class = self
 
-        class Wf(WorkChain):
+        class FrozenDictWorkChain(WorkChain):
 
             @classmethod
             def define(cls, spec):
@@ -1062,7 +1067,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
                 test_class.assertNotIn('c', self.inputs)
                 test_class.assertEqual(self.inputs['a'].value, 1)
 
-        run_and_check_success(Wf, a=Int(1), b=Int(2))
+        run_and_check_success(FrozenDictWorkChain, a=Int(1), b=Int(2))
 
     def test_immutable_input_groups(self):
         """
@@ -1070,7 +1075,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         """
         test_class = self
 
-        class Wf(WorkChain):
+        class ImmutableGroups(WorkChain):
 
             @classmethod
             def define(cls, spec):
@@ -1097,7 +1102,7 @@ class TestImmutableInputWorkchain(AiidaTestCase):
                 test_class.assertNotIn('four', self.inputs.subspace)
                 test_class.assertEqual(self.inputs.subspace['one'].value, 1)
 
-        run_and_check_success(Wf, subspace={'one': Int(1), 'two': Int(2)})
+        run_and_check_success(ImmutableGroups, subspace={'one': Int(1), 'two': Int(2)})
 
 
 class SerializeWorkChain(WorkChain):
@@ -1133,13 +1138,15 @@ class TestSerializeWorkChain(AiidaTestCase):
         super().tearDown()
         self.assertIsNone(Process.current())
 
-    def test_serialize(self):
+    @staticmethod
+    def test_serialize():
         """
         Test a simple serialization of a class to its identifier.
         """
         run_and_check_success(SerializeWorkChain, test=Int, reference=Str(ObjectLoader().identify_object(Int)))
 
-    def test_serialize_builder(self):
+    @staticmethod
+    def test_serialize_builder():
         """
         Test serailization when using a builder.
         """
@@ -1162,7 +1169,8 @@ class GrandParentExposeWorkChain(WorkChain):
 
     def do_run(self):
         return ToContext(
-            child=self.submit(ParentExposeWorkChain, **self.exposed_inputs(ParentExposeWorkChain, namespace='sub.sub')))
+            child=self.submit(ParentExposeWorkChain, **self.exposed_inputs(ParentExposeWorkChain, namespace='sub.sub'))
+        )
 
     def finalize(self):
         self.out_many(self.exposed_outputs(self.ctx.child, ParentExposeWorkChain, namespace='sub.sub'))
@@ -1202,11 +1210,14 @@ class ParentExposeWorkChain(WorkChain):
         child_1 = self.submit(
             ChildExposeWorkChain,
             a=self.exposed_inputs(ChildExposeWorkChain)['a'],
-            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False))
-        child_2 = self.submit(ChildExposeWorkChain, **self.exposed_inputs(
-            ChildExposeWorkChain,
-            namespace='sub_2.sub_3',
-        ))
+            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
+        )
+        child_2 = self.submit(
+            ChildExposeWorkChain, **self.exposed_inputs(
+                ChildExposeWorkChain,
+                namespace='sub_2.sub_3',
+            )
+        )
         return ToContext(child_1=child_1, child_2=child_2)
 
     def finalize(self):
@@ -1273,7 +1284,8 @@ class TestWorkChainExpose(AiidaTestCase):
                         'c': Bool(False)
                     }
                 }
-            })
+            }
+        )
 
     @unittest.skip('Functionality of `WorkChain.exposed_outputs` is broken.')
     def test_nested_expose(self):
@@ -1292,7 +1304,9 @@ class TestWorkChainExpose(AiidaTestCase):
                             'c': Bool(False)
                         }
                     },
-                )))
+                )
+            )
+        )
         self.assertEqual(
             res, {
                 'sub': {
@@ -1310,7 +1324,8 @@ class TestWorkChainExpose(AiidaTestCase):
                         }
                     }
                 }
-            })
+            }
+        )
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
     def test_issue_1741_expose_inputs(self):
@@ -1372,7 +1387,8 @@ class TestWorkChainMisc(AiidaTestCase):
             from aiida.engine import submit
             submit(TestWorkChainMisc.PointlessWorkChain)
 
-    def test_run_pointless_workchain(self):
+    @staticmethod
+    def test_run_pointless_workchain():
         """Running the pointless workchain should not incur any exceptions"""
         launch.run(TestWorkChainMisc.PointlessWorkChain)
 
@@ -1422,13 +1438,14 @@ class TestDefaultUniqueness(AiidaTestCase):
         nodes.
         """
         inputs = {'child_one': {}, 'child_two': {}}
-        result, node = launch.run.get_node(TestDefaultUniqueness.Parent, **inputs)
+        _, node = launch.run.get_node(TestDefaultUniqueness.Parent, **inputs)
 
         nodes = node.get_incoming().all_nodes()
-        uuids = set([n.uuid for n in nodes])
+        uuids = {n.uuid for n in nodes}
 
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
         node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
         self.assertEqual(
-            len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes)))
+            len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes))
+        )

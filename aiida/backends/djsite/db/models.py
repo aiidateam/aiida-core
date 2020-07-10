@@ -193,9 +193,7 @@ class DbSetting(m.Model):
         return "'{}'={}".format(self.key, self.getvalue())
 
     @classmethod
-    def set_value(
-        cls, key, value, with_transaction=True, subspecifier_value=None, other_attribs=None, stop_if_existing=False
-    ):
+    def set_value(cls, key, value, other_attribs=None, stop_if_existing=False):
         """Delete a setting value."""
         other_attribs = other_attribs if other_attribs is not None else {}
         setting = DbSetting.objects.filter(key=key).first()
@@ -221,7 +219,7 @@ class DbSetting(m.Model):
         return self.description
 
     @classmethod
-    def del_value(cls, key, only_children=False, subspecifier_value=None):
+    def del_value(cls, key):
         """Set a setting value."""
 
         setting = DbSetting.objects.filter(key=key).first()
@@ -300,7 +298,6 @@ class DbComputer(m.Model):
     name = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
-    # TODO: next three fields should not be blank...
     scheduler_type = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
     metadata = JSONField(default=dict)

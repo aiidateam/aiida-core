@@ -7,8 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-lines,invalid-name
 """Tests for specific subclasses of Data."""
-
 import os
 import tempfile
 import unittest
@@ -39,7 +39,7 @@ def to_list_of_lists(lofl):
     :param lofl: an iterable of iterables
 
     :return: a list of lists"""
-    return [[el for el in l] for l in lofl]
+    return [[el for el in l] for l in lofl]  # pylint: disable=unnecessary-comprehension
 
 
 def simplify(string):
@@ -96,6 +96,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_reload_cifdata(self):
+        """Test `CifData` cycle."""
         file_content = 'data_test _cell_length_a 10(1)'
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             filename = tmpf.name
@@ -157,6 +158,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_parse_cifdata(self):
+        """Test parsing a CIF file."""
         file_content = 'data_test _cell_length_a 10(1)'
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(file_content)
@@ -167,6 +169,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_change_cifdata_file(self):
+        """Test changing file for `CifData` before storing."""
         file_content_1 = 'data_test _cell_length_a 10(1)'
         file_content_2 = 'data_test _cell_length_a 11(1)'
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -186,6 +189,7 @@ class TestCifData(AiidaTestCase):
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_get_structure(self):
+        """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
                 '''
@@ -422,6 +426,7 @@ _tag   {}
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_cif_roundtrip(self):
+        """Test the `CifData` roundtrip."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
                 '''
@@ -455,6 +460,7 @@ _tag   {}
         self.assertEqual(b._prepare_cif(), c._prepare_cif())  # pylint: disable=protected-access
 
     def test_symop_string_from_symop_matrix_tr(self):
+        """Test symmetry operations."""
         from aiida.tools.data.cif import symop_string_from_symop_matrix_tr
 
         self.assertEqual(symop_string_from_symop_matrix_tr([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), 'x,y,z')
@@ -468,6 +474,7 @@ _tag   {}
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_attached_hydrogens(self):
+        """Test parsing of file with attached hydrogens."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
                 '''
@@ -1024,6 +1031,7 @@ class TestStructureData(AiidaTestCase):
     """
     Tests the creation of StructureData objects (cell and pbc).
     """
+    # pylint: disable=too-many-public-methods
     from aiida.orm.nodes.data.structure import has_ase, has_spglib
     from aiida.orm.nodes.data.cif import has_pycifrw
 
@@ -1362,9 +1370,9 @@ class TestStructureData(AiidaTestCase):
             [4, 0, 0],
         ])
 
-        asecell[0].mass = 12.
-        asecell[1].mass = 12.
-        asecell[2].mass = 12.
+        asecell[0].mass = 12.  # pylint: disable=assigning-non-slot
+        asecell[1].mass = 12.  # pylint: disable=assigning-non-slot
+        asecell[2].mass = 12.  # pylint: disable=assigning-non-slot
 
         s = StructureData(ase=asecell)
 
@@ -1392,9 +1400,9 @@ class TestStructureData(AiidaTestCase):
             [4, 0, 0],
         ])
 
-        asecell[0].mass = 12.
-        asecell[1].mass = 12.
-        asecell[2].mass = 12.
+        asecell[0].mass = 12.  # pylint: disable=assigning-non-slot
+        asecell[1].mass = 12.  # pylint: disable=assigning-non-slot
+        asecell[2].mass = 12.  # pylint: disable=assigning-non-slot
 
         s = StructureData(ase=asecell)
 
@@ -1497,6 +1505,7 @@ class TestStructureData(AiidaTestCase):
         """
         Test the ase_refine_cell() function
         """
+        # pylint: disable=too-many-statements
         from aiida.orm.nodes.data.structure import ase_refine_cell
         import ase
         import math
@@ -1912,7 +1921,7 @@ class TestStructureDataFromAse(AiidaTestCase):
             (0., 0., 0.),
             (0.5, 0.7, 0.9),
         ))
-        a[1].mass = 110.2
+        a[1].mass = 110.2  # pylint: disable=assigning-non-slot
 
         b = StructureData(ase=a)
         c = b.get_ase()
@@ -1973,8 +1982,8 @@ class TestStructureDataFromAse(AiidaTestCase):
         ))
 
         a.set_tags((0, 1, 0, 1))
-        a[2].mass = 100.
-        a[3].mass = 300.
+        a[2].mass = 100.  # pylint: disable=assigning-non-slot
+        a[3].mass = 300.  # pylint: disable=assigning-non-slot
 
         b = StructureData(ase=a)
         # This will give funny names to the kinds, because I am using
@@ -2026,9 +2035,9 @@ class TestStructureDataFromAse(AiidaTestCase):
         import ase
 
         atoms = ase.Atoms('Fe5')
-        atoms[2].tag = 1
-        atoms[3].tag = 1
-        atoms[4].tag = 4
+        atoms[2].tag = 1  # pylint: disable=assigning-non-slot
+        atoms[3].tag = 1  # pylint: disable=assigning-non-slot
+        atoms[4].tag = 4  # pylint: disable=assigning-non-slot
         atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = {k.name for k in s.kinds}
@@ -2048,9 +2057,9 @@ class TestStructureDataFromAse(AiidaTestCase):
         import ase
 
         atoms = ase.Atoms('Fe5')
-        atoms[0].tag = 1
-        atoms[2].tag = 1
-        atoms[3].tag = 4
+        atoms[0].tag = 1  # pylint: disable=assigning-non-slot
+        atoms[2].tag = 1  # pylint: disable=assigning-non-slot
+        atoms[3].tag = 4  # pylint: disable=assigning-non-slot
         atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = {k.name for k in s.kinds}
@@ -2517,6 +2526,7 @@ class TestArrayData(AiidaTestCase):
         Check the methods to add, remove, modify, and get arrays and
         array shapes.
         """
+        # pylint: disable=too-many-statements
         import numpy
 
         # Create a node with two arrays
@@ -2635,6 +2645,7 @@ class TestTrajectoryData(AiidaTestCase):
 
     def test_creation(self):
         """Check the methods to set and retrieve a trajectory."""
+        # pylint: disable=too-many-statements
         import numpy
 
         # Create a node with two arrays
@@ -3238,6 +3249,7 @@ class TestKpointsData(AiidaTestCase):
 
 
 class TestSpglibTupleConversion(AiidaTestCase):
+    """Tests for conversion of Spglib tuples."""
 
     def test_simple_to_aiida(self):
         """
@@ -3385,9 +3397,11 @@ class TestSpglibTupleConversion(AiidaTestCase):
 
 
 class TestSeekpathExplicitPath(AiidaTestCase):
+    """Tests for the `get_explicit_kpoints_path` from SeeK-path."""
 
     @unittest.skipIf(not has_seekpath(), 'No seekpath available')
     def test_simple(self):
+        """Test a simple case."""
         import numpy as np
         from aiida.plugins import DataFactory
 
@@ -3575,7 +3589,7 @@ class TestBandsData(AiidaTestCase):
         b.set_bands(input_bands, units='ev')
         b.set_bands(input_bands, occupations=input_occupations)
         with self.assertRaises(TypeError):
-            b.set_bands(occupations=input_occupations, units='ev')
+            b.set_bands(occupations=input_occupations, units='ev')  # pylint: disable=no-value-for-parameter
 
         b.set_bands(input_bands, occupations=input_occupations, units='ev')
         bands, occupations = b.get_bands(also_occupations=True)

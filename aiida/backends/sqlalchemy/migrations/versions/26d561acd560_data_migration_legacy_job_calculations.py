@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Data migration for legacy `JobCalculations`.
 
 These old nodes have already been migrated to the correct `CalcJobNode` type in a previous migration, but they can

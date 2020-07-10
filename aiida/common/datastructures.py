@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define commonly used data structures."""
-
 from enum import Enum, IntEnum
 
 from .extendeddicts import DefaultFieldsAttributeDict
@@ -78,7 +77,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
     """
 
     _default_fields = (
-        'job_environment',  # TODO UNDERSTAND THIS!
+        'job_environment',
         'email',
         'email_on_started',
         'email_on_terminated',

@@ -286,7 +286,6 @@ def run_base_restart_workchain():
             'x': Int(1),
             'y': Int(2),
             'code': code,
-            'settings': Dict(dict={'allow_negative': False}),
         }
     }
 
@@ -359,7 +358,7 @@ def main():
 
     # Run the `MultiplyAddWorkChain`
     print('Running the `MultiplyAddWorkChain`')
-    run_base_restart_workchain()
+    run_multiply_add_workchain()
 
     # Submitting the Calculations the new way directly through the launchers
     print('Submitting {} calculations to the daemon'.format(NUMBER_CALCULATIONS))

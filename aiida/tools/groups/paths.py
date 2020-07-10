@@ -11,7 +11,7 @@
 from collections import namedtuple
 from functools import total_ordering
 import re
-from typing import Any, Iterable, List, Optional  # pylint: disable=unused-import
+from typing import Any, Iterator, List, Optional, Tuple
 import warnings
 
 from aiida import orm
@@ -60,8 +60,7 @@ class GroupPath:
     See tests for usage examples.
     """
 
-    def __init__(self, path='', cls=orm.Group, warn_invalid_child=True):
-        # type: (str, Optional[str], Optional[GroupPath])
+    def __init__(self, path: str = '', cls: orm.groups.GroupMeta = orm.Group, warn_invalid_child: bool = True) -> None:
         """Instantiate the class.
 
         :param path: The initial path of the group.
@@ -88,60 +87,51 @@ class GroupPath:
             raise InvalidPath("The path may not start/end with the delimiter '{}': {}".format(self._delimiter, path))
         return path
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         """Represent the instantiated class."""
         return "{}('{}', cls='{}')".format(self.__class__.__name__, self.path, self.cls)
 
-    def __eq__(self, other):
-        # type: (Any) -> bool
+    def __eq__(self, other: Any) -> bool:
         """Compare equality of path and ``Group`` subclass to another ``GroupPath`` object."""
         if not isinstance(other, GroupPath):
             return NotImplemented
         return (self.path, self.cls) == (other.path, other.cls)
 
-    def __lt__(self, other):
-        # type: (Any) -> bool
+    def __lt__(self, other: Any) -> bool:
         """Compare less-than operator of path and ``Group`` subclass to another ``GroupPath`` object."""
         if not isinstance(other, GroupPath):
             return NotImplemented
         return (self.path, self.cls) < (other.path, other.cls)
 
     @property
-    def path(self):
-        # type: () -> str
+    def path(self) -> str:
         """Return the path string."""
         return self._path_string
 
     @property
-    def path_list(self):
-        # type: () -> List[str]
+    def path_list(self) -> List[str]:
         """Return a list of the path components."""
         return self._path_list[:]
 
     @property
-    def key(self):
-        # type: () -> str
+    def key(self) -> Optional[str]:
         """Return the final component of the the path."""
         if self._path_list:
             return self._path_list[-1]
         return None
 
     @property
-    def delimiter(self):
-        # type: () -> str
+    def delimiter(self) -> str:
         """Return the delimiter used to split path into components."""
         return self._delimiter
 
     @property
-    def cls(self):
-        # type: () -> str
+    def cls(self) -> orm.groups.GroupMeta:
         """Return the cls used to query for and instantiate a ``Group`` with."""
         return self._cls
 
     @property
-    def parent(self):
-        # type: () -> Optional[GroupPath]
+    def parent(self) -> Optional['GroupPath']:
         """Return the parent path."""
         if self.path_list:
             return GroupPath(
@@ -149,8 +139,7 @@ class GroupPath:
             )
         return None
 
-    def __truediv__(self, path):
-        # type: (str) -> GroupPath
+    def __truediv__(self, path: str) -> 'GroupPath':
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         if not isinstance(path, str):
             raise TypeError('path is not a string: {}'.format(path))
@@ -162,13 +151,11 @@ class GroupPath:
         )
         return child
 
-    def __getitem__(self, path):
-        # type: (str) -> GroupPath
+    def __getitem__(self, path: str) -> 'GroupPath':
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         return self.__truediv__(path)
 
-    def get_group(self):
-        # type: () -> Optional[self.cls]
+    def get_group(self) -> Optional['GroupPath']:
         """Return the concrete group associated with this path."""
         try:
             return orm.QueryBuilder().append(self.cls, subclassing=False, filters={'label': self.path}).one()[0]
@@ -176,8 +163,7 @@ class GroupPath:
             return None
 
     @property
-    def group_ids(self):
-        # type: () -> List[int]
+    def group_ids(self) -> List[int]:
         """Return all the UUID associated with this GroupPath.
 
         :returns: and empty list, if no group associated with this label,
@@ -192,13 +178,11 @@ class GroupPath:
         return query.all(flat=True)
 
     @property
-    def is_virtual(self):
-        # type: () -> bool
+    def is_virtual(self) -> bool:
         """Return whether there is one or more concrete groups associated with this path."""
         return len(self.group_ids) == 0
 
-    def get_or_create_group(self):
-        # type: () -> (self.cls, bool)
+    def get_or_create_group(self) -> Tuple[orm.Group, bool]:
         """Return the concrete group associated with this path or, create it, if it does not already exist."""
         return self.cls.objects.get_or_create(label=self.path)
 
@@ -215,8 +199,7 @@ class GroupPath:
         self.cls.objects.delete(ids[0])
 
     @property
-    def children(self):
-        # type: () -> Iterable[GroupPath]
+    def children(self) -> Iterator['GroupPath']:
         """Iterate through all (direct) children of this path."""
         query = orm.QueryBuilder()
         filters = {}
@@ -240,26 +223,22 @@ class GroupPath:
                     if self._warn_invalid_child:
                         warnings.warn('invalid path encountered: {}'.format(path_string))  # pylint: disable=no-member
 
-    def __iter__(self):
-        # type: () -> Iterable[GroupPath]
+    def __iter__(self) -> Iterator['GroupPath']:
         """Iterate through all (direct) children of this path."""
         return self.children
 
-    def __len__(self):
-        # type: () -> int
+    def __len__(self) -> int:
         """Return the number of children for this path."""
         return sum(1 for _ in self.children)
 
-    def __contains__(self, key):
-        # type: (str) -> bool
+    def __contains__(self, key: str) -> bool:
         """Return whether a child exists for this key."""
         for child in self.children:
             if child.path_list[-1] == key:
                 return True
         return False
 
-    def walk(self, return_virtual=True):
-        # type: () -> Iterable[GroupPath]
+    def walk(self, return_virtual: bool = True) -> Iterator['GroupPath']:
         """Recursively iterate through all children of this path."""
         for child in self:
             if return_virtual or not child.is_virtual:
@@ -268,8 +247,12 @@ class GroupPath:
                 if return_virtual or not sub_child.is_virtual:
                     yield sub_child
 
-    def walk_nodes(self, filters=None, node_class=None, query_batch=None):
-        # type: () -> Iterable[WalkNodeResult]
+    def walk_nodes(
+        self,
+        filters: Optional[dict] = None,
+        node_class: Optional[orm.Node] = None,
+        query_batch: Optional[int] = None
+    ) -> Iterator[WalkNodeResult]:
         """Recursively iterate through all nodes of this path and its children.
 
         :param filters: filters to apply to the node query
@@ -311,18 +294,15 @@ class GroupAttr:
 
     """
 
-    def __init__(self, group_path):
-        # type: (GroupPath)
+    def __init__(self, group_path: GroupPath) -> None:
         """Instantiate the ``GroupPath``, and a mapping of its children."""
         self._group_path = group_path
 
-    def __repr__(self):
-        # type: () -> str
+    def __repr__(self) -> str:
         """Represent the instantiated class."""
         return "{}('{}', type='{}')".format(self.__class__.__name__, self._group_path.path, self._group_path.cls)
 
-    def __call__(self):
-        # type: () -> GroupPath
+    def __call__(self) -> GroupPath:
         """Return the ``GroupPath``."""
         return self._group_path
 
@@ -330,8 +310,7 @@ class GroupAttr:
         """Return a list of available attributes."""
         return [c.path_list[-1] for c in self._group_path.children if REGEX_ATTR.match(c.path_list[-1])]
 
-    def __getattr__(self, attr):
-        # type: (str) -> GroupAttr
+    def __getattr__(self, attr) -> 'GroupAttr':
         """Return the requested attribute name."""
         for child in self._group_path.children:
             if attr == child.path_list[-1]:

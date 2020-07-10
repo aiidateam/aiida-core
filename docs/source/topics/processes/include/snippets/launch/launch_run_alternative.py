@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida import orm
 from aiida.engine import run_get_node, run_get_pk
 

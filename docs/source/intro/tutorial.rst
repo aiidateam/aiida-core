@@ -228,6 +228,8 @@ It should look something like the graph shown in :numref:`fig_calcfun_graph`.
 
 .. note:: Remember that the PK of the ``CalcJob`` can be different for your database.
 
+.. _tutorial:basic:calcjob:
+
 CalcJobs
 ========
 
@@ -235,7 +237,12 @@ When running calculations that require an external code or run on a remote machi
 For this purpose, AiiDA provides the ``CalcJob`` process class.
 
 To run a ``CalcJob``, you need to set up two things: a ``code`` that is going to implement the desired calculation and a ``computer`` for the calculation to run on.
-If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below:
+
+If you're running this tutorial in the Quantum Mobile VM or on Binder, these have been pre-configured for you. If you're running on your own machine, you can follow the instructions in the panel below.
+
+.. seealso::
+
+   More details for how to :ref:`run external codes <how-to:run-codes>`.
 
 .. dropdown:: Install localhost computer and code
 
@@ -499,62 +506,9 @@ You can see the code below:
 
 .. dropdown:: MultiplyAddWorkChain code
 
-    .. code-block:: python
-
-        from aiida.orm import Code, Int
-        from aiida.engine import calcfunction, WorkChain, ToContext
-        from aiida.plugins.factories import CalculationFactory
-
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
-
-
-        @calcfunction
-        def multiply(x, y):
-            return x * y
-
-
-        class MultiplyAddWorkChain(WorkChain):
-            """WorkChain to multiply two numbers and add a third, for testing and demonstration purposes."""
-
-            @classmethod
-            def define(cls, spec):
-                """Specify inputs and outputs."""
-                # yapf: disable
-                super().define(spec)
-                spec.input('x', valid_type=Int)
-                spec.input('y', valid_type=Int)
-                spec.input('z', valid_type=Int)
-                spec.input('code', valid_type=Code)
-                spec.outline(
-                    cls.multiply,
-                    cls.add,
-                    cls.validate_result,
-                    cls.result
-                )
-                spec.output('result', valid_type=Int)
-                spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER', message='The result is a negative number.')
-
-            def multiply(self):
-                """Multiply two integers."""
-                self.ctx.product = multiply(self.inputs.x, self.inputs.y)
-
-            def add(self):
-                """Add two numbers using the `ArithmeticAddCalculation` calculation job plugin."""
-                inputs = {'x': self.ctx.product, 'y': self.inputs.z, 'code': self.inputs.code}
-                future = self.submit(ArithmeticAddCalculation, **inputs)
-
-                return ToContext(addition=future)
-
-            def validate_result(self):  # pylint: disable=inconsistent-return-statements
-                """Make sure the result is not negative."""
-                result = self.ctx.addition.outputs.sum
-
-                if result.value < 0:
-                    return self.exit_codes.ERROR_NEGATIVE_NUMBER  # pylint: disable=no-member
-
-            def result(self):
-                """Add the result to the outputs."""
-                self.out('result', self.ctx.addition.outputs.sum)
+    .. literalinclude:: ../../../aiida/workflows/arithmetic/multiply_add.py
+        :language: python
+        :start-after: start-marker
 
     First, we recognize the ``multiply`` function we have used earlier, decorated as a ``calcfunction``.
     The ``define`` class method specifies the ``input`` and ``output`` of the ``WorkChain``, as well as the ``outline``, which are the steps of the workflow.
@@ -668,23 +622,23 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
-            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Tuning performance
             To optimise the performance of AiiDA for running many concurrent computations see the :ref:`tuning performance how-to <how-to:installation:performance>`.
 
         Saving computational resources
-            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:codes:caching>`.
+            AiiDA can cache and reuse the outputs of identical computations, as described in the :ref:`caching how-to <how-to:run-codes:caching>`.
 
     .. dropdown:: Run computations on High Performance Computers
 
         Connecting to supercomputers
-            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:running-on-supercomputers>`, or add a :ref:`custom transport <how-to:codes:transport>`.
+            To setup up a computer which can communicate with a HPC over SSH, see the :ref:`running on supercomputers how-to <how-to:installation:supercomputers>`, or add a :ref:`custom transport <how-to:plugin-codes:transport>`.
             AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
-            If none meet your needs, then the :ref:`external codes how-to <how-to:codes>` can show you how to create your own calculation plugin.
+            If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Exploring your data
             Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
@@ -699,4 +653,4 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
 .. todo::
 
-    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:codes:scheduler>`.
+    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:plugin-codes:scheduler>`.

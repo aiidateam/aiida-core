@@ -455,7 +455,8 @@ There are additional optional packages that you may want to install, which are g
     * ``REST``: allows a REST server to be ran locally to serve AiiDA data
     * ``docs``: tools to build the documentation
     * ``notebook``: jupyter notebook - to allow it to import AiiDA modules
-    * ``testing``: python modules required to run the automatic unit tests
+    * ``tests``: python modules required to run the automatic unit tests
+    * ``pre-commit``: pre-commit tools required for developers to enable automatic code linting and formatting
 
 In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command
 
@@ -463,7 +464,7 @@ In order to install any of these package groups, simply append them as a comma s
 
     $ pip install -e aiida-core[atomic_tools,docs]
 
-.. admonition:: Keberos on Ubuntu
+.. admonition:: Kerberos on Ubuntu
    :class: note title-icon-troubleshoot
 
    If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.

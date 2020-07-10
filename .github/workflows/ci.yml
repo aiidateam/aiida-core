@@ -12,10 +12,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
+    - name: Set up Python 3.8
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.8
 
     - name: Install system dependencies
       run: |
@@ -144,7 +144,7 @@ jobs:
         name: aiida-pytests-py3.5-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
-        fail_ci_if_error: true
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
   verdi:
 
@@ -154,10 +154,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
+    - name: Set up Python 3.8
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.8
 
     - name: Install python dependencies
       run: |

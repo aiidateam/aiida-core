@@ -7,21 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-import unittest
+# pylint: disable=invalid-name,protected-access
+"""Tests for the `LsfScheduler` plugin."""
 import logging
+import unittest
 import uuid
 
-from aiida.schedulers.plugins.lsf import *
+from aiida.schedulers.datastructures import JobState
+from aiida.schedulers.scheduler import SchedulerError
+from aiida.schedulers.plugins.lsf import LsfScheduler
 
 BJOBS_STDOUT_TO_TEST = '764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit' \
-                       '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44|aiida-1033269\n' \
-                       '764220165|PEND|-|-|inewton|-|-|-|8nm|-|-|-|Feb  2 01:46|aiida-1033444\n' \
+                       '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44' \
+                       '|aiida-1033269\n' '764220165|PEND|-|-|inewton|-|-|-|8nm|-|-|-|Feb  2 01:46|aiida-1033444\n' \
                        '764220167|PEND|-|-|fchopin|-|-|-|test|-|-|-|Feb  2 01:53 L|aiida-1033449\n' \
-                       '764254593|RUN|-|lxbsu2710|inewton|1|-|lxbsu2710|test|Feb  2 07:40|Feb  2 07:39|-|Feb  2 07:39|test\n' \
-                       '764255172|RUN|-|b68ac74822|inewton|1|-|b68ac74822|test|Feb  2 07:48 L|Feb  2 07:47|15.00% L|Feb  2 07:47|test\n' \
-                       '764245175|RUN|-|b68ac74822|dbowie|1|-|b68ac74822|test|Jan  1 05:07|Dec  31 23:48 L|25.00%|Dec  31 23:40|test\n' \
-                       '764399747|DONE|-|p05496706j68144|inewton|1|-|p05496706j68144|test|Feb  2 14:56 L|Feb  2 14:54|38.33% L|Feb  2 14:54|test'
+                       '764254593|RUN|-|lxbsu2710|inewton|1|-|lxbsu2710|test|Feb  2 07:40|Feb  2 07:39|-|Feb  2 07:39|'\
+                       'test\n764255172|RUN|-|b68ac74822|inewton|1|-|b68ac74822|test|Feb  2 07:48 L|Feb  2 07:47| ' \
+                       '15.00% L|Feb  2 07:47|test\n764245175|RUN|-|b68ac74822|dbowie|1|-|b68ac74822|test|' \
+                       'Jan  1 05:07|Dec  31 23:48 L|25.00%|Dec  31 23:40|test\n 764399747|DONE|-|p05496706j68144|' \
+                       'inewton|1|-|p05496706j68144|test|Feb  2 14:56 L|Feb  2 14:54|38.33% L|Feb  2 14:54|test'
 BJOBS_STDERR_TO_TEST = 'Job <864220165> is not found'
 
 SUBMIT_STDOUT_TO_TEST = 'Job <764254593> is submitted to queue <test>.'
@@ -38,6 +42,7 @@ class TestParserBjobs(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the bjobs output
         """
+        # pylint: disable=too-many-locals,too-many-statements
         import datetime
         scheduler = LsfScheduler()
 
@@ -79,8 +84,7 @@ class TestParserBjobs(unittest.TestCase):
         self.assertEqual(job_done_annotation, job_done_annotation_parsed)
 
         job_running = 3
-        job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JobState.RUNNING])
+        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
         self.assertEqual(job_running, job_running_parsed)
 
         running_users = ['inewton', 'inewton', 'dbowie']
@@ -104,13 +108,14 @@ class TestParserBjobs(unittest.TestCase):
         self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0], 4785)
         current_year = datetime.datetime.now().year
         self.assertEqual([j.submission_time for j in job_list if j.job_id == '764245175'][0],
-                          datetime.datetime(current_year, 12, 31, 23, 40))
+                         datetime.datetime(current_year, 12, 31, 23, 40))
 
         # Important to enable again logs!
         logging.disable(logging.NOTSET)
 
 
 class TestSubmitScript(unittest.TestCase):
+    """Tests for the submit script."""
 
     def test_submit_script(self):
         """
@@ -140,8 +145,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#BSUB -W 24:00' in submit_script_text)
         self.assertTrue('#BSUB -n 2' in submit_script_text)
 
-        self.assertTrue("'mpirun' '-np' '2' 'pw.x' '-npool' '1'" + \
-                        " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '2' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_machines(self):
         """
@@ -160,6 +164,7 @@ class TestSubmitScript(unittest.TestCase):
 
 
 class TestParserSubmit(unittest.TestCase):
+    """Test the parsing of the submit response."""
 
     def test_submit_output(self):
         """
@@ -174,6 +179,7 @@ class TestParserSubmit(unittest.TestCase):
 
 
 class TestParserBkill(unittest.TestCase):
+    """Test the parsing of the kill response."""
 
     def test_kill_output(self):
         """
@@ -185,7 +191,3 @@ class TestParserBkill(unittest.TestCase):
         stderr = ''
 
         self.assertTrue(scheduler._parse_kill_output(retval, stdout, stderr))
-
-
-if __name__ == '__main__':
-    unittest.main()

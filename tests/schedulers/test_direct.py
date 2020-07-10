@@ -7,8 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name,protected-access
+"""Tests for the `DirectScheduler` plugin."""
 import unittest
+
 from aiida.schedulers.plugins.direct import DirectScheduler
 from aiida.schedulers import SchedulerError
 
@@ -84,7 +86,3 @@ class TestParserGetJobList(unittest.TestCase):
 
         job_ids = [job.job_id for job in result]
         self.assertIn('11383', job_ids)
-
-
-if __name__ == '__main__':
-    unittest.main()

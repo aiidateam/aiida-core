@@ -332,7 +332,3 @@ class TestSubmitScript(unittest.TestCase):
             job_tmpl.job_resource = scheduler.create_job_resource(
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
-
-
-if __name__ == '__main__':
-    unittest.main()

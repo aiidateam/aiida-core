@@ -262,7 +262,15 @@ class CifData(SinglefileData):
     _ase = None
 
     def __init__(
-        self, ase=None, file=None, filename=None, values=None, source=None, scan_type=None, parse_policy=None, **kwargs
+        self,
+        ase=None,
+        file=None,
+        filename=None,
+        values=None,
+        source=None,
+        scan_type=None,
+        parse_policy=None,
+        **kwargs
     ):
         """Construct a new instance and set the contents to that of the file.
 
@@ -485,8 +493,7 @@ class CifData(SinglefileData):
         self.set_attribute('formulae', self.get_formulae())
         self.set_attribute('spacegroup_numbers', self.get_spacegroup_numbers())
 
-    # pylint: disable=arguments-differ
-    def store(self, *args, **kwargs):
+    def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """
         Store the node.
         """

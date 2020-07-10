@@ -20,7 +20,7 @@ from .utils import ProcessHandlerReport, process_handler
 __all__ = ('BaseRestartWorkChain',)
 
 
-def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint: disable=inconsistent-return-statements,unused-argument
+def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint: disable=unused-argument
     """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain.
 
     The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
@@ -154,7 +154,7 @@ class BaseRestartWorkChain(WorkChain):
             raise AttributeError('no process input dictionary was defined in `self.ctx.inputs`')
 
         # Set the `CALL` link label
-        unwrapped_inputs['metadata']['call_link_label'] = 'iteration_{:02d}'.format(self.ctx.iteration)
+        unwrapped_inputs.setdefault('metadata', {})['call_link_label'] = 'iteration_{:02d}'.format(self.ctx.iteration)
 
         inputs = self._wrap_bare_dict_inputs(self._process_class.spec().inputs, unwrapped_inputs)
         node = self.submit(self._process_class, **inputs)
@@ -170,7 +170,7 @@ class BaseRestartWorkChain(WorkChain):
 
         return ToContext(children=append_(node))
 
-    def inspect_process(self):  # pylint: disable=inconsistent-return-statements,too-many-branches
+    def inspect_process(self):  # pylint: disable=too-many-branches
         """Analyse the results of the previous process and call the handlers when necessary.
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called
@@ -260,7 +260,7 @@ class BaseRestartWorkChain(WorkChain):
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True
 
-    def results(self):  # pylint: disable=inconsistent-return-statements
+    def results(self):
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
 

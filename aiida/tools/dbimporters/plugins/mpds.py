@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+""""Implementation of `DbImporter` for the MPDS database."""
 import copy
 import enum
 import os
@@ -62,7 +62,7 @@ class MpdsDbImporter(DbImporter):
         self.setup_db(url=url, api_key=api_key)
         self._structures = StructuresCollection(self)
 
-    def setup_db(self, url=None, api_key=None, collection=None):
+    def setup_db(self, url=None, api_key=None, collection=None):  # pylint: disable=arguments-differ
         """
         Setup the required parameters for HTTP requests to the REST API
 
@@ -112,7 +112,7 @@ class MpdsDbImporter(DbImporter):
         return self._structures
 
     @property
-    def get_supported_keywords(self):
+    def get_supported_keywords(self):  # pylint: disable=invalid-overridden-method
         """
         Returns the list of all supported query keywords
 
@@ -127,7 +127,7 @@ class MpdsDbImporter(DbImporter):
         """
         return self._url
 
-    def query(self, query, collection=None):
+    def query(self, query, collection=None):  # pylint: disable=arguments-differ
         """
         Query the database with a given dictionary of query parameters for a given collection
 
@@ -176,6 +176,8 @@ class MpdsDbImporter(DbImporter):
 
         :param query: a dictionary with the query parameters
         """
+        # pylint: disable=too-many-branches
+
         if not isinstance(query, dict):
             raise TypeError('The query argument should be a dictionary')
 
@@ -234,7 +236,8 @@ class MpdsDbImporter(DbImporter):
         kwargs['fmt'] = fmt.value
         return requests.get(url=self.url, params=kwargs, headers={'Key': self.api_key})
 
-    def get_response_content(self, response, fmt=DEFAULT_API_FORMAT):
+    @staticmethod
+    def get_response_content(response, fmt=DEFAULT_API_FORMAT):
         """
         Analyze the response of an HTTP GET request, verify that the response code is OK
         and return the json loaded response text
@@ -254,10 +257,11 @@ class MpdsDbImporter(DbImporter):
                 raise ValueError('Got error response: {}'.format(error))
 
             return content
-        else:
-            return response.text
 
-    def get_id_from_cif(self, cif):
+        return response.text
+
+    @staticmethod
+    def get_id_from_cif(cif):
         """
         Extract the entry id from the string formatted cif response of the MPDS API
 
@@ -275,6 +279,7 @@ class MpdsDbImporter(DbImporter):
 
 
 class StructuresCollection:
+    """Collection of structures."""
 
     def __init__(self, engine):
         self._engine = engine
@@ -305,11 +310,11 @@ class MpdsEntry(DbEntry):
     Represents an MPDS database entry
     """
 
-    def __init__(self, url, **kwargs):
+    def __init__(self, _, **kwargs):
         """
         Set the class license from the source dictionary
         """
-        license = kwargs.pop('license', None)
+        license = kwargs.pop('license', None)  # pylint: disable=redefined-builtin
 
         if license is not None:
             self._license = license
@@ -317,7 +322,7 @@ class MpdsEntry(DbEntry):
         super().__init__(**kwargs)
 
 
-class MpdsCifEntry(CifEntry, MpdsEntry):
+class MpdsCifEntry(CifEntry, MpdsEntry):  # pylint: disable=abstract-method
     """
     An extension of the MpdsEntry class with the CifEntry class, which will treat
     the contents property through the URI as a cif file
@@ -337,10 +342,8 @@ class MpdsCifEntry(CifEntry, MpdsEntry):
             self.cif = cif
 
 
-class MpdsSearchResults(DbSearchResults):
-    """
-    A collection of MpdsEntry query result entries
-    """
+class MpdsSearchResults(DbSearchResults):  # pylint: disable=abstract-method
+    """Collection of MpdsEntry query result entries."""
 
     _db_name = 'Materials Platform for Data Science'
     _db_uri = 'https://mpds.io/'

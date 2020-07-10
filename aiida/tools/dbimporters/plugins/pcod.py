@@ -7,10 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-from aiida.tools.dbimporters.plugins.cod import (CodDbImporter,
-                                                 CodSearchResults, CodEntry)
-
+""""Implementation of `DbImporter` for the PCOD database."""
+from aiida.tools.dbimporters.plugins.cod import CodDbImporter, CodSearchResults, CodEntry
 
 
 class PcodDbImporter(CodDbImporter):
@@ -18,50 +16,25 @@ class PcodDbImporter(CodDbImporter):
     Database importer for Predicted Crystallography Open Database.
     """
 
-    def _int_clause(self, *args, **kwargs):
-        return super()._int_clause(*args, **kwargs)
-
-    def _composition_clause(self, *args, **kwargs):
-        return super()._composition_clause(*args, **kwargs)
-
-    def _formula_clause(self, *args, **kwargs):
-        return super()._formula_clause(*args, **kwargs)
-
-    def _volume_clause(self, *args, **kwargs):
-        return super()._volume_clause(*args, **kwargs)
-
-    def _str_exact_clause(self, *args, **kwargs):
-        return super()._str_exact_clause(*args, **kwargs)
-
-    def _length_clause(self, *args, **kwargs):
-        return super()._length_clause(*args, **kwargs)
-
-    def _angle_clause(self, *args, **kwargs):
-        return super()._angle_clause(*args, **kwargs)
-
-    def _str_fuzzy_clause(self, *args, **kwargs):
-        return super()._str_fuzzy_clause(*args, **kwargs)
-
-    _keywords = {'id': ['file', _int_clause],
-                 'element': ['element', _composition_clause],
-                 'number_of_elements': ['nel', _int_clause],
-                 'formula': ['formula', _formula_clause],
-                 'volume': ['vol', _volume_clause],
-                 'spacegroup': ['sg', _str_exact_clause],
-                 'a': ['a', _length_clause],
-                 'b': ['b', _length_clause],
-                 'c': ['c', _length_clause],
-                 'alpha': ['alpha', _angle_clause],
-                 'beta': ['beta', _angle_clause],
-                 'gamma': ['gamma', _angle_clause],
-                 'text': ['text', _str_fuzzy_clause]}
+    _keywords = {
+        'id': ['file', CodDbImporter._int_clause],
+        'element': ['element', CodDbImporter._composition_clause],
+        'number_of_elements': ['nel', CodDbImporter._int_clause],
+        'formula': ['formula', CodDbImporter._formula_clause],
+        'volume': ['vol', CodDbImporter._volume_clause],
+        'spacegroup': ['sg', CodDbImporter._str_exact_clause],
+        'a': ['a', CodDbImporter._length_clause],
+        'b': ['b', CodDbImporter._length_clause],
+        'c': ['c', CodDbImporter._length_clause],
+        'alpha': ['alpha', CodDbImporter._angle_clause],
+        'beta': ['beta', CodDbImporter._angle_clause],
+        'gamma': ['gamma', CodDbImporter._angle_clause],
+        'text': ['text', CodDbImporter._str_fuzzy_clause]
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._db_parameters = {'host': 'www.crystallography.net',
-                               'user': 'pcod_reader',
-                               'passwd': '',
-                               'db': 'pcod'}
+        self._db_parameters = {'host': 'www.crystallography.net', 'user': 'pcod_reader', 'passwd': '', 'db': 'pcod'}
         self.setup_db(**kwargs)
 
     def query_sql(self, **kwargs):
@@ -72,24 +45,16 @@ class PcodDbImporter(CodDbImporter):
         :return: string containing a SQL statement.
         """
         sql_parts = []
-        for key in self._keywords.keys():
-            if key in kwargs.keys():
+        for key in self._keywords:
+            if key in kwargs:
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
                     values = [values]
-                sql_parts.append( \
-                    '(' + self._keywords[key][1](self, \
-                                                 self._keywords[key][0], \
-                                                 key, \
-                                                 values) + \
-                    ')')
-        if len(kwargs.keys()) > 0:
-            raise NotImplementedError( \
-                "search keyword(s) '" + \
-                "', '".join(kwargs.keys()) + "' " + \
-                'is(are) not implemented for PCOD')
-        return 'SELECT file FROM data WHERE ' + \
-               ' AND '.join(sql_parts)
+                sql_parts.append('(' + self._keywords[key][1](self, self._keywords[key][0], key, values) + ')')
+        if kwargs:
+            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+
+        return 'SELECT file FROM data WHERE ' + ' AND '.join(sql_parts)
 
     def query(self, **kwargs):
         """
@@ -113,7 +78,7 @@ class PcodDbImporter(CodDbImporter):
         return PcodSearchResults(results)
 
 
-class PcodSearchResults(CodSearchResults):
+class PcodSearchResults(CodSearchResults):  # pylint: disable=abstract-method
     """
     Results of the search, performed on PCOD.
     """
@@ -129,27 +94,25 @@ class PcodSearchResults(CodSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return self._base_url + \
-               result_dict['id'][0] + '/' + \
-               result_dict['id'][0:3] + '/' + \
-               result_dict['id'] + '.cif'
+        return self._base_url + result_dict['id'][0] + '/' + result_dict['id'][0:3] + '/' + result_dict['id'] + '.cif'
 
 
-class PcodEntry(CodEntry):
+class PcodEntry(CodEntry):  # pylint: disable=abstract-method
     """
     Represents an entry from PCOD.
     """
     _license = 'CC0'
 
-    def __init__(self, uri,
-                 db_name='Predicted Crystallography Open Database',
-                 db_uri='http://www.crystallography.net/pcod', **kwargs):
+    def __init__(
+        self,
+        uri,
+        db_name='Predicted Crystallography Open Database',
+        db_uri='http://www.crystallography.net/pcod',
+        **kwargs
+    ):
         """
         Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.pcod.PcodEntry`, related
         to the supplied URI.
         """
-        super().__init__(db_name=db_name,
-                                        db_uri=db_uri,
-                                        uri=uri,
-                                        **kwargs)
+        super().__init__(db_name=db_name, db_uri=db_uri, uri=uri, **kwargs)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from aiida.engine import CalcJob
 
 class ArithmeticAddCalculation(CalcJob):

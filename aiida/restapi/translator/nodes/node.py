@@ -416,17 +416,14 @@ class NodeTranslator(BaseTranslator):
             for name in get_entry_point_names(entry_point_group):
                 try:
                     node_cls = load_entry_point(entry_point_group, name)
-                except LoadingEntryPointError:
-                    pass
-                else:
-                    node_cls.get_export_formats()
-                try:
                     available_formats = node_cls.get_export_formats()
-                    if available_formats:
-                        full_type = construct_full_type(node_cls.class_node_type, '')
-                        all_formats[full_type] = available_formats
-                except AttributeError:
-                    pass
+                except (AttributeError, LoadingEntryPointError):
+                    continue
+
+                if available_formats:
+                    full_type = construct_full_type(node_cls.class_node_type, '')
+                    all_formats[full_type] = available_formats
+
         return all_formats
 
     @staticmethod

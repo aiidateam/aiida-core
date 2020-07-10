@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Tests for the `ArithmeticAddCalculation` plugin."""
 import pytest
 
@@ -17,9 +26,7 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
 
     # Check the attributes of the returned `CalcInfo`
     assert isinstance(calc_info, datastructures.CalcInfo)
-    assert sorted(calc_info.local_copy_list) == sorted([])
     assert sorted(calc_info.retrieve_list) == sorted([options['output_filename'].default])
-    assert sorted(calc_info.remote_copy_list) == sorted([])
 
     codes_info = calc_info.codes_info
     assert isinstance(codes_info, list)

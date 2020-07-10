@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Importer implementation for the TCOD."""
+""""Implementation of `DbImporter` for the TCOD database."""
 from aiida.tools.dbimporters.plugins.cod import (CodDbImporter, CodSearchResults, CodEntry)
 
 

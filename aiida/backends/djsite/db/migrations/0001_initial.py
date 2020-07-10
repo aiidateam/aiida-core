@@ -7,7 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name
+"""Database migration."""
 from django.db import models, migrations
 import django.db.models.deletion
 import django.utils.timezone
@@ -19,6 +20,7 @@ DOWN_REVISION = '1.0.0'
 
 
 class Migration(migrations.Migration):
+    """Database migration."""
 
     dependencies = [
         ('auth', '0001_initial'),
@@ -53,8 +55,8 @@ class Migration(migrations.Migration):
                     'is_active',
                     models.BooleanField(
                         default=True,
-                        help_text=
-                        'Designates whether this user should be treated as active. Unselect this instead of deleting accounts.'
+                        help_text='Designates whether this user should be treated as active. Unselect this instead of '
+                        'deleting accounts.'
                     )
                 ),
                 ('date_joined', models.DateTimeField(default=django.utils.timezone.now)),
@@ -65,8 +67,8 @@ class Migration(migrations.Migration):
                         related_name='user_set',
                         to='auth.Group',
                         blank=True,
-                        help_text=
-                        'The groups this user belongs to. A user will get all permissions granted to each of his/her group.',
+                        help_text='The groups this user belongs to. A user will get all permissions granted to each of '
+                        'his/her group.',
                         verbose_name='groups'
                     )
                 ),

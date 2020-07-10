@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
 import os
 
-from aiida.common.exceptions import ValidationError, EntryPointError, InputValidationError
+from aiida.common import exceptions
 from .data import Data
 
 __all__ = ('Code',)
@@ -31,6 +32,8 @@ class Code(Data):
     methods (e.g., the set_preexec_code() can be used to load specific modules required
     for the code to be run).
     """
+
+    # pylint: disable=too-many-public-methods
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
         super().__init__(**kwargs)
@@ -132,9 +135,9 @@ class Code(Data):
         """
         if '@' in str(value):
             msg = "Code labels must not contain the '@' symbol"
-            raise InputValidationError(msg)
+            raise exceptions.InputValidationError(msg)
 
-        super(Code, self.__class__).label.fset(self, value)
+        super(Code, self.__class__).label.fset(self, value)  # pylint: disable=no-member
 
     def relabel(self, new_label, raise_error=True):
         """Relabel this code.
@@ -146,6 +149,7 @@ class Code(Data):
         .. deprecated:: 1.2.0
             Will remove raise_error in `v2.0.0`. Use `try/except` instead.
         """
+        # pylint: disable=unused-argument
         suffix = '@{}'.format(self.get_computer_name())
         if new_label.endswith(suffix):
             new_label = new_label[:-len(suffix)]
@@ -173,21 +177,21 @@ class Code(Data):
         from aiida.orm.querybuilder import QueryBuilder
         from aiida.orm.computers import Computer
 
-        qb = QueryBuilder()
-        qb.append(cls, filters={'label': {'==': label}}, project=['*'], tag='code')
+        query = QueryBuilder()
+        query.append(cls, filters={'label': label}, project='*', tag='code')
         if machinename:
-            qb.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
+            query.append(Computer, filters={'name': machinename}, with_node='code')
 
-        if qb.count() == 0:
+        if query.count() == 0:
             raise NotExistent("'{}' is not a valid code name.".format(label))
-        elif qb.count() > 1:
-            codes = qb.all(flat=True)
+        elif query.count() > 1:
+            codes = query.all(flat=True)
             retstr = ("There are multiple codes with label '{}', having IDs: ".format(label))
             retstr += ', '.join(sorted([str(c.pk) for c in codes])) + '.\n'
             retstr += ('Relabel them (using their ID), or refer to them with their ID.')
             raise MultipleObjectsError(retstr)
         else:
-            return qb.first()[0]
+            return query.first()[0]
 
     @classmethod
     def get(cls, pk=None, label=None, machinename=None):
@@ -200,11 +204,10 @@ class Code(Data):
         :param machinename: the machine name where code is setup
 
         :raise aiida.common.NotExistent: if no code identified by the given string is found
-        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
-            a code
+        :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely a code
         :raise aiida.common.InputValidationError: if neither a pk nor a label was passed in
         """
-        from aiida.common.exceptions import (NotExistent, MultipleObjectsError, InputValidationError)
+        # pylint: disable=arguments-differ
         from aiida.orm.utils import load_code
 
         # first check if code pk is provided
@@ -212,17 +215,17 @@ class Code(Data):
             code_int = int(pk)
             try:
                 return load_code(pk=code_int)
-            except NotExistent:
+            except exceptions.NotExistent:
                 raise ValueError('{} is not valid code pk'.format(pk))
-            except MultipleObjectsError:
-                raise MultipleObjectsError("More than one code in the DB with pk='{}'!".format(pk))
+            except exceptions.MultipleObjectsError:
+                raise exceptions.MultipleObjectsError("More than one code in the DB with pk='{}'!".format(pk))
 
         # check if label (and machinename) is provided
         elif label is not None:
             return cls.get_code_helper(label, machinename)
 
         else:
-            raise InputValidationError('Pass either pk or code label (and machinename)')
+            raise exceptions.InputValidationError('Pass either pk or code label (and machinename)')
 
     @classmethod
     def get_from_string(cls, code_string):
@@ -247,8 +250,8 @@ class Code(Data):
         from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
 
         try:
-            label, sep, machinename = code_string.partition('@')
-        except AttributeError as exception:
+            label, _, machinename = code_string.partition('@')
+        except AttributeError:
             raise InputValidationError('the provided code_string is not of valid string type')
 
         try:
@@ -270,35 +273,39 @@ class Code(Data):
           otherwise a list of integers with the code PKs.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        qb = QueryBuilder()
-        qb.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
-        valid_codes = qb.all(flat=True)
+        query = QueryBuilder()
+        query.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
+        valid_codes = query.all(flat=True)
 
         if labels:
             return [c.label for c in valid_codes]
-        else:
-            return [c.pk for c in valid_codes]
+
+        return [c.pk for c in valid_codes]
 
     def _validate(self):
         super()._validate()
 
         if self.is_local() is None:
-            raise ValidationError('You did not set whether the code is local or remote')
+            raise exceptions.ValidationError('You did not set whether the code is local or remote')
 
         if self.is_local():
             if not self.get_local_executable():
-                raise ValidationError('You have to set which file is the local executable '
-                                      'using the set_exec_filename() method')
+                raise exceptions.ValidationError(
+                    'You have to set which file is the local executable '
+                    'using the set_exec_filename() method'
+                )
             if self.get_local_executable() not in self.list_object_names():
-                raise ValidationError("The local executable '{}' is not in the list of "
-                                      'files of this code'.format(self.get_local_executable()))
+                raise exceptions.ValidationError(
+                    "The local executable '{}' is not in the list of "
+                    'files of this code'.format(self.get_local_executable())
+                )
         else:
             if self.list_object_names():
-                raise ValidationError('The code is remote but it has files inside')
+                raise exceptions.ValidationError('The code is remote but it has files inside')
             if not self.get_remote_computer():
-                raise ValidationError('You did not specify a remote computer')
+                raise exceptions.ValidationError('You did not specify a remote computer')
             if not self.get_remote_exec_path():
-                raise ValidationError('You did not specify a remote executable')
+                raise exceptions.ValidationError('You did not specify a remote executable')
 
     def set_prepend_text(self, code):
         """
@@ -367,9 +374,11 @@ class Code(Data):
         from aiida.common.lang import type_check
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
-            raise ValueError('remote_computer_exec must be a list or tuple '
-                             'of length 2, with machine and executable '
-                             'name')
+            raise ValueError(
+                'remote_computer_exec must be a list or tuple '
+                'of length 2, with machine and executable '
+                'name'
+            )
 
         computer, remote_exec_path = tuple(remote_computer_exec)
 
@@ -455,8 +464,8 @@ class Code(Data):
         """
         if self.is_local():
             return './{}'.format(self.get_local_executable())
-        else:
-            return self.get_remote_exec_path()
+
+        return self.get_remote_exec_path()
 
     def get_builder(self):
         """Create and return a new `ProcessBuilder` for the `CalcJob` class of the plugin configured for this code.
@@ -478,8 +487,8 @@ class Code(Data):
 
         try:
             process_class = CalculationFactory(plugin_name)
-        except EntryPointError:
-            raise EntryPointError('the calculation entry point `{}` could not be loaded'.format(plugin_name))
+        except exceptions.EntryPointError:
+            raise exceptions.EntryPointError('the calculation entry point `{}` could not be loaded'.format(plugin_name))
 
         builder = process_class.get_builder()
         builder.code = self
@@ -532,14 +541,3 @@ class Code(Data):
             result.append(['Append text', 'No append text'])
 
         return result
-
-    @classmethod
-    def setup(cls, **kwargs):
-        from aiida.cmdline.commands.code import CodeInputValidationClass
-        code = CodeInputValidationClass().set_and_validate_from_code(kwargs)
-
-        try:
-            code.store()
-        except ValidationError as exc:
-            raise ValidationError('Unable to store the computer: {}.'.format(exc))
-        return code

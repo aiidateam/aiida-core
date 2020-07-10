@@ -203,8 +203,7 @@ def refine_inline(node):
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
-        StructureData(ase=original_atoms).get_formula(mode='hill',
-                                                      separator=' ')
+        StructureData(ase=original_atoms).get_formula(mode='hill', separator=' ')
 
     # If the number of reduced atoms multiplies the number of non-reduced
     # atoms, the new Z value can be calculated.

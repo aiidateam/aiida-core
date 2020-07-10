@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Utilities for operations on files on remote computers."""
 import os
 
 
@@ -73,17 +74,17 @@ def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computer
     if pks:
         filters_calc['id'] = {'in': pks}
 
-    qb = orm.QueryBuilder()
-    qb.append(CalcJobNode, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
-    qb.append(orm.Computer, with_node='calc', tag='computer', project=['*'], filters=filters_computer)
-    qb.append(orm.User, with_node='calc', filters={'email': user.email})
+    query = orm.QueryBuilder()
+    query.append(CalcJobNode, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
+    query.append(orm.Computer, with_node='calc', tag='computer', project=['*'], filters=filters_computer)
+    query.append(orm.User, with_node='calc', filters={'email': user.email})
 
-    if qb.count() == 0:
+    if query.count() == 0:
         return None
 
     path_mapping = {}
 
-    for path, computer in qb.all():
+    for path, computer in query.all():
         if path is not None:
             path_mapping.setdefault(computer.uuid, []).append(path)
 

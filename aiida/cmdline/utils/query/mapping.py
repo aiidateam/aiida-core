@@ -12,8 +12,7 @@ from aiida.cmdline.utils.query import formatting
 
 
 class ProjectionMapper:
-    """
-    Class to map projection names from the CLI to entity labels, attributes and formatters.
+    """Class to map projection names from the CLI to entity labels, attributes and formatters.
 
     The command line interface will often have to display database entities and their attributes. The names of
     the attributes exposed on the CLI do not always match one-to-one with the attributes in the ORM and often
@@ -28,7 +27,6 @@ class ProjectionMapper:
     _valid_projections = []
 
     def __init__(self, projection_labels=None, projection_attributes=None, projection_formatters=None):
-        # pylint: disable=unused-variable,undefined-variable
         if not self._valid_projections:
             raise NotImplementedError('no valid projections were specified by the sub class')
 
@@ -108,7 +106,6 @@ class CalculationProjectionMapper(ProjectionMapper):
             'exit_status': exit_status_key,
         }
 
-        # pylint: disable=line-too-long
         default_formatters = {
             'ctime':
             lambda value: formatting.format_relative_time(value['ctime']),

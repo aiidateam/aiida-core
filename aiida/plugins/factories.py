@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,inconsistent-return-statements,cyclic-import
+# pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 
 from inspect import isclass

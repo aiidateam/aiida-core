@@ -31,7 +31,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         DbSetting.set_value(key='pippo', value=[1, 2, 3])
 
         # s_1 = DbSetting.objects.get(key='pippo')
-        s_1 = DbSetting.query.filter_by(key='pippo').first()
+        s_1 = DbSetting.query.filter_by(key='pippo').first()  # pylint: disable=no-member
 
         self.assertEqual(s_1.getvalue(), [1, 2, 3])
 
@@ -44,7 +44,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Should replace pippo
         DbSetting.set_value(key='pippo', value='a')
-        s_1 = DbSetting.query.filter_by(key='pippo').first()
+        s_1 = DbSetting.query.filter_by(key='pippo').first()  # pylint: disable=no-member
 
         self.assertEqual(s_1.getvalue(), 'a')
 
@@ -120,14 +120,14 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Query the session before commit
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 0, 'There should not be any nodes with this' 'UUID in the session/DB.')
+        self.assertEqual(len(res), 0, 'There should not be any nodes with this UUID in the session/DB.')
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is not in the DB
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 0, 'There should not be any nodes with this' 'UUID in the session/DB.')
+        self.assertEqual(len(res), 0, 'There should not be any nodes with this UUID in the session/DB.')
 
         # Get the automatic user
         dbuser = orm.User.objects.get_default().backend_entity.dbmodel
@@ -138,11 +138,11 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Query the session before commit
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the ' 'UUID {}'.format(node_uuid))
+        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the UUID {}'.format(node_uuid))
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is in the db
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the ' 'UUID {}'.format(node_uuid))
+        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the UUID {}'.format(node_uuid))

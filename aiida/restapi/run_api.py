@@ -8,7 +8,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=inconsistent-return-statements
 """
 It defines the method with all required parameters to run restapi locally.
 """

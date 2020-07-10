@@ -58,7 +58,7 @@ except NotImplementedError:
     using_sysrandom = False  # pylint: disable=invalid-name
 
 
-def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
+def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
     """
     Returns a securely generated random string.
 
@@ -153,7 +153,7 @@ def _(val, **kwargs):
 def _(sequence_obj, **kwargs):
     # unpack the list and use the elements
     return [_single_digest('list(')] + list(chain.from_iterable(_make_hash(i, **kwargs) for i in sequence_obj)
-                                           ) + [_END_DIGEST]
+                                            ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Set)
@@ -161,7 +161,7 @@ def _(set_obj, **kwargs):
     # turn the set objects into a list of hashes which are always sortable,
     # then return a flattened list of the hashes
     return [_single_digest('set(')] + list(chain.from_iterable(sorted(_make_hash(i, **kwargs) for i in set_obj))
-                                          ) + [_END_DIGEST]
+                                           ) + [_END_DIGEST]
 
 
 @_make_hash.register(abc.Mapping)

@@ -7,11 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name,protected-access,too-many-lines
+"""Tests for the `TorqueScheduler` plugin."""
 import unittest
 import uuid
+
 from aiida.schedulers.datastructures import JobState
-from aiida.schedulers.plugins.torque import *
+from aiida.schedulers.plugins.torque import TorqueScheduler
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal
@@ -762,6 +764,7 @@ class TestParserQstat(unittest.TestCase):
         """
         Test whether _parse_joblist can parse the qstat -f output
         """
+        # pylint: disable=too-many-locals
         s = TorqueScheduler()
 
         retval = 0
@@ -810,13 +813,13 @@ class TestParserQstat(unittest.TestCase):
 
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
-                # TODO : parse the env_vars
 
     def test_parse_with_unexpected_newlines(self):
         """
         Test whether _parse_joblist can parse the qstat -f output
         also when there are unexpected newlines
         """
+        # pylint: disable=too-many-locals
         s = TorqueScheduler()
 
         retval = 0
@@ -831,28 +834,23 @@ class TestParserQstat(unittest.TestCase):
         self.assertEqual(job_parsed, job_on_cluster)
 
         job_running = 2
-        job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JobState.RUNNING])
+        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
         self.assertEqual(job_running, job_running_parsed)
 
         job_held = 1
-        job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JobState.QUEUED_HELD])
+        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
         self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 5
-        job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JobState.QUEUED])
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         self.assertEqual(job_queued, job_queued_parsed)
 
         running_users = ['somebody', 'user_556491']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state \
-                                and j.job_state == JobState.RUNNING]
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_users), set(parsed_running_users))
 
         running_jobs = ['555716', '556491']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JobState.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
@@ -865,10 +863,10 @@ class TestParserQstat(unittest.TestCase):
 
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
-                # TODO : parse the env_vars
 
 
 class TestSubmitScript(unittest.TestCase):
+    """Test the submit script."""
 
     def test_submit_script(self):
         """
@@ -895,8 +893,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
         self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00' in submit_script_text)
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
-                        " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine(self):
         """
@@ -906,12 +903,13 @@ class TestSubmitScript(unittest.TestCase):
         from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
 
-        s = TorqueScheduler()
+        scheduler = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
-        job_tmpl.job_resource = s.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24)
+        job_tmpl.job_resource = scheduler.create_job_resource(
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -920,7 +918,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
-        submit_script_text = s.get_submit_script(job_tmpl)
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
@@ -940,7 +938,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_mpiproc=24)
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_mpiproc=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -971,7 +970,8 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = '#!/bin/bash'
         job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=24)
+            num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=24
+        )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
         code_info = CodeInfo()
@@ -1001,4 +1001,5 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl = JobTemplate()
         with self.assertRaises(ValueError):
             job_tmpl.job_resource = scheduler.create_job_resource(
-                num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23)
+                num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
+            )

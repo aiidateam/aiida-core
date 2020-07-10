@@ -7,21 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=unused-import
 """Upper lewel SQLAlchemy migration funcitons."""
 from alembic import context
 
 # The available SQLAlchemy tables
-from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo  # noqa
-from aiida.backends.sqlalchemy.models.comment import DbComment  # noqa
-from aiida.backends.sqlalchemy.models.computer import DbComputer  # noqa
-from aiida.backends.sqlalchemy.models.group import DbGroup  # noqa
-from aiida.backends.sqlalchemy.models.log import DbLog  # noqa
-from aiida.backends.sqlalchemy.models.node import DbLink, DbNode  # noqa
-from aiida.backends.sqlalchemy.models.computer import DbComputer  # noqa
-from aiida.backends.sqlalchemy.models.settings import DbSetting  # noqa
-from aiida.backends.sqlalchemy.models.user import DbUser  # noqa
-from aiida.common.exceptions import DbContentError  # noqa
-from aiida.backends.sqlalchemy.models.base import Base  # noqa
+from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+from aiida.backends.sqlalchemy.models.comment import DbComment
+from aiida.backends.sqlalchemy.models.computer import DbComputer
+from aiida.backends.sqlalchemy.models.group import DbGroup
+from aiida.backends.sqlalchemy.models.log import DbLog
+from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
+from aiida.backends.sqlalchemy.models.settings import DbSetting
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.common.exceptions import DbContentError
+from aiida.backends.sqlalchemy.models.base import Base
 target_metadata = Base.metadata  # pylint: disable=invalid-name
 
 
@@ -55,7 +55,7 @@ def run_migrations_online():
 
     if connectable is None:
         from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError('An initialized connection is expected ' 'for the AiiDA online migrations.')
+        raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
 
     with connectable.connect() as connection:
         context.configure(
@@ -69,7 +69,7 @@ def run_migrations_online():
 
 
 try:
-    if context.is_offline_mode():  #  pylint: disable=no-member
+    if context.is_offline_mode():  # pylint: disable=no-member
         run_migrations_offline()
     else:
         run_migrations_online()

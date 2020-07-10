@@ -163,7 +163,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct')
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_remote_code_set_computer_explicit(self):
@@ -176,7 +176,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
 
         # Setting explicitly a computer that is not the same as that of the `code` should raise
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct').store()
             process = ArithmeticAddCalculation(inputs=inputs)
 
@@ -201,7 +201,7 @@ class TestCalcJob(AiidaTestCase):
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.local_code
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_invalid_parser_name(self):
@@ -210,7 +210,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['parser_name'] = 'invalid_parser'
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_invalid_resources(self):
@@ -219,8 +219,24 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['resources'] = {'num_machines': 'invalid_type'}
 
-        with self.assertRaises(exceptions.InputValidationError):
+        with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
+
+    def test_par_env_resources_computer(self):
+        """Test launching a `CalcJob` an a computer with a scheduler using `ParEnvJobResource` as resources.
+
+        Even though the computer defines a default number of MPI procs per machine, it should not raise when the
+        scheduler that is defined does not actually support it, for example SGE or LSF.
+        """
+        inputs = deepcopy(self.inputs)
+        computer = orm.Computer('sge_computer', 'localhost', 'desc', 'local', 'sge').store()
+        computer.set_default_mpiprocs_per_machine(1)
+
+        inputs['code'] = orm.Code(remote_computer_exec=(computer, '/bin/bash')).store()
+        inputs['metadata']['options']['resources'] = {'parallel_env': 'environment', 'tot_num_mpiprocs': 10}
+
+        # Just checking that instantiating does not raise, meaning the inputs were valid
+        ArithmeticAddCalculation(inputs=inputs)
 
     @pytest.mark.timeout(5)
     @patch.object(CalcJob, 'presubmit', partial(raise_exception, exceptions.InputValidationError))

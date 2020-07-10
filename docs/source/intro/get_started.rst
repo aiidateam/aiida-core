@@ -4,11 +4,11 @@
 Getting Started
 ****************
 
-A working AiiDA installation consists of three core components, plus any external codes you wish to run:
+An AiiDA installation consists of three core components (plus any external codes you wish to run):
 
-* aiida-core: The main Python package and the associated command line tool: ``verdi``.
-* |PostgreSQL|: A service which manages the database that AiiDA uses to store generated data.
-* |RabbitMQ|: A service which manages communication with the processes that AiiDA spawns.
+* aiida-core: The main Python package and the associated ``verdi`` command line interface
+* |PostgreSQL|: The service that manages the database that AiiDA uses to store data.
+* |RabbitMQ|: The message broker used for communication within AiiDA.
 
 There are multiple routes to setting up a working AiiDA environment.
 These are shown below, followed by a recommended "quick-install" route on your local computer.
@@ -83,7 +83,7 @@ Install Software
 .. panels::
     :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
 
-    :fa:`download,mr-1` **Install from Conda**
+    :fa:`download,mr-1` **Install with conda**
 
     .. parsed-literal::
 

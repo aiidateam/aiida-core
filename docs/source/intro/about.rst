@@ -4,17 +4,17 @@
 What is AiiDA
 *************
 
-Implement data-driven and fully automated workflows with AiiDA.
+AiiDA is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data.
 
-AiiDA's primary features include:
+AiiDA is built to support and streamline the four core pillars of the ADES model: Automation, Data, Environment, and Sharing (described `here <https://arxiv.org/abs/1504.01163>`__). Some of the key features of AiiDA include:
 
-*  **Workflows:** Write complex, auto-documenting workflows in Python, linked to arbitrary executables on local and remote computers.
-   The event-based workflow engine supports tens of thousands of processes per hour with full check-pointing.
-*  **Data provenance:** Automatically track inputs, outputs & metadata of all calculations in a provenance graph for full reproducibility.
-   Perform fast queries on graphs containing millions of nodes.
-*  **HPC interface:** Move your calculations to a different computer by changing one line of code. AiiDA is compatible with schedulers like `SLURM <https://slurm.schedmd.com>`__, `PBS Pro <https://www.pbspro.org/>`__, `torque <http://www.adaptivecomputing.com/products/torque/>`__, `SGE <http://gridscheduler.sourceforge.net/>`__ or `LSF <https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html>`__ out of the box.
-*  **Plugin interface:** Extend AiiDA with `plugins <https://aiidateam.github.io/aiida-registry/>`__ for new simulation codes (input generation & parsing), data types, schedulers, transport modes and more.
-*  **Open Science:** Export subsets of your provenance graph and share them with peers or make them available online for everyone on the `Materials Cloud <https://www.materialscloud.org>`__.
-*  **Open source:** AiiDA is released under the `MIT open source license <LICENSE.txt>`__
+*  **Workflows:** AiiDA allows to build and execute complex, auto-documenting workflows linked to multiple codes on local and remote computers.
+*  **High-throughput:** AiiDA's event-based workflow engine supports tens of thousands of processes per hour with full check-pointing.
+*  **Data provenance:** AiiDA automatically tracks and records inputs, outputs and metadata of all calculations and workflows in extensive provenance graphs that preserve the full lineage of all data.
+*  **Advanced queries:** AiiDA's query language enables fast graph queries on millions of nodes.
+*  **Plugin interface:** AiiDA can support via plugins any computational code and data analytics tool, data type, scheduler, connection mode, etc. (see `public plugin repository <https://aiidateam.github.io/aiida-registry/>`__).
+*  **HPC interface:** AiiDA can seamlessly deal with heterogeneous and remote computing resources; it works with many schedulers out of the box (`SLURM <https://slurm.schedmd.com>`__, `PBS Pro <https://www.pbspro.org/>`__, `torque <http://www.adaptivecomputing.com/products/torque/>`__, `SGE <http://gridscheduler.sourceforge.net/>`__ or `LSF <https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html>`__).
+*  **Open science:** AiiDA allows to export both full databases and selected subsets, to be shared with collaborators or made available and browsable online on the `Archive <https://archive.materialscloud.org/>`__ and `Explore <https://www.materialscloud.org/explore>`__ sections of `Materials Cloud <https://www.materialscloud.org>`__.
+*  **Open source:** AiiDA is released under the `MIT open-source license <LICENSE.txt>`__.
 
-See also the `AiiDA testimonials <http://www.aiida.net/testimonials/>`__ and `AiiDA publications <http://www.aiida.net/science/>`__ pages.
+See also the `list of AiiDA-powered scientific publications <http://www.aiida.net/science/>`__ and `testimonials from AiiDA users <http://www.aiida.net/testimonials/>`__.

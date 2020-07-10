@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Add the process_type column to DbNode
 
 Revision ID: 6c629c886f84
@@ -17,7 +18,6 @@ Create Date: 2018-03-15 13:23:12.941148
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision = '6c629c886f84'
 down_revision = '0aebbeab274d'
@@ -26,11 +26,14 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('db_dbnode',
+    """Migrations for the upgrade."""
+    op.add_column(
+        'db_dbnode',
         sa.Column('process_type', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
     )
     op.create_index('ix_db_dbnode_process_type', 'db_dbnode', ['process_type'])
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     op.drop_column('db_dbnode', 'process_type')

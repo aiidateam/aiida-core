@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Correct the type string for the code class
 
 Revision ID: a603da2cc809
@@ -25,6 +26,7 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     conn = op.get_bind()
 
     # The Code class used to be just a sub class of Node but was changed to act like a Data node.
@@ -36,6 +38,7 @@ def upgrade():
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     conn = op.get_bind()
 
     statement = text("""

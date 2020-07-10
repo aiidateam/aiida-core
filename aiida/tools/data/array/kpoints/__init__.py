@@ -11,7 +11,6 @@
 Various utilities to deal with KpointsData instances or create new ones
 (e.g. band paths, kpoints from a parsed input text file, ...)
 """
-
 from aiida.orm import KpointsData, Dict
 from aiida.tools.data.array.kpoints import legacy
 from aiida.tools.data.array.kpoints import seekpath
@@ -49,15 +48,6 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
     if method not in _GET_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
 
-    if method == 'seekpath':
-        try:
-            seekpath.check_seekpath_is_installed()
-        except ImportError:
-            raise ValueError(
-                "selected method is 'seekpath' but the package is not installed\n"
-                "Either install it or pass method='legacy' as input to the function call"
-            )
-
     method = _GET_KPOINTS_PATH_METHODS[method]
 
     return method(structure, **kwargs)
@@ -93,15 +83,6 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     """
     if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
-
-    if method == 'seekpath':
-        try:
-            seekpath.check_seekpath_is_installed()
-        except ImportError:
-            raise ValueError(
-                "selected method is 'seekpath' but the package is not installed\n"
-                "Either install it or pass method='legacy' as input to the function call"
-            )
 
     method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
 
@@ -225,7 +206,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     if args_unknown:
         raise ValueError('unknown arguments {}'.format(args_unknown))
 
-    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
+    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(  # pylint: disable=unbalanced-tuple-unpacking
         cell=structure.cell, pbc=structure.pbc, **kwargs
     )
 

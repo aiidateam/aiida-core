@@ -15,13 +15,12 @@ functionality from within python without knowing details about how postgres is
 installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
-
-__all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
-
 import click
+from pgsu import PGSU, PostgresConnectionMode, DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.cmdline.utils import echo
-from pgsu import PGSU, PostgresConnectionMode, DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
+
+__all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
 _DROP_USER_COMMAND = 'DROP USER "{}"'

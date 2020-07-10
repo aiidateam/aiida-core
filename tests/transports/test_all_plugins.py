@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-lines,fixme
 """
 This module contains a set of unittest test classes that can be loaded from
 the plugin.
@@ -41,7 +42,9 @@ def get_all_custom_transports():
     thisdir, thisfname = os.path.split(this_full_fname)
 
     test_modules = [
-        os.path.split(fname)[1][:-3] for fname in os.listdir(thisdir) if fname.endswith('.py') and fname.startswith('test_')
+        os.path.split(fname)[1][:-3]
+        for fname in os.listdir(thisdir)
+        if fname.endswith('.py') and fname.startswith('test_')
     ]
 
     # Remove this module: note that I should be careful because __file__, from
@@ -53,13 +56,13 @@ def get_all_custom_transports():
         print('Warning, this module ({}) was not found!'.format(thisbasename))
 
     all_custom_transports = {}
-    for m in test_modules:
-        module = importlib.import_module('.'.join([modulename, m]))
+    for module in test_modules:
+        module = importlib.import_module('.'.join([modulename, module]))
         custom_transport = module.__dict__.get('plugin_transport', None)
         if custom_transport is None:
-            print('Define the plugin_transport variable inside the {} module!'.format(m))
+            print('Define the plugin_transport variable inside the {} module!'.format(module))
         else:
-            all_custom_transports[m] = custom_transport
+            all_custom_transports[module] = custom_transport
 
     return all_custom_transports
 
@@ -84,10 +87,9 @@ def run_for_all_plugins(actual_test_method):
         for tr_name, custom_transport in all_custom_transports.items():
             try:
                 actual_test_method(self, custom_transport)
-            except Exception as e:
+            except Exception as exception:  # pylint: disable=broad-except
                 import traceback
-
-                exceptions.append((e, traceback.format_exc(), tr_name))
+                exceptions.append((exception, traceback.format_exc(), tr_name))
 
         if exceptions:
             if all(isinstance(exc[0], AssertionError) for exc in exceptions):
@@ -97,8 +99,7 @@ def run_for_all_plugins(actual_test_method):
 
             messages = ['*** At least one test for a subplugin failed. See below ***', '']
             for exc in exceptions:
-                messages.append("*** [For plugin {}]: Exception '{}': {}"
-                                .format(exc[2], type(exc[0]).__name__, exc[0]))
+                messages.append("*** [For plugin {}]: Exception '{}': {}".format(exc[2], type(exc[0]).__name__, exc[0]))
                 messages.append(exc[1])
 
             raise exception_to_raise('\n'.join(messages))
@@ -137,38 +138,38 @@ class TestDirectoryManipulation(unittest.TestCase):
         import string
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            transport.chdir(location)
 
-            self.assertEqual(location, t.getcwd())
-            while t.isdir(directory):
+            self.assertEqual(location, transport.getcwd())
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             # define folder structure
             dir_tree = os.path.join('1', '2')
             # I create the tree
-            t.makedirs(dir_tree)
+            transport.makedirs(dir_tree)
             # verify the existence
-            self.assertTrue(t.isdir('1'))
+            self.assertTrue(transport.isdir('1'))
             self.assertTrue(dir_tree)
 
             # try to recreate the same folder
             with self.assertRaises(OSError):
-                t.makedirs(dir_tree)
+                transport.makedirs(dir_tree)
 
             # recreate but with ignore flag
-            t.makedirs(dir_tree, True)
+            transport.makedirs(dir_tree, True)
 
-            t.rmdir(dir_tree)
-            t.rmdir('1')
+            transport.rmdir(dir_tree)
+            transport.rmdir('1')
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_rmtree(self, custom_transport):
@@ -180,40 +181,40 @@ class TestDirectoryManipulation(unittest.TestCase):
         import string
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            transport.chdir(location)
 
-            self.assertEqual(location, t.getcwd())
-            while t.isdir(directory):
+            self.assertEqual(location, transport.getcwd())
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             # define folder structure
             dir_tree = os.path.join('1', '2')
             # I create the tree
-            t.makedirs(dir_tree)
+            transport.makedirs(dir_tree)
             # remove it
-            t.rmtree('1')
+            transport.rmtree('1')
             # verify the removal
-            self.assertFalse(t.isdir('1'))
+            self.assertFalse(transport.isdir('1'))
 
             # also tests that it works with a single file
             # create file
             local_file_name = 'file.txt'
             text = 'Viva Verdi\n'
-            with open(os.path.join(t.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
+            with open(os.path.join(transport.getcwd(), local_file_name), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             # remove it
-            t.rmtree(local_file_name)
+            transport.rmtree(local_file_name)
             # verify the removal
-            self.assertFalse(t.isfile(local_file_name))
+            self.assertFalse(transport.isfile(local_file_name))
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_listdir(self, custom_transport):
@@ -317,9 +318,15 @@ class TestDirectoryManipulation(unittest.TestCase):
                     'a2': True,
                     'a4f': True,
                     'a': False
-                })
+                }
+            )
             self.assertTrue(simplify_attributes(trans.listdir_withattributes('.', 'a?')), {'as': True, 'a2': True})
-            self.assertTrue(simplify_attributes(trans.listdir_withattributes('.', 'a[2-4]*')), {'a2': True, 'a4f': True})
+            self.assertTrue(
+                simplify_attributes(trans.listdir_withattributes('.', 'a[2-4]*')), {
+                    'a2': True,
+                    'a4f': True
+                }
+            )
 
             for this_dir in list_of_dir:
                 trans.rmdir(this_dir)
@@ -332,29 +339,30 @@ class TestDirectoryManipulation(unittest.TestCase):
 
     @run_for_all_plugins
     def test_dir_creation_deletion(self, custom_transport):
+        """Test creating and deleting directories."""
         # Imports required later
         import random
         import string
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            transport.chdir(location)
 
-            self.assertEqual(location, t.getcwd())
-            while t.isdir(directory):
+            self.assertEqual(location, transport.getcwd())
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
-            t.mkdir(directory)
+            transport.mkdir(directory)
 
             with self.assertRaises(OSError):
                 # I create twice the same directory
-                t.mkdir(directory)
+                transport.mkdir(directory)
 
-            t.isdir(directory)
-            self.assertFalse(t.isfile(directory))
-            t.rmdir(directory)
+            transport.isdir(directory)
+            self.assertFalse(transport.isfile(directory))
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_dir_copy(self, custom_transport):
@@ -367,30 +375,30 @@ class TestDirectoryManipulation(unittest.TestCase):
         import string
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            transport.chdir(location)
 
-            while t.isdir(directory):
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
-            t.mkdir(directory)
+            transport.mkdir(directory)
 
             dest_directory = directory + '_copy'
-            t.copy(directory, dest_directory)
+            transport.copy(directory, dest_directory)
 
             with self.assertRaises(ValueError):
-                t.copy(directory, '')
+                transport.copy(directory, '')
 
             with self.assertRaises(ValueError):
-                t.copy('', directory)
+                transport.copy('', directory)
 
-            t.rmdir(directory)
-            t.rmdir(dest_directory)
+            transport.rmdir(directory)
+            transport.rmdir(dest_directory)
 
     @run_for_all_plugins
-    def test_dir_permissions_creation_modification(self, custom_transport):
+    def test_dir_permissions_creation_modification(self, custom_transport):  # pylint: disable=invalid-name
         """
         verify if chmod raises IOError when trying to change bits on a
         non-existing folder
@@ -400,51 +408,51 @@ class TestDirectoryManipulation(unittest.TestCase):
         import string
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            transport.chdir(location)
 
-            while t.isdir(directory):
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
             # create directory with non default permissions
-            t.mkdir(directory)
+            transport.mkdir(directory)
 
             # change permissions
-            t.chmod(directory, 0o777)
+            transport.chmod(directory, 0o777)
 
             # test if the security bits have changed
-            self.assertEqual(t.get_mode(directory), 0o777)
+            self.assertEqual(transport.get_mode(directory), 0o777)
 
             # change permissions
-            t.chmod(directory, 0o511)
+            transport.chmod(directory, 0o511)
 
             # test if the security bits have changed
-            self.assertEqual(t.get_mode(directory), 0o511)
+            self.assertEqual(transport.get_mode(directory), 0o511)
 
             # TODO : bug in paramiko. When changing the directory to very low \
             # I cannot set it back to higher permissions
 
-            ## TODO: probably here we should then check for
-            ## the new directory modes. To see if we want a higher
-            ## level function to ask for the mode, or we just
-            ## use get_attribute
-            t.chdir(directory)
+            # TODO: probably here we should then check for
+            # the new directory modes. To see if we want a higher
+            # level function to ask for the mode, or we just
+            # use get_attribute
+            transport.chdir(directory)
 
             # change permissions of an empty string, non existing folder.
             fake_dir = ''
             with self.assertRaises(IOError):
-                t.chmod(fake_dir, 0o777)
+                transport.chmod(fake_dir, 0o777)
 
             fake_dir = 'pippo'
             with self.assertRaises(IOError):
                 # chmod to a non existing folder
-                t.chmod(fake_dir, 0o777)
+                transport.chmod(fake_dir, 0o777)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_dir_reading_permissions(self, custom_transport):
@@ -457,37 +465,37 @@ class TestDirectoryManipulation(unittest.TestCase):
         import string
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
             directory = 'temp_dir_test'
-            t.chdir(location)
+            transport.chdir(location)
 
-            while t.isdir(directory):
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
             # create directory with non default permissions
-            t.mkdir(directory)
+            transport.mkdir(directory)
 
             # change permissions to low ones
-            t.chmod(directory, 0)
+            transport.chmod(directory, 0)
 
             # test if the security bits have changed
-            self.assertEqual(t.get_mode(directory), 0)
+            self.assertEqual(transport.get_mode(directory), 0)
 
-            old_cwd = t.getcwd()
+            old_cwd = transport.getcwd()
 
             with self.assertRaises(IOError):
-                t.chdir(directory)
+                transport.chdir(directory)
 
-            new_cwd = t.getcwd()
+            new_cwd = transport.getcwd()
 
             self.assertEqual(old_cwd, new_cwd)
 
             # TODO : the test leaves a directory even if it is successful
             #        The bug is in paramiko. After lowering the permissions,
             #        I cannot restore them to higher values
-            #t.rmdir(directory)
+            # transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_isfile_isdir_to_empty_string(self, custom_transport):
@@ -497,11 +505,11 @@ class TestDirectoryManipulation(unittest.TestCase):
         """
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
-            t.chdir(location)
-            self.assertFalse(t.isdir(''))
-            self.assertFalse(t.isfile(''))
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
+            transport.chdir(location)
+            self.assertFalse(transport.isdir(''))
+            self.assertFalse(transport.isfile(''))
 
     @run_for_all_plugins
     def test_isfile_isdir_to_non_existing_string(self, custom_transport):
@@ -511,14 +519,14 @@ class TestDirectoryManipulation(unittest.TestCase):
         """
         import os
 
-        with custom_transport as t:
-            location = t.normalize(os.path.join('/', 'tmp'))
-            t.chdir(location)
+        with custom_transport as transport:
+            location = transport.normalize(os.path.join('/', 'tmp'))
+            transport.chdir(location)
             fake_folder = 'pippo'
-            self.assertFalse(t.isfile(fake_folder))
-            self.assertFalse(t.isdir(fake_folder))
+            self.assertFalse(transport.isfile(fake_folder))
+            self.assertFalse(transport.isdir(fake_folder))
             with self.assertRaises(IOError):
-                t.chdir(fake_folder)
+                transport.chdir(fake_folder)
 
     @run_for_all_plugins
     def test_chdir_to_empty_string(self, custom_transport):
@@ -529,11 +537,11 @@ class TestDirectoryManipulation(unittest.TestCase):
         """
         import os
 
-        with custom_transport as t:
-            new_dir = t.normalize(os.path.join('/', 'tmp'))
-            t.chdir(new_dir)
-            t.chdir('')
-            self.assertEqual(new_dir, t.getcwd())
+        with custom_transport as transport:
+            new_dir = transport.normalize(os.path.join('/', 'tmp'))
+            transport.chdir(new_dir)
+            transport.chdir('')
+            self.assertEqual(new_dir, transport.getcwd())
 
 
 class TestPutGetFile(unittest.TestCase):
@@ -546,6 +554,7 @@ class TestPutGetFile(unittest.TestCase):
 
     @run_for_all_plugins
     def test_put_and_get(self, custom_transport):
+        """Test putting and getting files."""
         import os
         import random
         import string
@@ -554,14 +563,14 @@ class TestPutGetFile(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
-            while t.isdir(directory):
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             local_file_name = os.path.join(local_dir, directory, 'file.txt')
             remote_file_name = 'file_remote.txt'
@@ -572,12 +581,12 @@ class TestPutGetFile(unittest.TestCase):
                 fhandle.write(text)
 
             # here use full path in src and dst
-            t.put(local_file_name, remote_file_name)
-            t.get(remote_file_name, retrieved_file_name)
-            t.putfile(local_file_name, remote_file_name)
-            t.getfile(remote_file_name, retrieved_file_name)
+            transport.put(local_file_name, remote_file_name)
+            transport.get(remote_file_name, retrieved_file_name)
+            transport.putfile(local_file_name, remote_file_name)
+            transport.getfile(remote_file_name, retrieved_file_name)
 
-            list_of_files = t.listdir('.')
+            list_of_files = transport.listdir('.')
             # it is False because local_file_name has the full path,
             # while list_of_files has not
             self.assertFalse(local_file_name in list_of_files)
@@ -585,11 +594,11 @@ class TestPutGetFile(unittest.TestCase):
             self.assertFalse(retrieved_file_name in list_of_files)
 
             os.remove(local_file_name)
-            t.remove(remote_file_name)
+            transport.remove(remote_file_name)
             os.remove(retrieved_file_name)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_put_get_abs_path(self, custom_transport):
@@ -604,14 +613,14 @@ class TestPutGetFile(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
-            while t.isdir(directory):
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             partial_file_name = 'file.txt'
             local_file_name = os.path.join(local_dir, directory, 'file.txt')
@@ -623,36 +632,36 @@ class TestPutGetFile(unittest.TestCase):
 
             # partial_file_name is not an abs path
             with self.assertRaises(ValueError):
-                t.put(partial_file_name, remote_file_name)
+                transport.put(partial_file_name, remote_file_name)
             with self.assertRaises(ValueError):
-                t.putfile(partial_file_name, remote_file_name)
+                transport.putfile(partial_file_name, remote_file_name)
 
             # retrieved_file_name does not exist
             with self.assertRaises(OSError):
-                t.put(retrieved_file_name, remote_file_name)
+                transport.put(retrieved_file_name, remote_file_name)
             with self.assertRaises(OSError):
-                t.putfile(retrieved_file_name, remote_file_name)
+                transport.putfile(retrieved_file_name, remote_file_name)
 
             # remote_file_name does not exist
             with self.assertRaises(IOError):
-                t.get(remote_file_name, retrieved_file_name)
+                transport.get(remote_file_name, retrieved_file_name)
             with self.assertRaises(IOError):
-                t.getfile(remote_file_name, retrieved_file_name)
+                transport.getfile(remote_file_name, retrieved_file_name)
 
-            t.put(local_file_name, remote_file_name)
-            t.putfile(local_file_name, remote_file_name)
+            transport.put(local_file_name, remote_file_name)
+            transport.putfile(local_file_name, remote_file_name)
 
             # local filename is not an abs path
             with self.assertRaises(ValueError):
-                t.get(remote_file_name, 'delete_me.txt')
+                transport.get(remote_file_name, 'delete_me.txt')
             with self.assertRaises(ValueError):
-                t.getfile(remote_file_name, 'delete_me.txt')
+                transport.getfile(remote_file_name, 'delete_me.txt')
 
-            t.remove(remote_file_name)
+            transport.remove(remote_file_name)
             os.remove(local_file_name)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_put_get_empty_string(self, custom_transport):
@@ -668,14 +677,14 @@ class TestPutGetFile(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
-            while t.isdir(directory):
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
+            while transport.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             local_file_name = os.path.join(local_dir, directory, 'file_local.txt')
             remote_file_name = 'file_remote.txt'
@@ -688,48 +697,48 @@ class TestPutGetFile(unittest.TestCase):
             # localpath is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                t.put('', remote_file_name)
+                transport.put('', remote_file_name)
             with self.assertRaises(ValueError):
-                t.putfile('', remote_file_name)
+                transport.putfile('', remote_file_name)
 
             # remote path is an empty string
             with self.assertRaises(IOError):
-                t.put(local_file_name, '')
+                transport.put(local_file_name, '')
             with self.assertRaises(IOError):
-                t.putfile(local_file_name, '')
+                transport.putfile(local_file_name, '')
 
-            t.put(local_file_name, remote_file_name)
+            transport.put(local_file_name, remote_file_name)
             # overwrite the remote_file_name
-            t.putfile(local_file_name, remote_file_name)
+            transport.putfile(local_file_name, remote_file_name)
 
             # remote path is an empty string
             with self.assertRaises(IOError):
-                t.get('', retrieved_file_name)
+                transport.get('', retrieved_file_name)
             with self.assertRaises(IOError):
-                t.getfile('', retrieved_file_name)
+                transport.getfile('', retrieved_file_name)
 
             # local path is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                t.get(remote_file_name, '')
+                transport.get(remote_file_name, '')
             with self.assertRaises(ValueError):
-                t.getfile(remote_file_name, '')
+                transport.getfile(remote_file_name, '')
 
             # TODO : get doesn't retrieve empty files.
             # Is it what we want?
-            t.get(remote_file_name, retrieved_file_name)
+            transport.get(remote_file_name, retrieved_file_name)
             # overwrite retrieved_file_name
-            t.getfile(remote_file_name, retrieved_file_name)
+            transport.getfile(remote_file_name, retrieved_file_name)
 
             os.remove(local_file_name)
-            t.remove(remote_file_name)
+            transport.remove(remote_file_name)
             # If it couldn't end the copy, it leaves what he did on
             # local file
-            self.assertTrue('file_retrieved.txt' in t.listdir('.'))
+            self.assertTrue('file_retrieved.txt' in transport.listdir('.'))
             os.remove(retrieved_file_name)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
 
 class TestPutGetTree(unittest.TestCase):
@@ -742,6 +751,7 @@ class TestPutGetTree(unittest.TestCase):
 
     @run_for_all_plugins
     def test_put_and_get(self, custom_transport):
+        """Test putting and getting files."""
         import os
         import random
         import string
@@ -750,9 +760,9 @@ class TestPutGetTree(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
+        with custom_transport as transport:
 
-            t.chdir(remote_dir)
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
@@ -765,7 +775,7 @@ class TestPutGetTree(unittest.TestCase):
             os.mkdir(os.path.join(local_dir, directory))
             os.mkdir(os.path.join(local_dir, directory, local_subfolder))
 
-            t.chdir(directory)
+            transport.chdir(directory)
 
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
@@ -776,14 +786,14 @@ class TestPutGetTree(unittest.TestCase):
             # here use full path in src and dst
             for i in range(2):
                 if i == 0:
-                    t.put(local_subfolder, remote_subfolder)
-                    t.get(remote_subfolder, retrieved_subfolder)
+                    transport.put(local_subfolder, remote_subfolder)
+                    transport.get(remote_subfolder, retrieved_subfolder)
                 else:
-                    t.puttree(local_subfolder, remote_subfolder)
-                    t.gettree(remote_subfolder, retrieved_subfolder)
+                    transport.puttree(local_subfolder, remote_subfolder)
+                    transport.gettree(remote_subfolder, retrieved_subfolder)
 
                 # Here I am mixing the local with the remote fold
-                list_of_dirs = t.listdir('.')
+                list_of_dirs = transport.listdir('.')
                 # # it is False because local_file_name has the full path,
                 # # while list_of_files has not
                 self.assertFalse(local_subfolder in list_of_dirs)
@@ -792,8 +802,8 @@ class TestPutGetTree(unittest.TestCase):
                 self.assertTrue('tmp1' in list_of_dirs)
                 self.assertTrue('tmp3' in list_of_dirs)
 
-                list_pushed_file = t.listdir('tmp2')
-                list_retrieved_file = t.listdir('tmp3')
+                list_pushed_file = transport.listdir('tmp2')
+                list_retrieved_file = transport.listdir('tmp3')
                 self.assertTrue('file.txt' in list_pushed_file)
                 self.assertTrue('file.txt' in list_retrieved_file)
 
@@ -801,23 +811,25 @@ class TestPutGetTree(unittest.TestCase):
 
             shutil.rmtree(local_subfolder)
             shutil.rmtree(retrieved_subfolder)
-            t.rmtree(remote_subfolder)
+            transport.rmtree(remote_subfolder)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_put_and_get_overwrite(self, custom_transport):
-        import os, shutil
+        """Test putting and getting files with overwrites."""
+        import os
         import random
+        import shutil
         import string
 
         local_dir = os.path.join('/', 'tmp')
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
@@ -830,7 +842,7 @@ class TestPutGetTree(unittest.TestCase):
             os.mkdir(os.path.join(local_dir, directory))
             os.mkdir(os.path.join(local_dir, directory, local_subfolder))
 
-            t.chdir(directory)
+            transport.chdir(directory)
 
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
@@ -838,32 +850,33 @@ class TestPutGetTree(unittest.TestCase):
             with open(local_file_name, 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
 
-            t.put(local_subfolder, remote_subfolder)
-            t.get(remote_subfolder, retrieved_subfolder)
+            transport.put(local_subfolder, remote_subfolder)
+            transport.get(remote_subfolder, retrieved_subfolder)
 
             # by defaults rewrite everything
-            t.put(local_subfolder, remote_subfolder)
-            t.get(remote_subfolder, retrieved_subfolder)
+            transport.put(local_subfolder, remote_subfolder)
+            transport.get(remote_subfolder, retrieved_subfolder)
 
             with self.assertRaises(OSError):
-                t.put(local_subfolder, remote_subfolder, overwrite=False)
+                transport.put(local_subfolder, remote_subfolder, overwrite=False)
             with self.assertRaises(OSError):
-                t.get(remote_subfolder, retrieved_subfolder, overwrite=False)
+                transport.get(remote_subfolder, retrieved_subfolder, overwrite=False)
             with self.assertRaises(OSError):
-                t.puttree(local_subfolder, remote_subfolder, overwrite=False)
+                transport.puttree(local_subfolder, remote_subfolder, overwrite=False)
             with self.assertRaises(OSError):
-                t.gettree(remote_subfolder, retrieved_subfolder, overwrite=False)
+                transport.gettree(remote_subfolder, retrieved_subfolder, overwrite=False)
 
             shutil.rmtree(local_subfolder)
             shutil.rmtree(retrieved_subfolder)
-            t.rmtree(remote_subfolder)
-            # t.rmtree(remote_subfolder)
+            transport.rmtree(remote_subfolder)
+            # transport.rmtree(remote_subfolder)
             # here I am mixing inevitably the local and the remote folder
-            t.chdir('..')
-            t.rmtree(directory)
+            transport.chdir('..')
+            transport.rmtree(directory)
 
     @run_for_all_plugins
     def test_copy(self, custom_transport):
+        """Test copying."""
         import os
         import random
         import string
@@ -872,15 +885,15 @@ class TestPutGetTree(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             local_base_dir = os.path.join(local_dir, directory, 'local')
             os.mkdir(local_base_dir)
@@ -895,46 +908,48 @@ class TestPutGetTree(unittest.TestCase):
                     fhandle.write(text)
 
             # first test the copy. Copy of two files matching patterns, into a folder
-            t.copy(os.path.join('local', '*.txt'), '.')
-            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
-            t.remove('a.txt')
-            t.remove('c.txt')
+            transport.copy(os.path.join('local', '*.txt'), '.')
+            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(transport.listdir('.')))
+            transport.remove('a.txt')
+            transport.remove('c.txt')
             # second test copy. Copy of two folders
-            t.copy('local', 'prova')
-            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
-            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
-            t.rmtree('prova')
+            transport.copy('local', 'prova')
+            self.assertEqual(set(['prova', 'local']), set(transport.listdir('.')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(transport.listdir('prova')))
+            transport.rmtree('prova')
             # third test copy. Can copy one file into a new file
-            t.copy(os.path.join('local', '*.tmp'), 'prova')
-            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
-            t.remove('prova')
+            transport.copy(os.path.join('local', '*.tmp'), 'prova')
+            self.assertEqual(set(['prova', 'local']), set(transport.listdir('.')))
+            transport.remove('prova')
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
             with self.assertRaises(OSError):
-                t.copy(os.path.join('local', '*.txt'), 'prova')
+                transport.copy(os.path.join('local', '*.txt'), 'prova')
             # fifth test, copying one file into a folder
-            t.mkdir('prova')
-            t.copy(os.path.join('local', 'a.txt'), 'prova')
-            self.assertEqual(set(t.listdir('prova')), set(['a.txt']))
-            t.rmtree('prova')
+            transport.mkdir('prova')
+            transport.copy(os.path.join('local', 'a.txt'), 'prova')
+            self.assertEqual(set(transport.listdir('prova')), set(['a.txt']))
+            transport.rmtree('prova')
             # sixth test, copying one file into a file
-            t.copy(os.path.join('local', 'a.txt'), 'prova')
-            self.assertTrue(t.isfile('prova'))
-            t.remove('prova')
+            transport.copy(os.path.join('local', 'a.txt'), 'prova')
+            self.assertTrue(transport.isfile('prova'))
+            transport.remove('prova')
             # copy of folder into an existing folder
-            #NOTE: the command cp has a different behavior on Mac vs Ubuntu
-            #tests performed locally on a Mac may result in a failure.
-            t.mkdir('prova')
-            t.copy('local', 'prova')
-            self.assertEqual(set(['local']), set(t.listdir('prova')))
-            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir(os.path.join('prova', 'local'))))
-            t.rmtree('prova')
+            # NOTE: the command cp has a different behavior on Mac vs Ubuntu
+            # tests performed locally on a Mac may result in a failure.
+            transport.mkdir('prova')
+            transport.copy('local', 'prova')
+            self.assertEqual(set(['local']), set(transport.listdir('prova')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(transport.listdir(os.path.join('prova', 'local'))))
+            transport.rmtree('prova')
             # exit
-            t.chdir('..')
-            t.rmtree(directory)
+            transport.chdir('..')
+            transport.rmtree(directory)
 
     @run_for_all_plugins
     def test_put(self, custom_transport):
+        """Test putting files."""
+        # pylint: disable=too-many-statements
         # exactly the same tests of copy, just with the put function
         # and therefore the local path must be absolute
         import os
@@ -945,15 +960,15 @@ class TestPutGetTree(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             local_base_dir = os.path.join(local_dir, directory, 'local')
             os.mkdir(local_base_dir)
@@ -967,72 +982,75 @@ class TestPutGetTree(unittest.TestCase):
                 with open(filename, 'w', encoding='utf8') as fhandle:
                     fhandle.write(text)
 
-            # first test put. Copy of two files matching patterns, into a folder
-            t.put(os.path.join(local_base_dir, '*.txt'), '.')
-            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(t.listdir('.')))
-            t.remove('a.txt')
-            t.remove('c.txt')
+            # first test putransport. Copy of two files matching patterns, into a folder
+            transport.put(os.path.join(local_base_dir, '*.txt'), '.')
+            self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(transport.listdir('.')))
+            transport.remove('a.txt')
+            transport.remove('c.txt')
             # second. Copy of folder into a non existing folder
-            t.put(local_base_dir, 'prova')
-            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
-            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir('prova')))
-            t.rmtree('prova')
+            transport.put(local_base_dir, 'prova')
+            self.assertEqual(set(['prova', 'local']), set(transport.listdir('.')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(transport.listdir('prova')))
+            transport.rmtree('prova')
             # third. copy of folder into an existing folder
-            t.mkdir('prova')
-            t.put(local_base_dir, 'prova')
-            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
-            self.assertEqual(set(['local']), set(t.listdir('prova')))
-            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(t.listdir(os.path.join('prova', 'local'))))
-            t.rmtree('prova')
+            transport.mkdir('prova')
+            transport.put(local_base_dir, 'prova')
+            self.assertEqual(set(['prova', 'local']), set(transport.listdir('.')))
+            self.assertEqual(set(['local']), set(transport.listdir('prova')))
+            self.assertEqual(set(['a.txt', 'b.tmp', 'c.txt']), set(transport.listdir(os.path.join('prova', 'local'))))
+            transport.rmtree('prova')
             # third test copy. Can copy one file into a new file
-            t.put(os.path.join(local_base_dir, '*.tmp'), 'prova')
-            self.assertEqual(set(['prova', 'local']), set(t.listdir('.')))
-            t.remove('prova')
+            transport.put(os.path.join(local_base_dir, '*.tmp'), 'prova')
+            self.assertEqual(set(['prova', 'local']), set(transport.listdir('.')))
+            transport.remove('prova')
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
             with self.assertRaises(OSError):
-                t.put(os.path.join(local_base_dir, '*.txt'), 'prova')
+                transport.put(os.path.join(local_base_dir, '*.txt'), 'prova')
             # copy of folder into file
             with open(os.path.join(local_dir, directory, 'existing.txt'), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             with self.assertRaises(OSError):
-                t.put(os.path.join(local_base_dir), 'existing.txt')
-            t.remove('existing.txt')
+                transport.put(os.path.join(local_base_dir), 'existing.txt')
+            transport.remove('existing.txt')
             # fifth test, copying one file into a folder
-            t.mkdir('prova')
-            t.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
-            self.assertEqual(set(t.listdir('prova')), set(['a.txt']))
-            t.rmtree('prova')
+            transport.mkdir('prova')
+            transport.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
+            self.assertEqual(set(transport.listdir('prova')), set(['a.txt']))
+            transport.rmtree('prova')
             # sixth test, copying one file into a file
-            t.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
-            self.assertTrue(t.isfile('prova'))
-            t.remove('prova')
+            transport.put(os.path.join(local_base_dir, 'a.txt'), 'prova')
+            self.assertTrue(transport.isfile('prova'))
+            transport.remove('prova')
 
             # exit
-            t.chdir('..')
-            t.rmtree(directory)
+            transport.chdir('..')
+            transport.rmtree(directory)
 
     @run_for_all_plugins
     def test_get(self, custom_transport):
+        """Test getting files."""
+        # pylint: disable=too-many-statements
         # exactly the same tests of copy, just with the put function
         # and therefore the local path must be absolute
         import os
         import random
-        import string, shutil
+        import shutil
+        import string
 
         local_dir = os.path.join('/', 'tmp')
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)
 
-            t.mkdir(directory)
-            t.chdir(directory)
+            transport.mkdir(directory)
+            transport.chdir(directory)
 
             local_base_dir = os.path.join(local_dir, directory, 'local')
             local_destination = os.path.join(local_dir, directory)
@@ -1048,51 +1066,53 @@ class TestPutGetTree(unittest.TestCase):
                     fhandle.write(text)
 
             # first test put. Copy of two files matching patterns, into a folder
-            t.get(os.path.join('local', '*.txt'), local_destination)
+            transport.get(os.path.join('local', '*.txt'), local_destination)
             self.assertEqual(set(['a.txt', 'c.txt', 'local']), set(os.listdir(local_destination)))
             os.remove(os.path.join(local_destination, 'a.txt'))
             os.remove(os.path.join(local_destination, 'c.txt'))
             # second. Copy of folder into a non existing folder
-            t.get('local', os.path.join(local_destination, 'prova'))
+            transport.get('local', os.path.join(local_destination, 'prova'))
             self.assertEqual(set(['prova', 'local']), set(os.listdir(local_destination)))
             self.assertEqual(
-                set(['a.txt', 'b.tmp', 'c.txt']), set(os.listdir(os.path.join(local_destination, 'prova'))))
+                set(['a.txt', 'b.tmp', 'c.txt']), set(os.listdir(os.path.join(local_destination, 'prova')))
+            )
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third. copy of folder into an existing folder
             os.mkdir(os.path.join(local_destination, 'prova'))
-            t.get('local', os.path.join(local_destination, 'prova'))
+            transport.get('local', os.path.join(local_destination, 'prova'))
             self.assertEqual(set(['prova', 'local']), set(os.listdir(local_destination)))
             self.assertEqual(set(['local']), set(os.listdir(os.path.join(local_destination, 'prova'))))
             self.assertEqual(
-                set(['a.txt', 'b.tmp', 'c.txt']), set(os.listdir(os.path.join(local_destination, 'prova', 'local'))))
+                set(['a.txt', 'b.tmp', 'c.txt']), set(os.listdir(os.path.join(local_destination, 'prova', 'local')))
+            )
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # third test copy. Can copy one file into a new file
-            t.get(os.path.join('local', '*.tmp'), os.path.join(local_destination, 'prova'))
+            transport.get(os.path.join('local', '*.tmp'), os.path.join(local_destination, 'prova'))
             self.assertEqual(set(['prova', 'local']), set(os.listdir(local_destination)))
             os.remove(os.path.join(local_destination, 'prova'))
             # fourth test copy: can't copy more than one file on the same file,
             # i.e., the destination should be a folder
             with self.assertRaises(OSError):
-                t.get(os.path.join('local', '*.txt'), os.path.join(local_destination, 'prova'))
+                transport.get(os.path.join('local', '*.txt'), os.path.join(local_destination, 'prova'))
             # copy of folder into file
             with open(os.path.join(local_destination, 'existing.txt'), 'w', encoding='utf8') as fhandle:
                 fhandle.write(text)
             with self.assertRaises(OSError):
-                t.get('local', os.path.join(local_destination, 'existing.txt'))
+                transport.get('local', os.path.join(local_destination, 'existing.txt'))
             os.remove(os.path.join(local_destination, 'existing.txt'))
             # fifth test, copying one file into a folder
             os.mkdir(os.path.join(local_destination, 'prova'))
-            t.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
+            transport.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
             self.assertEqual(set(os.listdir(os.path.join(local_destination, 'prova'))), set(['a.txt']))
             shutil.rmtree(os.path.join(local_destination, 'prova'))
             # sixth test, copying one file into a file
-            t.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
+            transport.get(os.path.join('local', 'a.txt'), os.path.join(local_destination, 'prova'))
             self.assertTrue(os.path.isfile(os.path.join(local_destination, 'prova')))
             os.remove(os.path.join(local_destination, 'prova'))
 
             # exit
-            t.chdir('..')
-            t.rmtree(directory)
+            transport.chdir('..')
+            transport.rmtree(directory)
 
     @run_for_all_plugins
     def test_put_get_abs_path(self, custom_transport):
@@ -1107,8 +1127,8 @@ class TestPutGetTree(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
@@ -1121,7 +1141,7 @@ class TestPutGetTree(unittest.TestCase):
             os.mkdir(os.path.join(local_dir, directory))
             os.mkdir(os.path.join(local_dir, directory, local_subfolder))
 
-            t.chdir(directory)
+            transport.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
             fhandle = open(local_file_name, 'w', encoding='utf8')
@@ -1129,44 +1149,44 @@ class TestPutGetTree(unittest.TestCase):
 
             # 'tmp1' is not an abs path
             with self.assertRaises(ValueError):
-                t.put('tmp1', remote_subfolder)
+                transport.put('tmp1', remote_subfolder)
             with self.assertRaises(ValueError):
-                t.putfile('tmp1', remote_subfolder)
+                transport.putfile('tmp1', remote_subfolder)
             with self.assertRaises(ValueError):
-                t.puttree('tmp1', remote_subfolder)
+                transport.puttree('tmp1', remote_subfolder)
 
             # 'tmp3' does not exist
             with self.assertRaises(OSError):
-                t.put(retrieved_subfolder, remote_subfolder)
+                transport.put(retrieved_subfolder, remote_subfolder)
             with self.assertRaises(OSError):
-                t.putfile(retrieved_subfolder, remote_subfolder)
+                transport.putfile(retrieved_subfolder, remote_subfolder)
             with self.assertRaises(OSError):
-                t.puttree(retrieved_subfolder, remote_subfolder)
+                transport.puttree(retrieved_subfolder, remote_subfolder)
 
             # remote_file_name does not exist
             with self.assertRaises(IOError):
-                t.get('non_existing', retrieved_subfolder)
+                transport.get('non_existing', retrieved_subfolder)
             with self.assertRaises(IOError):
-                t.getfile('non_existing', retrieved_subfolder)
+                transport.getfile('non_existing', retrieved_subfolder)
             with self.assertRaises(IOError):
-                t.gettree('non_existing', retrieved_subfolder)
+                transport.gettree('non_existing', retrieved_subfolder)
 
-            t.put(local_subfolder, remote_subfolder)
+            transport.put(local_subfolder, remote_subfolder)
 
             # local filename is not an abs path
             with self.assertRaises(ValueError):
-                t.get(remote_subfolder, 'delete_me_tree')
+                transport.get(remote_subfolder, 'delete_me_tree')
             with self.assertRaises(ValueError):
-                t.getfile(remote_subfolder, 'delete_me_tree')
+                transport.getfile(remote_subfolder, 'delete_me_tree')
             with self.assertRaises(ValueError):
-                t.gettree(remote_subfolder, 'delete_me_tree')
+                transport.gettree(remote_subfolder, 'delete_me_tree')
 
             os.remove(os.path.join(local_subfolder, 'file.txt'))
             os.rmdir(local_subfolder)
-            t.rmtree(remote_subfolder)
+            transport.rmtree(remote_subfolder)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
 
     @run_for_all_plugins
     def test_put_get_empty_string(self, custom_transport):
@@ -1182,8 +1202,8 @@ class TestPutGetTree(unittest.TestCase):
         remote_dir = local_dir
         directory = 'tmp_try'
 
-        with custom_transport as t:
-            t.chdir(remote_dir)
+        with custom_transport as transport:
+            transport.chdir(remote_dir)
 
             while os.path.exists(os.path.join(local_dir, directory)):
                 # I append a random letter/number until it is unique
@@ -1196,7 +1216,7 @@ class TestPutGetTree(unittest.TestCase):
             os.mkdir(os.path.join(local_dir, directory))
             os.mkdir(os.path.join(local_dir, directory, local_subfolder))
 
-            t.chdir(directory)
+            transport.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
 
             text = 'Viva Verdi\n'
@@ -1206,39 +1226,56 @@ class TestPutGetTree(unittest.TestCase):
             # localpath is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                t.puttree('', remote_subfolder)
+                transport.puttree('', remote_subfolder)
 
             # remote path is an empty string
             with self.assertRaises(IOError):
-                t.puttree(local_subfolder, '')
+                transport.puttree(local_subfolder, '')
 
-            t.puttree(local_subfolder, remote_subfolder)
+            transport.puttree(local_subfolder, remote_subfolder)
 
             # remote path is an empty string
             with self.assertRaises(IOError):
-                t.gettree('', retrieved_subfolder)
+                transport.gettree('', retrieved_subfolder)
 
             # local path is an empty string
             # ValueError because it is not an abs path
             with self.assertRaises(ValueError):
-                t.gettree(remote_subfolder, '')
+                transport.gettree(remote_subfolder, '')
 
             # TODO : get doesn't retrieve empty files.
             # Is it what we want?
-            t.gettree(remote_subfolder, retrieved_subfolder)
+            transport.gettree(remote_subfolder, retrieved_subfolder)
 
             os.remove(os.path.join(local_subfolder, 'file.txt'))
             os.rmdir(local_subfolder)
-            t.remove(os.path.join(remote_subfolder, 'file.txt'))
-            t.rmdir(remote_subfolder)
+            transport.remove(os.path.join(remote_subfolder, 'file.txt'))
+            transport.rmdir(remote_subfolder)
             # If it couldn't end the copy, it leaves what he did on local file
             # here I am mixing local with remote
-            self.assertTrue('file.txt' in t.listdir('tmp3'))
+            self.assertTrue('file.txt' in transport.listdir('tmp3'))
             os.remove(os.path.join(retrieved_subfolder, 'file.txt'))
             os.rmdir(retrieved_subfolder)
 
-            t.chdir('..')
-            t.rmdir(directory)
+            transport.chdir('..')
+            transport.rmdir(directory)
+
+    @run_for_all_plugins
+    def test_gettree_nested_directory(self, custom_transport):  # pylint: disable=no-self-use
+        """Test `gettree` for a nested directory."""
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as dir_remote, tempfile.TemporaryDirectory() as dir_local:
+            content = b'dummy\ncontent'
+            filepath = os.path.join(dir_remote, 'sub', 'path', 'filename.txt')
+            os.makedirs(os.path.dirname(filepath))
+
+            with open(filepath, 'wb') as handle:
+                handle.write(content)
+
+            with custom_transport as transport:
+                transport.gettree(os.path.join(dir_remote, 'sub/path'), os.path.join(dir_local, 'sub/path'))
 
 
 class TestExecuteCommandWait(unittest.TestCase):
@@ -1262,66 +1299,69 @@ class TestExecuteCommandWait(unittest.TestCase):
         # Start value
         delete_at_end = False
 
-        with custom_transport as t:
+        with custom_transport as transport:
 
             # To compare with: getcwd uses the normalized ('realpath') path
-            location = t.normalize('/tmp')
+            location = transport.normalize('/tmp')
             subfolder = """_'s f"#"""  # A folder with characters to escape
             subfolder_fullpath = os.path.join(location, subfolder)
 
-            t.chdir(location)
-            if not t.isdir(subfolder):
+            transport.chdir(location)
+            if not transport.isdir(subfolder):
                 # Since I created the folder, I will remember to
                 # delete it at the end of this test
                 delete_at_end = True
-                t.mkdir(subfolder)
+                transport.mkdir(subfolder)
 
-            self.assertTrue(t.isdir(subfolder))
-            t.chdir(subfolder)
+            self.assertTrue(transport.isdir(subfolder))
+            transport.chdir(subfolder)
 
-            self.assertEqual(subfolder_fullpath, t.getcwd())
-            retcode, stdout, stderr = t.exec_command_wait('pwd')
+            self.assertEqual(subfolder_fullpath, transport.getcwd())
+            retcode, stdout, stderr = transport.exec_command_wait('pwd')
             self.assertEqual(retcode, 0)
             # I have to strip it because 'pwd' returns a trailing \n
             self.assertEqual(stdout.strip(), subfolder_fullpath)
             self.assertEqual(stderr, '')
 
             if delete_at_end:
-                t.chdir(location)
-                t.rmdir(subfolder)
+                transport.chdir(location)
+                transport.rmdir(subfolder)
 
     @run_for_all_plugins
     def test_exec_with_stdin_string(self, custom_transport):
+        """Test command execution with a stdin string."""
         test_string = str('some_test String')
-        with custom_transport as t:
-            retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
+        with custom_transport as transport:
+            retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=test_string)
             self.assertEqual(retcode, 0)
             self.assertEqual(stdout, test_string)
             self.assertEqual(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_stdin_unicode(self, custom_transport):
+        """Test command execution with a unicode stdin string."""
         test_string = 'some_test String'
-        with custom_transport as t:
-            retcode, stdout, stderr = t.exec_command_wait('cat', stdin=test_string)
+        with custom_transport as transport:
+            retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=test_string)
             self.assertEqual(retcode, 0)
             self.assertEqual(stdout, test_string)
             self.assertEqual(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
-
+        """Test command execution with a stdin from filelike."""
         test_string = 'some_test String'
         stdin = io.StringIO(test_string)
-        with custom_transport as t:
-            retcode, stdout, stderr = t.exec_command_wait('cat', stdin=stdin)
+        with custom_transport as transport:
+            retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=stdin)
             self.assertEqual(retcode, 0)
             self.assertEqual(stdout, test_string)
             self.assertEqual(stderr, '')
 
     @run_for_all_plugins
     def test_exec_with_wrong_stdin(self, custom_transport):
+        """Test command execution with incorrect stdin string."""
         # I pass a number
-        with custom_transport as t:
+        with custom_transport as transport:
             with self.assertRaises(ValueError):
-                t.exec_command_wait('cat', stdin=1)
+                transport.exec_command_wait('cat', stdin=1)

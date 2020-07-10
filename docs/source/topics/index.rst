@@ -12,6 +12,7 @@ Topics
    provenance/index
    database
    plugins
+   schedulers
 
 .. todo::
 

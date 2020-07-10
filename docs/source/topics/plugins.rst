@@ -34,6 +34,33 @@ If you find yourself in a situation where you feel like you need to do any of th
 .. _core: https://github.com/aiidateam/aiida-core
 .. _registry: https://github.com/aiidateam/aiida-registry
 
+.. _topics:plugins:guidelines:
+
+Guidelines for plugin design
+============================
+
+CalcJob & Parser plugins
+------------------------
+
+The following guidelines are useful to keep in mind when wrapping external codes:
+
+ * | **Start simple.**
+   | Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
+     Write only what is necessary to pass information from and to AiiDA.
+ * | **Don't break data provenance.**
+   | Store *at least* what is needed for full reproducibility.
+ * | **Expose the full functionality.**
+   | Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
+     If the code can do it, there should be *some* way to do it with your plugin.
+ * | **Don't rely on AiiDA internals.**
+     Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
+ * | **Parse what you want to query for.**
+   | Make a list of which information to:
+
+     #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
+     #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
+     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
+
 
 .. _topics:plugins:entrypoints:
 

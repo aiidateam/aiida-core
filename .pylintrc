@@ -50,7 +50,18 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=bad-continuation,locally-disabled,useless-suppression,django-not-available,bad-option-value,logging-format-interpolation,no-else-raise,import-outside-toplevel,cyclic-import
+disable=bad-continuation,
+    locally-disabled,
+    useless-suppression,
+    django-not-available,
+    bad-option-value,
+    logging-format-interpolation,
+    no-else-raise,
+    import-outside-toplevel,
+    cyclic-import,
+    duplicate-code,
+    too-few-public-methods,
+    inconsistent-return-statements
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -136,7 +147,7 @@ function-name-hint=(([a-z][a-z0-9_]{2,40})|(_[a-z0-9_]*))$
 function-rgx=(([a-z][a-z0-9_]{2,30})|(_[a-z0-9_]*))$
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=x,y,z,i,j,k,ex,Run,_,pk,TemplatereplacerCalculation,ArithmeticAddCalculation,MultiplyAddWorkChain
+good-names=x,y,z,i,j,k,ex,Run,_,pk,fg,TemplatereplacerCalculation,ArithmeticAddCalculation,MultiplyAddWorkChain
 
 # Include a hint for the correct naming format with invalid-name
 include-naming-hint=no

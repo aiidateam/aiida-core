@@ -12,7 +12,6 @@ Module of the KpointsData class, defining the AiiDA data type for storing
 lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
-
 import numpy
 
 from .array import ArrayData

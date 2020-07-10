@@ -72,14 +72,12 @@ class TestCodDbImporter(AiidaTestCase):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
-        messages = ['',
-                    "incorrect value for keyword 'test' -- " + \
-                    'only integers and strings are accepted',
-                    "incorrect value for keyword 'test' -- " + \
-                    'only strings are accepted',
-                    "incorrect value for keyword 'test' -- " + \
-                    'only integers and floats are accepted',
-                    "invalid literal for int() with base 10: 'text'"]
+        messages = [
+            '', "incorrect value for keyword 'test' only integers and strings are accepted",
+            "incorrect value for keyword 'test' only strings are accepted",
+            "incorrect value for keyword 'test' only integers and floats are accepted",
+            "invalid literal for int() with base 10: 'text'"
+        ]
         values = [10, 'text', 'text', '10', 1.0 / 3, [1, 2, 3]]
         methods = [
             # pylint: disable=protected-access

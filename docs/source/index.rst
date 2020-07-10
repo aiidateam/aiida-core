@@ -4,11 +4,7 @@ Welcome to AiiDA's documentation!
 
 **aiida-core version:** |release|
 
-`AiiDA`_ is an open-source framework implemented in Python that aims to help researchers with managing simple to complex workflows and making them fully reproducible.
-
-Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's features.
-
-.. _AiiDA: https://www.aiida.net
+`AiiDA`_ is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
 
 .. panels::
    :body: bg-light text-center
@@ -17,7 +13,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    :fa:`rocket,mr-1` **Getting Started**
 
-   First time user or are looking for installation instructions? Start here!
+   AiiDA installation, configuration and troubleshooting.
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -30,7 +26,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    :fa:`info-circle,mr-1` **Tutorial**
 
-   Get your feet wet with a brief introduction to the basics of AiiDA.
+   First time users: Get your feet wet with AiiDA basics!
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -56,7 +52,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    :fa:`bookmark,mr-1` **Topics**
 
-   Comprehensive background information for those who want to learn more about AiiDA's underlying concepts.
+   Background information on AiiDA's underlying concepts.
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -69,7 +65,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    :fa:`cogs,mr-1` **API Reference**
 
-   Comprehensive description of all AiiDA components and APIs, including the command-line-interface, the Python interface, and the RESTful API.
+   Comprehensive documentation of AiiDA components: command-line interface, Python interface, and RESTful API.
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -82,7 +78,7 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 
    :fa:`sitemap,mr-1` **Internal Architecture**
 
-   Detailed information and rationale for the design and architecture of AiiDA and its components.
+   Notes on AiiDA's design and architecture aimed at core developers.
 
    +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -94,8 +90,8 @@ Have a look at :ref:`What is AiiDA<intro:about>` to see an overview of AiiDA's f
 .. admonition:: Development Contributions
    :class: title-icon-code-fork
 
-   Saw a typo in the documentation? Want to improve existing functionalities?
-   The contributing guidelines are hosted on the `aiida-core wiki <https://github.com/aiidateam/aiida-core/wiki>`__ and will guide you through the process of improving AiiDA.
+   Saw a typo in the documentation? Want to improve the code?
+   Help is always welcome, get started with the `contributing guidelines <https://github.com/aiidateam/aiida-core/wiki>`__.
 
 
 .. toctree::
@@ -114,7 +110,10 @@ How to cite
 
 If you use AiiDA for your research, please cite the following work:
 
-.. highlights:: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
+.. highlights:: **AiiDA 1.0:** Sebastiaan. P. Huber, Spyros Zoupanos, Martin Uhrin, Leopold Talirz, Leonid Kahle, Rico Häuselmann, Dominik Gresch, Tiziano Müller, Aliaksandr V. Yakutovich, Casper W. Andersen, Francisco F. Ramirez, Carl S. Adorf, Fernando Gargiulo, Snehal Kumbhar, Elsa Passaro, Conrad Johnston, Andrius Merkys, Andrea Cepellotti, Nicolas Mounet, Nicola Marzari, Boris Kozinsky, Giovanni Pizzi, *AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and data provenance*, `arXiv:2003.12476 (2020) <https://arxiv.org/abs/2003.12476>`_;
+    `http://www.aiida.net <http://www.aiida.net>`_.
+
+.. highlights:: **AiiDA 0.x:** Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
     and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database
     for computational science*, Comp. Mat. Sci 111, 218-230 (2016);
     https://doi.org/10.1016/j.commatsci.2015.09.013; http://www.aiida.net.
@@ -124,28 +123,13 @@ If you use AiiDA for your research, please cite the following work:
 Acknowledgements
 ****************
 
-This work is supported by:
-
-* the `MARVEL National Centre for Competency in Research`_ funded by the `Swiss National Science Foundation`_;
-* the `MaX European Centre of Excellence`_ funded by the Horizon 2020 EINFRA-5 program, Grant No. 676598;
-* the `swissuniversities P-5 project "Materials Cloud"`_.
+AiiDA is supported by the `MARVEL National Centre of Competence in Research`_, the `MaX European Centre of Excellence`_ and by a number of other supporting projects, partners and institutions, whose complete list is available on the `AiiDA website acknowledgements page`_.
 
 AiiDA is a NumFOCUS Affiliated Project. Visit `numfocus.org`_ for more information.
 
-.. image:: images/MARVEL.png
-   :height: 100px
-   :target: `MARVEL National Centre for Competency in Research`_
 
-.. image:: images/MaX.png
-   :height: 80px
-   :target: `MaX European Centre of Excellence`_
-
-.. image:: images/swissuniversities.png
-   :height: 35px
-   :target: `swissuniversities P-5 project "Materials Cloud"`_
-
-.. _MARVEL National Centre for Competency in Research: http://www.marvel-nccr.ch
-.. _Swiss National Science Foundation: http://www.snf.ch/en
+.. _AiiDA: http://www.aiida.net
+.. _MARVEL National Centre of Competence in Research: http://www.marvel-nccr.ch
 .. _MaX European Centre of Excellence: http://www.max-centre.eu
-.. _swissuniversities P-5 project "Materials Cloud": https://www.materialscloud.org/swissuniversities
+.. _AiiDA website acknowledgements page: http://www.aiida.net/acknowledgements/
 .. _numfocus.org: https://www.numfocus.org

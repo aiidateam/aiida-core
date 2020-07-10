@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Drop the DbLock model
 
 Revision ID: a514d673c163
@@ -17,7 +18,6 @@ Create Date: 2018-05-10 19:08:51.780194
 from alembic import op
 from sqlalchemy.dialects import postgresql
 import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = 'a514d673c163'
@@ -31,10 +31,10 @@ def upgrade():
 
 
 def downgrade():
-    op.create_table('db_dblock',
-    sa.Column('key', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
-    sa.Column('creation', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-    sa.Column('timeout', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('owner', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-    sa.PrimaryKeyConstraint('key', name='db_dblock_pkey')
+    op.create_table(
+        'db_dblock', sa.Column('key', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
+        sa.Column('creation', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
+        sa.Column('timeout', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('owner', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
+        sa.PrimaryKeyConstraint('key', name='db_dblock_pkey')
     )

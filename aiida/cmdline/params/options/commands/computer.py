@@ -45,13 +45,19 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
 
-LABEL = options.LABEL.clone(prompt='Computer label', cls=InteractiveOption, required=True)
+LABEL = options.LABEL.clone(
+    prompt='Computer label',
+    cls=InteractiveOption,
+    required=True,
+    help='Unique, human-readable label for this computer'
+)
 
 HOSTNAME = options.HOSTNAME.clone(
     prompt='Hostname',
     cls=InteractiveOption,
     required=True,
-    help='The fully qualified hostname of the computer; use "localhost" for local transports.',
+    help='The fully qualified hostname of the computer (e.g. daint.cscs.ch). ' +
+    'Use "localhost" when setting up the computer that AiiDA is running on',
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(
@@ -67,7 +73,8 @@ SHEBANG = OverridableOption(
     prompt='Shebang line (first line of each script, starting with #!)',
     default='#!/bin/bash',
     cls=InteractiveOption,
-    help='This line specifies the first line of the submission script for this computer.',
+    help=
+    'This line specifies the first line of the submission script for this computer (only the bash shell is supported).',
     type=types.ShebangParamType()
 )
 
@@ -78,9 +85,8 @@ WORKDIR = OverridableOption(
     default='/scratch/{username}/aiida/',
     cls=InteractiveOption,
     help='The absolute path of the directory on the computer where AiiDA will '
-    'run the calculations (typically, the scratch of the computer). You '
-    'can use the {username} replacement, that will be replaced by your '
-    'username on the remote computer.'
+    'run the calculations (often a "scratch" directory).'
+    'The {username} string will be replaced by your username on the remote computer.'
 )
 
 MPI_RUN_COMMAND = OverridableOption(
@@ -90,9 +96,8 @@ MPI_RUN_COMMAND = OverridableOption(
     default='mpirun -np {tot_num_mpiprocs}',
     cls=InteractiveOption,
     help='The mpirun command needed on the cluster to run parallel MPI '
-    'programs. You can use the {tot_num_mpiprocs} replacement, that will be '
-    'replaced by the total number of cpus, or the other scheduler-dependent '
-    'replacement fields (see the scheduler docs for more information).',
+    'programs. The {tot_num_mpiprocs} string will be replaced by the total number of cpus.'
+    'See the scheduler docs for further scheduler-dependent template variables .',
     type=types.MpirunCommandParamType()
 )
 
@@ -103,7 +108,6 @@ MPI_PROCS_PER_MACHINE = OverridableOption(
     prompt_fn=should_call_default_mpiprocs_per_machine,
     required_fn=False,
     type=click.INT,
-    help='Enter here the default number of MPI processes per machine (node) that '
-    'should be used if nothing is otherwise specified. Pass the digit 0 '
-    'if you do not want to provide a default value.',
+    help='The default number of MPI processes that should be executed per machine (node), if not otherwise specified.'
+    'Use 0 to specify no default value.',
 )

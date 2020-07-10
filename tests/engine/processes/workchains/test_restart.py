@@ -8,23 +8,28 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
-# pylint: disable=invalid-name,inconsistent-return-statements,no-self-use,no-member
+# pylint: disable=invalid-name,no-self-use,no-member
 import pytest
 
-from aiida.engine import CalcJob, BaseRestartWorkChain, process_handler, ProcessState, ProcessHandlerReport, ExitCode
+from aiida import engine
+from aiida.engine.processes.workchains.awaitable import Awaitable
 
 
-class SomeWorkChain(BaseRestartWorkChain):
+class SomeWorkChain(engine.BaseRestartWorkChain):
     """Dummy class."""
 
-    _process_class = CalcJob
+    _process_class = engine.CalcJob
 
-    @process_handler(priority=200)
+    def setup(self):
+        super().setup()
+        self.ctx.inputs = {}
+
+    @engine.process_handler(priority=200)
     def handler_a(self, node):
         if node.exit_status == 400:
-            return ProcessHandlerReport(do_break=False, exit_code=ExitCode(418, 'IMATEAPOT'))
+            return engine.ProcessHandlerReport(do_break=False, exit_code=engine.ExitCode(418, 'IMATEAPOT'))
 
-    @process_handler(priority=100)
+    @engine.process_handler(priority=100)
     def handler_b(self, _):
         return
 
@@ -49,8 +54,8 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was excepted."""
     process = generate_work_chain(SomeWorkChain, {})
     process.setup()
-    process.ctx.children = [generate_calculation_node(ProcessState.EXCEPTED)]
-    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED
+    process.ctx.children = [generate_calculation_node(engine.ProcessState.EXCEPTED)]
+    assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -58,8 +63,8 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was killed."""
     process = generate_work_chain(SomeWorkChain, {})
     process.setup()
-    process.ctx.children = [generate_calculation_node(ProcessState.KILLED)]
-    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED
+    process.ctx.children = [generate_calculation_node(engine.ProcessState.KILLED)]
+    assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -76,7 +81,8 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node):
     assert process.ctx.unhandled_failure is True
 
     process.ctx.children.append(generate_calculation_node(exit_status=100))
-    assert process.inspect_process() == BaseRestartWorkChain.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE  # pylint: disable=no-member
+    assert process.inspect_process(
+    ) == engine.BaseRestartWorkChain.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE  # pylint: disable=no-member
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -108,7 +114,29 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
 
     # Even though `handler_a` was followed by `handler_b`, we should retrieve the exit_code from `handler_a` because
     # `handler_b` returned `None` which should not overwrite the last report.
-    assert isinstance(result, ExitCode)
+    assert isinstance(result, engine.ExitCode)
     assert result.status == 418
     assert result.message == 'IMATEAPOT'
     assert process.ctx.unhandled_failure is False
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch):
+    """Test the `run_process` method."""
+
+    def mock_submit(_, process_class, **kwargs):
+        """Mock the submission to just return an empty `CalcJobNode`."""
+        assert process_class is SomeWorkChain._process_class  # pylint: disable=protected-access
+        assert 'metadata' in kwargs
+        assert kwargs['metadata']['call_link_label'] == 'iteration_01'
+        return generate_calculation_node()
+
+    monkeypatch.setattr(SomeWorkChain, 'submit', mock_submit)
+
+    process = generate_work_chain(SomeWorkChain, {})
+    process.setup()
+    result = process.run_process()
+
+    assert isinstance(result, engine.ToContext)
+    assert isinstance(result['children'], Awaitable)
+    assert process.node.get_extra(SomeWorkChain._considered_handlers_extra) == [[]]  # pylint: disable=protected-access

@@ -7,6 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-member
+# start-marker for docs
 """Implementation of the MultiplyAddWorkChain for testing and demonstration purposes."""
 from aiida.orm import Code, Int
 from aiida.engine import calcfunction, WorkChain, ToContext
@@ -26,7 +28,6 @@ class MultiplyAddWorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         """Specify inputs and outputs."""
-        # yapf: disable
         super().define(spec)
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
@@ -36,7 +37,7 @@ class MultiplyAddWorkChain(WorkChain):
             cls.multiply,
             cls.add,
             cls.validate_result,
-            cls.result
+            cls.result,
         )
         spec.output('result', valid_type=Int)
         spec.exit_code(400, 'ERROR_NEGATIVE_NUMBER', message='The result is a negative number.')
@@ -52,12 +53,12 @@ class MultiplyAddWorkChain(WorkChain):
 
         return ToContext(addition=future)
 
-    def validate_result(self):  # pylint: disable=inconsistent-return-statements
+    def validate_result(self):
         """Make sure the result is not negative."""
         result = self.ctx.addition.outputs.sum
 
         if result.value < 0:
-            return self.exit_codes.ERROR_NEGATIVE_NUMBER  # pylint: disable=no-member
+            return self.exit_codes.ERROR_NEGATIVE_NUMBER
 
     def result(self):
         """Add the result to the outputs."""

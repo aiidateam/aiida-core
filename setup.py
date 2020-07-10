@@ -10,10 +10,15 @@
 # pylint: disable=wrong-import-order
 """Setup script for aiida-core package."""
 import json
-import sys
 import os
+import sys
 
-from utils import fastentrypoints  # pylint: disable=unused-import
+try:
+    import fastentrypoints  # pylint: disable=unused-import
+except ImportError:
+    # This should only occur when building the package, i.e. when
+    # executing 'python setup.py sdist' or 'python setup.py bdist_wheel'
+    pass
 from setuptools import setup, find_packages
 
 if (sys.version_info.major, sys.version_info.minor) == (3, 5):
@@ -36,22 +41,16 @@ if __name__ == '__main__':
     with open(os.path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
         SETUP_JSON = json.load(info)
 
-    SETUP_JSON['extras_require']['testing'] = set(
-        SETUP_JSON['extras_require']['testing'] + SETUP_JSON['extras_require']['rest'] +
-        SETUP_JSON['extras_require']['atomic_tools']
-    )
+    EXTRAS_REQUIRE = SETUP_JSON['extras_require']
 
-    SETUP_JSON['extras_require']['docs'] = set(
-        SETUP_JSON['extras_require']['docs'] + SETUP_JSON['extras_require']['rest'] +
-        SETUP_JSON['extras_require']['atomic_tools']
-    )
+    EXTRAS_REQUIRE['tests'] = set(EXTRAS_REQUIRE['tests'] + EXTRAS_REQUIRE['rest'] + EXTRAS_REQUIRE['atomic_tools'])
 
-    SETUP_JSON['extras_require']['all'] = list({
-        item for sublist in SETUP_JSON['extras_require'].values() for item in sublist if item != 'bpython'
-    })
+    EXTRAS_REQUIRE['docs'] = set(EXTRAS_REQUIRE['docs'] + EXTRAS_REQUIRE['rest'] + EXTRAS_REQUIRE['atomic_tools'])
+
+    EXTRAS_REQUIRE['all'] = list({item for sublist in EXTRAS_REQUIRE.values() for item in sublist if item != 'bpython'})
 
     setup(
-        packages=find_packages(),
+        packages=find_packages(include=['aiida', 'aiida.*']),
         long_description=open(os.path.join(THIS_FOLDER, 'README.md')).read(),
         long_description_content_type='text/markdown',
         **SETUP_JSON

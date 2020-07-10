@@ -10,70 +10,56 @@
 """`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
 from aiida import orm
 from aiida.common.datastructures import CalcInfo, CodeInfo
-from aiida.engine import CalcJob
+from aiida.common.folders import Folder
+from aiida.engine import CalcJob, CalcJobProcessSpec
 
 
 class ArithmeticAddCalculation(CalcJob):
     """`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
 
     @classmethod
-    def define(cls, spec):
+    def define(cls, spec: CalcJobProcessSpec):
+        """Define the process specification, including its inputs, outputs and known exit codes.
+
+        :param spec: the calculation job process spec to define.
+        """
         super().define(spec)
-        # yapf: disable
+        spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
+        spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
+        spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
+        # set default options (optional)
         spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.inputs['metadata']['options']['resources'].default = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
-        spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
-        spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
-        spec.input('settings', required=False, valid_type=orm.Dict, help='Optional settings.')
-        spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
-        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER',
-            message='The retrieved folder data node could not be accessed.')
-        spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE',
-            message='The output file could not be read from the retrieved folder.')
-        spec.exit_code(320, 'ERROR_INVALID_OUTPUT',
-            message='The output file contains invalid output.')
-        spec.exit_code(410, 'ERROR_NEGATIVE_NUMBER',
-            message='The sum of the operands is a negative number. Only thrown if `settings.allow_negative = False`.')
+        # start exit codes - marker for docs
+        spec.exit_code(300, 'ERROR_NO_RETRIEVED_FOLDER', message='The retrieved output node does not exist.')
+        spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read.')
+        spec.exit_code(320, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
+        spec.exit_code(410, 'ERROR_NEGATIVE_NUMBER', message='The sum of the operands is a negative number.')
+        # end exit codes - marker for docs
 
-    def prepare_for_submission(self, folder):
+    def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
 
-        This method will convert the input nodes into the corresponding input files that the code will read in. In
-        addition, it will prepare and return a `CalcInfo` instance, that contains information for the engine, for
-        example, on what files to copy to the remote machine, what files to retrieve once it has completed, specific
-        scheduler settings and more.
-        :param folder: an `aiida.common.folders.Folder` to write the input files to
-        :returns: `aiida.common.datastructures.CalcInfo` instance
-        """
-        input_x = self.inputs.x
-        input_y = self.inputs.y
-        input_code = self.inputs.code
+        Convert the input nodes into the corresponding input files in the format that the code will expect. In addition,
+        define and return a `CalcInfo` instance, which is a simple data structure that contains information for the
+        engine, for example, on what files to copy to the remote machine, what files to retrieve once it has completed,
+        specific scheduler settings and more.
 
-        self.write_input_files(folder, input_x, input_y)
+        :param folder: a temporary folder on the local file system.
+        :returns: the `CalcInfo` instance
+        """
+        with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
+            handle.write('echo $(({x} + {y}))\n'.format(x=self.inputs.x.value, y=self.inputs.y.value))
 
         codeinfo = CodeInfo()
+        codeinfo.code_uuid = self.inputs.code.uuid
         codeinfo.stdin_name = self.options.input_filename
         codeinfo.stdout_name = self.options.output_filename
-        codeinfo.code_uuid = input_code.uuid
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
         calcinfo.retrieve_list = [self.options.output_filename]
-        calcinfo.local_copy_list = []
-        calcinfo.remote_copy_list = []
 
         return calcinfo
-
-    def write_input_files(self, folder, input_x, input_y):
-        """
-        Take the input_parameters dictionary with the namelists and their flags
-        and write the input file to disk in the temporary folder
-
-        :param folder: an aiida.common.folders.Folder to temporarily write files on disk
-        :param input_x: the numeric node representing the left operand of the summation
-        :param input_y: the numeric node representing the right operand of the summation
-        """
-        with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
-            handle.write('echo $(({} + {}))\n'.format(input_x.value, input_y.value))

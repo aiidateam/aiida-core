@@ -281,7 +281,7 @@ class InteractiveOptionTest(unittest.TestCase):
     def test_non_interactive_default(self):
         """
         scenario: InteractiveOption, invoked with only --non-interactive
-        behaviour: fail
+        behaviour: success
         """
         cmd = self.simple_command(default='default')
         runner = CliRunner()

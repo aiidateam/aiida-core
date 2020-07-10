@@ -29,7 +29,7 @@ jobs:
       run: |
         pip install numpy==1.17.4
         pip install transifex-client sphinx-intl
-        pip install -e .[docs,testing]
+        pip install -e .[docs,tests]
 
     - name: Build pot files
       env:

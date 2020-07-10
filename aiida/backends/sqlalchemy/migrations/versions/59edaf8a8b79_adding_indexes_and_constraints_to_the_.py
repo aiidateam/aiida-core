@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Adding indexes and constraints to the dbnode-dbgroup relationship table
 
 Revision ID: 59edaf8a8b79
@@ -25,30 +26,28 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     # Check if constraint uix_dbnode_id_dbgroup_id of migration 7a6587e16f4c
     # is there and if yes, drop it
     insp = Inspector.from_engine(op.get_bind())
     for constr in insp.get_unique_constraints('db_dbgroup_dbnodes'):
         if constr['name'] == 'uix_dbnode_id_dbgroup_id':
-            op.drop_constraint('uix_dbnode_id_dbgroup_id',
-                               'db_dbgroup_dbnodes')
+            op.drop_constraint('uix_dbnode_id_dbgroup_id', 'db_dbgroup_dbnodes')
 
-    op.create_index('db_dbgroup_dbnodes_dbnode_id_idx', 'db_dbgroup_dbnodes',
-                    ['dbnode_id'])
-    op.create_index('db_dbgroup_dbnodes_dbgroup_id_idx', 'db_dbgroup_dbnodes',
-                    ['dbgroup_id'])
+    op.create_index('db_dbgroup_dbnodes_dbnode_id_idx', 'db_dbgroup_dbnodes', ['dbnode_id'])
+    op.create_index('db_dbgroup_dbnodes_dbgroup_id_idx', 'db_dbgroup_dbnodes', ['dbgroup_id'])
     op.create_unique_constraint(
-        'db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes',
-        ['dbgroup_id', 'dbnode_id'])
+        'db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes', ['dbgroup_id', 'dbnode_id']
+    )
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     op.drop_index('db_dbgroup_dbnodes_dbnode_id_idx', 'db_dbgroup_dbnodes')
     op.drop_index('db_dbgroup_dbnodes_dbgroup_id_idx', 'db_dbgroup_dbnodes')
-    op.drop_constraint('db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key',
-                       'db_dbgroup_dbnodes')
+    op.drop_constraint('db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes')
     # Creating the constraint uix_dbnode_id_dbgroup_id that migration
     # 7a6587e16f4c would add
     op.create_unique_constraint(
-        'db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes',
-        ['dbgroup_id', 'dbnode_id'])
+        'db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes', ['dbgroup_id', 'dbnode_id']
+    )

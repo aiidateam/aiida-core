@@ -123,7 +123,7 @@ def generate_calculation_node():
     """Generate an instance of a `CalculationNode`."""
     from aiida.engine import ProcessState
 
-    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None):
+    def _generate_calculation_node(process_state=ProcessState.FINISHED, exit_status=None, entry_point=None):
         """Generate an instance of a `CalculationNode`..
 
         :param process_state: state to set
@@ -135,7 +135,7 @@ def generate_calculation_node():
         if process_state is ProcessState.FINISHED and exit_status is None:
             exit_status = 0
 
-        node = CalculationNode()
+        node = CalculationNode(process_type=entry_point)
         node.set_process_state(process_state)
 
         if exit_status is not None:

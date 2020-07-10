@@ -65,8 +65,7 @@ class MultipleValueOption(click.Option):
         to eat up parameters until the following flag or 'endopt' (i.e. --)
         """
         # pylint: disable=protected-access
-
-        result = super().add_to_parser(parser, ctx)
+        super().add_to_parser(parser, ctx)
 
         def parser_process(value, state):
             """
@@ -99,5 +98,3 @@ class MultipleValueOption(click.Option):
                 self._previous_parser_process = our_parser.process
                 our_parser.process = parser_process
                 break
-
-        return result

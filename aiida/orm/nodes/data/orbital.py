@@ -7,13 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Data plugin to model an atomic orbital."""
 import copy
 
-from .data import Data
-from .structure import Site as site_class
 from aiida.common.exceptions import ValidationError, InputValidationError
 from aiida.plugins import OrbitalFactory
+from .data import Data
 
 __all__ = ('OrbitalData',)
 
@@ -51,8 +50,7 @@ class OrbitalData(Data):
         filter_dict.update(kwargs)
         # prevents KeyError from occuring
         orbital_dicts = [x for x in orbital_dicts if all([y in x for y in filter_dict])]
-        orbital_dicts = [x for x in orbital_dicts if
-                         all([x[y] == filter_dict[y] for y in filter_dict])]
+        orbital_dicts = [x for x in orbital_dicts if all([x[y] == filter_dict[y] for y in filter_dict])]
 
         list_of_outputs = []
         for orbital_dict in orbital_dicts:
@@ -61,8 +59,8 @@ class OrbitalData(Data):
             except KeyError:
                 raise ValidationError('No _orbital_type found in: {}'.format(orbital_dict))
 
-            OrbitalClass = OrbitalFactory(orbital_type)
-            orbital = OrbitalClass(**orbital_dict)
+            cls = OrbitalFactory(orbital_type)
+            orbital = cls(**orbital_dict)
             list_of_outputs.append(orbital)
         return list_of_outputs
 
@@ -85,6 +83,7 @@ class OrbitalData(Data):
                 raise InputValidationError('No _orbital_type found in: {}'.format(orbital_dict))
             orbital_dicts.append(orbital_dict)
         self.set_attribute('orbital_dicts', orbital_dicts)
+
 
 ##########################################################################
 #     Here are some ideas for potential future convenience methods
@@ -116,4 +115,3 @@ class OrbitalData(Data):
 #
 #    def set_realhydrogenorbitals_from_structure(self, structure, pseudo_family=None):
 #        raise NotImplementedError
-

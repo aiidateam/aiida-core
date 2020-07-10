@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Drop the columns `nodeversion` and `public` from the `DbNode` model.
 
 Revision ID: 1830c8430131

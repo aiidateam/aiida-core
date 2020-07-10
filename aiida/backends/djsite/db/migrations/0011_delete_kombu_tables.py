@@ -7,23 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name
+"""Database migration."""
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
 
 REVISION = '1.0.11'
 DOWN_REVISION = '1.0.10'
 
 
 class Migration(migrations.Migration):
+    """Database migration."""
 
     dependencies = [
         ('db', '0010_process_type'),
     ]
 
     operations = [
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
             DROP TABLE IF EXISTS kombu_message;
             DROP TABLE IF EXISTS kombu_queue;
             DELETE FROM db_dbsetting WHERE key = 'daemon|user';
@@ -33,6 +35,7 @@ class Migration(migrations.Migration):
             DELETE FROM db_dbsetting WHERE key = 'daemon|task_start|updater';
             DELETE FROM db_dbsetting WHERE key = 'daemon|task_stop|submitter';
             DELETE FROM db_dbsetting WHERE key = 'daemon|task_start|submitter';
-        """),
+        """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

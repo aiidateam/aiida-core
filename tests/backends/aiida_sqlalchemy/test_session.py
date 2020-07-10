@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,no-member
 """Testing Session possible problems."""
 
 from sqlalchemy.orm import sessionmaker
@@ -35,7 +35,7 @@ class TestSessionSqla(AiidaTestCase):
         # way of managing connections and sessions in SQLA...
         # For instance, we should use probably a scopedsession wrapper
         session = sessionmaker(expire_on_commit=expire_on_commit)
-        aiida.backends.sqlalchemy.sessionfactory = session(bind=self._AiidaTestCase__backend_instance.connection)  # pylint: disable=no-member
+        aiida.backends.sqlalchemy.sessionfactory = session(bind=self._AiidaTestCase__backend_instance.connection)
 
         # Cleaning the database
         self.clean_db()

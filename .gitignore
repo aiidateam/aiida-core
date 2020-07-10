@@ -9,6 +9,7 @@
 */*/.DS_Store
 */*/*/.DS_Store
 .metadata
+.ipynb_checkpoints
 
 /venv*/
 /.idea/
@@ -28,3 +29,7 @@ coverage.xml
 # Build files
 dist/
 pip-wheel-metadata
+
+# Docs
+docs/build
+docs/source/reference/apidoc

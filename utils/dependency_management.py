@@ -9,7 +9,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
-
 import os
 import sys
 import re
@@ -161,21 +160,6 @@ def generate_environment_yml():
         )
 
 
-@cli.command('generate-rtd-reqs')
-def generate_requirements_for_rtd():
-    """Generate 'docs/requirements_for_rtd.txt' file."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
-
-    # pylint: disable=bad-continuation
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt'), 'w') as reqs_file:
-        reqs_file.write('\n'.join(sorted(map(str, install_requirements))))
-
-
 @cli.command()
 def generate_pyproject_toml():
     """Generate 'pyproject.toml' file."""
@@ -193,7 +177,8 @@ def generate_pyproject_toml():
 
     pyproject = {
         'build-system': {
-            'requires': ['setuptools>=40.8.0', 'wheel', str(reentry_requirement)],
+            'requires': ['setuptools>=40.8.0', 'wheel',
+                         str(reentry_requirement), 'fastentrypoints~=0.12'],
             'build-backend': 'setuptools.build_meta:__legacy__',
         }
     }
@@ -206,7 +191,6 @@ def generate_pyproject_toml():
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(generate_requirements_for_rtd)
     ctx.invoke(generate_pyproject_toml)
 
 
@@ -282,25 +266,6 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     click.secho('Conda dependency specification is consistent.', fg='green')
 
 
-@cli.command('validate-rtd-reqs', help="Validate 'docs/requirements_for_rtd.txt'.")
-def validate_requirements_for_rtd():
-    """Validate that 'docs/requirements_for_rtd.txt' is consistent with 'setup.json'."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = {Requirement.parse(r) for r in setup_cfg['install_requires']}
-    for key in ('testing', 'docs', 'rest', 'atomic_tools'):
-        install_requirements.update({Requirement.parse(r) for r in setup_cfg['extras_require'][key]})
-
-    with open(ROOT / Path('docs', 'requirements_for_rtd.txt')) as reqs_file:
-        reqs = {Requirement.parse(r) for r in reqs_file}
-
-    if reqs != install_requirements:
-        raise DependencySpecificationError("The requirements for RTD are inconsistent with 'setup.json'.")
-
-    click.secho('RTD requirements specification is consistent.', fg='green')
-
-
 @cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
 def validate_pyproject_toml():
     """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
@@ -344,11 +309,9 @@ def validate_all(ctx):
     - setup.json
     - environment.yml
     - pyproject.toml
-    - docs/requirements_for_rtd.txt
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_requirements_for_rtd)
     ctx.invoke(validate_pyproject_toml)
 
 
@@ -369,12 +332,12 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
     match all the dependencies specified in 'setup.json.
 
     The arguments allow to specify which 'extra' requirements to expect.
-    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'testing'.
+    Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'tests'.
 
     """
 
     if len(extras) == 1 and extras[0] == 'DEFAULT':
-        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'testing']
+        extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()

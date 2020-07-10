@@ -14,6 +14,8 @@ import plumpy
 
 from aiida import orm
 from aiida.common import exceptions, AttributeDict
+from aiida.common.datastructures import CalcInfo
+from aiida.common.folders import Folder
 from aiida.common.lang import override, classproperty
 from aiida.common.links import LinkType
 
@@ -24,7 +26,7 @@ from .tasks import Waiting, UPLOAD_COMMAND
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs, ctx):
+def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statements
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -33,7 +35,7 @@ def validate_calc_job(inputs, ctx):
      * The specified computer is not stored
      * The `Computer` specified in `metadata.computer` is not the same as that of the specified `Code`
 
-    :raises `~aiida.common.exceptions.InputValidationError`: if inputs are invalid
+    :return: string with error message in case the inputs are invalid
     """
     try:
         ctx.get_port('code')
@@ -47,27 +49,49 @@ def validate_calc_job(inputs, ctx):
     computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
     if not computer_from_code and not computer_from_metadata:
-        raise exceptions.InputValidationError('no computer has been specified in `metadata.computer` nor via `code`.')
+        return 'no computer has been specified in `metadata.computer` nor via `code`.'
 
     if computer_from_code and not computer_from_code.is_stored:
-        raise exceptions.InputValidationError('the Computer<{}> is not stored'.format(computer_from_code))
+        return 'the Computer<{}> is not stored'.format(computer_from_code)
 
     if computer_from_metadata and not computer_from_metadata.is_stored:
-        raise exceptions.InputValidationError('the Computer<{}> is not stored'.format(computer_from_metadata))
+        return 'the Computer<{}> is not stored'.format(computer_from_metadata)
 
     if computer_from_code and computer_from_metadata and computer_from_code.uuid != computer_from_metadata.uuid:
-        raise exceptions.InputValidationError(
-            'Computer<{}> explicitly defined in `metadata.computer is different from '
-            'Computer<{}> which is the computer of Code<{}> defined as the `code` input.'.format(
+        return (
+            'Computer<{}> explicitly defined in `metadata.computer` is different from Computer<{}> which is the '
+            'computer of Code<{}> defined as the `code` input.'.format(
                 computer_from_metadata, computer_from_code, code
             )
         )
 
+    try:
+        resources_port = ctx.get_port('metadata.options.resources')
+    except ValueError:
+        return
 
-def validate_parser(parser_name, ctx):  # pylint: disable=unused-argument
+    # If the resources port exists but is not required, we don't need to validate it against the computer's scheduler
+    if not resources_port.required:
+        return
+
+    computer = computer_from_code or computer_from_metadata
+    scheduler = computer.get_scheduler()
+    try:
+        resources = inputs['metadata']['options']['resources']
+    except KeyError:
+        return 'input `metadata.options.resources` is required but is not specified'
+
+    try:
+        scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+        scheduler.validate_resources(**resources)
+    except (ValueError, TypeError) as exception:
+        return 'input `metadata.options.resources` is not valid for the {} scheduler: {}'.format(scheduler, exception)
+
+
+def validate_parser(parser_name, _):
     """Validate the parser.
 
-    :raises InputValidationError: if the parser name does not correspond to a loadable `Parser` class.
+    :return: string with error message in case the inputs are invalid
     """
     from aiida.plugins import ParserFactory
 
@@ -75,20 +99,7 @@ def validate_parser(parser_name, ctx):  # pylint: disable=unused-argument
         try:
             ParserFactory(parser_name)
         except exceptions.EntryPointError as exception:
-            raise exceptions.InputValidationError('invalid parser specified: {}'.format(exception))
-
-
-def validate_resources(resources, ctx):  # pylint: disable=unused-argument
-    """Validate the resources.
-
-    :raises InputValidationError: if `num_machines` is not specified or is not an integer.
-    """
-    if resources is not plumpy.UNSPECIFIED:
-        if 'num_machines' not in resources:
-            raise exceptions.InputValidationError('the `resources` input has to at least include `num_machines`.')
-
-        if not isinstance(resources['num_machines'], int):
-            raise exceptions.InputValidationError('the input `resources.num_machines` shoud be an integer.')
+            return 'invalid parser specified: {}'.format(exception)
 
 
 class CalcJob(Process):
@@ -111,8 +122,12 @@ class CalcJob(Process):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def define(cls, spec):
+    def define(cls, spec: CalcJobProcessSpec):
         # yapf: disable
+        """Define the process specification, including its inputs, outputs and known exit codes.
+
+        :param spec: the calculation job process spec to define.
+        """
         super().define(spec)
         spec.inputs.validator = validate_calc_job
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
@@ -131,7 +146,7 @@ class CalcJob(Process):
             help='Filename to which the content of stdout of the scheduler is written.')
         spec.input('metadata.options.scheduler_stderr', valid_type=str, default='_scheduler-stderr.txt',
             help='Filename to which the content of stderr of the scheduler is written.')
-        spec.input('metadata.options.resources', valid_type=dict, required=True, validator=validate_resources,
+        spec.input('metadata.options.resources', valid_type=dict, required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
                  'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
                  'scheduler for more details.')
@@ -246,8 +261,17 @@ class CalcJob(Process):
         # Launch the upload operation
         return plumpy.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
 
-    def prepare_for_submission(self, folder):
-        """Prepare files for submission of calculation."""
+    def prepare_for_submission(self, folder: Folder) -> CalcInfo:
+        """Prepare the calculation for submission.
+
+        Convert the input nodes into the corresponding input files in the format that the code will expect. In addition,
+        define and return a `CalcInfo` instance, which is a simple data structure that contains  information for the
+        engine, for example, on what files to copy to the remote machine, what files to retrieve once it has completed,
+        specific scheduler settings and more.
+
+        :param folder: a temporary folder on the local file system.
+        :returns: the `CalcInfo` instance
+        """
         raise NotImplementedError
 
     def parse(self, retrieved_temporary_folder=None):
@@ -374,9 +398,7 @@ class CalcJob(Process):
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        def_cpus_machine = computer.get_default_mpiprocs_per_machine()
-        if def_cpus_machine is not None:
-            resources['default_mpiprocs_per_machine'] = def_cpus_machine
+        scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
         job_tmpl.job_resource = scheduler.create_job_resource(**resources)
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}

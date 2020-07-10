@@ -7,10 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name,protected-access
+"""Tests for the `SgeScheduler` plugin."""
 import unittest
 import logging
-from aiida.schedulers.plugins.sge import *
+
+from aiida.schedulers.datastructures import JobState
+from aiida.schedulers.plugins.sge import SgeScheduler
+from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError
 
 text_qstat_ext_urg_xml_test = """<?xml version='1.0'?>
 <job_info  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -169,8 +173,10 @@ test_raw_data = """<job_list state="running">
 
 
 class TestCommand(unittest.TestCase):
+    """Test various commands."""
 
     def test_get_joblist_command(self):
+        """Test the `get_joblist_command`."""
         sge = SgeScheduler()
 
         # TEST 1:
@@ -194,6 +200,7 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('*' in sge_get_joblist_command)
 
     def test_detailed_jobinfo_command(self):
+        """Test the `get_detailed_jobinfo_command`."""
         sge = SgeScheduler()
 
         sge_get_djobinfo_command = sge._get_detailed_job_info_command('123456')
@@ -203,6 +210,7 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('-j' in sge_get_djobinfo_command)
 
     def test_get_submit_command(self):
+        """Test the `get_submit_command`."""
         sge = SgeScheduler()
 
         sge_get_submit_command = sge._get_submit_command('script.sh')
@@ -212,6 +220,7 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('script.sh' in sge_get_submit_command)
 
     def test_parse_submit_output(self):
+        """Test the `parse_submit_command`."""
         sge = SgeScheduler()
 
         # TEST 1:
@@ -225,6 +234,7 @@ class TestCommand(unittest.TestCase):
         logging.disable(logging.NOTSET)
 
     def test_parse_joblist_output(self):
+        """Test the `parse_joblist_command`."""
         sge = SgeScheduler()
 
         retval = 0
@@ -294,6 +304,7 @@ class TestCommand(unittest.TestCase):
         logging.disable(logging.NOTSET)
 
     def test_submit_script(self):
+        """Test the submit script."""
         from aiida.schedulers.datastructures import JobTemplate
 
         sge = SgeScheduler()

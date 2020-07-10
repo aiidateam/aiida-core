@@ -7,16 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name
+"""Database migration."""
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
 
 REVISION = '1.0.8'
 DOWN_REVISION = '1.0.7'
 
 
 class Migration(migrations.Migration):
+    """Database migration."""
 
     dependencies = [
         ('db', '0006_delete_dbpath'),
@@ -36,7 +37,8 @@ class Migration(migrations.Migration):
         #   - joins a Data (or subclass) as output
         #   - is marked as a returnlink.
         # 2) set for these links the type to 'createlink'
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
             UPDATE db_dblink set type='createlink' WHERE db_dblink.id IN (
                 SELECT db_dblink_1.id
                 FROM db_dbnode AS db_dbnode_1
@@ -46,7 +48,8 @@ class Migration(migrations.Migration):
                     AND db_dbnode_2.type LIKE 'data.%'
                     AND db_dblink_1.type = 'returnlink'
             );
-        """),
+        """
+        ),
         # Now I am updating the link-types that are null because of either an export and subsequent import
         # https://github.com/aiidateam/aiida-core/issues/685
         # or because the link types don't exist because the links were added before the introduction of link types.
@@ -55,10 +58,11 @@ class Migration(migrations.Migration):
         # The following sql statement:
         # 1) selects all links that
         #   - joins Data (or subclass) or Code as input
-        #   - joins Calculation (or subclass) as output. This includes WorkCalculation, InlineCalcuation, JobCalculations...
+        #   - joins Calculation (or subclass) as output: includes WorkCalculation, InlineCalcuation, JobCalculations...
         #   - has no type (null)
         # 2) set for these links the type to 'inputlink'
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
              UPDATE db_dblink set type='inputlink' where id in (
                 SELECT db_dblink_1.id
                 FROM db_dbnode AS db_dbnode_1
@@ -68,7 +72,8 @@ class Migration(migrations.Migration):
                     AND db_dbnode_2.type LIKE 'calculation.%'
                     AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );
-        """),
+        """
+        ),
         #
         # The following sql statement:
         # 1) selects all links that
@@ -76,7 +81,8 @@ class Migration(migrations.Migration):
         #   - joins Data (or subclass) as output.
         #   - has no type (null)
         # 2) set for these links the type to 'createlink'
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
              UPDATE db_dblink set type='createlink' where id in (
                 SELECT db_dblink_1.id
                 FROM db_dbnode AS db_dbnode_1
@@ -90,14 +96,16 @@ class Migration(migrations.Migration):
                     )
                     AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );
-        """),
+        """
+        ),
         # The following sql statement:
         # 1) selects all links that
-        #   - join WorkCalculation as input. No subclassing was introduced so far, so only one type string is checked for.
+        #   - join WorkCalculation as input. No subclassing was introduced so far, so only one type string is checked
         #   - join Data (or subclass) as output.
         #   - has no type (null)
         # 2) set for these links the type to 'returnlink'
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
              UPDATE db_dblink set type='returnlink' where id in (
                 SELECT db_dblink_1.id
                 FROM db_dbnode AS db_dbnode_1
@@ -107,15 +115,17 @@ class Migration(migrations.Migration):
                     AND db_dbnode_1.type = 'calculation.work.WorkCalculation.'
                     AND ( db_dblink_1.type = null OR db_dblink_1.type = '')
             );
-        """),
+        """
+        ),
         # Now I update links that are CALLS:
         # The following sql statement:
         # 1) selects all links that
-        #   - join WorkCalculation as input. No subclassing was introduced so far, so only one type string is checked for.
+        #   - join WorkCalculation as input. No subclassing was introduced so far, so only one type string is checked
         #   - join Calculation (or subclass) as output. Includes JobCalculation and WorkCalculations and all subclasses.
         #   - has no type (null)
         # 2) set for these links the type to 'calllink'
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
              UPDATE db_dblink set type='calllink' where id in (
                 SELECT db_dblink_1.id
                 FROM db_dbnode AS db_dbnode_1
@@ -125,7 +135,7 @@ class Migration(migrations.Migration):
                     AND db_dbnode_2.type LIKE 'calculation.%'
                     AND ( db_dblink_1.type = null  OR db_dblink_1.type = '')
             );
-        """),
+        """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
-
     ]

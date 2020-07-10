@@ -7,19 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This module defines the main data structures used by the Scheduler.
+"""Data structures used by `Scheduler` instances.
 
 In particular, there is the definition of possible job states (job_states),
 the data structure to be filled for job submission (JobTemplate), and
 the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
-
-from enum import Enum
+import abc
+import enum
 
 from aiida.common import AIIDA_LOGGER
-from aiida.common.extendeddicts import DefaultFieldsAttributeDict
+from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
@@ -28,7 +27,7 @@ __all__ = (
 )
 
 
-class JobState(Enum):
+class JobState(enum.Enum):
     """Enumeration of possible scheduler states of a CalcJob.
 
     There is no FAILED state as every completed job is put in DONE, regardless of success.
@@ -42,14 +41,11 @@ class JobState(Enum):
     DONE = 'done'
 
 
-class JobResource(DefaultFieldsAttributeDict):
-    """
-    A class to store the job resources. It must be inherited and redefined by the specific
-    plugin, that should contain a ``_job_resource_class`` attribute pointing to the correct
-    JobResource subclass.
+class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
+    """Data structure to store job resources.
 
-    It should at least define the get_tot_num_mpiprocs() method, plus an __init__ to accept
-    its set of variables.
+    Each `Scheduler` implementation must define the `_job_resource_class` attribute to be a subclass of this class.
+    It should at least define the `get_tot_num_mpiprocs` method, plus a constructor to accept its set of variables.
 
     Typical attributes are:
 
@@ -61,40 +57,37 @@ class JobResource(DefaultFieldsAttributeDict):
     * ``tot_num_mpiprocs``
     * ``parallel_env``
 
-    The __init__ should take care of checking the values.
+    The constructor should take care of checking the values.
     The init should raise only ValueError or TypeError on invalid parameters.
     """
     _default_fields = tuple()
 
-    @classmethod
-    def accepts_default_mpiprocs_per_machine(cls):
-        """
-        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise.
+    @abc.abstractclassmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
 
-        Should be implemented in each subclass.
+        :param kwargs: dictionary of values to define the job resources
+        :raises ValueError: if the resources are invalid or incomplete
+        :return: optional tuple of parsed resource settings
         """
-        raise NotImplementedError
 
     @classmethod
     def get_valid_keys(cls):
-        """
-        Return a list of valid keys to be passed to the __init__
-        """
+        """Return a list of valid keys to be passed to the constructor."""
         return list(cls._default_fields)
 
+    @abc.abstractclassmethod
+    def accepts_default_mpiprocs_per_machine(cls):
+        """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
+
+    @abc.abstractmethod
     def get_tot_num_mpiprocs(self):
-        """
-        Return the total number of cpus of this job resource.
-        """
-        raise NotImplementedError
+        """Return the total number of cpus of this job resource."""
 
 
 class NodeNumberJobResource(JobResource):
-    """
-    An implementation of JobResource for schedulers that support
-    the specification of a number of nodes and a number of cpus per node
-    """
+    """`JobResource` for schedulers that support the specification of a number of nodes and cpus per node."""
+
     _default_fields = (
         'num_machines',
         'num_mpiprocs_per_machine',
@@ -103,205 +96,145 @@ class NodeNumberJobResource(JobResource):
     )
 
     @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        resources = AttributeDict()
+
+        def is_greater_equal_one(parameter):
+            value = getattr(resources, parameter, None)
+            if value is not None and value < 1:
+                raise ValueError('`{}` must be greater than or equal to one.'.format(parameter))
+
+        # Validate that all fields are valid integers if they are specified, otherwise initialize them to `None`
+        for parameter in list(cls._default_fields) + ['tot_num_mpiprocs']:
+            try:
+                setattr(resources, parameter, int(kwargs.pop(parameter)))
+            except KeyError:
+                setattr(resources, parameter, None)
+            except ValueError:
+                raise ValueError('`{}` must be an integer when specified'.format(parameter))
+
+        if kwargs:
+            raise ValueError('these parameters were not recognized: {}'.format(', '.join(list(kwargs.keys()))))
+
+        # At least two of the following parameters need to be defined as non-zero
+        if [resources.num_machines, resources.num_mpiprocs_per_machine, resources.tot_num_mpiprocs].count(None) > 1:
+            raise ValueError(
+                'At least two among `num_machines`, `num_mpiprocs_per_machine` or `tot_num_mpiprocs` must be specified.'
+            )
+
+        for parameter in ['num_machines', 'num_mpiprocs_per_machine']:
+            is_greater_equal_one(parameter)
+
+        # Here we now that at least two of the three required variables are defined and greater equal than one.
+        if resources.num_machines is None:
+            resources.num_machines = resources.tot_num_mpiprocs // resources.num_mpiprocs_per_machine
+        elif resources.num_mpiprocs_per_machine is None:
+            resources.num_mpiprocs_per_machine = resources.tot_num_mpiprocs // resources.num_machines
+        elif resources.tot_num_mpiprocs is None:
+            resources.tot_num_mpiprocs = resources.num_mpiprocs_per_machine * resources.num_machines
+
+        if resources.tot_num_mpiprocs != resources.num_mpiprocs_per_machine * resources.num_machines:
+            raise ValueError('`tot_num_mpiprocs` is not equal to `num_mpiprocs_per_machine * num_machines`.')
+
+        is_greater_equal_one('num_mpiprocs_per_machine')
+        is_greater_equal_one('num_machines')
+
+        return resources
+
+    def __init__(self, **kwargs):
+        """Initialize the job resources from the passed arguments.
+
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        resources = self.validate_resources(**kwargs)
+        super().__init__(resources)
+
+    @classmethod
     def get_valid_keys(cls):
-        """
-        Return a list of valid keys to be passed to the __init__
-        """
-        return super().get_valid_keys() + ['tot_num_mpiprocs', 'default_mpiprocs_per_machine']
+        """Return a list of valid keys to be passed to the constructor."""
+        return super().get_valid_keys() + ['tot_num_mpiprocs']
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
-        """
-        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise.
-        """
+        """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return True
 
-    def __init__(self, **kwargs):  # pylint: disable=too-many-branches,too-many-statements
-        """
-        Initialize the job resources from the passed arguments (the valid keys can be
-        obtained with the function self.get_valid_keys()).
-
-        Should raise only ValueError or TypeError on invalid parameters.
-        """
-        super().__init__()
-
-        try:
-            num_machines = int(kwargs.pop('num_machines'))
-        except KeyError:
-            num_machines = None
-        except ValueError:
-            raise ValueError('num_machines must an integer')
-
-        try:
-            default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine')
-            if default_mpiprocs_per_machine is not None:
-                default_mpiprocs_per_machine = int(default_mpiprocs_per_machine)
-        except KeyError:
-            default_mpiprocs_per_machine = None
-        except ValueError:
-            raise ValueError('default_mpiprocs_per_machine must an integer')
-
-        try:
-            num_mpiprocs_per_machine = int(kwargs.pop('num_mpiprocs_per_machine'))
-        except KeyError:
-            num_mpiprocs_per_machine = None
-        except ValueError:
-            raise ValueError('num_mpiprocs_per_machine must an integer')
-
-        try:
-            tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except KeyError:
-            tot_num_mpiprocs = None
-        except ValueError:
-            raise ValueError('tot_num_mpiprocs must an integer')
-
-        try:
-            self.num_cores_per_machine = int(kwargs.pop('num_cores_per_machine'))
-        except KeyError:
-            self.num_cores_per_machine = None
-        except ValueError:
-            raise ValueError('num_cores_per_machine must an integer')
-
-        try:
-            self.num_cores_per_mpiproc = int(kwargs.pop('num_cores_per_mpiproc'))
-        except KeyError:
-            self.num_cores_per_mpiproc = None
-        except ValueError:
-            raise ValueError('num_cores_per_mpiproc must an integer')
-
-        if kwargs:
-            raise TypeError(
-                'The following parameters were not recognized for '
-                'the JobResource: {}'.format(kwargs.keys())
-            )
-
-        if num_machines is None:
-            # Use default value, if not provided
-            if num_mpiprocs_per_machine is None:
-                num_mpiprocs_per_machine = default_mpiprocs_per_machine
-
-            if num_mpiprocs_per_machine is None or tot_num_mpiprocs is None:
-                raise TypeError(
-                    'At least two among num_machines, '
-                    'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified'
-                )
-            else:
-                # To avoid divisions by zero
-                if num_mpiprocs_per_machine <= 0:
-                    raise ValueError('num_mpiprocs_per_machine must be >= 1')
-                num_machines = tot_num_mpiprocs // num_mpiprocs_per_machine
-        else:
-            if tot_num_mpiprocs is None:
-                # Only set the default value if tot_num_mpiprocs is not provided.
-                # Otherwise, it means that the user provided both
-                # num_machines and tot_num_mpiprocs, and we have to ignore
-                # the default value of tot_num_mpiprocs
-                if num_mpiprocs_per_machine is None:
-                    num_mpiprocs_per_machine = default_mpiprocs_per_machine
-
-            if num_mpiprocs_per_machine is None:
-                if tot_num_mpiprocs is None:
-                    raise TypeError(
-                        'At least two among num_machines, '
-                        'num_mpiprocs_per_machine or tot_num_mpiprocs must be specified'
-                    )
-                else:
-                    # To avoid divisions by zero
-                    if num_machines <= 0:
-                        raise ValueError('num_machines must be >= 1')
-                    num_mpiprocs_per_machine = tot_num_mpiprocs // num_machines
-
-        self.num_machines = num_machines
-        self.num_mpiprocs_per_machine = num_mpiprocs_per_machine
-
-        if tot_num_mpiprocs is not None:
-            if tot_num_mpiprocs != self.num_mpiprocs_per_machine * self.num_machines:
-                raise ValueError(
-                    'tot_num_mpiprocs must be equal to '
-                    'num_mpiprocs_per_machine * num_machines, and in particular it '
-                    'should be a multiple of num_mpiprocs_per_machine and/or '
-                    'num_machines'
-                )
-
-        if self.num_mpiprocs_per_machine <= 0:
-            raise ValueError('num_mpiprocs_per_machine must be >= 1')
-        if self.num_machines <= 0:
-            raise ValueError('num_machine must be >= 1')
-
     def get_tot_num_mpiprocs(self):
-        """
-        Return the total number of cpus of this job resource.
-        """
+        """Return the total number of cpus of this job resource."""
         return self.num_machines * self.num_mpiprocs_per_machine
 
 
 class ParEnvJobResource(JobResource):
-    """
-    An implementation of JobResource for schedulers that support
-    the specification of a parallel environment (a string) + the total number of nodes
-    """
+    """`JobResource` for schedulers that support the specification of a parallel environment and number of MPI procs."""
+
     _default_fields = (
         'parallel_env',
         'tot_num_mpiprocs',
-        'default_mpiprocs_per_machine',
     )
+
+    @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        resources = AttributeDict()
+
+        try:
+            resources.parallel_env = kwargs.pop('parallel_env')
+        except KeyError:
+            raise ValueError('`parallel_env` must be specified and must be a string')
+        else:
+            if not isinstance(resources.parallel_env, str):
+                raise ValueError('`parallel_env` must be specified and must be a string')
+
+        try:
+            resources.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
+        except (KeyError, ValueError):
+            raise ValueError('`tot_num_mpiprocs` must be specified and must be an integer')
+
+        if resources.tot_num_mpiprocs < 1:
+            raise ValueError('`tot_num_mpiprocs` must be greater than or equal to one.')
+
+        if kwargs:
+            raise ValueError('these parameters were not recognized: {}'.format(', '.join(list(kwargs.keys()))))
+
+        return resources
 
     def __init__(self, **kwargs):
         """
         Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
-        :raise ValueError: on invalid parameters.
-        :raise TypeError: on invalid parameters.
-        :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
-            computer, since ParEnvJobResource cannot accept this parameter.
+        :raises ValueError: if the resources are invalid or incomplete
         """
-        from aiida.common.exceptions import ConfigurationError
-        super().__init__()
-
-        try:
-            self.parallel_env = str(kwargs.pop('parallel_env'))
-        except (KeyError, TypeError, ValueError):
-            raise TypeError("'parallel_env' must be specified and must be a string")
-
-        try:
-            self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except (KeyError, ValueError):
-            raise TypeError('tot_num_mpiprocs must be specified and must be an integer')
-
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
-        if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError(
-                'default_mpiprocs_per_machine cannot be set '
-                'for schedulers that use ParEnvJobResource'
-            )
-
-        if self.tot_num_mpiprocs <= 0:
-            raise ValueError('tot_num_mpiprocs must be >= 1')
-
-    def get_tot_num_mpiprocs(self):
-        """
-        Return the total number of cpus of this job resource.
-        """
-        return self.tot_num_mpiprocs
+        resources = self.validate_resources(**kwargs)
+        super().__init__(resources)
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
-        """
-        Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
-        key, False otherwise.
-        """
+        """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return False
+
+    def get_tot_num_mpiprocs(self):
+        """Return the total number of cpus of this job resource."""
+        return self.tot_num_mpiprocs
 
 
 class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-attributes
-    """
-    A template for submitting jobs. This contains all required information
-    to create the job header.
+    """A template for submitting jobs to a scheduler.
 
-    The required fields are: working_directory, job_name, num_machines,
-      num_mpiprocs_per_machine, argv.
+    This contains all required information to create the job header.
+
+    The required fields are: working_directory, job_name, num_machines, num_mpiprocs_per_machine, argv.
 
     Fields:
 

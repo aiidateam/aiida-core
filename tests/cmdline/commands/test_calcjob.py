@@ -37,7 +37,7 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.engine import ProcessState
 
         cls.computer = orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()

@@ -69,7 +69,7 @@ class AiidaTestImplementation(ABC):
     def create_computer(self):
         """This method creates and stores a computer."""
         self.computer = orm.Computer(
-            name='localhost',
+            label='localhost',
             hostname='localhost',
             transport_type='local',
             scheduler_type='pbspro',

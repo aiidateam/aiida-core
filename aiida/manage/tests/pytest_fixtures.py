@@ -94,15 +94,15 @@ def aiida_localhost(temp_dir):
     from aiida.orm import Computer
     from aiida.common.exceptions import NotExistent
 
-    name = 'localhost-test'
+    label = 'localhost-test'
 
     try:
-        computer = Computer.objects.get(name=name)
+        computer = Computer.objects.get(label=label)
     except NotExistent:
         computer = Computer(
-            name=name,
+            label=label,
             description='localhost computer set up by test manager',
-            hostname=name,
+            hostname=label,
             workdir=temp_dir,
             transport_type='local',
             scheduler_type='direct'

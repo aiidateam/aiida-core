@@ -146,13 +146,13 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options, input=user_input)
         self.assertIsNone(result.exception, msg='There was an unexpected exception. Output: {}'.format(result.output))
 
-        new_computer = orm.Computer.objects.get(name=label)
+        new_computer = orm.Computer.objects.get(label=label)
         self.assertIsInstance(new_computer, orm.Computer)
 
         self.assertEqual(new_computer.description, options_dict_full['description'])
         self.assertEqual(new_computer.hostname, options_dict_full['hostname'])
-        self.assertEqual(new_computer.get_transport_type(), options_dict_full['transport'])
-        self.assertEqual(new_computer.get_scheduler_type(), options_dict_full['scheduler'])
+        self.assertEqual(new_computer.transport_type, options_dict_full['transport'])
+        self.assertEqual(new_computer.scheduler_type, options_dict_full['scheduler'])
         self.assertEqual(new_computer.get_mpirun_command(), options_dict_full['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict_full['shebang'])
         self.assertEqual(new_computer.get_workdir(), options_dict_full['work-dir'])
@@ -173,13 +173,13 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertIsNone(result.exception, result.output[-1000:])
-        new_computer = orm.Computer.objects.get(name=options_dict['label'])
+        new_computer = orm.Computer.objects.get(label=options_dict['label'])
         self.assertIsInstance(new_computer, orm.Computer)
 
         self.assertEqual(new_computer.description, options_dict['description'])
         self.assertEqual(new_computer.hostname, options_dict['hostname'])
-        self.assertEqual(new_computer.get_transport_type(), options_dict['transport'])
-        self.assertEqual(new_computer.get_scheduler_type(), options_dict['scheduler'])
+        self.assertEqual(new_computer.transport_type, options_dict['transport'])
+        self.assertEqual(new_computer.scheduler_type, options_dict['scheduler'])
         self.assertEqual(new_computer.get_mpirun_command(), options_dict['mpirun-command'].split())
         self.assertEqual(new_computer.get_shebang(), options_dict['shebang'])
         self.assertEqual(new_computer.get_workdir(), options_dict['work-dir'])
@@ -203,7 +203,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         self.assertIsNone(result.exception, result.output[-1000:])
 
-        new_computer = orm.Computer.objects.get(name=options_dict['label'])
+        new_computer = orm.Computer.objects.get(label=options_dict['label'])
         self.assertIsInstance(new_computer, orm.Computer)
         self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
 
@@ -218,7 +218,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
 
         self.assertIsNone(result.exception, result.output[-1000:])
 
-        new_computer = orm.Computer.objects.get(name=options_dict['label'])
+        new_computer = orm.Computer.objects.get(label=options_dict['label'])
         self.assertIsInstance(new_computer, orm.Computer)
         self.assertIsNone(new_computer.get_default_mpiprocs_per_machine())
 
@@ -298,7 +298,7 @@ scheduler: direct
             result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Computer.objects.get(name=label), orm.Computer)
+        self.assertIsInstance(orm.Computer.objects.get(label=label), orm.Computer)
 
 
 class TestVerdiComputerConfigure(AiidaTestCase):
@@ -529,7 +529,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         super().setUpClass(*args, **kwargs)
         cls.computer_name = 'comp_cli_test_computer'
         cls.comp = orm.Computer(
-            name=cls.computer_name,
+            label=cls.computer_name,
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
@@ -638,9 +638,9 @@ class TestVerdiComputerCommands(AiidaTestCase):
         # Check that the name really was changed
         # The old name should not be available
         with self.assertRaises(NotExistent):
-            orm.Computer.objects.get(name='comp_cli_test_computer')
+            orm.Computer.objects.get(label='comp_cli_test_computer')
         # The new name should be avilable
-        orm.Computer.objects.get(name='renamed_test_computer')
+        orm.Computer.objects.get(label='renamed_test_computer')
 
         # Now change the name back
         options = ['renamed_test_computer', 'comp_cli_test_computer']
@@ -651,9 +651,9 @@ class TestVerdiComputerCommands(AiidaTestCase):
         # Check that the name really was changed
         # The old name should not be available
         with self.assertRaises(NotExistent):
-            orm.Computer.objects.get(name='renamed_test_computer')
+            orm.Computer.objects.get(label='renamed_test_computer')
         # The new name should be avilable
-        orm.Computer.objects.get(name='comp_cli_test_computer')
+        orm.Computer.objects.get(label='comp_cli_test_computer')
 
     def test_computer_delete(self):
         """
@@ -663,7 +663,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
 
         # Setup a computer to delete during the test
         orm.Computer(
-            name='computer_for_test_delete',
+            label='computer_for_test_delete',
             hostname='localhost',
             transport_type='local',
             scheduler_type='direct',
@@ -683,7 +683,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         self.assertClickResultNoException(result)
         # Check that the computer really was deleted
         with self.assertRaises(NotExistent):
-            orm.Computer.objects.get(name='computer_for_test_delete')
+            orm.Computer.objects.get(label='computer_for_test_delete')
 
     def test_computer_duplicate_interactive(self):
         """Test 'verdi computer duplicate' in interactive mode."""
@@ -696,11 +696,11 @@ class TestVerdiComputerCommands(AiidaTestCase):
         )
         self.assertIsNone(result.exception, result.output)
 
-        new_computer = orm.Computer.objects.get(name=label)
+        new_computer = orm.Computer.objects.get(label=label)
         self.assertEqual(self.comp.description, new_computer.description)
-        self.assertEqual(self.comp.get_hostname(), new_computer.get_hostname())
-        self.assertEqual(self.comp.get_transport_type(), new_computer.get_transport_type())
-        self.assertEqual(self.comp.get_scheduler_type(), new_computer.get_scheduler_type())
+        self.assertEqual(self.comp.hostname, new_computer.hostname)
+        self.assertEqual(self.comp.transport_type, new_computer.transport_type)
+        self.assertEqual(self.comp.scheduler_type, new_computer.scheduler_type)
         self.assertEqual(self.comp.get_shebang(), new_computer.get_shebang())
         self.assertEqual(self.comp.get_workdir(), new_computer.get_workdir())
         self.assertEqual(self.comp.get_mpirun_command(), new_computer.get_mpirun_command())
@@ -717,11 +717,11 @@ class TestVerdiComputerCommands(AiidaTestCase):
         )
         self.assertIsNone(result.exception, result.output)
 
-        new_computer = orm.Computer.objects.get(name=label)
+        new_computer = orm.Computer.objects.get(label=label)
         self.assertEqual(self.comp.description, new_computer.description)
-        self.assertEqual(self.comp.get_hostname(), new_computer.get_hostname())
-        self.assertEqual(self.comp.get_transport_type(), new_computer.get_transport_type())
-        self.assertEqual(self.comp.get_scheduler_type(), new_computer.get_scheduler_type())
+        self.assertEqual(self.comp.hostname, new_computer.hostname)
+        self.assertEqual(self.comp.transport_type, new_computer.transport_type)
+        self.assertEqual(self.comp.scheduler_type, new_computer.scheduler_type)
         self.assertEqual(self.comp.get_shebang(), new_computer.get_shebang())
         self.assertEqual(self.comp.get_workdir(), new_computer.get_workdir())
         self.assertEqual(self.comp.get_mpirun_command(), new_computer.get_mpirun_command())
@@ -744,13 +744,13 @@ def test_interactive(clear_database_before_test, aiida_localhost, non_interactiv
     result = CliRunner().invoke(computer_setup, input=user_input)
     assert result.exception is None, 'There was an unexpected exception. Output: {}'.format(result.output)
 
-    new_computer = orm.Computer.objects.get(name=label)
+    new_computer = orm.Computer.objects.get(label=label)
     assert isinstance(new_computer, orm.Computer)
 
     assert new_computer.description == options_dict['description']
     assert new_computer.hostname == options_dict['hostname']
-    assert new_computer.get_transport_type() == options_dict['transport']
-    assert new_computer.get_scheduler_type() == options_dict['scheduler']
+    assert new_computer.transport_type == options_dict['transport']
+    assert new_computer.scheduler_type == options_dict['scheduler']
     assert new_computer.get_mpirun_command() == options_dict['mpirun-command'].split()
     assert new_computer.get_shebang() == options_dict['shebang']
     assert new_computer.get_workdir() == options_dict['work-dir']

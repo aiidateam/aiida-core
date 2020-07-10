@@ -125,8 +125,8 @@ The computer has now been created in the database but you still need to *configu
 
 .. _how-to:run-codes:computer:configuration:
 
-Computer configuration
-----------------------
+Computer connection configuration
+---------------------------------
 
 The second step configures private connection details using:
 
@@ -144,6 +144,38 @@ After the setup and configuration have been completed, let's check that everythi
 
 This command will perform various tests to make sure that AiiDA can connect to the computer, create new files in the scratch directory, retrieve files and query the job scheduler.
 
+.. _how-to:run-codes:computer:performance:
+
+Computer performance configuration
+----------------------------------
+
+Some compute resources, particularly large supercomputing centres, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently or opening too many SSH connections.
+
+  * Limit the number of jobs in the queue.
+
+    Set yourself a limit for the maximum number of workflows to submit, and submit new ones only once previous workflows start to complete (in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_).
+    The supported number of jobs depends on your supercomputer - discuss this with your supercomputer administrators (`this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ may contain useful information for them).
+
+  * Increase the time interval between polling the job queue.
+
+    The time interval (in seconds) can be set through the python API by loading the corresponding |Computer| node, e.g. in the ``verdi shell``:
+
+    .. code-block:: python
+
+        load_computer('fidis').set_minimum_job_poll_interval(30.0)
+
+  * Increase the connection cooldown time.
+
+    This is the minimum time (in seconds) to wait between opening a new connection.
+    Modify it for an existing computer using:
+
+    .. code-block:: bash
+
+      verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+
+.. important::
+
+    The two intervals apply *per daemon worker*, i.e. doubling the number of workers may end up putting twice the load on the remote computer.
 
 Managing your computers
 -----------------------
@@ -179,40 +211,6 @@ Doing so will prevent AiiDA from connecting to the given computer to check the s
 
    $ verdi computer disable COMPUTERLABEL
    $ verdi computer enable COMPUTERLABEL
-
-.. _how-to:run-codes:supercomputers:
-
-Running on supercomputers
--------------------------
-
-Some compute resources, particularly large supercomputing centres, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently or opening too many SSH connections.
-
-  * Limit the number of jobs in the queue.
-
-    Set yourself a limit for the maximum number of workflows to submit, and submit new ones only once previous workflows start to complete (in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_).
-    The supported number of jobs depends on your supercomputer - discuss this with your supercomputer administrators (`this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ may contain useful information for them).
-
-  * Increase the time interval between polling the job queue.
-
-    The time interval (in seconds) can be set through the python API by loading the corresponding |Computer| node, e.g. in the ``verdi shell``:
-
-    .. code-block:: python
-
-        load_computer('fidis').set_minimum_job_poll_interval(30.0)
-
-
-  * Increase the connection cooldown time.
-
-    This is the minimum time (in seconds) to wait between opening a new connection.
-    Modify it for an existing computer using:
-
-    .. code-block:: bash
-
-      verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
-
-.. important::
-
-    The two intervals apply *per daemon worker*, i.e. doubling the number of workers may end up putting twice the load on the remote computer.
 
 .. _how-to:run-codes:code:
 

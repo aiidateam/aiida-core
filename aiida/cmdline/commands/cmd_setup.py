@@ -168,4 +168,6 @@ def quicksetup(
         'db_password': db_password,
         'repository': repository,
     }
+    # we remove None values, because invoke appears to parse it as a string, i.e None -> "None"
+    setup_parameters = {k: v for k, v in setup_parameters.items() if v is not None}
     ctx.invoke(setup, **setup_parameters)

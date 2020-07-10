@@ -19,8 +19,8 @@ In these prompts:
 
 .. note::
 
-  The ``verdi`` commands use ``readline`` extensions to provide default answers, which require an advanced terminal.
-  Use a standard terminal -- terminals embedded in some text editors (such as ``emacs``) have been known to cause problems.
+    The ``verdi`` commands use ``readline`` extensions to provide default answers, which require an advanced terminal.
+    Use a standard terminal -- terminals embedded in some text editors (such as ``emacs``) have been known to cause problems.
 
 .. _how-to:run-codes:computer:
 
@@ -69,7 +69,7 @@ Start by creating a new computer instance in the database:
 
 .. code-block:: console
 
-   $ verdi computer setup
+    $ verdi computer setup
 
 At the end, the command will open your default editor on a file containing a summary of the configuration up to this point.
 You can add ``bash`` commands that will be executed
@@ -81,12 +81,12 @@ Use these additional lines to perform any further set up of the environment on t
 
 .. code-block:: bash
 
-   export NEWVAR=1
-   source some/file
+    export NEWVAR=1
+    source some/file
 
 .. note::
 
-   Don't specify settings here that are specific to a code or calculation: you can set further pre-execution commands at the ``Code`` and even ``CalcJob`` level.
+    Don't specify settings here that are specific to a code or calculation: you can set further pre-execution commands at the ``Code`` and even ``CalcJob`` level.
 
 When you are done editing, save and quit.
 The computer has now been created in the database but you still need to *configure* access to it using your credentials.
@@ -121,7 +121,7 @@ The computer has now been created in the database but you still need to *configu
 
       $ verdi computer setup --help
 
-   Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
+    Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
 
 .. _how-to:run-codes:computer:configuration:
 
@@ -132,7 +132,7 @@ The second step configures private connection details using:
 
 .. code-block:: console
 
-   $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
+    $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
 Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``local`` for the localhost computer and ``ssh`` for any remote computer.
 
@@ -140,7 +140,7 @@ After the setup and configuration have been completed, let's check that everythi
 
 .. code-block:: console
 
-   $ verdi computer test COMPUTERNAME
+    $ verdi computer test COMPUTERNAME
 
 This command will perform various tests to make sure that AiiDA can connect to the computer, create new files in the scratch directory, retrieve files and query the job scheduler.
 
@@ -152,33 +152,33 @@ Fully configured computers can be listed with:
 
 .. code-block:: console
 
-   $ verdi computer list
+    $ verdi computer list
 
 To get detailed information on the specific computer named ``COMPUTERLABEL``:
 
 .. code-block:: console
 
-   $ verdi computer show COMPUTERLABEL
+    $ verdi computer show COMPUTERLABEL
 
 To rename a computer or remove it from the database:
 
 .. code-block:: console
 
-   $ verdi computer rename OLDCOMPUTERLABEL NEWCOMPUTERLABEL
-   $ verdi computer delete COMPUTERLABEL
+    $ verdi computer rename OLDCOMPUTERLABEL NEWCOMPUTERLABEL
+    $ verdi computer delete COMPUTERLABEL
 
 .. note::
 
-   Before deleting a |Computer|, you will need to delete *all* nodes linked to it (e.g. any ``CalcJob`` and ``RemoteData`` nodes).
-   Otherwise, AiiDA will prevent you from doing so in order to preserve provenance.
+    Before deleting a |Computer|, you will need to delete *all* nodes linked to it (e.g. any ``CalcJob`` and ``RemoteData`` nodes).
+    Otherwise, AiiDA will prevent you from doing so in order to preserve provenance.
 
 If a remote machine is under maintenance (or no longer operational), you may want to **disable** the corresponding |Computer|.
 Doing so will prevent AiiDA from connecting to the given computer to check the state of calculations or to submit new calculations.
 
 .. code-block:: console
 
-   $ verdi computer disable COMPUTERLABEL
-   $ verdi computer enable COMPUTERLABEL
+    $ verdi computer disable COMPUTERLABEL
+    $ verdi computer enable COMPUTERLABEL
 
 For further hints on tuning the configuration of your computers, see :ref:`how-to:installation:supercomputers`
 
@@ -204,7 +204,7 @@ To setup a new code, execute:
 
 .. code-block:: console
 
-   $ verdi code setup
+    $ verdi code setup
 
 and you will be guided through a process to setup your code.
 
@@ -238,37 +238,37 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 .. admonition:: Using configuration files
     :class: tip title-icon-lightbulb
 
-  Analogous to a :ref:`computer setup <how-to:run-codes:computer>`, some (or all) the information described above can be provided via a configuration file:
+    Analogous to a :ref:`computer setup <how-to:run-codes:computer>`, some (or all) the information described above can be provided via a configuration file:
 
-  .. code-block:: console
+    .. code-block:: console
 
-     $ verdi code setup --config code.yml
+        $ verdi code setup --config code.yml
 
-  where ``code.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
+    where ``code.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
 
-  This file contains the information in a series of key:value pairs:
+    This file contains the information in a series of key:value pairs:
 
-  .. code-block:: yaml
+    .. code-block:: yaml
 
-      ---
-      label: "qe-6.3-pw"
-      description: "quantum_espresso v6.3"
-      input_plugin: "quantumespresso.pw"
-      on_computer: true
-      remote_abs_path: "/path/to/code/pw.x"
-      computer: "localhost"
-      prepend_text: |
+        ---
+        label: "qe-6.3-pw"
+        description: "quantum_espresso v6.3"
+        input_plugin: "quantumespresso.pw"
+        on_computer: true
+        remote_abs_path: "/path/to/code/pw.x"
+        computer: "localhost"
+        prepend_text: |
         module load module1
         module load module2
-      append_text: " "
+        append_text: " "
 
-  The list of the keys for the ``yaml`` file is given by the available options of the ``code setup`` command:
+    The list of the keys for the ``yaml`` file is given by the available options of the ``code setup`` command:
 
-  .. code-block:: console
+        .. code-block:: console
 
-    $ verdi code setup --help
+            $ verdi code setup --help
 
-  Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
+    Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
 
 Managing codes
 --------------
@@ -277,7 +277,7 @@ You can change the label of a code by using the following command:
 
 .. code-block:: console
 
-  $ verdi code relabel <IDENTIFIER> "new-label"
+    $ verdi code relabel <IDENTIFIER> "new-label"
 
 where <IDENTIFIER> can be the numeric *PK*, the *UUID* or the label of the code (either ``label`` or ``label@computername``) if the label is unique.
 
@@ -285,7 +285,7 @@ You can also list all available codes and their identifiers with:
 
 .. code-block:: console
 
-  $ verdi code list
+    $ verdi code list
 
 which also accepts flags to filter only codes on a given computer, or only codes using a specific plugin, etc. (use the ``-h`` option).
 
@@ -293,26 +293,26 @@ You can get the information of a specific code with:
 
 .. code-block:: console
 
-  $ verdi code show <IDENTIFIER>
+    $ verdi code show <IDENTIFIER>
 
 Finally, to delete a code use:
 
 .. code-block:: console
 
-  $ verdi code delete <IDENTIFIER>
+    $ verdi code delete <IDENTIFIER>
 
 (only if it wasn't used by any calculation, otherwise an exception is raised).
 
 .. note::
 
-  Codes are a subclass of :py:class:`Node <aiida.orm.nodes.Node>` and, as such, you can attach ``extras`` to a code, for example:
+    Codes are a subclass of :py:class:`Node <aiida.orm.nodes.Node>` and, as such, you can attach ``extras`` to a code, for example:
 
-  .. code-block:: python
+    .. code-block:: python
 
-      load_code('<IDENTIFIER>').set_extra('version', '6.1')
-      load_code('<IDENTIFIER>').set_extra('family', 'cp2k')
+        load_code('<IDENTIFIER>').set_extra('version', '6.1')
+        load_code('<IDENTIFIER>').set_extra('family', 'cp2k')
 
-  These can be useful for querying, for instance in order to find all runs done with the CP2K code of version 6.1 or later.
+    These can be useful for querying, for instance in order to find all runs done with the CP2K code of version 6.1 or later.
 
 .. _how-to:run-codes:submit:
 
@@ -357,24 +357,150 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
  * Submit your calculation to the AiiDA daemon:
 
-   .. code-block:: bash
+    .. code-block:: bash
 
-       verdi run submit.py
+        verdi run submit.py
 
 After this, use ``verdi process list`` to monitor the status of the calculations.
 
 See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:monitoring` for more details.
 
-.. todo::
-
-    .. _how-to:run-codes:caching:
-
-    title: Using caching to save computational resources
-
-    `#3988`_
 
 
-.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.Code`
+.. _how-to:run-codes:caching:
+
+How to save computational resources using caching
+=================================================
+
+There are numerous reasons why you might need to re-run calculations you have already run before.
+Maybe you run a great number of complex workflows in high-throughput that each may repeat the same calculation, or you may have to restart an entire workflow that failed somewhere half-way through.
+Since AiiDA stores the full provenance of each calculation, it can detect whether a calculation has been run before and, instead of running it again, simply reuse its outputs, thereby saving valuable computational resources.
+This is what we mean by **caching** in AiiDA.
+
+.. _how-to:run-codes:caching:enable:
+
+How to enable caching
+---------------------
+
+Caching is **not enabled by default**.
+The reason is that it is designed to work in an unobtrusive way and simply save time and valuable computational resources.
+However, this design is a double-egded sword, in that a user that might not be aware of this functionality, can be caught off guard by the results of their calculations.
+
+.. important::
+
+    The caching mechanism comes with some limitations and caveats that are important to understand.
+    Refer to the :ref:`topics:provenance:caching:limitations` section for more details.
+
+In order to enable caching for your profile (here called ``aiida_profile``), place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder:
+
+.. code-block:: yaml
+
+    aiida_profile:
+        default: True
+
+From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
+If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
+
+In order to ensure that the provenance graph with and without caching is the same, AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
+
+.. _fig_caching:
+.. figure:: include/images/caching.png
+    :align: center
+    :height: 350px
+
+    When reusing the results of a calculation **C** for a new calculation **C'**, AiiDA simply makes a copy of the result nodes and links them up as usual.
+
+.. note::
+
+    AiiDA uses the *hashes* of the input nodes **D1** and **D2** when searching the calculation cache.
+    That is to say, if the input of **C'** were new nodes **D1'** and **D2'** with the same content (hash) as **D1**, **D2**, the cache would trigger as well.
+
+.. _how-to:run-codes:caching:configure:
+
+How to configure caching
+------------------------
+
+The caching mechanism can be configured on a process class level, meaning the rules will automatically be applied to all instances of the given class, or on a per-instance level, meaning it can be controlled for individual process instances when they are launch.
+
+Class level
+...........
+
+Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculations using their corresponding entry point strings (see the output of ``verdi plugin list aiida.calculations``):
+
+.. code-block:: yaml
+
+    aiida_profile:
+        default: False
+        enabled:
+            - aiida.calculations:quantumespresso.pw
+        disabled:
+            - aiida.calculations:templatereplacer
+
+In this example, where ``aiida_profile`` is the name of the profile, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by its corresponding ``aiida.calculations:quantumespresso.pw`` entry point string.
+It also shows how to disable caching for particular calculations (which has no effect here due to the profile-wide default).
+
+For calculations which do not have an entry point, you need to specify the fully qualified Python name instead.
+For example, the ``seekpath_structure_analysis`` calcfunction defined in ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis`` is labeled as ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis.seekpath_structure_analysis``.
+From an existing :class:`~aiida.orm.nodes.process.calculation.CalculationNode`, you can get the identifier string through the ``process_type`` attribute.
+
+The caching configuration also accepts ``*`` wildcards.
+For example, the following configuration enables caching for all calculation entry points defined by ``aiida-quantumespresso``, and the ``seekpath_structure_analysis`` calcfunction.
+Note that the ``*.seekpath_structure_analysis`` entry needs to be quoted, because it starts with ``*`` which is a special character in YAML.
+
+.. code-block:: yaml
+
+    aiida_profile:
+        default: False
+        enabled:
+            - aiida.calculations:quantumespresso.*
+            - '*.seekpath_structure_analysis'
+
+Any entry with a wildcard is overridden by a more specific entry.
+The following configuration enables caching for all ``aiida.calculation`` entry points, except those of ``aiida-quantumespresso``:
+
+.. code-block:: yaml
+
+    aiida_profile:
+        default: False
+        enabled:
+            - aiida.calculations:*
+        disabled:
+            - aiida.calculations:quantumespresso.*
+
+
+Instance level
+..............
+
+Caching can be enabled or disabled on a case-by-case basis by using the :class:`~aiida.manage.caching.enable_caching` or :class:`~aiida.manage.caching.disable_caching` context manager, respectively, regardless of the profile settings:
+
+.. code-block:: python
+
+    from aiida.engine import run
+    from aiida.manage.caching import enable_caching
+    with enable_caching(identifier='aiida.calculations:templatereplacer'):
+        run(...)
+
+.. warning::
+
+    This affects only the current Python interpreter and won't change the behavior of the daemon workers.
+    This means that this technique is only useful when using :py:class:`~aiida.engine.run`, and **not** with :py:class:`~aiida.engine.submit`.
+
+If you suspect a node is being reused in error (e.g. during development), you can also manually *prevent* a specific node from being reused:
+
+#. Load one of the nodes you suspect to be a clone.
+   Check that :meth:`~aiida.orm.nodes.Node.get_cache_source` returns a UUID.
+   If it returns `None`, the node was not cloned.
+
+#. Clear the hashes of all nodes that are considered identical to this node:
+
+    .. code:: python
+
+        for node in node.get_all_same_nodes():
+            node.clear_hash()
+
+#. Run your calculation again.
+   The node in question should no longer be reused.
+
+
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
-.. _#3988: https://github.com/aiidateam/aiida-core/issues/3988

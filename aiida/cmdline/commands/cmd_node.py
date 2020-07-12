@@ -58,7 +58,7 @@ def repo_cat(node, relative_path):
 
 @verdi_node_repo.command('ls')
 @arguments.NODE()
-@click.argument('relative_path', type=str, default='.')
+@click.argument('relative_path', type=str, required=False)
 @click.option('-c', '--color', 'color', flag_value=True, help='Use different color for folders and files.')
 @with_dbenv()
 def repo_ls(node, relative_path, color):

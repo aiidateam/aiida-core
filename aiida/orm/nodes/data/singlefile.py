@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data class that can be used to store a single file in its repository."""
+import contextlib
 import inspect
 import os
 import warnings
@@ -57,34 +58,19 @@ class SinglefileData(Data):
         """
         return self.get_attribute('filename')
 
-    def open(self, path=None, mode='r', key=None):
+    @contextlib.contextmanager
+    def open(self, path=None, mode='r'):
         """Return an open file handle to the content of this data node.
 
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Starting from `v2.0.0` this will raise if not used in a context manager.
-
         :param path: the relative path of the object within the repository.
-        :param key: optional key within the repository, by default is the `filename` set in the attributes
         :param mode: the mode with which to open the file handle (default: read mode)
         :return: a file handle
         """
-        from ..node import WarnWhenNotEntered
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
         if path is None:
             path = self.filename
 
-        return WarnWhenNotEntered(self._repository.open(path, mode=mode), repr(self))
+        with super().open(path, mode=mode) as handle:
+            yield handle
 
     def get_content(self):
         """Return the content of the single file stored for this data node.
@@ -130,7 +116,7 @@ class SinglefileData(Data):
             pass
 
         if is_filelike:
-            self.put_object_from_filelike(file, key, mode='wb')
+            self.put_object_from_filelike(file, key)
         else:
             self.put_object_from_file(file, key)
 

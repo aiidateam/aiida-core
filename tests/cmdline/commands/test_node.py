@@ -216,8 +216,9 @@ class TestVerdiNode(AiidaTestCase):
     def test_node_repo_cat(self):
         """Test 'verdi node repo cat' command."""
         # Test cat binary files
-        folder_node = self.get_unstored_folder_node()
-        folder_node.put_object_from_filelike(io.BytesIO(gzip.compress(b'COMPRESS')), 'filename.txt.gz', mode='wb')
+        folder_node = orm.FolderData()
+        bytestream = gzip.compress(b'COMPRESS')
+        folder_node.put_object_from_filelike(io.BytesIO(bytestream), 'filename.txt.gz')
         folder_node.store()
 
         options = [str(folder_node.pk), 'filename.txt.gz']

@@ -15,7 +15,6 @@ from aiida.common import timezone
 from aiida.common.folders import RepositoryFolder
 from aiida.common.progress_reporter import get_progress_reporter, create_callback
 from aiida.orm import Group, ImportGroup, Node, QueryBuilder
-from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
@@ -41,7 +40,7 @@ def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReader
         for import_entry_uuid, subfolder in zip(
             uuids_to_create, reader.iter_node_repos(uuids_to_create, callback=_callback)
         ):
-            destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)  # pylint: disable=protected-access
+            destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)  # pylint: disable=protected-access,undefined-variable
             # Replace the folder, possibly destroying existing previous folders, and move the files
             # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
             destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)

@@ -56,7 +56,7 @@ class FunctionCalculationMixin:
         try:
             source_file_path = inspect.getsourcefile(func)
             with open(source_file_path, 'rb') as handle:
-                self.put_object_from_filelike(handle, self.FUNCTION_SOURCE_FILE_PATH, mode='wb', encoding=None)
+                self.put_object_from_filelike(handle, self.FUNCTION_SOURCE_FILE_PATH)
         except (IOError, OSError):
             pass
 

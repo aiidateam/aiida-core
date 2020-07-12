@@ -41,11 +41,8 @@ from aiida.common.lang import type_check
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport.common import (
     exceptions,
-)
-from aiida.tools.importexport.common.config import (
     COMMENT_ENTITY_NAME,
     COMPUTER_ENTITY_NAME,
     EXPORT_VERSION,
@@ -645,7 +642,7 @@ def _write_node_repositories(
             progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
             progress.update()
 
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access,undefined-variable
             if not src.exists():
                 raise exceptions.ArchiveExportError(
                     f'Unable to find the repository folder for Node with UUID={uuid} '

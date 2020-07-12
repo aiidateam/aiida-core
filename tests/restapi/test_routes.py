@@ -9,8 +9,8 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Unittests for REST API."""
+import io
 
-import tempfile
 from flask_cors.core import ACL_ORIGIN
 
 from aiida import orm
@@ -75,14 +75,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
-
-        aiida_in = 'The input file\nof the CalcJob node'
-        # Add the calcjob_inputs folder with the aiida.in file to the CalcJobNode repository
-        with tempfile.NamedTemporaryFile(mode='w+') as handle:
-            handle.write(aiida_in)
-            handle.flush()
-            handle.seek(0)
-            calc.put_object_from_filelike(handle, 'calcjob_inputs/aiida.in')
+        calc.put_object_from_filelike(io.BytesIO(b'The input file\nof the CalcJob node'), 'calcjob_inputs/aiida.in')
         calc.store()
 
         # create log message for calcjob
@@ -103,14 +96,9 @@ class RESTApiTestCase(AiidaTestCase):
         }
         Log(**log_record)
 
-        aiida_out = 'The output file\nof the CalcJob node'
         retrieved_outputs = orm.FolderData()
-        # Add the calcjob_outputs folder with the aiida.out file to the FolderData node
-        with tempfile.NamedTemporaryFile(mode='w+') as handle:
-            handle.write(aiida_out)
-            handle.flush()
-            handle.seek(0)
-            retrieved_outputs.put_object_from_filelike(handle, 'calcjob_outputs/aiida.out')
+        stream = io.BytesIO(b'The output file\nof the CalcJob node')
+        retrieved_outputs.put_object_from_filelike(stream, 'calcjob_outputs/aiida.out')
         retrieved_outputs.store()
         retrieved_outputs.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
 

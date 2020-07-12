@@ -48,6 +48,7 @@ class TestCalcJobNode(AiidaTestCase):
 
                 if with_file:
                     retrieved.put_object_from_filelike(io.StringIO(stdout), option_value)
+                    retrieved.repository_metadata = retrieved.repository_serialize()
                 if with_option:
                     node.set_option(option_key, option_value)
                 node.store()
@@ -73,6 +74,7 @@ class TestCalcJobNode(AiidaTestCase):
 
                 if with_file:
                     retrieved.put_object_from_filelike(io.StringIO(stderr), option_value)
+                    retrieved.repository_metadata = retrieved.repository_serialize()
                 if with_option:
                     node.set_option(option_key, option_value)
                 node.store()

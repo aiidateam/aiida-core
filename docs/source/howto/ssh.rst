@@ -157,6 +157,22 @@ Try logging in to the remote computer; it should no longer require a passphrase.
 The key and its corresponding passphrase are now stored by the agent until it is stopped.
 After a reboot, remember to run ``ssh-add ~/.ssh/aiida`` again before starting the AiiDA daemon.
 
+Integrating the ssh-agent with keychain on OSX
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+On OSX Sierra and later, the native ``ssh-add`` client allows passphrases to be stored persistently in the `OSX keychain <https://support.apple.com/en-gb/guide/keychain-access/kyca1083/mac>`__. You can store the passphrase to keychain using the OSX only ``-k`` argument:
+
+.. code:: bash
+
+    ssh-add -k ~/.ssh/aiida
+
+Then to tell SSH to look in your OSX keychain for key passphrases, you must specify in your ``~/.ssh/config``:
+
+.. code:: bash
+
+   Host *
+      UseKeychain yes
+
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 

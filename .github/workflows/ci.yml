@@ -144,7 +144,7 @@ jobs:
         name: aiida-pytests-py3.5-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
-        fail_ci_if_error: true
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
   verdi:
 

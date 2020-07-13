@@ -379,7 +379,6 @@ With the entry points set up, you are ready to launch your first calculation wit
     .. code-block:: console
 
         $ verdi run launch.py
-        Calculation completed: uuid: 607d50ba-5396-411c-8bac-563b71dbaff4 (pk: 229) (calcjob.ArithmeticAddCalculation)
         Parsing completed. Result: 9
 
 .. tip::
@@ -391,9 +390,9 @@ Finally instead of running your calculation in the current shell, you can submit
 
  * (Re)start the daemon to update its Python environment:
 
-   .. code-block:: console
+    .. code-block:: console
 
-      $ verdi daemon restart --reset
+        $ verdi daemon restart --reset
 
  * Update your launch script to use:
 
@@ -414,6 +413,7 @@ Finally instead of running your calculation in the current shell, you can submit
 
         $ verdi run launch.py
 
+    This should print the UUID and the PK of the submitted calculation.
 
 You can use the verdi command line interface to :ref:`monitor<topics:processes:usage:monitoring>` this processes:
 
@@ -426,6 +426,7 @@ This marks the end of this how-to.
 
 The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-add`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins` in order to learn how to quickly create a feature-rich new plugin package from scratch.
+
 
 .. todo::
 

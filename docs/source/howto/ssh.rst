@@ -167,7 +167,7 @@ Store the passphrase in the keychain using the OSX-specific ``-k`` argument:
 
     ssh-add -k ~/.ssh/aiida
 
-Then to tell SSH to look in your OSX keychain for key passphrases, you must specify in your ``~/.ssh/config``:
+To instruct ssh to look in the OSX keychain for key passphrases, add the following lines to ``~/.ssh/config``:
 
 .. code:: bash
 

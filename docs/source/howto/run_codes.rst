@@ -144,9 +144,9 @@ After the setup and configuration have been completed, let's check that everythi
 
 This command will perform various tests to make sure that AiiDA can connect to the computer, create new files in the scratch directory, retrieve files and query the job scheduler.
 
-.. _how-to:run-codes:computer:performance:
+.. _how-to:run-codes:computer:connection:
 
-Computer performance configuration
+Mitigating connection overloads
 ----------------------------------
 
 Some compute resources, particularly large supercomputing centres, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently or opening too many SSH connections.

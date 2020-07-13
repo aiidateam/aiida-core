@@ -474,42 +474,6 @@ In order to restore a backup, you will need to:
        After supplying your database password, the database should be restored.
        Note that, if you installed the database on Ubuntu as a system service, you need to type ``sudo su - postgres`` to become the ``postgres`` UNIX user.
 
-.. _how-to:installation:supercomputers:
-
-Running on supercomputers
-=========================
-
-Some compute resources, particularly large supercomputing centres, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently or opening too many SSH connections.
-
-  * Limit the number of jobs in the queue.
-
-    Set yourself a limit for the maximum number of workflows to submit, and submit new ones only once previous workflows start to complete (in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_).
-    The supported number of jobs depends on your supercomputer - discuss this with your supercomputer administrators (`this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ may contain useful information for them).
-
-  * Increase the time interval between polling the job queue.
-
-    The time interval (in seconds) can be set through the python API by loading the corresponding |Computer| node, e.g. in the ``verdi shell``:
-
-    .. code-block:: python
-
-        load_computer('fidis').set_minimum_job_poll_interval(30.0)
-
-
-  * Increase the connection cooldown time.
-
-    This is the minimum time (in seconds) to wait between opening a new connection.
-    Modify it for an existing computer using:
-
-    .. code-block:: bash
-
-      verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
-
-
-.. important::
-
-    The two intervals apply *per daemon worker*, i.e. doubling the number of workers may end up putting twice the load on the remote computer.
-
-
 .. _how-to:installation:multi-user:
 
 Managing multiple users

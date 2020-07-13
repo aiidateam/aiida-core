@@ -36,10 +36,11 @@ repos:
     hooks:
     -   id: pylint
         name: pylint
+        entry: pylint
+        types: [python]
         language: system
         exclude: *exclude_files
 
-    hooks:
     -   id: dm-generate-all
         name: Update all requirements files
         entry: python ./utils/dependency_management.py generate-all

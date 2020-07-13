@@ -160,7 +160,8 @@ After a reboot, remember to run ``ssh-add ~/.ssh/aiida`` again before starting t
 Integrating the ssh-agent with keychain on OSX
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On OSX Sierra and later, the native ``ssh-add`` client allows passphrases to be stored persistently in the `OSX keychain <https://support.apple.com/en-gb/guide/keychain-access/kyca1083/mac>`__. You can store the passphrase to keychain using the OSX only ``-k`` argument:
+On OSX Sierra and later, the native ``ssh-add`` client allows passphrases to be stored persistently in the `OSX keychain <https://support.apple.com/en-gb/guide/keychain-access/kyca1083/mac>`__.
+Store the passphrase in the keychain using the OSX-specific ``-k`` argument:
 
 .. code:: bash
 

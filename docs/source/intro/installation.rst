@@ -361,7 +361,7 @@ Using virtual environments
 ==========================
 
 AiiDA depends on a number of third party python packages, and usually on specific versions of those packages.
-In order to not interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual python environment, for example, by means of one of the methods described below.
+In order to not interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual Python environment, for example, by means of one of the methods described below.
 
 .. admonition:: Additional Information
    :class: seealso title-icon-read-more

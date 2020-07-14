@@ -108,10 +108,3 @@ def devel_play():
     import webbrowser
 
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
-
-
-@verdi_devel.command()
-def configure_backup():
-    """Configure backup of the repository folder."""
-    from aiida.manage.backup.backup_setup import BackupSetup
-    BackupSetup().run()

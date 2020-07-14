@@ -443,75 +443,12 @@ A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 * queryable metadata in the PostgreSQL database (one per profile).
 
 
-.. _how-to:installation:backup:repository:
+.. todo::
 
-Repository backup (``.aiida`` folder)
--------------------------------------
+    .. _how-to:installation:backup:repository:
 
-For **small repositories** (with less than ~100k files), simply back up the ``.aiida`` folder using standard backup software.
-For example, the ``rsync`` utility supports incremental backups, and a backup command might look like ``rsync -avHzPx`` (verbose) or ``rsync -aHzx``.
+    title: Repository backup
 
-For **large repositories** with millions of files, even incremental backups can take a significant amount of time.
-AiiDA provides a helper script that takes advantage of the AiiDA database in order to figure out which files have been added since your last backup.
-The instructions below explain how to use it:
-
- 1. Configure your backup using ``verdi -p PROFILENAME devel configure-backup`` where ``PROFILENAME`` is the name of the AiiDA profile that should be backed up.
-    This will ask for information on:
-
-    * The "backup folder", where the backup *configuration file* will be placed.
-      This defaults to a folder named ``backup_PROFILENAME`` in your ``.aiida`` directory.
-
-    * The "destination folder", where the files of the backup will be stored.
-      This defaults to a subfolder of the backup folder but we **strongly suggest to back up to a different drive** (see note below).
-
-    The configuration step creates two files in the "backup folder": a ``backup_info.json`` configuration file (can also be edited manually) and a ``start_backup.py`` script.
-
-    .. dropdown:: Notes on using a SSH mount for the backups (on Linux)
-
-        Using the same disk for your backup forgoes protection against the most common cause of data loss: disk failure.
-        One simple option is to use a destination folder mounted over ssh.
-
-        On Ubuntu, install ``sshfs`` using ``sudo apt-get install sshfs``.
-        Imagine you run your calculations on `server_1` and would like to back up regularly to `server_2`.
-        Mount a `server_2` directory on `server_1` using the following command on `server_1`:
-
-        .. code-block:: shell
-
-            sshfs -o idmap=user -o rw backup_user@server_2:/home/backup_user/backup_destination_dir/ /home/aiida_user/remote_backup_dir/
-
-        Use ``gnome-session-properties`` in the terminal to add this line to the actions performed at start-up.
-        Do **not** add it to your shell's startup file (e.g. ``.bashrc``) or your computer will complain that the mount point is not empty whenever you open a new terminal.
-
- 2. Run the ``start_backup.py`` script in the "backup folder" to start the backup.
-
-    This will back up all data added after the ``oldest_object_backedup`` date.
-    It will only carry out a new backup every ``periodicity`` days, until a certain end date if specified (using ``end_date_of_backup`` or ``days_to_backup``), see :ref:`this reference page <reference:backup-script-config-options>` for a detailed description of all options.
-
-    Once you've checked that it works, make sure to run the script periodically (e.g. using a daily cron job).
-
-    .. dropdown:: Setting up a cron job on Linux
-
-        This is a quick note on how to setup a cron job on Linux (you can find many more resources online).
-
-        On Ubuntu, you can set up a cron job using:
-
-        .. code-block:: bash
-
-            sudo crontab -u USERNAME -e
-
-        It will open an editor, where you can add a line of the form::
-
-            00 03 * * * /home/USERNAME/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" USER_EMAIL@domain.net
-
-        or (if you need to backup a different profile than the default one)::
-
-            00 03 * * * verdi -p PROFILENAME run /home/USERNAME/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" USER_EMAIL@domain.net
-
-        This will launch the backup of the database every day at 3 AM (03:00), and send the output (or any error message) to the email address specified at the end (provided the ``mail`` command -- from ``mailutils`` -- is configured appropriately).
-
-.. note::
-
-    You might want to exclude the file repository from any separately set up automatic backups of your home directory.
 
 .. _how-to:installation:backup:postgresql:
 

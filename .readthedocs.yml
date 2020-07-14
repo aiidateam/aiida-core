@@ -23,4 +23,4 @@ sphinx:
 
 search:
   ranking:
-    reference/apidoc/*: -5
+    reference/apidoc/*: -7

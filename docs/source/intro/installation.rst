@@ -361,7 +361,7 @@ Using virtual environments
 ==========================
 
 AiiDA depends on a number of third party python packages, and usually on specific versions of those packages.
-In order to not interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual python environment, such as the methods described below.
+In order to not interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual python environment, for example, by means of one of the methods described below.
 
 .. admonition:: Additional Information
    :class: seealso title-icon-read-more
@@ -371,7 +371,7 @@ In order to not interfere with third party packages needed by other software on 
 venv
 ----
 
-`venv <https://docs.python.org/3/library/venv.html>`__ is a module included directly with python for creating virtual environments.
+The `venv <https://docs.python.org/3/library/venv.html>`__ module for creating virtual environments ships directly with Python.
 To create a virtual environment, in a given directory, run:
 
 .. code-block:: console
@@ -394,7 +394,7 @@ To leave or deactivate the environment, simply run:
 .. admonition:: Update install tools
    :class: tip title-icon-tip
 
-   You may need to install ``pip`` and ``setuptools`` in your virtual environment, in case the system or user version of these tools is old.
+   You may need to update ``pip`` and ``setuptools`` in your virtual environment, in case the system or user version of these tools is old.
 
    .. code-block:: console
 
@@ -408,9 +408,7 @@ If you have `Conda`_ installed then you can directly create a new environment wi
 .. code-block:: console
 
    $ conda create -n aiida -c conda-forge python=3.7 aiida-core aiida-core.services pip
-   # to activate
    $ conda activate aiida
-   # to deactivate
    $ conda deactivate
 
 

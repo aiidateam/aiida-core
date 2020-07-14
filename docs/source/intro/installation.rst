@@ -462,7 +462,7 @@ In order to install any of these package groups, simply append them as a comma s
 
 .. code-block:: console
 
-    $ pip install -e aiida-core[atomic_tools,docs]
+    $ pip install -e "aiida-core[atomic_tools,docs]"
 
 .. admonition:: Kerberos on Ubuntu
    :class: note title-icon-troubleshoot

@@ -42,12 +42,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        # The Python version is pinned due to issue #4256.
-        # The pinning should be removed as soon as issue #3709 is resolved.
-        python-version: 3.7.7
+        python-version: 3.8
 
     - name: Pip install
       run: |
@@ -72,7 +70,7 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
-        python-version: 3.7
+        python-version: 3.8
     - run: conda --version
     - run: python --version
     - run: which python

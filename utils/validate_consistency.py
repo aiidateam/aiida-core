@@ -17,11 +17,11 @@ Validates consistency of setup.json and
  * reentry dependency in pyproject.toml
 
 """
-
+import collections
+import json
 import os
 import sys
-import json
-from collections import OrderedDict
+
 import click
 
 FILENAME_TOML = 'pyproject.toml'
@@ -35,7 +35,7 @@ FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
 def get_setup_json():
     """Return the `setup.json` as a python dictionary """
     with open(FILEPATH_SETUP_JSON, 'r') as fil:
-        return json.load(fil, object_pairs_hook=OrderedDict)
+        return json.load(fil, object_pairs_hook=collections.OrderedDict)
 
 
 def write_setup_json(data):
@@ -143,8 +143,10 @@ def validate_verdi_documentation():
     from click import Context
     from aiida.cmdline.commands.cmd_verdi import verdi
 
+    width = 90  # The maximum width of the formatted help strings in characters
+
     # Set the `verdi data` command to isolated mode such that external plugin commands are not discovered
-    ctx = Context(verdi)
+    ctx = Context(verdi, terminal_width=width)
     command = verdi.get_command(ctx, 'data')
     command.set_exclude_external_plugins(True)
 
@@ -159,7 +161,7 @@ def validate_verdi_documentation():
     block = ['{}\n{}\n{}\n\n'.format(header, '=' * len(header), message)]
 
     for name, command in sorted(verdi.commands.items()):
-        ctx = click.Context(command)
+        ctx = click.Context(command, terminal_width=width)
 
         header_label = '.. _reference:command-line:verdi-{name:}:'.format(name=name)
         header_string = '``verdi {name:}``'.format(name=name)
@@ -168,7 +170,7 @@ def validate_verdi_documentation():
         block.append(header_label + '\n\n')
         block.append(header_string + '\n')
         block.append(header_underline + '\n\n')
-        block.append('::\n\n')  # Mark the beginning of a literal block
+        block.append('.. code:: console\n\n')  # Mark the beginning of a literal block
         for line in ctx.get_help().split('\n'):
             if line:
                 block.append('    {}\n'.format(line))

@@ -14,6 +14,7 @@ import enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.utils import echo
 from aiida.common.log import override_log_level
 from ..utils.echo import ExitCode
 
@@ -63,6 +64,11 @@ def verdi_status(no_rmq):
 
     manager = get_manager()
     profile = manager.get_profile()
+
+    if profile is None:
+        print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
+        echo.echo_info('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+        return
 
     try:
         profile = manager.get_profile()

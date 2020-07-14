@@ -403,7 +403,7 @@ To leave or deactivate the environment, simply run:
 Conda
 -----
 
-If you have `Conda`_ installed then you can directly create a new environment with ``aiida-core`` and (optionally) Postgres and RabbitMQ services installed.
+If you have `Conda`_ installed then you can directly create a new environment with ``aiida-core`` and (optionally) the Postgres and RabbitMQ services installed.
 
 .. code-block:: console
 

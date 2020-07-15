@@ -17,6 +17,7 @@ jobs:
   validate-dependency-specification:
     # Note: The specification is also validated by the pre-commit hook.
 
+    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -36,6 +37,7 @@ jobs:
 
   install-with-pip:
 
+    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -58,6 +60,7 @@ jobs:
 
   install-with-conda:
 
+    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
     name: install-with-conda
 

@@ -1,6 +1,5 @@
-## Run benchmarks on the three OSs
-## We run only on one python version (a recent one)
-## I think that different python versions might share hardware resources so results might have a much larger fluctuation
+# Note: this workflow is currently being tested,
+# and so currently is only activated for the benchmark-test-cjs branch 
 
 name: Performance benchmarks
 

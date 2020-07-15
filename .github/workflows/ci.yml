@@ -1,6 +1,10 @@
 name: continuous-integration
 
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore: [gh-pages, benchmark-test-cjs]
+  pull_request:
+    branches-ignore: [gh-pages, benchmark-test-cjs]
 
 jobs:
 

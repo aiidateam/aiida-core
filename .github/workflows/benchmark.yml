@@ -1,22 +1,44 @@
 # Note: this workflow is currently being tested,
 # and so is only activated for the benchmark-test-cjs branch
+## Run benchmarks on the three OSs
+## We run only on one python version (a recent one)
+## I think that different python versions might share hardware resources so results might have a much larger fluctuation
 
 name: Performance benchmarks
 
-on:
-  push:
-    branches:
-      - benchmark-test-cjs
+on: [pr]
 
 jobs:
 
   benchmarks:
-    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
+        backend: ['django', 'sqlalchemy']
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:12.3
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.8.3
+        ports:
+          - 5672:5672
 
     steps:
     - uses: actions/checkout@v2
@@ -28,8 +50,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements/requirements-py-3.8.txt
+        pip install --no-deps -e .
+        reentry scan
+        pip freeze
+
     - name: Run benchmarks
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run: pytest --benchmark-only --benchmark-json output.json
+
     - name: Store benchmark result
       ## Run only on push on develop! Otherwise people (or other branches) might access to the github-actions branch
       ## This is currently disabled because we are in a workflow that has the correct 'on' settings (only push,
@@ -37,7 +66,7 @@ jobs:
       #if: "github.event_name == 'push' && github.ref == 'refs/heads/develop'"
       uses: rhysd/github-action-benchmark@v1
       with:
-        name: "Benchmark on ${{ matrix.os }}"
+        name: "${{ matrix.os }} with ${{ matrix.backend }} [ci skip]"
         tool: "pytest"
         output-file-path: output.json
         github-token: ${{ secrets.GITHUB_TOKEN }}

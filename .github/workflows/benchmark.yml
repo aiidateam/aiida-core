@@ -1,5 +1,5 @@
 # Note: this workflow is currently being tested,
-# and so is only activated for the benchmark-test-cjs branch 
+# and so is only activated for the benchmark-test-cjs branch
 
 name: Performance benchmarks
 

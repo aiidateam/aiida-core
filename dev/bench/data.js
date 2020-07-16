@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1594914503122,
+  "lastUpdate": 1594914530776,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "entries": {
     "Benchmark on ubuntu-latest": [
@@ -161,6 +161,39 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.00022098278209678026",
             "extra": "mean: 8.678457579998735 msec\nrounds: 100"
+          }
+        ]
+      }
+    ],
+    "ubuntu-latest with django [ci skip]": [
+      {
+        "commit": {
+          "author": {
+            "email": "chrisj_sewell@hotmail.com",
+            "name": "Chris Sewell",
+            "username": "chrisjsewell"
+          },
+          "committer": {
+            "email": "chrisj_sewell@hotmail.com",
+            "name": "Chris Sewell",
+            "username": "chrisjsewell"
+          },
+          "distinct": true,
+          "id": "6e45865a238c4885471eeeebba6258e9ebb8e45b",
+          "message": "Update benchmark.yml",
+          "timestamp": "2020-07-16T16:44:57+01:00",
+          "tree_id": "5fceeb2f9acd95a456eaf1ce9873a5ec78fcafda",
+          "url": "https://github.com/aiidateam/aiida-core/commit/6e45865a238c4885471eeeebba6258e9ebb8e45b"
+        },
+        "date": 1594914530236,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 192.49545231383794,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008580438898631543",
+            "extra": "mean: 5.194927921567905 msec\nrounds: 102"
           }
         ]
       }

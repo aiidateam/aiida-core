@@ -27,7 +27,7 @@ jobs:
     - name: Install python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[tests]
+        pip install -r requirements/requirements-py-3.8.txt
     - name: Run benchmarks
       run: pytest --benchmark-only --benchmark-json output.json
     - name: Store benchmark result

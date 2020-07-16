@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: 3.8
     - name: Install python dependencies
@@ -43,6 +43,6 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
         # Show alert with commit comment on detecting possible performance regression
-        alert-threshold: '200%'
+        alert-threshold: '110%'
         comment-on-alert: false
         fail-on-alert: false

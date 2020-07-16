@@ -269,6 +269,13 @@ To test if a the computer does not produce spurious output, run (after configuri
 
 which checks and, in case of problems, suggests how to solve the problem.
 
+.. note::
+
+    If the methods explained above do not work, you can configure AiiDA to not use a login shell when connecting to your computer, which may prevent the spurious output from being printed:
+    During ``verdi computer configure``, set ``-no-use-login-shell`` or when asked to use a login shell, set it to ``False``.
+    Note, however, that this may result in a slightly different environment, since `certain startup files are only sourced for login shells <https://unix.stackexchange.com/a/46856/155909>`_.
+
+
 .. _StackExchange thread: https://apple.stackexchange.com/questions/51036/what-is-the-difference-between-bash-profile-and-bashrc
 
 

@@ -42,7 +42,6 @@ class LocalTransport(Transport):
     ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
 
-    # There are no valid parameters for the local transport
     _valid_auth_options = []
 
     # There is no real limit on how fast you can safely connect to a localhost, unlike often the case with SSH transport
@@ -744,7 +743,12 @@ class LocalTransport(Transport):
 
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        command = 'bash -l -c ' + escape_for_bash(command)
+        if self._use_login_shell:
+            bash_commmand = 'bash -l -c '
+        else:
+            bash_commmand = 'bash -c '
+
+        command = bash_commmand + escape_for_bash(command)
 
         proc = subprocess.Popen(
             command,

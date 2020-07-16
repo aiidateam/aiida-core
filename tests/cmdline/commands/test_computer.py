@@ -370,8 +370,15 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         comp = self.comp_builder.new()
         comp.store()
 
-        result = self.cli_runner.invoke(computer_configure, ['local', comp.label], input='\n', catch_exceptions=False)
+        command_input = ('{use_login_shell}\n{safe_interval}\n').format(use_login_shell='False', safe_interval='1.0')
+        result = self.cli_runner.invoke(
+            computer_configure, ['local', comp.label], input=command_input, catch_exceptions=False
+        )
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
+
+        new_auth_params = comp.get_authinfo(self.user).get_auth_params()
+        self.assertEqual(new_auth_params['use_login_shell'], False)
+        self.assertEqual(new_auth_params['safe_interval'], 1.0)
 
     def test_ssh_interactive(self):
         """
@@ -411,6 +418,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.assertEqual(new_auth_params['port'], port)
         self.assertEqual(new_auth_params['look_for_keys'], look_for_keys)
         self.assertEqual(new_auth_params['key_filename'], key_filename)
+        self.assertEqual(new_auth_params['use_login_shell'], True)
 
     def test_local_from_config(self):
         """Test configuring a computer from a config file"""

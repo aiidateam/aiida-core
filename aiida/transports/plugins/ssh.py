@@ -311,6 +311,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return 'True'
 
     @classmethod
+    def _get_use_login_shell_suggestion_string(cls, computer):  # pylint: disable=unused-argument
+        """
+        Return a suggestion for the specific field.
+        """
+        return 'True'
+
+    @classmethod
     def _get_load_system_host_keys_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
         Return a suggestion for the specific field.
@@ -361,6 +368,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         Initialize the SshTransport class.
 
         :param machine: the machine to connect to
+        :param use_login_shell: (optional, default True)
+           if False, do not use a login shell when executing command
         :param load_system_host_keys: (optional, default False)
            if False, do not load the system host keys
         :param key_policy: (optional, default = paramiko.RejectPolicy())
@@ -1232,7 +1241,12 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        channel.exec_command('bash -l -c ' + escape_for_bash(command_to_execute))
+        if self._use_login_shell:
+            bash_commmand = 'bash -l -c '
+        else:
+            bash_commmand = 'bash -c '
+
+        channel.exec_command(bash_commmand + escape_for_bash(command_to_execute))
 
         stdin = channel.makefile('wb', bufsize)
         stdout = channel.makefile('rb', bufsize)

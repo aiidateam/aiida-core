@@ -195,10 +195,15 @@ After finishing with your aiida session, particularly if switching between profi
 .. code-block:: console
 
     $ verdi daemon stop
-    $ pg_ctl stop
+    $ pg_ctl -D mylocal_db stop
+    
+If rabbitmq is installed in the virtual environment with conda, you may also want to stop rabbitmq service before deactivate the environment:
+
+.. code-block:: console
+
+    $ rabbitmqctl stop
 
 Any computations that are still running at this point, will be picked up next time the services are started.
-
 
 .. admonition:: Having problems?
     :class: attention title-icon-troubleshoot

@@ -1,0 +1,48 @@
+# Note: this workflow is currently being tested,
+# and so is only activated for the benchmark-test-cjs branch
+
+name: Performance benchmarks
+
+on:
+  push:
+    branches:
+      - benchmark-test-cjs
+
+jobs:
+
+  benchmarks:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/requirements-py-3.8.txt
+    - name: Run benchmarks
+      run: pytest --benchmark-only --benchmark-json output.json
+    - name: Store benchmark result
+      ## Run only on push on develop! Otherwise people (or other branches) might access to the github-actions branch
+      ## This is currently disabled because we are in a workflow that has the correct 'on' settings (only push,
+      ## and only 'develop'). Otherwise, enable this
+      #if: "github.event_name == 'push' && github.ref == 'refs/heads/develop'"
+      uses: rhysd/github-action-benchmark@v1
+      with:
+        name: "Benchmark on ${{ matrix.os }}"
+        tool: "pytest"
+        output-file-path: output.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: true
+        # Show alert with commit comment on detecting possible performance regression
+        alert-threshold: '110%'
+        comment-on-alert: false
+        fail-on-alert: false

@@ -743,10 +743,7 @@ class LocalTransport(Transport):
 
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        if self._use_login_shell:
-            bash_commmand = 'bash -l -c '
-        else:
-            bash_commmand = 'bash -c '
+        bash_commmand = self._bash_command_str + '-c '
 
         command = bash_commmand + escape_for_bash(command)
 
@@ -807,11 +804,8 @@ class LocalTransport(Transport):
 
         :param str remotedir: the full path of the remote directory
         """
-        script = ' ; '.join([
-            'if [ -d {escaped_remotedir} ]', 'then cd {escaped_remotedir}', 'bash', "else echo ' ** The directory'",
-            "echo ' ** {remotedir}'", "echo ' ** seems to have been deleted, I logout...'", 'fi'
-        ]).format(escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
-        cmd = 'bash -c "{}"'.format(script)
+        connect_string = self._gotocomputer_string(remotedir)
+        cmd = 'bash -c {}'.format(connect_string)
         return cmd
 
     def rename(self, oldpath, newpath):

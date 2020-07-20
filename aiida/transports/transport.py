@@ -77,10 +77,20 @@ class Transport(abc.ABC):
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
         __init__ method of the Transport base class.
+
+        :param safe_interval: (optional, default self._DEFAULT_SAFE_OPEN_INTERVAL)
+           Minimum time interval in seconds between opening new connections.
+        :param use_login_shell: (optional, default True)
+           if False, do not use a login shell when executing command
         """
         from aiida.common import AIIDA_LOGGER
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._use_login_shell = kwargs.pop('use_login_shell', True)
+        if self._use_login_shell:
+            self._bash_command_str = 'bash -l '
+        else:
+            self._bash_command_str = 'bash '
+
         self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
         self._is_open = False
@@ -211,6 +221,13 @@ class Transport(abc.ABC):
         This is used to provide a default in ``verdi computer configure``.
         """
         return cls._DEFAULT_SAFE_OPEN_INTERVAL
+
+    @classmethod
+    def _get_use_login_shell_suggestion_string(cls, computer):  # pylint: disable=unused-argument
+        """
+        Return a suggestion for the specific field.
+        """
+        return 'True'
 
     @property
     def logger(self):
@@ -774,6 +791,18 @@ class Transport(abc.ABC):
 
     def has_magic(self, string):
         return self._MAGIC_CHECK.search(string) is not None
+
+    def _gotocomputer_string(self, remotedir):
+        """command executed when goto computer."""
+        connect_string = (
+            """ "if [ -d {escaped_remotedir} ] ;"""
+            """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
+            """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
+                bash_command=self._bash_command_str, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
+            )
+        )
+
+        return connect_string
 
 
 class TransportInternalError(InternalError):

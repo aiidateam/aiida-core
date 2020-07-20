@@ -48,3 +48,16 @@ class TestBasicConnection(unittest.TestCase):
         """Test constructor."""
         with LocalTransport():
             pass
+
+
+def test_gotocomputer():
+    """Test gotocomputer"""
+    with LocalTransport() as transport:
+        cmd_str = transport.gotocomputer_command('/remote_dir/')
+
+        expected_str = (
+            """bash -c  "if [ -d '/remote_dir/' ] ;"""
+            """ then cd '/remote_dir/' ; bash -l  ; else echo '  ** The directory' ; """
+            """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
+        )
+        assert cmd_str == expected_str

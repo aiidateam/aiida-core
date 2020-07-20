@@ -11,10 +11,6 @@
 from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import EXPORT_LOGGER, IMPORT_LOGGER
 
-import pytest
-
-pytest.skip('the current export/import mechanism does not work with the new repository.', allow_module_level=True)
-
 
 class AiidaArchiveTestCase(AiidaTestCase):
     """Testcase for tests of archive-related functionality (import, export)."""

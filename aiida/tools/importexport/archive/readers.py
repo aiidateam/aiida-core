@@ -10,24 +10,23 @@
 """Archive reader classes."""
 from abc import ABC, abstractmethod
 import json
-import os
 from pathlib import Path
 import tarfile
 from types import TracebackType
-from typing import Any, Callable, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
+from typing import Any, Callable, cast, Dict, Iterator, List, Optional, Set, Tuple, Type
 import zipfile
 
 from distutils.version import StrictVersion
 from archive_path import TarPath, ZipPath, read_file_in_tar, read_file_in_zip
+from disk_objectstore import Container
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.exceptions import InvalidOperation
-from aiida.common.folders import Folder, SandboxFolder
-from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat, NODES_EXPORT_SUBFOLDER
+from aiida.common.folders import SandboxFolder
+from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat
 from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
 from aiida.tools.importexport.archive.common import (ArchiveMetadata, null_callback)
 from aiida.tools.importexport.common.config import NODE_ENTITY_NAME, GROUP_ENTITY_NAME
-from aiida.tools.importexport.common.utils import export_shard_uuid
 
 __all__ = (
     'ArchiveReaderAbstract',
@@ -184,33 +183,8 @@ class ArchiveReaderAbstract(ABC):
         """Iterate over links: {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}"""
 
     @abstractmethod
-    def iter_node_repos(
-        self,
-        uuids: Iterable[str],
-        callback: Callable[[str, Any], None] = null_callback,
-    ) -> Iterator[Folder]:
-        """Yield temporary folders containing the contents of the repository for each node.
-
-        :param uuids: UUIDs of the nodes over whose repository folders to iterate
-        :param callback: a callback to report on the process, ``callback(action, value)``,
-            with the following callback signatures:
-
-            - ``callback('init', {'total': <int>, 'description': <str>})``,
-               to signal the start of a process, its total iterations and description
-            - ``callback('update', <int>)``,
-               to signal an update to the process and the number of iterations to progress
-
-        :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
-        """
-
-    def node_repository(self, uuid: str) -> Folder:
-        """Return a temporary folder with the contents of the repository for a single node.
-
-        :param uuid: The UUID of the node
-
-        :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
-        """
-        return next(self.iter_node_repos([uuid]))
+    def get_repository_container(self) -> Container:
+        """Return an instance mapped to the repository container."""
 
 
 class ReaderJsonBase(ArchiveReaderAbstract):
@@ -218,7 +192,6 @@ class ReaderJsonBase(ArchiveReaderAbstract):
 
     FILENAME_DATA = 'data.json'
     FILENAME_METADATA = 'metadata.json'
-    REPO_FOLDER = NODES_EXPORT_SUBFOLDER
 
     def __init__(self, filename: str, sandbox_in_repo: bool = False, **kwargs: Any):
         """A reader for JSON compressed archives.
@@ -265,7 +238,7 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         """Retrieve the data JSON."""
         raise NotImplementedError()
 
-    def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None]):
+    def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         """Extract repository data to a temporary folder.
 
         :param path_prefix: Only extract paths starting with this prefix.
@@ -355,32 +328,11 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         for value in self._get_data()['links_uuid']:
             yield value
 
-    def iter_node_repos(
-        self,
-        uuids: Iterable[str],
-        callback: Callable[[str, Any], None] = null_callback,
-    ) -> Iterator[Folder]:
-        path_prefixes = [os.path.join(self.REPO_FOLDER, export_shard_uuid(uuid)) for uuid in uuids]
-
-        if not path_prefixes:
-            return
-        self.assert_within_context()
+    def get_repository_container(self) -> Container:
+        """Return an instance mapped to the repository container."""
+        self._extract(path_prefix='')
         assert self._sandbox is not None  # required by mypy
-
-        # unarchive the common folder if it does not exist
-        common_prefix = os.path.commonpath(path_prefixes)
-        if not self._sandbox.get_subfolder(common_prefix).exists():
-            self._extract(path_prefix=common_prefix, callback=callback)
-
-        callback('init', {'total': len(path_prefixes), 'description': 'Iterating node repositories'})
-        for uuid, path_prefix in zip(uuids, path_prefixes):
-            callback('update', 1)
-            subfolder = self._sandbox.get_subfolder(path_prefix)
-            if not subfolder.exists():
-                raise CorruptArchive(
-                    f'Unable to find the repository folder for Node with UUID={uuid} in the exported file'
-                )
-            yield subfolder
+        return Container(Path(self._sandbox.abspath) / 'container')
 
 
 class ReaderJsonZip(ReaderJsonBase):

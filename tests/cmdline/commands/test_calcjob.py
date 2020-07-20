@@ -9,10 +9,9 @@
 ###########################################################################
 # pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
-import gzip
+import io
 
 from click.testing import CliRunner
-import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -22,8 +21,6 @@ from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
 from tests.utils.archives import import_archive
-
-pytest.skip('the current export/import mechanism does not work with the new repository.', allow_module_level=True)
 
 
 def get_result_lines(result):
@@ -100,6 +97,7 @@ class TestVerdiCalculation(AiidaTestCase):
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
+        print(cls.arithmetic_job.repository_metadata)
 
     def setUp(self):
         super().setUp()
@@ -200,7 +198,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         options = [self.arithmetic_job.uuid, 'aiida.in']
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
-        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
+        assert result.stdout_bytes == b'COMPRESS'
 
         # Restore the file
         self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'2 3\n'), 'aiida.in')
@@ -232,7 +230,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
-        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
+        assert result.stdout_bytes == b'COMPRESS'
 
         # Restore the file
         retrieved._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')

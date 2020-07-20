@@ -447,8 +447,8 @@ def _store_entity_data(
 
         # Before storing entries in the DB, I store the files (if these are nodes).
         # Note: only for new entries!
-        uuids_to_create = [obj.uuid for obj in objects_to_create]
-        _copy_node_repositories(uuids_to_create=uuids_to_create, reader=reader)
+        repository_metadatas = [obj.repository_metadata for obj in objects_to_create if obj.repository_metadata]
+        _copy_node_repositories(repository_metadatas=repository_metadatas, reader=reader)
 
         # For the existing nodes that are also in the imported list we also update their extras if necessary
         if existing_entries[entity_name]:

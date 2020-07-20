@@ -15,7 +15,7 @@ import warnings
 from aiida.backends.utils import delete_nodes_and_connections
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm import Group, Node, QueryBuilder, load_node
+from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
 __all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')

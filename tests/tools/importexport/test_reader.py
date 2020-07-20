@@ -38,7 +38,7 @@ def test_reader(archive_reader):
 
     with archive_reader() as archive:
         assert archive.export_version == EXPORT_VERSION
-        assert archive.metadata.aiida_version == '1.1.1'
+        assert archive.metadata.aiida_version == '1.5.0'
         assert sorted(archive.entity_names) == ['Comment', 'Computer', 'Group', 'Log', 'Node', 'User']
         assert archive.entity_count('Node') == 10
         assert sum(1 for _ in archive.iter_entity_fields('Node')) == 10
@@ -66,16 +66,13 @@ def test_reader(archive_reader):
                         'user': 1,
                         'type_string': 'core'
                     })
-        subfolder = archive.node_repository(next(archive.iter_node_uuids()))
-        assert subfolder.get_subfolder('path').get_content_list() == ['.gitignore']
 
 
 def test_context_required(archive_reader):
     """Verify that accessing a property of an Archive outside of a context manager raises."""
     archive = archive_reader()
     with pytest.raises(InvalidOperation, match='should be used within a context'):
-        uuid = next(archive.iter_node_uuids())
-        archive.node_repository(uuid)
+        archive._extract(path_prefix='')  # pylint: disable=protected-access
 
 
 def test_empty_archive(archive_reader):

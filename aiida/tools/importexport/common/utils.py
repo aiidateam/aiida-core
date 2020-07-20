@@ -95,17 +95,3 @@ def get_valid_import_links(url):
         return_urls.append(urllib.parse.urljoin(request.geturl(), link))
 
     return return_urls
-
-
-def export_shard_uuid(uuid):
-    """Sharding of the UUID for the import/export
-
-    :param uuid: UUID to be sharded (v4)
-    :type uuid: str
-
-    :return: Sharded UUID as a subfolder path
-    :rtype: str
-    """
-    import os
-
-    return os.path.join(uuid[:2], uuid[2:4], uuid[4:])

@@ -50,9 +50,6 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
-    # Base path within the repository where to put objects by default
-    _repository_base_path = 'raw_input'
-
     # An optional entry point for a CalculationTools instance
     _tools = None
 

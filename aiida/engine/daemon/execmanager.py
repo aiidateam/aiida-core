@@ -546,12 +546,12 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
     treated as the work directory of the folder and the depth integer determines
     upto what level of the original remotepath nesting the files will be copied.
 
-    :param transport: the Transport instance
-    :param folder: an absolute path to a folder to copy files in
-    :param retrieve_list: the list of files to retrieve
+    :param transport: the Transport instance.
+    :param folder: an absolute path to a folder that contains the files to copy.
+    :param retrieve_list: the list of files to retrieve.
     """
     for item in retrieve_list:
-        if isinstance(item, list):
+        if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
             if transport.has_magic(tmp_rname):
@@ -561,6 +561,7 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
                     to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
                     local_names.append(os.path.sep.join([tmp_lname] + to_append))
             else:
+                remote_names = [tmp_rname]
                 to_append = tmp_rname.split(os.path.sep)[-depth:] if depth > 0 else []
                 local_names = [os.path.sep.join([tmp_lname] + to_append)]
             if depth > 1:  # create directories in the folder, if needed

@@ -56,8 +56,8 @@ class Repository:
         instance.__init__(backend)
 
         if serialized:
-            for name, obj in serialized['objects'].items():
-                instance.get_directory().objects[name] = File.from_serialized(obj)
+            for name, obj in serialized['o'].items():
+                instance.get_directory().objects[name] = File.from_serialized(obj, name)
 
         return instance
 

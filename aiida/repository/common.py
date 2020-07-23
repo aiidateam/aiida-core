@@ -43,34 +43,49 @@ class File():
         if objects is not None and any([not isinstance(obj, self.__class__) for obj in objects.values()]):
             raise TypeError('objects should be `None` or a dictionary of `File` instances.')
 
+        if file_type == FileType.DIRECTORY and key is not None:
+            raise ValueError('an object of type `FileType.DIRECTORY` cannot define a key.')
+
+        if file_type == FileType.FILE and objects is not None:
+            raise ValueError('an object of type `FileType.FILE` cannot define any objects.')
+
         self._name = name
         self._file_type = file_type
         self._key = key
         self._objects = objects or {}
 
     @classmethod
-    def from_serialized(cls, serialized: dict) -> 'File':
+    def from_serialized(cls, serialized: dict, name='') -> 'File':
         """Construct a new instance from a serialized instance.
 
         :param serialized: the serialized instance.
         :return: the reconstructed file object.
         """
-        objects = {name: File.from_serialized(obj) for name, obj in serialized['objects'].items()}
+        if 'k' in serialized:
+            file_type = FileType.FILE
+            key = serialized['k']
+            objects = None
+        else:
+            file_type = FileType.DIRECTORY
+            key = None
+            objects = {name: File.from_serialized(obj, name) for name, obj in serialized.get('o', {}).items()}
+
         instance = cls.__new__(cls)
-        instance.__init__(serialized['name'], FileType(serialized['file_type']), serialized['key'], objects)
+        instance.__init__(name, file_type, key, objects)
         return instance
 
     def serialize(self) -> dict:
         """Serialize the metadata into a JSON-serializable format.
 
+        .. note:: the serialization format is optimized to reduce the size in bytes.
+
         :return: dictionary with the content metadata.
         """
-        return {
-            'name': self.name,
-            'file_type': self.file_type.value,
-            'key': self.key,
-            'objects': {key: obj.serialize() for key, obj in self.objects.items()},
-        }
+        if self.file_type == FileType.DIRECTORY:
+            if self.objects:
+                return {'o': {key: obj.serialize() for key, obj in self.objects.items()}}
+            return {}
+        return {'k': self.key}
 
     @property
     def name(self) -> str:
@@ -98,11 +113,11 @@ class File():
             return False
 
         equal_attributes = all([getattr(self, key) == getattr(other, key) for key in ['name', 'file_type', 'key']])
-        equal_object_keys = list(self.objects) == list(other.objects)
+        equal_object_keys = sorted(self.objects) == sorted(other.objects)
         equal_objects = equal_object_keys and all([obj == other.objects[key] for key, obj in self.objects.items()])
 
         return equal_attributes and equal_objects
 
     def __repr__(self):
-        args = (self.name, self.file_type.value, self.key, list(self.objects.keys()))
+        args = (self.name, self.file_type.value, self.key, self.objects.items())
         return 'File<name={}, file_type={}, key={}, objects={}>'.format(*args)

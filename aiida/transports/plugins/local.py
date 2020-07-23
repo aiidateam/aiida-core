@@ -42,7 +42,6 @@ class LocalTransport(Transport):
     ``unset PYTHONPATH`` if you plan on running calculations that use Python.
     """
 
-    # There are no valid parameters for the local transport
     _valid_auth_options = []
 
     # There is no real limit on how fast you can safely connect to a localhost, unlike often the case with SSH transport
@@ -744,7 +743,9 @@ class LocalTransport(Transport):
 
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        command = 'bash -l -c ' + escape_for_bash(command)
+        bash_commmand = self._bash_command_str + '-c '
+
+        command = bash_commmand + escape_for_bash(command)
 
         proc = subprocess.Popen(
             command,
@@ -803,11 +804,8 @@ class LocalTransport(Transport):
 
         :param str remotedir: the full path of the remote directory
         """
-        script = ' ; '.join([
-            'if [ -d {escaped_remotedir} ]', 'then cd {escaped_remotedir}', 'bash', "else echo ' ** The directory'",
-            "echo ' ** {remotedir}'", "echo ' ** seems to have been deleted, I logout...'", 'fi'
-        ]).format(escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir)
-        cmd = 'bash -c "{}"'.format(script)
+        connect_string = self._gotocomputer_string(remotedir)
+        cmd = 'bash -c {}'.format(connect_string)
         return cmd
 
     def rename(self, oldpath, newpath):

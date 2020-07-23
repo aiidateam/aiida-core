@@ -55,3 +55,16 @@ class TestBasicConnection(unittest.TestCase):
 
         # Reset logging level
         logging.disable(logging.NOTSET)
+
+
+def test_gotocomputer():
+    """Test gotocomputer"""
+    with SshTransport(machine='localhost', timeout=30, use_login_shell=False, key_policy='AutoAddPolicy') as transport:
+        cmd_str = transport.gotocomputer_command('/remote_dir/')
+
+        expected_str = (
+            """ssh -t localhost   "if [ -d '/remote_dir/' ] ;"""
+            """ then cd '/remote_dir/' ; bash  ; else echo '  ** The directory' ; """
+            """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
+        )
+        assert cmd_str == expected_str

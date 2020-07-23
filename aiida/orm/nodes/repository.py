@@ -5,8 +5,6 @@ import io
 import tempfile
 import typing
 
-from wrapt import decorator
-
 from aiida.common import exceptions
 from aiida.repository import Repository, File
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
@@ -34,23 +32,10 @@ class NodeRepositoryMixin:
 
     _repository_instance = None
 
-    @decorator
-    def update_metadata_after_return(wrapped, self, args, kwargs):  # pylint: disable=no-self-argument
-        """Refresh the repository metadata of the node if it is stored and the decorated method returns successfully.
-
-        This decorator will yield to the wrapped method and only if it returns without raising an exception, will the
-        repository metadata be updated with the current metadata contents of the repository in serialized form. This
-        should be applied to any method that mutate the state of the repository.
-        """
-        try:
-            result = wrapped(*args, **kwargs)  # pylint: disable=not-callable
-        except Exception:  # pylint: disable=try-except-raise
-            raise
-        else:
-            if self.is_stored:
-                self.repository_metadata = self._repository.serialize()  # pylint: disable=protected-access
-
-        return result
+    def _update_repository_metadata(self):
+        """Refresh the repository metadata of the node if it is stored and the decorated method returns successfully."""
+        if self.is_stored:
+            self.repository_metadata = self._repository.serialize()
 
     @property
     def _repository(self) -> Repository:
@@ -160,7 +145,6 @@ class NodeRepositoryMixin:
 
         return self._repository.get_object_content(path)
 
-    @update_metadata_after_return
     def put_object_from_filelike(self, handle: io.BufferedReader, path: str):
         """Store the byte contents of a file in the repository.
 
@@ -181,8 +165,8 @@ class NodeRepositoryMixin:
                 handle = io.BytesIO(handle.read().encode('utf-8'))
 
         self._repository.put_object_from_filelike(handle, path)
+        self._update_repository_metadata()
 
-    @update_metadata_after_return
     def put_object_from_file(self, filepath: str, path: str):
         """Store a new object under `path` with contents of the file located at `filepath` on the local file system.
 
@@ -193,8 +177,8 @@ class NodeRepositoryMixin:
         """
         self.check_mutability()
         self._repository.put_object_from_file(filepath, path)
+        self._update_repository_metadata()
 
-    @update_metadata_after_return
     def put_object_from_tree(self, filepath: str, path: str = None):
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
 
@@ -205,8 +189,8 @@ class NodeRepositoryMixin:
         """
         self.check_mutability()
         self._repository.put_object_from_tree(filepath, path)
+        self._update_repository_metadata()
 
-    @update_metadata_after_return
     def delete_object(self, path: str):
         """Delete the object from the repository.
 
@@ -219,8 +203,8 @@ class NodeRepositoryMixin:
         """
         self.check_mutability()
         self._repository.delete_object(path)
+        self._update_repository_metadata()
 
-    @update_metadata_after_return
     def erase(self):
         """Delete all objects from the repository.
 
@@ -228,3 +212,4 @@ class NodeRepositoryMixin:
         """
         self.check_mutability()
         self._repository.erase()
+        self._update_repository_metadata()

@@ -5,6 +5,7 @@ import io
 
 import pytest
 
+from aiida.common import exceptions
 from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
 from aiida.orm import load_node, CalcJobNode, Data
@@ -80,12 +81,12 @@ def test_load():
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_load_updated():
     """Test the repository after loading."""
-    node = Data()
+    node = CalcJobNode()
     node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
     node.store()
 
     loaded = load_node(node.uuid)
-    assert loaded.get_object_content('relative/path', mode='rb') == b'new_content'
+    assert loaded.get_object_content('relative/path', mode='rb') == b'content'
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -134,3 +135,15 @@ def test_clone_unstored():
     clone.store()
     assert clone.list_object_names('relative') == ['path']
     assert clone.get_object_content('relative/path', mode='rb') == b'content'
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_sealed():
+    """Test the repository interface for a calculation node before and after it is sealed."""
+    node = CalcJobNode()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.store()
+    node.seal()
+
+    with pytest.raises(exceptions.ModificationNotAllowed):
+        node.put_object_from_filelike(io.BytesIO(b'content'), 'path')

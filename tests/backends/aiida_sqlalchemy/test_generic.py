@@ -164,3 +164,33 @@ class TestGroupNoOrmSQLA(AiidaTestCase):
             group = Group(label='test_batches_' + str(batch_size)).store()
             group.backend_entity.add_nodes(nodes, skip_orm=True, batch_size=batch_size)
             self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+    def test_remove_nodes_bulk(self):
+        """Test node removal."""
+        backend = self.backend
+
+        node_01 = Data().store().backend_entity
+        node_02 = Data().store().backend_entity
+        node_03 = Data().store().backend_entity
+        node_04 = Data().store().backend_entity
+        nodes = [node_01, node_02, node_03]
+        group = backend.groups.create(label='test_remove_nodes', user=backend.users.create('simple2@ton.com')).store()
+
+        # Add initial nodes
+        group.add_nodes(nodes)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+        # Remove a node that is not in the group: nothing should happen
+        group.remove_nodes([node_04], skip_orm=True)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+        # Remove one Node
+        nodes.remove(node_03)
+        group.remove_nodes([node_03], skip_orm=True)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+
+        # Remove a list of Nodes and check
+        nodes.remove(node_01)
+        nodes.remove(node_02)
+        group.remove_nodes([node_01, node_02], skip_orm=True)
+        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))

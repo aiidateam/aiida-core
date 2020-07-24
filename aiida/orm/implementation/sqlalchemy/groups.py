@@ -228,37 +228,56 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             # Commit everything as up till now we've just flushed
             session.commit()
 
-    def remove_nodes(self, nodes):
+    def remove_nodes(self, nodes, **kwargs):
         """Remove a node or a set of nodes from the group.
 
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a list of `BackendNode` instance to be added to this group
+        :param kwargs:
+            skip_orm: When the flag is set to `True`, the SQLA ORM is skipped and SQLA is used to create a direct SQL
+            DELETE statement to the group-node relationship table in order to improve speed.
         """
+        from sqlalchemy import and_
+        from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.backends.sqlalchemy.models.base import Base
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
         super().remove_nodes(nodes)
 
         # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
         dbnodes = self._dbmodel.dbnodes
+        skip_orm = kwargs.get('skip_orm', False)
 
-        list_nodes = []
-
-        for node in nodes:
+        def check_node(node):
             if not isinstance(node, SqlaNode):
                 raise TypeError('invalid type {}, has to be {}'.format(type(node), SqlaNode))
 
             if node.id is None:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
-            # If we don't check first, SqlA might issue a DELETE statement for an unexisting key, resulting in an error
-            if node.dbmodel in dbnodes:
-                list_nodes.append(node.dbmodel)
+        list_nodes = []
 
-        for node in list_nodes:
-            dbnodes.remove(node)
+        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+            if not skip_orm:
+                for node in nodes:
+                    check_node(node)
 
-        sa.get_scoped_session().commit()
+                    # Check first, if SqlA issues a DELETE statement for an unexisting key it will result in an error
+                    if node.dbmodel in dbnodes:
+                        list_nodes.append(node.dbmodel)
+
+                for node in list_nodes:
+                    dbnodes.remove(node)
+            else:
+                table = Base.metadata.tables['db_dbgroup_dbnodes']
+                for node in nodes:
+                    check_node(node)
+                    clause = and_(table.c.dbnode_id == node.id, table.c.dbgroup_id == self.id)
+                    statement = table.delete().where(clause)
+                    session.execute(statement)
+
+            session.commit()
 
 
 class SqlaGroupCollection(BackendGroupCollection):

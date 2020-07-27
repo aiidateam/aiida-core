@@ -120,7 +120,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
         cls.computer = orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
     def setUp(self):

@@ -28,7 +28,7 @@ you can use a modification of the following script::
         """
         from aiida import orm
 
-        computer = Computer.get(name='deneb')
+        computer = Computer.get(label='deneb')
         transport = computer.get_transport()
         scheduler = computer.get_scheduler()
         scheduler.set_transport(transport)
@@ -114,7 +114,7 @@ Here is, as an example, an useful utility function::
         manager = get_manager()
         profile = manager.get_profile()
         return AuthInfo.objects.get(
-            dbcomputer_id=Computer.get(name=computername).id,
+            dbcomputer_id=Computer.get(label=computername).id,
             aiidauser_id=User.get(email=profile.default_user).id
         )
 

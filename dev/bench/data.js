@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1596618275587,
+  "lastUpdate": 1596618298370,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "entries": {
     "ubuntu-latest with sqlalchemy [ci skip]": [
@@ -200,6 +200,72 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.03141803113426121",
             "extra": "mean: 258.27494423999497 msec\nrounds: 50"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chrisj_sewell@hotmail.com",
+            "name": "Chris Sewell",
+            "username": "chrisjsewell"
+          },
+          "committer": {
+            "email": "chrisj_sewell@hotmail.com",
+            "name": "Chris Sewell",
+            "username": "chrisjsewell"
+          },
+          "distinct": true,
+          "id": "c70b9c977b5a7bffa2840dadd7a899b941ce312a",
+          "message": "add tests",
+          "timestamp": "2020-08-05T08:52:59+01:00",
+          "tree_id": "094bb7aade583d53297f2848965bd93f477d92ad",
+          "url": "https://github.com/aiidateam/aiida-core/commit/c70b9c977b5a7bffa2840dadd7a899b941ce312a"
+        },
+        "date": 1596618297805,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 789.7207021411292,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00019945197325431594",
+            "extra": "mean: 1.2662704640878115 msec\nrounds: 181"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 160.53490770640826,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009021792151035201",
+            "extra": "mean: 6.22917479000165 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 153.9367015454929,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001033495645587714",
+            "extra": "mean: 6.496176609997519 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 34.67008671817223,
+            "unit": "iter/sec",
+            "range": "stddev: 0.004205909146886394",
+            "extra": "mean: 28.843308300000672 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_calcfunction",
+            "value": 6.02453170441198,
+            "unit": "iter/sec",
+            "range": "stddev: 0.02307988579711844",
+            "extra": "mean: 165.98800522000147 msec\nrounds: 50"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_workchain",
+            "value": 2.9721102003721183,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03247905677013635",
+            "extra": "mean: 336.4612792199955 msec\nrounds: 50"
           }
         ]
       }

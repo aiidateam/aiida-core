@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1596609975205,
+  "lastUpdate": 1596609981929,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "entries": {
     "Benchmark on ubuntu-latest": [
@@ -225,6 +225,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0008580438898631543",
             "extra": "mean: 5.194927921567905 msec\nrounds: 102"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chrisj_sewell@hotmail.com",
+            "name": "Chris Sewell",
+            "username": "chrisjsewell"
+          },
+          "committer": {
+            "email": "chrisj_sewell@hotmail.com",
+            "name": "Chris Sewell",
+            "username": "chrisjsewell"
+          },
+          "distinct": true,
+          "id": "a256b6e52d3325532255dbf3c8f7dc4093a3d8e2",
+          "message": "Merge branch 'develop' into benchmark-test-cjs",
+          "timestamp": "2020-08-05T07:42:18+01:00",
+          "tree_id": "992558b9e06efcce6b98682f74f9256aba4c715b",
+          "url": "https://github.com/aiidateam/aiida-core/commit/a256b6e52d3325532255dbf3c8f7dc4093a3d8e2"
+        },
+        "date": 1596609973918,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 186.99695574940264,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0003543803807064963",
+            "extra": "mean: 5.347680639999908 msec\nrounds: 100"
           }
         ]
       }

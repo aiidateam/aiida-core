@@ -471,9 +471,9 @@ This is why we wrap the ``self.retrieved`` call in a try-catch block:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 10-13
+    :lines: 11-14
     :linenos:
-    :lineno-start: 10
+    :lineno-start: 11
 
 If the exception is thrown, it means the retrieved files are not available and something must have has gone terribly awry with the calculation.
 In this case, there is nothing to do for the parser and so we return an exit code.
@@ -490,9 +490,9 @@ The parser opens this file, reads its content and tries to parse the sum from it
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 15-19
+    :lines: 16-20
     :linenos:
-    :lineno-start: 15
+    :lineno-start: 16
 
 Note that again we wrap this parsing action in a try-except block.
 If the file cannot be found or cannot be read, we return the appropriate exit code.
@@ -502,9 +502,9 @@ If we manage to parse the sum, produced by the calculation, we wrap it in the ap
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 24-24
+    :lines: 25-25
     :linenos:
-    :lineno-start: 24
+    :lineno-start: 25
 
 Note that if we encountered no problems, we do not have to return anything.
 The engine will interpret this as the calculation having finished successfully.

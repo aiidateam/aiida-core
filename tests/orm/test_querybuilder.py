@@ -10,6 +10,7 @@
 # pylint: disable=invalid-name,missing-docstring,too-many-lines
 """Tests for the QueryBuilder."""
 import warnings
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -130,6 +131,8 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'pseudo.family'})
         self.assertEqual(get_group_type_filter(classifiers, True), {'like': 'pseudo.family%'})
 
+    # Tracked in issue #4281
+    @pytest.mark.flaky(reruns=2)
     def test_process_query(self):
         """
         Test querying for a process class.

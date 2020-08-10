@@ -11,6 +11,7 @@
 
 import os
 import numpy
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -67,6 +68,8 @@ class TestData(AiidaTestCase):
             'for this data class, add a generator of a dummy instance here'.format(data_class)
         )
 
+    # Tracked in issue #4281
+    @pytest.mark.flaky(reruns=2)
     def test_data_exporters(self):
         """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
 

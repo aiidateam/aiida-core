@@ -80,7 +80,8 @@
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",
-            "ase~=3.18",
+            "ase~=3.18; python_version>'3.5'",
+            "ase~=3.18,<3.20; python_version<='3.5'",
             "pymatgen>=2019.7.2",
             "pymysql~=0.9.3",
             "seekpath~=1.9,>=1.9.3",

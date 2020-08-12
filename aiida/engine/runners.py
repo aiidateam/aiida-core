@@ -59,14 +59,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not (rmq_submit and persister is None), \
             'Must supply a persister if you want to submit using communicator'
 
-        # Runner take responsibility to clear up loop only if the loop was created by Runner
-        self._do_close_loop = False
-        if loop is not None:
-            self._loop = loop
-        else:
-            self._loop = asyncio.new_event_loop()
-            self._do_close_loop = True
-
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -155,8 +148,6 @@ class Runner:  # pylint: disable=too-many-public-methods
         """Close the runner by stopping the loop."""
         assert not self._closed
         self.stop()
-        if self._do_close_loop:
-            self._loop.close()
         self._closed = True
 
     def instantiate_process(self, process, *args, **inputs):

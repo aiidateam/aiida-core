@@ -11,8 +11,7 @@
 import os
 import unittest
 import traceback
-
-from tornado import ioloop
+import asyncio
 
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.lang import classproperty
@@ -84,17 +83,18 @@ class AiidaTestCase(unittest.TestCase):
         cls.insert_data()
 
     def setUp(self):
-        # Install a new IOLoop so that any messing up of the state of the loop is not propagated
+        # Install a new event loop so that any messing up of the state of the loop is not propagated
         # to subsequent tests.
         # This call should come before the backend instance setup call just in case it uses the loop
-        ioloop.IOLoop().make_current()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     def tearDown(self):
         # Clean up the loop we created in set up.
         # Call this after the instance tear down just in case it uses the loop
         reset_manager()
-        loop = ioloop.IOLoop.current()
-        if not loop._closing:  # pylint: disable=protected-access,no-member
+        loop = asyncio.get_event_loop()
+        if not loop.is_closed():
             loop.close()
 
     def reset_database(self):

@@ -287,8 +287,8 @@ class Manager:
 
         This is used by workers when the daemon is running and in testing.
 
-        :param loop: the (optional) tornado event loop to use
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: the (optional) asyncio event loop to use
+        :type loop: the asyncio event loop
         :return: a runner configured to work in the daemon configuration
         :rtype: :class:`aiida.engine.runners.Runner`
         """
@@ -314,7 +314,7 @@ class Manager:
     def close(self):
         """Reset the global settings entirely and release any global objects."""
         if self._communicator is not None:
-            self._communicator.stop()
+            self._communicator.close()
         if self._runner is not None:
             self._runner.stop()
 

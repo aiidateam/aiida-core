@@ -302,7 +302,6 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         template = 'ipc://{filepath}/{filename}'
         endpoint = template.format(filepath=filepath, filename=filename)
 
-        print(endpoint)
         return endpoint
 
     def get_tcp_endpoint(self, port=None):

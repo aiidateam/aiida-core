@@ -30,7 +30,7 @@ class TestTransportQueue(AiidaTestCase):
     def test_simple_request(self):
         """ Test a simple transport request """
         queue = TransportQueue()
-        loop = queue.loop()
+        loop = queue.loop
 
         async def test():
             trans = None
@@ -44,7 +44,7 @@ class TestTransportQueue(AiidaTestCase):
     def test_get_transport_nested(self):
         """Test nesting calls to get the same transport."""
         transport_queue = TransportQueue()
-        loop = transport_queue.loop()
+        loop = transport_queue.loop
 
         async def nested(queue, authinfo):
             with queue.request_transport(authinfo) as request1:
@@ -60,7 +60,7 @@ class TestTransportQueue(AiidaTestCase):
     def test_get_transport_interleaved(self):
         """Test interleaved calls to get the same transport."""
         transport_queue = TransportQueue()
-        loop = transport_queue.loop()
+        loop = transport_queue.loop
 
         async def interleaved(authinfo):
             with transport_queue.request_transport(authinfo) as trans_future:
@@ -71,7 +71,7 @@ class TestTransportQueue(AiidaTestCase):
     def test_return_from_context(self):
         """Test raising a Return from coroutine context."""
         queue = TransportQueue()
-        loop = queue.loop()
+        loop = queue.loop
 
         async def test():
             with queue.request_transport(self.authinfo) as request:
@@ -84,7 +84,7 @@ class TestTransportQueue(AiidaTestCase):
     def test_open_fail(self):
         """Test that if opening fails."""
         queue = TransportQueue()
-        loop = queue.loop()
+        loop = queue.loop
 
         async def test():
             with queue.request_transport(self.authinfo) as request:
@@ -115,7 +115,7 @@ class TestTransportQueue(AiidaTestCase):
 
             import time
             queue = TransportQueue()
-            loop = queue.loop()
+            loop = queue.loop
 
             time_start = time.time()
 

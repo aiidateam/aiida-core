@@ -282,7 +282,7 @@ class Process(plumpy.Process):
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
                 kill_future = plumpy.gather(*killing)
-                result = self.loop().create_future()
+                result = self.loop.create_future()
 
                 def done(done_future: plumpy.Future):
                     is_all_killed = all(done_future.result())

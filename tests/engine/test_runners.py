@@ -10,9 +10,10 @@
 # pylint: disable=redefined-outer-name
 """Module to test process runners."""
 import threading
+import asyncio
 
-import plumpy
 import pytest
+import plumpy
 
 from aiida.engine import Process
 from aiida.manage.manager import get_manager
@@ -24,7 +25,8 @@ def create_runner():
     """Construct and return a `Runner`."""
 
     def _create_runner(poll_interval=0.5):
-        return get_manager().create_runner(poll_interval=poll_interval)
+        loop = asyncio.new_event_loop()
+        return get_manager().create_runner(poll_interval=poll_interval, loop=loop)
 
     return _create_runner
 

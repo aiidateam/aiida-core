@@ -48,6 +48,7 @@ class TransportQueue:
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._transport_requests = {}
 
+    @property
     def loop(self):
         """ Get the loop being used by this transport queue """
         return self._loop

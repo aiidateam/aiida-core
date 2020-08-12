@@ -49,7 +49,7 @@ class JobsList:
 
         self._authinfo = authinfo
         self._transport_queue = transport_queue
-        self._loop = transport_queue.loop()
+        self._loop = transport_queue.loop
         self._logger = logging.getLogger(__name__)
 
         self._jobs_cache = {}

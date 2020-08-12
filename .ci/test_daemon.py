@@ -26,7 +26,7 @@ from workchains import (
 )
 
 CODENAME_ADD = 'add@localhost'
-CODENAME_DOUBLER = 'doubler'
+CODENAME_DOUBLER = 'doubler@localhost'
 TIMEOUTSECS = 4 * 60  # 4 minutes
 NUMBER_CALCULATIONS = 15  # Number of calculations to submit
 NUMBER_WORKCHAINS = 8  # Number of workchains to submit

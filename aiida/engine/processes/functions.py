@@ -13,6 +13,7 @@ import functools
 import inspect
 import logging
 import signal
+import asyncio
 
 from aiida.common.lang import override
 from aiida.manage.manager import get_manager
@@ -116,8 +117,9 @@ def process_function(node_class):
             :return: tuple of the outputs of the process and the process node pk
             :rtype: (dict, int)
             """
+            loop = asyncio.new_event_loop()
             manager = get_manager()
-            runner = manager.create_runner(with_persistence=False)
+            runner = manager.create_runner(with_persistence=False, loop=loop)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs

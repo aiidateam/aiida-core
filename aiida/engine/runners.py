@@ -60,7 +60,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not (rmq_submit and persister is None), \
             'Must supply a persister if you want to submit using communicator'
 
-        self._loop = loop if loop is not None else asyncio.new_event_loop()
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)

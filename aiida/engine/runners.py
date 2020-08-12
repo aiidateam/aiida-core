@@ -15,10 +15,10 @@ import logging
 import signal
 import threading
 import uuid
+import asyncio
 
 import kiwipy
 import plumpy
-import tornado.ioloop
 
 from aiida.common import exceptions
 from aiida.orm import load_node
@@ -49,8 +49,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         """Construct a new runner.
 
         :param poll_interval: interval in seconds between polling for status of active sub processes
-        :param loop: an event loop to use, if none is suppled a new one will be created
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: an asyncio event loop, if none is suppled a new one will be created
         :param communicator: the communicator to use
         :type communicator: :class:`kiwipy.Communicator`
         :param rmq_submit: if True, processes will be submitted to RabbitMQ, otherwise they will be scheduled here
@@ -65,7 +64,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         if loop is not None:
             self._loop = loop
         else:
-            self._loop = tornado.ioloop.IOLoop()
+            self._loop = asyncio.new_event_loop()
             self._do_close_loop = True
 
         self._poll_interval = poll_interval
@@ -93,8 +92,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         """
         Get the event loop of this runner
 
-        :return: the event loop
-        :rtype: :class:`tornado.ioloop.IOLoop`
+        :return: the asyncio event loop
         """
         return self._loop
 
@@ -142,7 +140,7 @@ class Runner:  # pylint: disable=too-many-public-methods
 
     def start(self):
         """Start the internal event loop."""
-        self._loop.start()
+        self._loop.run_forever()
 
     def stop(self):
         """Stop the internal event loop."""
@@ -151,7 +149,7 @@ class Runner:  # pylint: disable=too-many-public-methods
     def run_until_complete(self, future):
         """Run the loop until the future has finished and return the result."""
         with utils.loop_scope(self._loop):
-            return self._loop.run_sync(lambda: future)
+            return self._loop.run_until_complete(future)
 
     def close(self):
         """Close the runner by stopping the loop."""
@@ -190,7 +188,7 @@ class Runner:  # pylint: disable=too-many-public-methods
             process.close()
             self.controller.continue_process(process.pid, nowait=False, no_reply=True)
         else:
-            self.loop.add_callback(process.step_until_terminated)
+            self.loop.create_task(process.step_until_terminated())
 
         return process.node
 
@@ -206,7 +204,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not self._closed
 
         process = self.instantiate_process(process, *args, **inputs)
-        self.loop.add_callback(process.step_until_terminated)
+        self.loop.create_task(process.step_until_terminated())
         return process.node
 
     def _run(self, process, *args, **inputs):
@@ -329,6 +327,6 @@ class Runner:  # pylint: disable=too-many-public-methods
         if node.is_terminated:
             args = [node.__class__.__name__, node.pk]
             LOGGER.info('%s<%d> confirmed to be terminated by backup polling mechanism', *args)
-            self._loop.add_callback(callback)
+            self._loop.call_soon(callback)
         else:
             self._loop.call_later(self._poll_interval, self._poll_process, node, callback)

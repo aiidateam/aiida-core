@@ -11,8 +11,7 @@
 import contextlib
 import logging
 import time
-
-from tornado import concurrent, gen
+import asyncio
 
 from aiida.common import lang
 
@@ -50,7 +49,7 @@ class JobsList:
 
         self._authinfo = authinfo
         self._transport_queue = transport_queue
-        self._loop = transport_queue.loop()
+        self._loop = transport_queue.loop
         self._logger = logging.getLogger(__name__)
 
         self._jobs_cache = {}
@@ -83,8 +82,7 @@ class JobsList:
         """
         return self._last_updated
 
-    @gen.coroutine
-    def _get_jobs_from_scheduler(self):
+    async def _get_jobs_from_scheduler(self):
         """Get the current jobs list from the scheduler.
 
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
@@ -92,7 +90,7 @@ class JobsList:
         """
         with self._transport_queue.request_transport(self._authinfo) as request:
             self.logger.info('waiting for transport')
-            transport = yield request
+            transport = await request
 
             scheduler = self._authinfo.computer.get_scheduler()
             scheduler.set_transport(transport)
@@ -113,10 +111,9 @@ class JobsList:
             for job_id, job_info in scheduler_response.items():
                 jobs_cache[job_id] = job_info
 
-            raise gen.Return(jobs_cache)
+            return jobs_cache
 
-    @gen.coroutine
-    def _update_job_info(self):
+    async def _update_job_info(self):
         """Update all of the job information objects.
 
         This will set the futures for all pending update requests where the corresponding job has a new status compared
@@ -127,7 +124,7 @@ class JobsList:
                 return
 
             # Update our cache of the job states
-            self._jobs_cache = yield self._get_jobs_from_scheduler()
+            self._jobs_cache = await self._get_jobs_from_scheduler()
         except Exception as exception:
             # Set the exception on all the update futures
             for future in self._job_update_requests.values():
@@ -158,7 +155,7 @@ class JobsList:
         :return: future that will resolve to a `JobInfo` object when the job changes state
         """
         # Get or create the future
-        request = self._job_update_requests.setdefault(job_id, concurrent.Future())
+        request = self._job_update_requests.setdefault(job_id, asyncio.Future())
         assert not request.done(), 'Expected pending job info future, found in done state.'
 
         try:
@@ -173,19 +170,22 @@ class JobsList:
         This will automatically stop if there are no outstanding requests.
         """
 
-        @gen.coroutine
-        def updating():
+        async def updating():
             """Do the actual update, stop if not requests left."""
-            yield self._update_job_info()
+            await self._update_job_info()
             # Any outstanding requests?
             if self._update_requests_outstanding():
-                self._update_handle = self._loop.call_later(self._get_next_update_delay(), updating)
+                self._update_handle = self._loop.call_later(
+                    self._get_next_update_delay(), asyncio.ensure_future, updating()
+                )
             else:
                 self._update_handle = None
 
         # Check if we're already updating
         if self._update_handle is None:
-            self._update_handle = self._loop.call_later(self._get_next_update_delay(), updating)
+            self._update_handle = self._loop.call_later(
+                self._get_next_update_delay(), asyncio.ensure_future, updating()
+            )
 
     @staticmethod
     def _has_job_state_changed(old, new):
@@ -274,7 +274,7 @@ class JobManager:
         This is a context manager so that if the user leaves the context the request is automatically cancelled.
 
         :return: A tuple containing the `JobInfo` object and detailed job info. Both can be None.
-        :rtype: :class:`tornado.concurrent.Future`
+        :rtype: :class:`asyncio.Future`
         """
         with self.get_jobs_list(authinfo).request_job_info_update(job_id) as request:
             try:

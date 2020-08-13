@@ -740,10 +740,16 @@ class TestQueryHelp(AiidaTestCase):
         self.assertEqual(qb.count(), 1)
 
     def test_recreate_from_queryhelp(self):
-        """Test recreating a QueryBuilder from the Query Help"""
+        """Test recreating a QueryBuilder from the Query Help
+
+        We test appending a Data node and a Process node for variety, as well
+        as a generic Node specifically because it translates to `entity_type`
+        as an empty string (which can potentially cause problems).
+        """
         import copy
 
         qb1 = orm.QueryBuilder()
+        qb1.append(orm.Node)
         qb1.append(orm.Data)
         qb1.append(orm.CalcJobNode)
 

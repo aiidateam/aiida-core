@@ -104,9 +104,9 @@ def submit(process, **inputs):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     runner = manager.get_manager().get_runner()
-    controller = manager.get_manager().get_process_controller()
+    # controller = manager.get_manager().get_process_controller()
 
-    process = instantiate_process(runner, process, **inputs)
+    process = instantiate_process(None, process, **inputs)
 
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
     # instead of raising, because in this way the user does not have to change the launcher when testing.
@@ -121,7 +121,7 @@ def submit(process, **inputs):
     process.close()
 
     # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
-    controller.continue_process(process.pid, nowait=False, no_reply=True)
+    runner.controller.continue_process(process.pid, nowait=False, no_reply=True)
 
     return process.node
 

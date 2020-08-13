@@ -13,7 +13,6 @@ import functools
 import inspect
 import logging
 import signal
-import asyncio
 
 from aiida.common.lang import override
 from aiida.manage.manager import get_manager
@@ -108,18 +107,13 @@ def process_function(node_class):
             """
             Run the FunctionProcess with the supplied inputs in a local runner.
 
-            The function will have to create a new runner for the FunctionProcess instead of using the global runner,
-            because otherwise if this process function were to call another one from within its scope, that would use
-            the same runner and it would be blocking the event loop from continuing.
-
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
             :return: tuple of the outputs of the process and the process node pk
             :rtype: (dict, int)
             """
-            loop = asyncio.new_event_loop()
             manager = get_manager()
-            runner = manager.create_runner(with_persistence=False, loop=loop)
+            runner = manager.get_runner(with_persistence=False)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs
@@ -156,7 +150,6 @@ def process_function(node_class):
                 # If the `original_handler` is set, that means the `kill_process` was bound, which needs to be reset
                 if original_handler:
                     signal.signal(signal.SIGINT, original_handler)
-                runner.close()
 
             store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
             if not store_provenance:

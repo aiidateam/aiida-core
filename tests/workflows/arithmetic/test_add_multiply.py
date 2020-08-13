@@ -22,6 +22,7 @@ def test_factory():
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('reset_event_loop')
 def test_run():
     """Test running the work function."""
     x = Int(1)

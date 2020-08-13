@@ -10,6 +10,7 @@
 # pylint: disable=no-member, too-many-lines
 """Test data-related verdi commands."""
 
+import asyncio
 import io
 import os
 import shutil
@@ -310,7 +311,16 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
     @classmethod
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
+
+        # create a new event loop since the privious one is closed by other test case
+        cls.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(cls.loop)
         cls.ids = cls.create_structure_bands()
+
+    @classmethod
+    def tearDownClass(cls):  # pylint: disable=arguments-differ
+        cls.loop.close()
+        super().tearDownClass()
 
     def setUp(self):
         self.cli_runner = CliRunner()

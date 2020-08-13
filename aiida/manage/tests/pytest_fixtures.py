@@ -17,6 +17,7 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_local_code_factory
 
 """
+import asyncio
 import shutil
 import tempfile
 import pytest
@@ -57,6 +58,15 @@ def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
     aiida_profile.reset_db()
     yield
+
+
+@pytest.fixture(scope='function')
+def reset_event_loop():
+    """Reset the loop for independent test case"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield
+    loop.close()
 
 
 @pytest.fixture(scope='function')

@@ -241,14 +241,14 @@ class Manager:
 
         return self._process_controller
 
-    def get_runner(self):
+    def get_runner(self, **kwargs):
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
         :rtype: :class:`aiida.engine.runners.Runner`
         """
         if self._runner is None:
-            self._runner = self.create_runner()
+            self._runner = self.create_runner(**kwargs)
 
         return self._runner
 

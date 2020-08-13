@@ -98,9 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Python version 3.7.7 is pinned due to issue #4256.
-        # The pinning should be removed as soon as issue #3709 is resolved.
-        python-version: [3.5, 3.6, 3.7.7, 3.8]
+        python-version: [3.5, 3.6, 3.7, 3.8]
         backend: ['django', 'sqlalchemy']
 
     services:

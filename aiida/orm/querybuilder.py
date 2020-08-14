@@ -1527,6 +1527,74 @@ class QueryBuilder:
                                        )
         return descendants_recursive.c
 
+    def _join_descendants_full_recursive(
+        self, joined_entity, entity_to_join, isouterjoin, filter_dict, expand_path=False
+    ):
+        """
+        joining descendants using the recursive functionality
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        :TODO: Pass an option to also show the path, if this is wanted.
+        """
+        link_types = (
+            LinkType.CREATE.value,
+            LinkType.INPUT_CALC.value,
+            LinkType.INPUT_WORK.value,
+            LinkType.CALL_CALC.value,
+            LinkType.CALL_WORK.value,
+        )
+
+        self._check_dbentities((joined_entity, self._impl.Node), (entity_to_join, self._impl.Node), 'with_ancestors')
+
+        link1 = aliased(self._impl.Link)
+        link2 = aliased(self._impl.Link)
+        node1 = aliased(self._impl.Node)
+        in_recursive_filters = self._build_filters(node1, filter_dict)
+
+        selection_walk_list = [
+            link1.input_id.label('ancestor_id'),
+            link1.output_id.label('descendant_id'),
+            type_cast(0, Integer).label('depth'),
+        ]
+        if expand_path:
+            selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
+
+        walk = select(selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)).where(
+            and_(
+                in_recursive_filters,  # I apply filters for speed here
+                link1.type.in_(link_types)
+            )
+        ).cte(recursive=True)
+
+        aliased_walk = aliased(walk)
+
+        selection_union_list = [
+            aliased_walk.c.ancestor_id.label('ancestor_id'),
+            link2.output_id.label('descendant_id'),
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth')
+        ]
+        if expand_path:
+            selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
+
+        descendants_recursive = aliased(
+            aliased_walk.union_all(
+                select(selection_union_list).select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.input_id == aliased_walk.c.descendant_id,
+                    )
+                ).where(link2.type.in_(link_types))
+            )
+        )
+
+        self._query = self._query.join(descendants_recursive,
+                                       descendants_recursive.c.ancestor_id == joined_entity.id).join(
+                                           entity_to_join,
+                                           descendants_recursive.c.descendant_id == entity_to_join.id,
+                                           isouter=isouterjoin
+                                       )
+        return descendants_recursive.c
+
     def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, expand_path=False):
         """
         joining ancestors using the recursive functionality
@@ -1744,6 +1812,7 @@ class QueryBuilder:
                 'with_outgoing': self._join_inputs,
                 'with_descendants': self._join_ancestors_recursive,
                 'with_ancestors': self._join_descendants_recursive,
+                'with_ancestors_full': self._join_descendants_full_recursive,
                 'with_computer': self._join_to_computer_used,
                 'with_user': self._join_created_by,
                 'with_group': self._join_group_members,
@@ -1921,7 +1990,7 @@ class QueryBuilder:
             isouterjoin = verticespec.get('outerjoin')
             edge_tag = verticespec['edge_tag']
 
-            if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants', 'ancestor_of', 'descendant_of'):
+            if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants', 'with_ancestors_full'):
                 # I treat those two cases in a special way.
                 # I give them a filter_dict, to help the recursive function find a good
                 # starting point. TODO: document this!

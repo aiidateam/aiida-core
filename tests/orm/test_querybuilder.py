@@ -1461,3 +1461,244 @@ class TestDoubleStar(AiidaTestCase):
         # data are correct
         res = list(qb.dict()[0].values())[0]
         self.assertDictEqual(res, expected_dict)
+
+
+class TestJoining(AiidaTestCase):
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        """Set up the provenance graph.
+
+                                 ______
+             ------------------ |      |
+            |            ------ |  D1  |
+            |           |       |______|
+            |           |
+            |           |           |
+            |           v           v
+            |        ______      ______
+            |       |      |    |      |
+            |   --> |  W2  | -> |  C1  |
+            |  |    |______|    |______|
+            |  |
+            |  |        |           |
+            v  |        |           v
+           ______       |        ______
+          |      |       -----> |      |
+          |  W1  |       ------ |  D2  |
+          |______|      |       |______|
+                        |
+            |  |        |           |
+            |  |        v           v
+            |  |     ______      ______
+            |  |    |      |    |      |
+            |   --> |  W3  | -> |  C2  |
+            |       |______|    |______|
+            |
+            |           |           |
+            |           |           v
+            |           |        ______
+            |           |       |      |
+            |            -----> |  D3  |
+             -----------------> |______|
+
+
+        """
+        super().setUpClass(*args, **kwargs)
+
+        cls.data_01 = orm.Data().store()
+        cls.data_02 = orm.Data()
+        cls.data_03 = orm.Data()
+
+        cls.calc_01 = orm.CalculationNode()
+        cls.calc_02 = orm.CalculationNode()
+
+        cls.work_01 = orm.WorkflowNode()
+        cls.work_02 = orm.WorkflowNode()
+        cls.work_03 = orm.WorkflowNode()
+
+        cls.work_01.add_incoming(cls.data_01, link_type=LinkType.INPUT_WORK, link_label='data_01')
+        cls.work_01.store()
+
+        cls.work_02.add_incoming(cls.work_01, link_type=LinkType.CALL_WORK, link_label='work_01')
+        cls.work_02.add_incoming(cls.data_01, link_type=LinkType.INPUT_WORK, link_label='data_01')
+        cls.work_02.store()
+
+        cls.calc_01.add_incoming(cls.data_01, link_type=LinkType.INPUT_CALC, link_label='data_01')
+        cls.calc_01.add_incoming(cls.work_01, link_type=LinkType.CALL_CALC, link_label='calc_01')
+        cls.calc_01.store()
+
+        cls.data_02.add_incoming(cls.calc_01, link_type=LinkType.CREATE, link_label='data_02')
+        cls.data_02.store()
+        cls.data_02.add_incoming(cls.work_02, link_type=LinkType.RETURN, link_label='data_02')
+
+        cls.work_03.add_incoming(cls.work_01, link_type=LinkType.CALL_WORK, link_label='work_02')
+        cls.work_03.add_incoming(cls.data_02, link_type=LinkType.INPUT_WORK, link_label='data_02')
+        cls.work_03.store()
+
+        cls.calc_02.add_incoming(cls.data_02, link_type=LinkType.INPUT_CALC, link_label='data_02')
+        cls.calc_02.add_incoming(cls.work_02, link_type=LinkType.CALL_CALC, link_label='calc_02')
+        cls.calc_02.store()
+
+        cls.data_03.add_incoming(cls.calc_02, link_type=LinkType.CREATE, link_label='data_03')
+        cls.data_03.store()
+        cls.data_03.add_incoming(cls.work_01, link_type=LinkType.RETURN, link_label='data_03')
+        cls.data_03.add_incoming(cls.work_03, link_type=LinkType.RETURN, link_label='data_03')
+
+    def test_with_incoming_data(self):
+        """Test the `with_incoming` joining keyword for `Data` as the source node."""
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.CalculationNode, with_incoming='data')
+
+        assert builder.count() == 2
+        assert set(builder.all(flat=True)) == {self.data_01.pk, self.data_02.pk}
+
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.WorkflowNode, with_incoming='data', project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.data_01.pk, self.work_01.pk],
+            [self.data_01.pk, self.work_02.pk],
+            [self.data_02.pk, self.work_03.pk],
+        ])
+
+    def test_with_outgoing_data(self):
+        """Test the `with_outgoing` joining keyword for `Data` as the source node."""
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.CalculationNode, with_outgoing='data')
+
+        assert builder.count() == 2
+        assert set(builder.all(flat=True)) == {self.data_02.pk, self.data_03.pk}
+
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.WorkflowNode, with_outgoing='data', project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.data_02.pk, self.work_02.pk],
+            [self.data_03.pk, self.work_01.pk],
+            [self.data_03.pk, self.work_03.pk],
+        ])
+
+    def test_with_incoming_process(self):
+        """Test the `with_incoming` joining keyword for `ProcessNode` as the source node."""
+        builder = orm.QueryBuilder()
+        builder.append(orm.ProcessNode, tag='calculation', project='id')
+        builder.append(orm.Data, with_incoming='calculation', project='id')
+
+        assert builder.count() == 5
+        assert sorted(builder.all()) == sorted([
+            [self.work_01.pk, self.data_03.pk],
+            [self.work_03.pk, self.data_03.pk],
+            [self.calc_02.pk, self.data_03.pk],
+            [self.work_02.pk, self.data_02.pk],
+            [self.calc_01.pk, self.data_02.pk],
+        ])
+
+    def test_with_incoming_process_edge_filters(self):
+        """Test the `with_incoming` joining keyword for `ProcessNode` as the source node with edge filters."""
+        edge_filters = {'type': LinkType.CREATE.value}
+        builder = orm.QueryBuilder()
+        builder.append(orm.ProcessNode, tag='calculation', project='id')
+        builder.append(orm.Data, with_incoming='calculation', edge_filters=edge_filters, project='id')
+
+        assert builder.count() == 2
+        assert sorted(builder.all()) == sorted([
+            [self.calc_01.pk, self.data_02.pk],
+            [self.calc_02.pk, self.data_03.pk],
+        ])
+
+    def test_with_ancestors(self):
+        """Test the `with_ancestors` joining keyword."""
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.CalculationNode, with_ancestors='data', project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.data_01.pk, self.calc_01.pk],
+            [self.data_01.pk, self.calc_02.pk],
+            [self.data_02.pk, self.calc_02.pk],
+        ])
+
+        builder = orm.QueryBuilder()
+        builder.append(orm.CalculationNode, tag='calculation', project='id')
+        builder.append(orm.Data, with_ancestors='calculation', project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.calc_01.pk, self.data_02.pk],
+            [self.calc_01.pk, self.data_03.pk],
+            [self.calc_02.pk, self.data_03.pk],
+        ])
+
+        edge_filters = {'link_type': LinkType.CREATE.value}
+        builder = orm.QueryBuilder()
+        builder.append(orm.CalculationNode, tag='calculation', project='id')
+        builder.append(orm.Data, with_ancestors='calculation', edge_filters=edge_filters, project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.calc_01.pk, self.data_02.pk],
+            [self.calc_02.pk, self.data_03.pk],
+        ])
+
+    def test_with_descendants(self):
+        """Test the `with_descendants` joining keyword."""
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.CalculationNode, with_descendants='data', project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.data_02.pk, self.calc_01.pk],
+            [self.data_03.pk, self.calc_01.pk],
+            [self.data_03.pk, self.calc_02.pk],
+        ])
+
+        builder = orm.QueryBuilder()
+        builder.append(orm.CalculationNode, tag='calculation', project='id')
+        builder.append(orm.Data, with_descendants='calculation', project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.calc_01.pk, self.data_01.pk],
+            [self.calc_02.pk, self.data_01.pk],
+            [self.calc_02.pk, self.data_02.pk],
+        ])
+
+    def test_with_ancestors_full(self):
+        """Test the `with_ancestors_full` joining keyword."""
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.WorkflowNode, with_ancestors_full='data', project='id')
+
+        assert builder.count() == 7
+        assert sorted(builder.all()) == sorted([
+            [self.data_01.pk, self.work_01.pk],
+            [self.data_01.pk, self.work_02.pk],
+            [self.data_01.pk, self.work_02.pk],
+            [self.data_01.pk, self.work_03.pk],
+            [self.data_01.pk, self.work_03.pk],
+            [self.data_01.pk, self.work_03.pk],
+            [self.data_02.pk, self.work_03.pk],
+        ])
+
+    def test_with_ancestors_full_edge_filters(self):
+        """Test the `with_ancestors_full` joining keyword with edge filters."""
+        edge_filters = {'type': LinkType.INPUT_WORK.value}
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data, tag='data', project='id')
+        builder.append(orm.WorkflowNode, with_ancestors_full='data', edge_filters=edge_filters, project='id')
+
+        assert builder.count() == 3
+        assert sorted(builder.all()) == sorted([
+            [self.data_01.pk, self.work_01.pk],
+            [self.data_01.pk, self.work_02.pk],
+            [self.data_02.pk, self.work_03.pk],
+        ])

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Configuration file for pytest tests."""
 import os
 
@@ -215,3 +216,26 @@ def create_profile() -> Profile:
         return Profile(name, profile_dictionary)
 
     return _create_profile
+
+
+@pytest.fixture
+def backend():
+    """Get the ``Backend`` instance of the currently loaded profile."""
+    from aiida.manage.manager import get_manager
+    return get_manager().get_backend()
+
+
+@pytest.fixture
+def skip_if_not_django(backend):
+    """Fixture that will skip any test that uses it when a profile is loaded with any other backend then Django."""
+    from aiida.orm.implementation.django.backend import DjangoBackend
+    if not isinstance(backend, DjangoBackend):
+        pytest.skip('this test should only be run for the Django backend.')
+
+
+@pytest.fixture
+def skip_if_not_sqlalchemy(backend):
+    """Fixture that will skip any test that uses it when a profile is loaded with any other backend then SqlAlchemy."""
+    from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+    if not isinstance(backend, SqlaBackend):
+        pytest.skip('this test should only be run for the SqlAlchemy backend.')

@@ -658,12 +658,13 @@ class QueryBuilder:
         # input now.
         # First of all, let's make sure the specified
         # the class or the type (not both)
-        if cls and entity_type:
+
+        if cls is not None and entity_type is not None:
             raise InputValidationError(
                 'You cannot specify both a class ({}) and a entity_type ({})'.format(cls, entity_type)
             )
 
-        if not (cls or entity_type):
+        if cls is None and entity_type is None:
             raise InputValidationError('You need to specify at least a class or a entity_type')
 
         # Let's check if it is a valid class or type
@@ -675,7 +676,7 @@ class QueryBuilder:
             else:
                 if not inspect_isclass(cls):
                     raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(cls))
-        elif entity_type:
+        elif entity_type is not None:
             if isinstance(entity_type, (tuple, list, set)):
                 for sub_type in entity_type:
                     if not isinstance(sub_type, str):

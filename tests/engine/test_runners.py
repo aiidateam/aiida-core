@@ -12,8 +12,8 @@
 import threading
 import asyncio
 
-import pytest
 import plumpy
+import pytest
 
 from aiida.engine import Process
 from aiida.manage.manager import get_manager

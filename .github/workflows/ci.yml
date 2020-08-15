@@ -122,8 +122,7 @@ jobs:
       run: |
         pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip install --no-deps -e .
-        pip install --upgrade git+https://github.com/unkcpz/plumpy.git@asyncio
-        pip install --upgrade git+https://github.com/circus-tent/circus.git@master
+        pip install --upgrade git+https://github.com/unkcpz/circus.git@fix/quit-wait
         reentry scan
         pip freeze
 

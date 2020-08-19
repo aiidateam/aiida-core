@@ -123,7 +123,7 @@ def get_node_summary(node):
         pass
     else:
         if computer is not None:
-            table.append(['computer', '[{}] {}'.format(node.computer.pk, node.computer.name)])
+            table.append(['computer', '[{}] {}'.format(node.computer.pk, node.computer.label)])
 
     return tabulate(table, headers=table_headers)
 

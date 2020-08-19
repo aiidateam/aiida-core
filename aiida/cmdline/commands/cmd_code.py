@@ -45,7 +45,7 @@ def get_default(key, ctx):
 
 
 def get_computer_name(ctx):
-    return getattr(ctx.code_builder, 'computer').name
+    return getattr(ctx.code_builder, 'computer').label
 
 
 def get_on_computer(ctx):
@@ -168,7 +168,36 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code, verbose):
     """Display detailed information for a code."""
-    click.echo(tabulate.tabulate(code.get_full_text_info(verbose)))
+    from aiida.orm.utils.repository import FileType
+
+    table = []
+    table.append(['PK', code.pk])
+    table.append(['UUID', code.uuid])
+    table.append(['Label', code.label])
+    table.append(['Description', code.description])
+    table.append(['Default plugin', code.get_input_plugin_name()])
+
+    if code.is_local():
+        table.append(['Type', 'local'])
+        table.append(['Exec name', code.get_execname()])
+        table.append(['List of files/folders:', ''])
+        for obj in code.list_objects():
+            if obj.type == FileType.DIRECTORY:
+                table.append(['directory', obj.name])
+            else:
+                table.append(['file', obj.name])
+    else:
+        table.append(['Type', 'remote'])
+        table.append(['Remote machine', code.get_remote_computer().label])
+        table.append(['Remote absolute path', code.get_remote_exec_path()])
+
+    table.append(['Prepend text', code.get_prepend_text()])
+    table.append(['Append text', code.get_append_text()])
+
+    if verbose:
+        table.append(['Calculations', len(code.get_outgoing().all())])
+
+    click.echo(tabulate.tabulate(table))
 
 
 @verdi_code.command()
@@ -225,7 +254,7 @@ def relabel(code, label):
     try:
         code.relabel(label)
     except InputValidationError as exception:
-        echo.echo_critical('invalid code name: {}'.format(exception))
+        echo.echo_critical('invalid code label: {}'.format(exception))
     else:
         echo.echo_success('Code<{}> relabeled from {} to {}'.format(code.pk, old_label, code.full_label))
 
@@ -249,7 +278,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
     qb_computer_filters = dict()
     if computer is not None:
-        qb_computer_filters['name'] = computer.name
+        qb_computer_filters['name'] = computer.label
 
     qb_code_filters = dict()
     if input_plugin is not None:

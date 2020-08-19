@@ -188,11 +188,17 @@ class Transport(abc.ABC):
 
     @classmethod
     def get_valid_transports(cls):
-        """
-        :return: a list of existing plugin names
-        """
-        from aiida.plugins.entry_point import get_entry_point_names
+        """Return the list of registered transport entry points.
 
+        .. deprecated:: 1.4.0
+
+            Will be removed in `2.0.0`, use `aiida.plugins.entry_point.get_entry_point_names` instead
+        """
+        import warnings
+        from aiida.common.warnings import AiidaDeprecationWarning
+        from aiida.plugins.entry_point import get_entry_point_names
+        message = 'method is deprecated, use `aiida.plugins.entry_point.get_entry_point_names` instead'
+        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
         return get_entry_point_names('aiida.transports')
 
     @classmethod

@@ -19,7 +19,7 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_computer import computer_setup
-from aiida.cmdline.commands.cmd_computer import computer_show, computer_list, computer_rename, computer_delete
+from aiida.cmdline.commands.cmd_computer import computer_show, computer_list, computer_relabel, computer_delete
 from aiida.cmdline.commands.cmd_computer import computer_test, computer_configure, computer_duplicate
 
 
@@ -605,54 +605,49 @@ class TestVerdiComputerCommands(AiidaTestCase):
         # Exceptions should arise
         self.assertIsNotNone(result.exception)
 
-    def test_computer_rename(self):
+    def test_computer_relabel(self):
         """
-        Test if 'verdi computer rename' command works
+        Test if 'verdi computer relabel' command works
         """
         from aiida.common.exceptions import NotExistent
 
         # See if the command complains about not getting an invalid computer
-        options = ['not_existent_computer_name']
-        result = self.cli_runner.invoke(computer_rename, options)
-        # Exception should be raised
+        options = ['not_existent_computer_label']
+        result = self.cli_runner.invoke(computer_relabel, options)
         self.assertIsNotNone(result.exception)
 
-        # See if the command complains about not getting both names
+        # See if the command complains about not getting both labels
         options = ['comp_cli_test_computer']
-        result = self.cli_runner.invoke(computer_rename, options)
-        # Exception should be raised
+        result = self.cli_runner.invoke(computer_relabel, options)
         self.assertIsNotNone(result.exception)
 
-        # The new name must be different to the old one
+        # The new label must be different to the old one
         options = ['comp_cli_test_computer', 'comp_cli_test_computer']
-        result = self.cli_runner.invoke(computer_rename, options)
-        # Exception should be raised
+        result = self.cli_runner.invoke(computer_relabel, options)
         self.assertIsNotNone(result.exception)
 
-        # Change a computer name successully.
-        options = ['comp_cli_test_computer', 'renamed_test_computer']
-        result = self.cli_runner.invoke(computer_rename, options)
-        # Exception should be not be raised
+        # Change a computer label successully.
+        options = ['comp_cli_test_computer', 'relabeled_test_computer']
+        result = self.cli_runner.invoke(computer_relabel, options)
         self.assertIsNone(result.exception, result.output)
 
-        # Check that the name really was changed
-        # The old name should not be available
+        # Check that the label really was changed
+        # The old label should not be available
         with self.assertRaises(NotExistent):
             orm.Computer.objects.get(label='comp_cli_test_computer')
-        # The new name should be avilable
-        orm.Computer.objects.get(label='renamed_test_computer')
+        # The new label should be available
+        orm.Computer.objects.get(label='relabeled_test_computer')
 
-        # Now change the name back
-        options = ['renamed_test_computer', 'comp_cli_test_computer']
-        result = self.cli_runner.invoke(computer_rename, options)
-        # Exception should be not be raised
+        # Now change the label back
+        options = ['relabeled_test_computer', 'comp_cli_test_computer']
+        result = self.cli_runner.invoke(computer_relabel, options)
         self.assertIsNone(result.exception, result.output)
 
-        # Check that the name really was changed
-        # The old name should not be available
+        # Check that the label really was changed
+        # The old label should not be available
         with self.assertRaises(NotExistent):
-            orm.Computer.objects.get(label='renamed_test_computer')
-        # The new name should be avilable
+            orm.Computer.objects.get(label='relabeled_test_computer')
+        # The new label should be available
         orm.Computer.objects.get(label='comp_cli_test_computer')
 
     def test_computer_delete(self):

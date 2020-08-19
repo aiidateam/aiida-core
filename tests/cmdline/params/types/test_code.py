@@ -69,7 +69,7 @@ def test_get_by_label(setup_codes, parameter_type):
 def test_get_by_fullname(setup_codes, parameter_type):
     """Verify that using the LABEL@machinename will retrieve the correct entity."""
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}@{}'.format(entity_01.label, entity_01.computer.name)
+    identifier = '{}@{}'.format(entity_01.label, entity_01.computer.label)
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 

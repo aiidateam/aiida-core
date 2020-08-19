@@ -72,9 +72,9 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
 
         computer = Computer(label=self._get_and_count('label', used), hostname=self._get_and_count('hostname', used))
 
-        computer.set_description(self._get_and_count('description', used))
-        computer.set_scheduler_type(self._get_and_count('scheduler', used))
-        computer.set_transport_type(self._get_and_count('transport', used))
+        computer.description = self._get_and_count('description', used)
+        computer.scheduler_type = self._get_and_count('scheduler', used)
+        computer.transport_type = self._get_and_count('transport', used)
         computer.set_prepend_text(self._get_and_count('prepend_text', used))
         computer.set_append_text(self._get_and_count('append_text', used))
         computer.set_workdir(self._get_and_count('work_dir', used))

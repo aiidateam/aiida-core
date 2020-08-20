@@ -9,8 +9,10 @@
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
 import os
+import warnings
 
 from aiida.common import exceptions
+from aiida.common.warnings import AiidaDeprecationWarning
 from .data import Data
 
 __all__ = ('Code',)
@@ -95,21 +97,20 @@ class Code(Data):
 
     def __str__(self):
         local_str = 'Local' if self.is_local() else 'Remote'
-        computer_str = self.get_computer_name()
+        computer_str = self.computer.label
         return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label, computer_str, self.pk, self.uuid)
 
     def get_computer_name(self):
-        """Get name of this code's computer."""
+        """Get label of this code's computer.
 
-        if self.is_local():
-            computer_str = 'repository'
-        else:
-            if self.computer is not None:
-                computer_str = self.computer.name
-            else:
-                computer_str = '[unknown]'
+        .. deprecated:: 1.4.0
+            Will be removed in `v2.0.0`, use the `self.get_computer_label()` method instead.
+        """
+        return self.get_computer_label()
 
-        return computer_str
+    def get_computer_label(self):
+        """Get label of this code's computer."""
+        return 'repository' if self.is_local() else self.computer.label
 
     @property
     def full_label(self):
@@ -117,7 +118,7 @@ class Code(Data):
 
         Returns label of the form <code-label>@<computer-name>.
         """
-        return '{}@{}'.format(self.label, self.get_computer_name())
+        return '{}@{}'.format(self.label, self.get_computer_label())
 
     @property
     def label(self):
@@ -150,7 +151,7 @@ class Code(Data):
             Will remove raise_error in `v2.0.0`. Use `try/except` instead.
         """
         # pylint: disable=unused-argument
-        suffix = '@{}'.format(self.get_computer_name())
+        suffix = '@{}'.format(self.computer.label)
         if new_label.endswith(suffix):
             new_label = new_label[:-len(suffix)]
 
@@ -498,8 +499,12 @@ class Code(Data):
     def get_full_text_info(self, verbose=False):
         """Return a list of lists with a human-readable detailed information on this code.
 
+        .. deprecated:: 1.4.0
+            Will be removed in `v2.0.0`.
+
         :return: list of lists where each entry consists of two elements: a key and a value
         """
+        warnings.warn('this property is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
         from aiida.orm.utils.repository import FileType
 
         result = []
@@ -523,7 +528,7 @@ class Code(Data):
                     result.append(['file', obj.name])
         else:
             result.append(['Type', 'remote'])
-            result.append(['Remote machine', self.get_remote_computer().name])
+            result.append(['Remote machine', self.get_remote_computer().label])
             result.append(['Remote absolute path', self.get_remote_exec_path()])
 
         if self.get_prepend_text().strip():

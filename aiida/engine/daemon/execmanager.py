@@ -74,7 +74,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
                 "[submission of calculation {}] No remote_working_directory configured for computer '{}'".format(
-                    node.pk, computer.name
+                    node.pk, computer.label
                 )
             )
 
@@ -94,7 +94,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 raise exceptions.ConfigurationError(
                     '[submission of calculation {}] '
                     'Unable to create the remote directory {} on '
-                    "computer '{}': {}".format(node.pk, remote_working_directory, computer.name, exc)
+                    "computer '{}': {}".format(node.pk, remote_working_directory, computer.label, exc)
                 )
         # Store remotely with sharding (here is where we choose
         # the folder structure of remote jobs; then I store this
@@ -211,7 +211,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         'would have copied {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.name
+                            remote_abs_path, dest_rel_path, computer.label
                         )
                     )
 
@@ -220,7 +220,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         'would have created symlinks from {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.name
+                            remote_abs_path, dest_rel_path, computer.label
                         )
                     )
 
@@ -230,7 +230,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
                     '[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                        node.pk, dest_rel_path, computer.name
+                        node.pk, dest_rel_path, computer.label
                     )
                 )
                 try:
@@ -251,7 +251,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
                     '[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                        node.pk, dest_rel_path, computer.name
+                        node.pk, dest_rel_path, computer.label
                     )
                 )
                 try:

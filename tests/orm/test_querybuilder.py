@@ -1435,10 +1435,10 @@ class TestDoubleStar(AiidaTestCase):
             'scheduler_type': self.computer.scheduler_type,
             'hostname': self.computer.hostname,
             'uuid': self.computer.uuid,
-            'name': self.computer.name,
+            'name': self.computer.label,
             'transport_type': self.computer.transport_type,
             'id': self.computer.id,
-            'metadata': self.computer.get_metadata(),
+            'metadata': self.computer.metadata,
         }
 
         qb = orm.QueryBuilder()

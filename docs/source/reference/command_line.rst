@@ -119,6 +119,7 @@ Below is a list with all available subcommands.
       duplicate  Duplicate a computer allowing to change some parameters.
       enable     Enable the computer for the given user.
       list       List all available computers.
+      relabel    Relabel a computer.
       rename     Rename a computer.
       setup      Create a new computer.
       show       Show detailed information for a computer.

@@ -329,7 +329,7 @@ class CalcJob(Process):
         for code in codes:
             if not code.can_run_on(computer):
                 raise InputValidationError('The selected code {} for calculation {} cannot run on computer {}'.format(
-                    code.pk, self.node.pk, computer.name))
+                    code.pk, self.node.pk, computer.label))
 
             if code.is_local() and code.get_local_executable() in folder.get_content_list():
                 raise PluginInternalError('The plugin created a file {} that is also the executable name!'.format(

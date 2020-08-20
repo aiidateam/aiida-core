@@ -85,6 +85,6 @@ def remote_cat(datum, path):
 def remote_show(datum):
     """Show information for a RemoteData object."""
     click.echo('- Remote computer name:')
-    click.echo('  {}'.format(datum.get_computer_name()))
+    click.echo('  {}'.format(datum.computer.label))
     click.echo('- Remote folder full path:')
     click.echo('  {}'.format(datum.get_remote_path()))

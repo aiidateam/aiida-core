@@ -271,4 +271,4 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
                 clean_remote(transport, path)
                 counter += 1
 
-        echo.echo_success('{} remote folders cleaned on {}'.format(counter, computer.name))
+        echo.echo_success('{} remote folders cleaned on {}'.format(counter, computer.label))

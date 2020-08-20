@@ -47,7 +47,7 @@ def test_get_full_text_info(create_codes):
             assert ['List of files/folders:', ''] in full_text_info
         else:
             assert ['Type', 'remote'] in full_text_info
-            assert ['Remote machine', code.computer.name] in full_text_info
+            assert ['Remote machine', code.computer.label] in full_text_info
             assert ['Remote absolute path', code.get_remote_exec_path()] in full_text_info
 
     for code in create_codes:

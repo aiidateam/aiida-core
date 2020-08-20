@@ -36,9 +36,9 @@ class TestComputerParamType(AiidaTestCase):
         }
 
         cls.param = ComputerParamType()
-        cls.entity_01 = orm.Computer(name='computer_01', **kwargs).store()
-        cls.entity_02 = orm.Computer(name=str(cls.entity_01.pk), **kwargs).store()
-        cls.entity_03 = orm.Computer(name=str(cls.entity_01.uuid), **kwargs).store()
+        cls.entity_01 = orm.Computer(label='computer_01', **kwargs).store()
+        cls.entity_02 = orm.Computer(label=str(cls.entity_01.pk), **kwargs).store()
+        cls.entity_03 = orm.Computer(label=str(cls.entity_01.uuid), **kwargs).store()
 
     def test_get_by_id(self):
         """
@@ -60,7 +60,7 @@ class TestComputerParamType(AiidaTestCase):
         """
         Verify that using the LABEL will retrieve the correct entity
         """
-        identifier = '{}'.format(self.entity_01.name)
+        identifier = '{}'.format(self.entity_01.label)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
@@ -71,11 +71,11 @@ class TestComputerParamType(AiidaTestCase):
         Verify that using an ambiguous identifier gives precedence to the ID interpretation
         Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
         """
-        identifier = '{}'.format(self.entity_02.name)
+        identifier = '{}'.format(self.entity_02.label)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_02.name, OrmEntityLoader.label_ambiguity_breaker)
+        identifier = '{}{}'.format(self.entity_02.label, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_02.uuid)
 
@@ -86,10 +86,10 @@ class TestComputerParamType(AiidaTestCase):
         Verify that using an ambiguous identifier gives precedence to the UUID interpretation
         Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
         """
-        identifier = '{}'.format(self.entity_03.name)
+        identifier = '{}'.format(self.entity_03.label)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = '{}{}'.format(self.entity_03.name, OrmEntityLoader.label_ambiguity_breaker)
+        identifier = '{}{}'.format(self.entity_03.label, OrmEntityLoader.label_ambiguity_breaker)
         result = self.param.convert(identifier, None, None)
         self.assertEqual(result.uuid, self.entity_03.uuid)

@@ -753,3 +753,39 @@ def test_interactive(clear_database_before_test, aiida_localhost, non_interactiv
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == ''
     assert new_computer.get_append_text() == ''
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
+    """Test `verdi computer test` where tested command returns non-empty stderr."""
+    from aiida.transports.plugins.local import LocalTransport
+
+    aiida_localhost.configure()
+    stderr = 'spurious output in standard error'
+
+    def exec_command_wait(self, command, **kwargs):
+        return 0, '', stderr
+
+    monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
+
+    result = run_cli_command(computer_test, [aiida_localhost.label])
+    assert 'Warning: 1 out of 5 tests failed' in result.output
+    assert stderr in result.output
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
+    """Test `verdi computer test` where tested command returns non-empty stdout."""
+    from aiida.transports.plugins.local import LocalTransport
+
+    aiida_localhost.configure()
+    stdout = 'spurious output in standard output'
+
+    def exec_command_wait(self, command, **kwargs):
+        return 0, stdout, ''
+
+    monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
+
+    result = run_cli_command(computer_test, [aiida_localhost.label])
+    assert 'Warning: 1 out of 5 tests failed' in result.output
+    assert stdout in result.output

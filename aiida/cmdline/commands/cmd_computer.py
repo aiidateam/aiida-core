@@ -76,35 +76,20 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     if retval != 0:
         return False, 'The command `echo -n` returned a non-zero return code ({})'.format(retval)
 
-    if stdout:
-        return False, u"""
-There is some spurious output in the standard output,
-that we report below between the === signs:
-=========================================================
+    template = """
+We detected some spurious output in the {} when connecting to the computer, as shown between the bars
+=====================================================================================================
 {}
-=========================================================
-Please check that you don't have code producing output in
-your ~/.bash_profile (or ~/.bashrc). If you don't want to
-remove the code, but just to disable it for non-interactive
-shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida-core/issues/1890
-(and in the AiiDA documentation, linked from that issue)
-""".format(stdout)
+=====================================================================================================
+Please check that you don't have code producing output in your ~/.bash_profile, ~/.bashrc or similar.
+If you don't want to remove the code, but just to disable it for non-interactive shells, see comments
+in this troubleshooting section of the online documentation: https://bit.ly/2FCRDc5
+"""
+    if stdout:
+        return False, template.format('stdout', stdout)
 
     if stderr:
-        return u"""
-There is some spurious output in the stderr,
-that we report below between the === signs:
-=========================================================
-{}
-=========================================================
-Please check that you don't have code producing output in
-your ~/.bash_profile (or ~/.bashrc). If you don't want to
-remove the code, but just to disable it for non-interactive
-shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida-core/issues/1890
-(and in the AiiDA documentation, linked from that issue)
-"""
+        return False, template.format('stderr', stderr)
 
     return True, None
 

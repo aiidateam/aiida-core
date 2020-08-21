@@ -19,7 +19,25 @@ __all__ = ('Dict',)
 
 
 class Dict(Data):
-    """`Data` sub class to represent a dictionary."""
+    """`Data` sub class to represent a dictionary.
+
+    The dictionary key-value pairs are stored in the database in a column named `attributes`.
+    We will then say that these are "database-attributes", or "attributes in a database sense".
+    However, these are not "python-attributes" ("attributes in the python sense"), and can only
+    be accessed with the set/get item special methods or through the `dict` special property.
+
+        # These will set a database storeable key-value pair
+        dict_node[key] = value
+        dict_node.dict.key = value
+
+    If you try to set this directly as a "python-attribute", it will only be kept in memory for
+    as long as that node object persists, but it won't appear in the `dict` property nor will
+    it be stored in the database.
+
+        #  This will just set a transient `key` attribute on the node
+        dict_node.key = value
+
+    """
 
     def __init__(self, **kwargs):
         """Store a dictionary as a `Node` instance.
@@ -37,7 +55,10 @@ class Dict(Data):
             self.set_dict(dictionary)
 
     def __getitem__(self, key):
-        return self.get_dict()[key]
+        return self.get_attribute(key)
+
+    def __setitem__(self, key, value):
+        self.set_attribute(key, value)
 
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.

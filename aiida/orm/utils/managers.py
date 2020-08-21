@@ -128,7 +128,8 @@ class AttributeManager:  # pylint: disable=too-few-public-methods
         :param node: the node object.
         """
         # Possibly add checks here
-        self._node = node
+        self.__dict__['_node'] = node
+        #self._node = node
 
     def __dir__(self):
         """
@@ -159,6 +160,9 @@ class AttributeManager:  # pylint: disable=too-few-public-methods
         :param name: name of the key whose value is required.
         """
         return self._node.get_attribute(name)
+
+    def __setattr__(self, name, value):
+        self._node.set_attribute(name, value)
 
     def __getitem__(self, name):
         """

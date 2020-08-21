@@ -194,7 +194,7 @@ class TestAutoGroups(AiidaTestCase):
             ArithmeticAdd = CalculationFactory('arithmetic.add')
 
             computer = Computer(
-                name='localhost-example-{}'.format(sys.argv[1]),
+                label='localhost-example-{}'.format(sys.argv[1]),
                 hostname='localhost',
                 description='my computer',
                 transport_type='local',

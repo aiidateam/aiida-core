@@ -12,7 +12,6 @@ import logging
 import os
 import warnings
 
-from aiida import transports, schedulers
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
@@ -138,7 +137,7 @@ class Computer(entities.Entity):
         Return a (multiline) string with a human-readable detailed information on this computer.
 
         .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
+            Will be removed in `v2.0.0`.
 
         :rtype: str
         """
@@ -208,7 +207,8 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if transport_type not in transports.Transport.get_valid_transports():
+        from aiida.plugins.entry_point import get_entry_point_names
+        if transport_type not in get_entry_point_names('aiida.transports'):
             raise exceptions.ValidationError('The specified transport is not a valid one')
 
     @classmethod
@@ -216,7 +216,8 @@ class Computer(entities.Entity):
         """
         Validates the transport string.
         """
-        if scheduler_type not in schedulers.Scheduler.get_valid_schedulers():
+        from aiida.plugins.entry_point import get_entry_point_names
+        if scheduler_type not in get_entry_point_names('aiida.schedulers'):
             raise exceptions.ValidationError('The specified scheduler is not a valid one')
 
     @classmethod
@@ -286,7 +287,7 @@ class Computer(entities.Entity):
         For the base class, this is always valid. Subclasses will reimplement this.
         In the subclass, always call the super().validate() method first!
         """
-        if not self.get_name().strip():
+        if not self.label.strip():
             raise exceptions.ValidationError('No name specified')
 
         self._hostname_validator(self.hostname)
@@ -439,10 +440,10 @@ class Computer(entities.Entity):
         :param raise_exception: if True raise if the property does not exist, otherwise return None
         :type raise_exception: bool
         """
-        olddata = self.get_metadata()
+        olddata = self.metadata
         try:
             del olddata[name]
-            self.set_metadata(olddata)
+            self.metadata = olddata
         except KeyError:
             if raise_exception:
                 raise AttributeError("'{}' property not found".format(name))
@@ -454,9 +455,9 @@ class Computer(entities.Entity):
         :param name: the property name
         :param value: the new value
         """
-        metadata = self.get_metadata() or {}
+        metadata = self.metadata or {}
         metadata[name] = value
-        self.set_metadata(metadata)
+        self.metadata = metadata
 
     def get_property(self, name, *args):
         """
@@ -471,7 +472,7 @@ class Computer(entities.Entity):
         """
         if len(args) > 1:
             raise TypeError('get_property expected at most 2 arguments')
-        olddata = self.get_metadata()
+        olddata = self.metadata
         try:
             return olddata[name]
         except KeyError:
@@ -572,9 +573,9 @@ class Computer(entities.Entity):
             raise ValueError('{} is invalid. Input has to be a string'.format(val))
         if not val.startswith('#!'):
             raise ValueError('{} is invalid. A shebang line has to start with #!'.format(val))
-        metadata = self.get_metadata()
+        metadata = self.metadata
         metadata['shebang'] = val
-        self.set_metadata(metadata)
+        self.metadata = metadata
 
     def get_authinfo(self, user):
         """

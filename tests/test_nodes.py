@@ -1393,7 +1393,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
             d2 = SinglefileData(file=handle).store()
 
         unsavedcomputer = orm.Computer(
-            name='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local'
+            label='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local'
         )
 
         with self.assertRaises(ValueError):

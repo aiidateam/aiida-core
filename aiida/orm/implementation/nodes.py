@@ -16,7 +16,7 @@ from . import backends
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
 
-class BackendNode(backends.BackendEntity):
+class BackendNode(backends.BackendEntity, metaclass=abc.ABCMeta):
     """Wrapper around a `DbNode` instance to set and retrieve data independent of the database implementation."""
 
     # pylint: disable=too-many-public-methods

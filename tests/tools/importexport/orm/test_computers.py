@@ -60,7 +60,7 @@ class TestComputer(AiidaTestCase):
         calc2.seal()
 
         # Store locally the computer name
-        comp_name = str(comp.name)
+        comp_name = str(comp.label)
         comp_uuid = str(comp.uuid)
 
         # Export the first job calculation
@@ -149,14 +149,14 @@ class TestComputer(AiidaTestCase):
         calc1.seal()
 
         # Store locally the computer name
-        comp1_name = str(comp1.name)
+        comp1_name = str(comp1.label)
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.aiida')
         export([calc1], filename=filename1, silent=True)
 
         # Rename the computer
-        comp1.set_name(comp1_name + '_updated')
+        comp1.label = comp1_name + '_updated'
 
         # Store a second calculation
         calc2_label = 'calc2'
@@ -223,7 +223,7 @@ class TestComputer(AiidaTestCase):
 
         # Set the computer name
         comp1_name = 'localhost_1'
-        self.computer.set_name(comp1_name)
+        self.computer.label = comp1_name
 
         # Store a calculation
         calc1_label = 'calc1'
@@ -243,7 +243,7 @@ class TestComputer(AiidaTestCase):
         self.insert_data()
 
         # Set the computer name to the same name as before
-        self.computer.set_name(comp1_name)
+        self.computer.label = comp1_name
 
         # Store a second calculation
         calc2_label = 'calc2'
@@ -263,7 +263,7 @@ class TestComputer(AiidaTestCase):
         self.insert_data()
 
         # Set the computer name to the same name as before
-        self.computer.set_name(comp1_name)
+        self.computer.label = comp1_name
 
         # Store a third calculation
         calc3_label = 'calc3'
@@ -319,8 +319,8 @@ class TestComputer(AiidaTestCase):
         # Set the computer name
         comp1_name = 'localhost_1'
         comp1_metadata = {'workdir': '/tmp/aiida'}
-        self.computer.set_name(comp1_name)
-        self.computer.set_metadata(comp1_metadata)
+        self.computer.label = comp1_name
+        self.computer.metadata = comp1_metadata
 
         # Store a calculation
         calc1_label = 'calc1'
@@ -368,7 +368,7 @@ class TestComputer(AiidaTestCase):
             builder = orm.QueryBuilder()
             builder.append(
                 orm.Computer, project=['metadata'], tag='comp', filters={'name': {
-                    '!==': self.computer.name
+                    '!==': self.computer.label
                 }}
             )
             self.assertEqual(builder.count(), 1, 'Expected only one computer')

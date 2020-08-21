@@ -41,6 +41,9 @@ class Scheduler(metaclass=abc.ABCMeta):
     # The class to be used for the job resource.
     _job_resource_class = None
 
+    def __str__(self):
+        return self.__class__.__name__
+
     @classmethod
     def preprocess_resources(cls, resources, default_mpiprocs_per_machine=None):
         """Pre process the resources.

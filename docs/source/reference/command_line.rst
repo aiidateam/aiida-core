@@ -351,7 +351,9 @@ Below is a list with all available subcommands.
       --migration / --no-migration    Force migration of export file archives, if needed.
                                       [default: True]
 
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --help                          Show this message and exit.
 
 
@@ -460,7 +462,9 @@ Below is a list with all available subcommands.
       Setup a new profile in a fully automated fashion.
 
     Options:
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -583,7 +587,9 @@ Below is a list with all available subcommands.
       Setup a new profile.
 
     Options:
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when

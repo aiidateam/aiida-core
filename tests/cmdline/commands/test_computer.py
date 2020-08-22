@@ -131,7 +131,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         options_dict = generate_setup_options_dict(replace_args={'label': label})
         options_dict_full = options_dict.copy()
 
-        options_dict.pop('non-interactive', 'None')
+        options_dict.pop('non-interactive', None)
 
         non_interactive_options_dict = {}
         non_interactive_options_dict['prepend-text'] = options_dict.pop('prepend-text')

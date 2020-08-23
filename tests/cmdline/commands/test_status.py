@@ -45,3 +45,18 @@ def test_status_no_rmq(run_cli_command):
 
     for string in ['config', 'profile', 'postgres', 'daemon']:
         assert string in result.output
+
+
+def test_database_incompatible(run_cli_command, monkeypatch):
+    """Test `verdi status` when database schema version is incompatible with that of the code."""
+    from aiida.manage.manager import get_manager
+
+    def get_backend():
+        from aiida.common.exceptions import IncompatibleDatabaseSchema
+        raise IncompatibleDatabaseSchema()
+
+    monkeypatch.setattr(get_manager(), 'get_backend', get_backend)
+
+    result = run_cli_command(cmd_status.verdi_status, raises=True)
+    assert 'Database schema version is incompatible with the code: run `verdi database migrate`.' in result.output
+    assert result.exit_code is ExitCode.CRITICAL

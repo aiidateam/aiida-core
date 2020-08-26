@@ -44,6 +44,7 @@ jobs:
     strategy:
       matrix:
         pip-feature-flag: [ '', '--use-feature=2020-resolver' ]
+        extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
 
     steps:
     - uses: actions/checkout@v2
@@ -56,7 +57,7 @@ jobs:
     - name: Pip install
       run: |
         python -m pip --version
-        python -m pip install -e . ${{ matrix.pip-feature-flag }}
+        python -m pip install -e .${{ matrix.extras }} ${{ matrix.pip-feature-flag }}
         python -m pip freeze
 
     - name: Test importing aiida

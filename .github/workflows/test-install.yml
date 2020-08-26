@@ -57,7 +57,7 @@ jobs:
     - name: Pip install
       run: |
         python -m pip --version
-        python -m pip install -e .${{ matrix.extras }} ${{ matrix.pip-feature-flag }}
+        python -m pip install .${{ matrix.extras }} ${{ matrix.pip-feature-flag }}
         python -m pip freeze
 
     - name: Test importing aiida
@@ -88,7 +88,7 @@ jobs:
       run: |
         conda env create -f environment.yml -n test-environment
         source activate test-environment
-        python -m pip install --no-deps -e .
+        python -m pip install --no-deps .
 
     - name: Test importing aiida
       run: |
@@ -148,7 +148,7 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install -e .[atomic_tools,docs,notebook,rest,tests]
+        pip install .[atomic_tools,docs,notebook,rest,tests]
         reentry scan
 
     - run: pip freeze

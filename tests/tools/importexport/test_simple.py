@@ -181,3 +181,41 @@ class TestSimple(AiidaTestCase):
         folder = SandboxFolder()
         with self.assertRaises(LicensingException):
             export_tree([struct], folder=folder, silent=True, forbidden_licenses=crashing_filter)
+
+    @with_temp_dir
+    def test_create_autogroup_false(self, temp_dir):
+        """Make sure the `create_autogroup` flag is respected when `False`."""
+        # Create Nodes to export
+        data1 = orm.Data().store()
+        data2 = orm.Data().store()
+        node_uuids = [node.uuid for node in [data1, data2]]
+
+        # Export Nodes
+        filename = os.path.join(temp_dir, 'export.aiida')
+        export([data1, data2], filename=filename, silent=True)
+        self.reset_database()
+
+        # Try to import to this Group, providing only label, but specifying to not create an import group.
+        # Normally, this should fail, since `group` required an AiiDA Group entity, but here this should not raise,
+        # since `create_autogroup` is set to `False`, and the check is avoided (and also not needed).
+        import_data(filename, group='import_madness', create_autogroup=False, silent=True)
+
+        # Check database for content.
+        # The Nodes should be present, while there should be no auto-import groups.
+        builder = orm.QueryBuilder().append(orm.Data, project='uuid')
+        self.assertEqual(
+            builder.count(),
+            len(node_uuids),
+            msg='There should be exactly {} Data Nodes. '
+            'Instead {} was found.'.format(len(node_uuids), builder.count())
+        )
+        imported_node_uuids = builder.all(flat=True)
+        self.assertEqual(sorted(node_uuids), sorted(imported_node_uuids))
+
+        builder = orm.QueryBuilder().append(orm.ImportGroup)
+        self.assertEqual(
+            builder.count(),
+            0,
+            msg='There should not be any ImportGroups in the DB. '
+            'But {} was found.'.format(builder.count())
+        )

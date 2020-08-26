@@ -286,3 +286,17 @@ class TestVerdiImport(AiidaTestCase):
 
         self.assertNotIn(confirm_message, result.output, msg=result.exception)
         self.assertNotIn(success_message, result.output, msg=result.exception)
+
+    def test_create_import_group(self):
+        """Test the `create-import-group` flag is respected."""
+        archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
+
+        group = Group('import_madness').store()
+
+        # Invoke `verdi import`, making sure there are no exceptions
+        options = ['-G', group.label, '--no-create-import-group'] + [archive]
+        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        self.assertIsNone(result.exception, msg=result.output)
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+
+        self.assertTrue(group.is_empty, msg='The Group should be empty.')

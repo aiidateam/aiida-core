@@ -26,7 +26,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install numpy==1.17.4
-        pip install .[all]
+        pip install -e .[all]
         pip freeze
 
     - name: Run pre-commit
@@ -121,7 +121,7 @@ jobs:
     - name: Install aiida-core
       run: |
         pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --use-feature=2020-resolver --no-deps .
+        pip install --use-feature=2020-resolver --no-deps -e .
         reentry scan
         pip freeze
 
@@ -162,7 +162,7 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install numpy==1.17.4
-        pip install .
+        pip install -e .
 
     - name: Run verdi
       run: |

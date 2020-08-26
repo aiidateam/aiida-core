@@ -122,6 +122,8 @@ class TestVerdiImport(AiidaTestCase):
             )
         )
 
+        self.reset_database()
+
     def test_import_make_new_group(self):
         """Make sure imported entities are saved in new Group"""
         # Initialization
@@ -300,3 +302,5 @@ class TestVerdiImport(AiidaTestCase):
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
         self.assertTrue(group.is_empty, msg='The Group should be empty.')
+
+        self.reset_database()

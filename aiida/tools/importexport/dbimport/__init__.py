@@ -13,20 +13,23 @@ from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 __all__ = ('import_data', 'IMPORT_LOGGER')
 
 
-def import_data(in_path, group=None, silent=False, **kwargs):
+def import_data(in_path, **kwargs):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
     Proxy function for the backend-specific import functions.
     If ``in_path`` is a folder, calls extract_tree; otherwise, tries to detect the compression format
     (zip, tar.gz, tar.bz2, ...) and calls the correct function.
 
-    :param in_path: the path to a file or folder that can be imported in AiiDA.
+    :param in_path: The path to a file or folder that can be imported in AiiDA.
     :type in_path: str
+
+    :param create_autogroup: Whether or not to create a new Group (``group``) with all imported Nodes.
+    :type create_autogroup: bool
 
     :param group: Group wherein all imported Nodes will be placed.
     :type group: :py:class:`~aiida.orm.groups.Group`
 
-    :param silent: suppress prints.
+    :param silent: Suppress progress bar and summary.
     :type silent: bool
 
     :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
@@ -68,14 +71,11 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     backend = configuration.PROFILE.database_backend
 
     if backend == BACKEND_SQLA:
-        from aiida.tools.importexport.dbimport.backends.sqla import import_data_sqla
-        IMPORT_LOGGER.debug('Calling import function import_data_sqla for the %s backend.', backend)
-        return import_data_sqla(in_path, group=group, silent=silent, **kwargs)
+        from aiida.tools.importexport.dbimport.backends.sqla import import_data_sqla as import_function
+    elif backend == BACKEND_DJANGO:
+        from aiida.tools.importexport.dbimport.backends.django import import_data_dj as import_function
+    else:
+        raise ArchiveImportError('Unknown backend: {}'.format(backend))
 
-    if backend == BACKEND_DJANGO:
-        from aiida.tools.importexport.dbimport.backends.django import import_data_dj
-        IMPORT_LOGGER.debug('Calling import function import_data_dj for the %s backend.', backend)
-        return import_data_dj(in_path, group=group, silent=silent, **kwargs)
-
-    # else
-    raise ArchiveImportError('Unknown backend: {}'.format(backend))
+    IMPORT_LOGGER.debug('Calling import function for the %s backend.', backend)
+    return import_function(in_path, **kwargs)

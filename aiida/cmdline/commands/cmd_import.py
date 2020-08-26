@@ -74,17 +74,18 @@ def _echo_error(  # pylint: disable=unused-argument
         click.Abort()
 
 
-def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, **kwargs):
+def _try_import(migration_performed, file_to_import, archive, migration, non_interactive, **kwargs):
     """Utility function for `verdi import` to try to import archive
 
     :param migration_performed: Boolean to determine the exception message to throw for
         `~aiida.tools.importexport.common.exceptions.IncompatibleArchiveVersionError`
     :param file_to_import: Absolute path, including filename, of file to be migrated.
     :param archive: Filename of archive to be migrated, and later attempted imported.
-    :param group: AiiDA Group into which the import will be associated.
     :param migration: Whether or not to force migration of archive, if needed.
     :param non_interactive: Whether or not the user should be asked for input for any reason.
     :param kwargs: Key-word-arguments that _must_ contain:
+        * `'create_autogroup'`: Whether or not to create an AiiDA group with all imported Nodes.
+        * `'group'`: AiiDA Group into which the import will be associated.
         * `'extras_mode_existing'`: `import_data`'s `'extras_mode_existing'` keyword, determining import rules for
         Extras.
         * `'extras_mode_new'`: `import_data`'s `'extras_mode_new'` keyword, determining import rules for Extras.
@@ -102,7 +103,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     migrate_archive = False
 
     try:
-        import_data(file_to_import, group, **kwargs)
+        import_data(file_to_import, **kwargs)
     except IncompatibleArchiveVersionError as exception:
         if migration_performed:
             # Migration has been performed, something is still wrong
@@ -195,9 +196,15 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     help='Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. '
     'Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing'
 )
+@click.option(
+    '--create-import-group/--no-create-import-group',
+    default=True,
+    show_default=True,
+    help='Create auto-import Group (can be specified with -G, --group GROUP) into which all import Nodes will be added.'
+)
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),
-    help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
+    help='Specify Group to which all the import Nodes will be added. If such a Group does not exist, it will be'
     ' created automatically.'
 )
 @click.option(
@@ -240,7 +247,8 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
 @decorators.with_dbenv()
 @click.pass_context
 def cmd_import(
-    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
+    ctx, archives, webpages, create_import_group, group, extras_mode_existing, extras_mode_new, comment_mode, migration,
+    non_interactive
 ):
     """Import data from an AiiDA archive file.
 
@@ -284,6 +292,7 @@ def cmd_import(
     import_opts = {
         'file_to_import': '',
         'archive': '',
+        'create_autogroup': create_import_group,
         'group': group,
         'migration': migration,
         'extras_mode_existing': ExtrasImportCode[extras_mode_existing].value,

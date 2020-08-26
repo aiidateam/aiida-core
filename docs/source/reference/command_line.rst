@@ -322,8 +322,13 @@ Below is a list with all available subcommands.
                                       discovered archive URLs will be downloadeded and added
                                       to ARCHIVES for importing
 
-      -G, --group GROUP               Specify group to which all the import nodes will be
-                                      added. If such a group does not exist, it will be
+      --create-import-group / --no-create-import-group
+                                      Create auto-import Group (can be specified with -G,
+                                      --group GROUP) into which all import Nodes will be
+                                      added.  [default: True]
+
+      -G, --group GROUP               Specify Group to which all the import Nodes will be
+                                      added. If such a Group does not exist, it will be
                                       created automatically.
 
       -e, --extras-mode-existing [keep_existing|update_existing|mirror|none|ask]

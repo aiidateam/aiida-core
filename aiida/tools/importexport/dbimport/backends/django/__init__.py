@@ -42,6 +42,7 @@ from aiida.tools.importexport.dbimport.utils import (
 @override_log_formatter('%(message)s')
 def import_data_dj(
     in_path,
+    create_autogroup=True,
     group=None,
     ignore_unknown_nodes=False,
     extras_mode_existing='kcl',
@@ -56,8 +57,11 @@ def import_data_dj(
     If ``in_path`` is a folder, calls extract_tree; otherwise, tries to detect the compression format
     (zip, tar.gz, tar.bz2, ...) and calls the correct function.
 
-    :param in_path: the path to a file or folder that can be imported in AiiDA.
+    :param in_path: The path to a file or folder that can be imported in AiiDA.
     :type in_path: str
+
+    :param create_autogroup: Whether or not to create a new Group (``group``) with all imported Nodes.
+    :type create_autogroup: bool
 
     :param group: Group wherein all imported Nodes will be placed.
     :type group: :py:class:`~aiida.orm.groups.Group`
@@ -88,7 +92,7 @@ def import_data_dj(
         'overwrite' (will overwrite existing Comments with the ones from the import file).
     :type comment_mode: str
 
-    :param silent: suppress progress bar and summary.
+    :param silent: Suppress progress bar and summary.
     :type silent: bool
 
     :return: New and existing Nodes and Links.
@@ -115,7 +119,7 @@ def import_data_dj(
     ret_dict = {}
 
     # Initial check(s)
-    if group:
+    if group and create_autogroup:
         if not isinstance(group, Group):
             raise exceptions.ImportValidationError('group must be a Group entity')
         elif not group.is_stored:
@@ -733,8 +737,7 @@ def import_data_dj(
         pks_for_group = existing_pk + new_pk
 
         # So that we do not create empty groups
-        if pks_for_group:
-            # If user specified a group, import all things into it
+        if pks_for_group and create_autogroup:
             if not group:
                 # Get an unique name for the import group, based on the current (local) time
                 basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
@@ -769,7 +772,12 @@ def import_data_dj(
             group.add_nodes(nodes)
             progress_bar.set_description_str('Done (cleaning up)', refresh=True)
         else:
-            IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
+            IMPORT_LOGGER.debug(
+                'Auto-import Group NOT created. Nodes to import? %s (%d). Create auto-group? %s.',
+                bool(pks_for_group),
+                len(pks_for_group),
+                create_autogroup,
+            )
 
     # Finalize Progress bar
     close_progress_bar(leave=False)

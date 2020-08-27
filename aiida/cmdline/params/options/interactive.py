@@ -12,7 +12,6 @@
     :synopsis: Tools and an option class for interactive parameter entry with
     additional features such as help lookup.
 """
-
 import click
 
 from aiida.cmdline.utils import echo
@@ -282,6 +281,34 @@ class InteractiveOption(ConditionalOption):
 
         # And then we call the callback
         return self.after_callback(ctx, param, value)
+
+
+class TemplateInteractiveOption(InteractiveOption):
+    """Sub class of ``InteractiveOption`` that uses template file for input instead of simple inline prompt.
+
+    This is useful for options that need to be able to specify multiline string values.
+    """
+
+    def __init__(self, param_decls=None, **kwargs):
+        """Define the configuration for the multiline template in the keyword arguments.
+
+        :param template: name of the template to use from the ``aiida.cmdline.templates`` directory.
+            Default is the 'multiline.tpl' template.
+        :param header: string to put in the header of the template.
+        :param footer: string to put in the footer of the template.
+        :param extension: file extension to give to the template file.
+        """
+        self.template = kwargs.pop('template', 'multiline.tpl')
+        self.header = kwargs.pop('header', '')
+        self.footer = kwargs.pop('footer', '')
+        self.extension = kwargs.pop('extension', '')
+        super().__init__(param_decls=param_decls, **kwargs)
+
+    def prompt_func(self, ctx):
+        """Replace the basic prompt with a method that opens a template file in an editor."""
+        from aiida.cmdline.utils.multi_line_input import edit_multiline_template
+        kwargs = {'value': self._get_default(ctx) or '', 'header': self.header, 'footer': self.footer}
+        return edit_multiline_template(self.template, extension=self.extension, **kwargs)
 
 
 def opt_prompter(ctx, cmd, givenkwargs, oldvalues=None):

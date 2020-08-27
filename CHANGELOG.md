@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v1.3.1
+
+### Bug fixes:
+- Fix a file handle leak due to the `Runner` not closing the event loop if it created it itself [[#4307]](https://github.com/aiidateam/aiida-core/pull/4307)
+- `ArithmeticAddParser`: attach output before checking for negative value [[#4267]](https://github.com/aiidateam/aiida-core/pull/4267)
+
+
 ## v1.3.0
 
 ### Improvements

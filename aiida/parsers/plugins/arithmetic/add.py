@@ -33,7 +33,7 @@ class ArithmeticAddParser(Parser):
         except ValueError:
             return self.exit_codes.ERROR_INVALID_OUTPUT
 
+        self.out('sum', Int(result))
+
         if result < 0:
             return self.exit_codes.ERROR_NEGATIVE_NUMBER
-
-        self.out('sum', Int(result))

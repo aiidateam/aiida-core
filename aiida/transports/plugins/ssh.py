@@ -1232,7 +1232,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        channel.exec_command('bash -l -c ' + escape_for_bash(command_to_execute))
+        bash_commmand = self._bash_command_str + '-c '
+
+        channel.exec_command(bash_commmand + escape_for_bash(command_to_execute))
 
         stdin = channel.makefile('wb', bufsize)
         stdout = channel.makefile('rb', bufsize)
@@ -1298,21 +1300,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             further_params.append('-i {}'.format(escape_for_bash(self._connect_args['key_filename'])))
 
         further_params_str = ' '.join(further_params)
-        # I use triple strings because I both have single and double quotes, but I still want everything in
-        # a single line
-        connect_string = (
-            """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ;"""
-            """ then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; """
-            """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-                further_params=further_params_str,
-                machine=self._machine,
-                escaped_remotedir="'{}'".format(remotedir),
-                remotedir=remotedir
-            )
-        )
 
-        # print connect_string
-        return connect_string
+        connect_string = self._gotocomputer_string(remotedir)
+        cmd = 'ssh -t {machine} {further_params} {connect_string}'.format(
+            further_params=further_params_str,
+            machine=self._machine,
+            connect_string=connect_string,
+        )
+        return cmd
 
     def symlink(self, remotesource, remotedestination):
         """

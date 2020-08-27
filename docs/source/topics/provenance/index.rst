@@ -13,3 +13,4 @@ The :ref:`consistency<topics:provenance:consistency>` section details the rules 
    concepts
    implementation
    consistency
+   caching

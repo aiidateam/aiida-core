@@ -74,7 +74,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
                 "[submission of calculation {}] No remote_working_directory configured for computer '{}'".format(
-                    node.pk, computer.name
+                    node.pk, computer.label
                 )
             )
 
@@ -94,7 +94,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 raise exceptions.ConfigurationError(
                     '[submission of calculation {}] '
                     'Unable to create the remote directory {} on '
-                    "computer '{}': {}".format(node.pk, remote_working_directory, computer.name, exc)
+                    "computer '{}': {}".format(node.pk, remote_working_directory, computer.label, exc)
                 )
         # Store remotely with sharding (here is where we choose
         # the folder structure of remote jobs; then I store this
@@ -211,7 +211,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         'would have copied {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.name
+                            remote_abs_path, dest_rel_path, computer.label
                         )
                     )
 
@@ -220,7 +220,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         'would have created symlinks from {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.name
+                            remote_abs_path, dest_rel_path, computer.label
                         )
                     )
 
@@ -230,7 +230,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
                     '[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                        node.pk, dest_rel_path, computer.name
+                        node.pk, dest_rel_path, computer.label
                     )
                 )
                 try:
@@ -251,7 +251,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
                     '[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                        node.pk, dest_rel_path, computer.name
+                        node.pk, dest_rel_path, computer.label
                     )
                 )
                 try:
@@ -546,12 +546,12 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
     treated as the work directory of the folder and the depth integer determines
     upto what level of the original remotepath nesting the files will be copied.
 
-    :param transport: the Transport instance
-    :param folder: an absolute path to a folder to copy files in
-    :param retrieve_list: the list of files to retrieve
+    :param transport: the Transport instance.
+    :param folder: an absolute path to a folder that contains the files to copy.
+    :param retrieve_list: the list of files to retrieve.
     """
     for item in retrieve_list:
-        if isinstance(item, list):
+        if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
             if transport.has_magic(tmp_rname):
@@ -561,6 +561,7 @@ def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
                     to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
                     local_names.append(os.path.sep.join([tmp_lname] + to_append))
             else:
+                remote_names = [tmp_rname]
                 to_append = tmp_rname.split(os.path.sep)[-depth:] if depth > 0 else []
                 local_names = [os.path.sep.join([tmp_lname] + to_append)]
             if depth > 1:  # create directories in the folder, if needed

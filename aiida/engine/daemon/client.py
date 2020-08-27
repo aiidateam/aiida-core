@@ -17,7 +17,7 @@ import shutil
 import socket
 import tempfile
 
-from aiida.manage.configuration import get_config
+from aiida.manage.configuration import get_config, get_config_option
 
 VERDI_BIN = shutil.which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
@@ -63,7 +63,6 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
     DAEMON_ERROR_TIMEOUT = 'daemon-error-timeout'
 
     _DAEMON_NAME = 'aiida-{name}'
-    _DEFAULT_LOGLEVEL = 'INFO'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
     def __init__(self, profile):
@@ -103,7 +102,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
     @property
     def loglevel(self):
-        return self._DEFAULT_LOGLEVEL
+        return get_config_option('logging.circus_loglevel')
 
     @property
     def virtualenv(self):

@@ -81,11 +81,12 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
     except KeyError:
         return 'input `metadata.options.resources` is required but is not specified'
 
+    scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+
     try:
-        scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
         scheduler.validate_resources(**resources)
-    except (ValueError, TypeError) as exception:
-        return 'input `metadata.options.resources` is not valid for the {} scheduler: {}'.format(scheduler, exception)
+    except ValueError as exception:
+        return 'input `metadata.options.resources` is not valid for the `{}` scheduler: {}'.format(scheduler, exception)
 
 
 def validate_parser(parser_name, _):
@@ -329,7 +330,7 @@ class CalcJob(Process):
         for code in codes:
             if not code.can_run_on(computer):
                 raise InputValidationError('The selected code {} for calculation {} cannot run on computer {}'.format(
-                    code.pk, self.node.pk, computer.name))
+                    code.pk, self.node.pk, computer.label))
 
             if code.is_local() and code.get_local_executable() in folder.get_content_list():
                 raise PluginInternalError('The plugin created a file {} that is also the executable name!'.format(

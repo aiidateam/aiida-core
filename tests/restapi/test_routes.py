@@ -129,22 +129,22 @@ class RESTApiTestCase(AiidaTestCase):
         calc1.store()
 
         dummy_computers = [{
-            'name': 'test1',
+            'label': 'test1',
             'hostname': 'test1.epfl.ch',
             'transport_type': 'ssh',
             'scheduler_type': 'pbspro',
         }, {
-            'name': 'test2',
+            'label': 'test2',
             'hostname': 'test2.epfl.ch',
             'transport_type': 'ssh',
             'scheduler_type': 'torque',
         }, {
-            'name': 'test3',
+            'label': 'test3',
             'hostname': 'test3.epfl.ch',
             'transport_type': 'local',
             'scheduler_type': 'slurm',
         }, {
-            'name': 'test4',
+            'label': 'test4',
             'hostname': 'test4.epfl.ch',
             'transport_type': 'ssh',
             'scheduler_type': 'slurm',

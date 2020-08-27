@@ -17,13 +17,11 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 
 @verdi.command('completioncommand')
 def verdi_completioncommand():
-    """
-    Return the code to activate bash completion.
+    """Return the code to activate bash completion.
 
-    :note: this command is mainly for back-compatibility.
-        You should rather use:;
-
-            eval "$(_VERDI_COMPLETE=source verdi)"
+    \b
+    This command is mainly for back-compatibility.
+    You should rather use: eval "$(_VERDI_COMPLETE=source verdi)"
     """
     from click_completion import get_auto_shell, get_code
     click.echo(get_code(shell=get_auto_shell()))

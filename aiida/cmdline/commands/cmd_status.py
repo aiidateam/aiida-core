@@ -8,13 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi status` command."""
+import enum
 import sys
 
-import enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.utils import echo
 from aiida.common.log import override_log_level
+from aiida.common.exceptions import IncompatibleDatabaseSchema
 from ..utils.echo import ExitCode
 
 
@@ -50,7 +52,7 @@ STATUS_SYMBOLS = {
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
 def verdi_status(no_rmq):
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except,too-many-statements
+    # pylint: disable=broad-except,too-many-statements,too-many-branches
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing
     from aiida.manage.external.rmq import get_rmq_url
@@ -63,6 +65,11 @@ def verdi_status(no_rmq):
 
     manager = get_manager()
     profile = manager.get_profile()
+
+    if profile is None:
+        print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
+        echo.echo_info('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+        return
 
     try:
         profile = manager.get_profile()
@@ -87,8 +94,13 @@ def verdi_status(no_rmq):
         with override_log_level():  # temporarily suppress noisy logging
             backend = manager.get_backend()
             backend.cursor()
-    except Exception:
-        print_status(ServiceStatus.DOWN, 'postgres', 'Unable to connect as {}@{}:{}'.format(*database_data))
+    except IncompatibleDatabaseSchema:
+        message = 'Database schema version is incompatible with the code: run `verdi database migrate`.'
+        print_status(ServiceStatus.DOWN, 'postgres', message)
+        exit_code = ExitCode.CRITICAL
+    except Exception as exc:
+        message = 'Unable to connect as {}@{}:{}'.format(*database_data)
+        print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc)
         exit_code = ExitCode.CRITICAL
     else:
         print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
@@ -117,7 +129,6 @@ def verdi_status(no_rmq):
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
             print_status(ServiceStatus.WARNING, 'daemon', daemon_status)
-            exit_code = ExitCode.SUCCESS  # A daemon that is not running is not a failure
 
     except Exception as exc:
         print_status(ServiceStatus.ERROR, 'daemon', 'Error getting daemon status', exception=exc)

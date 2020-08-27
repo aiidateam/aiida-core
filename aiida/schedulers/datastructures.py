@@ -112,12 +112,14 @@ class NodeNumberJobResource(JobResource):
 
         # Validate that all fields are valid integers if they are specified, otherwise initialize them to `None`
         for parameter in list(cls._default_fields) + ['tot_num_mpiprocs']:
-            try:
-                setattr(resources, parameter, int(kwargs.pop(parameter)))
-            except KeyError:
+            value = kwargs.pop(parameter, None)
+            if value is None:
                 setattr(resources, parameter, None)
-            except ValueError:
-                raise ValueError('`{}` must be an integer when specified'.format(parameter))
+            else:
+                try:
+                    setattr(resources, parameter, int(value))
+                except ValueError:
+                    raise ValueError('`{}` must be an integer when specified'.format(parameter))
 
         if kwargs:
             raise ValueError('these parameters were not recognized: {}'.format(', '.join(list(kwargs.keys()))))
@@ -198,7 +200,7 @@ class ParEnvJobResource(JobResource):
 
         try:
             resources.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except (KeyError, ValueError):
+        except (KeyError, TypeError, ValueError):
             raise ValueError('`tot_num_mpiprocs` must be specified and must be an integer')
 
         if resources.tot_num_mpiprocs < 1:

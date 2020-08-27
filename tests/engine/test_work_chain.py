@@ -1287,7 +1287,7 @@ class TestWorkChainExpose(AiidaTestCase):
             }
         )
 
-    @unittest.skip('Functionality of `WorkChain.exposed_outputs` is broken.')
+    @unittest.skip('Functionality of `Process.exposed_outputs` is broken for nested namespaces, see issue #3533.')
     def test_nested_expose(self):
         res = launch.run(
             GrandParentExposeWorkChain,

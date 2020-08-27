@@ -19,7 +19,7 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 
 @verdi.command('shell')
 @decorators.with_dbenv()
-@click.option('--plain', is_flag=True, help='Use a plain Python shell.)')
+@click.option('--plain', is_flag=True, help='Use a plain Python shell.')
 @click.option(
     '--no-startup',
     is_flag=True,

@@ -532,7 +532,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, DummyVerdiDataListable, DummyVerdiD
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
         cls.ids = cls.create_trajectory_data()
 
@@ -613,7 +613,7 @@ class TestVerdiDataStructure(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDa
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
         cls.ids = cls.create_structure_data()
 
@@ -795,7 +795,7 @@ class TestVerdiDataCif(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExpo
         """Setup class to test CifData."""
         super().setUpClass()
         orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
         cls.ids = cls.create_cif_data()

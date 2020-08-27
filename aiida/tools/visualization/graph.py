@@ -221,11 +221,11 @@ def default_node_sublabels(node):
     elif class_node_type == 'data.bool.Bool.':
         sublabel = '{}'.format(node.get_attribute('value', ''))
     elif class_node_type == 'data.code.Code.':
-        sublabel = '{}@{}'.format(os.path.basename(node.get_execname()), node.get_computer_name())
+        sublabel = '{}@{}'.format(os.path.basename(node.get_execname()), node.computer.label)
     elif class_node_type == 'data.singlefile.SinglefileData.':
         sublabel = node.filename
     elif class_node_type == 'data.remote.RemoteData.':
-        sublabel = '@{}'.format(node.get_computer_name())
+        sublabel = '@{}'.format(node.computer.label)
     elif class_node_type == 'data.structure.StructureData.':
         sublabel = node.get_formula()
     elif class_node_type == 'data.cif.CifData.':

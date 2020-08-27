@@ -361,21 +361,24 @@ Using virtual environments
 ==========================
 
 AiiDA depends on a number of third party python packages, and usually on specific versions of those packages.
-In order not to interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual python environment.
+In order to not interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual Python environment, for example, by means of one of the methods described below.
 
 .. admonition:: Additional Information
    :class: seealso title-icon-read-more
 
    A very good tutorial on Python environments is provided by `realpython.com <https://realpython.com/effective-python-environment>`__.
 
-`venv <https://docs.python.org/3/library/venv.html>`__ is module included directly with python for creating virtual environments.
+venv
+----
+
+The `venv <https://docs.python.org/3/library/venv.html>`__ module for creating virtual environments ships directly with Python.
 To create a virtual environment, in a given directory, run:
 
 .. code-block:: console
 
    $ python3 -m venv /path/to/new/virtual/environment/aiida
 
-The command to activate the environment is shell specific (see `the documentation <https://docs.python.org/3/library/venv.html#creating-virtual-environments>`__.
+The command to activate the environment is shell specific (see `the documentation <https://docs.python.org/3/library/venv.html#creating-virtual-environments>`__).
 With bash the following command is used:
 
 .. code-block:: console
@@ -391,19 +394,22 @@ To leave or deactivate the environment, simply run:
 .. admonition:: Update install tools
    :class: tip title-icon-tip
 
-   You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old
+   You may need to update ``pip`` and ``setuptools`` in your virtual environment, in case the system or user version of these tools is old.
 
    .. code-block:: console
 
       (aiida) $ pip install -U setuptools pip
 
-If you have `Conda`_ installed then you can directly create a new environment with ``aiida-core`` and (optionally) Postgres and RabbitMQ installed.
+Conda
+-----
+
+If you have `Conda`_ installed then you can directly create a new environment with ``aiida-core`` and (optionally) the Postgres and RabbitMQ services installed.
 
 .. code-block:: console
 
    $ conda create -n aiida -c conda-forge python=3.7 aiida-core aiida-core.services pip
-   $ conda activate
-   $ conda deactivate aiida
+   $ conda activate aiida
+   $ conda deactivate
 
 
 .. _intro:install:aiida-core:
@@ -462,7 +468,7 @@ In order to install any of these package groups, simply append them as a comma s
 
 .. code-block:: console
 
-    $ pip install -e aiida-core[atomic_tools,docs]
+    $ pip install -e "aiida-core[atomic_tools,docs]"
 
 .. admonition:: Kerberos on Ubuntu
    :class: note title-icon-troubleshoot

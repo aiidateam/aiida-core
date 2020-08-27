@@ -48,6 +48,24 @@ def devel_check_load_time():
     echo.echo_success('no issues detected')
 
 
+@verdi_devel.command('check-undesired-imports')
+def devel_check_undesired_imports():
+    """Check that verdi does not import python modules it shouldn't.
+
+    Note: The blacklist was taken from the list of packages in the 'atomic_tools' extra but can be extended.
+    """
+    loaded_modules = 0
+
+    for modulename in ['seekpath', 'CifFile', 'ase', 'pymatgen', 'spglib', 'pymysql']:
+        if modulename in sys.modules:
+            echo.echo_warning('Detected loaded module "{}"'.format(modulename))
+            loaded_modules += 1
+
+    if loaded_modules > 0:
+        echo.echo_critical('Detected {} unwanted modules'.format(loaded_modules))
+    echo.echo_success('no issues detected')
+
+
 @verdi_devel.command('run_daemon')
 @decorators.with_dbenv()
 def devel_run_daemon():

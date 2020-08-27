@@ -214,6 +214,19 @@ class SlurmScheduler(Scheduler):
                 if not isinstance(jobs, (tuple, list)):
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
                 joblist = jobs
+
+            # Trick: If we are asking for a single job, we append the same job once more.
+            # We do this because squeue returns a non-zero exit code if provided an invalid jobid
+            # (stderr: "slurm_load_jobs error: Invalid job id specified"), which can happen if time has passed since
+            # the job finished and squeue no longer has knowledge of it.
+            # However, this *only* happens when providing a *single* jobid to squeue.
+            # When providing two or more jobids via `squeue --jobs=123,234`, it always returns exit code zero, and
+            # duplicating job ids has no other effect on the output.
+            # Verified on slurm versions 17.11.2, 19.05.3-2 and 20.02.2.
+            # See also https://github.com/aiidateam/aiida-core/issues/4326
+            if len(joblist) == 1:
+                joblist += joblist[0]
+
             command.append('--jobs={}'.format(','.join(joblist)))
 
         comm = ' '.join(command)
@@ -482,21 +495,18 @@ class SlurmScheduler(Scheduler):
         # pylint: disable=too-many-branches,too-many-statements
         num_fields = len(self.fields)
 
-        # I don't raise because if I pass a list of jobs,
-        # I get a non-zero status
-        # if one of the job is not in the list anymore
-        # retval should be zero
-        # if retval != 0:
-        # self.logger.warning("Error in _parse_joblist_output: retval={}; "
-        #    "stdout={}; stderr={}".format(retval, stdout, stderr))
-
-        # issue a warning if there is any stderr output and
-        # there is no line containing "Invalid job id specified", that happens
-        # when I ask for specific calculations, and they are all finished
-        if stderr.strip() and 'Invalid job id specified' not in stderr:
-            self.logger.warning("Warning in _parse_joblist_output, non-empty stderr='{}'".format(stderr.strip()))
-            if retval != 0:
-                raise SchedulerError('Error during squeue parsing (_parse_joblist_output function)')
+        if retval != 0:
+            raise SchedulerError(
+                """squeue returned exit code {} (_parse_joblist_output function)
+stdout='{}'
+stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
+            )
+        if stderr.strip():
+            self.logger.warning(
+                "squeue returned exit code 0 (_parse_joblist_output function) but non-empty stderr='{}'".format(
+                    stderr.strip()
+                )
+            )
 
         # will contain raw data parsed from output: only lines with the
         # separator, and already split in fields

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name
-"""Test the export archive migrations on the archives included in `tests/fixtures/export/migrate`."""
+"""Test migrating all export archives included in `tests/static/export/migrate`."""
 import copy
 import pytest
 

@@ -60,7 +60,14 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not (rmq_submit and persister is None), \
             'Must supply a persister if you want to submit using communicator'
 
-        self._loop = loop if loop is not None else tornado.ioloop.IOLoop()
+        # Runner take responsibility to clear up loop only if the loop was created by Runner
+        self._do_close_loop = False
+        if loop is not None:
+            self._loop = loop
+        else:
+            self._loop = tornado.ioloop.IOLoop()
+            self._do_close_loop = True
+
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -150,6 +157,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         """Close the runner by stopping the loop."""
         assert not self._closed
         self.stop()
+        if self._do_close_loop:
+            self._loop.close()
         self._closed = True
 
     def instantiate_process(self, process, *args, **inputs):

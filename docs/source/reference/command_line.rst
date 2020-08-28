@@ -216,11 +216,12 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      check-load-time   Check for common indicators that slowdown `verdi`.
-      configure-backup  Configure backup of the repository folder.
-      run_daemon        Run a daemon instance in the current interpreter.
-      tests             Run the unittest suite or parts of it.
-      validate-plugins  Validate all plugins by checking they can be loaded.
+      check-load-time          Check for common indicators that slowdown `verdi`.
+      check-undesired-imports  Check that verdi does not import python modules it shouldn't.
+      configure-backup         Configure backup of the repository folder.
+      run_daemon               Run a daemon instance in the current interpreter.
+      tests                    Run the unittest suite or parts of it.
+      validate-plugins         Validate all plugins by checking they can be loaded.
 
 
 .. _reference:command-line:verdi-export:
@@ -355,7 +356,9 @@ Below is a list with all available subcommands.
       --migration / --no-migration    Force migration of export file archives, if needed.
                                       [default: True]
 
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --help                          Show this message and exit.
 
 
@@ -464,7 +467,9 @@ Below is a list with all available subcommands.
       Setup a new profile in a fully automated fashion.
 
     Options:
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -587,7 +592,9 @@ Below is a list with all available subcommands.
       Setup a new profile.
 
     Options:
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when

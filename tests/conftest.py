@@ -77,21 +77,23 @@ def generate_calc_job():
     to it, into which the raw input files will have been written.
     """
 
-    def _generate_calc_job(folder, entry_point_name, inputs=None):
+    def _generate_calc_job(folder, entry_point_name, inputs=None, return_process=False):
         """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
         from aiida.engine.utils import instantiate_process
         from aiida.manage.manager import get_manager
         from aiida.plugins import CalculationFactory
 
+        inputs = inputs or {}
         manager = get_manager()
         runner = manager.get_runner()
 
         process_class = CalculationFactory(entry_point_name)
         process = instantiate_process(runner, process_class, **inputs)
 
-        calc_info = process.prepare_for_submission(folder)
+        if return_process:
+            return process
 
-        return calc_info
+        return process.prepare_for_submission(folder)
 
     return _generate_calc_job
 

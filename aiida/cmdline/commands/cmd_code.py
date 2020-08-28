@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi code` command."""
-
 from functools import partial
+
 import click
 import tabulate
 
@@ -18,7 +18,6 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import InputValidationError
 
 
@@ -69,8 +68,8 @@ def set_code_builder(ctx, param, value):
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options_code.PREPEND_TEXT()
+@options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @with_dbenv()
@@ -78,15 +77,6 @@ def setup_code(non_interactive, **kwargs):
     """Setup a new code."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
@@ -119,8 +109,8 @@ def setup_code(non_interactive, **kwargs):
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
-@options.PREPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'prepend_text'))
-@options.APPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'append_text'))
+@options_code.PREPEND_TEXT(contextual_default=partial(get_default, 'prepend_text'))
+@options_code.APPEND_TEXT(contextual_default=partial(get_default, 'append_text'))
 @options.NON_INTERACTIVE()
 @click.option('--hide-original', is_flag=True, default=False, help='Hide the code being copied.')
 @click.pass_context
@@ -129,15 +119,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     """Duplicate a code allowing to change some parameters."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER

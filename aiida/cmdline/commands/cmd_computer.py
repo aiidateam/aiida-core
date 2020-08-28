@@ -19,8 +19,7 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
-from aiida.cmdline.utils.multi_line_input import ensure_scripts
-from aiida.common.exceptions import ValidationError, InputValidationError
+from aiida.common.exceptions import ValidationError
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transports import cli as transport_cli
 
@@ -76,35 +75,20 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     if retval != 0:
         return False, 'The command `echo -n` returned a non-zero return code ({})'.format(retval)
 
-    if stdout:
-        return False, u"""
-There is some spurious output in the standard output,
-that we report below between the === signs:
-=========================================================
+    template = """
+We detected some spurious output in the {} when connecting to the computer, as shown between the bars
+=====================================================================================================
 {}
-=========================================================
-Please check that you don't have code producing output in
-your ~/.bash_profile (or ~/.bashrc). If you don't want to
-remove the code, but just to disable it for non-interactive
-shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida-core/issues/1890
-(and in the AiiDA documentation, linked from that issue)
-""".format(stdout)
+=====================================================================================================
+Please check that you don't have code producing output in your ~/.bash_profile, ~/.bashrc or similar.
+If you don't want to remove the code, but just to disable it for non-interactive shells, see comments
+in this troubleshooting section of the online documentation: https://bit.ly/2FCRDc5
+"""
+    if stdout:
+        return False, template.format('stdout', stdout)
 
     if stderr:
-        return u"""
-There is some spurious output in the stderr,
-that we report below between the === signs:
-=========================================================
-{}
-=========================================================
-Please check that you don't have code producing output in
-your ~/.bash_profile (or ~/.bashrc). If you don't want to
-remove the code, but just to disable it for non-interactive
-shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida-core/issues/1890
-(and in the AiiDA documentation, linked from that issue)
-"""
+        return False, template.format('stderr', stderr)
 
     return True, None
 
@@ -220,8 +204,8 @@ def set_computer_builder(ctx, param, value):
 @options_computer.WORKDIR()
 @options_computer.MPI_RUN_COMMAND()
 @options_computer.MPI_PROCS_PER_MACHINE()
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options_computer.PREPEND_TEXT()
+@options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @click.pass_context
@@ -236,15 +220,6 @@ def computer_setup(ctx, non_interactive, **kwargs):
             'Use "verdi computer duplicate {c}" to set up a new '
             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
         )
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
@@ -277,12 +252,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
 @options_computer.MPI_RUN_COMMAND(contextual_default=partial(get_parameter_default, 'mpirun_command'))
 @options_computer.MPI_PROCS_PER_MACHINE(contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'))
-@options.PREPEND_TEXT(
-    cls=options.ContextualDefaultOption, contextual_default=partial(get_parameter_default, 'prepend_text')
-)
-@options.APPEND_TEXT(
-    cls=options.ContextualDefaultOption, contextual_default=partial(get_parameter_default, 'append_text')
-)
+@options_computer.PREPEND_TEXT(contextual_default=partial(get_parameter_default, 'prepend_text'))
+@options_computer.APPEND_TEXT(contextual_default=partial(get_parameter_default, 'append_text'))
 @options.NON_INTERACTIVE()
 @click.pass_context
 @with_dbenv()
@@ -293,15 +264,6 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name

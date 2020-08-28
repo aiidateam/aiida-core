@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
-
 import click
 # Note: importing from aiida.manage.postgres leads to circular imports
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
@@ -26,11 +25,11 @@ __all__ = (
     'DATUM', 'DATA', 'GROUP', 'GROUPS', 'NODE', 'NODES', 'FORCE', 'SILENT', 'VISUALIZATION_FORMAT', 'INPUT_FORMAT',
     'EXPORT_FORMAT', 'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'DRY_RUN', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME',
     'USER_INSTITUTION', 'DB_BACKEND', 'DB_ENGINE', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME',
-    'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL',
-    'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
-    'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
-    'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
-    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG'
+    'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'LABEL', 'DESCRIPTION', 'INPUT_PLUGIN',
+    'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT',
+    'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS', 'GROUP_CLEAR', 'RAW', 'HOSTNAME',
+    'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX',
+    'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -205,7 +204,11 @@ ARCHIVE_FORMAT = OverridableOption(
 )
 
 NON_INTERACTIVE = OverridableOption(
-    '-n', '--non-interactive', is_flag=True, is_eager=True, help='Non-interactive mode: never prompt for input.'
+    '-n',
+    '--non-interactive',
+    is_flag=True,
+    is_eager=True,
+    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.'
 )
 
 DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry run.')
@@ -279,14 +282,6 @@ PROFILE_ONLY_CONFIG = OverridableOption(
 
 PROFILE_SET_DEFAULT = OverridableOption(
     '--set-default', is_flag=True, default=False, help='Set the profile as the new default.'
-)
-
-PREPEND_TEXT = OverridableOption(
-    '--prepend-text', type=click.STRING, default='', help='Bash script to be executed before an action.'
-)
-
-APPEND_TEXT = OverridableOption(
-    '--append-text', type=click.STRING, default='', help='Bash script to be executed after an action has completed.'
 )
 
 LABEL = OverridableOption('-L', '--label', type=click.STRING, metavar='LABEL', help='Short name to be used as a label.')

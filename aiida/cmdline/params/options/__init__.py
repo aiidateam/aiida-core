@@ -29,7 +29,7 @@ __all__ = (
     'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
     'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
     'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
-    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG'
+    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG', 'PRINT_TRACEBACK'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -587,4 +587,11 @@ DICT_KEYS = OverridableOption(
 
 DEBUG = OverridableOption(
     '--debug', is_flag=True, default=False, help='Show debug messages. Mostly relevant for developers.', hidden=True
+)
+
+PRINT_TRACEBACK = OverridableOption(
+    '-t',
+    '--print-traceback',
+    is_flag=True,
+    help='Print the full traceback in case an exception is raised.',
 )

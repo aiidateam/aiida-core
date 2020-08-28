@@ -280,7 +280,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             relpath = os.path.relpath(filepath, folder.abspath)
             if relpath not in provenance_exclude_list:
                 with open(filepath, 'rb') as handle:
-                    node.put_object_from_filelike(handle, relpath, 'wb', force=True)
+                    node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest

@@ -472,7 +472,7 @@ class NodeTranslator(BaseTranslator):
             raise RestInputValidationError('{} is not a directory in this repository'.format(filename))
         response = []
         for fobj in flist:
-            response.append({'name': fobj.name, 'type': fobj.type.name})
+            response.append({'name': fobj.name, 'type': fobj.file_type.name})
         return response
 
     @staticmethod

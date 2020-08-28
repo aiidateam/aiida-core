@@ -71,7 +71,7 @@ def deduplicate_uuids(table=None, dry_run=True):
     from collections import defaultdict
 
     from aiida.common.utils import get_new_uuid
-    from aiida.orm.utils.repository import Repository
+    from aiida.orm.utils._repository import Repository
 
     if table not in TABLES_UUID_DEDUPLICATION:
         raise ValueError('invalid table {}: choose from {}'.format(table, ', '.join(TABLES_UUID_DEDUPLICATION)))

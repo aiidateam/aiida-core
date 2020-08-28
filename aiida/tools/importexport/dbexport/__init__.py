@@ -20,7 +20,7 @@ from aiida.common.exceptions import LicensingException
 from aiida.common.folders import RepositoryFolder, SandboxFolder, Folder
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_formatter, LOG_LEVEL_REPORT
-from aiida.orm.utils.repository import Repository
+from aiida.orm.utils._repository import Repository
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
 from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER

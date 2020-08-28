@@ -182,7 +182,7 @@ class Manager:
         if task_prefetch_count is None:
             task_prefetch_count = self.get_config().get_option('daemon.worker_process_slots', profile.name)
 
-        url = rmq.get_rmq_url()
+        url = profile.get_rmq_url()
         prefix = profile.rmq_prefix
 
         # This needs to be here, because the verdi commands will call this function and when called in unit tests the

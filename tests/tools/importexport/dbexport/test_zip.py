@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for aiida.tools.importexport.dbexport.zip"""
 import os
 import zipfile

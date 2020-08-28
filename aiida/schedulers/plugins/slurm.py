@@ -215,13 +215,16 @@ class SlurmScheduler(Scheduler):
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
                 joblist = jobs
 
-            # Trick: If we are asking for a single job, we append the same job once more.
-            # We do this because squeue returns a non-zero exit code if provided an invalid jobid
-            # (stderr: "slurm_load_jobs error: Invalid job id specified"), which can happen if time has passed since
-            # the job finished and squeue no longer has knowledge of it.
-            # However, this *only* happens when providing a *single* jobid to squeue.
-            # When providing two or more jobids via `squeue --jobs=123,234`, it always returns exit code zero, and
-            # duplicating job ids has no other effect on the output.
+            # Trick: When asking for a single job, append the same job once more.
+            # This helps provide a reliable way of knowing whether the squeue command failed (if its exit code is
+            # non-zero, _parse_joblist_output assumes that an error has occurred and raises an exception).
+            # When asking for a single job, squeue also returns a non-zero exit code if the corresponding job is
+            # no longer in the queue (stderr: "slurm_load_jobs error: Invalid job id specified"), which typically
+            # happens once in the life time of an AiiDA job,
+            # However, when providing two or more jobids via `squeue --jobs=123,234`, squeue stops caring whether
+            # the jobs are still in the queue and returns exit code zero irrespectively (allowing AiiDA to rely on the
+            # exit code for detection of real issues).
+            # Duplicating job ids has no other effect on the output.
             # Verified on slurm versions 17.11.2, 19.05.3-2 and 20.02.2.
             # See also https://github.com/aiidateam/aiida-core/issues/4326
             if len(joblist) == 1:
@@ -495,6 +498,7 @@ class SlurmScheduler(Scheduler):
         # pylint: disable=too-many-branches,too-many-statements
         num_fields = len(self.fields)
 
+        # See discussion in _get_joblist_command on how we ensure that AiiDA can expect exit code 0 here.
         if retval != 0:
             raise SchedulerError(
                 """squeue returned exit code {} (_parse_joblist_output function)

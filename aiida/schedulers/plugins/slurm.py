@@ -228,7 +228,7 @@ class SlurmScheduler(Scheduler):
             # Verified on slurm versions 17.11.2, 19.05.3-2 and 20.02.2.
             # See also https://github.com/aiidateam/aiida-core/issues/4326
             if len(joblist) == 1:
-                joblist += joblist[0]
+                joblist += [joblist[0]]
 
             command.append('--jobs={}'.format(','.join(joblist)))
 

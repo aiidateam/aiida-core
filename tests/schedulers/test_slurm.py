@@ -14,6 +14,7 @@ import uuid
 import datetime
 
 from aiida.schedulers.plugins.slurm import SlurmScheduler, JobState
+from aiida.schedulers import SchedulerError
 
 # pylint: disable=line-too-long
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
@@ -42,7 +43,7 @@ class TestParserSqueue(unittest.TestCase):
 
     def test_parse_common_joblist_output(self):
         """
-        Test whether _parse_joblist can parse the qstat -f output
+        Test whether _parse_joblist_output can parse the squeue output
         """
         scheduler = SlurmScheduler()
 
@@ -98,6 +99,19 @@ class TestParserSqueue(unittest.TestCase):
         #
         #                self.assertTrue( j.num_machines==num_machines )
         #                self.assertTrue( j.num_mpiprocs==num_mpiprocs )
+    def test_parse_failed_squeue_output(self):
+        """
+        Test that _parse_joblist_output reacts as expected to failures.
+        """
+        scheduler = SlurmScheduler()
+
+        # non-zero return value should raise
+        with self.assertRaises(SchedulerError):
+            _ = scheduler._parse_joblist_output(1, TEXT_SQUEUE_TO_TEST, '')  # pylint: disable=protected-access
+
+        # non-empty stderr should be logged
+        with self.assertLogs(scheduler.logger, 'WARNING'):
+            _ = scheduler._parse_joblist_output(0, TEXT_SQUEUE_TO_TEST, 'error message')  # pylint: disable=protected-access
 
 
 class TestTimes(unittest.TestCase):
@@ -332,3 +346,24 @@ class TestSubmitScript(unittest.TestCase):
             job_tmpl.job_resource = scheduler.create_job_resource(
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
+
+
+class TestJoblistCommand(unittest.TestCase):
+    """
+    Tests of the issued squeue command.
+    """
+
+    def test_joblist_single(self):
+        """Test that asking for a single job results in duplication of the list."""
+        scheduler = SlurmScheduler()
+
+        command = scheduler._get_joblist_command(jobs=['123'])  # pylint: disable=protected-access
+        self.assertIn('123,123', command)
+
+    def test_joblist_multi(self):
+        """Test that asking for multiple jobs does not result in duplications."""
+        scheduler = SlurmScheduler()
+
+        command = scheduler._get_joblist_command(jobs=['123', '456'])  # pylint: disable=protected-access
+        self.assertIn('123,456', command)
+        self.assertNotIn('456,456', command)

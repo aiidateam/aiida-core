@@ -182,7 +182,7 @@ Finally, to check that all services are running as expected use:
     ✓ profile:     On profile me
     ✓ repository:  /home/ubuntu/.aiida/repository/me
     ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
-    ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+    ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
     ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
 
 Awesome! You now have a fully operational installation from which to take the next steps!

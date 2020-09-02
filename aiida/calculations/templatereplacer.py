@@ -68,7 +68,7 @@ class TemplatereplacerCalculation(CalcJob):
             help='A template for the input file.')
         spec.input('parameters', valid_type=orm.Dict, required=False,
             help='Parameters used to replace placeholders in the template.')
-        spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False)
+        spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False, dynamic=True)
 
         spec.output('output_parameters', valid_type=orm.Dict, required=True)
         spec.default_output_node = 'output_parameters'
@@ -83,6 +83,7 @@ class TemplatereplacerCalculation(CalcJob):
             message='A temporary retrieved file could not be read from the temporary retrieved folder.')
         spec.exit_code(120, 'ERROR_INVALID_OUTPUT',
             message='The output file contains invalid output.')
+
 
     def prepare_for_submission(self, folder):
         """

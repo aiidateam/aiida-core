@@ -129,7 +129,6 @@ class AttributeManager:  # pylint: disable=too-few-public-methods
         """
         # Possibly add checks here
         self.__dict__['_node'] = node
-        #self._node = node
 
     def __dir__(self):
         """

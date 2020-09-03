@@ -76,6 +76,7 @@ pipeline {
         }
         stage('Build') {
             steps {
+                sh 'pip install --upgrade --user pip'
                 sh 'pip install --user .[all]'
                 // To be able to do ssh localhost
                 sh 'ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa'

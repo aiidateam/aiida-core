@@ -128,6 +128,9 @@ class AttributeManager:  # pylint: disable=too-few-public-methods
         :param node: the node object.
         """
         # Possibly add checks here
+        # We cannot set `self._node` because it would go through the __setattr__ method
+        # which uses said _node by calling `self._node.set_attribute(name, value)`.
+        # Instead, we need to manually set it through the `self.__dict__` property.
         self.__dict__['_node'] = node
 
     def __dir__(self):

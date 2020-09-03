@@ -21,22 +21,29 @@ __all__ = ('Dict',)
 class Dict(Data):
     """`Data` sub class to represent a dictionary.
 
-    The dictionary key-value pairs are stored in the database in a column named `attributes`.
-    We will then say that these are "database-attributes", or "attributes in a database sense".
-    However, these are not "python-attributes" ("attributes in the python sense"), and can only
-    be accessed with the set/get item special methods or through the `dict` special property.
+    The dictionary contents of a `Dict` node are stored in the database as attributes. The dictionary
+    can be initialized through the `dict` argument in the constructor. After construction, values can
+    be retrieved and updated through the item getters and setters, respectively:
 
-        # These will set a database storeable key-value pair
-        dict_node[key] = value
-        dict_node.dict.key = value
+        node['key'] = 'value'
 
-    If you try to set this directly as a "python-attribute", it will only be kept in memory for
-    as long as that node object persists, but it won't appear in the `dict` property nor will
-    it be stored in the database.
+    Alternatively, the `dict` property returns an instance of the `AttributeManager` that can be used
+    to get and set values through attribute notation:
 
-        #  This will just set a transient `key` attribute on the node
-        dict_node.key = value
+        node.dict.key = 'value'
 
+    Note that trying to set dictionary values directly on the node, e.g. `node.key = value`, will not
+    work as intended. It will merely set the `key` attribute on the node instance, but will not be
+    stored in the database. As soon as the node goes out of scope, the value will be lost.
+
+    It is also relevant to note here the difference in something being an "attribute of a node" (in
+    the sense that it is stored in the "attribute" column of the database when the node is stored)
+    and something being an "attribute of a python object" (in the sense of being able to modify and
+    access it as if it was a property of the variable, e.g. `node.key = value`). This is true of all
+    types of nodes, but it becomes more relevant for `Dict` nodes where one is constantly manipulating
+    these attributes.
+
+    Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
     def __init__(self, **kwargs):

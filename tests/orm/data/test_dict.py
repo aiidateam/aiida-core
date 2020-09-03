@@ -42,7 +42,7 @@ class TestDict(AiidaTestCase):
 
     def test_set_item(self):
         """Test the methods for setting the item.
-        
+
         * `__setitem__` directly on the node
         * `__setattr__` through the `AttributeManager` returned by the `dict` property
         """

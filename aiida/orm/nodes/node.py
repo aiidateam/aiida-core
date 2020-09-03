@@ -128,6 +128,18 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         )
         super().__init__(backend_entity)
 
+    def __eq__(self, other):
+        """The uuid should uniquely identify a node.
+
+        Note that although there may be ways in which users may end up manually modifying the
+        uuid of a node, and thus ending up with different nodes with the same uuid, the problem
+        is with them doing these modifications and not with the equality being based on uuid.
+
+        In other words, if any procedure modifies uuids in a way that you end up having different
+        nodes with the same uuid, it is the procedure that must be considered to be buggy.
+        """
+        return self.uuid == other.uuid
+
     def __repr__(self):
         return '<{}: {}>'.format(self.__class__.__name__, str(self))
 

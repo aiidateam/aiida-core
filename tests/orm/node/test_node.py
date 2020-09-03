@@ -54,6 +54,14 @@ class TestNodeAttributesExtras(AiidaTestCase):
         super().setUp()
         self.node = Data()
 
+    def test_equality(self):
+        """Test the `__eq__` method."""
+        node1 = Node()
+        node2 = node1
+        node3 = Node()
+        self.assertTrue(node1 == node2)
+        self.assertTrue(node1 != node3)
+
     def test_attributes(self):
         """Test the `Node.attributes` property."""
         original_attribute = {'nested': {'a': 1}}

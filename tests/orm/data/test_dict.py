@@ -39,3 +39,14 @@ class TestDict(AiidaTestCase):
         """Test the `__getitem__` method."""
         self.assertEqual(self.node['value'], self.dictionary['value'])
         self.assertEqual(self.node['nested'], self.dictionary['nested'])
+
+    def test_set_item(self):
+        """Test the methods for setting the item.
+
+        * `__setitem__` directly on the node
+        * `__setattr__` through the `AttributeManager` returned by the `dict` property
+        """
+        self.node['value'] = 2
+        self.assertEqual(self.node['value'], 2)
+        self.node.dict.value = 3
+        self.assertEqual(self.node['value'], 3)

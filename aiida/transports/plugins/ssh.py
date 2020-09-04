@@ -789,6 +789,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if self.isfile(remotepath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
+        self.makedirs(os.path.dirname(remotepath), ignore_existing=True)
         return self.sftp.put(localpath, remotepath, callback=callback)
 
     def puttree(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # pylint: disable=too-many-branches,arguments-differ,unused-argument

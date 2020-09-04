@@ -330,6 +330,7 @@ class LocalTransport(Transport):
         if os.path.exists(the_destination) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
+        self.makedirs(os.path.dirname(the_destination), ignore_existing=True)
         shutil.copyfile(localpath, the_destination)
 
     def puttree(self, localpath, remotepath, *args, **kwargs):

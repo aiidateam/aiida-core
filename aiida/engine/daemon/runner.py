@@ -10,6 +10,7 @@
 """Function that starts a daemon runner."""
 import logging
 import signal
+import asyncio
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
@@ -31,16 +32,24 @@ def start_daemon():
         LOGGER.exception('daemon runner failed to start')
         raise
 
-    def shutdown_daemon(_num, _frame):
+    async def shutdown(runner):
+        """Cleanup tasks tied to the service's shutdown."""
         LOGGER.info('Received signal to shut down the daemon runner')
+
+        tasks = [t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()]
+
+        for task in tasks:
+            task.cancel()
+
+        await asyncio.gather(*tasks, return_exceptions=True)
         runner.close()
 
-    signal.signal(signal.SIGINT, shutdown_daemon)
-    signal.signal(signal.SIGTERM, shutdown_daemon)
-
-    LOGGER.info('Starting a daemon runner')
+    signals = (signal.SIGTERM, signal.SIGINT)
+    for s in signals:  # pylint: disable=invalid-name
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown(runner)))
 
     try:
+        LOGGER.info('Starting a daemon runner')
         runner.start()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)

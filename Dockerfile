@@ -1,4 +1,4 @@
-FROM aiidateam/aiida-prerequisites:0.2.0
+FROM aiidateam/aiida-prerequisites:0.2.1
 
 USER root
 

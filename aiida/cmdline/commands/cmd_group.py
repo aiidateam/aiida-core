@@ -66,8 +66,8 @@ def group_delete(group, clear, force):
     """Delete a group.
 
     As a precautionary measure, this command fails when trying to delete a group that is not empty.
-    In order to remove all nodes from the group before deleting it, pass the `-c/--clear` flag.
-    Note that the nodes themselves will *never* be deleted by this command.
+    In order to remove the group nevertheless, pass the `-c/--clear` flag.
+    Note that this command only deletes groups - nodes contained in the group will remain untouched.
     """
     from aiida import orm
 
@@ -82,9 +82,6 @@ def group_delete(group, clear, force):
 
     if not force:
         click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
-
-    if clear:
-        group.clear()
 
     orm.Group.objects.delete(group.pk)
     echo.echo_success('Group<{}> deleted.'.format(label))

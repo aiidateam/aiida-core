@@ -16,6 +16,7 @@
 *.egg-info
 .eggs
 .vscode
+.tox
 
 # files created by coverage
 .cache

@@ -145,7 +145,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         """
         from aiida.engine import ProcessState
 
-        if not node.is_excepted:
+        if not node.is_excepted and not node.is_sealed:
             node.logger.exception(message)
             node.set_exception(str(exception))
             node.set_process_state(ProcessState.EXCEPTED)

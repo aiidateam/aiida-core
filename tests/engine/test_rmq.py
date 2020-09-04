@@ -94,6 +94,12 @@ class TestProcessControl(AiidaTestCase):
             self.assertTrue(result)
             self.assertTrue(calc_node.paused)
 
+            kill_message = 'Sorry, you have to go mate'
+            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            future = await with_timeout(asyncio.wrap_future(kill_future))
+            result = await self.wait_future(asyncio.wrap_future(future))
+            self.assertTrue(result)
+
         self.runner.loop.run_until_complete(do_pause())
 
     def test_pause_play(self):
@@ -121,6 +127,12 @@ class TestProcessControl(AiidaTestCase):
             self.assertTrue(result)
             self.assertFalse(calc_node.paused)
             self.assertEqual(calc_node.process_status, None)
+
+            kill_message = 'Sorry, you have to go mate'
+            kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
+            future = await with_timeout(asyncio.wrap_future(kill_future))
+            result = await self.wait_future(asyncio.wrap_future(future))
+            self.assertTrue(result)
 
         self.runner.loop.run_until_complete(do_pause_play())
 

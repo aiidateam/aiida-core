@@ -65,9 +65,9 @@ def group_remove_nodes(group, nodes, clear, force):
 def group_delete(group, clear, force):
     """Delete a group.
 
-    Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
-    group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
-    will not actually be deleted from the database.
+    As a precautionary measure, this command fails when trying to delete a group that is not empty.
+    In order to remove all nodes from the group before deleting it, pass the `-c/--clear` flag.
+    Note that the nodes themselves will *never* be deleted by this command.
     """
     from aiida import orm
 

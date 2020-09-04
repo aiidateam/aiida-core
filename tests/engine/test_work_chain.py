@@ -11,6 +11,7 @@
 """Tests for the `WorkChain` class."""
 import inspect
 import unittest
+import asyncio
 
 import plumpy
 import pytest
@@ -997,7 +998,9 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         async def run_async():
             await run_until_waiting(process)
 
-            process.kill()
+            result = process.kill()
+            if asyncio.isfuture(result):
+                await result
 
             with self.assertRaises(plumpy.KilledError):
                 await process.future()

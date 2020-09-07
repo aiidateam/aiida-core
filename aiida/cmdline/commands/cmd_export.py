@@ -202,6 +202,10 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
             echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
 
         old_version = migration.verify_metadata_version(metadata)
+        if version <= old_version:
+            echo.echo_success('nothing to be done - archive already at version {} >= {}'.format(old_version, version))
+            return
+
         try:
             new_version = migration.migrate_recursively(metadata, data, folder, version)
         except ArchiveMigrationError as exception:
@@ -232,7 +236,4 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
             tempdir.cleanup()
 
         if not silent:
-            if new_version > old_version:
-                echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
-            else:
-                echo.echo_success('archive was already at latest version {}'.format(new_version))
+            echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))

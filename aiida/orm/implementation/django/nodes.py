@@ -160,7 +160,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :return: the attributes as a dictionary
         """
-        return self.dbmodel.attributes
+        return self._dbmodel.attributes
 
     def get_attribute(self, key):
         """Return the value of an attribute.
@@ -178,7 +178,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         try:
             return self._dbmodel.attributes[key]
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception))
+            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
 
     def get_attribute_many(self, keys):
         """Return the values of multiple attributes.
@@ -198,7 +198,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         try:
             return [self.get_attribute(key) for key in keys]
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception))
+            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
 
     def set_attribute(self, key, value):
         """Set an attribute to the given value.
@@ -250,7 +250,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         try:
             self._dbmodel.attributes.pop(key)
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception))
+            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
         else:
             self._flush_if_stored({'attributes'})
 
@@ -288,7 +288,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :return: an iterator with attribute keys
         """
-        for key in self._dbmodel.attributes:
+        for key in self._dbmodel.attributes.keys():
             yield key
 
     @property
@@ -297,23 +297,23 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         .. warning:: While the node is unstored, this will return references of the extras on the database model,
             meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            extras will be a deep copy and mutations of the database extras will have to go through the appropriate set
             methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
             or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
             `get_extra_many` instead.
 
         :return: the extras as a dictionary
         """
-        return self.dbmodel.extras
+        return self._dbmodel.extras
 
     def get_extra(self, key):
         """Return the value of an extra.
 
         .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
             meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            extra will be a deep copy and mutations of the database extras will have to go through the appropriate set
             methods.
 
         :param key: name of the extra
@@ -323,15 +323,15 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         try:
             return self._dbmodel.extras[key]
         except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception))
+            raise AttributeError('extra `{}` does not exist'.format(exception)) from exception
 
     def get_extra_many(self, keys):
         """Return the values of multiple extras.
 
         .. warning:: While the node is unstored, this will return references of the extras on the database model,
             meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            extras will be a deep copy and mutations of the database extras will have to go through the appropriate set
             methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
             or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
             `get_extra_many` instead.
@@ -340,10 +340,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :return: a list of extra values
         :raises AttributeError: if at least one extra does not exist
         """
-        try:
-            return [self.get_extra(key) for key in keys]
-        except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception))
+        return [self.get_extra(key) for key in keys]
 
     def set_extra(self, key, value):
         """Set an extra to the given value.
@@ -394,7 +391,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         try:
             self._dbmodel.extras.pop(key)
         except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception))
+            raise AttributeError('extra `{}` does not exist'.format(exception)) from exception
         else:
             self._flush_if_stored({'extras'})
 
@@ -432,10 +429,10 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
         :return: an iterator with extra keys
         """
-        for key in self._dbmodel.extras:
+        for key in self._dbmodel.extras.keys():
             yield key
 
-    def _flush_if_stored(self, fields=None):
+    def _flush_if_stored(self, fields):
         if self._dbmodel.is_saved():
             self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
@@ -475,7 +472,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             transaction.savepoint_commit(savepoint_id)
         except IntegrityError as exception:
             transaction.savepoint_rollback(savepoint_id)
-            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception))
+            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception)) from exception
 
     def clean_values(self):
         self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
@@ -523,7 +520,7 @@ class DjangoNodeCollection(BackendNodeCollection):
         try:
             return self.ENTITY_CLASS.from_dbmodel(models.DbNode.objects.get(pk=pk), self.backend)
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from ObjectDoesNotExist
 
     def delete(self, pk):
         """Remove a Node entry from the collection with the given id
@@ -533,4 +530,4 @@ class DjangoNodeCollection(BackendNodeCollection):
         try:
             models.DbNode.objects.filter(pk=pk).delete()  # pylint: disable=no-member
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from ObjectDoesNotExist

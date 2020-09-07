@@ -180,7 +180,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         try:
             return self._dbmodel.attributes[key]
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception))
+            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
 
     def get_attribute_many(self, keys):
         """Return the values of multiple attributes.
@@ -200,7 +200,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         try:
             return [self.get_attribute(key) for key in keys]
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception))
+            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
 
     def set_attribute(self, key, value):
         """Set an attribute to the given value.
@@ -212,8 +212,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             value = clean_value(value)
 
         self._dbmodel.attributes[key] = value
-        self._flag_field('attributes')
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def set_attribute_many(self, attributes):
         """Set multiple attributes.
@@ -226,10 +225,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             attributes = {key: clean_value(value) for key, value in attributes.items()}
 
         for key, value in attributes.items():
+            # We need to use `self.dbmodel` without the underscore, because otherwise the second iteration will refetch
+            # what is in the database and we lose the initial changes.
             self.dbmodel.attributes[key] = value
-
-        self._flag_field('attributes')
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def reset_attributes(self, attributes):
         """Reset the attributes.
@@ -242,8 +241,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             attributes = clean_value(attributes)
 
         self.dbmodel.attributes = attributes
-        self._flag_field('attributes')
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def delete_attribute(self, key):
         """Delete an attribute.
@@ -254,10 +252,9 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         try:
             self._dbmodel.attributes.pop(key)
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception))
+            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
         else:
-            self._flag_field('attributes')
-            self._flush_if_stored()
+            self._flush_if_stored({'attributes'})
 
     def delete_attribute_many(self, keys):
         """Delete multiple attributes.
@@ -273,12 +270,12 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         for key in keys:
             self.dbmodel.attributes.pop(key)
 
-        self._flag_field('attributes')
-        self._flush_if_stored()
+        self._flush_if_stored({'attributes'})
 
     def clear_attributes(self):
         """Delete all attributes."""
         self._dbmodel.attributes = {}
+        self._flush_if_stored({'attributes'})
 
     def attributes_items(self):
         """Return an iterator over the attributes.
@@ -302,8 +299,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
         .. warning:: While the node is unstored, this will return references of the extras on the database model,
             meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            extras will be a deep copy and mutations of the database extras will have to go through the appropriate set
             methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
             or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
             `get_extra_many` instead.
@@ -317,8 +314,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
         .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
             meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            extra will be a deep copy and mutations of the database extras will have to go through the appropriate set
             methods.
 
         :param key: name of the extra
@@ -328,15 +325,15 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         try:
             return self._dbmodel.extras[key]
         except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception))
+            raise AttributeError('extra `{}` does not exist'.format(exception)) from exception
 
     def get_extra_many(self, keys):
         """Return the values of multiple extras.
 
         .. warning:: While the node is unstored, this will return references of the extras on the database model,
             meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
+            automatically be reflected on the database model as well. As soon as the node is stored, the returned
+            extras will be a deep copy and mutations of the database extras will have to go through the appropriate set
             methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
             or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
             `get_extra_many` instead.
@@ -345,10 +342,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :return: a list of extra values
         :raises AttributeError: if at least one extra does not exist
         """
-        try:
-            return [self.get_extra(key) for key in keys]
-        except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception))
+        return [self.get_extra(key) for key in keys]
 
     def set_extra(self, key, value):
         """Set an extra to the given value.
@@ -360,8 +354,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             value = clean_value(value)
 
         self._dbmodel.extras[key] = value
-        self._flag_field('extras')
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def set_extra_many(self, extras):
         """Set multiple extras.
@@ -376,8 +369,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         for key, value in extras.items():
             self.dbmodel.extras[key] = value
 
-        self._flag_field('extras')
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def reset_extras(self, extras):
         """Reset the extras.
@@ -386,9 +378,11 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
         :param extras: a dictionary with the extras to set
         """
+        if self.is_stored:
+            extras = clean_value(extras)
+
         self.dbmodel.extras = extras
-        self._flag_field('extras')
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def delete_extra(self, key):
         """Delete an extra.
@@ -399,10 +393,9 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         try:
             self._dbmodel.extras.pop(key)
         except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception))
+            raise AttributeError('extra `{}` does not exist'.format(exception)) from exception
         else:
-            self._flag_field('extras')
-            self._flush_if_stored()
+            self._flush_if_stored({'extras'})
 
     def delete_extra_many(self, keys):
         """Delete multiple extras.
@@ -418,12 +411,12 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         for key in keys:
             self.dbmodel.extras.pop(key)
 
-        self._flag_field('extras')
-        self._flush_if_stored()
+        self._flush_if_stored({'extras'})
 
     def clear_extras(self):
         """Delete all extras."""
         self._dbmodel.extras = {}
+        self._flush_if_stored({'extras'})
 
     def extras_items(self):
         """Return an iterator over the extras.
@@ -441,13 +434,9 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         for key in self._dbmodel.extras.keys():
             yield key
 
-    def _flag_field(self, field):
-        from aiida.backends.sqlalchemy.utils import flag_modified
-        flag_modified(self._dbmodel, field)
-
-    def _flush_if_stored(self):
+    def _flush_if_stored(self, fields):
         if self._dbmodel.is_saved():
-            self._dbmodel.save()
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
     def add_incoming(self, source, link_type, link_label):
         """Add a link of the given type from a given node to ourself.
@@ -487,7 +476,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
                 link = DbLink(input_id=source.id, output_id=self.id, label=link_label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as exception:
-            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception))
+            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception)) from exception
 
     def clean_values(self):
         self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
@@ -536,7 +525,7 @@ class SqlaNodeCollection(BackendNodeCollection):
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
         except NoResultFound:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from NoResultFound
 
     def delete(self, pk):
         """Remove a Node entry from the collection with the given id
@@ -549,4 +538,4 @@ class SqlaNodeCollection(BackendNodeCollection):
             session.query(models.DbNode).filter_by(id=pk).one().delete()
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk))
+            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from NoResultFound

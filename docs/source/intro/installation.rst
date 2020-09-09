@@ -674,16 +674,21 @@ However, when the installation of RabbitMQ is not standard, for example it runs 
 
 The following parameters can be configured:
 
-------------- --------------------------- -------------- -------------------------------------------------------------------------------------------------------------------------
-Parameter     Option                      Default        Explanation
-------------- --------------------------- -------------- -------------------------------------------------------------------------------------------------------------------------
-Protocol      ``--broker-protocol``       ``amqp``       The protocol to use, can be either ``amqp`` or ``amqps`` for SSL enabled connections.
-Username      ``--broker-username``       ``guest``      The username with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation.
-Password      ``--broker-password``       ``guest``      The password with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation.
-Host          ``--broker-host``           ``127.0.0.1``  The hostname of the RabbitMQ server.
-Port          ``--broker-port``           ``5672``       The port to which the server listens.
-Virtual host  ``--broker-virtual-host``   ``''``         Optional virtual host. If defined, needs to start with a forward slash.
-------------- --------------------------- -------------- -------------------------------------------------------------------------------------------------------------------------
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Parameter    | Option                    | Default       | Explanation                                                                                                             |
++==============+===========================+===============+=========================================================================================================================+
+| Protocol     | ``--broker-protocol``     | ``amqp``      | The protocol to use, can be either ``amqp`` or ``amqps`` for SSL enabled connections.                                   |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Username     | ``--broker-username``     | ``guest``     | The username with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation. |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Password     | ``--broker-password``     | ``guest``     | The password with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation. |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Host         | ``--broker-host``         | ``127.0.0.1`` | The hostname of the RabbitMQ server.                                                                                    |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Port         | ``--broker-port``         | ``5672``      | The port to which the server listens.                                                                                   |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. If defined, needs to start with a forward slash.                                                 |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
 
 
 verdi setup

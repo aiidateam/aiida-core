@@ -33,11 +33,18 @@ from aiida.manage.manager import get_manager
 @options_setup.SETUP_DATABASE_NAME()
 @options_setup.SETUP_DATABASE_USERNAME()
 @options_setup.SETUP_DATABASE_PASSWORD()
+@options_setup.SETUP_BROKER_PROTOCOL()
+@options_setup.SETUP_BROKER_USERNAME()
+@options_setup.SETUP_BROKER_PASSWORD()
+@options_setup.SETUP_BROKER_HOST()
+@options_setup.SETUP_BROKER_PORT()
+@options_setup.SETUP_BROKER_VIRTUAL_HOST()
 @options_setup.SETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
 def setup(
     non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
-    db_name, db_username, db_password, repository
+    db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host, broker_port,
+    broker_virtual_host, repository
 ):
     """Setup a new profile."""
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
@@ -51,6 +58,12 @@ def setup(
     profile.database_hostname = db_host
     profile.database_username = db_username
     profile.database_password = db_password
+    profile.broker_protocol = broker_protocol
+    profile.broker_username = broker_username
+    profile.broker_password = broker_password
+    profile.broker_host = broker_host
+    profile.broker_port = broker_port
+    profile.broker_virtual_host = broker_virtual_host
     profile.repository_uri = 'file://' + repository
 
     config = get_config()
@@ -113,12 +126,19 @@ def setup(
 @options_setup.QUICKSETUP_SUPERUSER_DATABASE_NAME()
 @options_setup.QUICKSETUP_SUPERUSER_DATABASE_USERNAME()
 @options_setup.QUICKSETUP_SUPERUSER_DATABASE_PASSWORD()
+@options_setup.QUICKSETUP_BROKER_PROTOCOL()
+@options_setup.QUICKSETUP_BROKER_USERNAME()
+@options_setup.QUICKSETUP_BROKER_PASSWORD()
+@options_setup.QUICKSETUP_BROKER_HOST()
+@options_setup.QUICKSETUP_BROKER_PORT()
+@options_setup.QUICKSETUP_BROKER_VIRTUAL_HOST()
 @options_setup.QUICKSETUP_REPOSITORY_URI()
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(
     ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
-    db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, repository
+    db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, broker_protocol, broker_username,
+    broker_password, broker_host, broker_port, broker_virtual_host, repository
 ):
     """Setup a new profile in a fully automated fashion."""
     # pylint: disable=too-many-arguments,too-many-locals
@@ -166,6 +186,12 @@ def quicksetup(
         'db_port': postgres.port_for_psycopg2,
         'db_username': db_username,
         'db_password': db_password,
+        'broker_protocol': broker_protocol,
+        'broker_username': broker_username,
+        'broker_password': broker_password,
+        'broker_host': broker_host,
+        'broker_port': broker_port,
+        'broker_virtual_host': broker_virtual_host,
         'repository': repository,
     }
     ctx.invoke(setup, **setup_parameters)

@@ -13,10 +13,12 @@ import collections
 import logging
 
 from tornado import gen
-import plumpy
 from kiwipy import communications, Future
+import plumpy
 
-__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher')
+from aiida.common.extendeddicts import AttributeDict
+
+__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'BROKER_DEFAULTS')
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,40 +26,79 @@ RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
 CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-name
 
-# GP: Using here 127.0.0.1 instead of localhost because on some computers
-# localhost resolves first to IPv6 with address ::1 and if RMQ is not
-# running on IPv6 one gets an annoying warning. When moving this to
-# a user-configurable variable, make sure users are aware of this and
-# know how to avoid warnings. For more info see
-# https://github.com/aiidateam/aiida-core/issues/1142
-_RMQ_URL = 'amqp://127.0.0.1'
-_RMQ_HEARTBEAT_TIMEOUT = 600  # Maximum that can be set by client, with default RabbitMQ server configuration
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
 _TASK_EXCHANGE = 'tasks'
 
+BROKER_DEFAULTS = AttributeDict({
+    'protocol': 'amqp',
+    'username': 'guest',
+    'password': 'guest',
+    'host': '127.0.0.1',
+    'port': 5672,
+    'virtual_host': '',
+    'heartbeat': 600,
+})
 
-def get_rmq_url(heartbeat_timeout=None):
+BROKER_VALID_PARAMETERS = [
+    'heartbeat',  # heartbeat timeout in seconds
+    'cafile',  # string containing path to ca certificate file
+    'capath',  # string containing path to ca certificates
+    'cadata',  # base64 encoded ca certificate data
+    'keyfile',  # string containing path to key file
+    'certfile',  # string containing path to certificate file
+    'no_verify_ssl',  # boolean disables certificates validation
+]
+
+
+def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, virtual_host=None, **kwargs):
+    """Return the URL to connect to RabbitMQ.
+
+    .. note::
+
+        The default of the ``host`` is set to ``127.0.0.1`` instead of ``localhost`` because on some computers localhost
+        resolves first to IPv6 with address ::1 and if RMQ is not running on IPv6 one gets an annoying warning. For more
+        info see: https://github.com/aiidateam/aiida-core/issues/1142
+
+    :param protocol: the protocol to use, `amqp` or `amqps`.
+    :param username: the username for authentication.
+    :param password: the password for authentication.
+    :param host: the hostname of the RabbitMQ server.
+    :param port: the port of the RabbitMQ server.
+    :param virtual_host: the virtual host to connect to.
+    :returns: the connection URL string.
     """
-    Get the URL to connect to RabbitMQ
+    from urllib.parse import urlencode, urlunparse
 
-    :param heartbeat_timeout: the interval in seconds for the heartbeat timeout
-    :returns: the connection URL string
-    """
-    url = _RMQ_URL
+    invalid = set(kwargs.keys()).difference(BROKER_VALID_PARAMETERS)
+    if invalid:
+        raise ValueError('invalid URL parameters specified in the keyword arguments: {}'.format(', '.join(invalid)))
 
-    if heartbeat_timeout is None:
-        heartbeat_timeout = _RMQ_HEARTBEAT_TIMEOUT
+    if 'heartbeat' not in kwargs:
+        kwargs['heartbeat'] = BROKER_DEFAULTS.heartbeat
 
-    if heartbeat_timeout is not None:
-        url += '?heartbeat={}'.format(heartbeat_timeout)
+    scheme = protocol or BROKER_DEFAULTS.protocol
+    netloc = '{username}:{password}@{host}:{port}'.format(
+        username=username or BROKER_DEFAULTS.username,
+        password=password or BROKER_DEFAULTS.password,
+        host=host or BROKER_DEFAULTS.host,
+        port=port or BROKER_DEFAULTS.port,
+    )
+    path = virtual_host or BROKER_DEFAULTS.virtual_host
+    parameters = ''
+    query = urlencode(kwargs)
+    fragment = ''
 
-    return url
+    # The virtual host is optional but if it is specified it needs to start with a forward slash. If the virtual host
+    # itself contains forward slashes, they need to be encoded.
+    if path and not path.startswith('/'):
+        path = '/' + path
+
+    return urlunparse((scheme, netloc, path, parameters, query, fragment))
 
 
 def get_launch_queue_name(prefix=None):
-    """
-    Return the launch queue name with an optional prefix
+    """Return the launch queue name with an optional prefix.
 
     :returns: launch queue name
     """
@@ -68,8 +109,7 @@ def get_launch_queue_name(prefix=None):
 
 
 def get_message_exchange_name(prefix):
-    """
-    Return the message exchange name for a given prefix
+    """Return the message exchange name for a given prefix.
 
     :returns: message exchange name
     """
@@ -77,8 +117,7 @@ def get_message_exchange_name(prefix):
 
 
 def get_task_exchange_name(prefix):
-    """
-    Return the task exchange name for a given prefix
+    """Return the task exchange name for a given prefix.
 
     :returns: task exchange name
     """
@@ -86,8 +125,9 @@ def get_task_exchange_name(prefix):
 
 
 def _store_inputs(inputs):
-    """
-    Try to store the values in the input dictionary. For nested dictionaries, the values are stored by recursively.
+    """Try to store the values in the input dictionary.
+
+    For nested dictionaries, the values are stored by recursively.
     """
     for node in inputs.values():
         try:

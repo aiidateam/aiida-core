@@ -9,10 +9,10 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 import click
-# Note: importing from aiida.manage.postgres leads to circular imports
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.manage.external.rmq import BROKER_DEFAULTS
 from ...utils import defaults, echo
 from .. import types
 from .multivalue import MultipleValueOption
@@ -25,11 +25,11 @@ __all__ = (
     'DATUM', 'DATA', 'GROUP', 'GROUPS', 'NODE', 'NODES', 'FORCE', 'SILENT', 'VISUALIZATION_FORMAT', 'INPUT_FORMAT',
     'EXPORT_FORMAT', 'ARCHIVE_FORMAT', 'NON_INTERACTIVE', 'DRY_RUN', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_LAST_NAME',
     'USER_INSTITUTION', 'DB_BACKEND', 'DB_ENGINE', 'DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_NAME',
-    'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'LABEL', 'DESCRIPTION', 'INPUT_PLUGIN',
-    'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS', 'FAILED', 'LIMIT', 'PROJECT',
-    'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS', 'GROUP_CLEAR', 'RAW', 'HOSTNAME',
-    'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT', 'FORMULA_MODE', 'TRAJECTORY_INDEX',
-    'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG'
+    'REPOSITORY_PATH', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PREPEND_TEXT', 'APPEND_TEXT', 'LABEL',
+    'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
+    'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
+    'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
+    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG', 'PRINT_TRACEBACK'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -272,6 +272,55 @@ DB_PASSWORD = OverridableOption(
 
 DB_NAME = OverridableOption('--db-name', type=types.NonEmptyStringParamType(), help='Database name.')
 
+BROKER_PROTOCOL = OverridableOption(
+    '--broker-protocol',
+    type=click.Choice(('amqp', 'amqps')),
+    default=BROKER_DEFAULTS.protocol,
+    show_default=True,
+    help='Protocol to use for the message broker.'
+)
+
+BROKER_USERNAME = OverridableOption(
+    '--broker-username',
+    type=types.NonEmptyStringParamType(),
+    default=BROKER_DEFAULTS.username,
+    show_default=True,
+    help='Username to use for authentication with the message broker.'
+)
+
+BROKER_PASSWORD = OverridableOption(
+    '--broker-password',
+    type=types.NonEmptyStringParamType(),
+    default=BROKER_DEFAULTS.password,
+    show_default=True,
+    help='Password to use for authentication with the message broker.',
+    hide_input=True,
+)
+
+BROKER_HOST = OverridableOption(
+    '--broker-host',
+    type=types.HostnameType(),
+    default=BROKER_DEFAULTS.host,
+    show_default=True,
+    help='Hostname for the message broker.'
+)
+
+BROKER_PORT = OverridableOption(
+    '--broker-port',
+    type=click.INT,
+    default=BROKER_DEFAULTS.port,
+    show_default=True,
+    help='Port for the message broker.',
+)
+
+BROKER_VIRTUAL_HOST = OverridableOption(
+    '--broker-virtual-host',
+    type=types.HostnameType(),
+    default=BROKER_DEFAULTS.virtual_host,
+    show_default=True,
+    help='Name of the virtual host for the message broker. Forward slashes need to be encoded'
+)
+
 REPOSITORY_PATH = OverridableOption(
     '--repository', type=click.Path(file_okay=False), help='Absolute path to the file repository.'
 )
@@ -282,6 +331,14 @@ PROFILE_ONLY_CONFIG = OverridableOption(
 
 PROFILE_SET_DEFAULT = OverridableOption(
     '--set-default', is_flag=True, default=False, help='Set the profile as the new default.'
+)
+
+PREPEND_TEXT = OverridableOption(
+    '--prepend-text', type=click.STRING, default='', help='Bash script to be executed before an action.'
+)
+
+APPEND_TEXT = OverridableOption(
+    '--append-text', type=click.STRING, default='', help='Bash script to be executed after an action has completed.'
 )
 
 LABEL = OverridableOption('-L', '--label', type=click.STRING, metavar='LABEL', help='Short name to be used as a label.')
@@ -530,4 +587,11 @@ DICT_KEYS = OverridableOption(
 
 DEBUG = OverridableOption(
     '--debug', is_flag=True, default=False, help='Show debug messages. Mostly relevant for developers.', hidden=True
+)
+
+PRINT_TRACEBACK = OverridableOption(
+    '-t',
+    '--print-traceback',
+    is_flag=True,
+    help='Print the full traceback in case an exception is raised.',
 )

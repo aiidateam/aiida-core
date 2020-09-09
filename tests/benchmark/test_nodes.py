@@ -24,7 +24,7 @@ def get_node(store=True):
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='node', min_rounds=100)
+@pytest.mark.benchmark(group='Node Manipulation', min_rounds=100)
 def test_store_backend(benchmark):
 
     def _run():
@@ -36,14 +36,14 @@ def test_store_backend(benchmark):
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='node', min_rounds=100)
+@pytest.mark.benchmark(group='Node Manipulation', min_rounds=100)
 def test_store(benchmark):
     """Store a node."""
     benchmark(get_node)
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='node')
+@pytest.mark.benchmark(group='Node Manipulation')
 def test_delete_backend(benchmark):
 
     def _run(node):
@@ -52,54 +52,54 @@ def test_delete_backend(benchmark):
     benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='node')
-def test_delete(benchmark):
-    """Delete a node."""
-    def _run(node):
-        Data.objects.delete(node.pk)  # pylint: disable=no-member
+# @pytest.mark.usefixtures('clear_database_before_test')
+# @pytest.mark.benchmark(group='Node Manipulation')
+# def test_delete(benchmark):
+#     """Delete a node."""
+#     def _run(node):
+#         Data.objects.delete(node.pk)  # pylint: disable=no-member
 
-    benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='engine')
-def test_calcfunction(benchmark):
-    """Run a simple calcfunction."""
-
-    @calcfunction
-    def _calcfunction(node):
-        return get_node(store=False)[1]["node"]
-
-    def _run(node):
-        return _calcfunction(node)
-
-    result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
-    assert isinstance(result, Data)
+#     benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='engine')
-def test_workchain(benchmark):
+# @pytest.mark.usefixtures('clear_database_before_test')
+# @pytest.mark.benchmark(group='engine')
+# def test_calcfunction(benchmark):
+#     """Run a simple calcfunction."""
 
-    @calcfunction
-    def _calcfunction(node):
-        return get_node(store=False)[1]["node"]
+#     @calcfunction
+#     def _calcfunction(node):
+#         return get_node(store=False)[1]["node"]
 
-    class _Wc(WorkChain):
+#     def _run(node):
+#         return _calcfunction(node)
 
-        @classmethod
-        def define(cls, spec):
-            super().define(spec)
-            spec.input('node')
-            spec.output('node')
-            spec.outline(cls.call_workfunction)
+#     result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
+#     assert isinstance(result, Data)
 
-        def call_workfunction(self):
-            self.out('node', _calcfunction(self.inputs.node))
 
-    def _run(node):
-        return run(_Wc({"node": node}))
+# @pytest.mark.usefixtures('clear_database_before_test')
+# @pytest.mark.benchmark(group='engine')
+# def test_workchain(benchmark):
 
-    result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
-    assert isinstance(result['node'], Data)
+#     @calcfunction
+#     def _calcfunction(node):
+#         return get_node(store=False)[1]["node"]
+
+#     class _Wc(WorkChain):
+
+#         @classmethod
+#         def define(cls, spec):
+#             super().define(spec)
+#             spec.input('node')
+#             spec.output('node')
+#             spec.outline(cls.call_workfunction)
+
+#         def call_workfunction(self):
+#             self.out('node', _calcfunction(self.inputs.node))
+
+#     def _run(node):
+#         return run(_Wc({"node": node}))
+
+#     result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
+#     assert isinstance(result['node'], Data)

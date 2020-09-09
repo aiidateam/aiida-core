@@ -163,7 +163,7 @@ def generate_environment_yml():
 @cli.command()
 def update_pyproject_toml():
     """Generate a 'pyproject.toml' file, or update an existing one.
-    
+
     This function generates/updates the ``build-system`` section,
     to be consistent with the 'setup.json' file.
     """
@@ -190,7 +190,8 @@ def update_pyproject_toml():
     pyproject['build-system'].update({
         'requires': ['setuptools>=40.8.0,<50', 'wheel',
                      str(reentry_requirement), 'fastentrypoints~=0.12'],
-        'build-backend': 'setuptools.build_meta:__legacy__',
+        'build-backend':
+        'setuptools.build_meta:__legacy__',
     })
 
     # write the new file

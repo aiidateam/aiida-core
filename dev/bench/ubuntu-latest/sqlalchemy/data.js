@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599659397154,
+  "lastUpdate": 1599659820092,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [
@@ -152,6 +152,58 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0015744",
             "group": "Node Manipulation",
             "extra": "mean: 23.456 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.5"
+        },
+        "commit": {
+          "id": "ef2b61d687a40047f36462c1cc7a7f1f99f63369",
+          "message": "Pytest Benchmark",
+          "timestamp": "2020-09-08T05:32:02Z",
+          "url": "https://github.com/aiidateam/aiida-core/pull/4362/commits/ef2b61d687a40047f36462c1cc7a7f1f99f63369"
+        },
+        "date": 1599659819567,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 252.85638435865295,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012069",
+            "group": "Node Manipulation",
+            "extra": "mean: 3.9548 msec\nrounds: 138"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 100.80734688781786,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00074417",
+            "group": "Node Manipulation",
+            "extra": "mean: 9.9199 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 143.960266160331,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00088786",
+            "group": "Node Manipulation",
+            "extra": "mean: 6.9464 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 39.17588618587511,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025299",
+            "group": "Node Manipulation",
+            "extra": "mean: 25.526 msec\nrounds: 100"
           }
         ]
       }

@@ -52,14 +52,14 @@ def test_delete_backend(benchmark):
     benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
 
 
-# @pytest.mark.usefixtures('clear_database_before_test')
-# @pytest.mark.benchmark(group='Node Manipulation')
-# def test_delete(benchmark):
-#     """Delete a node."""
-#     def _run(node):
-#         Data.objects.delete(node.pk)  # pylint: disable=no-member
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.benchmark(group='Node Manipulation')
+def test_delete(benchmark):
+    """Delete a node."""
+    def _run(node):
+        Data.objects.delete(node.pk)  # pylint: disable=no-member
 
-#     benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
+    benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
 
 
 # @pytest.mark.usefixtures('clear_database_before_test')

@@ -1,17 +1,17 @@
 name: test-install
 
-on:
-  pull_request:
-    paths:
-      - 'setup.*'
-      - 'environment.yml'
-      - '**/requirements*.txt'
-      - 'pyproject.toml'
-      - 'util/dependency_management.py'
-      - '.github/workflows/test-install.yml'
-    branches-ignore: [gh-pages]
-  schedule:
-    - cron: '30 02 * * *'  # nightly build
+on: []
+  # pull_request:
+  #   paths:
+  #     - 'setup.*'
+  #     - 'environment.yml'
+  #     - '**/requirements*.txt'
+  #     - 'pyproject.toml'
+  #     - 'util/dependency_management.py'
+  #     - '.github/workflows/test-install.yml'
+  #   branches-ignore: [gh-pages]
+  # schedule:
+  #   - cron: '30 02 * * *'  # nightly build
 
 jobs:
 

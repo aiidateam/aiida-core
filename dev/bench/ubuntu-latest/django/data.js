@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599662033973,
+  "lastUpdate": 1599662768853,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [
@@ -257,6 +257,59 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0013282",
             "group": "Node Manipulation",
             "extra": "mean: 20.250 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.30",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.5",
+          "gh-metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "ecf7da85874a49a4d3c136c04cf29b7007232963",
+          "message": "Pytest Benchmark",
+          "timestamp": "2020-09-09T14:11:43Z",
+          "url": "https://github.com/aiidateam/aiida-core/pull/4362/commits/ecf7da85874a49a4d3c136c04cf29b7007232963"
+        },
+        "date": 1599662768279,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 914.5284568426085,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014746",
+            "group": "Node Manipulation",
+            "extra": "mean: 1.0935 msec\nrounds: 182"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 197.4432992555117,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00038992",
+            "group": "Node Manipulation",
+            "extra": "mean: 5.0647 msec\nrounds: 127"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 202.78458931221144,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013491",
+            "group": "Node Manipulation",
+            "extra": "mean: 4.9313 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 44.563994489898995,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017453",
+            "group": "Node Manipulation",
+            "extra": "mean: 22.440 msec\nrounds: 100"
           }
         ]
       }

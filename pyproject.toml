@@ -1,5 +1,5 @@
 [build-system]
-requires = [ "setuptools>=40.8.0,<50", "wheel", "reentry~=1.3", "fastentrypoints~=0.12",]
+requires = ["setuptools>=40.8.0,<50", "wheel", "reentry~=1.3", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta:__legacy__"
 
 [tool.tox]
@@ -16,7 +16,7 @@ legacy_tox_ini = """
 envlist = py37-django
 
 [testenv:py{35,36,37,38}-{django,sqla}]
-deps = 
+deps =
     py35: -rrequirements/requirements-py-3.5.txt
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
@@ -26,8 +26,11 @@ setenv =
     sqla: AIIDA_TEST_BACKEND = sqlalchemy
 commands = pytest {posargs}
 
-[testenv:docs-{clean,update}]
-deps = -rrequirements/requirements-py-3.7.txt
+[testenv:py{36,37,38}-docs-{clean,update}]
+deps =
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
 setenv =
     update: RUN_APIDOC = False
 changedir = docs
@@ -35,4 +38,8 @@ whitelist_externals = make
 commands =
     clean: make clean
     make debug
+
+[testenv:py{36,37,38}-pre-commit]
+extras = all
+commands = pre-commit run {posargs}
 """

@@ -21,7 +21,7 @@ from packaging.utils import canonicalize_name
 
 import click
 import yaml
-import toml
+import tomlkit as toml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -161,13 +161,19 @@ def generate_environment_yml():
 
 
 @cli.command()
-def generate_pyproject_toml():
+def update_pyproject_toml():
     """Generate 'pyproject.toml' file."""
+
+    # read the current file
+    toml_path = ROOT / 'pyproject.toml'
+    if toml_path.exists():
+        pyproject = toml.loads(toml_path.read_text(encoding='utf8'))
+    else:
+        pyproject = {}
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()
     install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-
     for requirement in install_requirements:
         if requirement.name == 'reentry':
             reentry_requirement = requirement
@@ -175,15 +181,15 @@ def generate_pyproject_toml():
     else:
         raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
 
-    pyproject = {
-        'build-system': {
-            'requires': ['setuptools>=40.8.0,<50', 'wheel',
-                         str(reentry_requirement), 'fastentrypoints~=0.12'],
-            'build-backend': 'setuptools.build_meta:__legacy__',
-        }
+    # update the build-system key
+    pyproject['build-system'] = {
+        'requires': ['setuptools>=40.8.0,<50', 'wheel',
+                     str(reentry_requirement), 'fastentrypoints~=0.12'],
+        'build-backend': 'setuptools.build_meta:__legacy__',
     }
-    with open(ROOT / 'pyproject.toml', 'w') as file:
-        toml.dump(pyproject, file)
+
+    # write the new file
+    toml_path.write_text(toml.dumps(pyproject), encoding='utf8')
 
 
 @cli.command()
@@ -191,7 +197,7 @@ def generate_pyproject_toml():
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(generate_pyproject_toml)
+    ctx.invoke(update_pyproject_toml)
 
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
@@ -281,18 +287,15 @@ def validate_pyproject_toml():
     else:
         raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
 
-    try:
-        with open(ROOT / 'pyproject.toml') as file:
-            pyproject = toml.load(file)
-            pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
-
-        if reentry_requirement not in pyproject_requires:
-            raise DependencySpecificationError(
-                "Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement)
-            )
-
-    except FileNotFoundError:
+    pyproject_file = ROOT / 'pyproject.toml'
+    if not pyproject_file.exists():
         raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
+
+    pyproject = toml.loads(pyproject_file.read_text(encoding='utf8'))
+    pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
+
+    if reentry_requirement not in pyproject_requires:
+        raise DependencySpecificationError("Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement))
 
     click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
 

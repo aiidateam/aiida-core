@@ -62,44 +62,44 @@ def test_delete(benchmark):
     benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
 
 
-# @pytest.mark.usefixtures('clear_database_before_test')
-# @pytest.mark.benchmark(group='engine')
-# def test_calcfunction(benchmark):
-#     """Run a simple calcfunction."""
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.benchmark(group='Computations')
+def test_calcfunction(benchmark):
+    """Run a simple calcfunction."""
 
-#     @calcfunction
-#     def _calcfunction(node):
-#         return get_node(store=False)[1]["node"]
+    @calcfunction
+    def _calcfunction(node):
+        return get_node(store=False)[1]["node"]
 
-#     def _run(node):
-#         return _calcfunction(node)
+    def _run(node):
+        return _calcfunction(node)
 
-#     result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
-#     assert isinstance(result, Data)
+    result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
+    assert isinstance(result, Data)
 
 
-# @pytest.mark.usefixtures('clear_database_before_test')
-# @pytest.mark.benchmark(group='engine')
-# def test_workchain(benchmark):
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.benchmark(group='Computations')
+def test_workchain(benchmark):
 
-#     @calcfunction
-#     def _calcfunction(node):
-#         return get_node(store=False)[1]["node"]
+    @calcfunction
+    def _calcfunction(node):
+        return get_node(store=False)[1]["node"]
 
-#     class _Wc(WorkChain):
+    class _Wc(WorkChain):
 
-#         @classmethod
-#         def define(cls, spec):
-#             super().define(spec)
-#             spec.input('node')
-#             spec.output('node')
-#             spec.outline(cls.call_workfunction)
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('node')
+            spec.output('node')
+            spec.outline(cls.call_workfunction)
 
-#         def call_workfunction(self):
-#             self.out('node', _calcfunction(self.inputs.node))
+        def call_workfunction(self):
+            self.out('node', _calcfunction(self.inputs.node))
 
-#     def _run(node):
-#         return run(_Wc({"node": node}))
+    def _run(node):
+        return run(_Wc({"node": node}))
 
-#     result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
-#     assert isinstance(result['node'], Data)
+    result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
+    assert isinstance(result['node'], Data)

@@ -101,5 +101,5 @@ def test_workchain(benchmark):
     def _run(node):
         return run(_Wc({"node": node}))
 
-    result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=51, warmup_rounds=1)
+    result = benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=50, warmup_rounds=1)
     assert isinstance(result['node'], Data)

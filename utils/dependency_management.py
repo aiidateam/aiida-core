@@ -175,13 +175,6 @@ def update_pyproject_toml():
     else:
         pyproject = {}
 
-    # read the current file
-    toml_path = ROOT / 'pyproject.toml'
-    if toml_path.exists():
-        pyproject = toml.loads(toml_path.read_text(encoding='utf8'))
-    else:
-        pyproject = {}
-
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()
     install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]

@@ -67,9 +67,10 @@ jobs:
       uses:  chrisjsewell/github-action-benchmark@v2
       with:
         benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
-        name: "Pytest Benchmarks"
+        name: "Pytest Benchmarks (${{ matrix.os }}, ${{ matrix.backend }})"
         commit-msg-append: "[ci skip]"
         output-file-path: benchmark.json
+        one-chart-groups: node
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
         # Show alert with commit comment on detecting possible performance regression

@@ -64,7 +64,7 @@ jobs:
       ## This is currently disabled because we are in a workflow that has the correct 'on' settings (only push,
       ## and only 'develop'). Otherwise, enable this
       #if: "github.event_name == 'push' && github.ref == 'refs/heads/develop'"
-      uses:  chrisjsewell/github-action-benchmark@v2
+      uses:  chrisjsewell/github-action-benchmark@update
       with:
         benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
         name: "Pytest Benchmarks (${{ matrix.os }}, ${{ matrix.backend }})"
@@ -77,3 +77,4 @@ jobs:
         alert-threshold: '200%'
         comment-on-alert: false
         fail-on-alert: false
+        metadata: 'postgres:12.3, rabbitmq:3.8.3'

@@ -3,7 +3,7 @@ window.BENCHMARK_DATA = {
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [
-    "Node Manipulation"
+    "Single Node"
   ],
   "entries": {
     "Pytest Benchmarks (ubuntu-latest, django)": [
@@ -30,7 +30,7 @@ window.BENCHMARK_DATA = {
             "value": 791.0466328581188,
             "unit": "iter/sec",
             "range": "stddev: 0.00079685",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.2641 msec\nrounds: 126"
           },
           {
@@ -38,7 +38,7 @@ window.BENCHMARK_DATA = {
             "value": 169.66712572252993,
             "unit": "iter/sec",
             "range": "stddev: 0.0013330",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.8939 msec\nrounds: 100"
           },
           {
@@ -46,7 +46,7 @@ window.BENCHMARK_DATA = {
             "value": 183.18574836120615,
             "unit": "iter/sec",
             "range": "stddev: 0.0013803",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.4589 msec\nrounds: 100"
           }
         ]
@@ -74,7 +74,7 @@ window.BENCHMARK_DATA = {
             "value": 1398.0350909389886,
             "unit": "iter/sec",
             "range": "stddev: 0.000087799",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 715.29 usec\nrounds: 215"
           },
           {
@@ -82,7 +82,7 @@ window.BENCHMARK_DATA = {
             "value": 293.8502929177761,
             "unit": "iter/sec",
             "range": "stddev: 0.00028604",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 3.4031 msec\nrounds: 155"
           },
           {
@@ -90,7 +90,7 @@ window.BENCHMARK_DATA = {
             "value": 312.0641224866216,
             "unit": "iter/sec",
             "range": "stddev: 0.00028478",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 3.2045 msec\nrounds: 100"
           },
           {
@@ -98,7 +98,7 @@ window.BENCHMARK_DATA = {
             "value": 62.757650790073946,
             "unit": "iter/sec",
             "range": "stddev: 0.0010569",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 15.934 msec\nrounds: 100"
           }
         ]
@@ -126,7 +126,7 @@ window.BENCHMARK_DATA = {
             "value": 975.1286509041493,
             "unit": "iter/sec",
             "range": "stddev: 0.00025352",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.0255 msec\nrounds: 190"
           },
           {
@@ -134,7 +134,7 @@ window.BENCHMARK_DATA = {
             "value": 182.8526361105402,
             "unit": "iter/sec",
             "range": "stddev: 0.0018678",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.4689 msec\nrounds: 113"
           },
           {
@@ -142,7 +142,7 @@ window.BENCHMARK_DATA = {
             "value": 209.01848591477287,
             "unit": "iter/sec",
             "range": "stddev: 0.00045438",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.7843 msec\nrounds: 100"
           },
           {
@@ -150,7 +150,7 @@ window.BENCHMARK_DATA = {
             "value": 39.194463471618405,
             "unit": "iter/sec",
             "range": "stddev: 0.0023900",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 25.514 msec\nrounds: 100"
           }
         ]
@@ -178,7 +178,7 @@ window.BENCHMARK_DATA = {
             "value": 840.928803995565,
             "unit": "iter/sec",
             "range": "stddev: 0.000097722",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.1892 msec\nrounds: 189"
           },
           {
@@ -186,7 +186,7 @@ window.BENCHMARK_DATA = {
             "value": 185.6188510187037,
             "unit": "iter/sec",
             "range": "stddev: 0.00033612",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.3874 msec\nrounds: 119"
           },
           {
@@ -194,7 +194,7 @@ window.BENCHMARK_DATA = {
             "value": 185.59671117875624,
             "unit": "iter/sec",
             "range": "stddev: 0.00061245",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.3880 msec\nrounds: 100"
           },
           {
@@ -202,7 +202,7 @@ window.BENCHMARK_DATA = {
             "value": 39.92931484291115,
             "unit": "iter/sec",
             "range": "stddev: 0.0025803",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 25.044 msec\nrounds: 100"
           }
         ]
@@ -231,7 +231,7 @@ window.BENCHMARK_DATA = {
             "value": 1028.1222875480562,
             "unit": "iter/sec",
             "range": "stddev: 0.00053574",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 972.65 usec\nrounds: 228"
           },
           {
@@ -239,7 +239,7 @@ window.BENCHMARK_DATA = {
             "value": 210.61563144948025,
             "unit": "iter/sec",
             "range": "stddev: 0.0018761",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.7480 msec\nrounds: 100"
           },
           {
@@ -247,7 +247,7 @@ window.BENCHMARK_DATA = {
             "value": 225.90149952324458,
             "unit": "iter/sec",
             "range": "stddev: 0.00047594",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.4267 msec\nrounds: 100"
           },
           {
@@ -255,7 +255,7 @@ window.BENCHMARK_DATA = {
             "value": 49.38296479320641,
             "unit": "iter/sec",
             "range": "stddev: 0.0013282",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 20.250 msec\nrounds: 100"
           }
         ]
@@ -284,7 +284,7 @@ window.BENCHMARK_DATA = {
             "value": 914.5284568426085,
             "unit": "iter/sec",
             "range": "stddev: 0.00014746",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.0935 msec\nrounds: 182"
           },
           {
@@ -292,7 +292,7 @@ window.BENCHMARK_DATA = {
             "value": 197.4432992555117,
             "unit": "iter/sec",
             "range": "stddev: 0.00038992",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.0647 msec\nrounds: 127"
           },
           {
@@ -300,7 +300,7 @@ window.BENCHMARK_DATA = {
             "value": 202.78458931221144,
             "unit": "iter/sec",
             "range": "stddev: 0.0013491",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.9313 msec\nrounds: 100"
           },
           {
@@ -308,7 +308,7 @@ window.BENCHMARK_DATA = {
             "value": 44.563994489898995,
             "unit": "iter/sec",
             "range": "stddev: 0.0017453",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 22.440 msec\nrounds: 100"
           }
         ]
@@ -337,7 +337,7 @@ window.BENCHMARK_DATA = {
             "value": 902.7071475802869,
             "unit": "iter/sec",
             "range": "stddev: 0.00015555",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.1078 msec\nrounds: 170"
           },
           {
@@ -345,7 +345,7 @@ window.BENCHMARK_DATA = {
             "value": 191.02582801614705,
             "unit": "iter/sec",
             "range": "stddev: 0.00094067",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.2349 msec\nrounds: 132"
           },
           {
@@ -353,7 +353,7 @@ window.BENCHMARK_DATA = {
             "value": 211.60206504997876,
             "unit": "iter/sec",
             "range": "stddev: 0.00055397",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.7259 msec\nrounds: 100"
           },
           {
@@ -361,24 +361,8 @@ window.BENCHMARK_DATA = {
             "value": 46.66216038362447,
             "unit": "iter/sec",
             "range": "stddev: 0.0015692",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 21.431 msec\nrounds: 100"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_calcfunction",
-            "value": 7.983196736316167,
-            "unit": "iter/sec",
-            "range": "stddev: 0.020632",
-            "group": "Computations",
-            "extra": "mean: 125.26 msec\nrounds: 50"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_workchain",
-            "value": 4.141041335559523,
-            "unit": "iter/sec",
-            "range": "stddev: 0.027196",
-            "group": "Computations",
-            "extra": "mean: 241.49 msec\nrounds: 50"
           }
         ]
       },
@@ -406,7 +390,7 @@ window.BENCHMARK_DATA = {
             "value": 1084.1518923549907,
             "unit": "iter/sec",
             "range": "stddev: 0.000035929",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 922.38 usec\nrounds: 193"
           },
           {
@@ -414,7 +398,7 @@ window.BENCHMARK_DATA = {
             "value": 157.24289791749663,
             "unit": "iter/sec",
             "range": "stddev: 0.020548",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 6.3596 msec\nrounds: 128"
           },
           {
@@ -422,7 +406,7 @@ window.BENCHMARK_DATA = {
             "value": 233.59602241653775,
             "unit": "iter/sec",
             "range": "stddev: 0.00014569",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.2809 msec\nrounds: 100"
           },
           {
@@ -430,24 +414,8 @@ window.BENCHMARK_DATA = {
             "value": 44.65389943420907,
             "unit": "iter/sec",
             "range": "stddev: 0.0013234",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 22.394 msec\nrounds: 100"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_calcfunction",
-            "value": 7.519323479681198,
-            "unit": "iter/sec",
-            "range": "stddev: 0.023100",
-            "group": "Computations",
-            "extra": "mean: 132.99 msec\nrounds: 50"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_workchain",
-            "value": 3.5559165486089324,
-            "unit": "iter/sec",
-            "range": "stddev: 0.031966",
-            "group": "Computations",
-            "extra": "mean: 281.22 msec\nrounds: 51"
           }
         ]
       },
@@ -475,7 +443,7 @@ window.BENCHMARK_DATA = {
             "value": 979.5943825287989,
             "unit": "iter/sec",
             "range": "stddev: 0.00010348",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.0208 msec\nrounds: 219"
           },
           {
@@ -483,7 +451,7 @@ window.BENCHMARK_DATA = {
             "value": 214.43706619303023,
             "unit": "iter/sec",
             "range": "stddev: 0.00029577",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.6634 msec\nrounds: 139"
           },
           {
@@ -491,7 +459,7 @@ window.BENCHMARK_DATA = {
             "value": 212.38931391969584,
             "unit": "iter/sec",
             "range": "stddev: 0.00067352",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 4.7083 msec\nrounds: 100"
           },
           {
@@ -499,24 +467,8 @@ window.BENCHMARK_DATA = {
             "value": 46.238209545557226,
             "unit": "iter/sec",
             "range": "stddev: 0.0013785",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 21.627 msec\nrounds: 100"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_calcfunction",
-            "value": 8.55287209932778,
-            "unit": "iter/sec",
-            "range": "stddev: 0.020997",
-            "group": "Computations",
-            "extra": "mean: 116.92 msec\nrounds: 50"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_workchain",
-            "value": 4.199507670902877,
-            "unit": "iter/sec",
-            "range": "stddev: 0.030483",
-            "group": "Computations",
-            "extra": "mean: 238.12 msec\nrounds: 50"
           }
         ]
       },
@@ -544,7 +496,7 @@ window.BENCHMARK_DATA = {
             "value": 734.2291652886513,
             "unit": "iter/sec",
             "range": "stddev: 0.00061971",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 1.3620 msec\nrounds: 140"
           },
           {
@@ -552,7 +504,7 @@ window.BENCHMARK_DATA = {
             "value": 186.70755604730812,
             "unit": "iter/sec",
             "range": "stddev: 0.00071959",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.3560 msec\nrounds: 111"
           },
           {
@@ -560,7 +512,7 @@ window.BENCHMARK_DATA = {
             "value": 182.55730656412427,
             "unit": "iter/sec",
             "range": "stddev: 0.0011717",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 5.4777 msec\nrounds: 100"
           },
           {
@@ -568,24 +520,8 @@ window.BENCHMARK_DATA = {
             "value": 40.51411225439273,
             "unit": "iter/sec",
             "range": "stddev: 0.0021451",
-            "group": "Node Manipulation",
+            "group": "Single Node",
             "extra": "mean: 24.683 msec\nrounds: 100"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_calcfunction",
-            "value": 7.3675377813274405,
-            "unit": "iter/sec",
-            "range": "stddev: 0.021439",
-            "group": "Computations",
-            "extra": "mean: 135.73 msec\nrounds: 50"
-          },
-          {
-            "name": "tests/benchmark/test_nodes.py::test_workchain",
-            "value": 3.6165837300919774,
-            "unit": "iter/sec",
-            "range": "stddev: 0.033592",
-            "group": "Computations",
-            "extra": "mean: 276.50 msec\nrounds: 50"
           }
         ]
       },

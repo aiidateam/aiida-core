@@ -443,6 +443,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self
 
     def open_file_transport(self):
+        """
+        Open the SFTP channel, and handle error by directing customer to try another transport
+        """
         from aiida.common.exceptions import InvalidOperation
 
         try:
@@ -543,9 +546,19 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self.sftp.normalize(path)
 
     def stat(self, path):
+        """
+        Wrap SFTP stat call
+
+        :param path: path to check
+        """
         return self.sftp.stat(path)
 
     def lstat(self, path):
+        """
+        Wrap SFTP lstat call
+
+        :param path: path to check
+        """
         return self.sftp.lstat(path)
 
     def getcwd(self):
@@ -1325,6 +1338,12 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return cmd
 
     def symlink_internal(self, source, dest):
+        """
+        Wrap SFTP symlink call without breaking API
+
+        :param source: source of link
+        :param dest: link to create
+        """
         self.sftp.symlink(source, dest)
 
     def symlink(self, remotesource, remotedestination):

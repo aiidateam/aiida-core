@@ -61,7 +61,6 @@ def test_delete(benchmark):
 
     benchmark.pedantic(_run, setup=get_node, iterations=1, rounds=100, warmup_rounds=1)
 
-
 # @pytest.mark.usefixtures('clear_database_before_test')
 # @pytest.mark.benchmark(group='engine')
 # def test_calcfunction(benchmark):

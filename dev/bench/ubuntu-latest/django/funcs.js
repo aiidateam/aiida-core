@@ -1,5 +1,8 @@
+// DOM independent functions module 
+
 'use strict';
 
+// convert the entries to to a map: {group-key: {test-name: data, ...}, ...}
 export function collectBenchesPerTestCasePerGroup(entries) {
     const map = new Map();
     for (const entry of entries) {
@@ -30,23 +33,45 @@ function* cycle(iterable) {
     }
 }
 
-export function renderGraph(canvas, dataset, labels, xAxis, alpha = 60, labelString = 'iter/sec') {
+
+var longestCommonPrefix = function(strs) {
+    let prefix = ""
+    if(strs === null || strs.length === 0) return prefix
+
+    for (let i=0; i < strs[0].length; i++){ 
+        const char = strs[0][i] // loop through all characters of the very first string. 
+
+        for (let j = 1; j < strs.length; j++){ 
+          // loop through all other strings in the array
+            if(strs[j][i] !== char) return prefix
+        }
+        prefix = prefix + char
+    }
+
+    return prefix
+}
+
+
+export function renderGraph(canvas, dataset, labels, xAxis, alpha = 60, fill = true, labelString = 'iter/sec') {
 
     const colorCycle = cycle(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']);
+
+    // if all test names start with a common prefix, then show this as a title
+    const tests_prefix = dataset.length > 1 ? longestCommonPrefix(dataset.map(s => s.name)): ''
 
     const data = {
         labels,
         datasets: dataset.map(s => {
             const color = colorCycle.next().value;
             return {
-                label: s.name,
+                label: s.name.slice(tests_prefix.length),
                 data: s.data.map(d => d ? d.bench.value : null),
                 borderColor: color,
-                // fill: false,
+                fill: fill,
                 backgroundColor: color + `${alpha}`, // Add alpha for #rrggbbaa
                 spanGaps: true,
             }
-        })
+        }).sort((a, b) => { return a.label > b.label; })
     };
     const xAxes = {
         scaleLabel: {
@@ -74,6 +99,18 @@ export function renderGraph(canvas, dataset, labels, xAxis, alpha = 60, labelStr
         scales: {
             xAxes: [xAxes],
             yAxes: [yAxes],
+        },
+        title: {
+            position: 'top',
+            text: tests_prefix,
+            display: tests_prefix.length > 0,
+        },
+        legend: {
+            position: 'top',
+            align: 'center',
+            // TODO legend titles only available in chartjs v3
+            // rather then chart title
+            // title: {text: 'hallo', display: true},
         },
         tooltips: {
             callbacks: {
@@ -122,6 +159,17 @@ export function renderGraph(canvas, dataset, labels, xAxis, alpha = 60, labelStr
             const url = data.commit.url;
             window.open(url, '_blank');
         },
+        plugins: {
+            zoom: {
+                // pan: {
+                //     enabled: true
+                // },
+                zoom: {
+                    enabled: true,
+                    drag: true
+                }
+            }
+        }
     };
     new Chart(canvas, {
         type: 'line',

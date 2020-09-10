@@ -12,7 +12,7 @@ window.CONFIGURATION_DATA = {
     "groups": {
         "node": {
             "header": "Single Node",
-            "description": "Comparison of basic node interactions, such as storage and retrieval from the database.",
+            "description": "Comparison of basic node interactions, such as storage and deletion from the database.",
             "single_chart": true,
             "xAxis": "id",
             "backgroundFill": false

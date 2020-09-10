@@ -66,7 +66,7 @@ jobs:
       ## This is currently disabled because we are in a workflow that has the correct 'on' settings (only push,
       ## and only 'develop'). Otherwise, enable this
       #if: "github.event_name == 'push' && github.ref == 'refs/heads/develop'"
-      uses: chrisjsewell/github-action-benchmark@v3
+      uses: aiidateam/github-action-benchmark@v3
       with:
         benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
         name: "pytest-benchmarks:${{ matrix.os }},${{ matrix.backend }}"

@@ -7,16 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,protected-access
+# pylint: disable=unused-argument,redefined-outer-name
 """Performance benchmark tests for local processes.
 
 The purpose of these tests is to benchmark and compare processes,
 which are executed *via* a local runner.
 Note, these tests will not touch the daemon or RabbitMQ.
 """
-import pytest
+import datetime
 
-from aiida.engine import run_get_node, ToContext, while_, WorkChain
+import pytest
+from tornado import gen
+
+from aiida.engine import run_get_node, submit, ToContext, while_, WorkChain
+from aiida.manage.manager import get_manager
 from aiida.orm import Code, Int
 from aiida.plugins.factories import CalculationFactory
 
@@ -115,8 +119,8 @@ WORKCHAINS = {
 
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
 @pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='engine-run')
-def test_workchain(benchmark, aiida_localhost, workchain, iterations, outgoing):
+@pytest.mark.benchmark(group='engine')
+def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the local runner."""
     code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
 
@@ -127,3 +131,60 @@ def test_workchain(benchmark, aiida_localhost, workchain, iterations, outgoing):
 
     assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
     assert len(result.node.get_outgoing().all()) == outgoing
+
+
+@gen.coroutine
+def with_timeout(what, timeout=60):
+    raise gen.Return((yield gen.with_timeout(datetime.timedelta(seconds=timeout), what)))
+
+
+@gen.coroutine
+def wait_for_process(runner, calc_node, timeout=60):
+    future = runner.get_process_future(calc_node.pk)
+    raise gen.Return((yield with_timeout(future, timeout)))
+
+
+@pytest.fixture()
+def submit_get_node():
+    """A test fixture for running a process *via* submission to the daemon,
+    and blocking until it is complete.
+
+    Adapted from tests/engine/test_rmq.py
+    """
+    manager = get_manager()
+    runner = manager.get_runner()
+    # The daemon runner needs to share a common event loop,
+    # otherwise the local runner will never send the message while the daemon is running listening to intercept.
+    daemon_runner = manager.create_daemon_runner(loop=runner.loop)
+
+    def _submit(_process, timeout=60, **kwargs):
+
+        @gen.coroutine
+        def _do_submit():
+            node = submit(_process, **kwargs)
+            yield wait_for_process(runner, node)
+            return node
+
+        result = runner.loop.run_sync(_do_submit, timeout=timeout)
+
+        return result
+
+    yield _submit
+
+    daemon_runner.close()
+
+
+@pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.benchmark(group='engine')
+def test_workchain_daemon(benchmark, submit_get_node, aiida_localhost, workchain, iterations, outgoing):
+    """Benchmark Workchains, executed in the via a daemon runner."""
+    code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
+
+    def _run():
+        return submit_get_node(workchain, iterations=Int(iterations), code=code)
+
+    result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
+
+    assert result.is_finished_ok, (result.exit_status, result.exit_message)
+    assert len(result.get_outgoing().all()) == outgoing

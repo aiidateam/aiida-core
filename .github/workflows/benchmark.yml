@@ -1,12 +1,9 @@
-# Note: this workflow is currently being tested,
-# and so is only activated for the benchmark-test-cjs branch
-## Run benchmarks on the three OSs
-## We run only on one python version (a recent one)
-## I think that different python versions might share hardware resources so results might have a much larger fluctuation
-
 name: Performance benchmarks
 
-on: [pull_request]
+on:
+  push:
+    branches: [master, benchmark-test-cjs]
+    paths-ignore: ['docs/**']
 
 jobs:
 

@@ -99,7 +99,8 @@ function renderBenchSetGroups(domElement, name, benchSets, configEntry, configGr
       });
       const labels = uniqueCommits.map((d) => (configGroup.xAxis === 'date') ? moment(d[0]) : d[1].slice(0, 7));
       const fill = configGroup.backgroundFill === undefined ? true : configGroup.backgroundFill
-      renderGraph(canvas, datasets, labels, configGroup.xAxis, 10, fill)
+      const legendAlign = configGroup.legendAlign === undefined ? 'center' : configGroup.legendAlign
+      renderGraph(canvas, datasets, labels, configGroup.xAxis, 10, fill, legendAlign)
     } else {
       for (const [benchName, benches] of benchSet.entries()) {
         const canvas = document.createElement('canvas');

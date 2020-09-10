@@ -24,6 +24,13 @@ window.CONFIGURATION_DATA = {
             "xAxis": "id",
             "backgroundFill": false,
             "legendAlign": "start"
+        },
+        "import-export": {
+            "header": "Import-Export",
+            "description": "Comparison of import/export of provenance trees.",
+            "single_chart": true,
+            "xAxis": "id",
+            "backgroundFill": false
         }
     }
 }

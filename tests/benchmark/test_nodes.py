@@ -11,7 +11,7 @@
 """Performance benchmark tests for single nodes.
 
 The purpose of these tests is to benchmark and compare basic node interactions,
-such as storage and retrieval from the database.
+such as storage and deletion from the database and repository.
 """
 from io import StringIO
 
@@ -32,7 +32,7 @@ def get_data_node(store=True):
 
 
 def get_data_node_and_object(store=True):
-    """A function to create a simple data node."""
+    """A function to create a simple data node, with an object."""
     data = Data()
     data.set_attribute_many({str(i): i for i in range(10)})
     data.put_object_from_filelike(StringIO('a' * 10000), 'key')

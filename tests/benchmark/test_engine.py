@@ -11,8 +11,7 @@
 """Performance benchmark tests for local processes.
 
 The purpose of these tests is to benchmark and compare processes,
-which are executed *via* a local runner.
-Note, these tests will not touch the daemon or RabbitMQ.
+which are executed *via* both a local runner and the daemon.
 """
 import datetime
 

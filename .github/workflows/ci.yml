@@ -1,10 +1,10 @@
 name: continuous-integration
 
-on: []
-  # push:
-  #   branches-ignore: [gh-pages]
-  # pull_request:
-  #   branches-ignore: [gh-pages]
+on:
+  push:
+    branches-ignore: [gh-pages]
+  pull_request:
+    branches-ignore: [gh-pages]
 
 jobs:
 

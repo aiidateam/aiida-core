@@ -1,7 +1,7 @@
 {
     "suites": {
-        "ubuntu-latest,django": {
-            "header": "Pytest Benchmarks (ubuntu-latest, django)",
+        "pytest-benchmarks:ubuntu-18.04,django": {
+            "header": "Performance Benchmarks (Ubuntu-18.04, Django)",
             "description": "Performance benchmark tests, generated using pytest-benchmark."
         }
     },

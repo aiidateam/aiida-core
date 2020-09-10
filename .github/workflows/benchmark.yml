@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-18.04]
         backend: ['django', 'sqlalchemy']
 
     runs-on: ${{ matrix.os }}
@@ -67,7 +67,7 @@ jobs:
       uses: chrisjsewell/github-action-benchmark@v3
       with:
         benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
-        name: "Pytest Benchmarks (${{ matrix.os }}, ${{ matrix.backend }})"
+        name: "pytest-benchmarks:${{ matrix.os }},${{ matrix.backend }}"
         metadata: 'postgres:12.3, rabbitmq:3.8.3'
         output-file-path: benchmark.json
         render-json-path: .github/workflows/benchmark-config.json

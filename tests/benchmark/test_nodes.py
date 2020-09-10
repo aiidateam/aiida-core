@@ -19,7 +19,7 @@ import pytest
 
 from aiida.orm import Data
 
-GROUP_NAME = 'Single Node'
+GROUP_NAME = 'node'
 
 
 def get_data_node(store=True):

@@ -64,17 +64,17 @@ jobs:
       ## This is currently disabled because we are in a workflow that has the correct 'on' settings (only push,
       ## and only 'develop'). Otherwise, enable this
       #if: "github.event_name == 'push' && github.ref == 'refs/heads/develop'"
-      uses: chrisjsewell/github-action-benchmark@testing
+      uses: chrisjsewell/github-action-benchmark@v3
       with:
         benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
         name: "Pytest Benchmarks (${{ matrix.os }}, ${{ matrix.backend }})"
-        commit-msg-append: "[ci skip]"
+        metadata: 'postgres:12.3, rabbitmq:3.8.3'
         output-file-path: benchmark.json
-        one-chart-groups: Single Node
+        render-json-path: .github/workflows/benchmark-config.json
+        commit-msg-append: "[ci skip]"
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
         # Show alert with commit comment on detecting possible performance regression
         alert-threshold: '200%'
         comment-on-alert: false
         fail-on-alert: false
-        metadata: 'postgres:12.3, rabbitmq:3.8.3'

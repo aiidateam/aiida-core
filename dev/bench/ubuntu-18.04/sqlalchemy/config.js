@@ -17,9 +17,9 @@ window.CONFIGURATION_DATA = {
             "xAxis": "id",
             "backgroundFill": false
         },
-        "engine-run": {
-            "header": "Local Processes",
-            "description": "Comparison of Processes, executed via a local runner.",
+        "engine": {
+            "header": "Processes",
+            "description": "Comparison of Processes, executed via both local and daemon runners.",
             "single_chart": true,
             "xAxis": "id",
             "backgroundFill": false

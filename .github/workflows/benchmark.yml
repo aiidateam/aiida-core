@@ -112,7 +112,7 @@ jobs:
           - 5672:5672
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v1
 
     - run: git log -1
 

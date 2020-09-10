@@ -17,7 +17,8 @@ from io import StringIO
 
 import pytest
 
-from aiida.orm import Data
+from aiida.common import NotExistent
+from aiida.orm import Data, load_node
 
 GROUP_NAME = 'node'
 
@@ -51,9 +52,11 @@ def test_store_backend(benchmark):
     def _run():
         data = Data()
         data.set_attribute_many({str(i): i for i in range(10)})
-        return data._backend_entity.store(clean=False)
+        data._backend_entity.store(clean=False)
+        return data
 
-    benchmark(_run)
+    node = benchmark(_run)
+    assert node.is_stored, node
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -62,7 +65,8 @@ def test_store(benchmark):
     """Benchmark for creating and storing a node,
     via the full ORM mechanism.
     """
-    benchmark(get_data_node)
+    _, node_dict = benchmark(get_data_node)
+    assert node_dict['node'].is_stored, node_dict
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -71,7 +75,8 @@ def test_store_with_object(benchmark):
     """Benchmark for creating and storing a node,
     including an object to be stored in the repository.
     """
-    benchmark(get_data_node_and_object)
+    _, node_dict = benchmark(get_data_node_and_object)
+    assert node_dict['node'].is_stored, node_dict
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -82,9 +87,13 @@ def test_delete_backend(benchmark):
     """
 
     def _run(node):
-        Data.objects._backend.nodes.delete(node.pk)  # pylint: disable=no-member
+        pk = node.pk
+        Data.objects._backend.nodes.delete(pk)  # pylint: disable=no-member
+        return pk
 
-    benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
+    pk = benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
+    with pytest.raises(NotExistent):
+        load_node(pk)
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -95,9 +104,13 @@ def test_delete(benchmark):
     """
 
     def _run(node):
-        Data.objects.delete(node.pk)  # pylint: disable=no-member
+        pk = node.pk
+        Data.objects.delete(pk)  # pylint: disable=no-member
+        return pk
 
-    benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
+    pk = benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
+    with pytest.raises(NotExistent):
+        load_node(pk)
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -108,6 +121,10 @@ def test_delete_with_object(benchmark):
     """
 
     def _run(node):
-        Data.objects.delete(node.pk)  # pylint: disable=no-member
+        pk = node.pk
+        Data.objects.delete(pk)  # pylint: disable=no-member
+        return pk
 
-    benchmark.pedantic(_run, setup=get_data_node_and_object, iterations=1, rounds=100, warmup_rounds=1)
+    pk = benchmark.pedantic(_run, setup=get_data_node_and_object, iterations=1, rounds=100, warmup_rounds=1)
+    with pytest.raises(NotExistent):
+        load_node(pk)

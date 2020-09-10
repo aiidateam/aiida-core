@@ -22,11 +22,9 @@ from aiida.plugins.factories import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
-GROUP_NAME = 'engine-run'
-ITERATIONS = 4
-
 
 class WorkchainLoop(WorkChain):
+    """A basic Workchain to run a looped step n times."""
 
     @classmethod
     def define(cls, spec):
@@ -51,13 +49,15 @@ class WorkchainLoop(WorkChain):
 
 
 class WorkchainLoopWcSerial(WorkchainLoop):
+    """A WorkChain that submits another WorkChain n times in different steps."""
 
     def run_task(self):
         future = self.submit(WorkchainLoop, iterations=Int(1))
-        return ToContext(**{"wkchain" + str(self.ctx.counter): future})
+        return ToContext(**{'wkchain' + str(self.ctx.counter): future})
 
 
 class WorkchainLoopWcThreaded(WorkchainLoop):
+    """A WorkChain that submits another WorkChain n times in the same step."""
 
     def init_loop(self):
         super().init_loop()
@@ -66,13 +66,14 @@ class WorkchainLoopWcThreaded(WorkchainLoop):
     def run_task(self):
 
         context = {
-            "wkchain" + str(i): self.submit(WorkchainLoop, iterations=Int(1))
+            'wkchain' + str(i): self.submit(WorkchainLoop, iterations=Int(1))
             for i in range(self.inputs.iterations.value)
         }
         return ToContext(**context)
 
 
 class WorkchainLoopCalcSerial(WorkchainLoop):
+    """A WorkChain that submits a CalcJob n times in different steps."""
 
     def run_task(self):
         inputs = {
@@ -85,6 +86,7 @@ class WorkchainLoopCalcSerial(WorkchainLoop):
 
 
 class WorkchainLoopCalcThreaded(WorkchainLoop):
+    """A WorkChain that submits a CalcJob n times in the same step."""
 
     def init_loop(self):
         super().init_loop()
@@ -98,71 +100,29 @@ class WorkchainLoopCalcThreaded(WorkchainLoop):
                 'y': Int(2),
                 'code': self.inputs.code,
             }
-            futures["addition" + str(i)] = self.submit(ArithmeticAddCalculation, **inputs)
+            futures['addition' + str(i)] = self.submit(ArithmeticAddCalculation, **inputs)
         return ToContext(**futures)
 
 
+WORKCHAINS = {
+    "basic-loop": (WorkchainLoop, 4, 0),
+    "serial-wc-loop": (WorkchainLoopWcSerial, 4, 4),
+    "threaded-wc-loop": (WorkchainLoopWcThreaded, 4, 4),
+    "serial-calcjob-loop": (WorkchainLoopCalcSerial, 4, 4),
+    "threaded-calcjob-loop": (WorkchainLoopCalcThreaded, 4, 4),
+}
+
+@pytest.mark.parametrize("workchain,iterations,outgoing", WORKCHAINS.values(), ids=WORKCHAINS.keys())
 @pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group=GROUP_NAME)
-def test_basic_loop(benchmark):
-
-    def _run():
-        return run_get_node(WorkchainLoop, iterations=Int(ITERATIONS))
-
-    result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
-
-    assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group=GROUP_NAME)
-def test_wkchain_loop_serial(benchmark):
-
-    def _run():
-        return run_get_node(WorkchainLoopWcSerial, iterations=Int(ITERATIONS))
-
-    result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
-
-    assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
-    assert len(result.node.get_outgoing().all()) == ITERATIONS
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group=GROUP_NAME)
-def test_wkchain_loop_threaded(benchmark):
-
-    def _run():
-        return run_get_node(WorkchainLoopWcThreaded, iterations=Int(ITERATIONS))
-
-    result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
-
-    assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
-    assert len(result.node.get_outgoing().all()) == ITERATIONS
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group=GROUP_NAME)
-def test_calc_loop_serial(benchmark, aiida_localhost):
+@pytest.mark.benchmark(group="engine-run")
+def test_workchain(benchmark, aiida_localhost, workchain, iterations, outgoing):
+    """Benchmark Workchains, executed in the local runner."""
     code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
 
     def _run():
-        return run_get_node(WorkchainLoopCalcSerial, iterations=Int(ITERATIONS), code=code)
+        return run_get_node(workchain, iterations=Int(iterations), code=code)
 
     result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
 
     assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
-    assert len(result.node.get_outgoing().all()) == ITERATIONS
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group=GROUP_NAME)
-def test_calc_loop_threaded(benchmark, aiida_localhost):
-    code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
-
-    def _run():
-        return run_get_node(WorkchainLoopCalcThreaded, iterations=Int(ITERATIONS), code=code)
-
-    result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
-
-    assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
-    assert len(result.node.get_outgoing().all()) == ITERATIONS
+    assert len(result.node.get_outgoing().all()) == outgoing

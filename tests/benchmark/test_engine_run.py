@@ -105,16 +105,17 @@ class WorkchainLoopCalcThreaded(WorkchainLoop):
 
 
 WORKCHAINS = {
-    "basic-loop": (WorkchainLoop, 4, 0),
-    "serial-wc-loop": (WorkchainLoopWcSerial, 4, 4),
-    "threaded-wc-loop": (WorkchainLoopWcThreaded, 4, 4),
-    "serial-calcjob-loop": (WorkchainLoopCalcSerial, 4, 4),
-    "threaded-calcjob-loop": (WorkchainLoopCalcThreaded, 4, 4),
+    'basic-loop': (WorkchainLoop, 4, 0),
+    'serial-wc-loop': (WorkchainLoopWcSerial, 4, 4),
+    'threaded-wc-loop': (WorkchainLoopWcThreaded, 4, 4),
+    'serial-calcjob-loop': (WorkchainLoopCalcSerial, 4, 4),
+    'threaded-calcjob-loop': (WorkchainLoopCalcThreaded, 4, 4),
 }
 
-@pytest.mark.parametrize("workchain,iterations,outgoing", WORKCHAINS.values(), ids=WORKCHAINS.keys())
+
+@pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
 @pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group="engine-run")
+@pytest.mark.benchmark(group='engine-run')
 def test_workchain(benchmark, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the local runner."""
     code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])

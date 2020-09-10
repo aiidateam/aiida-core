@@ -135,11 +135,13 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
 
 @gen.coroutine
 def with_timeout(what, timeout=60):
+    """Coroutine return with timeout."""
     raise gen.Return((yield gen.with_timeout(datetime.timedelta(seconds=timeout), what)))
 
 
 @gen.coroutine
 def wait_for_process(runner, calc_node, timeout=60):
+    """Coroutine block with timeout."""
     future = runner.get_process_future(calc_node.pk)
     raise gen.Return((yield with_timeout(future, timeout)))
 

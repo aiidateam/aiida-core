@@ -301,46 +301,6 @@ window.BENCHMARK_DATA = {
         "date": 1599753976395,
         "benches": [
           {
-            "name": "tests/benchmark/test_engine_run.py::test_basic_loop",
-            "value": 4.229740412950553,
-            "unit": "iter/sec",
-            "range": "stddev: 0.0087398",
-            "group": "engine-run",
-            "extra": "mean: 236.42 msec\nrounds: 10"
-          },
-          {
-            "name": "tests/benchmark/test_engine_run.py::test_wkchain_loop_serial",
-            "value": 0.9158845147011828,
-            "unit": "iter/sec",
-            "range": "stddev: 0.034457",
-            "group": "engine-run",
-            "extra": "mean: 1.0918 sec\nrounds: 10"
-          },
-          {
-            "name": "tests/benchmark/test_engine_run.py::test_wkchain_loop_threaded",
-            "value": 1.0474717221079946,
-            "unit": "iter/sec",
-            "range": "stddev: 0.045424",
-            "group": "engine-run",
-            "extra": "mean: 954.68 msec\nrounds: 10"
-          },
-          {
-            "name": "tests/benchmark/test_engine_run.py::test_calc_loop_serial",
-            "value": 0.18854352932405471,
-            "unit": "iter/sec",
-            "range": "stddev: 0.12244",
-            "group": "engine-run",
-            "extra": "mean: 5.3038 sec\nrounds: 10"
-          },
-          {
-            "name": "tests/benchmark/test_engine_run.py::test_calc_loop_threaded",
-            "value": 0.2193123979440728,
-            "unit": "iter/sec",
-            "range": "stddev: 0.072294",
-            "group": "engine-run",
-            "extra": "mean: 4.5597 sec\nrounds: 10"
-          },
-          {
             "name": "tests/benchmark/test_nodes.py::test_store_backend",
             "value": 1102.5274722285392,
             "unit": "iter/sec",

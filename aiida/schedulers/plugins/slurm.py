@@ -14,6 +14,7 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 import re
 
 from aiida.common.escaping import escape_for_bash
+from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
@@ -752,3 +753,54 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
             )
 
         return True
+
+    def parse_output(self, detailed_job_info, stdout, stderr):  # pylint: disable=inconsistent-return-statements
+        """Parse the output of the scheduler.
+
+        :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
+            This should contain the keys `retval`, `stdout` and `stderr` corresponding to the return value, stdout and
+            stderr returned by the accounting command executed for a specific job id.
+        :param stdout: string with the output written by the scheduler to stdout
+        :param stderr: string with the output written by the scheduler to stderr
+        :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
+        :raises TypeError or ValueError: if the passed arguments have incorrect type or value
+        """
+        from aiida.engine import CalcJob
+
+        type_check(detailed_job_info, dict)
+
+        try:
+            detailed_stdout = detailed_job_info['stdout']
+        except KeyError:
+            raise ValueError('the `detailed_job_info` does not contain the required key `stdout`.')
+
+        type_check(detailed_stdout, str)
+
+        # The format of the detailed job info should be a multiline string, where the first line is the header, with
+        # the labels of the projected attributes. The following line should be the values of those attributes for the
+        # entire job. Any additional lines correspond to those values for any additional tasks that were run.
+        lines = detailed_stdout.splitlines()
+
+        try:
+            master = lines[1]
+        except IndexError:
+            raise ValueError('the `detailed_job_info.stdout` contained less than two lines.')
+
+        attributes = master.split('|')
+
+        # Pop the last element if it is empty. This happens if the `master` string just finishes with a pipe
+        if not attributes[-1]:
+            attributes.pop()
+
+        if len(self._detailed_job_info_fields) != len(attributes):
+            raise ValueError(
+                'second line in `detailed_job_info.stdout` differs in length with schedulers `_detailed_job_info_fields'
+            )
+
+        data = dict(zip(self._detailed_job_info_fields, attributes))
+
+        if data['State'] == 'OUT_OF_MEMORY':
+            return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # pylint: disable=no-member
+
+        if data['State'] == 'TIMEOUT':
+            return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME  # pylint: disable=no-member

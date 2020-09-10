@@ -114,6 +114,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - run: git log -l
+
     - name: get commit message
       run: echo ::set-env name=commitmsg::$(git log --format=%B -n 1 "${{ github.event.after }}")
 

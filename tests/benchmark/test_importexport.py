@@ -48,19 +48,9 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
         recursive_provenance(out_node, depth, breadth, num_objects)
 
 
-TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
-
-
-@pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.usefixtures('clear_database_before_test')
-@pytest.mark.benchmark(group='import-export')
-def test_export(benchmark, tmp_path, depth, breadth, num_objects):
-    """Benchmark exporting a provenance graph."""
-    root_node = Dict()
-    recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
-    out_path = tmp_path / 'test.aiida'
-    kwargs = {
-        'filename': str(out_path),
+def get_export_kwargs(**kwargs):
+    """Return default export keyword arguments."""
+    obj = {
         'silent': True,
         'input_calc_forward': True,
         'input_work_forward': True,
@@ -73,6 +63,22 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
         'overwrite': True,
         'use_compression': True
     }
+    obj.update(kwargs)
+    return obj
+
+
+TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
+
+
+@pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.benchmark(group='import-export')
+def test_export(benchmark, tmp_path, depth, breadth, num_objects):
+    """Benchmark exporting a provenance graph."""
+    root_node = Dict()
+    recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
+    out_path = tmp_path / 'test.aiida'
+    kwargs = get_export_kwargs(filename=str(out_path))
 
     def _setup():
         if out_path.exists():
@@ -94,20 +100,7 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
     recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
     root_uuid = root_node.uuid
     out_path = tmp_path / 'test.aiida'
-    kwargs = {
-        'filename': str(out_path),
-        'silent': True,
-        'input_calc_forward': True,
-        'input_work_forward': True,
-        'create_backward': True,
-        'return_backward': True,
-        'call_calc_backward': True,
-        'call_work_backward': True,
-        'include_comments': True,
-        'include_logs': True,
-        'overwrite': True,
-        'use_compression': True
-    }
+    kwargs = get_export_kwargs(filename=str(out_path))
     export([root_node], **kwargs)
 
     def _setup():

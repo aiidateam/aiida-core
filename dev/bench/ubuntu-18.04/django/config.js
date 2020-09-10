@@ -22,7 +22,8 @@ window.CONFIGURATION_DATA = {
             "description": "Comparison of Processes, executed via both local and daemon runners.",
             "single_chart": true,
             "xAxis": "id",
-            "backgroundFill": false
+            "backgroundFill": false,
+            "legendAlign": "start"
         }
     }
 }

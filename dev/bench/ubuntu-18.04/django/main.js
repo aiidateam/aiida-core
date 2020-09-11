@@ -37,6 +37,24 @@ function setupData(data) {
   }));
 }
 
+function addResetZoomButton(chart, graphsElem) {
+  // assign the chart to the DOM and add a zoom reset
+  const chartId = Object.keys(window.charts).length
+  window.charts[chartId] = chart;
+  const resetButton = document.createElement('button');
+  resetButton.className = 'benchmark-button-reset';
+  resetButton.id = chartId
+  resetButton.innerText = 'Reset Zoom'
+  resetButton.onclick = function (event) {
+    console.log("resetting zoom");
+    console.log(window.charts)
+    console.log(event.target.id);
+    window.charts[event.target.id].resetZoom();
+  };
+  graphsElem.appendChild(resetButton);
+}
+
+
 /**
  * Returns the sum of all numbers passed to the function.
  * @param name name of the entry set
@@ -85,6 +103,8 @@ function renderBenchSetGroups(domElement, name, benchSets, configEntry, configGr
     graphsElem.className = 'benchmark-graphs';
     setElem.appendChild(graphsElem);
 
+    var chart, chartConfig;
+
     if (configGroup.single_chart) {
       const canvas = document.createElement('canvas');
       canvas.className = 'benchmark-chart';
@@ -98,9 +118,17 @@ function renderBenchSetGroups(domElement, name, benchSets, configEntry, configGr
         };
       });
       const labels = uniqueCommits.map((d) => (configGroup.xAxis === 'date') ? moment(d[0]) : d[1].slice(0, 7));
-      const fill = configGroup.backgroundFill === undefined ? true : configGroup.backgroundFill
-      const legendAlign = configGroup.legendAlign === undefined ? 'center' : configGroup.legendAlign
-      renderGraph(canvas, datasets, labels, configGroup.xAxis, 10, fill, legendAlign)
+      chartConfig = {
+        fill: configGroup.backgroundFill,
+        legendAlign: configGroup.legendAlign,
+        yAxisFormat: configGroup.yAxisFormat,
+        alpha: 10,
+        xAxis: configGroup.xAxis,
+        colors: configGroup.colors,
+      };
+      chart = renderGraph(canvas, datasets, labels, chartConfig);
+      addResetZoomButton(chart, graphsElem);
+
     } else {
       for (const [benchName, benches] of benchSet.entries()) {
         const canvas = document.createElement('canvas');
@@ -111,8 +139,13 @@ function renderBenchSetGroups(domElement, name, benchSets, configEntry, configGr
           data: benches
         }]
         const labels = benches.map((d) => (configGroup.xAxis === 'date') ? moment(d.commit.timestamp) : d.commit.id.slice(0, 7));
-        const labelString = benches.length > 0 ? benches[0].bench.unit : '';
-        renderGraph(canvas, datasets, labels, configGroup.xAxis, 60, labelString);
+        chartConfig = {
+          alpha: 60,
+          xAxis: configGroup.xAxis,
+          yLabelString: benches.length > 0 ? benches[0].bench.unit : ''
+        };
+        chart = renderGraph(canvas, datasets, labels, chartConfig);
+        addResetZoomButton(chart, graphsElem);
       }
     }
 
@@ -125,6 +158,7 @@ function renderBenchSetGroups(domElement, name, benchSets, configEntry, configGr
  * @param Object config map of {suites: {key: data}, groups: {key: data}}
  */
 function renderAllCharts(dataSets, config) {
+  window.charts = {};
   const main = document.getElementById('main');
   for (const { name, dataSet } of dataSets) {
     const configEntry = config.suites[name] || {};

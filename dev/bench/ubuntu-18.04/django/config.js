@@ -15,7 +15,8 @@ window.CONFIGURATION_DATA = {
             "description": "Comparison of basic node interactions, such as storage and deletion from the database.",
             "single_chart": true,
             "xAxis": "id",
-            "backgroundFill": false
+            "backgroundFill": false,
+            "yAxisFormat": "logarithmic"
         },
         "engine": {
             "header": "Processes",
@@ -23,14 +24,16 @@ window.CONFIGURATION_DATA = {
             "single_chart": true,
             "xAxis": "id",
             "backgroundFill": false,
-            "legendAlign": "start"
+            "legendAlign": "start",
+            "yAxisFormat": "logarithmic"
         },
         "import-export": {
             "header": "Import-Export",
             "description": "Comparison of import/export of provenance trees.",
             "single_chart": true,
             "xAxis": "id",
-            "backgroundFill": false
+            "backgroundFill": false,
+            "yAxisFormat": "logarithmic"
         }
     }
 }

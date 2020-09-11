@@ -52,8 +52,8 @@ def migrate_recursively(metadata, data, folder, version=EXPORT_VERSION):
 
     try:
         if old_version == version:
-            raise ArchiveMigrationError('Your export file is already at the version {}'.format(version))
-        elif old_version > version:
+            return old_version
+        if old_version > version:
             raise ArchiveMigrationError('Backward migrations are not supported')
         elif old_version in MIGRATE_FUNCTIONS:
             MIGRATE_FUNCTIONS[old_version](metadata, data, folder)

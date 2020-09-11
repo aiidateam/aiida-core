@@ -15,8 +15,8 @@ which are executed *via* both a local runner and the daemon.
 """
 import datetime
 
-import pytest
 from tornado import gen
+import pytest
 
 from aiida.engine import run_get_node, submit, ToContext, while_, WorkChain
 from aiida.manage.manager import get_manager

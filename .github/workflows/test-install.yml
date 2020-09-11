@@ -43,6 +43,7 @@ jobs:
 
     continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
     strategy:
+      fail-fast: false
       matrix:
         pip-feature-flag: [ '', '--use-feature=2020-resolver' ]
         extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]

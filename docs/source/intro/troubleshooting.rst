@@ -12,8 +12,8 @@ If you experience any problems, first check that all services are up and running
 
    ✓ profile:     On profile django
    ✓ repository:  /repo/aiida_dev/django
-   ✓ postgres:    Connected to aiida@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ postgres:    Connected as aiida@localhost:5432
+   ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
 In the example output, all service have a green check mark and so should be running as expected.

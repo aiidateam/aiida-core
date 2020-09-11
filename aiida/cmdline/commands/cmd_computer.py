@@ -434,12 +434,7 @@ def computer_relabel(computer, label):
     help='Test the connection for a given AiiDA user, specified by'
     'their email address. If not specified, uses the current default user.',
 )
-@click.option(
-    '-t',
-    '--print-traceback',
-    is_flag=True,
-    help='Print the full traceback in case an exception is raised',
-)
+@options.PRINT_TRACEBACK()
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_test(user, print_traceback, computer):

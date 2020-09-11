@@ -18,6 +18,13 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
 
+.. admonition:: PostgreSQL and RabbitMQ as services
+    :class: tip title-icon-tip
+
+    PostgreSQL and RabbitMQ can also be configured to run as services that run on other machines.
+    When setting up a profile, after having installed AiiDA, you can specify how to connect to these machines.
+    With this setup, it is not necesseray to install PostgreSQL nor RabbitMQ on the machine where AiiDA is installed.
+
 Depending on your set up, there are a few optional dependencies:
 
 * `git`_ (Version control system used for AiiDA development)
@@ -507,7 +514,8 @@ Most users should use the interactive quicksetup:
 
 which leads through the installation process and takes care of creating the corresponding AiiDA database.
 
-For maximum control and customizability, one can use ``verdi setup`` and set up the database manually as explained below.
+For maximum customizability, one can use ``verdi setup``, that provides fine-grained control in configuring how AiiDA should connect to the required services.
+This is useful, for example, if PostgreSQL and or RabbitMQ are not installed and configured with default settings, or are run on a different machine from AiiDA itself.
 
 .. admonition:: Don't forget to backup your data!
    :class: tip title-icon-tip
@@ -656,6 +664,33 @@ During the ``verdi setup`` phase, use ``!`` to leave host empty and specify your
    $ AiiDA Database user: <username>
    $ AiiDA Database password: ""
 
+
+RabbitMQ configuration
+......................
+
+In most normal setups, RabbitMQ will be installed and run as a service on the same machine that hosts AiiDA itself.
+In that case, using the default configuration proposed during a profile setup will work just fine.
+However, when the installation of RabbitMQ is not standard, for example it runs on a different port, or even runs on a completely different machine, all relevant connection details can be configured with ``verdi setup``.
+
+The following parameters can be configured:
+
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Parameter    | Option                    | Default       | Explanation                                                                                                             |
++==============+===========================+===============+=========================================================================================================================+
+| Protocol     | ``--broker-protocol``     | ``amqp``      | The protocol to use, can be either ``amqp`` or ``amqps`` for SSL enabled connections.                                   |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Username     | ``--broker-username``     | ``guest``     | The username with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation. |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Password     | ``--broker-password``     | ``guest``     | The password with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation. |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Host         | ``--broker-host``         | ``127.0.0.1`` | The hostname of the RabbitMQ server.                                                                                    |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Port         | ``--broker-port``         | ``5672``      | The port to which the server listens.                                                                                   |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. If defined, needs to start with a forward slash.                                                 |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+
+
 verdi setup
 ...........
 
@@ -733,8 +768,8 @@ Use the ``verdi status`` command to check that all services are up and running:
 
    ✓ profile:     On profile quicksetup
    ✓ repository:  /repo/aiida_dev/quicksetup
-   ✓ postgres:    Connected to aiida@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ postgres:    Connected as aiida@localhost:5432
+   ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
 In the example output, all service have a green check mark and so should be running as expected.
@@ -863,7 +898,7 @@ The profile is created under the ``aiida`` username, so to execute commands use:
    ✓ profile:     On profile default
    ✓ repository:  /home/aiida/.aiida/repository/default
    ✓ postgres:    Connected as aiida_qs_aiida_477d3dfc78a2042156110cb00ae3618f@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
 
 Or to enter into the container interactively:

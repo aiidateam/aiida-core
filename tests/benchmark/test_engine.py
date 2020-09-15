@@ -35,7 +35,6 @@ class WorkchainLoop(WorkChain):
         spec.input('iterations', required=True)
         spec.input('code', required=False)
         spec.outline(cls.init_loop, while_(cls.terminate_loop)(cls.run_task))
-        # spec.output('result')
 
     def init_loop(self):
         self.ctx.iter = self.inputs.iterations.value

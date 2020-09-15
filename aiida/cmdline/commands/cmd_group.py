@@ -8,9 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
+import warnings
 import click
 
 from aiida.common.exceptions import UniquenessError
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
@@ -59,26 +61,23 @@ def group_remove_nodes(group, nodes, clear, force):
 
 @verdi_group.command('delete')
 @arguments.GROUP()
-@options.GROUP_CLEAR(help='Remove all nodes before deleting the group itself.')
+@options.GROUP_CLEAR(
+    help='Remove all nodes before deleting the group itself.' +
+    ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
+)
 @options.FORCE()
 @with_dbenv()
 def group_delete(group, clear, force):
     """Delete a group.
 
-    As a precautionary measure, this command fails when trying to delete a group that is not empty.
-    In order to remove the group nevertheless, pass the `-c/--clear` flag.
     Note that this command only deletes groups - nodes contained in the group will remain untouched.
     """
     from aiida import orm
 
     label = group.label
 
-    if group.count() > 0 and not clear:
-        echo.echo_critical((
-            'Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
-                label, group.count()
-            )
-        ))
+    if clear:
+        warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     if not force:
         click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
@@ -229,11 +228,9 @@ def group_list(
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
-    import warnings
     from aiida import orm
     from aiida.common import timezone
     from aiida.common.escaping import escape_for_sql_like
-    from aiida.common.warnings import AiidaDeprecationWarning
     from tabulate import tabulate
 
     builder = orm.QueryBuilder()

@@ -143,21 +143,16 @@ class TestVerdiGroup(AiidaTestCase):
         node_01 = orm.CalculationNode().store()
         node_02 = orm.CalculationNode().store()
 
-        # Add some nodes and then use `verdi group delete --clear` to delete a node even when it contains nodes
+        # Add some nodes and then use `verdi group delete` to delete a group that contains nodes
         group = orm.load_group(label='group_test_delete_02')
         group.add_nodes([node_01, node_02])
         self.assertEqual(group.count(), 2)
 
-        # Calling delete on a group without the `--clear` option should raise
         result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', 'group_test_delete_02'])
-        self.assertIsNotNone(result.exception, result.output)
-
-        # With `--clear` option should delete group and nodes
-        result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', '--clear', 'group_test_delete_02'])
         self.assertClickResultNoException(result)
 
         with self.assertRaises(exceptions.NotExistent):
-            group = orm.load_group(label='group_test_delete_02')
+            orm.load_group(label='group_test_delete_02')
 
     def test_show(self):
         """Test `verdi group show` command."""

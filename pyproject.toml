@@ -15,6 +15,9 @@ legacy_tox_ini = """
 [tox]
 envlist = py37-django
 
+[testenv]
+usedevelop=True
+
 [testenv:py{35,36,37,38}-{django,sqla}]
 deps =
     py35: -rrequirements/requirements-py-3.5.txt

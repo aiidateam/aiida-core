@@ -111,3 +111,15 @@ footer {
 .benchmark-chart {
   max-width: 1000px;
 }
+
+.benchmark-button-reset {
+  margin-top: 1rem;
+  border-radius: 5px;
+  background-color: #5c8aac;
+  outline-color: #1f77b4;
+  outline-width: 10px;
+}
+
+.benchmark-button-reset:hover {
+  background-color: #1f77b4;
+}

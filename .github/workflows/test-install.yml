@@ -9,6 +9,7 @@ on:
       - 'pyproject.toml'
       - 'util/dependency_management.py'
       - '.github/workflows/test-install.yml'
+    branches-ignore: [gh-pages]
   schedule:
     - cron: '30 02 * * *'  # nightly build
 

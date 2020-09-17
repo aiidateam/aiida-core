@@ -34,7 +34,7 @@
         "ipython~=7.0",
         "jinja2~=2.10",
         "kiwipy[rmq]~=0.5.5",
-        "numpy~=1.17,<1.18",
+        "numpy~=1.19",
         "paramiko~=2.7",
         "pika~=1.1",
         "plumpy~=0.15.0",

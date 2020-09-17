@@ -137,7 +137,7 @@ jobs:
 
     - name: Install python dependencies
       run: |
-        pip install numpy==1.17.4
+        # pip install numpy==1.17.4
         pip install -e .
 
     - name: Run verdi

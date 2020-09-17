@@ -342,7 +342,7 @@ def get_explicit_kpoints_path(
     explicit_kpoints = [tuple(point_coordinates[path[0][0]])]
     labels = [(0, path[0][0])]
 
-    if not all([_.is_integer() for _ in num_points]):
+    if not all([_.is_integer() for _ in num_points if isinstance(_, (float, numpy.float64))]):
         raise ValueError('Could not determine number of points as a whole number. num_points={}'.format(num_points))
     num_points = [int(_) for _ in num_points]
 

@@ -550,17 +550,28 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     def stat(self, path):
         """
-        Wrap SFTP stat call
-
-        :param path: path to check
+        Retrieve information about a file on the remote system.  The return
+        value is an object whose attributes correspond to the attributes of
+        Python's ``stat`` structure as returned by ``os.stat``, except that it
+        contains fewer fields.
+        The fields supported are: ``st_mode``, ``st_size``, ``st_uid``,
+        ``st_gid``, ``st_atime``, and ``st_mtime``.
+        :param str path: the filename to stat
+        :return:
+            a `paramiko.sftp_attr.SFTPAttributes` object containing attributes
+            about the given file
         """
         return self.sftp.stat(path)
 
     def lstat(self, path):
         """
-        Wrap SFTP lstat call
-
-        :param path: path to check
+        Retrieve information about a file on the remote system, without
+        following symbolic links (shortcuts).  This otherwise behaves exactly
+        the same as `stat`.
+        :param str path: the filename to stat
+        :return:
+            a `paramiko.sftp_attr.SFTPAttributes` object containing attributes
+            about the given file
         """
         return self.sftp.lstat(path)
 

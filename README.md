@@ -51,13 +51,10 @@ If you are experiencing problems with your AiiDA installation, please refer to t
 
 ## How to cite
 
-If you use AiiDA in your research, please consider citing the AiiDA paper:
+If you use AiiDA in your research, please consider citing the following publications:
 
-> Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,
-> and Boris Kozinsky, *AiiDA: automated interactive infrastructure and
-> database for computational science*, Comp. Mat. Sci 111, 218-230
-> (2016); <https://doi.org/10.1016/j.commatsci.2015.09.013>;
-> <http://www.aiida.net>.
+ * **AiiDA >= 1.0**: S. P. Huber *et al.*, *AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and data provenance*, Scientific Data **7**, 300 (2020); DOI: [10.1038/s41597-020-00638-4](https://doi.org/10.1038/s41597-020-00638-4)
+ * **AiiDA < 1.0**: Giovanni Pizzi, Andrea Cepellotti, Riccardo Sabatini, Nicola Marzari,and Boris Kozinsky, *AiiDA: automated interactive infrastructure and database for computational science*, Comp. Mat. Sci **111**, 218-230 (2016); DOI: [10.1016/j.commatsci.2015.09.013](https://doi.org/10.1016/j.commatsci.2015.09.013)
 
 ## License
 

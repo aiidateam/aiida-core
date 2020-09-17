@@ -447,11 +447,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         Open the SFTP channel, and handle error by directing customer to try another transport
         """
         from aiida.common.exceptions import InvalidOperation
-
+        from paramiko.ssh_exception import SSHException
         try:
             self._sftp = self._client.open_sftp()
-        except Exception:
-            raise InvalidOperation('Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. Try setting it up with the sshonly plugin instead.')
+        except SSHException:
+            raise InvalidOperation(
+                'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
+                'Try setting it up with the aiida.transports:sshonly plugin instead.'
+            )
 
         self._is_open = True
 

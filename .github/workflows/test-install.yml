@@ -9,6 +9,7 @@ on:
       - 'pyproject.toml'
       - 'util/dependency_management.py'
       - '.github/workflows/test-install.yml'
+    branches-ignore: [gh-pages]
   schedule:
     - cron: '30 02 * * *'  # nightly build
 
@@ -41,7 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
     strategy:
+      fail-fast: false
       matrix:
         pip-feature-flag: [ '', '--use-feature=2020-resolver' ]
         extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
@@ -55,14 +58,22 @@ jobs:
         python-version: 3.8
 
     - name: Pip install
+      id: pip_install
+      continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
       run: |
         python -m pip --version
         python -m pip install -e .${{ matrix.extras }} ${{ matrix.pip-feature-flag }}
         python -m pip freeze
 
     - name: Test importing aiida
+      if: steps.pip_install.outcome == 'success'
       run:
         python -c "import aiida"
+
+    - name: Warn about pip 2020 resolver issues.
+      if: steps.pip_install.outcome == 'failure' && contains(matrix.pip-feature-flag, '2020-resolver')
+      run: |
+        echo "::warning ::Encountered issues with the pip 2020-resolver."
 
   install-with-conda:
 

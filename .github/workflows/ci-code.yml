@@ -136,9 +136,7 @@ jobs:
         python-version: 3.8
 
     - name: Install python dependencies
-      run: |
-        # pip install numpy==1.17.4
-        pip install -e .
+      run: pip install -e .
 
     - name: Run verdi
       run: |

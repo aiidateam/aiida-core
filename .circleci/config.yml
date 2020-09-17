@@ -13,9 +13,7 @@ jobs:
           keys:
             - cache-pip
 
-      - run: |
-          # pip install numpy==1.17.4
-          pip install --user .[docs,tests]
+      - run: pip install --user .[docs,tests]
 
       - save_cache:
           key: cache-pip

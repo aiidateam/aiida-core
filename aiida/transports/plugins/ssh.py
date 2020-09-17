@@ -556,7 +556,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         contains fewer fields.
         The fields supported are: ``st_mode``, ``st_size``, ``st_uid``,
         ``st_gid``, ``st_atime``, and ``st_mtime``.
+
         :param str path: the filename to stat
+
         :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
             attributes about the given file.
         """
@@ -567,7 +569,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         Retrieve information about a file on the remote system, without
         following symbolic links (shortcuts). This otherwise behaves exactly
         the same as `stat`.
+
         :param str path: the filename to stat
+
         :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
             attributes about the given file.
         """

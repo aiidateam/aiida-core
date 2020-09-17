@@ -1351,7 +1351,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         )
         return cmd
 
-    def symlink_internal(self, source, dest):
+    def _symlink(self, source, dest):
         """
         Wrap SFTP symlink call without breaking API
 
@@ -1381,9 +1381,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             for this_source in self.glob(source):
                 # create the name of the link: take the last part of the path
                 this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
-                self.symlink_internal(this_source, this_dest)
+                self._symlink(this_source, this_dest)
         else:
-            self.symlink_internal(source, dest)
+            self._symlink(source, dest)
 
     def path_exists(self, path):
         """

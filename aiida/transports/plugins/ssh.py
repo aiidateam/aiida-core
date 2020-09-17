@@ -453,7 +453,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         except SSHException:
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
-                'Try setting it up with the aiida.transports:sshonly plugin instead.'
+                'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
             )
 
         self._is_open = True

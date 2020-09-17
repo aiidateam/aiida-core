@@ -451,7 +451,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         try:
             self._sftp = self._client.open_sftp()
         except Exception:
-            raise InvalidOperation('SFTP seems not functional. Try using sshonly plugin instead?')
+            raise InvalidOperation('Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. Try setting it up with the sshonly plugin instead.')
 
         self._is_open = True
 

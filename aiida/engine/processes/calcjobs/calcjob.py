@@ -312,7 +312,8 @@ class CalcJob(Process):
         try:
             exit_code_retrieved = self.parse_retrieved_output(retrieved_temporary_folder)
         finally:
-            shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
+            if retrieved_temporary_folder is not None:
+                shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
 
         if exit_code_retrieved is not None and exit_code_retrieved.status > 0:
             args = (exit_code_retrieved.status, exit_code_retrieved.message)

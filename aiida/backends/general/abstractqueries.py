@@ -17,7 +17,7 @@ class AbstractQueryManager(abc.ABC):
     def __init__(self, backend):
         """
         :param backend: The AiiDA backend
-        :type backend: :class:`aiida.orm.implementation.sql.SqlBackend`
+        :type backend: :class:`aiida.orm.implementation.sql.backends.SqlBackend`
         """
         self._backend = backend
 

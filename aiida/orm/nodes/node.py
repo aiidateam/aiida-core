@@ -22,7 +22,7 @@ from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
-from aiida.orm.utils.node import AbstractNodeMeta, validate_attribute_extra_key
+from aiida.orm.utils.node import AbstractNodeMeta
 from aiida.orm import autogroup
 
 from ..comments import Comment
@@ -409,7 +409,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-        validate_attribute_extra_key(key)
         self.backend_entity.set_attribute(key, value)
 
     def set_attribute_many(self, attributes):
@@ -424,9 +423,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
 
-        for key in attributes:
-            validate_attribute_extra_key(key)
-
         self.backend_entity.set_attribute_many(attributes)
 
     def reset_attributes(self, attributes):
@@ -440,9 +436,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         """
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        for key in attributes:
-            validate_attribute_extra_key(key)
 
         self.backend_entity.reset_attributes(attributes)
 
@@ -567,7 +560,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         :param value: value of the extra
         :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
         """
-        validate_attribute_extra_key(key)
         self.backend_entity.set_extra(key, value)
 
     def set_extra_many(self, extras):
@@ -578,9 +570,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         :param extras: a dictionary with the extras to set
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
         self.backend_entity.set_extra_many(extras)
 
     def reset_extras(self, extras):
@@ -591,9 +580,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         :param extras: a dictionary with the extras to set
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
         self.backend_entity.reset_extras(extras)
 
     def delete_extra(self, key):

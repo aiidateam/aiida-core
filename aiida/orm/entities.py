@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
-
 import typing
 
 from plumpy.base.utils import super_check, call_with_super_check
@@ -207,9 +206,9 @@ class Entity:
 
         :return: an AiiDA entity instance
         """
-        from . import implementation
+        from .implementation.entities import BackendEntity
 
-        type_check(backend_entity, implementation.BackendEntity)
+        type_check(backend_entity, BackendEntity)
         entity = cls.__new__(cls)
         entity.init_from_backend(backend_entity)
         call_with_super_check(entity.initialize)
@@ -218,7 +217,7 @@ class Entity:
     def __init__(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
-        :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
+        :type backend_entity: :class:`aiida.orm.implementation.entities.BackendEntity`
         """
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
@@ -226,7 +225,7 @@ class Entity:
     def init_from_backend(self, backend_entity):
         """
         :param backend_entity: the backend model supporting this entity
-        :type backend_entity: :class:`aiida.orm.implementation.BackendEntity`
+        :type backend_entity: :class:`aiida.orm.implementation.entities.BackendEntity`
         """
         self._backend_entity = backend_entity
 

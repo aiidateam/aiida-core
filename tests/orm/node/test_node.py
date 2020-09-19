@@ -335,6 +335,20 @@ class TestNodeAttributesExtras(AiidaTestCase):
 
     def test_delete_extra_many(self):
         """Test the `Node.delete_extra_many` method."""
+        self.node.set_extra('valid_key', 'value')
+        self.assertEqual(self.node.get_extra('valid_key'), 'value')
+        self.node.delete_extra('valid_key')
+
+        with self.assertRaises(AttributeError):
+            self.node.delete_extra('valid_key')
+
+        # Repeat with stored group
+        self.node.set_extra('valid_key', 'value')
+        self.node.store()
+
+        self.node.delete_extra('valid_key')
+        with self.assertRaises(AttributeError):
+            load_node(self.node.pk).get_extra('valid_key')
 
     def test_clear_extras(self):
         """Test the `Node.clear_extras` method."""

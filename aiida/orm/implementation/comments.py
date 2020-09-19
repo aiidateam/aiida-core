@@ -11,12 +11,12 @@
 
 import abc
 
-from . import backends
+from .entities import BackendEntity, BackendCollection
 
 __all__ = ('BackendComment', 'BackendCommentCollection')
 
 
-class BackendComment(backends.BackendEntity):
+class BackendComment(BackendEntity):
     """Base class for a node comment."""
 
     @property
@@ -56,13 +56,13 @@ class BackendComment(backends.BackendEntity):
         pass
 
 
-class BackendCommentCollection(backends.BackendCollection[BackendComment]):
+class BackendCommentCollection(BackendCollection[BackendComment]):
     """The collection of Comment entries."""
 
     ENTITY_CLASS = BackendComment
 
     @abc.abstractmethod
-    def create(self, node, user, content=None, **kwargs):
+    def create(self, node, user, content=None, **kwargs):  # pylint: disable=arguments-differ
         """
         Create a Comment for a given node and user
 

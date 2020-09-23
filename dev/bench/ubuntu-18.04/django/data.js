@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1600845072989,
+  "lastUpdate": 1600854231725,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -3846,6 +3846,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.018752",
             "group": "node",
             "extra": "mean: 30.458 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.40",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.5",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "ac0d55995ef6620e61ba1bb25bc1df5d23ff1778",
+          "message": "Prepare the code for the new repository implementation (#4344)\n\nIn `v2.0.0`, the new repository implementation will be shipped, that\r\ndespite our best efforts, requires some slight backwards-incompatible\r\nchanges to the interface. The envisioned changes are translated as\r\ndeprecation warnings:\r\n\r\n * `FileType`: `aiida.orm.utils.repository` ->`aiida.repository.common`\r\n * `File`: `aiida.orm.utils.repository` ->`aiida.repository.common`\r\n * `File`: changed from namedtuple to class\r\n * `File`: iteration is deprecated\r\n * `File`: `type` attribute -> `file_type`\r\n * `Node.put_object_from_tree`: `path` -> `filepath`\r\n * `Node.put_object_from_file`: `path` -> `filepath`\r\n * `Node.put_object_from_tree`: `key` -> `path`\r\n * `Node.put_object_from_file`: `key` -> `path`\r\n * `Node.put_object_from_filelike`: `key` -> `path`\r\n * `Node.get_object`: `key` -> `path`\r\n * `Node.get_object_content`: `key` -> `path`\r\n * `Node.open`: `key` -> `path`\r\n * `Node.list_objects`: `key` -> `path`\r\n * `Node.list_object_names`: `key` -> `path`\r\n * `SinglefileData.open`: `key` -> `path`\r\n * Deprecated use of `Node.open` without context manager\r\n * Deprecated any other mode than `r` and `rb` in the methods:\r\n    o `Node.open`\r\n    o `Node.get_object_content`\r\n * Deprecated `contents_only` in `put_object_from_tree`\r\n * Deprecated `force` argument in\r\n    o `Node.put_object_from_tree`\r\n    o `Node.put_object_from_file`\r\n    o `Node.put_object_from_filelike`\r\n    o `Node.delete_object`\r\n\r\nThe special case is the `Repository` class of the internal module\r\n`aiida.orm.utils.repository`. Even though it is not part of the public\r\nAPI, plugins may have been using it. To allow deprecation warnings to be\r\nprinted when the module or class is used, we move the content to a\r\nmirror module `aiida.orm.utils._repository`, that is then used\r\ninternally, and the original module has the deprecation warning. This\r\nway clients will see the warning if they use it, but use in `aiida-core`\r\nwill not trigger them. Since there won't be a replacement for this class\r\nin the new implementation, it can also not be replaced or forwarded.",
+          "timestamp": "2020-09-23T11:33:51+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/ac0d55995ef6620e61ba1bb25bc1df5d23ff1778",
+          "distinct": true,
+          "tree_id": "51b4c19e8fbbe39ce6b68033fd9a518beb2868f5"
+        },
+        "date": 1600854231119,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.2661096035416692,
+            "unit": "iter/sec",
+            "range": "stddev: 0.051293",
+            "group": "engine",
+            "extra": "mean: 306.17 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.8231333598993732,
+            "unit": "iter/sec",
+            "range": "stddev: 0.044388",
+            "group": "engine",
+            "extra": "mean: 1.2149 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9124880027959416,
+            "unit": "iter/sec",
+            "range": "stddev: 0.071459",
+            "group": "engine",
+            "extra": "mean: 1.0959 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.17395258584157772,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10657",
+            "group": "engine",
+            "extra": "mean: 5.7487 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.19968134656624675,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12060",
+            "group": "engine",
+            "extra": "mean: 5.0080 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.6677996448936363,
+            "unit": "iter/sec",
+            "range": "stddev: 0.020160",
+            "group": "engine",
+            "extra": "mean: 374.84 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6404791588344926,
+            "unit": "iter/sec",
+            "range": "stddev: 0.067057",
+            "group": "engine",
+            "extra": "mean: 1.5613 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.7337289373824082,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053662",
+            "group": "engine",
+            "extra": "mean: 1.3629 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1547052148724866,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11792",
+            "group": "engine",
+            "extra": "mean: 6.4639 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.17983024048927493,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12186",
+            "group": "engine",
+            "extra": "mean: 5.5608 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.4698600025205897,
+            "unit": "iter/sec",
+            "range": "stddev: 0.044540",
+            "group": "import-export",
+            "extra": "mean: 404.88 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.197152625322471,
+            "unit": "iter/sec",
+            "range": "stddev: 0.051664",
+            "group": "import-export",
+            "extra": "mean: 455.13 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 1.3251625051556375,
+            "unit": "iter/sec",
+            "range": "stddev: 0.068518",
+            "group": "import-export",
+            "extra": "mean: 754.62 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.2266824630329332,
+            "unit": "iter/sec",
+            "range": "stddev: 0.050193",
+            "group": "import-export",
+            "extra": "mean: 815.21 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 918.9177475541755,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00029877",
+            "group": "node",
+            "extra": "mean: 1.0882 msec\nrounds: 182"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 189.4843943629555,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00060897",
+            "group": "node",
+            "extra": "mean: 5.2775 msec\nrounds: 125"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 184.164390772691,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011616",
+            "group": "node",
+            "extra": "mean: 5.4299 msec\nrounds: 121"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 193.69155364651922,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00050026",
+            "group": "node",
+            "extra": "mean: 5.1628 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 39.84844066392351,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0040007",
+            "group": "node",
+            "extra": "mean: 25.095 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 40.45460645548725,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0020732",
+            "group": "node",
+            "extra": "mean: 24.719 msec\nrounds: 100"
           }
         ]
       }

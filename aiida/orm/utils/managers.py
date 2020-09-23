@@ -86,7 +86,9 @@ class NodeLinksManager:  # pylint: disable=too-few-public-methods
             # `AttributeError`, so that `getattr(node.inputs, 'some_label', some_default)` returns `some_default`.
             # Otherwise, the exception is not caught by `getattr` and is propagated, instead of returning the default.
             raise NotExistentAttributeError(
-                "Node '{}' does not have an input with link '{}'".format(self._node.pk, name)
+                "Node '{}' does not have an {}put with link label '{}'".format(
+                    self._node.pk, 'in' if self._incoming else 'out', name
+                )
             )
 
     def __getitem__(self, name):
@@ -101,7 +103,11 @@ class NodeLinksManager:  # pylint: disable=too-few-public-methods
             # Note: in order for this class to behave as a dictionary, we raise an exception that also inherits from
             # `KeyError` - in this way, users can use the standard construct `try/except KeyError` and this will behave
             # like a standard dictionary.
-            raise NotExistentKeyError("Node '{}' does not have an input with link '{}'".format(self._node.pk, name))
+            raise NotExistentKeyError(
+                "Node '{}' does not have an {}put with link label '{}'".format(
+                    self._node.pk, 'in' if self._incoming else 'out', name
+                )
+            )
 
     def __str__(self):
         """Return a string representation of the manager"""

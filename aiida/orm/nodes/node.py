@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Package for node ORM classes."""
-import copy
 import importlib
 import warnings
 
@@ -22,12 +21,12 @@ from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.repository import Repository
-from aiida.orm.utils.node import AbstractNodeMeta, validate_attribute_extra_key
+from aiida.orm.utils.node import AbstractNodeMeta
 from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
-from ..entities import Entity
+from ..entities import Entity, EntityExtrasMixin, EntityAttributesMixin
 from ..entities import Collection as EntityCollection
 from ..querybuilder import QueryBuilder
 from ..users import User
@@ -37,7 +36,7 @@ __all__ = ('Node',)
 _NO_DEFAULT = tuple()
 
 
-class Node(Entity, metaclass=AbstractNodeMeta):
+class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -328,307 +327,6 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         :return: the mtime
         """
         return self.backend_entity.mtime
-
-    @property
-    def attributes(self):
-        """Return the complete attributes dictionary.
-
-        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned
-            attributes will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
-            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
-            getters `get_attribute` and `get_attribute_many` instead.
-
-        :return: the attributes as a dictionary
-        """
-        attributes = self.backend_entity.attributes
-
-        if self.is_stored:
-            attributes = copy.deepcopy(attributes)
-
-        return attributes
-
-    def get_attribute(self, key, default=_NO_DEFAULT):
-        """Return the value of an attribute.
-
-        .. warning:: While the node is unstored, this will return a reference of the attribute on the database model,
-            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned
-            attribute will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods.
-
-        :param key: name of the attribute
-        :param default: return this value instead of raising if the attribute does not exist
-        :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist and no default is specified
-        """
-        try:
-            attribute = self.backend_entity.get_attribute(key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            attribute = default
-
-        if self.is_stored:
-            attribute = copy.deepcopy(attribute)
-
-        return attribute
-
-    def get_attribute_many(self, keys):
-        """Return the values of multiple attributes.
-
-        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned
-            attributes will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
-            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
-            getters `get_attribute` and `get_attribute_many` instead.
-
-        :param keys: a list of attribute names
-        :return: a list of attribute values
-        :raises AttributeError: if at least one attribute does not exist
-        """
-        attributes = self.backend_entity.get_attribute_many(keys)
-
-        if self.is_stored:
-            attributes = copy.deepcopy(attributes)
-
-        return attributes
-
-    def set_attribute(self, key, value):
-        """Set an attribute to the given value.
-
-        :param key: name of the attribute
-        :param value: value of the attribute
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        validate_attribute_extra_key(key)
-        self.backend_entity.set_attribute(key, value)
-
-    def set_attribute_many(self, attributes):
-        """Set multiple attributes.
-
-        .. note:: This will override any existing attributes that are present in the new dictionary.
-
-        :param attributes: a dictionary with the attributes to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        for key in attributes:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.set_attribute_many(attributes)
-
-    def reset_attributes(self, attributes):
-        """Reset the attributes.
-
-        .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
-
-        :param attributes: a dictionary with the attributes to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        for key in attributes:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.reset_attributes(attributes)
-
-    def delete_attribute(self, key):
-        """Delete an attribute.
-
-        :param key: name of the attribute
-        :raises AttributeError: if the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        self.backend_entity.delete_attribute(key)
-
-    def delete_attribute_many(self, keys):
-        """Delete multiple attributes.
-
-        :param keys: names of the attributes to delete
-        :raises AttributeError: if at least one of the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        self.backend_entity.delete_attribute_many(keys)
-
-    def clear_attributes(self):
-        """Delete all attributes."""
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        self.backend_entity.clear_attributes()
-
-    def attributes_items(self):
-        """Return an iterator over the attributes.
-
-        :return: an iterator with attribute key value pairs
-        """
-        return self.backend_entity.attributes_items()
-
-    def attributes_keys(self):
-        """Return an iterator over the attribute keys.
-
-        :return: an iterator with attribute keys
-        """
-        return self.backend_entity.attributes_keys()
-
-    @property
-    def extras(self):
-        """Return the complete extras dictionary.
-
-        .. warning:: While the node is unstored, this will return references of the extras on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
-            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
-            `get_extra_many` instead.
-
-        :return: the extras as a dictionary
-        """
-        extras = self.backend_entity.extras
-
-        if self.is_stored:
-            extras = copy.deepcopy(extras)
-
-        return extras
-
-    def get_extra(self, key, default=_NO_DEFAULT):
-        """Return the value of an extra.
-
-        .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
-            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods.
-
-        :param key: name of the extra
-        :param default: return this value instead of raising if the attribute does not exist
-        :return: the value of the extra
-        :raises AttributeError: if the extra does not exist and no default is specified
-        """
-        try:
-            extra = self.backend_entity.get_extra(key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            extra = default
-
-        if self.is_stored:
-            extra = copy.deepcopy(extra)
-
-        return extra
-
-    def get_extra_many(self, keys):
-        """Return the values of multiple extras.
-
-        .. warning:: While the node is unstored, this will return references of the extras on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
-            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
-            `get_extra_many` instead.
-
-        :param keys: a list of extra names
-        :return: a list of extra values
-        :raises AttributeError: if at least one extra does not exist
-        """
-        extras = self.backend_entity.get_extra_many(keys)
-
-        if self.is_stored:
-            extras = copy.deepcopy(extras)
-
-        return extras
-
-    def set_extra(self, key, value):
-        """Set an extra to the given value.
-
-        :param key: name of the extra
-        :param value: value of the extra
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
-        """
-        validate_attribute_extra_key(key)
-        self.backend_entity.set_extra(key, value)
-
-    def set_extra_many(self, extras):
-        """Set multiple extras.
-
-        .. note:: This will override any existing extras that are present in the new dictionary.
-
-        :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.set_extra_many(extras)
-
-    def reset_extras(self, extras):
-        """Reset the extras.
-
-        .. note:: This will completely clear any existing extras and replace them with the new dictionary.
-
-        :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.reset_extras(extras)
-
-    def delete_extra(self, key):
-        """Delete an extra.
-
-        :param key: name of the extra
-        :raises AttributeError: if the extra does not exist
-        """
-        self.backend_entity.delete_extra(key)
-
-    def delete_extra_many(self, keys):
-        """Delete multiple extras.
-
-        :param keys: names of the extras to delete
-        :raises AttributeError: if at least one of the extra does not exist
-        """
-        self.backend_entity.delete_extra_many(keys)
-
-    def clear_extras(self):
-        """Delete all extras."""
-        self.backend_entity.clear_extras()
-
-    def extras_items(self):
-        """Return an iterator over the extras.
-
-        :return: an iterator with extra key value pairs
-        """
-        return self.backend_entity.extras_items()
-
-    def extras_keys(self):
-        """Return an iterator over the extra keys.
-
-        :return: an iterator with extra keys
-        """
-        return self.backend_entity.extras_keys()
 
     def list_objects(self, key=None):
         """Return a list of the objects contained in this repository, optionally in the given sub directory.

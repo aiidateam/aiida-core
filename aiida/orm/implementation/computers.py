@@ -12,12 +12,12 @@
 import abc
 import logging
 
-from . import backends
+from .entities import BackendEntity, BackendCollection
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
 
 
-class BackendComputer(backends.BackendEntity):
+class BackendComputer(BackendEntity):
     """
     Base class to map a node in the DB + its permanent repository counterpart.
 
@@ -117,7 +117,7 @@ class BackendComputer(backends.BackendEntity):
         pass
 
 
-class BackendComputerCollection(backends.BackendCollection[BackendComputer]):
+class BackendComputerCollection(BackendCollection[BackendComputer]):
     """The collection of Computer entries."""
 
     ENTITY_CLASS = BackendComputer

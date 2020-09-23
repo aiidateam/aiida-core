@@ -217,3 +217,22 @@ class TestRegisterProcessHandler(AiidaTestCase):
                 pass
 
         assert not SomeWorkChain.disabled_handler.enabled  # pylint: disable=no-member
+
+    def test_empty_exit_codes_list(self):
+        """A `process_handler` with an empty `exit_codes` list should not run."""
+
+        class SomeWorkChain(BaseRestartWorkChain):
+            _process_class = ArithmeticAddCalculation
+
+            @process_handler(exit_codes=[])
+            def should_not_run(self, node):
+                raise ValueError('This should not run.')
+
+        child = ProcessNode()
+        child.set_process_state(ProcessState.FINISHED)
+
+        process = SomeWorkChain()
+        process.setup()
+        process.ctx.iteration = 1
+        process.ctx.children = [child]
+        process.inspect_process()

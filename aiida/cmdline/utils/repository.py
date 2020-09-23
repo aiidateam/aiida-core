@@ -18,9 +18,9 @@ def list_repository_contents(node, path, color):
     :param path: directory path
     :raises FileNotFoundError: if the `path` does not exist in the repository of the given node
     """
-    from aiida.orm.utils.repository import FileType
+    from aiida.repository import FileType
 
     for entry in node.list_objects(path):
-        bold = bool(entry.type == FileType.DIRECTORY)
-        fg = 'blue' if color and entry.type == FileType.DIRECTORY else None
+        bold = bool(entry.file_type == FileType.DIRECTORY)
+        fg = 'blue' if color and entry.file_type == FileType.DIRECTORY else None
         click.secho(entry.name, bold=bold, fg=fg)

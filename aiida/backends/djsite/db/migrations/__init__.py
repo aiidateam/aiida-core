@@ -21,7 +21,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0044_dbgroup_type_string'
+LATEST_MIGRATION = '0045_dbgroup_extras'
 
 
 def _update_schema_version(version, apps, _):
@@ -273,7 +273,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None, origina
         try:
             return json.loads(mainitem['tval'])
         except ValueError:
-            raise DeserializationException('Error in the content of the json field')
+            raise DeserializationException('Error in the content of the json field') from ValueError
     else:
         raise DeserializationException("The type field '{}' is not recognized".format(mainitem['datatype']))
 
@@ -426,7 +426,8 @@ class ModelModifierV0025:
         try:
             attr = cls.objects.get(dbnode=dbnode_node, key=key)
         except ObjectDoesNotExist:
-            raise AttributeError('{} with key {} for node {} not found in db'.format(cls.__name__, key, dbnode.pk))
+            raise AttributeError('{} with key {} for node {} not found in db'.format(cls.__name__, key, dbnode.pk)) \
+                from ObjectDoesNotExist
 
         return self.getvalue(attr)
 
@@ -674,7 +675,7 @@ class ModelModifierV0025:
                     'another entry already exists and the creation would '
                     'violate an uniqueness constraint.\nFurther details: '
                     '{}'.format(cls.__name__, exc)
-                )
+                ) from exc
             raise
 
     @staticmethod
@@ -806,7 +807,7 @@ class ModelModifierV0025:
                 raise ValueError(
                     'Unable to store the value: it must be either a basic datatype, or json-serializable: {}'.
                     format(value)
-                )
+                ) from TypeError
 
             new_entry.datatype = 'json'
             new_entry.tval = jsondata

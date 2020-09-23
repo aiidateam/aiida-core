@@ -272,6 +272,12 @@ class TemporaryProfileManager(ProfileManager):
             'database_name': self.profile_info.get('database_name'),
             'database_username': self.profile_info.get('database_username'),
             'database_password': self.profile_info.get('database_password'),
+            'broker_protocol': self.profile_info.get('broker_protocol'),
+            'broker_username': self.profile_info.get('broker_username'),
+            'broker_password': self.profile_info.get('broker_password'),
+            'broker_host': self.profile_info.get('broker_host'),
+            'broker_port': self.profile_info.get('broker_port'),
+            'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
             'repository_uri': 'file://' + self.repo,
         }
         return dictionary

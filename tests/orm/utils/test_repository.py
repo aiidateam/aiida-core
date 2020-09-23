@@ -8,15 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `Repository` utility class."""
-
 import os
 import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Node, Data
-from aiida.orm.utils.repository import File, FileType
 from aiida.common.exceptions import ModificationNotAllowed
+from aiida.orm import Node, Data
+from aiida.repository import File, FileType
 
 
 class TestRepository(AiidaTestCase):

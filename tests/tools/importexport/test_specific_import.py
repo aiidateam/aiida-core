@@ -18,7 +18,7 @@ import numpy as np
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.folders import RepositoryFolder
-from aiida.orm.utils.repository import Repository
+from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport import import_data, export
 from aiida.tools.importexport.common import exceptions
 

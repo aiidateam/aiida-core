@@ -254,6 +254,8 @@ class DbGroup(m.Model):
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
     user = m.ForeignKey(DbUser, on_delete=m.CASCADE, related_name='dbgroups')
+    # JSON Extras
+    extras = JSONField(default=dict, null=False)
 
     class Meta:  # pylint: disable=too-few-public-methods
         unique_together = (('label', 'type_string'),)

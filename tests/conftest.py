@@ -241,3 +241,21 @@ def skip_if_not_sqlalchemy(backend):
     from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
     if not isinstance(backend, SqlaBackend):
         pytest.skip('this test should only be run for the SqlAlchemy backend.')
+
+
+@pytest.fixture(scope='function')
+def override_logging():
+    """Return a `SandboxFolder`."""
+    from aiida.common.log import configure_logging
+
+    config = get_config()
+
+    try:
+        config.set_option('logging.aiida_loglevel', 'DEBUG')
+        config.set_option('logging.db_loglevel', 'DEBUG')
+        configure_logging(with_orm=True)
+        yield
+    finally:
+        config.unset_option('logging.aiida_loglevel')
+        config.unset_option('logging.db_loglevel')
+        configure_logging(with_orm=True)

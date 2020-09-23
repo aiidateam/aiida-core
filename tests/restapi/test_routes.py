@@ -90,7 +90,7 @@ class RESTApiTestCase(AiidaTestCase):
             handle.write(aiida_in)
             handle.flush()
             handle.seek(0)
-            calc.put_object_from_filelike(handle, key='calcjob_inputs/aiida.in', force=True)
+            calc.put_object_from_filelike(handle, 'calcjob_inputs/aiida.in', force=True)
         calc.store()
 
         # create log message for calcjob
@@ -118,7 +118,7 @@ class RESTApiTestCase(AiidaTestCase):
             handle.write(aiida_out)
             handle.flush()
             handle.seek(0)
-            retrieved_outputs.put_object_from_filelike(handle, key='calcjob_outputs/aiida.out', force=True)
+            retrieved_outputs.put_object_from_filelike(handle, 'calcjob_outputs/aiida.out', force=True)
         retrieved_outputs.store()
         retrieved_outputs.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
 

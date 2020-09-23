@@ -114,9 +114,7 @@ class TestExportFileMigration(AiidaTestCase):
             with self.assertRaises(ArchiveMigrationError):
                 migrate_recursively(archive.meta_data, archive.data, None, version='0.2')
 
-            # Same version will also raise
-            with self.assertRaises(ArchiveMigrationError):
-                migrate_recursively(archive.meta_data, archive.data, None, version='0.3')
+            migrate_recursively(archive.meta_data, archive.data, None, version='0.3')
 
             migrated_version = '0.5'
             version = migrate_recursively(archive.meta_data, archive.data, None, version=migrated_version)
@@ -186,17 +184,11 @@ class TestExportFileMigration(AiidaTestCase):
                 )
 
     def test_migrate_newest_version(self):
-        """Test that an exception is raised when an export file with the newest export version is migrated."""
+        """Test that  migrating the latest version runs without complaints."""
         metadata = {'export_version': newest_version}
 
-        with self.assertRaises(ArchiveMigrationError):
-            new_version = migrate_recursively(metadata, {}, None)
-
-            self.assertIsNone(
-                new_version,
-                msg='migrate_recursively should not return anything, '
-                "hence the 'return' should be None, but instead it is {}".format(new_version)
-            )
+        new_version = migrate_recursively(metadata, {}, None)
+        self.assertEqual(new_version, newest_version)
 
     @with_temp_dir
     def test_v02_to_newest(self, temp_dir):

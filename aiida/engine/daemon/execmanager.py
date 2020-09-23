@@ -14,6 +14,7 @@ the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
 import os
+import shutil
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.folders import SandboxFolder
@@ -153,17 +154,12 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     transport.put(handle.name, filename)
             transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
-    # In a dry_run, the working directory is the raw input folder, which will already contain these resources
-    if not dry_run:
-        for filename in folder.get_content_list():
-            logger.debug('[submission of calculation {}] copying file/folder {}...'.format(node.pk, filename))
-            transport.put(folder.get_abs_path(filename), filename)
-
     # local_copy_list is a list of tuples, each with (uuid, dest_rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
     local_copy_list = calc_info.local_copy_list or []
     remote_copy_list = calc_info.remote_copy_list or []
     remote_symlink_list = calc_info.remote_symlink_list or []
+    provenance_exclude_list = calc_info.provenance_exclude_list or []
 
     for uuid, filename, target in local_copy_list:
         logger.debug('[submission of calculation {}] copying local file/folder to {}'.format(node.uuid, target))
@@ -196,34 +192,19 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         if data_node is None:
             logger.warning('failed to load Node<{}> specified in the `local_copy_list`'.format(uuid))
         else:
-            # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
-            # combination with the new `Transport.put_object_from_filelike`
-            # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
-            with NamedTemporaryFile(mode='wb+') as handle:
-                handle.write(data_node.get_object_content(filename, mode='rb'))
-                handle.flush()
-                transport.put(handle.name, target)
+            dirname = os.path.dirname(target)
+            if dirname:
+                os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
+            with folder.open(target, 'wb') as handle:
+                with data_node.open(filename, 'rb') as source:
+                    shutil.copyfileobj(source, handle)
+            provenance_exclude_list.append(target)
 
-    if dry_run:
-        if remote_copy_list:
-            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:
-                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
-                    handle.write(
-                        'would have copied {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.label
-                        )
-                    )
-
-        if remote_symlink_list:
-            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:
-                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
-                    handle.write(
-                        'would have created symlinks from {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.label
-                        )
-                    )
-
-    else:
+    # In a dry_run, the working directory is the raw input folder, which will already contain these resources
+    if not dry_run:
+        for filename in folder.get_content_list():
+            logger.debug('[submission of calculation {}] copying file/folder {}...'.format(node.pk, filename))
+            transport.put(folder.get_abs_path(filename), filename)
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
@@ -266,8 +247,25 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     'It is not possible to create a symlink between two different machines for '
                     'calculation {}'.format(node.pk)
                 )
+    else:
 
-    provenance_exclude_list = calc_info.provenance_exclude_list or []
+        if remote_copy_list:
+            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:
+                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
+                    handle.write(
+                        'would have copied {} to {} in working directory on remote {}'.format(
+                            remote_abs_path, dest_rel_path, computer.label
+                        )
+                    )
+
+        if remote_symlink_list:
+            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:
+                for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
+                    handle.write(
+                        'would have created symlinks from {} to {} in working directory on remote {}'.format(
+                            remote_abs_path, dest_rel_path, computer.label
+                        )
+                    )
 
     # Loop recursively over content of the sandbox folder copying all that are not in `provenance_exclude_list`. Note
     # that directories are not created explicitly. The `node.put_object_from_filelike` call will create intermediate
@@ -282,7 +280,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
             relpath = os.path.relpath(filepath, folder.abspath)
             if relpath not in provenance_exclude_list:
                 with open(filepath, 'rb') as handle:
-                    node.put_object_from_filelike(handle, relpath, 'wb', force=True)
+                    node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest

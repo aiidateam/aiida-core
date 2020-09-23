@@ -16,7 +16,7 @@ from django.db import models, transaction
 from aiida.backends.djsite.queries import DjangoQueryManager
 from aiida.backends.djsite.manager import DjangoBackendManager
 
-from ..sql import SqlBackend
+from ..sql.backends import SqlBackend
 from . import authinfos
 from . import comments
 from . import computers

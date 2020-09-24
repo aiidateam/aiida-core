@@ -7,13 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module that contains the class definitions necessary to offer support for
-queries to Materials Project."""
-
-import os
+""""Implementation of `DbImporter` for the Materials Project database."""
 import datetime
+import os
 import requests
+
 from pymatgen import MPRester
+
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 

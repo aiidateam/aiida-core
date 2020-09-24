@@ -7,16 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+# pylint: disable=invalid-name
+"""Database migration."""
 from django.db import migrations
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-
 
 REVISION = '1.0.8'
 DOWN_REVISION = '1.0.7'
 
 
 class Migration(migrations.Migration):
+    """Database migration."""
 
     dependencies = [
         ('db', '0007_update_linktypes'),
@@ -28,16 +29,20 @@ class Migration(migrations.Migration):
         # we move that value to the extra table
         #
         # First we copy the 'hidden' attributes from code.Code. nodes to the db_extra table
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
             INSERT INTO db_dbextra (key, datatype, tval, fval, ival, bval, dval, dbnode_id) (
-                SELECT db_dbattribute.key, db_dbattribute.datatype, db_dbattribute.tval, db_dbattribute.fval, db_dbattribute.ival, db_dbattribute.bval, db_dbattribute.dval, db_dbattribute.dbnode_id
+                SELECT db_dbattribute.key, db_dbattribute.datatype, db_dbattribute.tval, db_dbattribute.fval,
+                db_dbattribute.ival, db_dbattribute.bval, db_dbattribute.dval, db_dbattribute.dbnode_id
                 FROM db_dbattribute JOIN db_dbnode ON db_dbnode.id = db_dbattribute.dbnode_id
                 WHERE db_dbattribute.key = 'hidden'
                     AND db_dbnode.type = 'code.Code.'
             );
-        """),
+        """
+        ),
         # Secondly, we delete the original entries from the DbAttribute table
-        migrations.RunSQL("""
+        migrations.RunSQL(
+            """
             DELETE FROM db_dbattribute
             WHERE id in (
                 SELECT db_dbattribute.id
@@ -45,6 +50,7 @@ class Migration(migrations.Migration):
                 JOIN db_dbnode ON db_dbnode.id = db_dbattribute.dbnode_id
                 WHERE db_dbattribute.key = 'hidden' AND db_dbnode.type = 'code.Code.'
             );
-        """),
+        """
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

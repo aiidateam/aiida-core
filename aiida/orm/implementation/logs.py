@@ -8,15 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend group module"""
-
 import abc
 
-from . import backends
+from .entities import BackendEntity, BackendCollection
 
 __all__ = ('BackendLog', 'BackendLogCollection')
 
 
-class BackendLog(backends.BackendEntity):
+class BackendLog(BackendEntity):
     """
     Backend Log interface
     """
@@ -85,7 +84,7 @@ class BackendLog(backends.BackendEntity):
         """
 
 
-class BackendLogCollection(backends.BackendCollection[BackendLog]):
+class BackendLogCollection(BackendCollection[BackendLog]):
     """The collection of Log entries."""
 
     ENTITY_CLASS = BackendLog

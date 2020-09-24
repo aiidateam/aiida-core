@@ -27,6 +27,7 @@ from aiida.cmdline.commands.cmd_data import cmd_structure, cmd_trajectory, cmd_u
 from aiida.engine import calcfunction
 from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
+from tests.static import STATIC_DIR
 
 
 class DummyVerdiDataExportable:
@@ -341,7 +342,7 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         options = [str(self.ids[DummyVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
-        self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands' 'export')
+        self.assertIn(b'[1.0, 3.0]', res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands export')
 
     def test_bandsexport_single_kp(self):
         """
@@ -532,7 +533,7 @@ class TestVerdiDataTrajectory(AiidaTestCase, DummyVerdiDataListable, DummyVerdiD
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
         cls.ids = cls.create_trajectory_data()
 
@@ -613,7 +614,7 @@ class TestVerdiDataStructure(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDa
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
         cls.ids = cls.create_structure_data()
 
@@ -795,7 +796,7 @@ class TestVerdiDataCif(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExpo
         """Setup class to test CifData."""
         super().setUpClass()
         orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
         cls.ids = cls.create_cif_data()
@@ -897,7 +898,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         super().setUpClass()
 
     def setUp(self):
-        self.filepath_pseudos = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'fixtures', 'pseudos')
+        self.filepath_pseudos = os.path.join(STATIC_DIR, 'pseudos')
         self.cli_runner = CliRunner()
 
     def upload_family(self):

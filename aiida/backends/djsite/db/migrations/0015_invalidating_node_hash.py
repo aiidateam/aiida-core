@@ -8,9 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,too-few-public-methods
-"""
-Invalidating node hash - User should rehash nodes for caching
-"""
+"""Invalidating node hash - User should rehash nodes for caching."""
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error

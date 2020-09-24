@@ -55,7 +55,7 @@ class PluginTestCase1(PluginTestCase):
         from aiida import orm
 
         computer = orm.Computer(
-            name='localhost',
+            label='localhost',
             hostname='localhost',
             description='my computer',
             transport_type='local',
@@ -80,7 +80,7 @@ class PluginTestCase1(PluginTestCase):
         work after resetting the DB.
         """
         from aiida import orm
-        self.assertEqual(orm.Computer.objects.get(name='localhost').uuid, self.computer.uuid)
+        self.assertEqual(orm.Computer.objects.get(label='localhost').uuid, self.computer.uuid)
 
     def test_tear_down(self):
         """

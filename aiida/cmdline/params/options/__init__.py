@@ -8,12 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
-
 import click
-# Note: importing from aiida.manage.postgres leads to circular imports
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.manage.external.rmq import BROKER_DEFAULTS
 from ...utils import defaults, echo
 from .. import types
 from .multivalue import MultipleValueOption
@@ -30,7 +29,7 @@ __all__ = (
     'DESCRIPTION', 'INPUT_PLUGIN', 'CALC_JOB_STATE', 'PROCESS_STATE', 'PROCESS_LABEL', 'TYPE_STRING', 'EXIT_STATUS',
     'FAILED', 'LIMIT', 'PROJECT', 'ORDER_BY', 'PAST_DAYS', 'OLDER_THAN', 'ALL', 'ALL_STATES', 'ALL_USERS',
     'GROUP_CLEAR', 'RAW', 'HOSTNAME', 'TRANSPORT', 'SCHEDULER', 'USER', 'PORT', 'FREQUENCY', 'VERBOSE', 'TIMEOUT',
-    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG'
+    'FORMULA_MODE', 'TRAJECTORY_INDEX', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'DEBUG', 'PRINT_TRACEBACK'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -205,7 +204,11 @@ ARCHIVE_FORMAT = OverridableOption(
 )
 
 NON_INTERACTIVE = OverridableOption(
-    '-n', '--non-interactive', is_flag=True, is_eager=True, help='Non-interactive mode: never prompt for input.'
+    '-n',
+    '--non-interactive',
+    is_flag=True,
+    is_eager=True,
+    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.'
 )
 
 DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry run.')
@@ -269,6 +272,55 @@ DB_PASSWORD = OverridableOption(
 
 DB_NAME = OverridableOption('--db-name', type=types.NonEmptyStringParamType(), help='Database name.')
 
+BROKER_PROTOCOL = OverridableOption(
+    '--broker-protocol',
+    type=click.Choice(('amqp', 'amqps')),
+    default=BROKER_DEFAULTS.protocol,
+    show_default=True,
+    help='Protocol to use for the message broker.'
+)
+
+BROKER_USERNAME = OverridableOption(
+    '--broker-username',
+    type=types.NonEmptyStringParamType(),
+    default=BROKER_DEFAULTS.username,
+    show_default=True,
+    help='Username to use for authentication with the message broker.'
+)
+
+BROKER_PASSWORD = OverridableOption(
+    '--broker-password',
+    type=types.NonEmptyStringParamType(),
+    default=BROKER_DEFAULTS.password,
+    show_default=True,
+    help='Password to use for authentication with the message broker.',
+    hide_input=True,
+)
+
+BROKER_HOST = OverridableOption(
+    '--broker-host',
+    type=types.HostnameType(),
+    default=BROKER_DEFAULTS.host,
+    show_default=True,
+    help='Hostname for the message broker.'
+)
+
+BROKER_PORT = OverridableOption(
+    '--broker-port',
+    type=click.INT,
+    default=BROKER_DEFAULTS.port,
+    show_default=True,
+    help='Port for the message broker.',
+)
+
+BROKER_VIRTUAL_HOST = OverridableOption(
+    '--broker-virtual-host',
+    type=types.HostnameType(),
+    default=BROKER_DEFAULTS.virtual_host,
+    show_default=True,
+    help='Name of the virtual host for the message broker. Forward slashes need to be encoded'
+)
+
 REPOSITORY_PATH = OverridableOption(
     '--repository', type=click.Path(file_okay=False), help='Absolute path to the file repository.'
 )
@@ -323,6 +375,8 @@ PROCESS_STATE = OverridableOption(
     default=active_process_states,
     help='Only include entries with this process state.'
 )
+
+PAUSED = OverridableOption('--paused', 'paused', is_flag=True, help='Only include entries that are paused.')
 
 PROCESS_LABEL = OverridableOption(
     '-L',
@@ -428,11 +482,19 @@ RAW = OverridableOption(
 HOSTNAME = OverridableOption('-H', '--hostname', type=types.HostnameType(), help='Hostname.')
 
 TRANSPORT = OverridableOption(
-    '-T', '--transport', type=types.PluginParamType(group='transports'), required=True, help='Transport type.'
+    '-T',
+    '--transport',
+    type=types.PluginParamType(group='transports'),
+    required=True,
+    help="A transport plugin (as listed in 'verdi plugin list aiida.transports')."
 )
 
 SCHEDULER = OverridableOption(
-    '-S', '--scheduler', type=types.PluginParamType(group='schedulers'), required=True, help='Scheduler type.'
+    '-S',
+    '--scheduler',
+    type=types.PluginParamType(group='schedulers'),
+    required=True,
+    help="A scheduler plugin (as listed in 'verdi plugin list aiida.schedulers')."
 )
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), help='Email address of the user.')
@@ -525,4 +587,11 @@ DICT_KEYS = OverridableOption(
 
 DEBUG = OverridableOption(
     '--debug', is_flag=True, default=False, help='Show debug messages. Mostly relevant for developers.', hidden=True
+)
+
+PRINT_TRACEBACK = OverridableOption(
+    '-t',
+    '--print-traceback',
+    is_flag=True,
+    help='Print the full traceback in case an exception is raised.',
 )

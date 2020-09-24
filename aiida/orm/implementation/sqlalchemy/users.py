@@ -66,13 +66,14 @@ class SqlaUserCollection(BackendUserCollection):
 
     ENTITY_CLASS = SqlaUser
 
-    def create(self, email, first_name='', last_name='', institution=''):
+    def create(self, email, first_name='', last_name='', institution=''):  # pylint: disable=arguments-differ
         """
         Create a user with the provided email address
 
         :return: A new user object
         :rtype: :class:`aiida.orm.User`
         """
+        # pylint: disable=abstract-class-instantiated
         return SqlaUser(self.backend, email, first_name, last_name, institution)
 
     def find(self, email=None, id=None):  # pylint: disable=redefined-builtin,invalid-name

@@ -11,6 +11,7 @@
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
+from tests.static import STATIC_DIR
 
 
 class TestCodDbImporter(AiidaTestCase):
@@ -72,14 +73,12 @@ class TestCodDbImporter(AiidaTestCase):
         from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
-        messages = ['',
-                    "incorrect value for keyword 'test' -- " + \
-                    'only integers and strings are accepted',
-                    "incorrect value for keyword 'test' -- " + \
-                    'only strings are accepted',
-                    "incorrect value for keyword 'test' -- " + \
-                    'only integers and floats are accepted',
-                    "invalid literal for int() with base 10: 'text'"]
+        messages = [
+            '', "incorrect value for keyword 'test' only integers and strings are accepted",
+            "incorrect value for keyword 'test' only strings are accepted",
+            "incorrect value for keyword 'test' only integers and floats are accepted",
+            "invalid literal for int() with base 10: 'text'"
+        ]
         values = [10, 'text', 'text', '10', 1.0 / 3, [1, 2, 3]]
         methods = [
             # pylint: disable=protected-access
@@ -258,8 +257,7 @@ class TestNnincDbImporter(AiidaTestCase):
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
 
-        path_root = os.path.split(__file__)[0]
-        path_pseudos = os.path.join(path_root, 'fixtures', 'pseudos')
+        path_pseudos = os.path.join(STATIC_DIR, 'pseudos')
         with open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as fpntr:
             entry._contents = fpntr.read()  # pylint: disable=protected-access
 

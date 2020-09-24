@@ -30,7 +30,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
         cls.computer = orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
     def setUp(self):
@@ -50,12 +50,12 @@ class TestVerdiCodeSetup(AiidaTestCase):
         label = 'noninteractive_remote'
         options = [
             '--non-interactive', '--label={}'.format(label), '--description=description',
-            '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(self.computer.name),
+            '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(self.computer.label),
             '--remote-abs-path=/remote/abs/path'
         ]
         result = self.cli_runner.invoke(setup_code, options)
         self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string('{}@{}'.format(label, self.computer.name)), orm.Code)
+        self.assertIsInstance(orm.Code.get_from_string('{}@{}'.format(label, self.computer.label)), orm.Code)
 
     def test_noninteractive_upload(self):
         """Test non-interactive code setup."""
@@ -89,7 +89,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         # local file
         label = 'noninteractive_config'
         with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(config_file_template.format(label=label, computer=self.computer.name))
+            handle.write(config_file_template.format(label=label, computer=self.computer.label))
             handle.flush()
             result = self.cli_runner.invoke(
                 setup_code,
@@ -103,7 +103,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         fake_url = 'https://my.url.com'
         with mock.patch(
             'urllib.request.urlopen',
-            return_value=config_file_template.format(label=label, computer=self.computer.name)
+            return_value=config_file_template.format(label=label, computer=self.computer.label)
         ):
             result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', fake_url])
 
@@ -120,7 +120,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
         cls.computer = orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
     def setUp(self):
@@ -189,7 +189,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code.label = 'code2'
             code.store()
 
-        options = ['-A', '-a', '-o', '--input-plugin=arithmetic.add', '--computer={}'.format(self.computer.name)]
+        options = ['-A', '-a', '-o', '--input-plugin=arithmetic.add', '--computer={}'.format(self.computer.label)]
         result = self.cli_runner.invoke(code_list, options)
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
@@ -243,10 +243,10 @@ class TestVerdiCodeNoCodes(AiidaTestCase):
 def test_interactive_remote(clear_database_before_test, aiida_localhost, non_interactive_editor):
     """Test interactive remote code setup."""
     label = 'interactive_remote'
-    user_input = '\n'.join([label, 'description', 'arithmetic.add', 'yes', aiida_localhost.name, '/remote/abs/path'])
+    user_input = '\n'.join([label, 'description', 'arithmetic.add', 'yes', aiida_localhost.label, '/remote/abs/path'])
     result = CliRunner().invoke(setup_code, input=user_input)
     assert result.exception is None
-    assert isinstance(orm.Code.get_from_string('{}@{}'.format(label, aiida_localhost.name)), orm.Code)
+    assert isinstance(orm.Code.get_from_string('{}@{}'.format(label, aiida_localhost.label)), orm.Code)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
@@ -267,10 +267,10 @@ def test_mixed(clear_database_before_test, aiida_localhost, non_interactive_edit
     from aiida.orm import Code
     label = 'mixed_remote'
     options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-    user_input = '\n'.join([label, 'arithmetic.add', aiida_localhost.name])
+    user_input = '\n'.join([label, 'arithmetic.add', aiida_localhost.label])
     result = CliRunner().invoke(setup_code, options, input=user_input)
     assert result.exception is None
-    assert isinstance(Code.get_from_string('{}@{}'.format(label, aiida_localhost.name)), Code)
+    assert isinstance(Code.get_from_string('{}@{}'.format(label, aiida_localhost.label)), Code)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)

@@ -9,18 +9,17 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
-
 from functools import partial
 
 import click
+import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.utils.multi_line_input import ensure_scripts
-from aiida.common.exceptions import ValidationError, InputValidationError
+from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
+from aiida.common.exceptions import ValidationError
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transports import cli as transport_cli
 
@@ -76,35 +75,20 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     if retval != 0:
         return False, 'The command `echo -n` returned a non-zero return code ({})'.format(retval)
 
-    if stdout:
-        return False, u"""
-There is some spurious output in the standard output,
-that we report below between the === signs:
-=========================================================
+    template = """
+We detected some spurious output in the {} when connecting to the computer, as shown between the bars
+=====================================================================================================
 {}
-=========================================================
-Please check that you don't have code producing output in
-your ~/.bash_profile (or ~/.bashrc). If you don't want to
-remove the code, but just to disable it for non-interactive
-shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida-core/issues/1890
-(and in the AiiDA documentation, linked from that issue)
-""".format(stdout)
+=====================================================================================================
+Please check that you don't have code producing output in your ~/.bash_profile, ~/.bashrc or similar.
+If you don't want to remove the code, but just to disable it for non-interactive shells, see comments
+in this troubleshooting section of the online documentation: https://bit.ly/2FCRDc5
+"""
+    if stdout:
+        return False, template.format('stdout', stdout)
 
     if stderr:
-        return u"""
-There is some spurious output in the stderr,
-that we report below between the === signs:
-=========================================================
-{}
-=========================================================
-Please check that you don't have code producing output in
-your ~/.bash_profile (or ~/.bashrc). If you don't want to
-remove the code, but just to disable it for non-interactive
-shells, see comments in issue #1980 on GitHub:
-https://github.com/aiidateam/aiida-core/issues/1890
-(and in the AiiDA documentation, linked from that issue)
-"""
+        return False, template.format('stderr', stderr)
 
     return True, None
 
@@ -220,8 +204,8 @@ def set_computer_builder(ctx, param, value):
 @options_computer.WORKDIR()
 @options_computer.MPI_RUN_COMMAND()
 @options_computer.MPI_PROCS_PER_MACHINE()
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options_computer.PREPEND_TEXT()
+@options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @click.pass_context
@@ -237,15 +221,6 @@ def computer_setup(ctx, non_interactive, **kwargs):
             'computer starting from the settings of {c}.'.format(c=kwargs['label'])
         )
 
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
-
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
 
@@ -260,10 +235,10 @@ def computer_setup(ctx, non_interactive, **kwargs):
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
     else:
-        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
+        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.label))
 
     echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+    echo.echo_info('  verdi computer configure {} {}'.format(computer.transport_type, computer.label))
 
 
 @verdi_computer.command('duplicate')
@@ -277,12 +252,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
 @options_computer.MPI_RUN_COMMAND(contextual_default=partial(get_parameter_default, 'mpirun_command'))
 @options_computer.MPI_PROCS_PER_MACHINE(contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'))
-@options.PREPEND_TEXT(
-    cls=options.ContextualDefaultOption, contextual_default=partial(get_parameter_default, 'prepend_text')
-)
-@options.APPEND_TEXT(
-    cls=options.ContextualDefaultOption, contextual_default=partial(get_parameter_default, 'append_text')
-)
+@options_computer.PREPEND_TEXT(contextual_default=partial(get_parameter_default, 'prepend_text'))
+@options_computer.APPEND_TEXT(contextual_default=partial(get_parameter_default, 'append_text'))
 @options.NON_INTERACTIVE()
 @click.pass_context
 @with_dbenv()
@@ -293,15 +264,6 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 
     if kwargs['label'] in get_computer_names():
         echo.echo_critical('A computer called {} already exists'.format(kwargs['label']))
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     kwargs['transport'] = kwargs['transport'].name
     kwargs['scheduler'] = kwargs['scheduler'].name
@@ -316,20 +278,20 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     except (ComputerBuilder.ComputerValidationError, ValidationError) as e:
         echo.echo_critical('{}: {}'.format(type(e).__name__, e))
     else:
-        echo.echo_success('stored computer {}<{}>'.format(computer.name, computer.pk))
+        echo.echo_success('stored computer {}<{}>'.format(computer.label, computer.pk))
 
     try:
         computer.store()
     except ValidationError as err:
         echo.echo_critical('unable to store the computer: {}. Exiting...'.format(err))
     else:
-        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.name))
+        echo.echo_success('Computer<{}> {} created'.format(computer.pk, computer.label))
 
     is_configured = computer.is_user_configured(orm.User.objects.get_default())
 
     if not is_configured:
         echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info('  verdi computer configure {} {}'.format(computer.get_transport_type(), computer.name))
+        echo.echo_info('  verdi computer configure {} {}'.format(computer.transport_type, computer.label))
 
 
 @verdi_computer.command('enable')
@@ -344,15 +306,15 @@ def computer_enable(computer, user):
         authinfo = computer.get_authinfo(user)
     except NotExistent:
         echo.echo_critical(
-            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.label)
         )
 
     if not authinfo.enabled:
         authinfo.enabled = True
-        echo.echo_info("Computer '{}' enabled for user {}.".format(computer.name, user.get_full_name()))
+        echo.echo_info("Computer '{}' enabled for user {}.".format(computer.label, user.get_full_name()))
     else:
         echo.echo_info(
-            "Computer '{}' was already enabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+            "Computer '{}' was already enabled for user {} {}.".format(computer.label, user.first_name, user.last_name)
         )
 
 
@@ -370,15 +332,17 @@ def computer_disable(computer, user):
         authinfo = computer.get_authinfo(user)
     except NotExistent:
         echo.echo_critical(
-            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.name)
+            "User with email '{}' is not configured for computer '{}' yet.".format(user.email, computer.label)
         )
 
     if authinfo.enabled:
         authinfo.enabled = False
-        echo.echo_info("Computer '{}' disabled for user {}.".format(computer.name, user.get_full_name()))
+        echo.echo_info("Computer '{}' disabled for user {}.".format(computer.label, user.get_full_name()))
     else:
         echo.echo_info(
-            "Computer '{}' was already disabled for user {} {}.".format(computer.name, user.first_name, user.last_name)
+            "Computer '{}' was already disabled for user {} {}.".format(
+                computer.label, user.first_name, user.last_name
+            )
         )
 
 
@@ -400,7 +364,7 @@ def computer_list(all_entries, raw):
     if not computers:
         echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
 
-    sort = lambda computer: computer.name
+    sort = lambda computer: computer.label
     highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
     hide = lambda comp: not (comp.is_user_configured(user) and comp.is_user_enabled(user)) and not all_entries
     echo.echo_formatted_list(computers, ['name'], sort=sort, highlight=highlight, hide=hide)
@@ -411,36 +375,57 @@ def computer_list(all_entries, raw):
 @with_dbenv()
 def computer_show(computer):
     """Show detailed information for a computer."""
-    echo.echo(computer.full_text_info)
+    table = []
+    table.append(['Label', computer.label])
+    table.append(['PK', computer.pk])
+    table.append(['UUID', computer.uuid])
+    table.append(['Description', computer.description])
+    table.append(['Hostname', computer.hostname])
+    table.append(['Transport type', computer.transport_type])
+    table.append(['Scheduler type', computer.scheduler_type])
+    table.append(['Work directory', computer.get_workdir()])
+    table.append(['Shebang', computer.get_shebang()])
+    table.append(['Mpirun command', ' '.join(computer.get_mpirun_command())])
+    table.append(['Prepend text', computer.get_prepend_text()])
+    table.append(['Append text', computer.get_append_text()])
+    echo.echo(tabulate.tabulate(table))
 
 
 @verdi_computer.command('rename')
 @arguments.COMPUTER()
 @arguments.LABEL('NEW_NAME')
+@deprecated_command("This command has been deprecated. Please use 'verdi computer relabel' instead.")
+@click.pass_context
 @with_dbenv()
-def computer_rename(computer, new_name):
+def computer_rename(ctx, computer, new_name):
     """Rename a computer."""
+    ctx.invoke(computer_relabel, computer=computer, label=new_name)
+
+
+@verdi_computer.command('relabel')
+@arguments.COMPUTER()
+@arguments.LABEL('LABEL')
+@with_dbenv()
+def computer_relabel(computer, label):
+    """Relabel a computer."""
     from aiida.common.exceptions import UniquenessError
 
-    old_name = computer.get_name()
+    old_label = computer.label
 
-    if old_name == new_name:
-        echo.echo_critical('The old and new names are the same.')
+    if old_label == label:
+        echo.echo_critical('The old and new labels are the same.')
 
     try:
-        computer.set_name(new_name)
+        computer.label = label
         computer.store()
     except ValidationError as error:
         echo.echo_critical('Invalid input! {}'.format(error))
     except UniquenessError as error:
         echo.echo_critical(
-            'Uniqueness error encountered! Probably a '
-            "computer with name '{}' already exists"
-            ''.format(new_name)
+            "Uniqueness error encountered! Probably a computer with label '{}' already exists: {}".format(label, error)
         )
-        echo.echo_critical('(Message was: {})'.format(error))
 
-    echo.echo_success("Computer '{}' renamed to '{}'".format(old_name, new_name))
+    echo.echo_success("Computer '{}' relabeled to '{}'".format(old_label, label))
 
 
 @verdi_computer.command('test')
@@ -449,12 +434,7 @@ def computer_rename(computer, new_name):
     help='Test the connection for a given AiiDA user, specified by'
     'their email address. If not specified, uses the current default user.',
 )
-@click.option(
-    '-t',
-    '--print-traceback',
-    is_flag=True,
-    help='Print the full traceback in case an exception is raised',
-)
+@options.PRINT_TRACEBACK()
 @arguments.COMPUTER()
 @with_dbenv()
 def computer_test(user, print_traceback, computer):
@@ -472,15 +452,15 @@ def computer_test(user, print_traceback, computer):
     if user is None:
         user = orm.User.objects.get_default()
 
-    echo.echo_info('Testing computer<{}> for user<{}>...'.format(computer.name, user.email))
+    echo.echo_info('Testing computer<{}> for user<{}>...'.format(computer.label, user.email))
 
     try:
         authinfo = computer.get_authinfo(user)
     except NotExistent:
-        echo.echo_critical('Computer<{}> is not yet configured for user<{}>'.format(computer.name, user.email))
+        echo.echo_critical('Computer<{}> is not yet configured for user<{}>'.format(computer.label, user.email))
 
     if not authinfo.enabled:
-        echo.echo_warning('Computer<{}> is disabled for user<{}>'.format(computer.name, user.email))
+        echo.echo_warning('Computer<{}> is disabled for user<{}>'.format(computer.label, user.email))
         click.confirm('Do you really want to test it?', abort=True)
 
     scheduler = authinfo.computer.get_scheduler()
@@ -568,14 +548,14 @@ def computer_delete(computer):
     from aiida.common.exceptions import InvalidOperation
     from aiida import orm
 
-    compname = computer.name
+    label = computer.label
 
     try:
         orm.Computer.objects.delete(computer.id)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    echo.echo_success("Computer '{}' deleted.".format(compname))
+    echo.echo_success("Computer '{}' deleted.".format(label))
 
 
 @verdi_computer.group('configure')
@@ -594,12 +574,11 @@ def computer_configure():
 @arguments.COMPUTER()
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
-    import tabulate
     from aiida.common.escaping import escape_for_bash
 
     transport_cls = computer.get_transport_class()
     option_list = [
-        param for param in transport_cli.create_configure_cmd(computer.get_transport_type()).params
+        param for param in transport_cli.create_configure_cmd(computer.transport_type).params
         if isinstance(param, click.core.Option)
     ]
     option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]

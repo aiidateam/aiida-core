@@ -11,9 +11,11 @@
 
 import os
 import numpy
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from tests.static import STATIC_DIR
 
 
 class TestData(AiidaTestCase):
@@ -22,18 +24,17 @@ class TestData(AiidaTestCase):
     @staticmethod
     def generate_class_instance(data_class):
         """Generate a dummy `Data` instance for the given sub class."""
-        dirpath_fixtures = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'fixtures'))
         if data_class is orm.CifData:
-            instance = data_class(file=os.path.join(dirpath_fixtures, 'data', 'Si.cif'))
+            instance = data_class(file=os.path.join(STATIC_DIR, 'data', 'Si.cif'))
             return instance
 
         if data_class is orm.UpfData:
-            filename = os.path.join(dirpath_fixtures, 'pseudos', 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
+            filename = os.path.join(STATIC_DIR, 'pseudos', 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
             instance = data_class(file=filename)
             return instance
 
         if data_class is orm.StructureData:
-            instance = orm.CifData(file=os.path.join(dirpath_fixtures, 'data', 'Si.cif')).get_structure()
+            instance = orm.CifData(file=os.path.join(STATIC_DIR, 'data', 'Si.cif')).get_structure()
             return instance
 
         if data_class is orm.BandsData:
@@ -55,9 +56,7 @@ class TestData(AiidaTestCase):
             return instance
 
         if data_class is orm.UpfData:
-            filepath_base = os.path.abspath(
-                os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos')
-            )
+            filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
             filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
             instance = data_class(file=filepath_carbon)
             return instance
@@ -67,6 +66,8 @@ class TestData(AiidaTestCase):
             'for this data class, add a generator of a dummy instance here'.format(data_class)
         )
 
+    # Tracked in issue #4281
+    @pytest.mark.flaky(reruns=2)
     def test_data_exporters(self):
         """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
 

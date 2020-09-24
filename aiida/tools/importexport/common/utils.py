@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Utility functions for import/export of AiiDA entities """
-# pylint: disable=inconsistent-return-statements,too-many-branches,too-many-return-statements
-# pylint: disable=too-many-nested-blocks,too-many-locals
+# pylint: disable=too-many-branches,too-many-return-statements,too-many-nested-blocks,too-many-locals
 from html.parser import HTMLParser
 import urllib.request
 import urllib.parse

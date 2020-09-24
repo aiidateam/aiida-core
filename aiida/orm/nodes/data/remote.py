@@ -7,10 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Data plugin that models a folder on a remote computer."""
 import os
 
-from .data import Data
 from aiida.orm import AuthInfo
+from .data import Data
 
 __all__ = ('RemoteData',)
 
@@ -28,7 +29,12 @@ class RemoteData(Data):
             self.set_remote_path(remote_path)
 
     def get_computer_name(self):
-        return self.computer.name
+        """Get label of this node's computer.
+
+        .. deprecated:: 1.4.0
+            Will be removed in `v2.0.0`, use the `self.computer.label` property instead.
+        """
+        return self.computer.label  # pylint: disable=no-member
 
     def get_remote_path(self):
         return self.get_attribute('remote_path')
@@ -61,19 +67,20 @@ class RemoteData(Data):
         :param destpath: The absolute path of where to store the file on the local machine.
         """
         authinfo = self.get_authinfo()
-        t = authinfo.get_transport()
 
-        with t:
+        with authinfo.get_transport() as transport:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
-                t.getfile(full_path, destpath)
-            except IOError as e:
-                if e.errno == 2:  # file not existing
-                    raise IOError('The required remote file {} on {} does not exist or has been deleted.'.format(
-                        full_path, self.computer.name
-                    ))
-                else:
-                    raise
+                transport.getfile(full_path, destpath)
+            except IOError as exception:
+                if exception.errno == 2:  # file does not exist
+                    raise IOError(
+                        'The required remote file {} on {} does not exist or has been deleted.'.format(
+                            full_path,
+                            self.computer.label  # pylint: disable=no-member
+                        )
+                    )
+                raise
 
     def listdir(self, relpath='.'):
         """
@@ -83,32 +90,31 @@ class RemoteData(Data):
         :return: a flat list of file/directory names (as strings).
         """
         authinfo = self.get_authinfo()
-        t = authinfo.get_transport()
 
-        with t:
+        with authinfo.get_transport() as transport:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
-                t.chdir(full_path)
-            except IOError as e:
-                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                transport.chdir(full_path)
+            except IOError as exception:
+                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
-                            full_path, self.computer.name
-                        ))
-                    exc.errno = e.errno
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                    )
+                    exc.errno = exception.errno
                     raise exc
                 else:
                     raise
 
             try:
-                return t.listdir()
-            except IOError as e:
-                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                return transport.listdir()
+            except IOError as exception:
+                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
-                            full_path, self.computer.name
-                        ))
-                    exc.errno = e.errno
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                    )
+                    exc.errno = exception.errno
                     raise exc
                 else:
                     raise
@@ -121,32 +127,31 @@ class RemoteData(Data):
         :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
         """
         authinfo = self.get_authinfo()
-        t = authinfo.get_transport()
 
-        with t:
+        with authinfo.get_transport() as transport:
             try:
                 full_path = os.path.join(self.get_remote_path(), path)
-                t.chdir(full_path)
-            except IOError as e:
-                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                transport.chdir(full_path)
+            except IOError as exception:
+                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
-                            full_path, self.computer.name
-                        ))
-                    exc.errno = e.errno
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                    )
+                    exc.errno = exception.errno
                     raise exc
                 else:
                     raise
 
             try:
-                return t.listdir_withattributes()
-            except IOError as e:
-                if e.errno == 2 or e.errno == 20:  # directory not existing or not a directory
+                return transport.listdir_withattributes()
+            except IOError as exception:
+                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.format(
-                            full_path, self.computer.name
-                        ))
-                    exc.errno = e.errno
+                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                    )
+                    exc.errno = exception.errno
                     raise exc
                 else:
                     raise

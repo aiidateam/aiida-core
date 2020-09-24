@@ -7,27 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
 import os
 
-from aiida.common import exceptions
 from aiida.orm import Dict
 from aiida.parsers.parser import Parser
-from aiida.plugins import CalculationFactory
-
-TemplatereplacerCalculation = CalculationFactory('templatereplacer')
 
 
 class TemplatereplacerDoublerParser(Parser):
+    """Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
 
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
+        output_folder = self.retrieved
         template = self.node.inputs.template.get_dict()
-
-        try:
-            output_folder = self.retrieved
-        except exceptions.NotExistent:
-            return self.exit_codes.ERROR_NO_RETRIEVED_FOLDER
 
         try:
             output_file = template['output_file_name']
@@ -57,8 +50,11 @@ class TemplatereplacerDoublerParser(Parser):
                 file_path = os.path.join(retrieved_temporary_folder, retrieved_file)
 
                 if not os.path.isfile(file_path):
-                    self.logger.error('the file {} was not found in the temporary retrieved folder {}'.format(
-                        retrieved_file, retrieved_temporary_folder))
+                    self.logger.error(
+                        'the file {} was not found in the temporary retrieved folder {}'.format(
+                            retrieved_file, retrieved_temporary_folder
+                        )
+                    )
                     return self.exit_codes.ERROR_READING_TEMPORARY_RETRIEVED_FILE
 
                 with open(file_path, 'r', encoding='utf8') as handle:
@@ -73,8 +69,7 @@ class TemplatereplacerDoublerParser(Parser):
 
     @staticmethod
     def parse_stdout(filelike):
-        """
-        Parse the sum from the output of the ArithmeticAddcalculation written to standard out
+        """Parse the sum from the output of the ArithmeticAddcalculation written to standard out.
 
         :param filelike: filelike object containing the output
         :returns: the sum

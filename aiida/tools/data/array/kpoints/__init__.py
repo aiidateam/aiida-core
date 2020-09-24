@@ -11,10 +11,7 @@
 Various utilities to deal with KpointsData instances or create new ones
 (e.g. band paths, kpoints from a parsed input text file, ...)
 """
-
 from aiida.orm import KpointsData, Dict
-from aiida.tools.data.array.kpoints import legacy
-from aiida.tools.data.array.kpoints import seekpath
 
 __all__ = ('get_kpoints_path', 'get_explicit_kpoints_path')
 
@@ -48,15 +45,6 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
     """
     if method not in _GET_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
-
-    if method == 'seekpath':
-        try:
-            seekpath.check_seekpath_is_installed()
-        except ImportError:
-            raise ValueError(
-                "selected method is 'seekpath' but the package is not installed\n"
-                "Either install it or pass method='legacy' as input to the function call"
-            )
 
     method = _GET_KPOINTS_PATH_METHODS[method]
 
@@ -94,15 +82,6 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS.keys():
         raise ValueError("the method '{}' is not implemented".format(method))
 
-    if method == 'seekpath':
-        try:
-            seekpath.check_seekpath_is_installed()
-        except ImportError:
-            raise ValueError(
-                "selected method is 'seekpath' but the package is not installed\n"
-                "Either install it or pass method='legacy' as input to the function call"
-            )
-
     method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
 
     return method(structure, **kwargs)
@@ -131,6 +110,8 @@ def _seekpath_get_kpoints_path(structure, **kwargs):
     :param symprec: the symmetry precision used internally by SPGLIB
     :param angle_tolerance: the angle_tolerance used internally by SPGLIB
     """
+    from aiida.tools.data.array.kpoints import seekpath
+
     assert structure.pbc == (True, True, True), 'Seekpath only implemented for three-dimensional structures'
 
     recognized_args = ['with_time_reversal', 'recipe', 'threshold', 'symprec', 'angle_tolerance']
@@ -169,6 +150,8 @@ def _seekpath_get_explicit_kpoints_path(structure, **kwargs):
     :param symprec: the symmetry precision used internally by SPGLIB
     :param angle_tolerance: the angle_tolerance used internally by SPGLIB
     """
+    from aiida.tools.data.array.kpoints import seekpath
+
     assert structure.pbc == (True, True, True), 'Seekpath only implemented for three-dimensional structures'
 
     recognized_args = ['with_time_reversal', 'reference_distance', 'recipe', 'threshold', 'symprec', 'angle_tolerance']
@@ -189,6 +172,8 @@ def _legacy_get_kpoints_path(structure, **kwargs):
     :param epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
     :param epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
     """
+    from aiida.tools.data.array.kpoints import legacy
+
     args_recognized = ['cartesian', 'epsilon_length', 'epsilon_angle']
     args_unknown = set(kwargs).difference(args_recognized)
 
@@ -219,6 +204,8 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     :param float epsilon_length: threshold on lengths comparison, used to get the bravais lattice info
     :param float epsilon_angle: threshold on angles comparison, used to get the bravais lattice info
     """
+    from aiida.tools.data.array.kpoints import legacy
+
     args_recognized = ['value', 'kpoint_distance', 'cartesian', 'epsilon_length', 'epsilon_angle']
     args_unknown = set(kwargs).difference(args_recognized)
 

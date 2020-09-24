@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Final data migration for `Nodes` after `aiida.orm.nodes` reorganization was finalized to remove the `node.` prefix
 
 Revision ID: 61fc0913fae9

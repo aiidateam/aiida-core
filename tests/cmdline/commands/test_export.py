@@ -49,7 +49,7 @@ class TestVerdiExport(AiidaTestCase):
         from aiida import orm
 
         cls.computer = orm.Computer(
-            name='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
@@ -181,18 +181,6 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             delete_temporary_file(filename_output)
 
-    def test_migrate_versions_recent(self):
-        """Migrating an archive with the current version should exit with non-zero status."""
-        filename_input = get_archive_file(self.newest_archive, filepath=self.fixture_archive)
-        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
-
-        try:
-            options = [filename_input, filename_output]
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
-            self.assertIsNotNone(result.exception)
-        finally:
-            delete_temporary_file(filename_output)
-
     def test_migrate_force(self):
         """Test that passing the -f/--force option will overwrite the output file even if it exists."""
         filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
@@ -212,6 +200,39 @@ class TestVerdiExport(AiidaTestCase):
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
+
+    def test_migrate_in_place(self):
+        """Test that passing the -i/--in-place option will overwrite the passed file."""
+        archive = 'export_v0.1_simple.aiida'
+        target_version = '0.2'
+        filename_input = get_archive_file(archive, filepath=self.fixture_archive)
+        filename_tmp = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
+
+        try:
+            # copy file (don't want to overwrite test data)
+            shutil.copy(filename_input, filename_tmp)
+
+            # specifying both output and in-place should except
+            options = [filename_tmp, '--in-place', '--output-file', 'test.aiida']
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNotNone(result.exception, result.output)
+
+            # specifying neither output nor in-place should except
+            options = [filename_tmp]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNotNone(result.exception, result.output)
+
+            # check that in-place migration produces a valid archive in place of the old file
+            options = [filename_tmp, '--in-place', '--version', target_version]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNone(result.exception, result.output)
+            self.assertTrue(os.path.isfile(filename_tmp))
+            # check that files in zip file are ok
+            self.assertEqual(zipfile.ZipFile(filename_tmp).testzip(), None)
+            with Archive(filename_tmp) as archive_object:
+                self.assertEqual(archive_object.version_format, target_version)
+        finally:
+            os.remove(filename_tmp)
 
     def test_migrate_silent(self):
         """Test that the captured output is an empty string when the -s/--silent option is passed."""

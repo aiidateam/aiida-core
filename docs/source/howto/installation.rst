@@ -201,8 +201,8 @@ For example, the directory structure in your home folder ``~/`` might look like 
     .
     ├── .aiida
     └── project_a
-        ├── .aiida
-        └── subfolder
+        ├── .aiida
+        └── subfolder
 
 If you leave the ``AIIDA_PATH`` variable unset, the default location ``~/.aiida`` will be used.
 However, if you set:
@@ -343,7 +343,7 @@ Updating from 0.x.* to 1.*
 --------------------------
 - `Additional instructions on how to migrate from 0.12.x versions <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#updating-from-0-12-to-1>`_.
 - `Additional instructions on how to migrate from versions 0.4 -- 0.11 <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#older-versions>`_.
-- For a list of breaking changes between the 0.x and the 1.x series of AiiDA, check `this page <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
+- For a list of breaking changes between the 0.x and the 1.x series of AiiDA, `see here <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
 
 
 .. _how-to:installation:backup:
@@ -474,144 +474,6 @@ In order to restore a backup, you will need to:
        After supplying your database password, the database should be restored.
        Note that, if you installed the database on Ubuntu as a system service, you need to type ``sudo su - postgres`` to become the ``postgres`` UNIX user.
 
-.. _how-to:installation:running-on-supercomputers:
-
-Running on supercomputers
-=========================
-
-.. _how-to:installation:running-on-supercomputers:ssh-agent:
-
-Using passphrase-protected SSH keys via a ssh-agent
----------------------------------------------------
-
-In order to connect to a remote computer using the ``SSH`` transport, AiiDA needs a password-less login: for this reason, it is necessary to configure an authentication key pair.
-
-Using a passphrase to encrypt the private key is not mandatory, however it is highly recommended.
-In some cases it is indispensable because it is requested by the computer center managing the remote cluster.
-To this purpose, the use of a tool like ``ssh-agent`` becomes essential, so that the private-key passphrase only needs to be supplied once (note that the key needs to be provided again after a reboot of your AiiDA machine).
-
-Starting the ssh-agent
-^^^^^^^^^^^^^^^^^^^^^^
-
-In the majority of modern Linux systems for desktops/laptops, the ``ssh-agent`` automatically starts during login.
-In some cases (e.g. virtual machines, or old distributions) it is needed to start it manually instead.
-If you are unsure, just run the command ``ssh-add``: if it displays the error ``Could not open a connection to your authentication agent``, then you need to start the agent manually as described below.
-
-.. dropdown:: Start the ``ssh-agent`` manually (and reuse it across shells)
-
-    If you have no ``ssh-agent`` running, you can start a new one with the command:
-
-    .. code:: bash
-
-        eval `ssh-agent`
-
-    However, this command will start a new agent that will be visible **only in your current shell**.
-
-    In order to use the same agent instance in every future opened shell, and most importantly to make this accessible to the AiiDA daemon, you need to make sure that the environment variables of ``ssh-agent`` are reused by *all* shells.
-
-    To make the ssh-agent persistent, downlod the script :download:`load-singlesshagent.sh <include/load-singlesshagent.sh>` and put it in a directory dedicated to the storage of your scripts (in our example will be ``~/bin``).
-
-    .. note::
-
-       You need to use this script only if a "global" ssh-agent is not available by default on your computer.
-       A global agent is available, for instance, on recent versions of Mac OS X and of Ubuntu Linux.
-
-    Then edit the file ``~/.bashrc`` and add the following lines:
-
-    .. code:: bash
-
-        if [ -f ~/bin/load-singlesshagent.sh ]; then
-            . ~/bin/load-singlesshagent.sh
-        fi
-
-    To check that it works, perform the following steps:
-
-    * Open a new shell, so that the ``~/.bashrc`` file is sourced.
-    * Run the command ``ssh-add`` as described in the following section.
-    * Logout from the current shell.
-    * Open a new shell.
-    * Check that you are able to connect to the remote computer without typing the passphrase.
-
-Adding the passphrase of your key(s) to the agent
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To provide the passphrase of your private key to the the agent use the command:
-
-.. code:: bash
-
-    ssh-add
-
-If you changed the default position or the default name of the private key, or you want to provide the passphrase only for a specific key, you need specify the path to the SSH key file as a parameter to ``ssh-add``.
-
-The private key and the relative passphrase are now recorded in an instance of the agent.
-
-.. note::
-
-   The passphase is stored in the agent only until the next reboot.
-   If you shut down or restart the AiiDA machine, before starting the AiiDA deamon remember to run the ``ssh-add`` command again.
-
-Configure AiiDA
-^^^^^^^^^^^^^^^
-
-In order to use the agent in AiiDA, you need to first make sure that you can connect to the computer via SSH without explicitly specifying a passphrase.
-Make sure that this is the case also in newly opened bash shells.
-
-Then, when configuring the corresponding AiiDA computer (via ``verdi computer configure``), make sure to specify ``true`` to the question ``Allow ssh agent``.
-If you already configured the computer and just want to adapt the computer configuration, just rerun
-
-.. code:: bash
-
-    verdi computer configure ssh COMPUTERNAME
-
-After the configuration, you should verify that AiiDA can connect to the computer with:
-
-.. code:: bash
-
-    verdi computer test COMPUTERNAME
-
-
-.. _how-to:installation:running-on-supercomputers:avoiding-overloads:
-
-Avoiding overloads
-------------------
-
-If you submit to a supercomputer shared by many users (e.g., in a supercomputer center), be careful not to overload the supercomputer with too many jobs:
-
-  * limit the number of jobs in the queue (the exact number depends on the supercomputer: discuss this with your supercomputer administrators, and you can redirect them to :ref:`this page<how-to:installation:running-on-supercomputers:for_cluster_admins>` that may contain useful information for them).
-    While in the future `this might be dealt with by AiiDA automatically <https://github.com/aiidateam/aiida-core/issues/88>`_,
-    you are responsible for this at the moment.
-    This can be achieved for instance by submitting only a maximum number of workflows to AiiDA, and submitting new ones only when the previous ones complete.
-
-  * Tune the parameters that AiiDA uses to avoid overloading the supercomputer with connections or batch requests.
-    For SSH transports, the default is 30 seconds, which means that when each worker opens a SSH connection to a computer, it will reuse it as long as there are tasks to execute and then close it.
-    Opening a new connection will not happen before 30 seconds has passed from the opening of the previous one.
-
-    We stress that this is *per daemon worker*, so that if you have 10 workers, your supercomputer will on average see 10 connections every 30 seconds.
-    Therefore, if you are using many workers and you mostly have long-running jobs, you can set a longer time (e.g., 120 seconds) by reconfiguring the computer with ``verdi computer configure ssh <COMPUTER_NAME>`` and changing the value
-    of the *Connection cooldown time* or, alternatively, by running:
-
-    .. code-block:: bash
-
-      verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
-
-  * In addition to the connection cooldown time described above, AiiDA also limits the frequency for retrieving the job queue from the scheduler (``squeue``, ``qstat``, ...), as this can also impact the performance of the scheduler.
-    For a given computer, you can increase how many seconds must pass between requests.
-    First load the computer in a shell with ``computer = load_computer(<COMPUTER_NAME>)``.
-    You can check the current value in seconds (by default, 10) with ``computer.get_minimum_job_poll_interval()``.
-    You can then set it to a higher value using:
-
-    .. code-block:: python
-
-      computer.set_minimum_job_poll_interval(<NEW_VALUE_SECONDS>)
-
-.. _how-to:installation:running-on-supercomputers:for_cluster_admins:
-
-Optimising the SLURM scheduler configuration
---------------------------------------------
-
-If too many jobs are submitted at the same time to the queue, SLURM might have trouble in dealing with new submissions.
-If you are a cluster administrator, you might be interested in `some tips available in the AiiDA wiki <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_, suggested by sysadmins at the Swiss Supercomputer Centre `CSCS <http://www.cscs.ch>`_ (or you can redirect your admin to this page if your cluster is experiencing slowness related to a large number of submitted jobs).
-
 .. _how-to:installation:multi-user:
 
 Managing multiple users
@@ -625,3 +487,4 @@ Data can be shared between instances using :ref:`AiiDA's export and import funct
 Sharing (subsets of) the AiiDA graph can be done as often as needed.
 
 .. _#4122: https://github.com/aiidateam/aiida-core/issues/4122
+.. |Computer| replace:: :py:class:`~aiida.orm.Computer`

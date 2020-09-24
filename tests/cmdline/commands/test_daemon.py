@@ -86,7 +86,8 @@ class TestVerdiDaemon(AiidaTestCase):
         finally:
             self.daemon_client.stop_daemon(wait=True)
 
-    @pytest.mark.skip(reason='Test fails non-deterministically; see issue #3051.')
+    # Tracked in issue #3051
+    @pytest.mark.flaky(reruns=2)
     def test_daemon_start_number(self):
         """Test `verdi daemon start` with a specific number of workers."""
 
@@ -111,7 +112,8 @@ class TestVerdiDaemon(AiidaTestCase):
         finally:
             self.daemon_client.stop_daemon(wait=True)
 
-    @pytest.mark.skip(reason='Test fails non-deterministically; see issue #3051.')
+    # Tracked in issue #3051
+    @pytest.mark.flaky(reruns=2)
     def test_daemon_start_number_config(self):
         """Test `verdi daemon start` with `daemon.default_workers` config option being set."""
         number = 3

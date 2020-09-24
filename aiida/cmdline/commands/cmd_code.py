@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi code` command."""
-
 from functools import partial
+
 import click
 import tabulate
 
@@ -18,7 +18,6 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import InputValidationError
 
 
@@ -45,7 +44,7 @@ def get_default(key, ctx):
 
 
 def get_computer_name(ctx):
-    return getattr(ctx.code_builder, 'computer').name
+    return getattr(ctx.code_builder, 'computer').label
 
 
 def get_on_computer(ctx):
@@ -69,8 +68,8 @@ def set_code_builder(ctx, param, value):
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options_code.PREPEND_TEXT()
+@options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @with_dbenv()
@@ -78,15 +77,6 @@ def setup_code(non_interactive, **kwargs):
     """Setup a new code."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
@@ -119,8 +109,8 @@ def setup_code(non_interactive, **kwargs):
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
-@options.PREPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'prepend_text'))
-@options.APPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'append_text'))
+@options_code.PREPEND_TEXT(contextual_default=partial(get_default, 'prepend_text'))
+@options_code.APPEND_TEXT(contextual_default=partial(get_default, 'append_text'))
 @options.NON_INTERACTIVE()
 @click.option('--hide-original', is_flag=True, default=False, help='Hide the code being copied.')
 @click.pass_context
@@ -129,15 +119,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     """Duplicate a code allowing to change some parameters."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
@@ -168,7 +149,36 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code, verbose):
     """Display detailed information for a code."""
-    click.echo(tabulate.tabulate(code.get_full_text_info(verbose)))
+    from aiida.repository import FileType
+
+    table = []
+    table.append(['PK', code.pk])
+    table.append(['UUID', code.uuid])
+    table.append(['Label', code.label])
+    table.append(['Description', code.description])
+    table.append(['Default plugin', code.get_input_plugin_name()])
+
+    if code.is_local():
+        table.append(['Type', 'local'])
+        table.append(['Exec name', code.get_execname()])
+        table.append(['List of files/folders:', ''])
+        for obj in code.list_objects():
+            if obj.file_type == FileType.DIRECTORY:
+                table.append(['directory', obj.name])
+            else:
+                table.append(['file', obj.name])
+    else:
+        table.append(['Type', 'remote'])
+        table.append(['Remote machine', code.get_remote_computer().label])
+        table.append(['Remote absolute path', code.get_remote_exec_path()])
+
+    table.append(['Prepend text', code.get_prepend_text()])
+    table.append(['Append text', code.get_append_text()])
+
+    if verbose:
+        table.append(['Calculations', len(code.get_outgoing().all())])
+
+    click.echo(tabulate.tabulate(table))
 
 
 @verdi_code.command()
@@ -225,7 +235,7 @@ def relabel(code, label):
     try:
         code.relabel(label)
     except InputValidationError as exception:
-        echo.echo_critical('invalid code name: {}'.format(exception))
+        echo.echo_critical('invalid code label: {}'.format(exception))
     else:
         echo.echo_success('Code<{}> relabeled from {} to {}'.format(code.pk, old_label, code.full_label))
 
@@ -249,7 +259,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
     qb_computer_filters = dict()
     if computer is not None:
-        qb_computer_filters['name'] = computer.name
+        qb_computer_filters['name'] = computer.label
 
     qb_code_filters = dict()
     if input_plugin is not None:

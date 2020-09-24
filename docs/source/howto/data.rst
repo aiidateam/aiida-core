@@ -246,7 +246,7 @@ However, storing large amounts of data within the database comes at the cost of 
 Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
-The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.nodes.node.Node.set_attribute` and :py:meth:`~aiida.orm.nodes.node.Node.set_attribute_many`.
+The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.entities.EntityAttributesMixin.set_attribute` and :py:meth:`~aiida.orm.entities.EntityAttributesMixin.set_attribute_many`.
 
 .. _how-to:data:find:
 
@@ -979,7 +979,7 @@ A subset of data in AiiDA is mutable also after storing a node, and is used as a
 This data can be safely deleted at any time.
 This includes, notably:
 
-* *Node extras*: These can be deleted using :py:meth:`~aiida.orm.nodes.node.Node.delete_extra` and :py:meth:`~aiida.orm.nodes.node.Node.delete_extra_many`.
+* *Node extras*: These can be deleted using :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra` and :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra_many` methods.
 * *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
 * *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.Group.Collection.delete>`.
   This command will only delete the group, not the nodes contained in the group.

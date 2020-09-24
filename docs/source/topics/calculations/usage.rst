@@ -466,45 +466,32 @@ The advantage of adding the raw output data in different form as output nodes, i
 This allows one to query for calculations that produced specific outputs with a certain value, which becomes a very powerful approach for post-processing and analyses of big databases.
 
 The ``retrieved`` attribute of the parser will return the ``FolderData`` node that should have been attached by the engine containing all the retrieved files, as specified using the :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>` in the :ref:`preparation step of the calculation job<topics:calculations:usage:calcjobs:prepare>`.
-If this node has not been attached for whatever reason, this call will throw an :py:class:`~aiida.common.exceptions.NotExistent` exception.
-This is why we wrap the ``self.retrieved`` call in a try-catch block:
-
-.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
-    :language: python
-    :lines: 10-13
-    :linenos:
-    :lineno-start: 10
-
-If the exception is thrown, it means the retrieved files are not available and something must have has gone terribly awry with the calculation.
-In this case, there is nothing to do for the parser and so we return an exit code.
-Specific exit codes can be referenced by their label, such as ``ERROR_NO_RETRIEVED_FOLDER`` in this example, through the ``self.exit_codes`` property.
-This call will retrieve the corresponding exit code defined on the ``CalcJob`` that we are currently parsing.
-Returning this exit code from the parser will stop the parsing immediately and will instruct the engine to set its exit status and exit message on the node of this calculation job.
-This should scenario should however never occur, but it is just here as a safety.
-If the exception would not be caught, the engine will catch the exception instead and set the process state of the corresponding calculation to ``Excepted``.
-Note that this will happen for any exception that occurs during parsing.
-
-Assuming that everything went according to plan during the retrieval, we now have access to those retrieved files and can start to parse them.
+This retrieved folder can be used to open and read the contents of the files it contains.
 In this example, there should be a single output file that was written by redirecting the standard output of the bash script that added the two integers.
 The parser opens this file, reads its content and tries to parse the sum from it:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 15-19
+    :lines: 12-16
     :linenos:
-    :lineno-start: 15
+    :lineno-start: 12
 
-Note that again we wrap this parsing action in a try-except block.
-If the file cannot be found or cannot be read, we return the appropriate exit code.
+Note that this parsing action is wrapped in a try-except block to catch the exceptions that would be thrown if the output file could not be read.
+If the exception would not be caught, the engine will catch the exception instead and set the process state of the corresponding calculation to ``Excepted``.
+Note that this will happen for any uncaught exception that is thrown during parsing.
+Instead, we catch these exceptions and return an exit code that is retrieved by referencing it by its label, such as ``ERROR_READING_OUTPUT_FILE`` in this example, through the ``self.exit_codes`` property.
+This call will retrieve the corresponding exit code defined on the ``CalcJob`` that we are currently parsing.
+Returning this exit code from the parser will stop the parsing immediately and will instruct the engine to set its exit status and exit message on the node of this calculation job.
+
 The ``parse_stdout`` method is just a small utility function to separate the actual parsing of the data from the main parser code.
 In this case, the parsing is so simple that we might have as well kept it in the main method, but this is just to illustrate that you are completely free to organize the code within the ``parse`` method for clarity.
 If we manage to parse the sum, produced by the calculation, we wrap it in the appropriate :py:class:`~aiida.orm.nodes.data.int.Int` data node class, and register it as an output through the ``out`` method:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 24-24
+    :lines: 21-21
     :linenos:
-    :lineno-start: 24
+    :lineno-start: 21
 
 Note that if we encountered no problems, we do not have to return anything.
 The engine will interpret this as the calculation having finished successfully.
@@ -518,3 +505,50 @@ However, we can give you some guidelines:
         If you were to store all this data in the database, it would become unnecessarily bloated, because the chances you would have to query for this data are unlikely.
         Instead these array type data nodes store the bulk of their content in the repository.
         This way you still keep the data and therewith the provenance of your calculations, while keeping your database lean and fast!
+
+
+.. _topics:calculations:usage:calcjobs:scheduler-errors:
+
+Scheduler errors
+----------------
+
+Besides the output parsers, the scheduler plugins can also provide parsing of the output generated by the job scheduler, by implementing the :meth:`~aiida.schedulers.scheduler.Scheduler.parse_output` method.
+If the scheduler plugin has implemented this method, the output generated by the scheduler, written to the stdout and stderr file descriptors as well as the output of the detailed job info command, is parsed.
+If the parser detects a known problem, such as an out-of-memory (OOM) error, the corresponding exit code will already be set on the calculation job node.
+The output parser, if defined in the inputs, can inspect the exit status on the node and decide to keep it or override it with a different, potentially more useful, exit code.
+
+.. code:: python
+
+    class SomeParser(Parser):
+
+        def parse(self, **kwargs):
+            """Parse the contents of the output files retrieved in the `FolderData`."""
+            if self.node.exit_status is not None:
+                # If an exit status is already set on the node, that means the
+                # scheduler plugin detected a problem.
+                return
+
+Note that in the example given above, the parser returns immediately if it detects that the scheduler detected a problem.
+Since it returns `None`, the exit code of the scheduler will be kept and will be the final exit code of the calculation job.
+However, the parser does not have to immediately return.
+It can still try to parse some of the retrieved output, if there is any.
+If it finds a more specific problem than the generic scheduler error, it can always return an exit code of itself to override it.
+The parser can even return ``ExitCode(0)`` to have the calculation marked as successfully finished, despite the scheduler having determined that there was a problem.
+The following table summarizes the possible scenarios of the scheduler parser and output parser returning an exit code and what the final resulting exit code will be that is set on the node:
+
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| **Scenario**                                                                       | **Scheduler result**  | **Retrieved result**  | **Final result**      |
++====================================================================================+=======================+=======================+=======================+
+| Neither parser found any problem.                                                  | ``None``              | ``None``              | ``ExitCode(0)``       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Scheduler parser found an issue,                                                   | ``ExitCode(100)``     | ``None``              | ``ExitCode(100)``     |
+| but output parser does not override.                                               |                       |                       |                       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Only output parser found a problem.                                                | ``None``              | ``ExitCode(400)``     | ``ExitCode(400)``     |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Scheduler parser found an issue, but the output parser overrides with a more       | ``ExitCode(100)``     | ``ExitCode(400)``     | ``ExitCode(400)``     |
+| specific error code.                                                               |                       |                       |                       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Scheduler found issue but output parser overrides saying that despite that the     | ``ExitCode(100)``     | ``ExitCode(0)``       | ``ExitCode(0)``       |
+| calculation should be considered finished successfully.                            |                       |                       |                       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+

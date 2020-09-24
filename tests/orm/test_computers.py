@@ -24,7 +24,7 @@ class TestComputer(AiidaTestCase):
         import tempfile
 
         new_comp = orm.Computer(
-            name='bbb', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='bbb', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
         ).store()
 
         # Configure the computer - no parameters for local transport
@@ -43,7 +43,7 @@ class TestComputer(AiidaTestCase):
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
         new_comp = orm.Computer(
-            name='aaa', hostname='aaa', transport_type='local', scheduler_type='pbspro', workdir='/tmp/aiida'
+            label='aaa', hostname='aaa', transport_type='local', scheduler_type='pbspro', workdir='/tmp/aiida'
         ).store()
 
         comp_pk = new_comp.pk

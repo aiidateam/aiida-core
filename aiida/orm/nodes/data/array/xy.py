@@ -12,8 +12,6 @@ This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
-
-
 import numpy as np
 from aiida.common.exceptions import InputValidationError, NotExistent
 from .array import ArrayData
@@ -30,8 +28,8 @@ def check_convert_single_to_tuple(item):
     """
     if isinstance(item, (list, tuple)):
         return item
-    else:
-        return [item]
+
+    return [item]
 
 
 class XyData(ArrayData):
@@ -40,7 +38,9 @@ class XyData(ArrayData):
     each other. That is there is one array, the X array, and there are several
     Y arrays, which can be considered functions of X.
     """
-    def _arrayandname_validator(self, array, name, units):
+
+    @staticmethod
+    def _arrayandname_validator(array, name, units):
         """
         Validates that the array is an numpy.ndarray and that the name is
         of type str. Raises InputValidationError if this not the case.
@@ -86,8 +86,7 @@ class XyData(ArrayData):
 
         # checks that the input lengths match
         if len(y_arrays) != len(y_names):
-            raise InputValidationError('Length of arrays and names do not '
-                                       'match!')
+            raise InputValidationError('Length of arrays and names do not match!')
         if len(y_units) != len(y_names):
             raise InputValidationError('Length of units does not match!')
 
@@ -100,9 +99,11 @@ class XyData(ArrayData):
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise InputValidationError('y_array {} did not have the '
-                                           'same shape has the x_array!'
-                                           ''.format(y_name))
+                raise InputValidationError(
+                    'y_array {} did not have the '
+                    'same shape has the x_array!'
+                    ''.format(y_name)
+                )
             self.set_array('y_array_{}'.format(num), y_array)
 
         # if the y_arrays pass the initial validation, sets each
@@ -147,6 +148,5 @@ class XyData(ArrayData):
             for i in range(len(y_names)):
                 y_arrays += [self.get_array('y_array_{}'.format(i))]
         except (KeyError, AttributeError):
-            raise NotExistent('Could not retrieve array associated with y array'
-                              ' {}'.format(y_names[i]))
+            raise NotExistent('Could not retrieve array associated with y array {}'.format(y_names[i]))
         return list(zip(y_names, y_arrays, y_units))

@@ -16,6 +16,7 @@
 *.egg-info
 .eggs
 .vscode
+.tox
 
 # files created by coverage
 .cache
@@ -32,4 +33,4 @@ pip-wheel-metadata
 
 # Docs
 docs/build
-docs/source/apidoc
+docs/source/reference/apidoc

@@ -10,6 +10,7 @@
 # pylint: disable=invalid-name,missing-docstring,too-many-lines
 """Tests for the QueryBuilder."""
 import warnings
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -130,6 +131,8 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(get_group_type_filter(classifiers, False), {'==': 'pseudo.family'})
         self.assertEqual(get_group_type_filter(classifiers, True), {'like': 'pseudo.family%'})
 
+    # Tracked in issue #4281
+    @pytest.mark.flaky(reruns=2)
     def test_process_query(self):
         """
         Test querying for a process class.
@@ -737,10 +740,16 @@ class TestQueryHelp(AiidaTestCase):
         self.assertEqual(qb.count(), 1)
 
     def test_recreate_from_queryhelp(self):
-        """Test recreating a QueryBuilder from the Query Help"""
+        """Test recreating a QueryBuilder from the Query Help
+
+        We test appending a Data node and a Process node for variety, as well
+        as a generic Node specifically because it translates to `entity_type`
+        as an empty string (which can potentially cause problems).
+        """
         import copy
 
         qb1 = orm.QueryBuilder()
+        qb1.append(orm.Node)
         qb1.append(orm.Data)
         qb1.append(orm.CalcJobNode)
 
@@ -1034,14 +1043,14 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         qb = orm.QueryBuilder()
         qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
         qb.append(orm.Group, with_user='user', filters={'id': {'==': group.id}})
-        self.assertEqual(qb.count(), 1, 'The expected group that belongs to ' 'the selected user was not found.')
+        self.assertEqual(qb.count(), 1, 'The expected group that belongs to the selected user was not found.')
 
         # Search for the user that owns a group
         qb = orm.QueryBuilder()
         qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
-        self.assertEqual(qb.count(), 1, 'The expected user that owns the ' 'selected group was not found.')
+        self.assertEqual(qb.count(), 1, 'The expected user that owns the selected group was not found.')
 
     def test_joins_group_node(self):
         """
@@ -1423,13 +1432,13 @@ class TestDoubleStar(AiidaTestCase):
         # pylint: disable=no-member
         expected_dict = {
             'description': self.computer.description,
-            'scheduler_type': self.computer.get_scheduler_type(),
+            'scheduler_type': self.computer.scheduler_type,
             'hostname': self.computer.hostname,
             'uuid': self.computer.uuid,
-            'name': self.computer.name,
-            'transport_type': self.computer.get_transport_type(),
+            'name': self.computer.label,
+            'transport_type': self.computer.transport_type,
             'id': self.computer.id,
-            'metadata': self.computer.get_metadata(),
+            'metadata': self.computer.metadata,
         }
 
         qb = orm.QueryBuilder()

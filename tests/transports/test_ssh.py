@@ -7,16 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Test ssh plugin on localhost
-"""
-import unittest
+"""Test the `SshTransport` plugin on localhost."""
 import logging
+import unittest
 
-import aiida.transports
-import aiida.transports.transport
 import paramiko
+
 from aiida.transports.plugins.ssh import SshTransport
+from aiida.transports.transport import TransportInternalError
 
 # This will be used by test_all_plugins
 
@@ -29,20 +27,25 @@ class TestBasicConnection(unittest.TestCase):
     """
 
     def test_closed_connection_ssh(self):
-        with self.assertRaises(aiida.transports.transport.TransportInternalError):
-            t = SshTransport(machine='localhost')
-            t._exec_command_internal('ls')
+        """Test calling command on a closed connection."""
+        with self.assertRaises(TransportInternalError):
+            transport = SshTransport(machine='localhost')
+            transport._exec_command_internal('ls')  # pylint: disable=protected-access
 
     def test_closed_connection_sftp(self):
-        with self.assertRaises(aiida.transports.transport.TransportInternalError):
-            t = SshTransport(machine='localhost')
-            t.listdir()
+        """Test calling sftp command on a closed connection."""
+        with self.assertRaises(TransportInternalError):
+            transport = SshTransport(machine='localhost')
+            transport.listdir()
 
-    def test_auto_add_policy(self):
+    @staticmethod
+    def test_auto_add_policy():
+        """Test the auto add policy."""
         with SshTransport(machine='localhost', timeout=30, load_system_host_keys=True, key_policy='AutoAddPolicy'):
             pass
 
     def test_no_host_key(self):
+        """Test if there is no host key."""
         # Disable logging to avoid output during test
         logging.disable(logging.ERROR)
 
@@ -54,5 +57,14 @@ class TestBasicConnection(unittest.TestCase):
         logging.disable(logging.NOTSET)
 
 
-if __name__ == '__main__':
-    unittest.main()
+def test_gotocomputer():
+    """Test gotocomputer"""
+    with SshTransport(machine='localhost', timeout=30, use_login_shell=False, key_policy='AutoAddPolicy') as transport:
+        cmd_str = transport.gotocomputer_command('/remote_dir/')
+
+        expected_str = (
+            """ssh -t localhost   "if [ -d '/remote_dir/' ] ;"""
+            """ then cd '/remote_dir/' ; bash  ; else echo '  ** The directory' ; """
+            """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
+        )
+        assert cmd_str == expected_str

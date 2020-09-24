@@ -1,3 +1,45 @@
 [build-system]
-requires = [ "setuptools>=40.8.0", "wheel", "reentry~=1.3", "fastentrypoints~=0.12",]
+requires = ["setuptools>=40.8.0,<50", "wheel", "reentry~=1.3", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta:__legacy__"
+
+[tool.tox]
+# To use tox, see https://tox.readthedocs.io
+# Simply pip or conda install tox
+# If you use conda, you may also want to install tox-conda
+# then run `tox` or `tox -e py37 -- {pytest args}`
+
+# To ensure rebuild of the tox environment,
+# either simple delete the .tox folder or use `tox -r`
+
+legacy_tox_ini = """
+[tox]
+envlist = py37-django
+
+[testenv:py{35,36,37,38}-{django,sqla}]
+deps =
+    py35: -rrequirements/requirements-py-3.5.txt
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
+setenv =
+    django: AIIDA_TEST_BACKEND = django
+    sqla: AIIDA_TEST_BACKEND = sqlalchemy
+commands = pytest {posargs}
+
+[testenv:py{36,37,38}-docs-{clean,update}]
+deps =
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
+setenv =
+    update: RUN_APIDOC = False
+changedir = docs
+whitelist_externals = make
+commands =
+    clean: make clean
+    make debug
+
+[testenv:py{36,37,38}-pre-commit]
+extras = all
+commands = pre-commit run {posargs}
+"""

@@ -18,7 +18,7 @@ REVISION = '1.0.14'
 DOWN_REVISION = '1.0.13'
 
 
-def verify_node_uuid_uniqueness(apps, schema_editor):
+def verify_node_uuid_uniqueness(_, __):
     """Check whether the database contains nodes with duplicate UUIDS.
 
     Note that we have to redefine this method from aiida.manage.database.integrity.verify_node_uuid_uniqueness
@@ -31,7 +31,7 @@ def verify_node_uuid_uniqueness(apps, schema_editor):
     verify_uuid_uniqueness(table='db_dbnode')
 
 
-def reverse_code(apps, schema_editor):
+def reverse_code(_, __):
     pass
 
 

@@ -17,6 +17,7 @@ from aiida.common import json
 from aiida.common.exceptions import NotExistent
 from aiida.tools.importexport.common.archive import extract_tar, extract_zip
 from aiida.common.folders import SandboxFolder
+from tests.static import STATIC_DIR
 
 
 def get_archive_file(archive, filepath=None, external_module=None):
@@ -24,7 +25,7 @@ def get_archive_file(archive, filepath=None, external_module=None):
 
     The expected path for these files:
 
-        tests.fixtures.filepath
+        tests.static.filepath
 
     :param archive: the relative filename of the archive
     :param filepath: str of directories of where to find archive (starting "/"s are irrelevant)
@@ -55,11 +56,8 @@ def get_archive_file(archive, filepath=None, external_module=None):
 
         dirpath_archive = os.path.join(external_path, dirpath_archive)
     else:
-        # Add absolute path to local repo's fixtures
-        dirpath_current = os.path.dirname(os.path.realpath(__file__))
-        dirpath_migrate = os.path.join(dirpath_current, os.pardir, 'fixtures')
-
-        dirpath_archive = os.path.join(dirpath_migrate, dirpath_archive)
+        # Add absolute path to local repo's static
+        dirpath_archive = os.path.join(STATIC_DIR, dirpath_archive)
 
     if not os.path.isfile(dirpath_archive):
         dirpath_parent = os.path.dirname(dirpath_archive)

@@ -12,8 +12,8 @@ If you experience any problems, first check that all services are up and running
 
    ✓ profile:     On profile django
    ✓ repository:  /repo/aiida_dev/django
-   ✓ postgres:    Connected to aiida@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ postgres:    Connected as aiida@localhost:5432
+   ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
 In the example output, all service have a green check mark and so should be running as expected.
@@ -268,6 +268,13 @@ To test if a the computer does not produce spurious output, run (after configuri
    $ verdi computer test <COMPUTERNAME>
 
 which checks and, in case of problems, suggests how to solve the problem.
+
+.. note::
+
+    If the methods explained above do not work, you can configure AiiDA to not use a login shell when connecting to your computer, which may prevent the spurious output from being printed:
+    During ``verdi computer configure``, set ``-no-use-login-shell`` or when asked to use a login shell, set it to ``False``.
+    Note, however, that this may result in a slightly different environment, since `certain startup files are only sourced for login shells <https://unix.stackexchange.com/a/46856/155909>`_.
+
 
 .. _StackExchange thread: https://apple.stackexchange.com/questions/51036/what-is-the-difference-between-bash-profile-and-bashrc
 

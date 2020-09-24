@@ -22,6 +22,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ParsingError
 from aiida.orm.nodes.data.upf import parse_upf
+from tests.static import STATIC_DIR
 
 
 def isnumeric(vector):
@@ -80,7 +81,7 @@ class TestUpfParser(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
-        filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
+        filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         cls.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
         cls.filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
         cls.filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
@@ -325,7 +326,7 @@ class TestUpfParser(AiidaTestCase):
         """Test UPF check Oxygen UPF1 pp conversion"""
         # pylint: disable=protected-access
         json_string, _ = self.pseudo_carbon._prepare_json()
-        filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
+        filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         reference_dict = json.load(open(os.path.join(filepath_base, 'C.json'), 'r'))
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
@@ -337,7 +338,7 @@ class TestUpfParser(AiidaTestCase):
         """Test UPF check Bariium UPF1 pp conversion"""
         # pylint: disable=protected-access
         json_string, _ = self.pseudo_barium._prepare_json()
-        filepath_base = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir, 'fixtures', 'pseudos'))
+        filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
         reference_dict = json.load(open(os.path.join(filepath_base, 'Ba.json'), 'r'))
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information

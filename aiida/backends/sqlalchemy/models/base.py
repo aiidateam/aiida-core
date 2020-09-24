@@ -44,7 +44,7 @@ class _SessionProperty:
 
     def __get__(self, obj, _type):
         if not aiida.backends.sqlalchemy.get_scoped_session():
-            raise InvalidOperation('You need to call load_dbenv before ' 'accessing the session of SQLALchemy.')
+            raise InvalidOperation('You need to call load_dbenv before accessing the session of SQLALchemy.')
         return aiida.backends.sqlalchemy.get_scoped_session()
 
 

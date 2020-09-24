@@ -10,12 +10,12 @@
 """Backend user"""
 import abc
 
-from . import backends
+from .entities import BackendEntity, BackendCollection
 
 __all__ = ('BackendUser', 'BackendUserCollection')
 
 
-class BackendUser(backends.BackendEntity):
+class BackendUser(BackendEntity):
     """
     This is the base class for User information in AiiDA.  An implementing
     backend needs to provide a concrete version.
@@ -106,7 +106,7 @@ class BackendUser(backends.BackendEntity):
         """
 
 
-class BackendUserCollection(backends.BackendCollection[BackendUser]):
+class BackendUserCollection(BackendCollection[BackendUser]):
     # pylint: disable=too-few-public-methods
 
     ENTITY_CLASS = BackendUser

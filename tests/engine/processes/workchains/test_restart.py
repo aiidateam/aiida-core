@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
-# pylint: disable=invalid-name,inconsistent-return-statements,no-self-use,no-member
+# pylint: disable=invalid-name,no-self-use,no-member
 import pytest
 
 from aiida import engine

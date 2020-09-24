@@ -12,7 +12,7 @@
 
 from aiida.engine import calcfunction
 from aiida.orm import CifData
-from aiida.orm.utils.node import clean_value
+from aiida.orm.implementation.utils import clean_value
 
 
 class InvalidOccupationsError(Exception):
@@ -141,12 +141,12 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
             structures = parser.get_structures(**parameters)
         except ValueError:
             # If it still fails, the occupancies were not the reason for failure
-            raise ValueError('pymatgen failed to provide a structure from the cif file')
+            raise ValueError('pymatgen failed to provide a structure from the cif file') from ValueError
         else:
             # If it now succeeds, non-unity occupancies were the culprit
             raise InvalidOccupationsError(
                 'detected atomic sites with an occupation number larger than the occupation tolerance'
-            )
+            ) from ValueError
 
     return {'structure': StructureData(pymatgen_structure=structures[0])}
 
@@ -203,8 +203,7 @@ def refine_inline(node):
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \
-        StructureData(ase=original_atoms).get_formula(mode='hill',
-                                                      separator=' ')
+        StructureData(ase=original_atoms).get_formula(mode='hill', separator=' ')
 
     # If the number of reduced atoms multiplies the number of non-reduced
     # atoms, the new Z value can be calculated.

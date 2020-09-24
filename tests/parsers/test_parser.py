@@ -17,6 +17,7 @@ from aiida.common import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
 from aiida.plugins import CalculationFactory, ParserFactory
+from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
 ArithmeticAddParser = ParserFactory('arithmetic.add')  # pylint: disable=invalid-name
@@ -106,12 +107,13 @@ class TestParser(AiidaTestCase):
         retrieved.store()
         retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
-        result, calcfunction = ArithmeticAddParser.parse_from_node(node)
+        for cls in [ArithmeticAddParser, SimpleArithmeticAddParser]:
+            result, calcfunction = cls.parse_from_node(node)
 
-        self.assertIsInstance(result['sum'], orm.Int)
-        self.assertEqual(result['sum'].value, summed)
-        self.assertIsInstance(calcfunction, orm.CalcFunctionNode)
-        self.assertEqual(calcfunction.exit_status, 0)
+            self.assertIsInstance(result['sum'], orm.Int)
+            self.assertEqual(result['sum'].value, summed)
+            self.assertIsInstance(calcfunction, orm.CalcFunctionNode)
+            self.assertEqual(calcfunction.exit_status, 0)
 
         # Verify that the `retrieved_temporary_folder` keyword can be passed, there is no validation though
         result, calcfunction = ArithmeticAddParser.parse_from_node(node, retrieved_temporary_folder='/some/path')

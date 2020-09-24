@@ -50,9 +50,9 @@ class AuthInfo(entities.Entity):
 
     def __str__(self):
         if self.enabled:
-            return 'AuthInfo for {} on {}'.format(self.user.email, self.computer.name)
+            return 'AuthInfo for {} on {}'.format(self.user.email, self.computer.label)
 
-        return 'AuthInfo for {} on {} [DISABLED]'.format(self.user.email, self.computer.name)
+        return 'AuthInfo for {} on {} [DISABLED]'.format(self.user.email, self.computer.label)
 
     @property
     def enabled(self):
@@ -138,7 +138,7 @@ class AuthInfo(entities.Entity):
         :rtype: :class:`aiida.transports.Transport`
         """
         computer = self.computer
-        transport_type = computer.get_transport_type()
+        transport_type = computer.transport_type
 
         try:
             transport_class = TransportFactory(transport_type)

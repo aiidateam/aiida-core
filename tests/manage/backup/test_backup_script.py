@@ -16,6 +16,7 @@ import sys
 import tempfile
 
 from dateutil.parser import parse
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import utils, json
@@ -281,6 +282,8 @@ class TestBackupScriptIntegration(AiidaTestCase):
         super().setUpClass(*args, **kwargs)
         cls._bs_instance = backup_setup.BackupSetup()
 
+    # Tracked in issue #2134
+    @pytest.mark.flaky(reruns=2)
     def test_integration(self):
         """Test integration"""
         from aiida.common.utils import Capturing

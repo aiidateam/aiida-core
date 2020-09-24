@@ -103,6 +103,6 @@ def create_database(url, encoding='utf8'):
             engine.execute(text)
 
         else:
-            raise Exception('Only PostgreSQL with the psycopg2 driver is ' 'supported.')
+            raise Exception('Only PostgreSQL with the psycopg2 driver is supported.')
     finally:
         engine.dispose()

@@ -7,8 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Configuration file for pytest tests."""
-import pytest  # pylint: disable=unused-import
+import os
+
+import pytest
+
+from aiida.manage.configuration import Config, Profile, get_config
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
 
@@ -24,7 +29,6 @@ def non_interactive_editor(request):
 
     :param request: the command to set for the editor that is to be called
     """
-    import os
     from unittest.mock import patch
     from click._termui_impl import Editor
 
@@ -32,7 +36,6 @@ def non_interactive_editor(request):
     os.environ['VISUAL'] = request.param
 
     def edit_file(self, filename):
-        import os
         import subprocess
         import click
 
@@ -74,21 +77,23 @@ def generate_calc_job():
     to it, into which the raw input files will have been written.
     """
 
-    def _generate_calc_job(folder, entry_point_name, inputs=None):
+    def _generate_calc_job(folder, entry_point_name, inputs=None, return_process=False):
         """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
         from aiida.engine.utils import instantiate_process
         from aiida.manage.manager import get_manager
         from aiida.plugins import CalculationFactory
 
+        inputs = inputs or {}
         manager = get_manager()
         runner = manager.get_runner()
 
         process_class = CalculationFactory(entry_point_name)
         process = instantiate_process(runner, process_class, **inputs)
 
-        calc_info = process.prepare_for_submission(folder)
+        if return_process:
+            return process
 
-        return calc_info
+        return process.prepare_for_submission(folder)
 
     return _generate_calc_job
 
@@ -144,3 +149,113 @@ def generate_calculation_node():
         return node
 
     return _generate_calculation_node
+
+
+@pytest.fixture
+def create_empty_config_instance(tmp_path) -> Config:
+    """Create a temporary configuration instance.
+
+    This creates a temporary directory with a clean `.aiida` folder and basic configuration file. The currently loaded
+    configuration and profile are stored in memory and are automatically restored at the end of this context manager.
+
+    :return: a new empty config instance.
+    """
+    from aiida.common.utils import Capturing
+    from aiida.manage import configuration
+    from aiida.manage.configuration import settings, load_profile, reset_profile
+
+    # Store the current configuration instance and config directory path
+    current_config = configuration.CONFIG
+    current_config_path = current_config.dirpath
+    current_profile_name = configuration.PROFILE.name
+
+    reset_profile()
+    configuration.CONFIG = None
+
+    # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
+    settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
+
+    # Create the instance base directory structure, the config file and a dummy profile
+    settings.create_instance_directories()
+
+    # The constructor of `Config` called by `load_config` will print warning messages about migrating it
+    with Capturing():
+        configuration.CONFIG = configuration.load_config(create=True)
+
+    yield get_config()
+
+    # Reset the config folder path and the config instance. Note this will always be executed after the yield no
+    # matter what happened in the test that used this fixture.
+    reset_profile()
+    settings.AIIDA_CONFIG_FOLDER = current_config_path
+    configuration.CONFIG = current_config
+    load_profile(current_profile_name)
+
+
+@pytest.fixture
+def create_profile() -> Profile:
+    """Create a new profile instance.
+
+    :return: the profile instance.
+    """
+
+    def _create_profile(name, **kwargs):
+
+        repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
+
+        profile_dictionary = {
+            'default_user': kwargs.pop('default_user', 'dummy@localhost'),
+            'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
+            'database_backend': kwargs.pop('database_backend', 'django'),
+            'database_hostname': kwargs.pop('database_hostname', 'localhost'),
+            'database_port': kwargs.pop('database_port', 5432),
+            'database_name': kwargs.pop('database_name', name),
+            'database_username': kwargs.pop('database_username', 'user'),
+            'database_password': kwargs.pop('database_password', 'pass'),
+            'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
+        }
+
+        return Profile(name, profile_dictionary)
+
+    return _create_profile
+
+
+@pytest.fixture
+def backend():
+    """Get the ``Backend`` instance of the currently loaded profile."""
+    from aiida.manage.manager import get_manager
+    return get_manager().get_backend()
+
+
+@pytest.fixture
+def skip_if_not_django(backend):
+    """Fixture that will skip any test that uses it when a profile is loaded with any other backend then Django."""
+    from aiida.orm.implementation.django.backend import DjangoBackend
+    if not isinstance(backend, DjangoBackend):
+        pytest.skip('this test should only be run for the Django backend.')
+
+
+@pytest.fixture
+def skip_if_not_sqlalchemy(backend):
+    """Fixture that will skip any test that uses it when a profile is loaded with any other backend then SqlAlchemy."""
+    from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+    if not isinstance(backend, SqlaBackend):
+        pytest.skip('this test should only be run for the SqlAlchemy backend.')
+
+
+@pytest.fixture(scope='function')
+def override_logging():
+    """Return a `SandboxFolder`."""
+    from aiida.common.log import configure_logging
+
+    config = get_config()
+
+    try:
+        config.set_option('logging.aiida_loglevel', 'DEBUG')
+        config.set_option('logging.db_loglevel', 'DEBUG')
+        configure_logging(with_orm=True)
+        yield
+    finally:
+        config.unset_option('logging.aiida_loglevel')
+        config.unset_option('logging.db_loglevel')
+        configure_logging(with_orm=True)

@@ -1,37 +1,13 @@
 name: continuous-integration
 
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore: [gh-pages]
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths-ignore: ['docs/**']
 
 jobs:
-
-  pre-commit:
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
-
-    - name: Install system dependencies
-      run: |
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
-        sudo apt update
-        sudo apt install libkrb5-dev ruby ruby-dev
-
-    - name: Install python dependencies
-      run: |
-        pip install numpy==1.17.4
-        pip install -e .[all]
-        pip freeze
-
-    - name: Run pre-commit
-      run:
-        pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
   check-requirements:
 
@@ -42,12 +18,12 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: 3.8
 
     - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
 
     - name: Check requirements files
       id: check_reqs
@@ -99,7 +75,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -120,8 +96,8 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --no-deps -e .
+        pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --use-feature=2020-resolver --no-deps -e .
         reentry scan
         pip freeze
 
@@ -144,7 +120,7 @@ jobs:
         name: aiida-pytests-py3.5-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
-        fail_ci_if_error: true
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
   verdi:
 
@@ -154,15 +130,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
-      uses: actions/setup-python@v1
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
       with:
-        python-version: 3.7
+        python-version: 3.8
 
     - name: Install python dependencies
-      run: |
-        pip install numpy==1.17.4
-        pip install -e .
+      run: pip install -e .
 
     - name: Run verdi
       run: |

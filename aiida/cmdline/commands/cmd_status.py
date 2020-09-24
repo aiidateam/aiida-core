@@ -8,13 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi status` command."""
+import enum
 import sys
 
-import enum
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
+from aiida.cmdline.utils import echo
 from aiida.common.log import override_log_level
+from aiida.common.exceptions import IncompatibleDatabaseSchema
 from ..utils.echo import ExitCode
 
 
@@ -47,13 +50,13 @@ STATUS_SYMBOLS = {
 
 
 @verdi.command('status')
+@options.PRINT_TRACEBACK()
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
-def verdi_status(no_rmq):
+def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except,too-many-statements
+    # pylint: disable=broad-except,too-many-statements,too-many-branches
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing
-    from aiida.manage.external.rmq import get_rmq_url
     from aiida.manage.manager import get_manager
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
@@ -64,19 +67,25 @@ def verdi_status(no_rmq):
     manager = get_manager()
     profile = manager.get_profile()
 
+    if profile is None:
+        print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
+        echo.echo_info('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+        return
+
     try:
         profile = manager.get_profile()
         print_status(ServiceStatus.UP, 'profile', 'On profile {}'.format(profile.name))
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'profile', 'Unable to read AiiDA profile', exception=exc)
+        message = 'Unable to read AiiDA profile'
+        print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
     # Getting the repository
-    repo_folder = 'undefined'
     try:
         repo_folder = profile.repository_path
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'repository', 'Error with repo folder', exception=exc)
+        message = 'Error with repository folder'
+        print_status(ServiceStatus.ERROR, 'repository', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
         print_status(ServiceStatus.UP, 'repository', repo_folder)
@@ -87,8 +96,13 @@ def verdi_status(no_rmq):
         with override_log_level():  # temporarily suppress noisy logging
             backend = manager.get_backend()
             backend.cursor()
-    except Exception:
-        print_status(ServiceStatus.DOWN, 'postgres', 'Unable to connect as {}@{}:{}'.format(*database_data))
+    except IncompatibleDatabaseSchema:
+        message = 'Database schema version is incompatible with the code: run `verdi database migrate`.'
+        print_status(ServiceStatus.DOWN, 'postgres', message)
+        exit_code = ExitCode.CRITICAL
+    except Exception as exc:
+        message = 'Unable to connect as {}@{}:{}'.format(*database_data)
+        print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
         print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
@@ -101,10 +115,11 @@ def verdi_status(no_rmq):
                     comm = manager.create_communicator(with_orm=False)
                     comm.stop()
         except Exception as exc:
-            print_status(ServiceStatus.ERROR, 'rabbitmq', 'Unable to connect to rabbitmq', exception=exc)
+            message = 'Unable to connect to rabbitmq with URL: {}'.format(profile.get_rmq_url())
+            print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            print_status(ServiceStatus.UP, 'rabbitmq', 'Connected to {}'.format(get_rmq_url()))
+            print_status(ServiceStatus.UP, 'rabbitmq', 'Connected as {}'.format(profile.get_rmq_url()))
 
     # Getting the daemon status
     try:
@@ -117,17 +132,17 @@ def verdi_status(no_rmq):
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
             print_status(ServiceStatus.WARNING, 'daemon', daemon_status)
-            exit_code = ExitCode.SUCCESS  # A daemon that is not running is not a failure
 
     except Exception as exc:
-        print_status(ServiceStatus.ERROR, 'daemon', 'Error getting daemon status', exception=exc)
+        message = 'Error getting daemon status'
+        print_status(ServiceStatus.ERROR, 'daemon', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     sys.exit(exit_code)
 
 
-def print_status(status, service, msg='', exception=None):
+def print_status(status, service, msg='', exception=None, print_traceback=False):
     """Print status message.
 
     Includes colored indicator.
@@ -139,5 +154,10 @@ def print_status(status, service, msg='', exception=None):
     symbol = STATUS_SYMBOLS[status]
     click.secho(' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
     click.secho('{:12s} {}'.format(service + ':', msg))
+
     if exception is not None:
-        click.echo(exception, err=True)
+        echo.echo_error('{}: {}'.format(type(exception).__name__, exception))
+
+    if print_traceback:
+        import traceback
+        traceback.print_exc()

@@ -231,7 +231,7 @@ def import_ase(filename, dry_run):
     try:
         import ase.io
     except ImportError:
-        echo.echo_critical('You have not installed the package ase. \n' 'You can install it with: pip install ase')
+        echo.echo_critical('You have not installed the package ase. \nYou can install it with: pip install ase')
 
     try:
         asecell = ase.io.read(filename)

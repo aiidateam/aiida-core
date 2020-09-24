@@ -14,6 +14,7 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 import re
 
 from aiida.common.escaping import escape_for_bash
+from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
 
@@ -214,6 +215,22 @@ class SlurmScheduler(Scheduler):
                 if not isinstance(jobs, (tuple, list)):
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
                 joblist = jobs
+
+            # Trick: When asking for a single job, append the same job once more.
+            # This helps provide a reliable way of knowing whether the squeue command failed (if its exit code is
+            # non-zero, _parse_joblist_output assumes that an error has occurred and raises an exception).
+            # When asking for a single job, squeue also returns a non-zero exit code if the corresponding job is
+            # no longer in the queue (stderr: "slurm_load_jobs error: Invalid job id specified"), which typically
+            # happens once in the life time of an AiiDA job,
+            # However, when providing two or more jobids via `squeue --jobs=123,234`, squeue stops caring whether
+            # the jobs are still in the queue and returns exit code zero irrespectively (allowing AiiDA to rely on the
+            # exit code for detection of real issues).
+            # Duplicating job ids has no other effect on the output.
+            # Verified on slurm versions 17.11.2, 19.05.3-2 and 20.02.2.
+            # See also https://github.com/aiidateam/aiida-core/issues/4326
+            if len(joblist) == 1:
+                joblist += [joblist[0]]
+
             command.append('--jobs={}'.format(','.join(joblist)))
 
         comm = ' '.join(command)
@@ -482,21 +499,19 @@ class SlurmScheduler(Scheduler):
         # pylint: disable=too-many-branches,too-many-statements
         num_fields = len(self.fields)
 
-        # I don't raise because if I pass a list of jobs,
-        # I get a non-zero status
-        # if one of the job is not in the list anymore
-        # retval should be zero
-        # if retval != 0:
-        # self.logger.warning("Error in _parse_joblist_output: retval={}; "
-        #    "stdout={}; stderr={}".format(retval, stdout, stderr))
-
-        # issue a warning if there is any stderr output and
-        # there is no line containing "Invalid job id specified", that happens
-        # when I ask for specific calculations, and they are all finished
-        if stderr.strip() and 'Invalid job id specified' not in stderr:
-            self.logger.warning("Warning in _parse_joblist_output, non-empty stderr='{}'".format(stderr.strip()))
-            if retval != 0:
-                raise SchedulerError('Error during squeue parsing (_parse_joblist_output function)')
+        # See discussion in _get_joblist_command on how we ensure that AiiDA can expect exit code 0 here.
+        if retval != 0:
+            raise SchedulerError(
+                """squeue returned exit code {} (_parse_joblist_output function)
+stdout='{}'
+stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
+            )
+        if stderr.strip():
+            self.logger.warning(
+                "squeue returned exit code 0 (_parse_joblist_output function) but non-empty stderr='{}'".format(
+                    stderr.strip()
+                )
+            )
 
         # will contain raw data parsed from output: only lines with the
         # separator, and already split in fields
@@ -738,3 +753,54 @@ class SlurmScheduler(Scheduler):
             )
 
         return True
+
+    def parse_output(self, detailed_job_info, stdout, stderr):  # pylint: disable=inconsistent-return-statements
+        """Parse the output of the scheduler.
+
+        :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
+            This should contain the keys `retval`, `stdout` and `stderr` corresponding to the return value, stdout and
+            stderr returned by the accounting command executed for a specific job id.
+        :param stdout: string with the output written by the scheduler to stdout
+        :param stderr: string with the output written by the scheduler to stderr
+        :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
+        :raises TypeError or ValueError: if the passed arguments have incorrect type or value
+        """
+        from aiida.engine import CalcJob
+
+        type_check(detailed_job_info, dict)
+
+        try:
+            detailed_stdout = detailed_job_info['stdout']
+        except KeyError:
+            raise ValueError('the `detailed_job_info` does not contain the required key `stdout`.')
+
+        type_check(detailed_stdout, str)
+
+        # The format of the detailed job info should be a multiline string, where the first line is the header, with
+        # the labels of the projected attributes. The following line should be the values of those attributes for the
+        # entire job. Any additional lines correspond to those values for any additional tasks that were run.
+        lines = detailed_stdout.splitlines()
+
+        try:
+            master = lines[1]
+        except IndexError:
+            raise ValueError('the `detailed_job_info.stdout` contained less than two lines.')
+
+        attributes = master.split('|')
+
+        # Pop the last element if it is empty. This happens if the `master` string just finishes with a pipe
+        if not attributes[-1]:
+            attributes.pop()
+
+        if len(self._detailed_job_info_fields) != len(attributes):
+            raise ValueError(
+                'second line in `detailed_job_info.stdout` differs in length with schedulers `_detailed_job_info_fields'
+            )
+
+        data = dict(zip(self._detailed_job_info_fields, attributes))
+
+        if data['State'] == 'OUT_OF_MEMORY':
+            return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # pylint: disable=no-member
+
+        if data['State'] == 'TIMEOUT':
+            return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME  # pylint: disable=no-member

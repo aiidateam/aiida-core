@@ -18,6 +18,13 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
 
+.. admonition:: PostgreSQL and RabbitMQ as services
+    :class: tip title-icon-tip
+
+    PostgreSQL and RabbitMQ can also be configured to run as services that run on other machines.
+    When setting up a profile, after having installed AiiDA, you can specify how to connect to these machines.
+    With this setup, it is not necesseray to install PostgreSQL nor RabbitMQ on the machine where AiiDA is installed.
+
 Depending on your set up, there are a few optional dependencies:
 
 * `git`_ (Version control system used for AiiDA development)
@@ -361,21 +368,24 @@ Using virtual environments
 ==========================
 
 AiiDA depends on a number of third party python packages, and usually on specific versions of those packages.
-In order not to interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual python environment.
+In order to not interfere with third party packages needed by other software on your system, we **strongly** recommend isolating AiiDA in a virtual Python environment, for example, by means of one of the methods described below.
 
 .. admonition:: Additional Information
    :class: seealso title-icon-read-more
 
    A very good tutorial on Python environments is provided by `realpython.com <https://realpython.com/effective-python-environment>`__.
 
-`venv <https://docs.python.org/3/library/venv.html>`__ is module included directly with python for creating virtual environments.
+venv
+----
+
+The `venv <https://docs.python.org/3/library/venv.html>`__ module for creating virtual environments ships directly with Python.
 To create a virtual environment, in a given directory, run:
 
 .. code-block:: console
 
    $ python3 -m venv /path/to/new/virtual/environment/aiida
 
-The command to activate the environment is shell specific (see `the documentation <https://docs.python.org/3/library/venv.html#creating-virtual-environments>`__.
+The command to activate the environment is shell specific (see `the documentation <https://docs.python.org/3/library/venv.html#creating-virtual-environments>`__).
 With bash the following command is used:
 
 .. code-block:: console
@@ -391,19 +401,22 @@ To leave or deactivate the environment, simply run:
 .. admonition:: Update install tools
    :class: tip title-icon-tip
 
-   You may need to install ``pip`` and ``setuptools`` in your virtual environment in case the system or user version of these tools is old
+   You may need to update ``pip`` and ``setuptools`` in your virtual environment, in case the system or user version of these tools is old.
 
    .. code-block:: console
 
       (aiida) $ pip install -U setuptools pip
 
-If you have `Conda`_ installed then you can directly create a new environment with ``aiida-core`` and (optionally) Postgres and RabbitMQ installed.
+Conda
+-----
+
+If you have `Conda`_ installed then you can directly create a new environment with ``aiida-core`` and (optionally) the Postgres and RabbitMQ services installed.
 
 .. code-block:: console
 
    $ conda create -n aiida -c conda-forge python=3.7 aiida-core aiida-core.services pip
-   $ conda activate
-   $ conda deactivate aiida
+   $ conda activate aiida
+   $ conda deactivate
 
 
 .. _intro:install:aiida-core:
@@ -462,7 +475,7 @@ In order to install any of these package groups, simply append them as a comma s
 
 .. code-block:: console
 
-    $ pip install -e aiida-core[atomic_tools,docs]
+    $ pip install -e "aiida-core[atomic_tools,docs]"
 
 .. admonition:: Kerberos on Ubuntu
    :class: note title-icon-troubleshoot
@@ -501,7 +514,8 @@ Most users should use the interactive quicksetup:
 
 which leads through the installation process and takes care of creating the corresponding AiiDA database.
 
-For maximum control and customizability, one can use ``verdi setup`` and set up the database manually as explained below.
+For maximum customizability, one can use ``verdi setup``, that provides fine-grained control in configuring how AiiDA should connect to the required services.
+This is useful, for example, if PostgreSQL and or RabbitMQ are not installed and configured with default settings, or are run on a different machine from AiiDA itself.
 
 .. admonition:: Don't forget to backup your data!
    :class: tip title-icon-tip
@@ -650,6 +664,33 @@ During the ``verdi setup`` phase, use ``!`` to leave host empty and specify your
    $ AiiDA Database user: <username>
    $ AiiDA Database password: ""
 
+
+RabbitMQ configuration
+......................
+
+In most normal setups, RabbitMQ will be installed and run as a service on the same machine that hosts AiiDA itself.
+In that case, using the default configuration proposed during a profile setup will work just fine.
+However, when the installation of RabbitMQ is not standard, for example it runs on a different port, or even runs on a completely different machine, all relevant connection details can be configured with ``verdi setup``.
+
+The following parameters can be configured:
+
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Parameter    | Option                    | Default       | Explanation                                                                                                             |
++==============+===========================+===============+=========================================================================================================================+
+| Protocol     | ``--broker-protocol``     | ``amqp``      | The protocol to use, can be either ``amqp`` or ``amqps`` for SSL enabled connections.                                   |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Username     | ``--broker-username``     | ``guest``     | The username with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation. |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Password     | ``--broker-password``     | ``guest``     | The password with which to connect. The ``guest`` account is available and usable with a default RabbitMQ installation. |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Host         | ``--broker-host``         | ``127.0.0.1`` | The hostname of the RabbitMQ server.                                                                                    |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Port         | ``--broker-port``         | ``5672``      | The port to which the server listens.                                                                                   |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. If defined, needs to start with a forward slash.                                                 |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+
+
 verdi setup
 ...........
 
@@ -727,8 +768,8 @@ Use the ``verdi status`` command to check that all services are up and running:
 
    ✓ profile:     On profile quicksetup
    ✓ repository:  /repo/aiida_dev/quicksetup
-   ✓ postgres:    Connected to aiida@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ postgres:    Connected as aiida@localhost:5432
+   ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
 In the example output, all service have a green check mark and so should be running as expected.
@@ -857,7 +898,7 @@ The profile is created under the ``aiida`` username, so to execute commands use:
    ✓ profile:     On profile default
    ✓ repository:  /home/aiida/.aiida/repository/default
    ✓ postgres:    Connected as aiida_qs_aiida_477d3dfc78a2042156110cb00ae3618f@localhost:5432
-   ✓ rabbitmq:    Connected to amqp://127.0.0.1?heartbeat=600
+   ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
    ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
 
 Or to enter into the container interactively:

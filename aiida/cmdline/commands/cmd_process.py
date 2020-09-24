@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-arguments
 """`verdi process` command."""
-
 import click
 
 from kiwipy import communications
@@ -37,6 +36,7 @@ def verdi_process():
 @options.ALL(help='Show all entries, regardless of their process state.')
 @options.PROCESS_STATE()
 @options.PROCESS_LABEL()
+@options.PAUSED()
 @options.EXIT_STATUS()
 @options.FAILED()
 @options.PAST_DAYS()
@@ -44,8 +44,8 @@ def verdi_process():
 @options.RAW()
 @decorators.with_dbenv()
 def process_list(
-    all_entries, group, process_state, process_label, exit_status, failed, past_days, limit, project, raw, order_by,
-    order_dir
+    all_entries, group, process_state, process_label, paused, exit_status, failed, past_days, limit, project, raw,
+    order_by, order_dir
 ):
     """Show a list of running or terminated processes.
 
@@ -61,7 +61,7 @@ def process_list(
         relationships['with_node'] = group
 
     builder = CalculationQueryBuilder()
-    filters = builder.get_filters(all_entries, process_state, process_label, exit_status, failed)
+    filters = builder.get_filters(all_entries, process_state, process_label, paused, exit_status, failed)
     query_set = builder.get_query_set(
         relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit
     )

@@ -68,21 +68,27 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
     _valid_connect_options = [
-        ('username', {
-            'prompt': 'User name',
-            'help': 'user name for the computer',
-            'non_interactive_default': True
-        }),
-        ('port', {
-            'option': options.PORT,
-            'prompt': 'port Nr',
-            'non_interactive_default': True
-        }),
+        (
+            'username', {
+                'prompt': 'User name',
+                'help': 'Login user name on the remote machine.',
+                'non_interactive_default': True
+            }
+        ),
+        (
+            'port',
+            {
+                'option': options.PORT,
+                'prompt': 'Port number',
+                'non_interactive_default': True,
+            },
+        ),
         (
             'look_for_keys', {
+                'default': True,
                 'switch': True,
                 'prompt': 'Look for keys',
-                'help': 'switch automatic key file discovery on / off',
+                'help': 'Automatically look for private keys in the ~/.ssh folder.',
                 'non_interactive_default': True
             }
         ),
@@ -90,7 +96,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'key_filename', {
                 'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
                 'prompt': 'SSH key file',
-                'help': 'Manually pass a key file if default path is not set in ssh config',
+                'help': 'Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
                 'non_interactive_default': True
             }
         ),
@@ -98,62 +104,70 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             'timeout', {
                 'type': int,
                 'prompt': 'Connection timeout in s',
-                'help': 'time in seconds to wait for connection before giving up',
+                'help': 'Time in seconds to wait for connection before giving up. Leave empty to use default value.',
                 'non_interactive_default': True
             }
         ),
         (
             'allow_agent', {
+                'default': False,
                 'switch': True,
                 'prompt': 'Allow ssh agent',
-                'help': 'switch to allow or disallow ssh agent',
+                'help': 'Switch to allow or disallow using an SSH agent.',
                 'non_interactive_default': True
             }
         ),
         (
             'proxy_command', {
                 'prompt': 'SSH proxy command',
-                'help': 'SSH proxy command',
+                'help': 'SSH proxy command for tunneling through a proxy server.'
+                ' Leave empty to parse the proxy command from the SSH config file.',
                 'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect
         (
             'compress', {
+                'default': True,
                 'switch': True,
                 'prompt': 'Compress file transfers',
-                'help': 'switch file transfer compression on / off',
+                'help': 'Turn file transfer compression on or off.',
                 'non_interactive_default': True
             }
         ),
         (
             'gss_auth', {
+                'default': False,
                 'type': bool,
                 'prompt': 'GSS auth',
-                'help': 'GSS auth for kerberos',
+                'help': 'Enable when using GSS kerberos token to connect.',
                 'non_interactive_default': True
             }
         ),
         (
             'gss_kex', {
+                'default': False,
                 'type': bool,
                 'prompt': 'GSS kex',
-                'help': 'GSS kex for kerberos',
+                'help': 'GSS kex for kerberos, if not configured in SSH config file.',
                 'non_interactive_default': True
             }
         ),
         (
             'gss_deleg_creds', {
+                'default': False,
                 'type': bool,
                 'prompt': 'GSS deleg_creds',
-                'help': 'GSS deleg_creds for kerberos',
+                'help': 'GSS deleg_creds for kerberos, if not configured in SSH config file.',
                 'non_interactive_default': True
             }
         ),
-        ('gss_host', {
-            'prompt': 'GSS host',
-            'help': 'GSS host for kerberos',
-            'non_interactive_default': True
-        }),
+        (
+            'gss_host', {
+                'prompt': 'GSS host',
+                'help': 'GSS host for kerberos, if not configured in SSH config file.',
+                'non_interactive_default': True
+            }
+        ),
         # for Kerberos support through python-gssapi
     ]
 
@@ -172,21 +186,28 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     _valid_auth_options = _valid_connect_options + [
         (
             'load_system_host_keys', {
+                'default': True,
                 'switch': True,
                 'prompt': 'Load system host keys',
-                'help': 'switch loading system host keys on / off',
+                'help': 'Load system host keys from default SSH location.',
                 'non_interactive_default': True
             }
         ),
         (
             'key_policy', {
+                'default': 'RejectPolicy',
                 'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
                 'prompt': 'Key policy',
-                'help': 'SSH key policy',
+                'help': 'SSH key policy if host is not known.',
                 'non_interactive_default': True
             }
         )
     ]
+
+    # Max size of log message to print in _exec_command_internal.
+    # Unlimited by default, but can be cropped by a subclass
+    # if too large commands are sent, clogging the outputs or logs
+    _MAX_EXEC_COMMAND_LOG_SIZE = None
 
     @classmethod
     def _get_username_suggestion_string(cls, computer):
@@ -421,14 +442,29 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             )
             raise
 
-        # Open also a SFTPClient
-        self._sftp = self._client.open_sftp()
-        # Set the current directory to a explicit path, and not to None
-        self._sftp.chdir(self._sftp.normalize('.'))
+        # Open also a File transport client. SFTP by default, pure SSH in ssh_only
+        self.open_file_transport()
+
+        return self
+
+    def open_file_transport(self):
+        """
+        Open the SFTP channel, and handle error by directing customer to try another transport
+        """
+        from aiida.common.exceptions import InvalidOperation
+        from paramiko.ssh_exception import SSHException
+        try:
+            self._sftp = self._client.open_sftp()
+        except SSHException:
+            raise InvalidOperation(
+                'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
+                'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
+            )
 
         self._is_open = True
 
-        return self
+        # Set the current directory to a explicit path, and not to None
+        self._sftp.chdir(self._sftp.normalize('.'))
 
     def close(self):
         """
@@ -505,7 +541,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # Note: I don't store the result of the function; if I have no
         # read permissions, this will raise an exception.
         try:
-            self.sftp.stat('.')
+            self.stat('.')
         except IOError as exc:
             if 'Permission denied' in str(exc):
                 self.chdir(old_path)
@@ -516,6 +552,35 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         Returns the normalized path (removing double slashes, etc...)
         """
         return self.sftp.normalize(path)
+
+    def stat(self, path):
+        """
+        Retrieve information about a file on the remote system.  The return
+        value is an object whose attributes correspond to the attributes of
+        Python's ``stat`` structure as returned by ``os.stat``, except that it
+        contains fewer fields.
+        The fields supported are: ``st_mode``, ``st_size``, ``st_uid``,
+        ``st_gid``, ``st_atime``, and ``st_mtime``.
+
+        :param str path: the filename to stat
+
+        :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
+            attributes about the given file.
+        """
+        return self.sftp.stat(path)
+
+    def lstat(self, path):
+        """
+        Retrieve information about a file on the remote system, without
+        following symbolic links (shortcuts). This otherwise behaves exactly
+        the same as `stat`.
+
+        :param str path: the filename to stat
+
+        :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
+            attributes about the given file.
+        """
+        return self.sftp.lstat(path)
 
     def getcwd(self):
         """
@@ -647,7 +712,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if not path:
             return False
         try:
-            return S_ISDIR(self.sftp.stat(path).st_mode)
+            return S_ISDIR(self.stat(path).st_mode)
         except IOError as exc:
             if getattr(exc, 'errno', None) == 2:
                 # errno=2 means path does not exist: I return False
@@ -826,7 +891,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             this_basename = os.path.relpath(path=this_source[0], start=localpath)
 
             try:
-                self.sftp.stat(os.path.join(remotepath, this_basename))
+                self.stat(os.path.join(remotepath, this_basename))
             except IOError as exc:
                 import errno
                 if exc.errno == errno.ENOENT:  # Missing file
@@ -994,7 +1059,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         from aiida.transports.util import FileAttribute
 
-        paramiko_attr = self.sftp.lstat(path)
+        paramiko_attr = self.lstat(path)
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
         # note that paramiko object contains more informations than the aiida
@@ -1167,11 +1232,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         try:
             self.logger.debug(
                 "stat for path '{}' ('{}'): {} [{}]".format(
-                    path, self.sftp.normalize(path), self.sftp.stat(path),
-                    self.sftp.stat(path).st_mode
+                    path, self.normalize(path), self.stat(path),
+                    self.stat(path).st_mode
                 )
             )
-            return S_ISREG(self.sftp.stat(path).st_mode)
+            return S_ISREG(self.stat(path).st_mode)
         except IOError as exc:
             if getattr(exc, 'errno', None) == 2:
                 # errno=2 means path does not exist: I return False
@@ -1212,11 +1277,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         else:
             command_to_execute = command
 
-        self.logger.debug('Command to be executed: {}'.format(command_to_execute))
+        self.logger.debug('Command to be executed: {}'.format(command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]))
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        channel.exec_command('bash -l -c ' + escape_for_bash(command_to_execute))
+        bash_commmand = self._bash_command_str + '-c '
+
+        channel.exec_command(bash_commmand + escape_for_bash(command_to_execute))
 
         stdin = channel.makefile('wb', bufsize)
         stdout = channel.makefile('rb', bufsize)
@@ -1282,21 +1349,23 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             further_params.append('-i {}'.format(escape_for_bash(self._connect_args['key_filename'])))
 
         further_params_str = ' '.join(further_params)
-        # I use triple strings because I both have single and double quotes, but I still want everything in
-        # a single line
-        connect_string = (
-            """ssh -t {machine} {further_params} "if [ -d {escaped_remotedir} ] ;"""
-            """ then cd {escaped_remotedir} ; bash -l ; else echo '  ** The directory' ; """
-            """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-                further_params=further_params_str,
-                machine=self._machine,
-                escaped_remotedir="'{}'".format(remotedir),
-                remotedir=remotedir
-            )
-        )
 
-        # print connect_string
-        return connect_string
+        connect_string = self._gotocomputer_string(remotedir)
+        cmd = 'ssh -t {machine} {further_params} {connect_string}'.format(
+            further_params=further_params_str,
+            machine=self._machine,
+            connect_string=connect_string,
+        )
+        return cmd
+
+    def _symlink(self, source, dest):
+        """
+        Wrap SFTP symlink call without breaking API
+
+        :param source: source of link
+        :param dest: link to create
+        """
+        self.sftp.symlink(source, dest)
 
     def symlink(self, remotesource, remotedestination):
         """
@@ -1319,9 +1388,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             for this_source in self.glob(source):
                 # create the name of the link: take the last part of the path
                 this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
-                self.sftp.symlink(this_source, this_dest)
+                self._symlink(this_source, this_dest)
         else:
-            self.sftp.symlink(source, dest)
+            self._symlink(source, dest)
 
     def path_exists(self, path):
         """
@@ -1329,7 +1398,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         import errno
         try:
-            self.sftp.stat(path)
+            self.stat(path)
         except IOError as exc:
             if exc.errno == errno.ENOENT:
                 return False

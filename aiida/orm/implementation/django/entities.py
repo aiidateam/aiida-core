@@ -77,15 +77,6 @@ class DjangoModelEntity(typing.Generic[ModelType]):
         return self._dbmodel.pk
 
     @property
-    def pk(self):
-        """
-        Get the principal key for this entry
-
-        :return: the principal key
-        """
-        return self._dbmodel.id
-
-    @property
     def is_stored(self):
         """
         Is this entity stored?

@@ -1,5 +1,51 @@
 # Changelog
 
+## v1.4.0
+
+### Improvements
+- Add defaults for configure options of the `SshTransport` plugin [[#4223]](https://github.com/aiidateam/aiida-core/pull/4223)
+- `verdi status`: distinguish database schema version incompatible [[#4319]](https://github.com/aiidateam/aiida-core/pull/4319)
+- `SlurmScheduler`: implement `parse_output` to detect OOM and OOW [[#3931]](https://github.com/aiidateam/aiida-core/pull/3931)
+
+### Features
+- Make the RabbitMQ connection parameters configurable [[#4341]](https://github.com/aiidateam/aiida-core/pull/4341)
+- Add infrastructure to parse scheduler output for `CalcJobs` [[#3906]](https://github.com/aiidateam/aiida-core/pull/3906)
+- Add support for "peer" authentication with PostgreSQL [[#4255]](https://github.com/aiidateam/aiida-core/pull/4255)
+- Add the `--paused` flag to `verdi process list` [[#4213]](https://github.com/aiidateam/aiida-core/pull/4213)
+- Make the loglevel of the daemonizer configurable [[#4276]](https://github.com/aiidateam/aiida-core/pull/4276)
+- `Transport`: add option to not use a login shell for all commands [[#4271]](https://github.com/aiidateam/aiida-core/pull/4271)
+- Implement `skip_orm` option for SqlAlchemy `Group.remove_nodes` [[#4214]](https://github.com/aiidateam/aiida-core/pull/4214)
+- `Dict`: allow setting attributes through setitem and `AttributeManager` [[#4351]](https://github.com/aiidateam/aiida-core/pull/4351)
+- `CalcJob`: allow nested target paths for `local_copy_list` [[#4373]](https://github.com/aiidateam/aiida-core/pull/4373)
+- `verdi export migrate`: add `--in-place` flag to migrate archive in place [[#4220]](https://github.com/aiidateam/aiida-core/pull/4220)
+
+### Bug fixes
+- `verdi`: make `--prepend-text` and `--append-text` options properly interactive [[#4318]](https://github.com/aiidateam/aiida-core/pull/4318)
+- `verdi computer test`: fix failing result in harmless `stderr` responses [[#4316]](https://github.com/aiidateam/aiida-core/pull/4316)
+- `QueryBuilder`: Accept empty string for `entity_type` in `append` method [[#4299]](https://github.com/aiidateam/aiida-core/pull/4299)
+- `verdi status`: do not except when no profile is configured [[#4253]](https://github.com/aiidateam/aiida-core/pull/4253)
+- `ArithmeticAddParser`: attach output before checking for negative value [[#4267]](https://github.com/aiidateam/aiida-core/pull/4267)
+- `CalcJob`: fix bug in `retrieve_list` affecting entries without wildcards [[#4275]](https://github.com/aiidateam/aiida-core/pull/4275)
+- `TemplateReplacerCalculation`: make `files` namespace dynamic [[#4348]](https://github.com/aiidateam/aiida-core/pull/4348)
+
+### Developers
+- Rename folder `test.fixtures` to `test.static` [[#4219]](https://github.com/aiidateam/aiida-core/pull/4219)
+- Remove all files from the pre-commit exclude list [[#4196]](https://github.com/aiidateam/aiida-core/pull/4196)
+- ORM: move attributes/extras methods of frontend and backend nodes to mixins [[#4376]](https://github.com/aiidateam/aiida-core/pull/4376)
+
+### Dependencies
+- Dependencies: update minimum requirement `paramiko~=2.7` [[#4222]](https://github.com/aiidateam/aiida-core/pull/4222)
+- Depedencies: remove upper limit and allow `numpy~=1.17` [[#4378]](https://github.com/aiidateam/aiida-core/pull/4378)
+
+### Deprecations
+- Deprecate getter and setter methods of `Computer` properties [[#4252]](https://github.com/aiidateam/aiida-core/pull/4252)
+- Deprecate methods that refer to a computer's label as name [[#4309]](https://github.com/aiidateam/aiida-core/pull/4309)
+
+### Changes
+- `BaseRestartWorkChain`: do not run `process_handler` when `exit_codes=[]` [[#4380]](https://github.com/aiidateam/aiida-core/pull/4380)
+- `SlurmScheduler`: always raise for non-zero exit code [[#4332]](https://github.com/aiidateam/aiida-core/pull/4332)
+- Remove superfluous `ERROR_NO_RETRIEVED_FOLDER` from `CalcJob` subclasses [[#3906]](https://github.com/aiidateam/aiida-core/pull/3906)
+
 
 ## v1.3.1
 

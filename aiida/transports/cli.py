@@ -26,10 +26,10 @@ TRANSPORT_PARAMS = []
 # pylint: disable=unused-argument
 def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
-    if computer.get_transport_type() != transport_type:
+    if computer.transport_type != transport_type:
         echo.echo_critical(
             'Computer {} has transport of type "{}", not {}!'.format(
-                computer.name, computer.get_transport_type(), transport_type
+                computer.label, computer.transport_type, transport_type
             )
         )
     return computer
@@ -42,12 +42,12 @@ def configure_computer_main(computer, user, **kwargs):
 
     user = user or orm.User.objects.get_default()
 
-    echo.echo_info('Configuring computer {} for user {}.'.format(computer.name, user.email))
+    echo.echo_info('Configuring computer {} for user {}.'.format(computer.label, user.email))
     if user.email != get_manager().get_profile().default_user:
         echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)
-    echo.echo_success('{} successfully configured for {}'.format(computer.name, user.email))
+    echo.echo_success('{} successfully configured for {}'.format(computer.label, user.email))
 
 
 def common_params(command_func):
@@ -71,25 +71,33 @@ def transport_option_default(name, computer):
     return default
 
 
-def interactive_default(transport_type, key, also_noninteractive=False):
-    """Create a contextual_default value callback for an auth_param key."""
+def interactive_default(key, also_non_interactive=False):
+    """Create a contextual_default value callback for an auth_param key.
+
+    :param key: the name of the option.
+    :param also_non_interactive: indicates whether this option should provide a default also in non-interactive mode. If
+        False, the option will raise `MissingParameter` if no explicit value is specified when the command is called in
+        non-interactive mode.
+    """
 
     @with_dbenv()
     def get_default(ctx):
         """Determine the default value from the context."""
         from aiida import orm
 
+        if not also_non_interactive and ctx.params['non_interactive']:
+            raise click.MissingParameter()
+
         user = ctx.params['user'] or orm.User.objects.get_default()
         computer = ctx.params['computer']
+
         try:
             authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)
         except NotExistent:
             authinfo = orm.AuthInfo(computer=computer, user=user)
-        non_interactive = ctx.params['non_interactive']
-        old_authparams = authinfo.get_auth_params()
-        if not also_noninteractive and non_interactive:
-            raise click.MissingParameter()
-        suggestion = old_authparams.get(key)
+
+        auth_params = authinfo.get_auth_params()
+        suggestion = auth_params.get(key)
         suggestion = suggestion or transport_option_default(key, computer)
         return suggestion
 
@@ -99,25 +107,25 @@ def interactive_default(transport_type, key, also_noninteractive=False):
 def create_option(name, spec):
     """Create a click option from a name and partial specs as used in transport auth_options."""
     from copy import deepcopy
+
     spec = deepcopy(spec)
     name_dashed = name.replace('_', '-')
     option_name = '--{}'.format(name_dashed)
     existing_option = spec.pop('option', None)
+
     if spec.pop('switch', False):
         option_name = '--{name}/--no-{name}'.format(name=name_dashed)
-    kwargs = {}
 
-    if 'default' in spec:
-        kwargs['show_default'] = True
-    else:
-        kwargs['contextual_default'] = interactive_default(
-            'ssh', name, also_noninteractive=spec.pop('non_interactive_default', False)
-        )
+    kwargs = {'cls': InteractiveOption, 'show_default': True}
 
-    kwargs['cls'] = InteractiveOption
+    non_interactive_default = spec.pop('non_interactive_default', False)
+    kwargs['contextual_default'] = interactive_default(name, also_non_interactive=non_interactive_default)
+
     kwargs.update(spec)
+
     if existing_option:
         return existing_option(**kwargs)
+
     return click.option(option_name, **kwargs)
 
 

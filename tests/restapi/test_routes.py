@@ -90,7 +90,7 @@ class RESTApiTestCase(AiidaTestCase):
             handle.write(aiida_in)
             handle.flush()
             handle.seek(0)
-            calc.put_object_from_filelike(handle, key='calcjob_inputs/aiida.in', force=True)
+            calc.put_object_from_filelike(handle, 'calcjob_inputs/aiida.in', force=True)
         calc.store()
 
         # create log message for calcjob
@@ -118,7 +118,7 @@ class RESTApiTestCase(AiidaTestCase):
             handle.write(aiida_out)
             handle.flush()
             handle.seek(0)
-            retrieved_outputs.put_object_from_filelike(handle, key='calcjob_outputs/aiida.out', force=True)
+            retrieved_outputs.put_object_from_filelike(handle, 'calcjob_outputs/aiida.out', force=True)
         retrieved_outputs.store()
         retrieved_outputs.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
 
@@ -129,22 +129,22 @@ class RESTApiTestCase(AiidaTestCase):
         calc1.store()
 
         dummy_computers = [{
-            'name': 'test1',
+            'label': 'test1',
             'hostname': 'test1.epfl.ch',
             'transport_type': 'ssh',
             'scheduler_type': 'pbspro',
         }, {
-            'name': 'test2',
+            'label': 'test2',
             'hostname': 'test2.epfl.ch',
             'transport_type': 'ssh',
             'scheduler_type': 'torque',
         }, {
-            'name': 'test3',
+            'label': 'test3',
             'hostname': 'test3.epfl.ch',
             'transport_type': 'local',
             'scheduler_type': 'slurm',
         }, {
-            'name': 'test4',
+            'label': 'test4',
             'hostname': 'test4.epfl.ch',
             'transport_type': 'ssh',
             'scheduler_type': 'slurm',

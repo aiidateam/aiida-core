@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
 """Drop various columns from the `DbUser` model.
 
 These columns were part of the default Django user model
@@ -16,7 +17,6 @@ Revises: 1830c8430131
 Create Date: 2019-05-28 11:15:33.242602
 
 """
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
 
 from alembic import op
 import sqlalchemy as sa

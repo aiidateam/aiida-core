@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=invalid-name,no-member
 """Add a unique constraint on the UUID column of the Node model
 
 Revision ID: 62fe0d36de90
@@ -31,26 +32,30 @@ def verify_node_uuid_uniqueness():
 
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.
     """
-    from alembic import op
     from sqlalchemy.sql import text
     from aiida.common.exceptions import IntegrityError
 
     query = text(
-        'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode) AS s WHERE c > 1')
+        'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode) AS s WHERE c > 1'
+    )
     conn = op.get_bind()
     duplicates = conn.execute(query).fetchall()
 
     if duplicates:
         table = 'db_dbnode'
-        command = '`verdi database integrity detect-duplicate-uuid {table}`'.format(table)
-        raise IntegrityError('Your table "{}" contains entries with duplicate UUIDS.\nRun {} '
-                             'to return to a consistent state'.format(table, command))
+        command = '`verdi database integrity detect-duplicate-uuid {table}`'.format(table=table)
+        raise IntegrityError(
+            'Your table "{}" contains entries with duplicate UUIDS.\nRun {} '
+            'to return to a consistent state'.format(table, command)
+        )
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     verify_node_uuid_uniqueness()
     op.create_unique_constraint('db_dbnode_uuid_key', 'db_dbnode', ['uuid'])
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     op.drop_constraint('db_dbnode_uuid_key', 'db_dbnode')

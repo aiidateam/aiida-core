@@ -7,11 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
-
-
-from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults,
-                                                 CifEntry)
+# pylint: disable=no-self-use
+""""Implementation of `DbImporter` for the OQMD database."""
+from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, CifEntry
 
 
 class OqmdDbImporter(DbImporter):
@@ -24,8 +22,7 @@ class OqmdDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str) and not isinstance(values, int):
-            raise ValueError("incorrect value for keyword '" + alias + \
-                             "' -- only strings and integers are accepted")
+            raise ValueError("incorrect value for keyword '" + alias + "' -- only strings and integers are accepted")
         return '{}={}'.format(key, values)
 
     _keywords = {'element': ['element', None]}
@@ -65,27 +62,22 @@ class OqmdDbImporter(DbImporter):
 
         results = []
         for entry in entries:
-            response = urlopen('{}{}'.format(self._query_url,
-                                                     entry)).read()
-            structures = re.findall(r'/materials/export/conventional/cif/(\d+)',
-                                    response)
+            response = urlopen('{}{}'.format(self._query_url, entry)).read()
+            structures = re.findall(r'/materials/export/conventional/cif/(\d+)', response)
             for struct in structures:
                 results.append({'id': struct})
 
         return OqmdSearchResults(results)
 
-    def setup_db(self, query_url=None, **kwargs):
+    def setup_db(self, query_url=None, **kwargs):  # pylint: disable=arguments-differ
         """
         Changes the database connection details.
         """
         if query_url:
             self._query_url = query_url
 
-        if kwargs.keys():
-            raise NotImplementedError( \
-                "unknown database connection parameter(s): '" + \
-                "', '".join(kwargs.keys()) + \
-                "', available parameters: 'query_url'")
+        if kwargs:
+            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
 
     def get_supported_keywords(self):
         """
@@ -96,7 +88,7 @@ class OqmdDbImporter(DbImporter):
         return self._keywords.keys()
 
 
-class OqmdSearchResults(DbSearchResults):
+class OqmdSearchResults(DbSearchResults):  # pylint: disable=abstract-method
     """
     Results of the search, performed on OQMD.
     """
@@ -127,7 +119,7 @@ class OqmdSearchResults(DbSearchResults):
         return self._base_url + result_dict['id']
 
 
-class OqmdEntry(CifEntry):
+class OqmdEntry(CifEntry):  # pylint: disable=abstract-method
     """
     Represents an entry from OQMD.
     """
@@ -138,7 +130,4 @@ class OqmdEntry(CifEntry):
         :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdEntry`, related
         to the supplied URI.
         """
-        super().__init__(db_name='Open Quantum Materials Database',
-                                        db_uri='http://oqmd.org',
-                                        uri=uri,
-                                        **kwargs)
+        super().__init__(db_name='Open Quantum Materials Database', db_uri='http://oqmd.org', uri=uri, **kwargs)

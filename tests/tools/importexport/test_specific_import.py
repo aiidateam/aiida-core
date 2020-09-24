@@ -13,14 +13,12 @@ import os
 import shutil
 import tempfile
 
-import unittest
-
 import numpy as np
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.folders import RepositoryFolder
-from aiida.orm.utils.repository import Repository
+from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport import import_data, export
 from aiida.tools.importexport.common import exceptions
 
@@ -268,7 +266,6 @@ class TestSpecificImport(AiidaTestCase):
             'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
         )
 
-    @unittest.skip('Reenable when issue #3199 is solve (PR #3242): Fix `extract_tree`')
     @with_temp_dir
     def test_empty_repo_folder_export(self, temp_dir):
         """Check a Node's empty repository folder is exported properly"""

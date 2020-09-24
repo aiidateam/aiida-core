@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
-# pylint: disable=no-name-in-module,import-error
+# pylint: disable=invalid-name,no-member,no-name-in-module,import-error
 """This migration creates UUID column and populates it with distinct UUIDs
 
 This migration corresponds to the 0024_dblog_update Django migration.

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""" AiiDA Group entites"""
+"""AiiDA Group entites"""
 from abc import ABCMeta
 from enum import Enum
 import warnings
@@ -77,7 +77,7 @@ class GroupTypeString(Enum):
     USER = 'user'
 
 
-class Group(entities.Entity, metaclass=GroupMeta):
+class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
 
     class Collection(entities.Collection):

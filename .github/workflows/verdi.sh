@@ -34,3 +34,6 @@ while true; do
     fi
 
 done
+
+$VERDI devel check-load-time
+$VERDI devel check-undesired-imports

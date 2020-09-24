@@ -8,11 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for Computer commands."""
-
 import click
 
 from aiida.cmdline.params import options, types
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
 
@@ -45,13 +44,19 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
 
-LABEL = options.LABEL.clone(prompt='Computer label', cls=InteractiveOption, required=True)
+LABEL = options.LABEL.clone(
+    prompt='Computer label',
+    cls=InteractiveOption,
+    required=True,
+    help='Unique, human-readable label for this computer.'
+)
 
 HOSTNAME = options.HOSTNAME.clone(
     prompt='Hostname',
     cls=InteractiveOption,
     required=True,
-    help='The fully qualified hostname of the computer; use "localhost" for local transports.',
+    help='The fully qualified hostname of the computer (e.g. daint.cscs.ch). '
+    'Use "localhost" when setting up the computer that AiiDA is running on.',
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(
@@ -67,7 +72,7 @@ SHEBANG = OverridableOption(
     prompt='Shebang line (first line of each script, starting with #!)',
     default='#!/bin/bash',
     cls=InteractiveOption,
-    help='This line specifies the first line of the submission script for this computer.',
+    help='Specify the first line of the submission script for this computer (only the bash shell is supported).',
     type=types.ShebangParamType()
 )
 
@@ -78,9 +83,8 @@ WORKDIR = OverridableOption(
     default='/scratch/{username}/aiida/',
     cls=InteractiveOption,
     help='The absolute path of the directory on the computer where AiiDA will '
-    'run the calculations (typically, the scratch of the computer). You '
-    'can use the {username} replacement, that will be replaced by your '
-    'username on the remote computer.'
+    'run the calculations (often a "scratch" directory).'
+    'The {username} string will be replaced by your username on the remote computer.'
 )
 
 MPI_RUN_COMMAND = OverridableOption(
@@ -89,10 +93,8 @@ MPI_RUN_COMMAND = OverridableOption(
     prompt='Mpirun command',
     default='mpirun -np {tot_num_mpiprocs}',
     cls=InteractiveOption,
-    help='The mpirun command needed on the cluster to run parallel MPI '
-    'programs. You can use the {tot_num_mpiprocs} replacement, that will be '
-    'replaced by the total number of cpus, or the other scheduler-dependent '
-    'replacement fields (see the scheduler docs for more information).',
+    help='The mpirun command needed on the cluster to run parallel MPI programs. The {tot_num_mpiprocs} string will be '
+    'replaced by the total number of cpus. See the scheduler docs for further scheduler-dependent template variables.',
     type=types.MpirunCommandParamType()
 )
 
@@ -103,7 +105,32 @@ MPI_PROCS_PER_MACHINE = OverridableOption(
     prompt_fn=should_call_default_mpiprocs_per_machine,
     required_fn=False,
     type=click.INT,
-    help='Enter here the default number of MPI processes per machine (node) that '
-    'should be used if nothing is otherwise specified. Pass the digit 0 '
-    'if you do not want to provide a default value.',
+    help='The default number of MPI processes that should be executed per machine (node), if not otherwise specified.'
+    'Use 0 to specify no default value.',
+)
+
+PREPEND_TEXT = OverridableOption(
+    '--prepend-text',
+    cls=TemplateInteractiveOption,
+    prompt='Prepend script',
+    type=click.STRING,
+    default='',
+    help='Bash commands that should be prepended to the executable call in all submit scripts for this computer.',
+    extension='.bash',
+    header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call in all '
+    'submit scripts for this computer, type that between the equal signs below and save the file.',
+    footer='All lines that start with `#=` will be ignored.'
+)
+
+APPEND_TEXT = OverridableOption(
+    '--append-text',
+    cls=TemplateInteractiveOption,
+    prompt='Append script',
+    type=click.STRING,
+    default='',
+    help='Bash commands that should be appended to the executable call in all submit scripts for this computer.',
+    extension='.bash',
+    header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call in all '
+    'submit scripts for this computer, type that between the equal signs below and save the file.',
+    footer='All lines that start with `#=` will be ignored.'
 )

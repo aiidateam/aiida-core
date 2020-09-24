@@ -7,17 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+"""Base class implementation for an external database importer."""
+import io
 
 
 class DbImporter:
-    """
-    Base class for database importers.
-    """
+    """Base class implementation for an external database importer."""
 
     def query(self, **kwargs):
-        """
-        Method to query the database.
+        """Method to query the database.
 
         :param id: database-specific entry identificator
         :param element: element name from periodic table of elements
@@ -86,14 +84,14 @@ class DbSearchResults:
     ``__getitem__``.
     """
 
+    _return_class = None
+
     def __init__(self, results):
         self._results = results
         self._entries = {}
 
     class DbSearchResultsIterator:
-        """
-        Iterator for search results
-        """
+        """Iterator for search results."""
 
         def __init__(self, results, increment=1):
             self._results = results
@@ -101,12 +99,13 @@ class DbSearchResults:
             self._increment = increment
 
         def __next__(self):
+            """Return the next entry in the iterator."""
             pos = self._position
-            if pos >= 0 and pos < len(self._results):
+            if pos >= 0 and pos < len(self._results):  # pylint: disable=chained-comparison
                 self._position = self._position + self._increment
                 return self._results[pos]
-            else:
-                raise StopIteration()
+
+            raise StopIteration()
 
     def __iter__(self):
         """
@@ -141,7 +140,7 @@ class DbSearchResults:
         """
         raise NotImplementedError('not implemented in base class')
 
-    def at(self, position):
+    def at(self, position):  # pylint: disable=invalid-name
         """
         Returns ``position``-th result as
         :py:class:`aiida.tools.dbimporters.baseclasses.DbEntry`.
@@ -155,7 +154,7 @@ class DbSearchResults:
         if position not in self._entries:
             source_dict = self._get_source_dict(self._results[position])
             url = self._get_url(self._results[position])
-            self._entries[position] = self._return_class(url, **source_dict)
+            self._entries[position] = self._return_class(url, **source_dict)  # pylint: disable=not-callable
         return self._entries[position]
 
     def _get_source_dict(self, result_dict):
@@ -182,8 +181,7 @@ class DbEntry:
     """
     _license = None
 
-    def __init__(self, db_name=None, db_uri=None, id=None,
-                 version=None, extras={}, uri=None):
+    def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):  # pylint: disable=too-many-arguments,redefined-builtin
         """
         Sets the basic parameters for the database entry:
 
@@ -200,7 +198,7 @@ class DbEntry:
             'db_uri': db_uri,
             'id': id,
             'version': version,
-            'extras': extras,
+            'extras': extras or {},
             'uri': uri,
             'source_md5': None,
             'license': self._license,
@@ -208,11 +206,13 @@ class DbEntry:
         self._contents = None
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__.__name__,
-                               ','.join(['{}={}'.format(k, '"{}"'.format(self.source[k])
-                               if issubclass(self.source[k].__class__, str)
-                               else self.source[k])
-                                         for k in sorted(self.source.keys())]))
+        return '{}({})'.format(
+            self.__class__.__name__, ','.join([
+                '{}={}'.format(
+                    k, '"{}"'.format(self.source[k]) if issubclass(self.source[k].__class__, str) else self.source[k]
+                ) for k in sorted(self.source.keys())
+            ])
+        )
 
     @property
     def contents(self):
@@ -272,7 +272,7 @@ class CifEntry(DbEntry):
             :py:class:`aiida.orm.nodes.data.cif.CifData`.
         """
         from aiida.orm import CifData
-        return CifData.read_cif(StringIO(self.cif))
+        return CifData.read_cif(io.StringIO(self.cif))
 
     def get_cif_node(self, store=False, parse_policy='lazy'):
         """
@@ -286,10 +286,10 @@ class CifEntry(DbEntry):
 
         cifnode = None
 
-        with tempfile.NamedTemporaryFile(mode='w+') as f:
-            f.write(self.cif)
-            f.flush()
-            cifnode = CifData(file=f.name, source=self.source, parse_policy=parse_policy)
+        with tempfile.NamedTemporaryFile(mode='w+') as handle:
+            handle.write(self.cif)
+            handle.flush()
+            cifnode = CifData(file=handle.name, source=self.source, parse_policy=parse_policy)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.
@@ -333,10 +333,10 @@ class UpfEntry(DbEntry):
 
         # Prefixing with an ID in order to start file name with the name
         # of the described element.
-        with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as f:
-            f.write(self.contents)
-            f.flush()
-            upfnode = UpfData(file=f.name, source=self.source)
+        with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as handle:
+            handle.write(self.contents)
+            handle.flush()
+            upfnode = UpfData(file=handle.name, source=self.source)
 
         # Maintaining backwards-compatibility. Parameter 'store' should
         # be removed in the future, as the new node can be stored later.

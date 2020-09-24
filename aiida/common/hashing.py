@@ -10,10 +10,6 @@
 """Common password and hash generation functions."""
 import datetime
 import hashlib
-try:  # Python > 3.5
-    from hashlib import blake2b
-except ImportError:  # Python 3.5
-    from pyblake2 import blake2b
 import numbers
 import random
 import time
@@ -110,13 +106,13 @@ def make_hash(object_to_hash, **kwargs):
 
     # use the Unlimited fanout hashing protocol outlined in
     #   https://blake2.net/blake2_20130129.pdf
-    final_hash = blake2b(node_depth=1, last_node=True, **BLAKE2B_OPTIONS)
+    final_hash = hashlib.blake2b(node_depth=1, last_node=True, **BLAKE2B_OPTIONS)
 
     for sub in hashes:
         final_hash.update(sub)
 
     # add an empty last leaf node
-    final_hash.update(blake2b(node_depth=0, last_node=True, **BLAKE2B_OPTIONS).digest())
+    final_hash.update(hashlib.blake2b(node_depth=0, last_node=True, **BLAKE2B_OPTIONS).digest())
 
     return final_hash.hexdigest()
 
@@ -131,7 +127,7 @@ def _make_hash(object_to_hash, **_):
 
 
 def _single_digest(obj_type, obj_bytes=b''):
-    return blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()
+    return hashlib.blake2b(obj_bytes, person=obj_type.encode('ascii'), node_depth=0, **BLAKE2B_OPTIONS).digest()
 
 
 _END_DIGEST = _single_digest(')')

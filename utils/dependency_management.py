@@ -30,7 +30,7 @@ SETUPTOOLS_CONDA_MAPPINGS = {
     'graphviz': 'python-graphviz',
 }
 
-CONDA_IGNORE = ['pyblake2', r'.*python_version == \"3\.5\"']
+CONDA_IGNORE = []
 
 GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS') == 'true'
 

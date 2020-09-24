@@ -13,7 +13,7 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 
 * `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
   `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `python`_ >= 3.5 (The programming language used by AiiDA)
+* `python`_ >= 3.6 (The programming language used by AiiDA)
 * `python3-pip`_ (Python 3 package manager)
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)

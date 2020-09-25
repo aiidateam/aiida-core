@@ -78,7 +78,7 @@ pgsu==0.1.0
 pickleshare==0.7.5
 pika==1.1.0
 pluggy==0.13.1
-plumpy==0.15.0
+plumpy==0.15.1
 prometheus-client==0.7.1
 prompt-toolkit==2.0.10
 psutil==5.7.0

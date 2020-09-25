@@ -122,7 +122,7 @@ class BaseResource(Resource):
 
         if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access,isinstance-second-argument-not-valid-type
             raise RestInputValidationError(
-                'node {} is not of the required type {}'.format(node_id, self.trans._aiida_class)  # pylint: disable=protected-access
+                f'node {node_id} is not of the required type {self.trans._aiida_class}'  # pylint: disable=protected-access
             )
 
         return node
@@ -318,7 +318,7 @@ class Node(BaseResource):
                 if query_type == 'repo_contents' and results:
                     response = make_response(results)
                     response.headers['content-type'] = 'application/octet-stream'
-                    response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
                     return response
 
                 if query_type == 'download' and download not in ['false', 'False', False] and results:
@@ -341,8 +341,8 @@ class Node(BaseResource):
                     if not isinstance(attributes_filter, list):
                         attributes_filter = [attributes_filter]
                     for attr in attributes_filter:
-                        node['attributes'][str(attr)] = node['attributes.' + str(attr)]
-                        del node['attributes.' + str(attr)]
+                        node['attributes'][str(attr)] = node[f'attributes.{str(attr)}']
+                        del node[f'attributes.{str(attr)}']
 
             if extras_filter is not None and extras:
                 for node in results['nodes']:
@@ -350,8 +350,8 @@ class Node(BaseResource):
                     if not isinstance(extras_filter, list):
                         extras_filter = [extras_filter]
                     for extra in extras_filter:
-                        node['extras'][str(extra)] = node['extras.' + str(extra)]
-                        del node['extras.' + str(extra)]
+                        node['extras'][str(extra)] = node[f'extras.{str(extra)}']
+                        del node[f'extras.{str(extra)}']
 
         ## Build response
         data = dict(

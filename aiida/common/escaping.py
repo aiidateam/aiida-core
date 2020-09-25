@@ -41,7 +41,7 @@ def escape_for_bash(str_to_escape):
     str_to_escape = str(str_to_escape)
 
     escaped_quotes = str_to_escape.replace("'", """'"'"'""")
-    return "'{}'".format(escaped_quotes)
+    return f"'{escaped_quotes}'"
 
 
 # Mapping of "SQL" tokens into corresponding regex expressions
@@ -126,7 +126,7 @@ def get_regex_pattern_from_sql(sql_pattern):
         # regex symbols like $ ^ [ ] etc
         return re.escape(string)
 
-    return '^{}$'.format(tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS]))
+    return f'^{tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS])}$'
 
 
 def sql_string_match(string, pattern):

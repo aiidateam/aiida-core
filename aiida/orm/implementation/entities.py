@@ -153,7 +153,7 @@ class BackendEntityAttributesMixin(abc.ABC):
         try:
             return self._dbmodel.attributes[key]
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
 
     def get_attribute_many(self, keys):
         """Return the values of multiple attributes.
@@ -173,7 +173,7 @@ class BackendEntityAttributesMixin(abc.ABC):
         try:
             return [self.get_attribute(key) for key in keys]
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
 
     def set_attribute(self, key, value):
         """Set an attribute to the given value.
@@ -233,7 +233,7 @@ class BackendEntityAttributesMixin(abc.ABC):
         try:
             self._dbmodel.attributes.pop(key)
         except KeyError as exception:
-            raise AttributeError('attribute `{}` does not exist'.format(exception)) from exception
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
         else:
             self._flush_if_stored({'attributes'})
 
@@ -246,7 +246,7 @@ class BackendEntityAttributesMixin(abc.ABC):
         non_existing_keys = [key for key in keys if key not in self._dbmodel.attributes]
 
         if non_existing_keys:
-            raise AttributeError('attributes `{}` do not exist'.format(', '.join(non_existing_keys)))
+            raise AttributeError(f"attributes `{', '.join(non_existing_keys)}` do not exist")
 
         for key in keys:
             self.dbmodel.attributes.pop(key)
@@ -322,7 +322,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         try:
             return self._dbmodel.extras[key]
         except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception)) from exception
+            raise AttributeError(f'extra `{exception}` does not exist') from exception
 
     def get_extra_many(self, keys):
         """Return the values of multiple extras.
@@ -398,7 +398,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         try:
             self._dbmodel.extras.pop(key)
         except KeyError as exception:
-            raise AttributeError('extra `{}` does not exist'.format(exception)) from exception
+            raise AttributeError(f'extra `{exception}` does not exist') from exception
         else:
             self._flush_if_stored({'extras'})
 
@@ -411,7 +411,7 @@ class BackendEntityExtrasMixin(abc.ABC):
         non_existing_keys = [key for key in keys if key not in self._dbmodel.extras]
 
         if non_existing_keys:
-            raise AttributeError('extras `{}` do not exist'.format(', '.join(non_existing_keys)))
+            raise AttributeError(f"extras `{', '.join(non_existing_keys)}` do not exist")
 
         for key in keys:
             self.dbmodel.extras.pop(key)

@@ -52,13 +52,13 @@ class TorqueScheduler(PbsBaseClass):
         """
         return_lines = []
 
-        select_string = 'nodes={}'.format(num_machines)
+        select_string = f'nodes={num_machines}'
         if num_cores_per_machine:
-            select_string += ':ppn={}'.format(num_cores_per_machine)
+            select_string += f':ppn={num_cores_per_machine}'
         elif num_mpiprocs_per_machine:
             # if num_cores_per_machine is not defined then use
             # num_mpiprocs_per_machine
-            select_string += ':ppn={}'.format(num_mpiprocs_per_machine)
+            select_string += f':ppn={num_mpiprocs_per_machine}'
 
         if max_wallclock_seconds is not None:
             try:
@@ -77,7 +77,7 @@ class TorqueScheduler(PbsBaseClass):
             seconds = tot_minutes % 60
             # There is always something before, at least the total #
             # of nodes
-            select_string += (',walltime={:02d}:{:02d}:{:02d}'.format(hours, minutes, seconds))
+            select_string += f',walltime={hours:02d}:{minutes:02d}:{seconds:02d}'
 
         if max_memory_kb:
             try:
@@ -92,7 +92,7 @@ class TorqueScheduler(PbsBaseClass):
                 )
             # There is always something before, at least the total #
             # of nodes
-            select_string += ',mem={}kb'.format(virtual_memory_kb)
+            select_string += f',mem={virtual_memory_kb}kb'
 
-        return_lines.append('#PBS -l {}'.format(select_string))
+        return_lines.append(f'#PBS -l {select_string}')
         return return_lines

@@ -154,8 +154,8 @@ class DbNode(m.Model):
         simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
-            return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
-        return '{} node [{}]'.format(simplename, self.pk)
+            return f'{simplename} node [{self.pk}]: {self.label}'
+        return f'{simplename} node [{self.pk}]'
 
 
 class DbLink(m.Model):
@@ -190,7 +190,7 @@ class DbSetting(m.Model):
     time = m.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return "'{}'={}".format(self.key, self.getvalue())
+        return f"'{self.key}'={self.getvalue()}"
 
     @classmethod
     def set_value(cls, key, value, other_attribs=None, stop_if_existing=False):
@@ -261,7 +261,7 @@ class DbGroup(m.Model):
         unique_together = (('label', 'type_string'),)
 
     def __str__(self):
-        return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
+        return f'<DbGroup [type_string: {self.type_string}] "{self.label}">'
 
 
 class DbComputer(m.Model):
@@ -305,7 +305,7 @@ class DbComputer(m.Model):
     metadata = JSONField(default=dict)
 
     def __str__(self):
-        return '{} ({})'.format(self.name, self.hostname)
+        return f'{self.name} ({self.hostname})'
 
 
 class DbAuthInfo(m.Model):
@@ -330,8 +330,8 @@ class DbAuthInfo(m.Model):
 
     def __str__(self):
         if self.enabled:
-            return 'DB authorization info for {} on {}'.format(self.aiidauser.email, self.dbcomputer.name)
-        return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)
+            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name}'
+        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name} [DISABLED]'
 
 
 class DbComment(m.Model):
@@ -363,7 +363,7 @@ class DbLog(m.Model):
     metadata = JSONField(default=dict)
 
     def __str__(self):
-        return 'DbLog: {} for node {}: {}'.format(self.levelname, self.dbnode.id, self.message)
+        return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
 
 
 @contextlib.contextmanager

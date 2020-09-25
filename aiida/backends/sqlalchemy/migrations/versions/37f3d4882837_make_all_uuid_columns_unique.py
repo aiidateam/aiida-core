@@ -43,14 +43,13 @@ def verify_uuid_uniqueness(table):
     from aiida.common.exceptions import IntegrityError
 
     query = text(
-        'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {}) AS s WHERE c > 1'.
-        format(table)
+        f'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {table}) AS s WHERE c > 1'
     )
     conn = op.get_bind()
     duplicates = conn.execute(query).fetchall()
 
     if duplicates:
-        command = '`verdi database integrity detect-duplicate-uuid {table}`'.format(table=table)
+        command = f'`verdi database integrity detect-duplicate-uuid {table}`'
         raise IntegrityError(
             'Your table "{}"" contains entries with duplicate UUIDS.\nRun {} '
             'to return to a consistent state'.format(table, command)
@@ -61,10 +60,10 @@ def upgrade():
 
     for table in tables:
         verify_uuid_uniqueness(table)
-        op.create_unique_constraint(table + '_uuid_key', table, ['uuid'])
+        op.create_unique_constraint(f'{table}_uuid_key', table, ['uuid'])
 
 
 def downgrade():
 
     for table in tables:
-        op.drop_constraint(table + '_uuid_key', table)
+        op.drop_constraint(f'{table}_uuid_key', table)

@@ -111,7 +111,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         backend = self.backend
 
         # Get the automatic user
-        dbuser = backend.users.create('{}@aiida.net'.format(self.id())).store().dbmodel
+        dbuser = backend.users.create(f'{self.id()}@aiida.net').store().dbmodel
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, node_type=None)
@@ -138,11 +138,11 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Query the session before commit
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the UUID {}'.format(node_uuid))
+        self.assertEqual(len(res), 1, f'There should be a node in the session/DB with the UUID {node_uuid}')
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is in the db
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1, 'There should be a node in the session/DB with the UUID {}'.format(node_uuid))
+        self.assertEqual(len(res), 1, f'There should be a node in the session/DB with the UUID {node_uuid}')

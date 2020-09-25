@@ -40,8 +40,8 @@ def represent_node(dumper, node):
     :return: the representation
     """
     if not node.is_stored:
-        raise ValueError('node {}<{}> cannot be represented because it is not stored'.format(type(node), node.uuid))
-    return dumper.represent_scalar(_NODE_TAG, '%s' % node.uuid)
+        raise ValueError(f'node {type(node)}<{node.uuid}> cannot be represented because it is not stored')
+    return dumper.represent_scalar(_NODE_TAG, f'{node.uuid}')
 
 
 def node_constructor(loader, node):
@@ -65,8 +65,8 @@ def represent_group(dumper, group):
     :return: the representation
     """
     if not group.is_stored:
-        raise ValueError('group {} cannot be represented because it is not stored'.format(group))
-    return dumper.represent_scalar(_GROUP_TAG, '%s' % group.uuid)
+        raise ValueError(f'group {group} cannot be represented because it is not stored')
+    return dumper.represent_scalar(_GROUP_TAG, f'{group.uuid}')
 
 
 def group_constructor(loader, group):
@@ -90,8 +90,8 @@ def represent_computer(dumper, computer):
     :return: the representation
     """
     if not computer.is_stored:
-        raise ValueError('computer {} cannot be represented because it is not stored'.format(computer))
-    return dumper.represent_scalar(_COMPUTER_TAG, '%s' % computer.uuid)
+        raise ValueError(f'computer {computer} cannot be represented because it is not stored')
+    return dumper.represent_scalar(_COMPUTER_TAG, f'{computer.uuid}')
 
 
 def computer_constructor(loader, computer):

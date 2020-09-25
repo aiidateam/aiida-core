@@ -34,15 +34,11 @@ def _store_structure(new_structure, dry_run):
     """
     if dry_run:
         echo.echo(
-            '  Successfully imported structure {} (not storing it, dry-run requested)'.format(
-                new_structure.get_formula()
-            )
+            f'  Successfully imported structure {new_structure.get_formula()} (not storing it, dry-run requested)'
         )
     else:
         new_structure.store()
-        echo.echo(
-            '  Successfully imported structure {} (PK = {})'.format(new_structure.get_formula(), new_structure.pk)
-        )
+        echo.echo(f'  Successfully imported structure {new_structure.get_formula()} (PK = {new_structure.pk})')
 
 
 @verdi_data.group('structure')
@@ -118,7 +114,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
         echo.echo(tabulate(struct_list_data, headers='firstrow'))
-        echo.echo('\nTotal results: {}\n'.format(counter))
+        echo.echo(f'\nTotal results: {counter}\n')
 
 
 @structure.command('show')
@@ -128,9 +124,9 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
 def structure_show(data, fmt):
     """Visualize StructureData objects."""
     try:
-        show_function = getattr(cmd_show, '_show_{}'.format(fmt))
+        show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
-        echo.echo_critical('visualization format {} is not supported'.format(fmt))
+        echo.echo_critical(f'visualization format {fmt} is not supported')
 
     show_function(fmt, data)
 

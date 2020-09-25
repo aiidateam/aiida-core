@@ -38,7 +38,7 @@ def load_group_class(type_string):
     try:
         group_class = load_entry_point('aiida.groups', type_string)
     except EntryPointError:
-        message = 'could not load entry point `{}`, falling back onto `Group` base class.'.format(type_string)
+        message = f'could not load entry point `{type_string}`, falling back onto `Group` base class.'
         warnings.warn(message)  # pylint: disable=no-member
         group_class = Group
 
@@ -57,7 +57,7 @@ class GroupMeta(ABCMeta):
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
             newcls._type_string = None
-            message = 'no registered entry point for `{}` so its instances will not be storable.'.format(name)
+            message = f'no registered entry point for `{name}` so its instances will not be storable.'
             warnings.warn(message)  # pylint: disable=no-member
         else:
             newcls._type_string = entry_point.name  # pylint: disable=protected-access
@@ -162,13 +162,13 @@ class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
         super().__init__(model)
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
     def __str__(self):
         if self.type_string:
-            return '"{}" [type {}], of user {}'.format(self.label, self.type_string, self.user.email)
+            return f'"{self.label}" [type {self.type_string}], of user {self.user.email}'
 
-        return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
+        return f'"{self.label}" [user-defined], of user {self.user.email}'
 
     def store(self):
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""

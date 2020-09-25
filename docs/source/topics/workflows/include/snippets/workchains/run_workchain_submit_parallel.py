@@ -15,10 +15,10 @@ class SomeWorkChain(WorkChain):
     def submit_workchains(self):
         for i in range(3):
             future = self.submit(SomeWorkChain)
-            key = 'workchain_{}'.format(i)
+            key = f'workchain_{i}'
             self.to_context(**{key: future})
 
     def inspect_workchains(self):
         for i in range(3):
-            key = 'workchain_{}'.format(i)
+            key = f'workchain_{i}'
             assert self.ctx[key].is_finished_ok

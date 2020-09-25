@@ -18,7 +18,7 @@ disable = [
     "import-outside-toplevel",
     "inconsistent-return-statements",
     "locally-disabled",
-    "logging-format-interpolation",
+    "logging-fstring-interpolation",
     "missing-class-docstring",
     "missing-function-docstring",
     "no-else-raise",

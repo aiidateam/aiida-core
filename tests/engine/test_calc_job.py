@@ -400,8 +400,8 @@ def test_parse_insufficient_data(process):
     logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
     expected_logs = [
         'could not parse scheduler output: the `detailed_job_info` attribute is missing',
-        'could not parse scheduler output: the `{}` file is missing'.format(filename_stderr),
-        'could not parse scheduler output: the `{}` file is missing'.format(filename_stdout)
+        f'could not parse scheduler output: the `{filename_stderr}` file is missing',
+        f'could not parse scheduler output: the `{filename_stdout}` file is missing'
     ]
 
     for log in expected_logs:
@@ -487,7 +487,7 @@ def test_parse_scheduler_excepted(process, monkeypatch):
     monkeypatch.setattr(DirectScheduler, 'parse_output', raise_exception)
     process.parse()
     logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
-    expected_logs = ['the `parse_output` method of the scheduler excepted: {}'.format(msg)]
+    expected_logs = [f'the `parse_output` method of the scheduler excepted: {msg}']
 
     for log in expected_logs:
         assert log in logs

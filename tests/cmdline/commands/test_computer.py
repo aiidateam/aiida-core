@@ -75,9 +75,9 @@ def generate_setup_options(ordereddict):
     options = []
     for key, value in ordereddict.items():
         if value is None:
-            options.append('--{}'.format(key))
+            options.append(f'--{key}')
         else:
-            options.append('--{}={}'.format(key, value))
+            options.append(f'--{key}={value}')
     return options
 
 
@@ -144,7 +144,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         options = generate_setup_options(non_interactive_options_dict)
 
         result = self.cli_runner.invoke(computer_setup, options, input=user_input)
-        self.assertIsNone(result.exception, msg='There was an unexpected exception. Output: {}'.format(result.output))
+        self.assertIsNone(result.exception, msg=f'There was an unexpected exception. Output: {result.output}')
 
         new_computer = orm.Computer.objects.get(label=label)
         self.assertIsInstance(new_computer, orm.Computer)
@@ -286,12 +286,12 @@ class TestVerdiComputerSetup(AiidaTestCase):
         label = 'noninteractive_config'
 
         with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write("""---
-label: {l}
+            handle.write(f"""---
+label: {label}
 hostname: myhost
 transport: local
 scheduler: direct
-""".format(l=label))
+""")
             handle.flush()
 
             options = ['--non-interactive', '--config', os.path.realpath(handle.name)]
@@ -431,9 +431,9 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         interval = 20
 
         with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write("""---
+            handle.write(f"""---
 safe_interval: {interval}
-""".format(interval=interval))
+""")
             handle.flush()
 
             options = ['local', computer.label, '--config', os.path.realpath(handle.name)]
@@ -479,7 +479,7 @@ safe_interval: {interval}
         comp.store()
 
         username = 'TEST'
-        options = ['ssh', comp.label, '--non-interactive', '--username={}'.format(username), '--safe-interval', '1']
+        options = ['ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
         self.assertEqual(
@@ -685,7 +685,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         os.environ['VISUAL'] = 'sleep 1; vim -cwq'
         os.environ['EDITOR'] = 'sleep 1; vim -cwq'
         label = 'computer_duplicate_interactive'
-        user_input = label + '\n\n\n\n\n\n\n\n\nN'
+        user_input = f'{label}\n\n\n\n\n\n\n\n\nN'
         result = self.cli_runner.invoke(
             computer_duplicate, [str(self.comp.pk)], input=user_input, catch_exceptions=False
         )
@@ -708,7 +708,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         label = 'computer_duplicate_noninteractive'
         result = self.cli_runner.invoke(
             computer_duplicate,
-            ['--non-interactive', '--label=' + label, str(self.comp.pk)]
+            ['--non-interactive', f'--label={label}', str(self.comp.pk)]
         )
         self.assertIsNone(result.exception, result.output)
 
@@ -737,7 +737,7 @@ def test_interactive(clear_database_before_test, aiida_localhost, non_interactiv
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
 
     result = CliRunner().invoke(computer_setup, input=user_input)
-    assert result.exception is None, 'There was an unexpected exception. Output: {}'.format(result.output)
+    assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
 
     new_computer = orm.Computer.objects.get(label=label)
     assert isinstance(new_computer, orm.Computer)

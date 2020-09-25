@@ -45,7 +45,7 @@ def _load_setup_cfg():
         with open(ROOT / 'setup.json') as setup_json_file:
             return json.load(setup_json_file)
     except json.decoder.JSONDecodeError as error:  # pylint: disable=no-member
-        raise DependencySpecificationError("Error while parsing 'setup.json' file: {}".format(error))
+        raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")
     except FileNotFoundError:
         raise DependencySpecificationError("The 'setup.json' file is missing!")
 
@@ -56,7 +56,7 @@ def _load_environment_yml():
         with open(ROOT / 'environment.yml') as file:
             return yaml.load(file, Loader=yaml.SafeLoader)
     except yaml.error.YAMLError as error:
-        raise DependencySpecificationError("Error while parsing 'environment.yml':\n{}".format(error))
+        raise DependencySpecificationError(f"Error while parsing 'environment.yml':\n{error}")
     except FileNotFoundError as error:
         raise DependencySpecificationError(str(error))
 
@@ -222,12 +222,12 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
             'conda-forge', 'defaults'
         ], "channels should be 'conda-forge', 'defaults'."
     except AssertionError as error:
-        raise DependencySpecificationError("Error in 'environment.yml': {}".format(error))
+        raise DependencySpecificationError(f"Error in 'environment.yml': {error}")
 
     try:
         conda_dependencies = {Requirement.parse(d) for d in environment_yml['dependencies']}
     except TypeError as error:
-        raise DependencySpecificationError("Error while parsing requirements from 'environment_yml': {}".format(error))
+        raise DependencySpecificationError(f"Error while parsing requirements from 'environment_yml': {error}")
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
     for dependency in conda_dependencies:
@@ -242,9 +242,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
         if expected_classifier not in setup_cfg['classifiers']:
-            raise DependencySpecificationError(
-                "Trove classifier '{}' missing from 'setup.json'.".format(expected_classifier)
-            )
+            raise DependencySpecificationError(f"Trove classifier '{expected_classifier}' missing from 'setup.json'.")
 
         # The Python version should be specified as supported in 'setup.json'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
@@ -254,7 +252,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
 
         break
     else:
-        raise DependencySpecificationError("Missing specifier: '{}'.".format(conda_python_dependency))
+        raise DependencySpecificationError(f"Missing specifier: '{conda_python_dependency}'.")
 
     # Check that all requirements specified in the setup.json file are found in the
     # conda environment specification.
@@ -265,7 +263,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
         try:
             conda_dependencies.remove(_setuptools_to_conda(req))
         except KeyError:
-            raise DependencySpecificationError("Requirement '{}' not specified in 'environment.yml'.".format(req))
+            raise DependencySpecificationError(f"Requirement '{req}' not specified in 'environment.yml'.")
 
     # The only dependency left should be the one for Python itself, which is not part of
     # the install_requirements for setuptools.
@@ -301,7 +299,7 @@ def validate_pyproject_toml():
     pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
 
     if reentry_requirement not in pyproject_requires:
-        raise DependencySpecificationError("Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement))
+        raise DependencySpecificationError(f"Missing requirement '{reentry_requirement}' in 'pyproject.toml'.")
 
     click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
 

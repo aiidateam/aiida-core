@@ -115,11 +115,11 @@ class NodeTranslator(BaseTranslator):
             self._content_type = 'repo_contents'
             self._filename = filename
         else:
-            raise InputValidationError('invalid result/content value: {}'.format(query_type))
+            raise InputValidationError(f'invalid result/content value: {query_type}')
 
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
-            edge_tag = self.__label__ + '--' + self._result_type
+            edge_tag = f'{self.__label__}--{self._result_type}'
             self._query_help['path'].append({
                 'cls': self._aiida_class,
                 'tag': self._result_type,
@@ -342,10 +342,10 @@ class NodeTranslator(BaseTranslator):
             if is_pkg:
                 app_module = imp.load_package(full_path_base, full_path_base)
             else:
-                full_path = full_path_base + '.py'
+                full_path = f'{full_path_base}.py'
                 # I could use load_module but it takes lots of arguments,
                 # then I use load_source
-                app_module = imp.load_source('rst' + name, full_path)
+                app_module = imp.load_source(f'rst{name}', full_path)
 
             # Go through the content of the module
             if not is_pkg:
@@ -401,7 +401,7 @@ class NodeTranslator(BaseTranslator):
             try:
                 node_cls = load_entry_point_from_full_type(full_type)
             except (TypeError, ValueError):
-                raise RestInputValidationError('The full type {} is invalid.'.format(full_type))
+                raise RestInputValidationError(f'The full type {full_type} is invalid.')
             except EntryPointError:
                 raise RestFeatureNotAvailable('The download formats for this node type are not available.')
 
@@ -469,7 +469,7 @@ class NodeTranslator(BaseTranslator):
         try:
             flist = node.list_objects(filename)
         except IOError:
-            raise RestInputValidationError('{} is not a directory in this repository'.format(filename))
+            raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
         for fobj in flist:
             response.append({'name': fobj.name, 'type': fobj.file_type.name})
@@ -506,7 +506,7 @@ class NodeTranslator(BaseTranslator):
             response.append({
                 'created_time': cobj.ctime,
                 'modified_time': cobj.mtime,
-                'user': cobj.user.first_name + ' ' + cobj.user.last_name,
+                'user': f'{cobj.user.first_name} {cobj.user.last_name}',
                 'message': cobj.content
             })
         return response

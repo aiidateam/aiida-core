@@ -35,10 +35,10 @@ class UserParamType(click.ParamType):
             if self._create:
                 return orm.User(email=value)
 
-            self.fail("User '{}' not found".format(value), param, ctx)
+            self.fail(f"User '{value}' not found", param, ctx)
 
         if len(results) > 1:
-            self.fail("Multiple users found with email '{}': {}".format(value, results))
+            self.fail(f"Multiple users found with email '{value}': {results}")
 
         return results[0]
 

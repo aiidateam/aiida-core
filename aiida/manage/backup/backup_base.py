@@ -92,7 +92,7 @@ class AbstractBackup(ABC):
                 backup_variables = json.load(backup_info_file)
             except ValueError:
                 self._logger.error('Could not parse file %s', backup_info_file_name)
-                raise BackupError('Could not parse file ' + backup_info_file_name)
+                raise BackupError(f'Could not parse file {backup_info_file_name}')
 
         self._read_backup_info_from_dict(backup_variables)
 
@@ -370,7 +370,7 @@ class AbstractBackup(ABC):
 
         temp_path = ''
         for sub_path in sub_paths:
-            temp_path += sub_path + '/'
+            temp_path += f'{sub_path}/'
             parent_dir_set.add(temp_path)
 
         return parent_dir_set

@@ -90,7 +90,7 @@ class LocalTransport(Transport):
         """
         Return a description as a string.
         """
-        return 'local [{}]'.format('OPEN' if self._is_open else 'CLOSED')
+        return f"local [{'OPEN' if self._is_open else 'CLOSED'}]"
 
     @property
     def curdir(self):
@@ -111,9 +111,9 @@ class LocalTransport(Transport):
         """
         new_path = os.path.join(self.curdir, path)
         if not os.path.isdir(new_path):
-            raise IOError("'{}' is not a valid directory".format(new_path))
+            raise IOError(f"'{new_path}' is not a valid directory")
         elif not os.access(new_path, os.R_OK):
-            raise IOError("Do not have read permission to '{}'".format(new_path))
+            raise IOError(f"Do not have read permission to '{new_path}'")
 
         self._internal_dir = os.path.normpath(new_path)
 
@@ -298,7 +298,7 @@ class LocalTransport(Transport):
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise OSError('The local path {} does not exist'.format(localpath))
+                    raise OSError(f'The local path {localpath} does not exist')
 
     def putfile(self, localpath, remotepath, *args, **kwargs):
         """
@@ -459,7 +459,7 @@ class LocalTransport(Transport):
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError('The remote path {} does not exist'.format(remotepath))
+                    raise IOError(f'The remote path {remotepath} does not exist')
 
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """
@@ -515,7 +515,7 @@ class LocalTransport(Transport):
             raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise IOError('Input remotepath is not a folder: {}'.format(remotepath))
+            raise IOError(f'Input remotepath is not a folder: {remotepath}')
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -743,7 +743,7 @@ class LocalTransport(Transport):
 
         # Note: The outer shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        bash_commmand = self._bash_command_str + '-c '
+        bash_commmand = f'{self._bash_command_str}-c '
 
         command = bash_commmand + escape_for_bash(command)
 
@@ -805,7 +805,7 @@ class LocalTransport(Transport):
         :param str remotedir: the full path of the remote directory
         """
         connect_string = self._gotocomputer_string(remotedir)
-        cmd = 'bash -c {}'.format(connect_string)
+        cmd = f'bash -c {connect_string}'
         return cmd
 
     def rename(self, oldpath, newpath):
@@ -819,13 +819,13 @@ class LocalTransport(Transport):
         :raises ValueError: if src/dst is not a valid string
         """
         if not oldpath:
-            raise ValueError('Source {} is not a valid string'.format(oldpath))
+            raise ValueError(f'Source {oldpath} is not a valid string')
         if not newpath:
-            raise ValueError('Destination {} is not a valid string'.format(newpath))
+            raise ValueError(f'Destination {newpath} is not a valid string')
         if not os.path.exists(oldpath):
-            raise IOError('Source {} does not exist'.format(oldpath))
+            raise IOError(f'Source {oldpath} does not exist')
         if not os.path.exists(newpath):
-            raise IOError('Destination {} does not exist'.format(newpath))
+            raise IOError(f'Destination {newpath} does not exist')
 
         shutil.move(oldpath, newpath)
 
@@ -855,7 +855,7 @@ class LocalTransport(Transport):
             try:
                 os.symlink(remotesource, os.path.join(self.curdir, remotedestination))
             except OSError:
-                raise OSError('!!: {}, {}, {}'.format(remotesource, self.curdir, remotedestination))
+                raise OSError(f'!!: {remotesource}, {self.curdir}, {remotedestination}')
 
     def path_exists(self, path):
         """

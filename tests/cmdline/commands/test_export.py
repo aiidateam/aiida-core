@@ -64,7 +64,7 @@ class TestVerdiExport(AiidaTestCase):
 
         # Utility helper
         cls.fixture_archive = 'export/migrate'
-        cls.newest_archive = 'export_v{}_simple.aiida'.format(EXPORT_VERSION)
+        cls.newest_archive = f'export_v{EXPORT_VERSION}_simple.aiida'
         cls.penultimate_archive = 'export_v0.6_simple.aiida'
 
     @classmethod
@@ -145,7 +145,7 @@ class TestVerdiExport(AiidaTestCase):
         """Migrating archives with a version older than the current should work."""
         archives = []
         for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
-            archives.append('export_v0.{}_simple.aiida'.format(version))
+            archives.append(f'export_v0.{version}_simple.aiida')
 
         for archive in archives:
 
@@ -269,7 +269,7 @@ class TestVerdiExport(AiidaTestCase):
         """Test the functionality of `verdi export inspect`."""
         archives = []
         for version in range(1, int(EXPORT_VERSION.split('.')[-1])):
-            archives.append(('export_v0.{}_simple.aiida'.format(version), '0.{}'.format(version)))
+            archives.append((f'export_v0.{version}_simple.aiida', f'0.{version}'))
 
         for archive, version_number in archives:
 

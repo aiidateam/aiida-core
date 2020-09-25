@@ -135,8 +135,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
             symbols = [elements[num]['symbol'] for num in numbers]
         except KeyError as exc:
             raise ValueError(
-                'You did not pass kind_info, but at least one number '
-                'is not a valid Z number: {}'.format(exc.args[0])
+                f'You did not pass kind_info, but at least one number is not a valid Z number: {exc.args[0]}'
             )
 
         _kind_info = {elements[num]['symbol']: num for num in set(numbers)}
@@ -153,12 +152,12 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
     try:
         mapping_to_kinds = {num: _kinds_dict[kindname] for num, kindname in mapping_num_kindname.items()}
     except KeyError as exc:
-        raise ValueError("Unable to find '{}' in the kinds list".format(exc.args[0]))
+        raise ValueError(f"Unable to find '{exc.args[0]}' in the kinds list")
 
     try:
         site_kinds = [mapping_to_kinds[num] for num in numbers]
     except KeyError as exc:
-        raise ValueError('Unable to find kind in kind_info for number {}'.format(exc.args[0]))
+        raise ValueError(f'Unable to find kind in kind_info for number {exc.args[0]}')
 
     structure = StructureData(cell=cell)
     for k in _kinds:
@@ -207,18 +206,14 @@ def xyz_parser_iterator(xyz_string):
                 else:
                     # otherwise we got too less entries
                     raise TypeError(
-                        'Number of atom entries ({}) is smaller than the number of atoms ({})'.format(
-                            self._catom, self._natoms
-                        )
+                        f'Number of atom entries ({self._catom}) is smaller than the number of atoms ({self._natoms})'
                     )
 
             self._catom += 1
 
             if self._catom > self._natoms:
                 raise TypeError(
-                    'Number of atom entries ({}) is larger than the number of atoms ({})'.format(
-                        self._catom, self._natoms
-                    )
+                    f'Number of atom entries ({self._catom}) is larger than the number of atoms ({self._natoms})'
                 )
 
             return (match.group('sym'), (float(match.group('x')), float(match.group('y')), float(match.group('z'))))

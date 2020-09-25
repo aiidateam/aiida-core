@@ -161,7 +161,7 @@ def aiida_local_code_factory(aiida_localhost):
 
         executable_path = shutil.which(executable)
         if not executable_path:
-            raise ValueError('The executable "{}" was not found in the $PATH.'.format(executable))
+            raise ValueError(f'The executable "{executable}" was not found in the $PATH.')
 
         code = Code(input_plugin_name=entry_point, remote_computer_exec=[computer, executable_path])
         code.label = label

@@ -30,7 +30,7 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
         try:
             scheduler_cls = scheduler_ep.load()
         except ImportError:
-            raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
+            raise ImportError(f"Unable to load the '{scheduler_ep.name}' scheduler")
     else:
         raise ValidationError(
             'The should_call_... function should always be run (and prompted) AFTER asking for a scheduler'

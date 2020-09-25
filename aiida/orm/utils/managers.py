@@ -85,11 +85,8 @@ class NodeLinksManager:
             # Note: in order for TAB-completion to work, we need to raise an exception that also inherits from
             # `AttributeError`, so that `getattr(node.inputs, 'some_label', some_default)` returns `some_default`.
             # Otherwise, the exception is not caught by `getattr` and is propagated, instead of returning the default.
-            raise NotExistentAttributeError(
-                "Node '{}' does not have an {}put with link label '{}'".format(
-                    self._node.pk, 'in' if self._incoming else 'out', name
-                )
-            )
+            prefix = 'input' if self._incoming else 'output'
+            raise NotExistentAttributeError(f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'")
 
     def __getitem__(self, name):
         """
@@ -103,20 +100,16 @@ class NodeLinksManager:
             # Note: in order for this class to behave as a dictionary, we raise an exception that also inherits from
             # `KeyError` - in this way, users can use the standard construct `try/except KeyError` and this will behave
             # like a standard dictionary.
-            raise NotExistentKeyError(
-                "Node '{}' does not have an {}put with link label '{}'".format(
-                    self._node.pk, 'in' if self._incoming else 'out', name
-                )
-            )
+            prefix = 'input' if self._incoming else 'output'
+            raise NotExistentKeyError(f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'")
 
     def __str__(self):
         """Return a string representation of the manager"""
-        return 'Manager for {} {} links for node pk={}'.format(
-            'incoming' if self._incoming else 'outgoing', self._link_type.value.upper(), self._node.pk
-        )
+        prefix = 'incoming' if self._incoming else 'outgoing'
+        return f'Manager for {prefix} {self._link_type.value.upper()} links for node pk={self._node.pk}'
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
 
 class AttributeManager:

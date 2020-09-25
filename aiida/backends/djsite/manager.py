@@ -169,7 +169,7 @@ class DjangoSettingsManager(SettingsManager):
         setting = DbSetting.objects.filter(key=key).first()
 
         if setting is None:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent(f'setting `{key}` does not exist')
 
         return Setting(setting.key, setting.val, setting.description, setting.time)
 
@@ -205,4 +205,4 @@ class DjangoSettingsManager(SettingsManager):
         try:
             DbSetting.del_value(key=key)
         except KeyError:
-            raise NotExistent('setting `{}` does not exist'.format(key)) from KeyError
+            raise NotExistent(f'setting `{key}` does not exist') from KeyError

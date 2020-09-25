@@ -66,7 +66,7 @@ class TestBackendNode(AiidaTestCase):
         # Store the node.ctime before the store as a reference
         now = timezone.now()
         node_ctime_before_store = node.ctime
-        self.assertTrue(now > node.ctime, '{} is not smaller than now {}'.format(node.ctime, now))
+        self.assertTrue(now > node.ctime, f'{node.ctime} is not smaller than now {now}')
 
         node.store()
         node_ctime = node.ctime
@@ -75,7 +75,7 @@ class TestBackendNode(AiidaTestCase):
         # The node.ctime should have been unchanged, but the node.mtime should have changed
         self.assertEqual(node.ctime, node_ctime_before_store)
         self.assertIsNotNone(node.mtime)
-        self.assertTrue(now < node.mtime, '{} is not larger than now {}'.format(node.mtime, now))
+        self.assertTrue(now < node.mtime, f'{node.mtime} is not larger than now {now}')
 
         # After storing
         self.assertTrue(isinstance(node.id, int))

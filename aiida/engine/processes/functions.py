@@ -126,7 +126,7 @@ def process_function(node_class):
 
             # If any kwargs remain, the spec should be dynamic, so we raise if it isn't
             if kwargs and not process_class.spec().inputs.dynamic:
-                raise ValueError('{} does not support these kwargs: {}'.format(function.__name__, kwargs.keys()))
+                raise ValueError(f'{function.__name__} does not support these kwargs: {kwargs.keys()}')
 
             process = process_class(inputs=inputs, runner=runner)
 
@@ -303,7 +303,7 @@ class FunctionProcess(Process):
         # the input link to be completely lost.
         if cls.spec().inputs.dynamic and nargs > nparameters:
             name = cls._func.__name__
-            raise TypeError('{}() takes {} positional arguments but {} were given'.format(name, nparameters, nargs))
+            raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
 
     @classmethod
     def create_inputs(cls, *args, **kwargs):

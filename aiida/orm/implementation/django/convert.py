@@ -28,7 +28,7 @@ def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument
     :param dbmodel: the db model instance
     """
     raise TypeError(
-        'No corresponding AiiDA backend class exists for the DbModel instance {}'.format(dbmodel.__class__.__name__)
+        f'No corresponding AiiDA backend class exists for the DbModel instance {dbmodel.__class__.__name__}'
     )
 
 

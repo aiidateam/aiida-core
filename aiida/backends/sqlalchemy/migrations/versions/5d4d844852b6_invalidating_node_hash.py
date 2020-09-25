@@ -36,7 +36,7 @@ def upgrade():
     conn = op.get_bind()  # pylint: disable=no-member
 
     # Invalidate all the hashes
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
     conn.execute(statement)
 
 
@@ -45,5 +45,5 @@ def downgrade():
     conn = op.get_bind()  # pylint: disable=no-member
 
     # Invalidate all the hashes
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
     conn.execute(statement)

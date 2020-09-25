@@ -108,7 +108,7 @@ class JobsList:
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
             jobs_cache = {}
-            self.logger.info('AuthInfo<{}>: successfully retrieved status of active jobs'.format(self._authinfo.pk))
+            self.logger.info(f'AuthInfo<{self._authinfo.pk}>: successfully retrieved status of active jobs')
 
             for job_id, job_info in scheduler_response.items():
                 jobs_cache[job_id] = job_info

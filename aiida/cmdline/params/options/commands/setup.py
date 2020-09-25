@@ -31,7 +31,7 @@ def validate_profile_parameter(ctx):
     """
     option = 'profile'
     if option not in ctx.params or ctx.params[option] is None or not isinstance(ctx.params[option], Profile):
-        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--{}"'.format(option))
+        raise click.BadParameter('specifying the name of the profile is required', param_hint=f'"--{option}"')
 
 
 def get_profile_attribute_default(attribute_tuple, ctx):
@@ -96,7 +96,7 @@ def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-a
     config = get_config()
     profile = ctx.params['profile'].name
     config_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
-    database_name = '{profile}_{user}_{hash}'.format(profile=profile, user=getpass.getuser(), hash=config_hash)
+    database_name = f'{profile}_{getpass.getuser()}_{config_hash}'
 
     return database_name
 
@@ -115,7 +115,7 @@ def get_quicksetup_username(ctx, param, value):  # pylint: disable=unused-argume
 
     config = get_config()
     config_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
-    username = 'aiida_qs_{user}_{hash}'.format(user=getpass.getuser(), hash=config_hash)
+    username = f'aiida_qs_{getpass.getuser()}_{config_hash}'
 
     return username
 

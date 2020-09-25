@@ -41,7 +41,7 @@ def load_node_class(type_string):
         return Data
 
     if not type_string.endswith('.'):
-        raise exceptions.DbContentError('The type string `{}` is invalid'.format(type_string))
+        raise exceptions.DbContentError(f'The type string `{type_string}` is invalid')
 
     try:
         base_path = type_string.rsplit('.', 2)[0]
@@ -71,7 +71,7 @@ def load_node_class(type_string):
     # node then would fail miserably. This is now no longer allowed, but we need a fallback for existing cases, which
     # should be rare. We fallback on `Data` and not `Node` because bare node instances are also not storable and so the
     # logic of the ORM is not well defined for a loaded instance of the base `Node` class.
-    warnings.warn('unknown type string `{}`, falling back onto `Data` class'.format(type_string))  # pylint: disable=no-member
+    warnings.warn(f'unknown type string `{type_string}`, falling back onto `Data` class')  # pylint: disable=no-member
 
     return Data
 
@@ -92,11 +92,11 @@ def get_type_string_from_class(class_module, class_name):
     # If we can reverse engineer an entry point group and name, we're dealing with an external class
     if group and entry_point:
         module_base_path = ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP[group]
-        type_string = '{}.{}.{}.'.format(module_base_path, entry_point.name, class_name)
+        type_string = f'{module_base_path}.{entry_point.name}.{class_name}.'
 
     # Otherwise we are dealing with an internal class
     else:
-        type_string = '{}.{}.'.format(class_module, class_name)
+        type_string = f'{class_module}.{class_name}.'
 
     prefixes = ('aiida.orm.nodes.',)
 
@@ -129,7 +129,7 @@ def is_valid_node_type_string(type_string, raise_on_false=False):
     # as well as the usual type strings like 'data.parameter.ParameterData.'
     if type_string.count('.') == 1 or not type_string.endswith('.'):
         if raise_on_false:
-            raise exceptions.DbContentError('The type string {} is invalid'.format(type_string))
+            raise exceptions.DbContentError(f'The type string {type_string} is invalid')
         return False
 
     return True
@@ -150,7 +150,7 @@ def get_query_type_from_type_string(type_string):
         return ''
 
     type_path = type_string.rsplit('.', 2)[0]
-    type_string = type_path + '.'
+    type_string = f'{type_path}.'
 
     return type_string
 
@@ -160,7 +160,7 @@ class AbstractNodeMeta(ABCMeta):
 
     def __new__(cls, name, bases, namespace, **kwargs):
         newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
-        newcls._logger = logging.getLogger('{}.{}'.format(namespace['__module__'], name))
+        newcls._logger = logging.getLogger(f"{namespace['__module__']}.{name}")
 
         # Set the plugin type string and query type string based on the plugin type string
         newcls._plugin_type_string = get_type_string_from_class(namespace['__module__'], name)  # pylint: disable=protected-access

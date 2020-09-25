@@ -23,9 +23,9 @@ class MultipleValueParamType(click.ParamType):
         self._param_type = param_type
 
         if hasattr(param_type, 'name'):
-            self.name = '{}...'.format(param_type.name)
+            self.name = f'{param_type.name}...'
         else:
-            self.name = '{}...'.format(param_type.__name__.upper())
+            self.name = f'{param_type.__name__.upper()}...'
 
     def get_metavar(self, param):
         try:
@@ -37,4 +37,4 @@ class MultipleValueParamType(click.ParamType):
         try:
             return tuple([self._param_type(entry) for entry in value])
         except ValueError:
-            self.fail('could not convert {} into type {}'.format(value, self._param_type))
+            self.fail(f'could not convert {value} into type {self._param_type}')

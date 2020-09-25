@@ -50,11 +50,11 @@ class PcodDbImporter(CodDbImporter):
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
                     values = [values]
-                sql_parts.append('(' + self._keywords[key][1](self, self._keywords[key][0], key, values) + ')')
+                sql_parts.append(f'({self._keywords[key][1](self, self._keywords[key][0], key, values)})')
         if kwargs:
-            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
-        return 'SELECT file FROM data WHERE ' + ' AND '.join(sql_parts)
+        return f"SELECT file FROM data WHERE {' AND '.join(sql_parts)}"
 
     def query(self, **kwargs):
         """
@@ -94,7 +94,7 @@ class PcodSearchResults(CodSearchResults):  # pylint: disable=abstract-method
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return self._base_url + result_dict['id'][0] + '/' + result_dict['id'][0:3] + '/' + result_dict['id'] + '.cif'
+        return f"{self._base_url + result_dict['id'][0]}/{result_dict['id'][0:3]}/{result_dict['id']}.cif"
 
 
 class PcodEntry(CodEntry):  # pylint: disable=abstract-method

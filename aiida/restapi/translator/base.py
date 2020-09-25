@@ -322,7 +322,7 @@ class BaseTranslator:
                         if not isinstance(attributes_filter, list):
                             attributes_filter = [attributes_filter]
                         for attr in attributes_filter:
-                            default_projections.append('attributes.' + str(attr))
+                            default_projections.append(f'attributes.{str(attr)}')
                 elif attributes is not None and attributes is not False:
                     raise RestValidationError('The attributes filter is false by default and can only be set to true.')
 
@@ -334,7 +334,7 @@ class BaseTranslator:
                         if not isinstance(extras_filter, list):
                             extras_filter = [extras_filter]
                         for extra in extras_filter:
-                            default_projections.append('extras.' + str(extra))
+                            default_projections.append(f'extras.{str(extra)}')
                 elif extras is not None and extras is not False:
                     raise RestValidationError('The extras filter is false by default and can only be set to true.')
 
@@ -376,7 +376,7 @@ class BaseTranslator:
             except ValueError:
                 raise InputValidationError('Limit value must be an integer')
             if limit > self.limit_default:
-                raise RestValidationError('Limit and perpage cannot be bigger than {}'.format(self.limit_default))
+                raise RestValidationError(f'Limit and perpage cannot be bigger than {self.limit_default}')
         else:
             limit = self.limit_default
 
@@ -419,8 +419,8 @@ class BaseTranslator:
                 # Note: In code cleanup and design change, remove this node dependant part
                 # from base class and move it to node translator.
                 if self._result_type in ['with_outgoing', 'with_incoming']:
-                    tmp['link_type'] = res[self.__label__ + '--' + label]['type']
-                    tmp['link_label'] = res[self.__label__ + '--' + label]['label']
+                    tmp['link_type'] = res[f'{self.__label__}--{label}']['type']
+                    tmp['link_label'] = res[f'{self.__label__}--{label}']['label']
                 results.append(tmp)
 
         # TODO think how to make it less hardcoded

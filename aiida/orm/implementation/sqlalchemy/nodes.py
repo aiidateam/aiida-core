@@ -71,15 +71,15 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         type_check(user, SqlaUser)
 
         if computer:
-            type_check(computer, SqlaComputer, 'computer is of type {}'.format(type(computer)))
+            type_check(computer, SqlaComputer, f'computer is of type {type(computer)}')
             arguments['dbcomputer'] = computer.dbmodel
 
         if ctime:
-            type_check(ctime, datetime, 'the given ctime is of type {}'.format(type(ctime)))
+            type_check(ctime, datetime, f'the given ctime is of type {type(ctime)}')
             arguments['ctime'] = ctime
 
         if mtime:
-            type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
+            type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
         self._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))
@@ -186,7 +186,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
                 link = DbLink(input_id=source.id, output_id=self.id, label=link_label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as exception:
-            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception)) from exception
+            raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception
 
     def clean_values(self):
         self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
@@ -235,7 +235,7 @@ class SqlaNodeCollection(BackendNodeCollection):
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
         except NoResultFound:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from NoResultFound
+            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
     def delete(self, pk):
         """Remove a Node entry from the collection with the given id
@@ -248,4 +248,4 @@ class SqlaNodeCollection(BackendNodeCollection):
             session.query(models.DbNode).filter_by(id=pk).one().delete()
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from NoResultFound
+            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound

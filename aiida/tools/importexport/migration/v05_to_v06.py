@@ -57,9 +57,9 @@ def migrate_deserialized_datetime(data, conversion):
                 # `data.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
                 # Note that this first converted the datetime to UTC but then dropped the information from the string.
                 # Since we know that all strings will be UTC, here we are simply reattaching that information.
-                ret_data = data + '+00:00'
+                ret_data = f'{data}+00:00'
             else:
-                raise ArchiveMigrationError("Unknown convert_type '{}'".format(conversion))
+                raise ArchiveMigrationError(f"Unknown convert_type '{conversion}'")
 
     return ret_data
 

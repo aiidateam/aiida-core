@@ -67,6 +67,12 @@ class WarnWhenNotEntered:
     def __del__(self):
         self._warn_if_not_entered('del')
 
+    def __iter__(self):
+        return self._fileobj.__iter__()
+
+    def __next__(self):
+        return self._fileobj.__next__()
+
     def read(self, *args, **kwargs):
         self._warn_if_not_entered('read')
         return self._fileobj.read(*args, **kwargs)

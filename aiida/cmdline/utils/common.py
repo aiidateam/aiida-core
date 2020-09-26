@@ -147,17 +147,21 @@ def get_node_info(node, include_summary=True):
     nodes_input = node.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
     nodes_output = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
-    if nodes_caller:
-        result += '\n' + format_nested_links(nodes_caller.nested(), headers=['Called by', 'PK', 'Type'])
-
     if nodes_input:
         result += '\n' + format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])
 
     if nodes_output:
         result += '\n' + format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])
 
+    if nodes_caller:
+        result += '\n' + format_flat_links(
+            sorted(nodes_caller.all(), key=lambda x: x.node.ctime), headers=['Caller', 'PK', 'Type']
+        )
+
     if nodes_called:
-        result += '\n' + format_flat_links(nodes_called.all(), headers=['Called', 'PK', 'Type'])
+        result += '\n' + format_flat_links(
+            sorted(nodes_called.all(), key=lambda x: x.node.ctime), headers=['Called', 'PK', 'Type']
+        )
 
     log_messages = orm.Log.objects.get_logs_for(node)
 
@@ -181,7 +185,7 @@ def format_flat_links(links, headers):
     table = []
 
     for link_triple in links:
-        table.append([link_triple.link_label, link_triple.node.pk, link_triple.node.__class__.__name__])
+        table.append([link_triple.link_label, link_triple.node.pk, link_triple.node.get_attribute('process_label', '')])
 
     result = '\n{}'.format(tabulate(table, headers=headers))
 

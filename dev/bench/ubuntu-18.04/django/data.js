@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1601044223245,
+  "lastUpdate": 1601145218191,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -5493,6 +5493,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.017859",
             "group": "node",
             "extra": "mean: 26.049 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.5",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "ff30ebdb8860dc69bcbfec5e7a19e8b6e15a4f42",
+          "message": "`verdi setup`: forward broker defaults to interactive mode (#4405)\n\nThe options for the message broker configuration do define defaults,\r\nhowever, the interactive clones for `verdi setup`, which are defined in\r\n`aiida.cmdline.params.options.commands.setup` override the default with\r\nthe `contextual_default` which sets an empty default, unless it is taken\r\nfrom an existing profile. The result is that for new profiles, the\r\nbroker options do not specify a default, even though for most usecases\r\nthe defaults will be required. After the changes of this commit, the\r\nprompt of `verdi setup` will provide a default for all broker parameters\r\nso most users will simply have to press enter each time.",
+          "timestamp": "2020-09-26T20:24:20+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/ff30ebdb8860dc69bcbfec5e7a19e8b6e15a4f42",
+          "distinct": true,
+          "tree_id": "7bb1be28e3269247b969133b649361fe0a808875"
+        },
+        "date": 1601145217578,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.658629669381976,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0083069",
+            "group": "engine",
+            "extra": "mean: 273.33 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.8719311995927755,
+            "unit": "iter/sec",
+            "range": "stddev: 0.038544",
+            "group": "engine",
+            "extra": "mean: 1.1469 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9895277734464488,
+            "unit": "iter/sec",
+            "range": "stddev: 0.034678",
+            "group": "engine",
+            "extra": "mean: 1.0106 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.18429473344770958,
+            "unit": "iter/sec",
+            "range": "stddev: 0.094902",
+            "group": "engine",
+            "extra": "mean: 5.4261 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.2128084300883462,
+            "unit": "iter/sec",
+            "range": "stddev: 0.087895",
+            "group": "engine",
+            "extra": "mean: 4.6991 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.9090599203035934,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0083076",
+            "group": "engine",
+            "extra": "mean: 343.75 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6809036788274678,
+            "unit": "iter/sec",
+            "range": "stddev: 0.061067",
+            "group": "engine",
+            "extra": "mean: 1.4686 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.7700768138260954,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055037",
+            "group": "engine",
+            "extra": "mean: 1.2986 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.16384459664590859,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11983",
+            "group": "engine",
+            "extra": "mean: 6.1033 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.193006433938456,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11748",
+            "group": "engine",
+            "extra": "mean: 5.1812 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.852608965958365,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055974",
+            "group": "import-export",
+            "extra": "mean: 350.56 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.609905259290595,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0083688",
+            "group": "import-export",
+            "extra": "mean: 383.16 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 1.5506407880914364,
+            "unit": "iter/sec",
+            "range": "stddev: 0.058830",
+            "group": "import-export",
+            "extra": "mean: 644.89 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.469185452163126,
+            "unit": "iter/sec",
+            "range": "stddev: 0.052262",
+            "group": "import-export",
+            "extra": "mean: 680.65 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 1045.8837803516979,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00039044",
+            "group": "node",
+            "extra": "mean: 956.13 usec\nrounds: 179"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 232.0200487212111,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00039611",
+            "group": "node",
+            "extra": "mean: 4.3100 msec\nrounds: 134"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 209.25843687145277,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00038371",
+            "group": "node",
+            "extra": "mean: 4.7788 msec\nrounds: 127"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 241.57050415305682,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022914",
+            "group": "node",
+            "extra": "mean: 4.1396 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 43.82075871838796,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0077696",
+            "group": "node",
+            "extra": "mean: 22.820 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 46.613686644300564,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016732",
+            "group": "node",
+            "extra": "mean: 21.453 msec\nrounds: 100"
           }
         ]
       }

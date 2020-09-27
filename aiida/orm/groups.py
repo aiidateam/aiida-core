@@ -48,10 +48,10 @@ def load_group_class(type_string):
 class GroupMeta(ABCMeta):
     """Meta class for `aiida.orm.groups.Group` to automatically set the `type_string` attribute."""
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(cls, name, bases, namespace, **kwargs):
         from aiida.plugins.entry_point import get_entry_point_from_class
 
-        newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
+        newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
 
         entry_point_group, entry_point = get_entry_point_from_class(namespace['__module__'], name)
 

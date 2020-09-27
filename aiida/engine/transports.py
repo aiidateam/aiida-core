@@ -20,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 class TransportRequest:
     """ Information kept about request for a transport object """
 
-    # pylint: disable=too-few-public-methods
     def __init__(self):
         super().__init__()
         self.future = concurrent.Future()

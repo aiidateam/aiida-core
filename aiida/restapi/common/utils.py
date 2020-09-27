@@ -63,7 +63,6 @@ class CustomJSONEncoder(JSONEncoder):
 
 
 class DatetimePrecision:
-    # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).

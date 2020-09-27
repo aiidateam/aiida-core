@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Data migration for `Data` nodes after it was moved in the `aiida.orm.node` module changing the type string."""
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed

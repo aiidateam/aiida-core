@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,no-member
 """Module that defines db models."""
 import contextlib
 
@@ -63,7 +63,7 @@ class AiidaObjectManager(m.Manager):
         return AiidaQuerySet(self.model, using=self._db)
 
 
-class DbUser(m.Model):  # pylint: disable=too-few-public-methods
+class DbUser(m.Model):
     """Class that represents a user as the owner of a specific Node."""
 
     is_anonymous = False
@@ -257,7 +257,7 @@ class DbGroup(m.Model):
     # JSON Extras
     extras = JSONField(default=dict, null=False)
 
-    class Meta:  # pylint: disable=too-few-public-methods
+    class Meta:
         unique_together = (('label', 'type_string'),)
 
     def __str__(self):
@@ -325,7 +325,7 @@ class DbAuthInfo(m.Model):
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
-    class Meta:  # pylint: disable=too-few-public-methods
+    class Meta:
         unique_together = (('aiidauser', 'dbcomputer'),)
 
     def __str__(self):

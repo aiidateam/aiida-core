@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Replace use of text fields to store JSON data with builtin JSONField."""
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed

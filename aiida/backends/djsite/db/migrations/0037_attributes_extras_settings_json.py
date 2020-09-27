@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,import-error,no-name-in-module,too-few-public-methods,no-member
+# pylint: disable=invalid-name,import-error,no-name-in-module,no-member
 """Adding JSONB field for Node.attributes and Node.Extras"""
 
 import math

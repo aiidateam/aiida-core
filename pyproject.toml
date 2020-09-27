@@ -2,6 +2,12 @@
 requires = ["setuptools>=40.8.0,<50", "wheel", "reentry~=1.3", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta:__legacy__"
 
+[tool.pylint.master]
+load-plugins = "pylint_django"
+
+[tool.pylint.format]
+max-line-length = 120
+
 [tool.pylint.messages_control]
 disable = [
     "bad-continuation",
@@ -39,11 +45,23 @@ good-names = [
     "MultiplyAddWorkChain"
 ]
 
-[tool.pylint.master]
-load-plugins = "pylint_django"
-
-[tool.pylint.format]
-max-line-length = 120
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--benchmark-skip"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:babel:",
+    "ignore::DeprecationWarning:django:",
+    "ignore::DeprecationWarning:frozendict:",
+    "ignore::DeprecationWarning:sqlalchemy:",
+    "ignore::DeprecationWarning:yaml:",
+    "ignore::DeprecationWarning:pymatgen:",
+    "ignore::DeprecationWarning:jsonbackend:",
+    "ignore::DeprecationWarning:reentry:",
+    "ignore::DeprecationWarning:pkg_resources:",
+]
 
 [tool.tox]
 legacy_tox_ini = """

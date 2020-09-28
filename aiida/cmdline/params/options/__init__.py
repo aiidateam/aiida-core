@@ -315,10 +315,10 @@ BROKER_PORT = OverridableOption(
 
 BROKER_VIRTUAL_HOST = OverridableOption(
     '--broker-virtual-host',
-    type=types.HostnameType(),
+    type=click.types.StringParamType(),
     default=BROKER_DEFAULTS.virtual_host,
     show_default=True,
-    help='Name of the virtual host for the message broker. Forward slashes need to be encoded'
+    help='Name of the virtual host for the message broker without leading forward slash.'
 )
 
 REPOSITORY_PATH = OverridableOption(

@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods
 """Tests for the Node ORM class."""
+import io
 import os
 import tempfile
 
@@ -842,3 +843,20 @@ def test_store_from_cache():
     assert clone.is_stored
     assert clone.get_cache_source() == data.uuid
     assert data.get_hash() == clone.get_hash()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_open_wrapper():
+    """Test the wrapper around the return value of ``Node.open``.
+
+    This should be remove in v2.0.0 because the wrapper should be removed.
+    """
+    filename = 'test'
+    node = Node()
+    node.put_object_from_filelike(io.StringIO('test'), filename)
+
+    # Both `iter` and `next` should not raise
+    next(node.open(filename))
+    iter(node.open(filename))
+    node.open(filename).__next__()
+    node.open(filename).__iter__()

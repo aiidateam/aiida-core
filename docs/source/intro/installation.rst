@@ -687,7 +687,7 @@ The following parameters can be configured:
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
 | Port         | ``--broker-port``         | ``5672``      | The port to which the server listens.                                                                                   |
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
-| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. If defined, needs to start with a forward slash.                                                 |
+| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. Should not contain the leading forward slash, this will be added automatically by AiiDA.         |
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
 
 

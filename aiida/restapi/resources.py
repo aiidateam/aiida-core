@@ -37,9 +37,12 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
+        subpath = self.utils.strip_api_prefix(path).strip('/')
+        pathlist = self.utils.split_path(subpath)
 
-        if len(pathlist) > 1:
+        if subpath == '':
+            resource_type = 'endpoints'
+        elif len(pathlist) > 1:
             resource_type = pathlist.pop(1)
         else:
             resource_type = 'info'

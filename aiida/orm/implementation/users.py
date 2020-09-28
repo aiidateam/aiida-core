@@ -107,6 +107,5 @@ class BackendUser(BackendEntity):
 
 
 class BackendUserCollection(BackendCollection[BackendUser]):
-    # pylint: disable=too-few-public-methods
 
     ENTITY_CLASS = BackendUser

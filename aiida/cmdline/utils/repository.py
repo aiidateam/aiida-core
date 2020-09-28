@@ -22,5 +22,4 @@ def list_repository_contents(node, path, color):
 
     for entry in node.list_objects(path):
         bold = bool(entry.file_type == FileType.DIRECTORY)
-        fg = 'blue' if color and entry.file_type == FileType.DIRECTORY else None
-        click.secho(entry.name, bold=bold, fg=fg)
+        click.secho(entry.name, bold=bold, fg='blue' if color and entry.file_type == FileType.DIRECTORY else None)

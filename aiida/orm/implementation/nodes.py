@@ -169,8 +169,6 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttribut
 class BackendNodeCollection(BackendCollection[BackendNode]):
     """The collection of `BackendNode` entries."""
 
-    # pylint: disable=too-few-public-methods
-
     ENTITY_CLASS = BackendNode
 
     @abc.abstractmethod

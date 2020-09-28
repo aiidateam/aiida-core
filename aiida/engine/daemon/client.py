@@ -24,7 +24,7 @@ VERDI_BIN = shutil.which('verdi')
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 
-class ControllerProtocol(enum.Enum):  # pylint: disable=too-few-public-methods
+class ControllerProtocol(enum.Enum):
     """
     The protocol to use to for the controller of the Circus daemon
     """

@@ -38,8 +38,6 @@ class OverridableArgument:
     the function argument name is determined, can be overriden
     """
 
-    # pylint: disable=too-few-public-methods
-
     def __init__(self, *args, **kwargs):
         """
         Store the default args and kwargs

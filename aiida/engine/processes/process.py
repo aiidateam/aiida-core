@@ -52,7 +52,6 @@ class Process(plumpy.Process):
         """
         Keys used to identify things in the saved instance state bundle.
         """
-        # pylint: disable=too-few-public-methods
         CALC_ID = 'calc_id'
 
     @classmethod
@@ -346,7 +345,7 @@ class Process(plumpy.Process):
         if self._enable_persistence:
             try:
                 self.runner.persister.delete_checkpoint(self.pid)
-            except BaseException:
+            except Exception:  # pylint: disable=broad-except
                 self.logger.exception('Failed to delete checkpoint')
 
         try:

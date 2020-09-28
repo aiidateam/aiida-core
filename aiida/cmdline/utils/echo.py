@@ -22,7 +22,6 @@ __all__ = (
 )
 
 
-# pylint: disable=too-few-public-methods
 class ExitCode(IntEnum):
     """Exit codes for the verdi command line."""
     CRITICAL = 1

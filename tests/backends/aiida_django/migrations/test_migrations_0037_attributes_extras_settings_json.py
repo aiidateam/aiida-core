@@ -246,9 +246,8 @@ class TestSettingsToJSONMigration(TestMigrations):
         super().tearDown()
 
 
-# pylint: disable=no-init, old-style-class, too-few-public-methods, dangerous-default-value, too-many-statements
-# pylint: disable= no-else-return, too-many-arguments, too-many-branches, fixme
-class DbMultipleValueAttributeBaseClass():
+# pylint: disable=no-init,dangerous-default-value,too-many-statements,no-else-return,too-many-arguments,too-many-branches,fixme
+class DbMultipleValueAttributeBaseClass:
     """
     Abstract base class for tables storing attribute + value data, of
     different data types (without any association to a Node).

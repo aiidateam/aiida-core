@@ -2,22 +2,74 @@
 requires = ["setuptools>=40.8.0,<50", "wheel", "reentry~=1.3", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta:__legacy__"
 
+[tool.pylint.master]
+load-plugins = "pylint_django"
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.messages_control]
+disable = [
+    "bad-continuation",
+    "bad-option-value",
+    "cyclic-import",
+    "django-not-available",
+    "duplicate-code",
+    "import-outside-toplevel",
+    "inconsistent-return-statements",
+    "locally-disabled",
+    "logging-format-interpolation",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "no-else-raise",
+    "too-few-public-methods",
+    "too-many-ancestors",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "useless-suppression",
+]
+
+[tool.pylint.basic]
+good-names = [
+    "_",
+    "x",
+    "y",
+    "z",
+    "i",
+    "j",
+    "k",
+    "pk",
+    "TemplatereplacerCalculation",
+    "ArithmeticAddCalculation",
+    "MultiplyAddWorkChain"
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--benchmark-skip"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:babel:",
+    "ignore::DeprecationWarning:django:",
+    "ignore::DeprecationWarning:frozendict:",
+    "ignore::DeprecationWarning:sqlalchemy:",
+    "ignore::DeprecationWarning:yaml:",
+    "ignore::DeprecationWarning:pymatgen:",
+    "ignore::DeprecationWarning:jsonbackend:",
+    "ignore::DeprecationWarning:reentry:",
+    "ignore::DeprecationWarning:pkg_resources:",
+]
+
 [tool.tox]
-# To use tox, see https://tox.readthedocs.io
-# Simply pip or conda install tox
-# If you use conda, you may also want to install tox-conda
-# then run `tox` or `tox -e py37 -- {pytest args}`
-
-# To ensure rebuild of the tox environment,
-# either simple delete the .tox folder or use `tox -r`
-
 legacy_tox_ini = """
 [tox]
 envlist = py37-django
 
-[testenv:py{35,36,37,38}-{django,sqla}]
+[testenv:py{36,37,38}-{django,sqla}]
 deps =
-    py35: -rrequirements/requirements-py-3.5.txt
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt

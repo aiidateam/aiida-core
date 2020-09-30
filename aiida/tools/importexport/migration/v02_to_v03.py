@@ -29,7 +29,7 @@ def migrate_v2_to_v3(metadata, data, *args):
     old_version = '0.2'
     new_version = '0.3'
 
-    class LinkType(enum.Enum):  # pylint: disable=too-few-public-methods
+    class LinkType(enum.Enum):
         """This was the state of the `aiida.common.links.LinkType` enum before aiida-core v1.0.0a5"""
 
         UNSPECIFIED = 'unspecified'
@@ -38,7 +38,7 @@ def migrate_v2_to_v3(metadata, data, *args):
         INPUT = 'inputlink'
         CALL = 'calllink'
 
-    class NodeType(enum.Enum):  # pylint: disable=too-few-public-methods
+    class NodeType(enum.Enum):
         """A simple enum of relevant node types"""
 
         NONE = 'none'

@@ -61,8 +61,8 @@ class TestVerdiNode(AiidaTestCase):
         cls.content_file2 = 'the minister of silly walks'
         cls.key_file1 = 'some/nested/folder/filename.txt'
         cls.key_file2 = 'some_other_file.txt'
-        folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), key=cls.key_file1)
-        folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), key=cls.key_file2)
+        folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), cls.key_file1)
+        folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
         folder_node.store()
         cls.folder_node = folder_node
 

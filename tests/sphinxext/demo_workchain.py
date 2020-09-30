@@ -74,5 +74,5 @@ class EmptyOutlineWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.input('x', valid_type=Float, help='First input argument.')
 
 
-class NormalClass:  # pylint: disable=too-few-public-methods
+class NormalClass:
     """This is here to check that we didn't break the regular autoclass."""

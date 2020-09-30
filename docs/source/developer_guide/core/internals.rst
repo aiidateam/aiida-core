@@ -17,18 +17,18 @@ This means that as soon as a node is stored, any attempt to alter its attributes
 Certain subclasses of nodes need to adapt this behavior however, as for example in the case of the :py:class:`~aiida.orm.nodes.process.process.ProcessNode` class (see `calculation updatable attributes`_), but since the immutability of stored nodes is a core concept of AiiDA, this behavior is nonetheless enforced on the node level.
 This guarantees that any subclasses of the Node class will respect this behavior unless it is explicitly overriden.
 
-Node methods
+Entity methods
 ******************
-- :py:meth:`~aiida.orm.utils.node.clean_value` takes a value and returns an object which can be serialized for storage in the database.
+- :py:meth:`~aiida.orm.implementation.utils.clean_value` takes a value and returns an object which can be serialized for storage in the database.
   Such an object must be able to be subsequently deserialized without changing value.
   If a simple datatype is passed (integer, float, etc.), a check is performed to see if it has a value of ``nan`` or ``inf``, as these cannot be stored.
   Otherwise, if a list, tuple, dictionary, etc., is  passed, this check is performed for each value it contains.
   This is done recursively, automatically handling the case of nested objects.
   It is important to note that iterable type objects are converted to lists during this process, and mappings are converted to normal dictionaries.
   For efficiency reasons, the cleaning of attribute values is delayed to the last moment possible.
-  This means that for an unstored node, new attributes are not cleaned but simply set in the cache of the underlying database model.
-  When the node is then stored, all attributes are cleaned in one fell swoop and if successful the values are flushed to the database.
-  Once a node is stored, there no longer is such a cache and so the attribute values are cleaned straight away for each call.
+  This means that for an unstored entity, new attributes are not cleaned but simply set in the cache of the underlying database model.
+  When the entity is then stored, all attributes are cleaned in one fell swoop and if successful the values are flushed to the database.
+  Once an entity is stored, there no longer is such a cache and so the attribute values are cleaned straight away for each call.
   The same mechanism holds for the cleaning of the values of extras.
 
 

@@ -76,7 +76,7 @@ def override_decorator(check=False):
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
 
-class classproperty:  # pylint: disable=too-few-public-methods,invalid-name
+class classproperty:  # pylint: disable=invalid-name
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together

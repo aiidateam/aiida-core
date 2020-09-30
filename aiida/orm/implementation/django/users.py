@@ -70,13 +70,14 @@ class DjangoUserCollection(BackendUserCollection):
 
     ENTITY_CLASS = DjangoUser
 
-    def create(self, email, first_name='', last_name='', institution=''):
+    def create(self, email, first_name='', last_name='', institution=''):  # pylint: disable=arguments-differ
         """
         Create a user with the provided email address
 
         :return: A new user object
         :rtype: :class:`aiida.orm.implementation.django.users.DjangoUser`
         """
+        # pylint: disable=abstract-class-instantiated
         return DjangoUser(self.backend, email, first_name, last_name, institution)
 
     def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name

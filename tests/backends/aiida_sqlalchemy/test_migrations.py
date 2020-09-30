@@ -1708,3 +1708,42 @@ class TestGroupTypeStringMigration(TestMigrationsSQLA):
                 self.assertEqual(group_autorun.type_string, 'core.auto')
             finally:
                 session.close()
+
+
+class TestGroupExtrasMigration(TestMigrationsSQLA):
+    """Test migration to add the `extras` JSONB column to the `DbGroup` model."""
+
+    migrate_from = 'bf591f31dd12'  # bf591f31dd12_dbgroup_type_string.py
+    migrate_to = '0edcdd5a30f0'  # 0edcdd5a30f0_dbgroup_extras.py
+
+    def setUpBeforeMigration(self):
+        """Create a DbGroup."""
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
+                session.add(default_user)
+                session.commit()
+
+                group = DbGroup(label='01', user_id=default_user.id, type_string='user')
+                session.add(group)
+                session.commit()
+
+                # Store values for later tests
+                self.group_pk = group.id
+
+            finally:
+                session.close()
+
+    def test_group_string_update(self):
+        """Test that the model now has an extras column with empty dictionary as default."""
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                group = session.query(DbGroup).filter(DbGroup.id == self.group_pk).one()
+                self.assertEqual(group.extras, {})
+            finally:
+                session.close()

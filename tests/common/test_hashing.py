@@ -46,7 +46,7 @@ class MakeHashTest(unittest.TestCase):
     Tests for the make_hash function.
     """
 
-    # pylint: disable=missing-docstring,too-few-public-methods
+    # pylint: disable=missing-docstring
 
     def test_builtin_types(self):
         test_data = {

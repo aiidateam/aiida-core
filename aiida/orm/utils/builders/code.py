@@ -217,7 +217,6 @@ class CodeBuilder:
         """Analogous to Code.is_local()"""
         return self.__getattr__('code_type') == self.CodeType.STORE_AND_UPLOAD
 
-    # pylint: disable=too-few-public-methods
     class CodeType(enum.Enum):
         STORE_AND_UPLOAD = 'store in the db and upload'
         ON_COMPUTER = 'on computer'

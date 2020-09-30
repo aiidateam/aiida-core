@@ -18,6 +18,7 @@ from aiida.backends import BACKEND_DJANGO
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import get_config, get_config_option, Profile
 from aiida.manage.external.postgres import DEFAULT_DBINFO
+from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 PASSWORD_UNCHANGED = '***'  # noqa
 
@@ -292,42 +293,44 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
     prompt='Broker protocol',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_protocol', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_protocol', BROKER_DEFAULTS.protocol)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_USERNAME = QUICKSETUP_BROKER_USERNAME.clone(
     prompt='Broker username',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_username', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_username', BROKER_DEFAULTS.username)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PASSWORD = QUICKSETUP_BROKER_PASSWORD.clone(
     prompt='Broker password',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_password', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_password', BROKER_DEFAULTS.password)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_HOST = QUICKSETUP_BROKER_HOST.clone(
     prompt='Broker host',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_host', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_host', BROKER_DEFAULTS.host)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PORT = QUICKSETUP_BROKER_PORT.clone(
     prompt='Broker port',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_port', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_port', BROKER_DEFAULTS.port)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
     prompt='Broker virtual host name',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_virtual_host', None)),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('broker_virtual_host', BROKER_DEFAULTS.virtual_host)
+    ),
     cls=options.interactive.InteractiveOption
 )
 

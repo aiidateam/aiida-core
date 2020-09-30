@@ -28,8 +28,8 @@ def runner():
 def folder_data():
     """Create a `FolderData` instance with basic file and directory structure."""
     node = FolderData()
-    node.put_object_from_filelike(io.StringIO(''), key='nested/file.txt')
-    node.put_object_from_filelike(io.StringIO(''), key='file.txt')
+    node.put_object_from_filelike(io.StringIO(''), 'nested/file.txt')
+    node.put_object_from_filelike(io.StringIO(''), 'file.txt')
 
     return node
 

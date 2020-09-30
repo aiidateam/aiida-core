@@ -50,7 +50,7 @@ jobs:
       fail-fast: false
       matrix:
         backend: ['django', 'sqlalchemy']
-        python-version: [3.5, 3.8]
+        python-version: [3.6, 3.8]
 
     services:
       postgres:
@@ -90,10 +90,6 @@ jobs:
         pip install --upgrade pip
         pip --version
 
-    - name: upgrade setuptools [py35]
-      if: matrix.python-version == 3.5
-      run: pip install -I setuptools==42.0.0  # Minimally required version for Python 3.5.
-
     - name: Install aiida-core
       run: |
         pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
@@ -114,10 +110,10 @@ jobs:
         .github/workflows/tests.sh
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.5 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.6 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v1
       with:
-        name: aiida-pytests-py3.5-${{ matrix.backend }}
+        name: aiida-pytests-py3.6-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails

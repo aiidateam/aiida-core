@@ -24,7 +24,7 @@ from aiida.common.log import override_log_formatter
 from aiida.common.utils import get_object_from_string
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.orm.utils.links import link_triple_exists, validate_link
-from aiida.orm.utils.repository import Repository
+from aiida.orm.utils._repository import Repository
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip

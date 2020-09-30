@@ -354,62 +354,143 @@ class TestCalcJob(AiidaTestCase):
         # because the retrieved folder does not contain the output file it expects
         assert exit_code == process.exit_codes.ERROR_READING_OUTPUT_FILE
 
-    def test_parse_insufficient_data(self):
-        """Test the scheduler output parsing logic in `CalcJob.parse`.
 
-        Here we check explicitly that the parsing does not except even if the required information is not available.
-        """
-        process = self.instantiate_process()
-        retrieved = orm.FolderData().store()
-        retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
-        process.parse()
+@pytest.fixture
+def process(aiida_local_code_factory):
+    """Instantiate a process with default inputs and return the `Process` instance."""
+    from aiida.engine.utils import instantiate_process
+    from aiida.manage.manager import get_manager
 
-        filename_stderr = process.node.get_option('scheduler_stderr')
-        filename_stdout = process.node.get_option('scheduler_stdout')
+    inputs = {
+        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'metadata': {
+            'options': {}
+        }
+    }
 
-        # The scheduler parsing requires three resources of information, the `detailed_job_info` dictionary which is
-        # stored as an attribute on the calculation job node and the output of the stdout and stderr which are both
-        # stored in the repository. In this test, we haven't created these on purpose. This should not except the
-        # process but should log a warning, so here we check that those expected warnings are attached to the node
-        logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
-        expected_logs = [
-            'could not parse scheduler output: the `detailed_job_info` attribute is missing',
-            'could not parse scheduler output: the `{}` file is missing'.format(filename_stderr),
-            'could not parse scheduler output: the `{}` file is missing'.format(filename_stdout)
-        ]
+    manager = get_manager()
+    runner = manager.get_runner()
 
-        for log in expected_logs:
-            assert log in logs
+    process_class = CalculationFactory('arithmetic.add')
+    process = instantiate_process(runner, process_class, **inputs)
+    process.node.set_state(CalcJobState.PARSING)
 
-    def test_parse_not_implemented(self):
-        """Test the scheduler output parsing logic in `CalcJob.parse`.
+    return process
 
-        Here we check explicitly that the parsing does not except even if the scheduler does not implement the method.
-        """
-        process = self.instantiate_process()
-        retrieved = orm.FolderData().store()
-        retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-        process.node.set_attribute('detailed_job_info', {})
+@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+def test_parse_insufficient_data(process):
+    """Test the scheduler output parsing logic in `CalcJob.parse`.
 
-        filename_stderr = process.node.get_option('scheduler_stderr')
-        filename_stdout = process.node.get_option('scheduler_stdout')
+    Here we check explicitly that the parsing does not except even if the required information is not available.
+    """
+    retrieved = orm.FolderData().store()
+    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+    process.parse()
 
-        with retrieved.open(filename_stderr, 'w') as handle:
-            handle.write('\n')
+    filename_stderr = process.node.get_option('scheduler_stderr')
+    filename_stdout = process.node.get_option('scheduler_stdout')
 
-        with retrieved.open(filename_stdout, 'w') as handle:
-            handle.write('\n')
+    # The scheduler parsing requires three resources of information, the `detailed_job_info` dictionary which is
+    # stored as an attribute on the calculation job node and the output of the stdout and stderr which are both
+    # stored in the repository. In this test, we haven't created these on purpose. This should not except the
+    # process but should log a warning, so here we check that those expected warnings are attached to the node
+    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    expected_logs = [
+        'could not parse scheduler output: the `detailed_job_info` attribute is missing',
+        'could not parse scheduler output: the `{}` file is missing'.format(filename_stderr),
+        'could not parse scheduler output: the `{}` file is missing'.format(filename_stdout)
+    ]
 
-        process.parse()
+    for log in expected_logs:
+        assert log in logs
 
-        # The `DirectScheduler` at this point in time does not implement the `parse_output` method. Instead of raising
-        # a warning message should be logged. We verify here that said message is present.
-        logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
-        expected_logs = ['could not parse scheduler output: output parsing is not available for `DirectScheduler`']
 
-        for log in expected_logs:
-            assert log in logs
+@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+def test_parse_non_zero_retval(process):
+    """Test the scheduler output parsing logic in `CalcJob.parse`.
+
+    This is testing the case where the `detailed_job_info` is incomplete because the call failed. This is checked
+    through the return value that is stored within the attribute dictionary.
+    """
+    retrieved = orm.FolderData().store()
+    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+
+    process.node.set_attribute('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
+    process.parse()
+
+    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    assert 'could not parse scheduler output: return value of `detailed_job_info` is non-zero' in logs
+
+
+@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+def test_parse_not_implemented(process):
+    """Test the scheduler output parsing logic in `CalcJob.parse`.
+
+    Here we check explicitly that the parsing does not except even if the scheduler does not implement the method.
+    """
+    retrieved = orm.FolderData().store()
+    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+
+    process.node.set_attribute('detailed_job_info', {})
+
+    filename_stderr = process.node.get_option('scheduler_stderr')
+    filename_stdout = process.node.get_option('scheduler_stdout')
+
+    with retrieved.open(filename_stderr, 'w') as handle:
+        handle.write('\n')
+
+    with retrieved.open(filename_stdout, 'w') as handle:
+        handle.write('\n')
+
+    process.parse()
+
+    # The `DirectScheduler` at this point in time does not implement the `parse_output` method. Instead of raising
+    # a warning message should be logged. We verify here that said message is present.
+    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    expected_logs = ['`DirectScheduler` does not implement scheduler output parsing']
+
+    for log in expected_logs:
+        assert log in logs
+
+
+@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+def test_parse_scheduler_excepted(process, monkeypatch):
+    """Test the scheduler output parsing logic in `CalcJob.parse`.
+
+    Here we check explicitly the case where the `Scheduler.parse_output` method excepts
+    """
+    from aiida.schedulers.plugins.direct import DirectScheduler
+
+    retrieved = orm.FolderData().store()
+    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+
+    process.node.set_attribute('detailed_job_info', {})
+
+    filename_stderr = process.node.get_option('scheduler_stderr')
+    filename_stdout = process.node.get_option('scheduler_stdout')
+
+    with retrieved.open(filename_stderr, 'w') as handle:
+        handle.write('\n')
+
+    with retrieved.open(filename_stdout, 'w') as handle:
+        handle.write('\n')
+
+    msg = 'crash'
+
+    def raise_exception(*args, **kwargs):
+        raise RuntimeError(msg)
+
+    # Monkeypatch the `DirectScheduler.parse_output` to raise an exception
+    monkeypatch.setattr(DirectScheduler, 'parse_output', raise_exception)
+    process.parse()
+    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    expected_logs = ['the `parse_output` method of the scheduler excepted: {}'.format(msg)]
+
+    for log in expected_logs:
+        assert log in logs
 
 
 @pytest.mark.parametrize(('exit_status_scheduler', 'exit_status_retrieved', 'final'), (

@@ -9,11 +9,8 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
-import typing
 
-__all__ = ('Backend', 'BackendEntity', 'BackendCollection', 'EntityType')
-
-EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
+__all__ = ('Backend',)
 
 
 class Backend(abc.ABC):
@@ -120,97 +117,3 @@ class Backend(abc.ABC):
 
         :return: an instance of :class:`sqlalchemy.orm.session.Session`
         """
-
-
-class BackendEntity(abc.ABC):
-    """An first-class entity in the backend"""
-
-    def __init__(self, backend):
-        self._backend = backend
-        self._dbmodel = None
-
-    @property
-    def backend(self):
-        """Return the backend this entity belongs to
-
-        :return: the backend instance
-        """
-        return self._backend
-
-    @property
-    def dbmodel(self):
-        return self._dbmodel
-
-    @abc.abstractproperty
-    def id(self):  # pylint: disable=invalid-name
-        """Return the id for this entity.
-
-        This is unique only amongst entities of this type for a particular backend.
-
-        :return: the entity id
-        """
-
-    @property
-    def pk(self):
-        """Return the id for this entity.
-
-        This is unique only amongst entities of this type for a particular backend.
-
-        :return: the entity id
-        """
-        return self.id
-
-    @abc.abstractmethod
-    def store(self):
-        """Store this entity in the backend.
-
-        Whether it is possible to call store more than once is delegated to the object itself
-        """
-
-    @abc.abstractproperty
-    def is_stored(self):
-        """Return whether the entity is stored.
-
-        :return: True if stored, False otherwise
-        :rtype: bool
-        """
-
-
-class BackendCollection(typing.Generic[EntityType]):
-    """Container class that represents a collection of entries of a particular backend entity."""
-
-    ENTITY_CLASS = None  # type: EntityType
-
-    def __init__(self, backend):
-        """
-        :param backend: the backend this collection belongs to
-        :type backend: :class:`aiida.orm.implementation.Backend`
-        """
-        assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
-        self._backend = backend
-
-    def from_dbmodel(self, dbmodel):
-        """
-        Create an entity from the backend dbmodel
-
-        :param dbmodel: the dbmodel to create the entity from
-        :return: the entity instance
-        """
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
-
-    @property
-    def backend(self):
-        """
-        Return the backend.
-
-        :rtype: :class:`aiida.orm.implementation.Backend`
-        """
-        return self._backend
-
-    def create(self, **kwargs):
-        """
-        Create new a entry and set the attributes to those specified in the keyword arguments
-
-        :return: the newly created entry of type ENTITY_CLASS
-        """
-        return self.ENTITY_CLASS(backend=self._backend, **kwargs)  # pylint: disable=not-callable

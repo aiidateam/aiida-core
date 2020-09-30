@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Migration that renames name and type columns to label and type_string"""
 
 # pylint: disable=no-name-in-module,import-error

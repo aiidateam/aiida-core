@@ -11,12 +11,12 @@
 
 import abc
 
-from . import backends
+from .entities import BackendEntity, BackendCollection
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 
 
-class BackendAuthInfo(backends.BackendEntity):
+class BackendAuthInfo(BackendEntity):
     """Backend implementation for the `AuthInfo` ORM class."""
 
     METADATA_WORKDIR = 'workdir'
@@ -78,7 +78,7 @@ class BackendAuthInfo(backends.BackendEntity):
         """
 
 
-class BackendAuthInfoCollection(backends.BackendCollection[BackendAuthInfo]):
+class BackendAuthInfoCollection(BackendCollection[BackendAuthInfo]):
     """The collection of backend `AuthInfo` entries."""
 
     ENTITY_CLASS = BackendAuthInfo

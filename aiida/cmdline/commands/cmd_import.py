@@ -25,7 +25,6 @@ EXTRAS_MODE_NEW = ['import', 'none']
 COMMENT_MODE = ['newest', 'overwrite']
 
 
-# pylint: disable=too-few-public-methods
 class ExtrasImportCode(Enum):
     """Exit codes for the verdi command line."""
     keep_existing = 'kcl'

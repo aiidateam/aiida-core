@@ -71,7 +71,7 @@ envlist = py37-django
 [testenv]
 usedevelop=True
 
-[testenv:py{35,36,37,38}-{django,sqla}]
+[testenv:py{36,37,38}-{django,sqla}]
 deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt

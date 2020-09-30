@@ -101,7 +101,7 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
             try:
                 node.export(output_fname, fileformat=fileformat, overwrite=overwrite, **other_args)
             except OSError as err:
-                echo.echo_critical('OSError while exporting file:\n{}'.format(err))
+                echo.echo_critical(f'OSError while exporting file:\n{err}')
         else:
             filetext, extra_files = node._exportcontent(fileformat, main_file_name=output_fname, **other_args)
             if extra_files:
@@ -115,7 +115,5 @@ def data_export(node, output_fname, fileformat, other_args=None, overwrite=False
         # This typically occurs for parameters that are passed down to the
         # methods in, e.g., BandsData, but they are not accepted
         echo.echo_critical(
-            'TypeError, perhaps a parameter is not '
-            'supported by the specific format?\nError '
-            'message: {}'.format(err)
+            f'TypeError, perhaps a parameter is not supported by the specific format?\nError message: {err}'
         )

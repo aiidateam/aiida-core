@@ -50,9 +50,9 @@ class AuthInfo(entities.Entity):
 
     def __str__(self):
         if self.enabled:
-            return 'AuthInfo for {} on {}'.format(self.user.email, self.computer.label)
+            return f'AuthInfo for {self.user.email} on {self.computer.label}'
 
-        return 'AuthInfo for {} on {} [DISABLED]'.format(self.user.email, self.computer.label)
+        return f'AuthInfo for {self.user.email} on {self.computer.label} [DISABLED]'
 
     @property
     def enabled(self):
@@ -143,8 +143,6 @@ class AuthInfo(entities.Entity):
         try:
             transport_class = TransportFactory(transport_type)
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                'transport type `{}` could not be loaded: {}'.format(transport_type, exception)
-            )
+            raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
 
         return transport_class(machine=computer.hostname, **self.get_auth_params())

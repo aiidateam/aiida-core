@@ -108,11 +108,11 @@ def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
         raise TypeError('fmt should be an instance of EntryPointFormat')
 
     if fmt == EntryPointFormat.FULL:
-        return '{}{}{}'.format(group, ENTRY_POINT_STRING_SEPARATOR, name)
+        return f'{group}{ENTRY_POINT_STRING_SEPARATOR}{name}'
     if fmt == EntryPointFormat.PARTIAL:
-        return '{}{}{}'.format(group[len(ENTRY_POINT_GROUP_PREFIX):], ENTRY_POINT_STRING_SEPARATOR, name)
+        return f'{group[len(ENTRY_POINT_GROUP_PREFIX):]}{ENTRY_POINT_STRING_SEPARATOR}{name}'
     if fmt == EntryPointFormat.MINIMAL:
-        return '{}'.format(name)
+        return f'{name}'
     raise ValueError('invalid EntryPointFormat')
 
 
@@ -204,7 +204,7 @@ def load_entry_point(group, name):
     try:
         loaded_entry_point = entry_point.load()
     except ImportError:
-        raise LoadingEntryPointError("Failed to load entry point '{}':\n{}".format(name, traceback.format_exc()))
+        raise LoadingEntryPointError(f"Failed to load entry point '{name}':\n{traceback.format_exc()}")
 
     return loaded_entry_point
 

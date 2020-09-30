@@ -44,7 +44,7 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
     """
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
-        raise BadParameter('{} is not a valid positive number'.format(value))
+        raise BadParameter(f'{value} is not a valid positive number')
 
 
 class InteractiveOptionTest(unittest.TestCase):
@@ -74,7 +74,7 @@ class InteractiveOptionTest(unittest.TestCase):
         """Return expected output of simple_command, given a commandline cli_input string."""
         # pylint: disable=no-self-use
 
-        return 'Opt: {}\n{}\n'.format(cli_input, converted or cli_input)
+        return f'Opt: {cli_input}\n{converted or cli_input}\n'
 
     def test_callback_prompt_twice(self):
         """
@@ -160,7 +160,7 @@ class InteractiveOptionTest(unittest.TestCase):
         for ptype, cli_input, output in params:
             cmd = self.simple_command(type=ptype, help='help msg')
             runner = CliRunner()
-            result = runner.invoke(cmd, [], input='\n?\n{}\n'.format(cli_input))
+            result = runner.invoke(cmd, [], input=f'\n?\n{cli_input}\n')
             expected_1 = 'Opt: \nOpt: ?\n'
             expected_2 = 'help msg\n'
             expected_2 += self.prompt_output(cli_input, output)
@@ -182,7 +182,7 @@ class InteractiveOptionTest(unittest.TestCase):
         for ptype, cli_input in params:
             cmd = self.simple_command(type=ptype, help='help msg')
             runner = CliRunner()
-            result = runner.invoke(cmd, [], input='\n?\n{}\n'.format(cli_input))
+            result = runner.invoke(cmd, [], input=f'\n?\n{cli_input}\n')
             expected_1 = 'Opt: \nOpt: ?\n'
             expected_2 = 'help msg\n'
             expected_2 += self.strip_line(self.prompt_output(cli_input))

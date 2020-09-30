@@ -37,13 +37,13 @@ def format_type_string_regex(node_class):
     type_parts = type_string.split('.')[:-2]
 
     # 'nodes.process.calculation.'
-    type_string_regex = '{}.'.format('.'.join(type_parts))
+    type_string_regex = f"{'.'.join(type_parts)}."
 
     return type_string_regex
 
 
 VALID_NODE_BASE_CLASSES = [Data, CalculationNode, WorkflowNode]
-VALID_NODE_TYPE_STRING = '({})%'.format('|'.join([format_type_string_regex(cls) for cls in VALID_NODE_BASE_CLASSES]))
+VALID_NODE_TYPE_STRING = f"({'|'.join([format_type_string_regex(cls) for cls in VALID_NODE_BASE_CLASSES])})%"
 
 SELECT_NODES_WITH_INVALID_TYPE = """
     SELECT node.id, node.uuid, node.node_type

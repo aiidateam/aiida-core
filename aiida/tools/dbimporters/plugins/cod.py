@@ -23,8 +23,8 @@ class CodDbImporter(DbImporter):
         """
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
-                raise ValueError("incorrect value for keyword '" + alias + "' only integers and strings are accepted")
-        return key + ' IN (' + ', '.join(str(int(i)) for i in values) + ')'
+                raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
+        return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -33,11 +33,11 @@ class CodDbImporter(DbImporter):
         clause_parts = []
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
-                raise ValueError("incorrect value for keyword '" + alias + "' only integers and strings are accepted")
+                raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
             if isinstance(value, int):
                 value = str(value)
-            clause_parts.append("'" + value + "'")
-        return key + ' IN (' + ', '.join(clause_parts) + ')'
+            clause_parts.append(f"'{value}'")
+        return f"{key} IN ({', '.join(clause_parts)})"
 
     def _str_exact_or_none_clause(self, key, alias, values):
         """
@@ -51,9 +51,9 @@ class CodDbImporter(DbImporter):
                     values_now.append(value)
             if values_now:
                 clause = self._str_exact_clause(key, alias, values_now)
-                return '{} OR {} IS NULL'.format(clause, key)
+                return f'{clause} OR {key} IS NULL'
 
-            return '{} IS NULL'.format(key)
+            return f'{key} IS NULL'
 
         return self._str_exact_clause(key, alias, values)
 
@@ -63,8 +63,8 @@ class CodDbImporter(DbImporter):
         """
         for value in values:
             if not isinstance(value, str):
-                raise ValueError("incorrect value for keyword '" + alias + "' only strings are accepted")
-        return self._str_exact_clause(key, alias, ['- {} -'.format(f) for f in values])
+                raise ValueError(f"incorrect value for keyword '{alias}' only strings are accepted")
+        return self._str_exact_clause(key, alias, [f'- {f} -' for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
         """
@@ -73,10 +73,10 @@ class CodDbImporter(DbImporter):
         clause_parts = []
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
-                raise ValueError("incorrect value for keyword '" + alias + "' only integers and strings are accepted")
+                raise ValueError(f"incorrect value for keyword '{alias}' only integers and strings are accepted")
             if isinstance(value, int):
                 value = str(value)
-            clause_parts.append(key + " LIKE '%" + value + "%'")
+            clause_parts.append(f"{key} LIKE '%{value}%'")
         return ' OR '.join(clause_parts)
 
     def _composition_clause(self, _, alias, values):
@@ -86,8 +86,8 @@ class CodDbImporter(DbImporter):
         clause_parts = []
         for value in values:
             if not isinstance(value, str):
-                raise ValueError("incorrect value for keyword '" + alias + "' only strings are accepted")
-            clause_parts.append("formula REGEXP ' " + value + "[0-9 ]'")
+                raise ValueError(f"incorrect value for keyword '{alias}' only strings are accepted")
+            clause_parts.append(f"formula REGEXP ' {value}[0-9 ]'")
         return ' AND '.join(clause_parts)
 
     def _double_clause(self, key, alias, values, precision):
@@ -96,7 +96,7 @@ class CodDbImporter(DbImporter):
         """
         for value in values:
             if not isinstance(value, int) and not isinstance(value, float):
-                raise ValueError("incorrect value for keyword '" + alias + "' only integers and floats are accepted")
+                raise ValueError(f"incorrect value for keyword '{alias}' only integers and floats are accepted")
         return ' OR '.join('{} BETWEEN {} AND {}'.format(key, d - precision, d + precision) for d in values)
 
     length_precision = 0.001
@@ -187,12 +187,12 @@ class CodDbImporter(DbImporter):
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
                     values = [values]
-                sql_parts.append('(' + self._keywords[key][1](self, self._keywords[key][0], key, values) + ')')
+                sql_parts.append(f'({self._keywords[key][1](self, self._keywords[key][0], key, values)})')
 
         if kwargs:
-            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
-        return 'SELECT file, svnrevision FROM data WHERE ' + ' AND '.join(sql_parts)
+        return f"SELECT file, svnrevision FROM data WHERE {' AND '.join(sql_parts)}"
 
     def query(self, **kwargs):
         """
@@ -292,10 +292,10 @@ class CodSearchResults(DbSearchResults):  # pylint: disable=abstract-method
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        url = self._base_url + result_dict['id'] + '.cif'
+        url = f"{self._base_url + result_dict['id']}.cif"
         if 'svnrevision' in result_dict and \
                         result_dict['svnrevision'] is not None:
-            return '{}@{}'.format(url, result_dict['svnrevision'])
+            return f"{url}@{result_dict['svnrevision']}"
 
         return url
 

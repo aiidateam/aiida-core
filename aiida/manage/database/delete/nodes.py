@@ -60,7 +60,7 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
         try:
             load_node(pk)
         except exceptions.NotExistent:
-            echo.echo_warning('warning: node with pk<{}> does not exist, skipping'.format(pk))
+            echo.echo_warning(f'warning: node with pk<{pk}> does not exist, skipping')
         else:
             starting_pks.append(pk)
 
@@ -84,13 +84,13 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
                     'in': pks_set_to_delete
                 }}, project=('uuid', 'id', 'node_type', 'label')
             )
-            echo.echo('The nodes I {} delete:'.format('would' if dry_run else 'will'))
+            echo.echo(f"The nodes I {'would' if dry_run else 'will'} delete:")
             for uuid, pk, type_string, label in builder.iterall():
                 try:
                     short_type_string = type_string.split('.')[-2]
                 except IndexError:
                     short_type_string = type_string
-                echo.echo('   {} {} {} {}'.format(uuid, pk, short_type_string, label))
+                echo.echo(f'   {uuid} {pk} {short_type_string} {label}')
 
     if dry_run:
         if verbosity > 0:
@@ -101,7 +101,7 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
     if force:
         pass
     else:
-        echo.echo_warning('YOU ARE ABOUT TO DELETE {} NODES! THIS CANNOT BE UNDONE!'.format(len(pks_set_to_delete)))
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks_set_to_delete)} NODES! THIS CANNOT BE UNDONE!')
         if not click.confirm('Shall I continue?'):
             echo.echo('Exiting without deleting')
             return

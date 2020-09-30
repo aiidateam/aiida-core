@@ -74,7 +74,7 @@ class TestConfigDirectory(AiidaTestCase):
             directory = tempfile.mkdtemp()
 
             # Set the environment variable and call configuration initialization
-            env_variable = '{}'.format(directory)
+            env_variable = f'{directory}'
             os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
             settings.set_configuration_directory()
 
@@ -93,7 +93,7 @@ class TestConfigDirectory(AiidaTestCase):
             os.makedirs(os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME))
 
             # Set the environment variable and call configuration initialization
-            env_variable = '{}'.format(directory)
+            env_variable = f'{directory}'
             os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
             settings.set_configuration_directory()
 
@@ -116,7 +116,7 @@ class TestConfigDirectory(AiidaTestCase):
             directory = tempfile.mkdtemp()
 
             # Set the environment variable with a path that include base folder name and call config initialization
-            env_variable = '{}'.format(os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME))
+            env_variable = f'{os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)}'
             os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
             settings.set_configuration_directory()
 
@@ -136,7 +136,7 @@ class TestConfigDirectory(AiidaTestCase):
             directory_c = tempfile.mkdtemp()
 
             # Set the environment variable to contain three paths and call configuration initialization
-            env_variable = '{}:{}:{}'.format(directory_a, directory_b, directory_c)
+            env_variable = f'{directory_a}:{directory_b}:{directory_c}'
             os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = env_variable
             settings.set_configuration_directory()
 

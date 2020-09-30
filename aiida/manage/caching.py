@@ -65,7 +65,7 @@ def _get_config(config_file):
     # Validate configuration
     for key in config:
         if key not in DEFAULT_CONFIG:
-            raise exceptions.ConfigurationError("Configuration error: Invalid key '{}' in cache_config.yml".format(key))
+            raise exceptions.ConfigurationError(f"Configuration error: Invalid key '{key}' in cache_config.yml")
 
     # Add defaults where key is either completely missing or specifies no values in which case it will be `None`
     for key, default_config in DEFAULT_CONFIG.items():
@@ -262,13 +262,12 @@ def _validate_identifier_pattern(*, identifier):
     :param identifier: Process type string, or a pattern with '*' wildcard that matches it.
     :type identifier: str
     """
-    common_error_msg = "Invalid identifier pattern '{}': ".format(identifier)
+    common_error_msg = f"Invalid identifier pattern '{identifier}': "
     assert ENTRY_POINT_STRING_SEPARATOR not in '.*'  # The logic of this function depends on this
     # Check if it can be an entry point string
     if identifier.count(ENTRY_POINT_STRING_SEPARATOR) > 1:
         raise ValueError(
-            common_error_msg +
-            "Can contain at most one entry point string separator '{}'".format(ENTRY_POINT_STRING_SEPARATOR)
+            f"{common_error_msg}Can contain at most one entry point string separator '{ENTRY_POINT_STRING_SEPARATOR}'"
         )
     # If there is one separator, it must be an entry point string.
     # Check if the left hand side is a matching pattern
@@ -302,10 +301,10 @@ def _validate_identifier_pattern(*, identifier):
             if not identifier_part.replace('*', 'a').isidentifier():
                 raise ValueError(
                     common_error_msg +
-                    "Identifier part '{}' can not match a fully qualified Python name.".format(identifier_part)
+                    f"Identifier part '{identifier_part}' can not match a fully qualified Python name."
                 )
         else:
             if not identifier_part.isidentifier():
-                raise ValueError(common_error_msg + "'{}' is not a valid Python identifier.".format(identifier_part))
+                raise ValueError(f"{common_error_msg}'{identifier_part}' is not a valid Python identifier.")
             if keyword.iskeyword(identifier_part):
-                raise ValueError(common_error_msg + "'{}' is a reserved Python keyword.".format(identifier_part))
+                raise ValueError(f"{common_error_msg}'{identifier_part}' is a reserved Python keyword.")

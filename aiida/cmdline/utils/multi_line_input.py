@@ -29,7 +29,7 @@ def edit_multiline_template(template_name, comment_marker='#=', extension=None, 
 
     if content:
         # Remove all comments, which are all lines that start with the comment marker
-        value = re.sub(r'(^' + re.escape(comment_marker) + '.*$\n)+', '', content, flags=re.M).strip()
+        value = re.sub(f'(^{re.escape(comment_marker)}.*$\n)+', '', content, flags=re.M).strip()
 
     return value
 

@@ -111,10 +111,7 @@ class TestComputer(AiidaTestCase):
         # did not change.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name', 'uuid', 'id'])
-        self.assertEqual(
-            builder.count(), 1, 'Found {} computers'
-            'but only one computer should be found.'.format(builder.count())
-        )
+        self.assertEqual(builder.count(), 1, f'Found {builder.count()} computersbut only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
         self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
         self.assertEqual(builder.first()[2], comp_id, 'The computer id is not correct.')
@@ -156,7 +153,7 @@ class TestComputer(AiidaTestCase):
         export([calc1], filename=filename1, silent=True)
 
         # Rename the computer
-        comp1.label = comp1_name + '_updated'
+        comp1.label = f'{comp1_name}_updated'
 
         # Store a second calculation
         calc2_label = 'calc2'
@@ -207,10 +204,7 @@ class TestComputer(AiidaTestCase):
         # did not change.
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['name'])
-        self.assertEqual(
-            builder.count(), 1, 'Found {} computers'
-            'but only one computer should be found.'.format(builder.count())
-        )
+        self.assertEqual(builder.count(), 1, f'Found {builder.count()} computersbut only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
     @with_temp_dir

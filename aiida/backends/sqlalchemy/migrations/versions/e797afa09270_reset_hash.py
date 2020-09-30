@@ -41,7 +41,7 @@ def drop_hashes(conn):  # pylint: disable=unused-argument
     if n_nodes > 0:
         echo.echo_warning('Invalidating the hashes of all nodes. Please run "verdi rehash".', bold=True)
 
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
     conn.execute(statement)
 
 

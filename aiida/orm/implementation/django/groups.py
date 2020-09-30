@@ -158,7 +158,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         for node in nodes:
 
             if not isinstance(node, DjangoNode):
-                raise TypeError('invalid type {}, has to be {}'.format(type(node), DjangoNode))
+                raise TypeError(f'invalid type {type(node)}, has to be {DjangoNode}')
 
             if not node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -177,7 +177,7 @@ class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # 
         for node in nodes:
 
             if not isinstance(node, DjangoNode):
-                raise TypeError('invalid type {}, has to be {}'.format(type(node), DjangoNode))
+                raise TypeError(f'invalid type {type(node)}, has to be {DjangoNode}')
 
             if not node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -249,7 +249,7 @@ class DjangoGroupCollection(BackendGroupCollection):
                 queryobject &= Q(user=user.id)
 
         if label_filters is not None:
-            label_filters_list = {'name__' + key: value for (key, value) in label_filters.items() if value}
+            label_filters_list = {f'name__{key}': value for (key, value) in label_filters.items() if value}
             queryobject &= Q(**label_filters_list)
 
         groups_pk = set(models.DbGroup.objects.filter(queryobject, **kwargs).values_list('pk', flat=True))
@@ -266,7 +266,7 @@ class DjangoGroupCollection(BackendGroupCollection):
                     base_query_dict = models.DbAttribute.get_query_dict(value)
                     # prepend to the key the right django string to SQL-join
                     # on the right table
-                    query_dict = {'dbnodes__dbattributes__{}'.format(k2): v2 for k2, v2 in base_query_dict.items()}
+                    query_dict = {f'dbnodes__dbattributes__{k2}': v2 for k2, v2 in base_query_dict.items()}
 
                     # I narrow down the list of groups.
                     # I had to do it in this way, with multiple DB hits and

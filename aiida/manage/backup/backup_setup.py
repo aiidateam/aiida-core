@@ -35,7 +35,7 @@ class BackupSetup:
 
     def __init__(self):
         # The backup directory names
-        self._conf_backup_folder_rel = 'backup_{}'.format(configuration.PROFILE.name)
+        self._conf_backup_folder_rel = f'backup_{configuration.PROFILE.name}'
         self._file_backup_folder_rel = 'backup_dest'
 
         # The backup configuration file (& template) names
@@ -99,7 +99,7 @@ class BackupSetup:
         final_path = utils.query_string(question, dir_path)
 
         if not os.path.exists(final_path):
-            if utils.query_yes_no("The path {} doesn't exist. Should it be created?".format(final_path), 'yes'):
+            if utils.query_yes_no(f"The path {final_path} doesn't exist. Should it be created?", 'yes'):
                 try:
                     os.makedirs(final_path)
                 except OSError:
@@ -205,34 +205,34 @@ class BackupSetup:
         # If the backup parameters are configured manually
         else:
             sys.stdout.write(
-                'Please rename the file {} '.format(self._backup_info_tmpl_filename) +
-                'found in {} to '.format(conf_backup_folder_abs) + '{} and '.format(self._backup_info_filename) +
+                f'Please rename the file {self._backup_info_tmpl_filename} ' +
+                f'found in {conf_backup_folder_abs} to ' + f'{self._backup_info_filename} and ' +
                 'change the backup parameters accordingly.\n'
             )
             sys.stdout.write(
                 'Please adapt the startup script accordingly to point to the ' +
                 'correct backup configuration file. For the moment, it points ' +
-                'to {}\n'.format(os.path.join(conf_backup_folder_abs, self._backup_info_filename))
+                f'to {os.path.join(conf_backup_folder_abs, self._backup_info_filename)}\n'
             )
 
         script_content = \
-u"""#!/usr/bin/env python
+f"""#!/usr/bin/env python
 import logging
 from aiida.manage.configuration import load_profile
 
-load_profile(profile='{}')
+load_profile(profile='{configuration.PROFILE.name}')
 
 from aiida.manage.backup.backup_general import Backup
 
 # Create the backup instance
-backup_inst = Backup(backup_info_filepath="{}", additional_back_time_mins=2)
+backup_inst = Backup(backup_info_filepath="{final_conf_filepath}", additional_back_time_mins=2)
 
 # Define the backup logging level
 backup_inst._logger.setLevel(logging.INFO)
 
 # Start the backup
 backup_inst.run()
-""".format(configuration.PROFILE.name, final_conf_filepath)
+"""
 
         # Script full path
         script_path = os.path.join(conf_backup_folder_abs, self._script_filename)

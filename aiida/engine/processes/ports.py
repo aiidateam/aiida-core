@@ -119,7 +119,7 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
         :returns: a dictionary of the stringified InputPort attributes
         """
         description = super().get_description()
-        description['non_db'] = '{}'.format(self.non_db)
+        description['non_db'] = f'{self.non_db}'
 
         return description
 
@@ -186,14 +186,14 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         try:
             validate_link_label(port_name)
         except ValueError as exception:
-            raise ValueError('invalid port name `{}`: {}'.format(port_name, exception))
+            raise ValueError(f'invalid port name `{port_name}`: {exception}')
 
         # Following regexes will match all groups of consecutive underscores where each group will be of the form
         # `('___', '_')`, where the first element is the matched group of consecutive underscores.
         consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
 
         if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
-            raise ValueError('invalid port name `{}`: more than two consecutive underscores'.format(port_name))
+            raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
     def serialize(self, mapping, breadcrumbs=()):
         """Serialize the given mapping onto this `Portnamespace`.
@@ -213,7 +213,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
 
         if not isinstance(mapping, collections.Mapping):
             port = breadcrumbs_to_port(breadcrumbs)
-            raise TypeError('port namespace `{}` received `{}` instead of a dictionary'.format(port, type(mapping)))
+            raise TypeError(f'port namespace `{port}` received `{type(mapping)}` instead of a dictionary')
 
         result = {}
 

@@ -69,7 +69,7 @@ def default_link_styles(link_pair, add_label, add_type):
     elif add_type and not add_label:
         style['label'] = link_pair.link_type.name
     elif add_label and add_type:
-        style['label'] = '{}\n{}'.format(link_pair.link_type.name, link_pair.link_label)
+        style['label'] = f'{link_pair.link_type.name}\n{link_pair.link_label}'
 
     return style
 
@@ -213,19 +213,19 @@ def default_node_sublabels(node):
 
     class_node_type = node.class_node_type
     if class_node_type == 'data.int.Int.':
-        sublabel = 'value: {}'.format(node.get_attribute('value', ''))
+        sublabel = f"value: {node.get_attribute('value', '')}"
     elif class_node_type == 'data.float.Float.':
-        sublabel = 'value: {}'.format(node.get_attribute('value', ''))
+        sublabel = f"value: {node.get_attribute('value', '')}"
     elif class_node_type == 'data.str.Str.':
-        sublabel = '{}'.format(node.get_attribute('value', ''))
+        sublabel = f"{node.get_attribute('value', '')}"
     elif class_node_type == 'data.bool.Bool.':
-        sublabel = '{}'.format(node.get_attribute('value', ''))
+        sublabel = f"{node.get_attribute('value', '')}"
     elif class_node_type == 'data.code.Code.':
-        sublabel = '{}@{}'.format(os.path.basename(node.get_execname()), node.computer.label)
+        sublabel = f'{os.path.basename(node.get_execname())}@{node.computer.label}'
     elif class_node_type == 'data.singlefile.SinglefileData.':
         sublabel = node.filename
     elif class_node_type == 'data.remote.RemoteData.':
-        sublabel = '@{}'.format(node.computer.label)
+        sublabel = f'@{node.computer.label}'
     elif class_node_type == 'data.structure.StructureData.':
         sublabel = node.get_formula()
     elif class_node_type == 'data.cif.CifData.':
@@ -238,13 +238,13 @@ def default_node_sublabels(node):
             sublabel_lines.append(', '.join(sg_numbers))
         sublabel = '; '.join(sublabel_lines)
     elif class_node_type == 'data.upf.UpfData.':
-        sublabel = '{}'.format(node.get_attribute('element', ''))
+        sublabel = f"{node.get_attribute('element', '')}"
     elif isinstance(node, orm.ProcessNode):
         sublabel = []
         if node.process_state is not None:
-            sublabel.append('State: {}'.format(node.process_state.value))
+            sublabel.append(f'State: {node.process_state.value}')
         if node.exit_status is not None:
-            sublabel.append('Exit Code: {}'.format(node.exit_status))
+            sublabel.append(f'Exit Code: {node.exit_status}')
         sublabel = '\n'.join(sublabel)
     else:
         sublabel = node.get_description()
@@ -260,20 +260,20 @@ def get_node_id_label(node, id_type):
         return node.uuid.split('-')[0]
     if id_type == 'label':
         return node.label
-    raise ValueError('node_id_type not recognised: {}'.format(id_type))
+    raise ValueError(f'node_id_type not recognised: {id_type}')
 
 
 def _get_node_label(node, id_type='pk'):
     """return a label text of node and the return format is '<NodeType> (<id>)'."""
     if isinstance(node, orm.Data):
-        label = '{} ({})'.format(node.__class__.__name__, get_node_id_label(node, id_type))
+        label = f'{node.__class__.__name__} ({get_node_id_label(node, id_type)})'
     elif isinstance(node, orm.ProcessNode):
         label = '{} ({})'.format(
             node.__class__.__name__ if node.process_label is None else node.process_label,
             get_node_id_label(node, id_type)
         )
     else:
-        raise TypeError('Unknown type: {}'.format(type(node)))
+        raise TypeError(f'Unknown type: {type(node)}')
 
     return label
 
@@ -324,7 +324,7 @@ def _add_graphviz_node(
     # coerce node style values to strings, required by graphviz
     node_style = {k: str(v) for k, v in node_style.items()}
 
-    return graph.node('N{}'.format(node.pk), **node_style)
+    return graph.node(f'N{node.pk}', **node_style)
 
 
 def _add_graphviz_edge(graph, in_node, out_node, style=None):
@@ -343,7 +343,7 @@ def _add_graphviz_edge(graph, in_node, out_node, style=None):
     # coerce node style values to strings
     style = {k: str(v) for k, v in style.items()}
 
-    return graph.edge('N{}'.format(in_node.pk), 'N{}'.format(out_node.pk), **style)
+    return graph.edge(f'N{in_node.pk}', f'N{out_node.pk}', **style)
 
 
 class Graph:
@@ -489,10 +489,10 @@ class Graph:
         """
         in_node = self._load_node(in_node)
         if in_node.pk not in self._nodes:
-            raise AssertionError('in_node pk={} must have already been added to the graph'.format(in_node.pk))
+            raise AssertionError(f'in_node pk={in_node.pk} must have already been added to the graph')
         out_node = self._load_node(out_node)
         if out_node.pk not in self._nodes:
-            raise AssertionError('out_node pk={} must have already been added to the graph'.format(out_node.pk))
+            raise AssertionError(f'out_node pk={out_node.pk} must have already been added to the graph')
 
         if (in_node.pk, out_node.pk, link_pair) in self._edges and not overwrite:
             return
@@ -528,8 +528,7 @@ class Graph:
         """
         if annotate_links not in [None, False, 'label', 'type', 'both']:
             raise ValueError(
-                'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {}'.
-                format(annotate_links)
+                f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
             )
 
         # incoming nodes are found traversing backwards
@@ -585,8 +584,7 @@ class Graph:
         """
         if annotate_links not in [None, False, 'label', 'type', 'both']:
             raise ValueError(
-                'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {}'.
-                format(annotate_links)
+                f'annotate_links must be one of False, "label", "type" or "both"\ninstead, it is: {annotate_links}'
             )
 
         # outgoing nodes are found traversing forwards

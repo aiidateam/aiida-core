@@ -59,7 +59,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
 
     if hookup:
         # Run app through built-in werkzeug server
-        print(' * REST API running on http://{}:{}{}'.format(hostname, port, API_CONFIG['PREFIX']))
+        print(f" * REST API running on http://{hostname}:{port}{API_CONFIG['PREFIX']}")
         api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
 
     else:
@@ -90,7 +90,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     wsgi_profile = kwargs.pop('wsgi_profile', CLI_DEFAULTS['WSGI_PROFILE'])
 
     if kwargs:
-        raise ValueError('Unknown keyword arguments: {}'.format(kwargs))
+        raise ValueError(f'Unknown keyword arguments: {kwargs}')
 
     # Import the configuration file
     spec = importlib.util.spec_from_file_location(os.path.join(config, 'config'), os.path.join(config, 'config.py'))

@@ -55,7 +55,7 @@ def _echo_error(  # pylint: disable=unused-argument
 
     IMPORT_LOGGER.debug('%s', traceback.format_exc())
 
-    exception = '{}: {}'.format(raised_exception.__class__.__name__, str(raised_exception))
+    exception = f'{raised_exception.__class__.__name__}: {str(raised_exception)}'
 
     echo.echo_error(message)
     echo.echo(exception)
@@ -95,7 +95,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     expected_keys = ['extras_mode_existing', 'extras_mode_new', 'comment_mode']
     for key in expected_keys:
         if key not in kwargs:
-            raise ValueError("{} needed for utility function '{}' to use in 'import_data'".format(key, '_try_import'))
+            raise ValueError(f"{key} needed for utility function '_try_import' to use in 'import_data'")
 
     # Initialization
     migrate_archive = False
@@ -106,7 +106,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
         if migration_performed:
             # Migration has been performed, something is still wrong
             _echo_error(
-                '{} has been migrated, but it still cannot be imported'.format(archive),
+                f'{archive} has been migrated, but it still cannot be imported',
                 non_interactive=non_interactive,
                 raised_exception=exception,
                 **kwargs
@@ -130,13 +130,13 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
                 echo.echo_critical(str(exception))
     except Exception as exception:
         _echo_error(
-            'an exception occurred while importing the archive {}'.format(archive),
+            f'an exception occurred while importing the archive {archive}',
             non_interactive=non_interactive,
             raised_exception=exception,
             **kwargs
         )
     else:
-        echo.echo_success('imported archive {}'.format(archive))
+        echo.echo_success(f'imported archive {archive}')
 
     return migrate_archive
 
@@ -159,7 +159,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     from aiida.cmdline.commands.cmd_export import migrate
 
     # Echo start
-    echo.echo_info('migrating archive {}'.format(archive))
+    echo.echo_info(f'migrating archive {archive}')
 
     # Initialization
     temp_out_file = 'migrated_importfile.aiida'
@@ -262,17 +262,17 @@ def cmd_import(
     if webpages is not None:
         for webpage in webpages:
             try:
-                echo.echo_info('retrieving archive URLS from {}'.format(webpage))
+                echo.echo_info(f'retrieving archive URLS from {webpage}')
                 urls = get_valid_import_links(webpage)
             except Exception as exception:
                 _echo_error(
-                    'an exception occurred while trying to discover archives at URL {}'.format(webpage),
+                    f'an exception occurred while trying to discover archives at URL {webpage}',
                     non_interactive=non_interactive,
                     more_archives=webpage != webpages[-1] or archives_file or archives_url,
                     raised_exception=exception
                 )
             else:
-                echo.echo_success('{} archive URLs discovered and added'.format(len(urls)))
+                echo.echo_success(f'{len(urls)} archive URLs discovered and added')
                 archives_url += urls
 
     # Preliminary sanity check
@@ -295,7 +295,7 @@ def cmd_import(
     # Import local archives
     for archive in archives_file:
 
-        echo.echo_info('importing archive {}'.format(archive))
+        echo.echo_info(f'importing archive {archive}')
 
         # Initialization
         import_opts['archive'] = archive
@@ -318,12 +318,12 @@ def cmd_import(
         import_opts['archive'] = archive
         import_opts['more_archives'] = archive != archives_url[-1]
 
-        echo.echo_info('downloading archive {}'.format(archive))
+        echo.echo_info(f'downloading archive {archive}')
 
         try:
             response = urllib.request.urlopen(archive)
         except Exception as exception:
-            _echo_error('downloading archive {} failed'.format(archive), raised_exception=exception, **import_opts)
+            _echo_error(f'downloading archive {archive} failed', raised_exception=exception, **import_opts)
 
         with SandboxFolder() as temp_folder:
             temp_file = 'importfile.tar.gz'

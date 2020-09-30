@@ -174,7 +174,7 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
     else:
         entries = collection
 
-    template = '{symbol}' + ' {}' * len(attributes)
+    template = f"{{symbol}}{' {}' * len(attributes)}"
 
     for entry in entries:
         if hide and hide(entry):
@@ -199,7 +199,7 @@ def _format_dictionary_json_date(dictionary):
         if isinstance(data, datetime.datetime):
             return timezone.localtime(data).strftime('%Y-%m-%dT%H:%M:%S.%f%z')
 
-        raise TypeError(repr(data) + ' is not JSON serializable')
+        raise TypeError(f'{repr(data)} is not JSON serializable')
 
     return json.dumps(dictionary, indent=4, sort_keys=True, default=default_jsondump)
 
@@ -219,7 +219,7 @@ def echo_dictionary(dictionary, fmt='json+date'):
         format_function = VALID_DICT_FORMATS_MAPPING[fmt]
     except KeyError:
         formats = ', '.join(VALID_DICT_FORMATS_MAPPING.keys())
-        raise ValueError('Unrecognised printing format. Valid formats are: {}'.format(formats))
+        raise ValueError(f'Unrecognised printing format. Valid formats are: {formats}')
 
     echo(format_function(dictionary))
 

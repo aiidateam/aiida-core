@@ -42,7 +42,7 @@ class InteractiveOption(ConditionalOption):
         @click.command()
         @click.option('label', prompt='Label', cls=InteractiveOption)
         def foo(label):
-            click.echo('Labeling with label: {}'.format(label))
+            click.echo(f'Labeling with label: {label}')
     """
 
     PROMPT_COLOR = 'yellow'
@@ -71,9 +71,7 @@ class InteractiveOption(ConditionalOption):
         # I do it after calling super so e.g. 'self.name' is defined
         if not self._prompt:
             raise TypeError(
-                "Interactive options need to have a prompt specified, but '{}' does not have a prompt defined".format(
-                    self.name
-                )
+                f"Interactive options need to have a prompt specified, but '{self.name}' does not have a prompt defined"
             )
 
         # other kwargs
@@ -151,7 +149,7 @@ class InteractiveOption(ConditionalOption):
 
         gives a list of possibilities for parameter types that support completion
         """
-        msg = self.help or 'Expecting {}'.format(self.type.name)
+        msg = self.help or f'Expecting {self.type.name}'
         choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
         if choices:
             choice_table = []
@@ -160,7 +158,7 @@ class InteractiveOption(ConditionalOption):
                 if isinstance(choice, tuple):
                     choice_table.append('\t{:<12} {}'.format(*choice))
                 else:
-                    choice_table.append('\t{:<12}'.format(choice))
+                    choice_table.append(f'\t{choice:<12}')
             msg += '\n'.join(choice_table)
         return msg
 
@@ -201,8 +199,8 @@ class InteractiveOption(ConditionalOption):
     def simple_prompt_loop(self, ctx, param, value):
         """Prompt until successful conversion. dispatch control sequences."""
         if not hasattr(ctx, 'prompt_loop_info_printed'):
-            echo.echo_info('enter "{}" for help'.format(self.CHARACTER_PROMPT_HELP))
-            echo.echo_info('enter "{}" to ignore the default and set no value'.format(self.CHARACTER_IGNORE_DEFAULT))
+            echo.echo_info(f'enter "{self.CHARACTER_PROMPT_HELP}" for help')
+            echo.echo_info(f'enter "{self.CHARACTER_IGNORE_DEFAULT}" to ignore the default and set no value')
             ctx.prompt_loop_info_printed = True
 
         while 1:

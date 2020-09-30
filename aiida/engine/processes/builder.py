@@ -81,12 +81,12 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
                 port = self._port_namespace[attr]
             except KeyError:
                 if not self._port_namespace.dynamic:
-                    raise AttributeError('Unknown builder parameter: {}'.format(attr))
+                    raise AttributeError(f'Unknown builder parameter: {attr}')
             else:
                 value = port.serialize(value)
                 validation_error = port.validate(value)
                 if validation_error:
-                    raise ValueError('invalid attribute value {}'.format(validation_error.message))
+                    raise ValueError(f'invalid attribute value {validation_error.message}')
 
             self._data[attr] = value
 
@@ -125,7 +125,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         :type kwds: dict
         """
         if len(args) > 1:
-            raise TypeError('update expected at most 1 arguments, got %d' % len(args))
+            raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
 
         if args:
             for key, value in args[0].items():

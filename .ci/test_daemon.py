@@ -37,14 +37,14 @@ def print_daemon_log():
     daemon_client = get_daemon_client()
     daemon_log = daemon_client.daemon_log_file
 
-    print("Output of 'cat {}':".format(daemon_log))
+    print(f"Output of 'cat {daemon_log}':")
     try:
         print(subprocess.check_output(
-            ['cat', '{}'.format(daemon_log)],
+            ['cat', f'{daemon_log}'],
             stderr=subprocess.STDOUT,
         ))
     except subprocess.CalledProcessError as exception:
-        print('Note: the command failed, message: {}'.format(exception))
+        print(f'Note: the command failed, message: {exception}')
 
 
 def jobs_have_finished(pks):
@@ -55,21 +55,21 @@ def jobs_have_finished(pks):
 
     for node in node_list:
         if not node.is_terminated:
-            print('not terminated: {} [{}]'.format(node.pk, node.process_state))
-    print('{}/{} finished'.format(num_finished, len(finished_list)))
+            print(f'not terminated: {node.pk} [{node.process_state}]')
+    print(f'{num_finished}/{len(finished_list)} finished')
     return False not in finished_list
 
 
 def print_report(pk):
     """Print the process report for given pk."""
-    print("Output of 'verdi process report {}':".format(pk))
+    print(f"Output of 'verdi process report {pk}':")
     try:
         print(subprocess.check_output(
-            ['verdi', 'process', 'report', '{}'.format(pk)],
+            ['verdi', 'process', 'report', f'{pk}'],
             stderr=subprocess.STDOUT,
         ))
     except subprocess.CalledProcessError as exception:
-        print('Note: the command failed, message: {}'.format(exception))
+        print(f'Note: the command failed, message: {exception}')
 
 
 def validate_calculations(expected_results):
@@ -79,18 +79,14 @@ def validate_calculations(expected_results):
     for pk, expected_dict in expected_results.items():
         calc = load_node(pk)
         if not calc.is_finished_ok:
-            print(
-                'Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
-                    pk, calc.process_state, calc.exit_status
-                )
-            )
+            print(f'Calc<{pk}> not finished ok: process_state<{calc.process_state}> exit_status<{calc.exit_status}>')
             print_report(pk)
             valid = False
 
         try:
             actual_dict = calc.outputs.output_parameters.get_dict()
         except exceptions.NotExistent:
-            print('Could not retrieve `output_parameters` node for Calculation<{}>'.format(pk))
+            print(f'Could not retrieve `output_parameters` node for Calculation<{pk}>')
             print_report(pk)
             valid = False
 
@@ -101,7 +97,7 @@ def validate_calculations(expected_results):
             pass
 
         if actual_dict != expected_dict:
-            print('* UNEXPECTED VALUE {} for calc pk={}: I expected {}'.format(actual_dict, pk, expected_dict))
+            print(f'* UNEXPECTED VALUE {actual_dict} for calc pk={pk}: I expected {expected_dict}')
             valid = False
 
     return valid
@@ -166,7 +162,7 @@ def validate_cached(cached_calcs):
             valid = False
 
         if '_aiida_cached_from' not in calc.extras or calc.get_hash() != calc.get_extra('_aiida_hash'):
-            print('Cached calculation<{}> has invalid hash'.format(calc.pk))
+            print(f'Cached calculation<{calc.pk}> has invalid hash')
             print_report(calc.pk)
             valid = False
 
@@ -176,7 +172,7 @@ def validate_cached(cached_calcs):
             files_cached = calc.list_object_names()
 
             if not files_cached:
-                print('Cached calculation <{}> does not have any raw inputs files'.format(calc.pk))
+                print(f'Cached calculation <{calc.pk}> does not have any raw inputs files')
                 print_report(calc.pk)
                 valid = False
             if not files_original:
@@ -204,7 +200,7 @@ def launch_calculation(code, counter, inputval):
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     calc = submit(process, **inputs)
-    print('[{}] launched calculation {}, pk={}'.format(counter, calc.uuid, calc.pk))
+    print(f'[{counter}] launched calculation {calc.uuid}, pk={calc.pk}')
     return calc, expected_result
 
 
@@ -214,7 +210,7 @@ def run_calculation(code, counter, inputval):
     """
     process, inputs, expected_result = create_calculation_process(code=code, inputval=inputval)
     _, calc = run.get_node(process, **inputs)
-    print('[{}] ran calculation {}, pk={}'.format(counter, calc.uuid, calc.pk))
+    print(f'[{counter}] ran calculation {calc.uuid}, pk={calc.pk}')
     return calc, expected_result
 
 
@@ -361,14 +357,14 @@ def main():
     run_multiply_add_workchain()
 
     # Submitting the Calculations the new way directly through the launchers
-    print('Submitting {} calculations to the daemon'.format(NUMBER_CALCULATIONS))
+    print(f'Submitting {NUMBER_CALCULATIONS} calculations to the daemon')
     for counter in range(1, NUMBER_CALCULATIONS + 1):
         inputval = counter
         calc, expected_result = launch_calculation(code=code_doubler, counter=counter, inputval=inputval)
         expected_results_calculations[calc.pk] = expected_result
 
     # Submitting the Workchains
-    print('Submitting {} workchains to the daemon'.format(NUMBER_WORKCHAINS))
+    print(f'Submitting {NUMBER_WORKCHAINS} workchains to the daemon')
     for index in range(NUMBER_WORKCHAINS):
         inp = Int(index)
         _, node = run.get_node(NestedWorkChain, inp=inp)
@@ -435,7 +431,7 @@ def main():
         # that the test machine is shut down because there is no output
 
         print('#' * 78)
-        print('####### TIME ELAPSED: {} s'.format(time.time() - start_time))
+        print(f'####### TIME ELAPSED: {time.time() - start_time} s')
         print('#' * 78)
         print("Output of 'verdi process list -a':")
         try:
@@ -444,7 +440,7 @@ def main():
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as exception:
-            print('Note: the command failed, message: {}'.format(exception))
+            print(f'Note: the command failed, message: {exception}')
 
         print("Output of 'verdi daemon status':")
         try:
@@ -453,7 +449,7 @@ def main():
                 stderr=subprocess.STDOUT,
             ))
         except subprocess.CalledProcessError as exception:
-            print('Note: the command failed, message: {}'.format(exception))
+            print(f'Note: the command failed, message: {exception}')
 
         if jobs_have_finished(pks):
             print('Calculation terminated its execution')
@@ -463,7 +459,7 @@ def main():
     if exited_with_timeout:
         print_daemon_log()
         print('')
-        print('Timeout!! Calculation did not complete after {} seconds'.format(TIMEOUTSECS))
+        print(f'Timeout!! Calculation did not complete after {TIMEOUTSECS} seconds')
         sys.exit(2)
     else:
         # Launch the same calculations but with caching enabled -- these should be FINISHED immediately

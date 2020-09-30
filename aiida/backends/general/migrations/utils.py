@@ -85,7 +85,7 @@ def get_numpy_array_absolute_path(uuid, name):
     :param name: the name of the numpy array
     :return: the absolute path of the numpy array file
     """
-    return os.path.join(get_node_repository_sub_folder(uuid), name + '.npy')
+    return os.path.join(get_node_repository_sub_folder(uuid), f'{name}.npy')
 
 
 def store_numpy_array_in_repository(uuid, name, array):

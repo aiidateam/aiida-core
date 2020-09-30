@@ -23,7 +23,7 @@ def setup_groups(clear_database_before_test):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
         group, _ = orm.Group.objects.get_or_create(label)
-        group.description = 'A description of {}'.format(label)
+        group.description = f'A description of {label}'
     orm.UpfFamily.objects.get_or_create('a/x')
     yield
 

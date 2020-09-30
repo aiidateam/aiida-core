@@ -35,7 +35,7 @@ class TestProfile(AiidaTestCase):
             'database_hostname': 'localhost',
             'database_username': 'user',
             'database_password': 'pass',
-            'repository_uri': 'file:///' + os.path.join('/some/path', 'repository_' + cls.profile_name),
+            'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
         }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 

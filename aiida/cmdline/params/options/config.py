@@ -35,7 +35,7 @@ class ConfigFileOption(OverridableOption):
         @click.option('computer_name')
         @CONFIG_FILE(help='Configuration file for computer_setup')
         def computer_setup(computer_name):
-            click.echo("Setting up computer {}".format(computername))
+            click.echo(f"Setting up computer {computername}")
 
         computer_setup --config config.yml
 

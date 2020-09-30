@@ -110,7 +110,7 @@ class ConditionalOptionTest(unittest.TestCase):
             """test command for scenario a-or-b"""
             # pylint: disable=unused-argument
 
-            click.echo('{} / {}'.format(opt_a, opt_b))
+            click.echo(f'{opt_a} / {opt_b}')
 
         runner = CliRunner()
         return runner, cmd
@@ -183,7 +183,7 @@ class ConditionalOptionTest(unittest.TestCase):
         def cmd(flag, opt_a):
             """A command with a flag and customizable options that depend on it."""
             # pylint: disable=unused-argument
-            click.echo('{}'.format(opt_a))
+            click.echo(f'{opt_a}')
 
         return cmd
 

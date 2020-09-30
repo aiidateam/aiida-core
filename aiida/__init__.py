@@ -122,10 +122,10 @@ def _get_raw_file_header():
     :return: default AiiDA source file header
     :rtype: str
     """
-    return """This file has been created with AiiDA v. {}
+    return f"""This file has been created with AiiDA v. {__version__}
 If you use AiiDA for publication purposes, please cite:
-{}
-""".format(__version__, __paper__)
+{__paper__}
+"""
 
 
 def get_file_header(comment_char='# '):
@@ -143,4 +143,4 @@ def get_file_header(comment_char='# '):
     :rtype: str
     """
     lines = _get_raw_file_header().splitlines()
-    return '\n'.join('{}{}'.format(comment_char, line) for line in lines)
+    return '\n'.join(f'{comment_char}{line}' for line in lines)

@@ -37,7 +37,7 @@ class SinglefileData(Data):
         # 'filename' argument was added to 'set_file' after 1.0.0.
         if 'filename' not in inspect.getfullargspec(self.set_file)[0]:
             warnings.warn(  # pylint: disable=no-member
-                "Method '{}.set_file' does not support the 'filename' argument. ".format(type(self).__name__) +
+                f"Method '{type(self).__name__}.set_file' does not support the 'filename' argument. " +
                 'This will raise an exception in AiiDA 2.0.', AiidaDeprecationWarning
             )
 
@@ -107,10 +107,10 @@ class SinglefileData(Data):
 
             key = os.path.basename(file)
             if not os.path.isabs(file):
-                raise ValueError('path `{}` is not absolute'.format(file))
+                raise ValueError(f'path `{file}` is not absolute')
 
             if not os.path.isfile(file):
-                raise ValueError('path `{}` does not correspond to an existing file'.format(file))
+                raise ValueError(f'path `{file}` does not correspond to an existing file')
         else:
             is_filelike = True
             try:
@@ -152,5 +152,5 @@ class SinglefileData(Data):
 
         if [filename] != objects:
             raise exceptions.ValidationError(
-                'respository files {} do not match the `filename` attribute {}.'.format(objects, filename)
+                f'respository files {objects} do not match the `filename` attribute {filename}.'
             )

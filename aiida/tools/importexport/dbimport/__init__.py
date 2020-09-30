@@ -78,4 +78,4 @@ def import_data(in_path, group=None, silent=False, **kwargs):
         return import_data_dj(in_path, group=group, silent=silent, **kwargs)
 
     # else
-    raise ArchiveImportError('Unknown backend: {}'.format(backend))
+    raise ArchiveImportError(f'Unknown backend: {backend}')

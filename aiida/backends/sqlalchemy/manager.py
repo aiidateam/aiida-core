@@ -179,7 +179,7 @@ class SqlaSettingsManager(SettingsManager):
         try:
             setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
         except NoResultFound:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent('setting `{}` does not exist'.format(key)) from NoResultFound
 
         return Setting(key, setting.getvalue(), setting.description, setting.time)
 
@@ -191,7 +191,7 @@ class SqlaSettingsManager(SettingsManager):
         :param description: optional setting description
         """
         from aiida.backends.sqlalchemy.models.settings import DbSetting
-        from aiida.orm.utils.node import validate_attribute_extra_key
+        from aiida.orm.implementation.utils import validate_attribute_extra_key
 
         self.validate_table_existence()
         validate_attribute_extra_key(key)
@@ -215,4 +215,4 @@ class SqlaSettingsManager(SettingsManager):
             setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
             setting.delete()
         except NoResultFound:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent('setting `{}` does not exist'.format(key)) from NoResultFound

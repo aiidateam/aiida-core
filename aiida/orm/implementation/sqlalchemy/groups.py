@@ -70,7 +70,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             try:
                 self._dbmodel.save()
             except Exception:
-                raise UniquenessError('a group of the same type with the label {} already exists'.format(label))
+                raise UniquenessError('a group of the same type with the label {} already exists'.format(label)) \
+                    from Exception
 
     @property
     def description(self):
@@ -109,7 +110,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         if not self.is_stored:
             return None
 
-        return self._dbnode.id
+        return self._dbnode.id  # pylint: disable=no-member
 
     @property
     def is_stored(self):

@@ -337,8 +337,12 @@ class CalcJob(Process):
         filename_stdout = self.node.get_option('scheduler_stdout')
 
         detailed_job_info = self.node.get_detailed_job_info()
+
         if detailed_job_info is None:
-            self.logger.warning('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+            self.logger.info('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+        elif detailed_job_info.get('retval', 0) != 0:
+            self.logger.info('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
+            detailed_job_info = None
 
         try:
             scheduler_stderr = retrieved.get_object_content(filename_stderr)
@@ -358,11 +362,11 @@ class CalcJob(Process):
 
         try:
             exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
-        except exceptions.FeatureNotAvailable as exception:
-            self.logger.warning('could not parse scheduler output: {}'.format(exception))
+        except exceptions.FeatureNotAvailable:
+            self.logger.info('`{}` does not implement scheduler output parsing'.format(scheduler.__class__.__name__))
             return
         except Exception as exception:  # pylint: disable=broad-except
-            self.logger.warning('the `parse_output` method of the scheduler excepted: {}'.format(exception))
+            self.logger.error('the `parse_output` method of the scheduler excepted: {}'.format(exception))
             return
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):

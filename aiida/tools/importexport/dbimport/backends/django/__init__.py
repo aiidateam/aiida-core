@@ -23,7 +23,7 @@ from aiida.common.links import LinkType, validate_link_label
 from aiida.common.log import override_log_formatter
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.manage.configuration import get_config_option
-from aiida.orm.utils.repository import Repository
+from aiida.orm.utils._repository import Repository
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar

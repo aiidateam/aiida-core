@@ -23,7 +23,6 @@ from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     name = 'jsonb_array_len'
 
 
@@ -36,7 +35,6 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined, re
 
 
 class array_length(FunctionElement):  # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     name = 'array_len'
 
 
@@ -49,7 +47,6 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
 
 
 class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     name = 'jsonb_typeof'
 
 

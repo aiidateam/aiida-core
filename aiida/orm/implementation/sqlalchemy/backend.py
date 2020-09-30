@@ -14,7 +14,7 @@ from aiida.backends.sqlalchemy.models import base
 from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 
-from ..sql import SqlBackend
+from ..sql.backends import SqlBackend
 from . import authinfos
 from . import comments
 from . import computers

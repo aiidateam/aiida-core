@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for utilities dealing with plugins and entry points."""
-
 from aiida import __version__ as version_core
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import calcfunction, WorkChain
@@ -18,8 +17,6 @@ from aiida.plugins.utils import PluginVersionProvider
 
 class TestPluginVersionProvider(AiidaTestCase):
     """Tests for the :py:class:`~aiida.plugins.utils.PluginVersionProvider` utility class."""
-
-    # pylint: disable=no-init,old-style-class,too-few-public-methods,no-member
 
     def setUp(self):
         super().setUp()
@@ -35,7 +32,7 @@ class TestPluginVersionProvider(AiidaTestCase):
         # Create a new module with a unique name and add the `plugin` and `plugin_version` as attributes
         module_name = 'TestModule{}'.format(str(uuid.uuid4())[:5])
         dynamic_module = types.ModuleType(module_name, 'Dynamically created module for testing purposes')
-        setattr(plugin, '__module__', dynamic_module.__name__)
+        setattr(plugin, '__module__', dynamic_module.__name__)  # pylint: disable=no-member
         setattr(dynamic_module, plugin.__name__, plugin)
 
         # For tests that need to fail, this flag can be set to `False`
@@ -47,7 +44,7 @@ class TestPluginVersionProvider(AiidaTestCase):
 
         # Make the dynamic module importable unless the test requests not to, to test an unimportable module
         if add_module_to_sys:
-            sys.modules[dynamic_module.__name__] = dynamic_module
+            sys.modules[dynamic_module.__name__] = dynamic_module  # pylint: disable=no-member
 
         return dynamic_plugin
 

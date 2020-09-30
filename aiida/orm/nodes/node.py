@@ -7,9 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,too-many-arguments
 """Package for node ORM classes."""
-import copy
 import importlib
 import warnings
 
@@ -21,13 +20,13 @@ from aiida.common.links import LinkType
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
-from aiida.orm.utils.repository import Repository
-from aiida.orm.utils.node import AbstractNodeMeta, validate_attribute_extra_key
+from aiida.orm.utils._repository import Repository
+from aiida.orm.utils.node import AbstractNodeMeta
 from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
-from ..entities import Entity
+from ..entities import Entity, EntityExtrasMixin, EntityAttributesMixin
 from ..entities import Collection as EntityCollection
 from ..querybuilder import QueryBuilder
 from ..users import User
@@ -37,7 +36,53 @@ __all__ = ('Node',)
 _NO_DEFAULT = tuple()
 
 
-class Node(Entity, metaclass=AbstractNodeMeta):
+class WarnWhenNotEntered:
+    """Temporary wrapper to warn when `Node.open` is called outside of a context manager."""
+
+    def __init__(self, fileobj, name):
+        self._fileobj = fileobj
+        self._name = name
+        self._was_entered = False
+
+    def _warn_if_not_entered(self, method):
+        """Fire a warning if the object wrapper has not yet been entered."""
+        if not self._was_entered:
+            msg = '`{}` used without context manager for {}. This will raise starting from `aiida-core==2.0.0`'.format(
+                method, self._name
+            )
+            warnings.warn(msg, AiidaDeprecationWarning)  # pylint: disable=no-member
+
+    def __enter__(self):
+        self._was_entered = True
+        return self._fileobj.__enter__()
+
+    def __exit__(self, *args):
+        self._fileobj.__exit__(*args)
+
+    def __getattr__(self, key):
+        if key == '_fileobj':
+            return self._fileobj
+        return getattr(self._fileobj, key)
+
+    def __del__(self):
+        self._warn_if_not_entered('del')
+
+    def __iter__(self):
+        return self._fileobj.__iter__()
+
+    def __next__(self):
+        return self._fileobj.__next__()
+
+    def read(self, *args, **kwargs):
+        self._warn_if_not_entered('read')
+        return self._fileobj.read(*args, **kwargs)
+
+    def close(self, *args, **kwargs):
+        self._warn_if_not_entered('close')
+        return self._fileobj.close(*args, **kwargs)
+
+
+class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -329,368 +374,190 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         """
         return self.backend_entity.mtime
 
-    @property
-    def attributes(self):
-        """Return the complete attributes dictionary.
-
-        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned
-            attributes will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
-            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
-            getters `get_attribute` and `get_attribute_many` instead.
-
-        :return: the attributes as a dictionary
-        """
-        attributes = self.backend_entity.attributes
-
-        if self.is_stored:
-            attributes = copy.deepcopy(attributes)
-
-        return attributes
-
-    def get_attribute(self, key, default=_NO_DEFAULT):
-        """Return the value of an attribute.
-
-        .. warning:: While the node is unstored, this will return a reference of the attribute on the database model,
-            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned
-            attribute will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods.
-
-        :param key: name of the attribute
-        :param default: return this value instead of raising if the attribute does not exist
-        :return: the value of the attribute
-        :raises AttributeError: if the attribute does not exist and no default is specified
-        """
-        try:
-            attribute = self.backend_entity.get_attribute(key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            attribute = default
-
-        if self.is_stored:
-            attribute = copy.deepcopy(attribute)
-
-        return attribute
-
-    def get_attribute_many(self, keys):
-        """Return the values of multiple attributes.
-
-        .. warning:: While the node is unstored, this will return references of the attributes on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned
-            attributes will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
-            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
-            getters `get_attribute` and `get_attribute_many` instead.
-
-        :param keys: a list of attribute names
-        :return: a list of attribute values
-        :raises AttributeError: if at least one attribute does not exist
-        """
-        attributes = self.backend_entity.get_attribute_many(keys)
-
-        if self.is_stored:
-            attributes = copy.deepcopy(attributes)
-
-        return attributes
-
-    def set_attribute(self, key, value):
-        """Set an attribute to the given value.
-
-        :param key: name of the attribute
-        :param value: value of the attribute
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        validate_attribute_extra_key(key)
-        self.backend_entity.set_attribute(key, value)
-
-    def set_attribute_many(self, attributes):
-        """Set multiple attributes.
-
-        .. note:: This will override any existing attributes that are present in the new dictionary.
-
-        :param attributes: a dictionary with the attributes to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        for key in attributes:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.set_attribute_many(attributes)
-
-    def reset_attributes(self, attributes):
-        """Reset the attributes.
-
-        .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
-
-        :param attributes: a dictionary with the attributes to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        for key in attributes:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.reset_attributes(attributes)
-
-    def delete_attribute(self, key):
-        """Delete an attribute.
-
-        :param key: name of the attribute
-        :raises AttributeError: if the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        self.backend_entity.delete_attribute(key)
-
-    def delete_attribute_many(self, keys):
-        """Delete multiple attributes.
-
-        :param keys: names of the attributes to delete
-        :raises AttributeError: if at least one of the attribute does not exist
-        :raise aiida.common.ModificationNotAllowed: if the node is stored
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        self.backend_entity.delete_attribute_many(keys)
-
-    def clear_attributes(self):
-        """Delete all attributes."""
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the attributes of a stored node are immutable')
-
-        self.backend_entity.clear_attributes()
-
-    def attributes_items(self):
-        """Return an iterator over the attributes.
-
-        :return: an iterator with attribute key value pairs
-        """
-        return self.backend_entity.attributes_items()
-
-    def attributes_keys(self):
-        """Return an iterator over the attribute keys.
-
-        :return: an iterator with attribute keys
-        """
-        return self.backend_entity.attributes_keys()
-
-    @property
-    def extras(self):
-        """Return the complete extras dictionary.
-
-        .. warning:: While the node is unstored, this will return references of the extras on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
-            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
-            `get_extra_many` instead.
-
-        :return: the extras as a dictionary
-        """
-        extras = self.backend_entity.extras
-
-        if self.is_stored:
-            extras = copy.deepcopy(extras)
-
-        return extras
-
-    def get_extra(self, key, default=_NO_DEFAULT):
-        """Return the value of an extra.
-
-        .. warning:: While the node is unstored, this will return a reference of the extra on the database model,
-            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extra
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods.
-
-        :param key: name of the extra
-        :param default: return this value instead of raising if the attribute does not exist
-        :return: the value of the extra
-        :raises AttributeError: if the extra does not exist and no default is specified
-        """
-        try:
-            extra = self.backend_entity.get_extra(key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            extra = default
-
-        if self.is_stored:
-            extra = copy.deepcopy(extra)
-
-        return extra
-
-    def get_extra_many(self, keys):
-        """Return the values of multiple extras.
-
-        .. warning:: While the node is unstored, this will return references of the extras on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the node is stored, the returned extras
-            will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
-            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
-            `get_extra_many` instead.
-
-        :param keys: a list of extra names
-        :return: a list of extra values
-        :raises AttributeError: if at least one extra does not exist
-        """
-        extras = self.backend_entity.get_extra_many(keys)
-
-        if self.is_stored:
-            extras = copy.deepcopy(extras)
-
-        return extras
-
-    def set_extra(self, key, value):
-        """Set an extra to the given value.
-
-        :param key: name of the extra
-        :param value: value of the extra
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
-        """
-        validate_attribute_extra_key(key)
-        self.backend_entity.set_extra(key, value)
-
-    def set_extra_many(self, extras):
-        """Set multiple extras.
-
-        .. note:: This will override any existing extras that are present in the new dictionary.
-
-        :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.set_extra_many(extras)
-
-    def reset_extras(self, extras):
-        """Reset the extras.
-
-        .. note:: This will completely clear any existing extras and replace them with the new dictionary.
-
-        :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
-        self.backend_entity.reset_extras(extras)
-
-    def delete_extra(self, key):
-        """Delete an extra.
-
-        :param key: name of the extra
-        :raises AttributeError: if the extra does not exist
-        """
-        self.backend_entity.delete_extra(key)
-
-    def delete_extra_many(self, keys):
-        """Delete multiple extras.
-
-        :param keys: names of the extras to delete
-        :raises AttributeError: if at least one of the extra does not exist
-        """
-        self.backend_entity.delete_extra_many(keys)
-
-    def clear_extras(self):
-        """Delete all extras."""
-        self.backend_entity.clear_extras()
-
-    def extras_items(self):
-        """Return an iterator over the extras.
-
-        :return: an iterator with extra key value pairs
-        """
-        return self.backend_entity.extras_items()
-
-    def extras_keys(self):
-        """Return an iterator over the extra keys.
-
-        :return: an iterator with extra keys
-        """
-        return self.backend_entity.extras_keys()
-
-    def list_objects(self, key=None):
+    def list_objects(self, path=None, key=None):
         """Return a list of the objects contained in this repository, optionally in the given sub directory.
 
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
-        :return: a list of `File` named tuples representing the objects present in directory with the given key
+        :return: a list of `File` named tuples representing the objects present in directory with the given path
         :raises FileNotFoundError: if the `path` does not exist in the repository of this node
         """
-        return self._repository.list_objects(key)
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-    def list_object_names(self, key=None):
+        return self._repository.list_objects(path)
+
+    def list_object_names(self, path=None, key=None):
         """Return a list of the object names contained in this repository, optionally in the given sub directory.
 
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
-        :return: a list of `File` named tuples representing the objects present in directory with the given key
+        :return: a list of `File` named tuples representing the objects present in directory with the given path
         """
-        return self._repository.list_object_names(key)
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-    def open(self, key, mode='r'):
-        """Open a file handle to an object stored under the given key.
+        return self._repository.list_object_names(path)
 
+    def open(self, path=None, mode='r', key=None):
+        """Open a file handle to the object with the given path.
+
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        .. deprecated:: 1.4.0
+            Starting from `v2.0.0` this will raise if not used in a context manager.
+
+        :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
         :param mode: the mode under which to open the handle
         """
-        return self._repository.open(key, mode)
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-    def get_object(self, key):
-        """Return the object identified by key.
+        if path is None:
+            raise TypeError("open() missing 1 required positional argument: 'path'")
 
+        if mode not in ['r', 'rb']:
+            warnings.warn("from v2.0 only the modes 'r' and 'rb' will be accepted", AiidaDeprecationWarning)  # pylint: disable=no-member
+
+        return WarnWhenNotEntered(self._repository.open(path, mode), repr(self))
+
+    def get_object(self, path=None, key=None):
+        """Return the object with the given path.
+
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
-        :return: a `File` named tuple representing the object located at key
+        :return: a `File` named tuple
         """
-        return self._repository.get_object(key)
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-    def get_object_content(self, key, mode='r'):
-        """Return the content of a object identified by key.
+        if path is None:
+            raise TypeError("get_object() missing 1 required positional argument: 'path'")
 
+        return self._repository.get_object(path)
+
+    def get_object_content(self, path=None, mode='r', key=None):
+        """Return the content of a object with the given path.
+
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
         """
-        return self._repository.get_object_content(key, mode)
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-    def put_object_from_tree(self, path, key=None, contents_only=True, force=False):
-        """Store a new object under `key` with the contents of the directory located at `path` on this file system.
+        if path is None:
+            raise TypeError("get_object_content() missing 1 required positional argument: 'path'")
+
+        if mode not in ['r', 'rb']:
+            warnings.warn("from v2.0 only the modes 'r' and 'rb' will be accepted", AiidaDeprecationWarning)  # pylint: disable=no-member
+
+        return self._repository.get_object_content(path, mode)
+
+    def put_object_from_tree(self, filepath, path=None, contents_only=True, force=False, key=None):
+        """Store a new object under `path` with the contents of the directory located at `filepath` on this file system.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
             This check can be avoided by using the `force` flag, but this should be used with extreme caution!
 
-        :param path: absolute path of directory whose contents to copy to the repository
+        .. deprecated:: 1.4.0
+            First positional argument `path` has been deprecated and renamed to `filepath`.
+
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        .. deprecated:: 1.4.0
+            Keyword `force` is deprecated and will be removed in `v2.0.0`.
+
+        .. deprecated:: 1.4.0
+            Keyword `contents_only` is deprecated and will be removed in `v2.0.0`.
+
+        :param filepath: absolute path of directory whose contents to copy to the repository
+        :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
         :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
-        self._repository.put_object_from_tree(path, key, contents_only, force)
+        if force:
+            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
-    def put_object_from_file(self, path, key, mode=None, encoding=None, force=False):
-        """Store a new object under `key` with contents of the file located at `path` on this file system.
+        if contents_only is False:
+            warnings.warn(
+                'the `contents_only` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
+
+        self._repository.put_object_from_tree(filepath, path, contents_only, force)
+
+    def put_object_from_file(self, filepath, path=None, mode=None, encoding=None, force=False, key=None):
+        """Store a new object under `path` with contents of the file located at `filepath` on this file system.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
             This check can be avoided by using the `force` flag, but this should be used with extreme caution!
 
-        :param path: absolute path of file whose contents to copy to the repository
+        .. deprecated:: 1.4.0
+            First positional argument `path` has been deprecated and renamed to `filepath`.
+
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        .. deprecated:: 1.4.0
+            Keyword `force` is deprecated and will be removed in `v2.0.0`.
+
+        :param filepath: absolute path of file whose contents to copy to the repository
+        :param path: the relative path where to store the object in the repository.
         :param key: fully qualified identifier for the object within the repository
         :param mode: the file mode with which the object will be written
             Deprecated: will be removed in `v2.0.0`
@@ -703,42 +570,100 @@ class Node(Entity, metaclass=AbstractNodeMeta):
         # order to detect when they were being passed such that the deprecation warning can be emitted. The defaults did
         # not make sense and so ignoring them is justified, since the side-effect of this function, a file being copied,
         # will continue working the same.
+        if force:
+            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
+
         if mode is not None:
-            warnings.warn('the `mode` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning)  # pylint: disable=no-member
+            warnings.warn('the `mode` argument is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
         if encoding is not None:
             warnings.warn(  # pylint: disable=no-member
                 'the `encoding` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
             )
 
-        self._repository.put_object_from_file(path, key, mode, encoding, force)
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-    def put_object_from_filelike(self, handle, key, mode='w', encoding='utf8', force=False):
-        """Store a new object under `key` with contents of filelike object `handle`.
+        if path is None:
+            raise TypeError("put_object_from_file() missing 1 required positional argument: 'path'")
+
+        self._repository.put_object_from_file(filepath, path, mode, encoding, force)
+
+    def put_object_from_filelike(self, handle, path=None, mode='w', encoding='utf8', force=False, key=None):
+        """Store a new object under `path` with contents of filelike object `handle`.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
             This check can be avoided by using the `force` flag, but this should be used with extreme caution!
 
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        .. deprecated:: 1.4.0
+            Keyword `force` is deprecated and will be removed in `v2.0.0`.
+
         :param handle: filelike object with the content to be stored
+        :param path: the relative path where to store the object in the repository.
         :param key: fully qualified identifier for the object within the repository
         :param mode: the file mode with which the object will be written
         :param encoding: the file encoding with which the object will be written
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
-        self._repository.put_object_from_filelike(handle, key, mode, encoding, force)
+        if force:
+            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
-    def delete_object(self, key, force=False):
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
+
+        if path is None:
+            raise TypeError("put_object_from_filelike() missing 1 required positional argument: 'path'")
+
+        self._repository.put_object_from_filelike(handle, path, mode, encoding, force)
+
+    def delete_object(self, path=None, force=False, key=None):
         """Delete the object from the repository.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
             This check can be avoided by using the `force` flag, but this should be used with extreme caution!
 
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        .. deprecated:: 1.4.0
+            Keyword `force` is deprecated and will be removed in `v2.0.0`.
+
         :param key: fully qualified identifier for the object within the repository
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
-        self._repository.delete_object(key, force)
+        if force:
+            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
+
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
+
+        if path is None:
+            raise TypeError("delete_object() missing 1 required positional argument: 'path'")
+
+        self._repository.delete_object(path, force)
 
     def add_comment(self, content, user=None):
         """Add a new comment.

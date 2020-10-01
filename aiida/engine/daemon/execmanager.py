@@ -159,6 +159,13 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     remote_symlink_list = calc_info.remote_symlink_list or []
     provenance_exclude_list = calc_info.provenance_exclude_list or []
 
+    # Creates the directory structure locally and first to prevent unnecessary transport
+    # calls when copying the individual files
+    for _, _, target_relpath in local_copy_list + remote_copy_list + remote_symlink_list:
+        dirname = os.path.dirname(target_relpath)
+        if dirname:
+            os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
+
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
@@ -190,9 +197,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         if data_node is None:
             logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
         else:
-            dirname = os.path.dirname(target)
-            if dirname:
-                os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
             with folder.open(target, 'wb') as handle:
                 with data_node.open(filename, 'rb') as source:
                     shutil.copyfileobj(source, handle)
@@ -212,10 +216,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     )
                 )
                 try:
-                    # We have to create the directory first: if it doesn't exist the copy call will fail
-                    dirname = os.path.dirname(dest_rel_path)
-                    if dirname:
-                        transport.makedirs(dirname, ignore_existing=True)
                     transport.copy(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(
@@ -237,10 +237,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     )
                 )
                 try:
-                    # We have to create the directory first: if it doesn't exist the copy call will fail
-                    dirname = os.path.dirname(dest_rel_path)
-                    if dirname:
-                        transport.makedirs(dirname, ignore_existing=True)
                     transport.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(

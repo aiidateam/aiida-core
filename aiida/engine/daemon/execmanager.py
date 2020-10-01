@@ -212,7 +212,10 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     )
                 )
                 try:
-                    transport.makedirs(os.path.dirname(dest_rel_path), ignore_existing=True)
+                    # We have to create the directory first: if it doesn't exist the copy call will fail
+                    dirname = os.path.dirname(dest_rel_path)
+                    if dirname:
+                        transport.makedirs(dirname, ignore_existing=True)
                     transport.copy(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(
@@ -234,7 +237,10 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     )
                 )
                 try:
-                    transport.makedirs(os.path.dirname(dest_rel_path), ignore_existing=True)
+                    # We have to create the directory first: if it doesn't exist the copy call will fail
+                    dirname = os.path.dirname(dest_rel_path)
+                    if dirname:
+                        transport.makedirs(dirname, ignore_existing=True)
                     transport.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(

@@ -26,6 +26,7 @@ def edit_multiline_template(template_name, comment_marker='#=', extension=None, 
     template = env.get_template(template_name)
     rendered = template.render(**kwargs)
     content = click.edit(rendered, extension=extension)
+    value = ''
 
     if content:
         # Remove all comments, which are all lines that start with the comment marker

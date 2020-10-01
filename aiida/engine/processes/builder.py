@@ -7,10 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cell-var-from-loop
+# pylint: disable=cell-var-from-loop, line-too-long
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
 
+from aiida.orm import Node
 from aiida.engine.processes.ports import PortNamespace
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
@@ -112,6 +113,9 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
     def __delitem__(self, item):
         self._data.__delitem__(item)
 
+    def __delattr__(self, item):
+        self._data.__delitem__(item)
+
     def _update(self, *args, **kwds):
         """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
 
@@ -160,8 +164,6 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         :param value: a nested mapping of port values
         :return: the same mapping but without any nested namespace that is completely empty.
         """
-        from aiida.orm import Node
-
         if isinstance(value, collections.abc.Mapping) and not isinstance(value, Node):
             result = {}
             for key, sub_value in value.items():
@@ -174,7 +176,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         return value
 
 
-class ProcessBuilder(ProcessBuilderNamespace):
+class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ancestors
     """A process builder that helps setting up the inputs for creating a new process."""
 
     def __init__(self, process_class):
@@ -188,4 +190,5 @@ class ProcessBuilder(ProcessBuilderNamespace):
 
     @property
     def process_class(self):
+        """Straighforward wrapper for the process_class"""
         return self._process_class

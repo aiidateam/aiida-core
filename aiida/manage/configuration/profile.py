@@ -14,6 +14,7 @@ import os
 from disk_objectstore import Container
 
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
 
 from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
@@ -76,6 +77,18 @@ class Profile:  # pylint: disable=too-many-public-methods
         KEY_REPOSITORY_URI: 'repository_uri',
     }
 
+    @classproperty
+    def defaults(cls):  # pylint: disable=no-self-use,no-self-argument
+        """Return the dictionary of default values for profile settings."""
+        return {
+            'repository': {
+                'pack_size_target': 4 * 1024 * 1024 * 1024,
+                'loose_prefix_len': 2,
+                'hash_type': 'sha256',
+                'compression_algorithm': 'zlib+1'
+            }
+        }
+
     @classmethod
     def contains_unknown_keys(cls, dictionary):
         """Return whether the profile dictionary contains any unsupported keys.
@@ -121,7 +134,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         container = Container(filepath)
 
         if not container.is_initialised:
-            container.init_container()
+            container.init_container(clear=True, **self.defaults['repository'])  # pylint: disable=unsubscriptable-object
 
         return container
 
@@ -365,18 +378,6 @@ class Profile:  # pylint: disable=too-many-public-methods
             virtual_host=self.broker_virtual_host,
             **self.broker_parameters
         )
-
-    def configure_repository(self):
-        """Validates the configured repository and in the case of a file system repo makes sure the folder exists."""
-        import errno
-
-        try:
-            os.makedirs(self.repository_path)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise exceptions.ConfigurationError(
-                    f'could not create the configured repository `{self.repository_path}`: {str(exception)}'
-                )
 
     @property
     def filepaths(self):

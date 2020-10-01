@@ -59,7 +59,7 @@ def database_migrate(force):
     if force:
         try:
             backend.migrate()
-        except exceptions.ConfigurationError as exception:
+        except (exceptions.ConfigurationError, exceptions.DatabaseMigrationError) as exception:
             echo.echo_critical(str(exception))
         return
 
@@ -88,7 +88,7 @@ def database_migrate(force):
     else:
         try:
             backend.migrate()
-        except exceptions.ConfigurationError as exception:
+        except (exceptions.ConfigurationError, exceptions.DatabaseMigrationError) as exception:
             echo.echo_critical(str(exception))
         else:
             echo.echo_success('migration completed')

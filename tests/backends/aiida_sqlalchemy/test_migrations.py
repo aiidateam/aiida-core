@@ -1103,6 +1103,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
+
 class TestTrajectoryDataMigration(TestMigrationsSQLA):
     """Test the migration of the symbols from numpy array to attribute for TrajectoryData nodes."""
     import numpy
@@ -1171,6 +1172,7 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
 
             finally:
                 session.close()
+
 
 class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
     """Test the migration of Data nodes after the data module was moved within the node moduel."""
@@ -1272,6 +1274,7 @@ class TestParameterDataToDictMigration(TestMigrationsSQLA):
                 self.assertEqual(node.type, 'data.dict.Dict.')
             finally:
                 session.close()
+
 
 class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
     """Test the migration that performs a data migration of legacy `JobCalcState`."""
@@ -1762,7 +1765,7 @@ class TestNodeRepositoryMetadataMigration(TestMigrationsSQLA):
 
         with self.get_session() as session:
             try:
-                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
+                default_user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(default_user)
                 session.commit()
 
@@ -1784,5 +1787,107 @@ class TestNodeRepositoryMetadataMigration(TestMigrationsSQLA):
                 node = session.query(DbNode).filter(DbNode.id == self.node_id).one()
                 assert hasattr(node, 'repository_metadata')
                 assert node.repository_metadata is None
+            finally:
+                session.close()
+
+
+class TestRepositoryMigration(TestMigrationsSQLA):
+    """Test migration of the old file repository to the disk object store."""
+
+    migrate_from = '7536a82b2cc4'
+    migrate_to = '1feaea71bd5a'
+
+    def setUpBeforeMigration(self):
+        from aiida.common.utils import get_new_uuid
+
+        DbNode = self.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                default_user = DbUser(email=f'{self.id()}@aiida.net')
+                session.add(default_user)
+                session.commit()
+
+                # For some reasons, the UUIDs do not get created automatically through the column's default in the
+                # migrations so we set it manually using the same method.
+                node_01 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
+                node_02 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
+                node_03 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
+                node_04 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
+
+                session.add(node_01)
+                session.add(node_02)
+                session.add(node_03)  # Empty repository folder
+                session.add(node_04)  # Both `path` and `raw_input` subfolder
+                session.commit()
+
+                assert node_01.uuid is not None
+                assert node_02.uuid is not None
+                assert node_03.uuid is not None
+                assert node_04.uuid is not None
+
+                self.node_01_pk = node_01.id
+                self.node_02_pk = node_02.id
+                self.node_03_pk = node_03.id
+                self.node_04_pk = node_04.id
+
+                utils.put_object_from_string(node_01.uuid, 'sub/path/file_b.txt', 'b')
+                utils.put_object_from_string(node_01.uuid, 'sub/file_a.txt', 'a')
+                utils.put_object_from_string(node_02.uuid, 'output.txt', 'output')
+
+                os.makedirs(utils.get_node_repository_sub_folder(node_04.uuid, 'path'), exist_ok=True)
+                os.makedirs(utils.get_node_repository_sub_folder(node_04.uuid, 'raw_input'), exist_ok=True)
+
+                # Add a repository folder for a node that no longer exists - i.e. it may have been deleted.
+                utils.put_object_from_string(get_new_uuid(), 'file_of_deleted_node', 'output')
+
+            finally:
+                session.close()
+
+    def test_migration(self):
+        """Test that the files are correctly migrated."""
+        import hashlib
+        DbNode = self.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                node_01 = session.query(DbNode).filter(DbNode.id == self.node_01_pk).one()
+                node_02 = session.query(DbNode).filter(DbNode.id == self.node_02_pk).one()
+                node_03 = session.query(DbNode).filter(DbNode.id == self.node_03_pk).one()
+
+                assert node_01.repository_metadata == {
+                    'o': {
+                        'sub': {
+                            'o': {
+                                'path': {
+                                    'o': {
+                                        'file_b.txt': {
+                                            'k': hashlib.sha256('b'.encode('utf-8')).hexdigest()
+                                        }
+                                    }
+                                },
+                                'file_a.txt': {
+                                    'k': hashlib.sha256('a'.encode('utf-8')).hexdigest()
+                                }
+                            }
+                        }
+                    }
+                }
+                assert node_02.repository_metadata == {
+                    'o': {
+                        'output.txt': {
+                            'k': hashlib.sha256('output'.encode('utf-8')).hexdigest()
+                        }
+                    }
+                }
+                assert node_03.repository_metadata is None
+
+                for hashkey, content in (
+                    (node_01.repository_metadata['o']['sub']['o']['path']['o']['file_b.txt']['k'], b'b'),
+                    (node_01.repository_metadata['o']['sub']['o']['file_a.txt']['k'], b'a'),
+                    (node_02.repository_metadata['o']['output.txt']['k'], b'output'),
+                ):
+                    assert utils.get_repository_object(hashkey) == content
             finally:
                 session.close()

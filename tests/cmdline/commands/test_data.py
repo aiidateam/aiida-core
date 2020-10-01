@@ -50,7 +50,7 @@ class DummyVerdiDataExportable:
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
-            raise Exception('The listing of the objects {} is not supported'.format(datatype))
+            raise Exception(f'The listing of the objects {datatype} is not supported')
 
         export_cmd = datatype_mapping[datatype]
 
@@ -63,10 +63,7 @@ class DummyVerdiDataExportable:
             for frmt in supported_formats:
                 options = [flag, frmt, str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertEqual(
-                    res.exit_code, 0, 'The command did not finish '
-                    'correctly. Output:\n{}'.format(res.output)
-                )
+                self.assertEqual(res.exit_code, 0, f'The command did not finish correctly. Output:\n{res.output}')
 
         # Check that the output to file flags work correctly:
         # -o, --output
@@ -77,10 +74,7 @@ class DummyVerdiDataExportable:
                 filepath = os.path.join(tmpd, 'output_file.txt')
                 options = [flag, filepath, str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertEqual(
-                    res.exit_code, 0, 'The command should finish correctly.'
-                    'Output:\n{}'.format(res.output)
-                )
+                self.assertEqual(res.exit_code, 0, f'The command should finish correctly.Output:\n{res.output}')
 
                 # Try to export it again. It should fail because the
                 # file exists
@@ -91,10 +85,7 @@ class DummyVerdiDataExportable:
                 # existing files
                 options = [flag, filepath, '-f', str(ids[self.NODE_ID_STR])]
                 res = self.cli_runner.invoke(export_cmd, options, catch_exceptions=False)
-                self.assertEqual(
-                    res.exit_code, 0, 'The command should finish correctly.'
-                    'Output: {}'.format(res.output)
-                )
+                self.assertEqual(res.exit_code, 0, f'The command should finish correctly.Output: {res.output}')
             finally:
                 shutil.rmtree(tmpd)
 
@@ -127,7 +118,7 @@ class DummyVerdiDataListable:
         }
 
         if datatype is None or datatype not in datatype_mapping.keys():
-            raise Exception('The listing of the objects {} is not supported'.format(datatype))
+            raise Exception(f'The listing of the objects {datatype} is not supported')
 
         listing_cmd = datatype_mapping[datatype]
 
@@ -136,9 +127,7 @@ class DummyVerdiDataListable:
 
         # Check that the normal listing works as expected
         res = self.cli_runner.invoke(listing_cmd, [], catch_exceptions=False)
-        self.assertIn(
-            search_string_bytes, res.stdout_bytes, 'The string {} was not found in the listing'.format(search_string)
-        )
+        self.assertIn(search_string_bytes, res.stdout_bytes, f'The string {search_string} was not found in the listing')
 
         # Check that the past days filter works as expected
         past_days_flags = ['-p', '--past-days']
@@ -146,15 +135,13 @@ class DummyVerdiDataListable:
             options = [flag, '1']
             res = self.cli_runner.invoke(listing_cmd, options, catch_exceptions=False)
             self.assertIn(
-                search_string_bytes, res.stdout_bytes,
-                'The string {} was not found in the listing'.format(search_string)
+                search_string_bytes, res.stdout_bytes, f'The string {search_string} was not found in the listing'
             )
 
             options = [flag, '0']
             res = self.cli_runner.invoke(listing_cmd, options, catch_exceptions=False)
             self.assertNotIn(
-                search_string_bytes, res.stdout_bytes,
-                'A not expected string {} was found in the listing'.format(search_string)
+                search_string_bytes, res.stdout_bytes, f'A not expected string {search_string} was found in the listing'
             )
 
         # Check that the group filter works as expected
@@ -214,7 +201,7 @@ class TestVerdiData(AiidaTestCase):
         subcommands = ['array', 'bands', 'cif', 'dict', 'remote', 'structure', 'trajectory', 'upf']
         for sub_cmd in subcommands:
             output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
-            self.assertIn(b'Usage:', output, 'Sub-command verdi data {} --help failed.'.format(sub_cmd))
+            self.assertIn(b'Usage:', output, f'Sub-command verdi data {sub_cmd} --help failed.')
 
 
 class TestVerdiDataArray(AiidaTestCase):
@@ -911,7 +898,7 @@ class TestVerdiDataUpf(AiidaTestCase):
 
     def test_uploadfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'upf', 'uploadfamily', '--help'])
-        self.assertIn(b'Usage:', output, 'Sub-command verdi data upf uploadfamily --help failed: {}'.format(output))
+        self.assertIn(b'Usage:', output, f'Sub-command verdi data upf uploadfamily --help failed: {output}')
 
     def test_uploadfamily(self):
         self.upload_family()
@@ -934,7 +921,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         output = sp.check_output(['ls', path])
         self.assertIn(
             b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF', output,
-            'Sub-command verdi data upf exportfamily --help failed: {}'.format(output)
+            f'Sub-command verdi data upf exportfamily --help failed: {output}'
         )
         self.assertIn(
             b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF', output,

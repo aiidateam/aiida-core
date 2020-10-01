@@ -62,7 +62,7 @@ class TestBackendComment(AiidaTestCase):
         # Store the comment.ctime before the store as a reference
         now = timezone.now()
         comment_ctime_before_store = comment.ctime
-        self.assertTrue(now > comment.ctime, '{} is not smaller than now {}'.format(comment.ctime, now))
+        self.assertTrue(now > comment.ctime, f'{comment.ctime} is not smaller than now {now}')
 
         comment.store()
         comment_ctime = comment.ctime
@@ -71,7 +71,7 @@ class TestBackendComment(AiidaTestCase):
         # The comment.ctime should have been unchanged, but the comment.mtime should have changed
         self.assertEqual(comment.ctime, comment_ctime_before_store)
         self.assertIsNotNone(comment.mtime)
-        self.assertTrue(now < comment.mtime, '{} is not larger than now {}'.format(comment.mtime, now))
+        self.assertTrue(now < comment.mtime, f'{comment.mtime} is not larger than now {now}')
 
         # After storing
         self.assertTrue(isinstance(comment.id, int))
@@ -328,15 +328,14 @@ class TestBackendComment(AiidaTestCase):
         # delete_many should return an empty list
         deleted_entities = self.backend.comments.delete_many(filters={'id': id_})
         self.assertEqual(
-            deleted_entities, [],
-            msg='No entities should have been deleted, since Comment id {} does not exist'.format(id_)
+            deleted_entities, [], msg=f'No entities should have been deleted, since Comment id {id_} does not exist'
         )
 
         # Try to delete non-existing Comment - using delete
         # NotExistent should be raised, since no entities are found
         with self.assertRaises(exceptions.NotExistent) as exc:
             self.backend.comments.delete(comment_id=id_)
-        self.assertIn("Comment with id '{}' not found".format(id_), str(exc.exception))
+        self.assertIn(f"Comment with id '{id_}' not found", str(exc.exception))
 
         # Try to delete existing and non-existing Comment - using delete_many
         # delete_many should return a list that *only* includes the existing Comment
@@ -344,7 +343,7 @@ class TestBackendComment(AiidaTestCase):
         deleted_entities = self.backend.comments.delete_many(filters=filters)
         self.assertEqual([comment_id],
                          deleted_entities,
-                         msg='Only Comment id {} should be returned from delete_many'.format(comment_id))
+                         msg=f'Only Comment id {comment_id} should be returned from delete_many')
 
         # Make sure the existing Comment was deleted
         builder = orm.QueryBuilder().append(orm.Comment, filters={'uuid': comment_uuid})

@@ -126,7 +126,7 @@ class Repository:
         if os.path.isfile(filepath):
             return File(filename, FileType.FILE)
 
-        raise IOError('object {} does not exist'.format(key))
+        raise IOError(f'object {key} does not exist')
 
     def get_object_content(self, key, mode='r'):
         """Return the content of a object identified by key.

@@ -92,7 +92,7 @@ def migrate_v2_to_v3(metadata, data, *args):
             input_type = NodeType(mapping[link['input']])
             output_type = NodeType(mapping[link['output']])
         except KeyError:
-            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'], link['output']))
+            raise DanglingLinkError(f"Unknown node UUID {link['input']} or {link['output']}")
 
         # The following table demonstrates the logic for inferring the link type
         # (CODE, DATA) -> (WORK, CALC) : INPUT

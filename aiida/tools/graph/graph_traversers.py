@@ -109,9 +109,7 @@ def validate_traversal_rules(ruleset=GraphTraversalRules.DEFAULT, **kwargs):
 
     if not isinstance(ruleset, GraphTraversalRules):
         raise TypeError(
-            'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {}'.format(
-                type(ruleset)
-            )
+            f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'
         )
 
     rules_applied = {}
@@ -125,12 +123,12 @@ def validate_traversal_rules(ruleset=GraphTraversalRules.DEFAULT, **kwargs):
         if name in kwargs:
 
             if not rule.toggleable:
-                raise ValueError('input rule {} is not toggleable for ruleset {}'.format(name, ruleset))
+                raise ValueError(f'input rule {name} is not toggleable for ruleset {ruleset}')
 
             follow = kwargs.pop(name)
 
             if not isinstance(follow, bool):
-                raise ValueError('the value of rule {} must be boolean, but it is: {}'.format(name, follow))
+                raise ValueError(f'the value of rule {name} must be boolean, but it is: {follow}')
 
         if follow:
 
@@ -139,14 +137,12 @@ def validate_traversal_rules(ruleset=GraphTraversalRules.DEFAULT, **kwargs):
             elif rule.direction == 'backward':
                 links_backward.append(rule.link_type)
             else:
-                raise exceptions.InternalError(
-                    'unrecognized direction `{}` for graph traversal rule'.format(rule.direction)
-                )
+                raise exceptions.InternalError(f'unrecognized direction `{rule.direction}` for graph traversal rule')
 
         rules_applied[name] = follow
 
     if kwargs:
-        error_message = 'unrecognized keywords: {}'.format(', '.join(kwargs.keys()))
+        error_message = f"unrecognized keywords: {', '.join(kwargs.keys())}"
         raise exceptions.ValidationError(error_message)
 
     valid_output = {
@@ -197,19 +193,19 @@ def traverse_graph(starting_pks, max_iterations=None, get_links=False, links_for
     linktype_list = []
     for linktype in links_forward:
         if not isinstance(linktype, LinkType):
-            raise TypeError('links_forward should contain links, but one of them is: {}'.format(type(linktype)))
+            raise TypeError(f'links_forward should contain links, but one of them is: {type(linktype)}')
         linktype_list.append(linktype.value)
     filters_forwards = {'type': {'in': linktype_list}}
 
     linktype_list = []
     for linktype in links_backward:
         if not isinstance(linktype, LinkType):
-            raise TypeError('links_backward should contain links, but one of them is: {}'.format(type(linktype)))
+            raise TypeError(f'links_backward should contain links, but one of them is: {type(linktype)}')
         linktype_list.append(linktype.value)
     filters_backwards = {'type': {'in': linktype_list}}
 
     if not isinstance(starting_pks, (list, set, tuple)):
-        raise TypeError('starting_pks must be of type list, set or tuple\ninstead, it is {}'.format(type(starting_pks)))
+        raise TypeError(f'starting_pks must be of type list, set or tuple\ninstead, it is {type(starting_pks)}')
 
     if not starting_pks:
         if get_links:
@@ -219,7 +215,7 @@ def traverse_graph(starting_pks, max_iterations=None, get_links=False, links_for
         return output
 
     if any([not isinstance(pk, int) for pk in starting_pks]):
-        raise TypeError('one of the starting_pks is not of type int:\n {}'.format(starting_pks))
+        raise TypeError(f'one of the starting_pks is not of type int:\n {starting_pks}')
     operational_set = set(starting_pks)
 
     query_nodes = orm.QueryBuilder()
@@ -228,7 +224,7 @@ def traverse_graph(starting_pks, max_iterations=None, get_links=False, links_for
     missing_pks = operational_set.difference(existing_pks)
     if missing_pks:
         raise exceptions.NotExistent(
-            'The following pks are not in the database and must be pruned before this   call: {}'.format(missing_pks)
+            f'The following pks are not in the database and must be pruned before this   call: {missing_pks}'
         )
 
     rules = []

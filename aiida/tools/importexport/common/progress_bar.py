@@ -67,8 +67,7 @@ def get_progress_bar(iterable=None, total=None, leave=None, **kwargs):
                 setattr(PROGRESS_BAR, attribute, value)
             except AttributeError:
                 raise ProgressBarError(
-                    'The given attribute {} either can not be set or does not exist for the progress bar.'.
-                    format(attribute)
+                    f'The given attribute {attribute} either can not be set or does not exist for the progress bar.'
                 )
 
     return PROGRESS_BAR

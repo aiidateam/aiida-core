@@ -58,11 +58,11 @@ def devel_check_undesired_imports():
 
     for modulename in ['seekpath', 'CifFile', 'ase', 'pymatgen', 'spglib', 'pymysql']:
         if modulename in sys.modules:
-            echo.echo_warning('Detected loaded module "{}"'.format(modulename))
+            echo.echo_warning(f'Detected loaded module "{modulename}"')
             loaded_modules += 1
 
     if loaded_modules > 0:
-        echo.echo_critical('Detected {} unwanted modules'.format(loaded_modules))
+        echo.echo_critical(f'Detected {loaded_modules} unwanted modules')
     echo.echo_success('no issues detected')
 
 

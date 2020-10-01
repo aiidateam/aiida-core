@@ -30,7 +30,7 @@ class GroupNotFoundError(Exception):
     """An exception raised when a path does not have an associated group."""
 
     def __init__(self, grouppath):
-        msg = 'No such group: {}'.format(grouppath.path)
+        msg = f'No such group: {grouppath.path}'
         super().__init__(msg)
 
 
@@ -38,7 +38,7 @@ class GroupNotUniqueError(Exception):
     """An exception raised when a path has multiple associated groups."""
 
     def __init__(self, grouppath):
-        msg = 'The path is not unique: {}'.format(grouppath.path)
+        msg = f'The path is not unique: {grouppath.path}'
         super().__init__(msg)
 
 
@@ -46,7 +46,7 @@ class NoGroupsInPathError(Exception):
     """An exception raised when a path has multiple associated groups."""
 
     def __init__(self, grouppath):
-        msg = 'The path does not contain any descendant groups: {}'.format(grouppath.path)
+        msg = f'The path does not contain any descendant groups: {grouppath.path}'
         super().__init__(msg)
 
 
@@ -69,7 +69,7 @@ class GroupPath:
 
         """
         if not issubclass(cls, orm.Group):
-            raise TypeError('cls must a subclass of Group: {}'.format(cls))
+            raise TypeError(f'cls must a subclass of Group: {cls}')
 
         self._delimiter = '/'
         self._cls = cls
@@ -82,14 +82,14 @@ class GroupPath:
         if path == self._delimiter:
             return ''
         if self._delimiter * 2 in path:
-            raise InvalidPath("The path may not contain a duplicate delimiter '{}': {}".format(self._delimiter, path))
+            raise InvalidPath(f"The path may not contain a duplicate delimiter '{self._delimiter}': {path}")
         if (path.startswith(self._delimiter) or path.endswith(self._delimiter)):
-            raise InvalidPath("The path may not start/end with the delimiter '{}': {}".format(self._delimiter, path))
+            raise InvalidPath(f"The path may not start/end with the delimiter '{self._delimiter}': {path}")
         return path
 
     def __repr__(self) -> str:
         """Represent the instantiated class."""
-        return "{}('{}', cls='{}')".format(self.__class__.__name__, self.path, self.cls)
+        return f"{self.__class__.__name__}('{self.path}', cls='{self.cls}')"
 
     def __eq__(self, other: Any) -> bool:
         """Compare equality of path and ``Group`` subclass to another ``GroupPath`` object."""
@@ -142,7 +142,7 @@ class GroupPath:
     def __truediv__(self, path: str) -> 'GroupPath':
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         if not isinstance(path, str):
-            raise TypeError('path is not a string: {}'.format(path))
+            raise TypeError(f'path is not a string: {path}')
         path = self._validate_path(path)
         child = GroupPath(
             path=self.path + self.delimiter + path if self.path else path,
@@ -204,7 +204,7 @@ class GroupPath:
         query = orm.QueryBuilder()
         filters = {}
         if self.path:
-            filters['label'] = {'like': self.path + self.delimiter + '%'}
+            filters['label'] = {'like': f'{self.path + self.delimiter}%'}
         query.append(self.cls, subclassing=False, filters=filters, project='label')
         if query.count() == 0 and self.is_virtual:
             raise NoGroupsInPathError(self)
@@ -221,7 +221,7 @@ class GroupPath:
                     yield GroupPath(path=path_string, cls=self.cls, warn_invalid_child=self._warn_invalid_child)
                 except InvalidPath:
                     if self._warn_invalid_child:
-                        warnings.warn('invalid path encountered: {}'.format(path_string))  # pylint: disable=no-member
+                        warnings.warn(f'invalid path encountered: {path_string}')  # pylint: disable=no-member
 
     def __iter__(self) -> Iterator['GroupPath']:
         """Iterate through all (direct) children of this path."""
@@ -264,7 +264,7 @@ class GroupPath:
         query = orm.QueryBuilder()
         group_filters = {}
         if self.path:
-            group_filters['label'] = {'or': [{'==': self.path}, {'like': self.path + self.delimiter + '%'}]}
+            group_filters['label'] = {'or': [{'==': self.path}, {'like': f'{self.path + self.delimiter}%'}]}
         query.append(self.cls, subclassing=False, filters=group_filters, project='label', tag='group')
         query.append(
             orm.Node if node_class is None else node_class,
@@ -300,7 +300,7 @@ class GroupAttr:
 
     def __repr__(self) -> str:
         """Represent the instantiated class."""
-        return "{}('{}', type='{}')".format(self.__class__.__name__, self._group_path.path, self._group_path.cls)
+        return f"{self.__class__.__name__}('{self._group_path.path}', type='{self._group_path.cls}')"
 
     def __call__(self) -> GroupPath:
         """Return the ``GroupPath``."""

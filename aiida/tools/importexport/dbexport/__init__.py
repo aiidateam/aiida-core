@@ -135,7 +135,7 @@ def export(
         filename = 'export_data.aiida'
 
     if not overwrite and os.path.exists(filename):
-        raise exceptions.ArchiveExportError("The output file '{}' already exists".format(filename))
+        raise exceptions.ArchiveExportError(f"The output file '{filename}' already exists")
 
     if silent:
         logging.disable(level=logging.CRITICAL)
@@ -391,7 +391,7 @@ def export_tree(
             entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
         else:
             raise exceptions.ArchiveExportError(
-                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
+                f'I was given {entry} ({type(entry)}), which is not a Node, Computer, or Group instance'
             )
 
     # Add all the nodes contained within the specified groups
@@ -491,7 +491,7 @@ def export_tree(
 
     entries_to_add = dict()
     for given_entity in given_entities:
-        progress_bar.set_description_str(pbar_base_str + ' - {}s'.format(given_entity), refresh=False)
+        progress_bar.set_description_str(f'{pbar_base_str} - {given_entity}s', refresh=False)
         progress_bar.update()
 
         project_cols = ['id']
@@ -555,7 +555,7 @@ def export_tree(
     entity_separator = '_'
     for entity_name, partial_query in entries_to_add.items():
 
-        progress_bar.set_description_str('Exporting {}s'.format(entity_name), refresh=False)
+        progress_bar.set_description_str(f'Exporting {entity_name}s', refresh=False)
         progress_bar.update()
 
         foreign_fields = {k: v for k, v in all_fields_info[entity_name].items() if 'requires' in v}
@@ -595,7 +595,7 @@ def export_tree(
         EXPORT_LOGGER.log(msg='Nothing to store, exiting...', level=LOG_LEVEL_REPORT)
         return
     EXPORT_LOGGER.log(
-        msg='Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks)),
+        msg=f'Exporting a total of {model_data} database entries, of which {len(all_node_pks)} are Nodes.',
         level=LOG_LEVEL_REPORT
     )
 
@@ -710,7 +710,7 @@ def export_tree(
         for uuid in all_node_uuids:
             sharded_uuid = export_shard_uuid(uuid)
 
-            progress_bar.set_description_str(pbar_base_str + 'UUID={}'.format(uuid.split('-')[0]), refresh=False)
+            progress_bar.set_description_str(f"{pbar_base_str}UUID={uuid.split('-')[0]}", refresh=False)
             progress_bar.update()
 
             # Important to set create=False, otherwise creates twice a subfolder. Maybe this is a bug of insert_path?
@@ -720,7 +720,7 @@ def export_tree(
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
             if not src.exists():
                 raise exceptions.ArchiveExportError(
-                    'Unable to find the repository folder for Node with UUID={} in the local repository'.format(uuid)
+                    f'Unable to find the repository folder for Node with UUID={uuid} in the local repository'
                 )
 
             # In this way, I copy the content of the folder, and not the folder itself

@@ -51,7 +51,7 @@ class ProcessFuture(plumpy.Future):
             if self._communicator is not None:
                 broadcast_filter = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(node), sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
-                    broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
+                    broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
                 self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)
 
             # Start polling

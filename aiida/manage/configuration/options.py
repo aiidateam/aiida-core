@@ -198,7 +198,7 @@ def get_option(option_name):
     try:
         option = Option(option_name, **CONFIG_OPTIONS[option_name])
     except KeyError:
-        raise ValueError('the option {} does not exist'.format(option_name))
+        raise ValueError(f'the option {option_name} does not exist')
     else:
         return option
 
@@ -229,7 +229,7 @@ def parse_option(option_name, option_value):
             elif option_value.strip().lower() in ['1', 'true', 't']:
                 value = True
             else:
-                raise ValueError('option {} expects a boolean value'.format(option.name))
+                raise ValueError(f'option {option.name} expects a boolean value')
         else:
             value = bool(option_value)
     elif option.valid_type == 'string':
@@ -239,7 +239,7 @@ def parse_option(option_name, option_value):
     elif option.valid_type == 'list_of_str':
         value = option_value.split()
     else:
-        raise NotImplementedError('Type string {} not implemented yet'.format(option.valid_type))
+        raise NotImplementedError(f'Type string {option.valid_type} not implemented yet')
 
     if option.valid_values is not None:
         if value not in option.valid_values:

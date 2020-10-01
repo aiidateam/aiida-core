@@ -72,7 +72,7 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
 
     invalid = set(kwargs.keys()).difference(BROKER_VALID_PARAMETERS)
     if invalid:
-        raise ValueError('invalid URL parameters specified in the keyword arguments: {}'.format(', '.join(invalid)))
+        raise ValueError(f"invalid URL parameters specified in the keyword arguments: {', '.join(invalid)}")
 
     if 'heartbeat' not in kwargs:
         kwargs['heartbeat'] = BROKER_DEFAULTS.heartbeat
@@ -92,7 +92,7 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
     # The virtual host is optional but if it is specified it needs to start with a forward slash. If the virtual host
     # itself contains forward slashes, they need to be encoded.
     if path and not path.startswith('/'):
-        path = '/' + path
+        path = f'/{path}'
 
     return urlunparse((scheme, netloc, path, parameters, query, fragment))
 
@@ -103,7 +103,7 @@ def get_launch_queue_name(prefix=None):
     :returns: launch queue name
     """
     if prefix is not None:
-        return '{}.{}'.format(prefix, _LAUNCH_QUEUE)
+        return f'{prefix}.{_LAUNCH_QUEUE}'
 
     return _LAUNCH_QUEUE
 
@@ -113,7 +113,7 @@ def get_message_exchange_name(prefix):
 
     :returns: message exchange name
     """
-    return '{}.{}'.format(prefix, _MESSAGE_EXCHANGE)
+    return f'{prefix}.{_MESSAGE_EXCHANGE}'
 
 
 def get_task_exchange_name(prefix):
@@ -121,7 +121,7 @@ def get_task_exchange_name(prefix):
 
     :returns: task exchange name
     """
-    return '{}.{}'.format(prefix, _TASK_EXCHANGE)
+    return f'{prefix}.{_TASK_EXCHANGE}'
 
 
 def _store_inputs(inputs):

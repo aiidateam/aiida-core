@@ -31,8 +31,8 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            """ DELETE FROM db_dbextra WHERE key='""" + _HASH_EXTRA_KEY + """';""",
-            reverse_sql=""" DELETE FROM db_dbextra WHERE key='""" + _HASH_EXTRA_KEY + """';"""
+            f" DELETE FROM db_dbextra WHERE key='{_HASH_EXTRA_KEY}';",
+            reverse_sql=f" DELETE FROM db_dbextra WHERE key='{_HASH_EXTRA_KEY}';"
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

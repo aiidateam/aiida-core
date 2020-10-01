@@ -200,9 +200,7 @@ class TestSpecificImport(AiidaTestCase):
         with self.assertRaises(exceptions.ArchiveExportError) as exc:
             export([node], filename=filename, silent=True)
 
-        self.assertIn(
-            'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
-        )
+        self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
         self.assertFalse(os.path.exists(filename), msg='The export file should not exist')
 
     @with_temp_dir
@@ -262,9 +260,7 @@ class TestSpecificImport(AiidaTestCase):
         with self.assertRaises(exceptions.CorruptArchive) as exc:
             import_data(filename_corrupt, silent=True)
 
-        self.assertIn(
-            'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
-        )
+        self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
 
     @with_temp_dir
     def test_empty_repo_folder_export(self, temp_dir):
@@ -287,9 +283,7 @@ class TestSpecificImport(AiidaTestCase):
                 shutil.rmtree(abspath_filename, ignore_errors=False)
         self.assertFalse(
             node_repo.get_content_list(),
-            msg='Repository folder should be empty, instead the following was found: {}'.format(
-                node_repo.get_content_list()
-            )
+            msg=f'Repository folder should be empty, instead the following was found: {node_repo.get_content_list()}'
         )
 
         archive_variants = {
@@ -305,7 +299,7 @@ class TestSpecificImport(AiidaTestCase):
         for variant, filename in archive_variants.items():
             self.reset_database()
             node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
-            self.assertEqual(node_count, 0, msg='After DB reset {} Dict Nodes was (wrongly) found'.format(node_count))
+            self.assertEqual(node_count, 0, msg=f'After DB reset {node_count} Dict Nodes was (wrongly) found')
 
             import_data(filename, silent=True)
             builder = orm.QueryBuilder().append(orm.Dict, project='uuid')

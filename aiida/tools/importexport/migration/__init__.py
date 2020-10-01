@@ -58,7 +58,7 @@ def migrate_recursively(metadata, data, folder, version=EXPORT_VERSION):
         elif old_version in MIGRATE_FUNCTIONS:
             MIGRATE_FUNCTIONS[old_version](metadata, data, folder)
         else:
-            raise ArchiveMigrationError('Cannot migrate from version {}'.format(old_version))
+            raise ArchiveMigrationError(f'Cannot migrate from version {old_version}')
     except ValueError as exception:
         raise ArchiveMigrationError(exception)
     except DanglingLinkError:

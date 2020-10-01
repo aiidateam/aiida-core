@@ -90,7 +90,7 @@ class Archive:
             raise CorruptArchive('unrecognized archive format')
 
         if not self.folder.get_content_list():
-            raise ContentNotExistent('the provided archive {} is empty'.format(self.filepath))
+            raise ContentNotExistent(f'the provided archive {self.filepath} is empty')
 
         self._unpacked = True
 
@@ -233,7 +233,7 @@ def update_description(path, refresh: bool = False):
     (path, description) = os.path.split(path)
     while description == '':
         (path, description) = os.path.split(path)
-    description = 'EXTRACTING: {}'.format(description)
+    description = f'EXTRACTING: {description}'
 
     progress_bar = get_progress_bar()
     progress_bar.set_description_str(description, refresh=refresh)
@@ -275,7 +275,7 @@ def get_file_iterator(file_handle, folderpath, silent=True, **kwargs):  # pylint
             else:
                 file_handle.extract(path=folderpath, member=json_file)
         except KeyError:
-            raise CorruptArchive('required file `{}` is not included'.format(json_file))
+            raise CorruptArchive(f'required file `{json_file}` is not included')
 
     close_progress_bar(leave=False)
     if file_format == 'tar':
@@ -371,12 +371,12 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, **kwargs):
             for member in file_iterator:
                 if member.isdev():
                     # safety: skip if character device, block device or FIFO
-                    print('WARNING, device found inside the import file: {}'.format(member.name), file=sys.stderr)
+                    print(f'WARNING, device found inside the import file: {member.name}', file=sys.stderr)
                     continue
                 if member.issym() or member.islnk():
                     # safety: in export, I set dereference=True therefore
                     # there should be no symbolic or hard links.
-                    print('WARNING, symlink found inside the import file: {}'.format(member.name), file=sys.stderr)
+                    print(f'WARNING, symlink found inside the import file: {member.name}', file=sys.stderr)
                     continue
                 # Check that we are only exporting nodes within the subfolder!
                 # TODO: better check such that there are no .. in the

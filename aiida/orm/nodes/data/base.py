@@ -18,7 +18,7 @@ __all__ = ('BaseType', 'to_aiida_type')
 @singledispatch
 def to_aiida_type(value):
     """Turns basic Python types (str, int, float, bool) into the corresponding AiiDA types."""
-    raise TypeError('Cannot convert value of type {} to AiiDA type.'.format(type(value)))
+    raise TypeError(f'Cannot convert value of type {type(value)} to AiiDA type.')
 
 
 class BaseType(Data):
@@ -48,7 +48,7 @@ class BaseType(Data):
         self.set_attribute('value', self._type(value))  # pylint: disable=no-member
 
     def __str__(self):
-        return super().__str__() + ' value: {}'.format(self.value)
+        return f'{super().__str__()} value: {self.value}'
 
     def __eq__(self, other):
         if isinstance(other, BaseType):

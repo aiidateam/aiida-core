@@ -56,7 +56,7 @@ def get_pseudos_from_structure(structure, family_name):
         if isinstance(node, UpfData):
             if node.element in family_pseudos:
                 raise MultipleObjectsError(
-                    'More than one UPF for element {} found in family {}'.format(node.element, family_name)
+                    f'More than one UPF for element {node.element} found in family {family_name}'
                 )
             family_pseudos[node.element] = node
 
@@ -64,7 +64,7 @@ def get_pseudos_from_structure(structure, family_name):
         try:
             pseudo_list[kind.name] = family_pseudos[kind.symbol]
         except KeyError:
-            raise NotExistent('No UPF for element {} found in family {}'.format(kind.symbol, family_name))
+            raise NotExistent(f'No UPF for element {kind.symbol} found in family {family_name}')
 
     return pseudo_list
 
@@ -131,11 +131,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
             pseudo_and_created.append((pseudo, created))
         else:
             if stop_if_existing:
-                raise ValueError(
-                    'A UPF with identical MD5 to '
-                    ' {} cannot be added with stop_if_existing'
-                    ''.format(filename)
-                )
+                raise ValueError(f'A UPF with identical MD5 to  {filename} cannot be added with stop_if_existing')
             existing_upf = existing_upf[0]
             pseudo_and_created.append((existing_upf, False))
 
@@ -157,7 +153,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     if not len(elements_names) == len(set(elements_names)):
         duplicates = {x for x in elements_names if elements_names.count(x) > 1}
         duplicates_string = ', '.join(i for i in duplicates)
-        raise UniquenessError('More than one UPF found for the elements: ' + duplicates_string + '.')
+        raise UniquenessError(f'More than one UPF found for the elements: {duplicates_string}.')
 
         # At this point, save the group, if still unstored
     if group_created:
@@ -168,9 +164,9 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
         if created:
             pseudo.store()
 
-            AIIDA_LOGGER.debug('New node {} created for file {}'.format(pseudo.uuid, pseudo.filename))
+            AIIDA_LOGGER.debug(f'New node {pseudo.uuid} created for file {pseudo.filename}')
         else:
-            AIIDA_LOGGER.debug('Reusing node {} for file {}'.format(pseudo.uuid, pseudo.filename))
+            AIIDA_LOGGER.debug(f'Reusing node {pseudo.uuid} for file {pseudo.filename}')
 
     # Add elements to the group all togetehr
     group.add_nodes([pseudo for pseudo, created in pseudo_and_created])
@@ -207,9 +203,9 @@ def parse_upf(fname, check_filename=True):
     match = REGEX_UPF_VERSION.search(upf_contents)
     if match:
         version = match.group('version')
-        AIIDA_LOGGER.debug('Version found: {} for file {}'.format(version, fname))
+        AIIDA_LOGGER.debug(f'Version found: {version} for file {fname}')
     else:
-        AIIDA_LOGGER.debug('Assuming version 1 for file {}'.format(fname))
+        AIIDA_LOGGER.debug(f'Assuming version 1 for file {fname}')
         version = '1'
 
     parsed_data['version'] = version
@@ -218,10 +214,7 @@ def parse_upf(fname, check_filename=True):
     except ValueError:
         # If the version string does not contain a dot, fallback
         # to version 1
-        AIIDA_LOGGER.debug(
-            'Falling back to version 1 for file {}, '
-            "version string '{}' unrecognized".format(fname, version)
-        )
+        AIIDA_LOGGER.debug(f'Falling back to version 1 for file {fname} version string {version} unrecognized')
         version_major = 1
 
     element = None
@@ -235,10 +228,10 @@ def parse_upf(fname, check_filename=True):
             element = match.group('element_name')
 
     if element is None:
-        raise ParsingError('Unable to find the element of UPF {}'.format(fname))
+        raise ParsingError(f'Unable to find the element of UPF {fname}')
     element = element.capitalize()
     if element not in _valid_symbols:
-        raise ParsingError('Unknown element symbol {} for file {}'.format(element, fname))
+        raise ParsingError(f'Unknown element symbol {element} for file {fname}')
     if check_filename:
         if not os.path.basename(fname).lower().startswith(element.lower()):
             raise ParsingError(
@@ -322,7 +315,7 @@ class UpfData(SinglefileData):
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ParsingError('Could not parse the element from the UPF file {}'.format(self.filename))
+            raise ParsingError(f'Could not parse the element from the UPF file {self.filename}')
 
         self.set_attribute('element', str(element))
         self.set_attribute('md5', md5)
@@ -364,7 +357,7 @@ class UpfData(SinglefileData):
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ParsingError("No 'element' parsed in the UPF file {}; unable to store".format(self.filename))
+            raise ParsingError(f"No 'element' parsed in the UPF file {self.filename}; unable to store")
 
         super().set_file(file, filename=filename)
 
@@ -414,7 +407,7 @@ class UpfData(SinglefileData):
         try:
             element = parsed_data['element']
         except KeyError:
-            raise ValidationError("No 'element' could be parsed in the UPF {}".format(self.filename))
+            raise ValidationError(f"No 'element' could be parsed in the UPF {self.filename}")
 
         try:
             attr_element = self.get_attribute('element')
@@ -427,12 +420,10 @@ class UpfData(SinglefileData):
             raise ValidationError("attribute 'md5' not set.")
 
         if attr_element != element:
-            raise ValidationError(
-                "Attribute 'element' says '{}' but '{}' was parsed instead.".format(attr_element, element)
-            )
+            raise ValidationError(f"Attribute 'element' says '{attr_element}' but '{element}' was parsed instead.")
 
         if attr_md5 != md5:
-            raise ValidationError("Attribute 'md5' says '{}' but '{}' was parsed instead.".format(attr_md5, md5))
+            raise ValidationError(f"Attribute 'md5' says '{attr_md5}' but '{md5}' was parsed instead.")
 
     def _prepare_upf(self, main_file_name=''):
         """

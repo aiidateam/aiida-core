@@ -437,8 +437,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             self._client.connect(self._machine, **connection_arguments)
         except Exception as exc:
             self.logger.error(
-                "Error connecting to '{}' through SSH: ".format(self._machine) +
-                '[{}] {}, '.format(self.__class__.__name__, exc) + 'connect_args were: {}'.format(self._connect_args)
+                f"Error connecting to '{self._machine}' through SSH: " + f'[{self.__class__.__name__}] {exc}, ' +
+                f'connect_args were: {self._connect_args}'
             )
             raise
 
@@ -501,17 +501,17 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         conn_info = self._machine
         try:
-            conn_info = '{}@{}'.format(self._connect_args['username'], conn_info)
+            conn_info = f"{self._connect_args['username']}@{conn_info}"
         except KeyError:
             # No username explicitly defined: ignore
             pass
         try:
-            conn_info += ':{}'.format(self._connect_args['port'])
+            conn_info += f":{self._connect_args['port']}"
         except KeyError:
             # No port explicitly defined: ignore
             pass
 
-        return '{} [{}]'.format('OPEN' if self._is_open else 'CLOSED', conn_info)
+        return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
 
     def chdir(self, path):
         """
@@ -672,21 +672,18 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         rm_flags = '-r -f'
         # if in input I give an invalid object raise ValueError
         if not path:
-            raise ValueError('Input to rmtree() must be a non empty string. ' + 'Found instead %s as path' % path)
+            raise ValueError('Input to rmtree() must be a non empty string. ' + f'Found instead {path} as path')
 
-        command = '{} {} {}'.format(rm_exe, rm_flags, escape_for_bash(path))
+        command = f'{rm_exe} {rm_flags} {escape_for_bash(path)}'
 
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning('There was nonempty stderr in the rm command: {}'.format(stderr))
+                self.logger.warning(f'There was nonempty stderr in the rm command: {stderr}')
             return True
-        self.logger.error(
-            "Problem executing rm. Exit code: {}, stdout: '{}', "
-            "stderr: '{}'".format(retval, stdout, stderr)
-        )
-        raise IOError('Error while executing rm. Exit code: {}'.format(retval))
+        self.logger.error(f"Problem executing rm. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}'")
+        raise IOError(f'Error while executing rm. Exit code: {retval}')
 
     def rmdir(self, path):
         """
@@ -814,7 +811,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                     self.putfile(localpath, remotepath, callback, dereference, overwrite)
             else:
                 if not ignore_nonexisting:
-                    raise OSError('The local path {} does not exist'.format(localpath))
+                    raise OSError(f'The local path {localpath} does not exist')
 
     def putfile(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
         """
@@ -870,7 +867,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise OSError('The localpath does not exists')
 
         if not os.path.isdir(localpath):
-            raise ValueError('Input localpath is not a folder: {}'.format(localpath))
+            raise ValueError(f'Input localpath is not a folder: {localpath}')
 
         if not remotepath:
             raise IOError('remotepath must be a non empty string')
@@ -967,7 +964,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 if ignore_nonexisting:
                     pass
                 else:
-                    raise IOError('The remote path {} does not exist'.format(remotepath))
+                    raise IOError(f'The remote path {remotepath} does not exist')
 
     def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
         """
@@ -1028,7 +1025,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise ValueError('Localpaths must be an absolute path')
 
         if not self.isdir(remotepath):
-            raise IOError('Input remotepath is not a folder: {}'.format(localpath))
+            raise IOError(f'Input remotepath is not a folder: {localpath}')
 
         if os.path.exists(localpath) and not overwrite:
             raise OSError("Can't overwrite existing files")
@@ -1105,13 +1102,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # if in input I give an invalid object raise ValueError
         if not remotesource:
             raise ValueError(
-                'Input to copy() must be a non empty string. ' + 'Found instead %s as remotesource' % remotesource
+                'Input to copy() must be a non empty string. ' + f'Found instead {remotesource} as remotesource'
             )
 
         if not remotedestination:
             raise ValueError(
                 'Input to copy() must be a non empty string. ' +
-                'Found instead %s as remotedestination' % remotedestination
+                f'Found instead {remotedestination} as remotedestination'
             )
 
         if self.has_magic(remotedestination):
@@ -1133,13 +1130,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     def _exec_cp(self, cp_exe, cp_flags, src, dst):
         """Execute the ``cp`` command on the remote machine."""
         # to simplify writing the above copy function
-        command = '{} {} {} {}'.format(cp_exe, cp_flags, escape_for_bash(src), escape_for_bash(dst))
+        command = f'{cp_exe} {cp_flags} {escape_for_bash(src)} {escape_for_bash(dst)}'
 
         retval, stdout, stderr = self.exec_command_wait(command)
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning('There was nonempty stderr in the cp command: {}'.format(stderr))
+                self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
         else:
             self.logger.error(
                 "Problem executing cp. Exit code: {}, stdout: '{}', "
@@ -1207,15 +1204,15 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         :raises ValueError: if sroldpathc/newpath is not a valid string
         """
         if not oldpath:
-            raise ValueError('Source {} is not a valid string'.format(oldpath))
+            raise ValueError(f'Source {oldpath} is not a valid string')
         if not newpath:
-            raise ValueError('Destination {} is not a valid string'.format(newpath))
+            raise ValueError(f'Destination {newpath} is not a valid string')
         if not self.isfile(oldpath):
             if not self.isdir(oldpath):
-                raise IOError('Source {} does not exist'.format(oldpath))
+                raise IOError(f'Source {oldpath} does not exist')
         if not self.isfile(newpath):
             if not self.isdir(newpath):
-                raise IOError('Destination {} does not exist'.format(newpath))
+                raise IOError(f'Destination {newpath} does not exist')
 
         return self.sftp.rename(oldpath, newpath)
 
@@ -1231,10 +1228,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             return False
         try:
             self.logger.debug(
-                "stat for path '{}' ('{}'): {} [{}]".format(
-                    path, self.normalize(path), self.stat(path),
-                    self.stat(path).st_mode
-                )
+                f"stat for path '{path}' ('{self.normalize(path)}'): {self.stat(path)} [{self.stat(path).st_mode}]"
             )
             return S_ISREG(self.stat(path).st_mode)
         except IOError as exc:
@@ -1270,14 +1264,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = (
-                'cd {escaped_folder} && '
-                '{real_command}'.format(escaped_folder=escaped_folder, real_command=command)
-            )
+            command_to_execute = (f'cd {escaped_folder} && {command}')
         else:
             command_to_execute = command
 
-        self.logger.debug('Command to be executed: {}'.format(command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]))
+        self.logger.debug(f'Command to be executed: {command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]}')
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
@@ -1340,22 +1331,18 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         further_params = []
         if 'username' in self._connect_args:
-            further_params.append('-l {}'.format(escape_for_bash(self._connect_args['username'])))
+            further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
 
         if 'port' in self._connect_args and self._connect_args['port']:
-            further_params.append('-p {}'.format(self._connect_args['port']))
+            further_params.append(f"-p {self._connect_args['port']}")
 
         if 'key_filename' in self._connect_args and self._connect_args['key_filename']:
-            further_params.append('-i {}'.format(escape_for_bash(self._connect_args['key_filename'])))
+            further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
 
         further_params_str = ' '.join(further_params)
 
         connect_string = self._gotocomputer_string(remotedir)
-        cmd = 'ssh -t {machine} {further_params} {connect_string}'.format(
-            further_params=further_params_str,
-            machine=self._machine,
-            connect_string=connect_string,
-        )
+        cmd = f'ssh -t {self._machine} {further_params_str} {connect_string}'
         return cmd
 
     def _symlink(self, source, dest):

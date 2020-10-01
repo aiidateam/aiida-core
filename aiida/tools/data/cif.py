@@ -63,12 +63,12 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
             elif matrix[i][j] < -eps:
                 sign = '-'
             if sign:
-                parts[i] = format('{}{}{}'.format(parts[i], sign, axes[j]))
+                parts[i] = format(f'{parts[i]}{sign}{axes[j]}')
         if tr[i] < -eps or tr[i] > eps:
             sign = '+'
             if tr[i] < -eps:
                 sign = '-'
-            parts[i] = format('{}{}{}'.format(parts[i], sign, abs(tr[i])))
+            parts[i] = format(f'{parts[i]}{sign}{abs(tr[i])}')
         parts[i] = re.sub(r'^\+', '', parts[i])
     return ','.join(parts)
 

@@ -127,7 +127,7 @@ def attributes_to_dict(attr_list):
         try:
             tmp_d = select_from_key(a.key, d)
         except ValueError:
-            echo.echo_error("Couldn't transfer attribute {} with key {} for dbnode {}".format(a.id, a.key, a.dbnode_id))
+            echo.echo_error(f"Couldn't transfer attribute {a.id} with key {a.key} for dbnode {a.dbnode_id}")
             error = True
             continue
         key = a.key.split('.')[-1]

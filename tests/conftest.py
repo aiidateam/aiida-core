@@ -47,15 +47,15 @@ def non_interactive_editor(request):
             environ = None
         try:
             process = subprocess.Popen(
-                '{} {}'.format(editor, filename),  # This is the line that we change removing `shlex_quote`
+                f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
             )
             exit_code = process.wait()
             if exit_code != 0:
-                raise click.ClickException('{}: Editing failed!'.format(editor))
+                raise click.ClickException(f'{editor}: Editing failed!')
         except OSError as exception:
-            raise click.ClickException('{}: Editing failed: {}'.format(editor, exception))
+            raise click.ClickException(f'{editor}: Editing failed: {exception}')
 
     with patch.object(Editor, 'edit_file', edit_file):
         yield
@@ -212,7 +212,7 @@ def create_profile() -> Profile:
             'database_name': kwargs.pop('database_name', name),
             'database_username': kwargs.pop('database_username', 'user'),
             'database_password': kwargs.pop('database_password', 'pass'),
-            'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
+            'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
         }
 
         return Profile(name, profile_dictionary)

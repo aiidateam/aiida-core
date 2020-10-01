@@ -33,51 +33,51 @@ class TestAutogroup(AiidaTestCase):
         expected_label = label_prefix
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )
 
         # Second group (only one with no suffix existing)
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
         group = autogroup.get_or_create_group()
-        expected_label = label_prefix + '_1'
+        expected_label = f'{label_prefix}_1'
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )
 
         # Second group (only one suffix _1 existing)
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
         group = autogroup.get_or_create_group()
-        expected_label = label_prefix + '_2'
+        expected_label = f'{label_prefix}_2'
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )
 
         # I create a group with a large integer suffix (9)
-        AutoGroup(label='{}_9'.format(label_prefix)).store()
+        AutoGroup(label=f'{label_prefix}_9').store()
         # The next autogroup should become number 10
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
         group = autogroup.get_or_create_group()
-        expected_label = label_prefix + '_10'
+        expected_label = f'{label_prefix}_10'
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )
 
         # I create a group with a non-integer suffix (15a), it should be ignored
-        AutoGroup(label='{}_15b'.format(label_prefix)).store()
+        AutoGroup(label=f'{label_prefix}_15b').store()
         # The next autogroup should become number 11
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
         group = autogroup.get_or_create_group()
-        expected_label = label_prefix + '_11'
+        expected_label = f'{label_prefix}_11'
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )
 
     def test_get_or_create_invalid_prefix(self):
@@ -86,7 +86,7 @@ class TestAutogroup(AiidaTestCase):
         label_prefix = 'new_test_prefix_TestAutogroup'
         # I create a group with the same prefix, but followed by non-underscore
         # characters. These should be ignored in the logic.
-        AutoGroup(label='{}xx'.format(label_prefix)).store()
+        AutoGroup(label=f'{label_prefix}xx').store()
 
         # Check that there are no groups to begin with
         queryb = QueryBuilder().append(AutoGroup, filters={'label': label_prefix})
@@ -101,15 +101,15 @@ class TestAutogroup(AiidaTestCase):
         expected_label = label_prefix
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )
 
         # Second group (only one with no suffix existing)
         autogroup = Autogroup()
         autogroup.set_group_label_prefix(label_prefix)
         group = autogroup.get_or_create_group()
-        expected_label = label_prefix + '_1'
+        expected_label = f'{label_prefix}_1'
         self.assertEqual(
             group.label, expected_label,
-            "The auto-group should be labelled '{}', it is instead '{}'".format(expected_label, group.label)
+            f"The auto-group should be labelled '{expected_label}', it is instead '{group.label}'"
         )

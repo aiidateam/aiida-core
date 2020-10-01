@@ -30,14 +30,12 @@ class TestMigrate(ArchiveMigrationTest):
                     self.assertNotIn(
                         attr,
                         attrs,
-                        msg="key '{}' should have been removed from attributes for Node <pk={}>".format(attr, node_pk)
+                        msg=f"key '{attr}' should have been removed from attributes for Node <pk={node_pk}>"
                     )
 
                 # Check new attributes were added successfully
                 for attr in new_attrs:
-                    self.assertIn(
-                        attr, attrs, msg="key '{}' was not added to attributes for Node <pk={}>".format(attr, node_pk)
-                    )
+                    self.assertIn(attr, attrs, msg=f"key '{attr}' was not added to attributes for Node <pk={node_pk}>")
                     self.assertEqual(
                         attrs[attr],
                         new_attrs[attr],
@@ -53,7 +51,7 @@ class TestMigrate(ArchiveMigrationTest):
                 self.assertNotIn(
                     entity,
                     metadata[dict_],
-                    msg="key '{}' should have been removed from '{}' in metadata.json".format(entity, dict_)
+                    msg=f"key '{entity}' should have been removed from '{dict_}' in metadata.json"
                 )
 
     def test_migration_0040_corrupt_archive(self):

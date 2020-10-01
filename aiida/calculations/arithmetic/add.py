@@ -50,7 +50,7 @@ class ArithmeticAddCalculation(CalcJob):
         :returns: the `CalcInfo` instance
         """
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
-            handle.write('echo $(({x} + {y}))\n'.format(x=self.inputs.x.value, y=self.inputs.y.value))
+            handle.write(f'echo $(({self.inputs.x.value} + {self.inputs.y.value}))\n')
 
         codeinfo = CodeInfo()
         codeinfo.code_uuid = self.inputs.code.uuid

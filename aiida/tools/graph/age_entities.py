@@ -127,7 +127,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         return len(self.keyset)
 
     def __repr__(self):
-        return '{{{}}}'.format(','.join(map(str, self.keyset)))
+        return f"{{{','.join(map(str, self.keyset))}}}"
 
     def __eq__(self, other):
         return self.keyset == other.keyset
@@ -177,7 +177,7 @@ class AiidaEntitySet(AbstractSetContainer):
         """
         super().__init__()
         if not aiida_cls in VALID_ENTITY_CLASSES:
-            raise TypeError('aiida_cls has to be among:{}'.format(VALID_ENTITY_CLASSES))
+            raise TypeError(f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}')
         self._aiida_cls = aiida_cls
         self.keyset = set()
         self._identifier = 'id'
@@ -254,7 +254,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         super().__init__()
         for aiida_cls in (aiida_cls_to, aiida_cls_from):
             if not aiida_cls in VALID_ENTITY_CLASSES:
-                raise TypeError('aiida_cls has to be among:{}'.format(VALID_ENTITY_CLASSES))
+                raise TypeError(f'aiida_cls has to be among:{VALID_ENTITY_CLASSES}')
         self._aiida_cls_to = aiida_cls_to
         self._aiida_cls_from = aiida_cls_from
         self.keyset = set()
@@ -270,11 +270,9 @@ class DirectedEdgeSet(AbstractSetContainer):
                 self._edge_identifiers = (('nodes', 'id'), ('groups', 'id'))
                 self._edge_namedtuple = GroupNodeEdge
             else:
-                raise TypeError(
-                    'Unexpted types aiida_cls_from={} and aiida_cls_to={}'.format(aiida_cls_from, aiida_cls_to)
-                )
+                raise TypeError(f'Unexpted types aiida_cls_from={aiida_cls_from} and aiida_cls_to={aiida_cls_to}')
         else:
-            raise TypeError('Unexpted types aiida_cls_from={} and aiida_cls_to={}'.format(aiida_cls_from, aiida_cls_to))
+            raise TypeError(f'Unexpted types aiida_cls_from={aiida_cls_from} and aiida_cls_to={aiida_cls_to}')
 
     def _check_self_and_other(self, other):
         if not isinstance(other, DirectedEdgeSet):
@@ -289,11 +287,11 @@ class DirectedEdgeSet(AbstractSetContainer):
 
     def _check_input_for_set(self, input_for_set):
         if not isinstance(input_for_set, tuple):
-            raise TypeError('value for `input_for_set` {} is not a tuple'.format(input_for_set))
+            raise TypeError(f'value for `input_for_set` {input_for_set} is not a tuple')
         if len(input_for_set) != len(self._edge_identifiers):
             inputs_len = len(input_for_set)
             inside_len = len(self._edge_identifiers)
-            raise ValueError('tuple passed has len = {}, but there are {} identifiers'.format(inputs_len, inside_len))
+            raise ValueError(f'tuple passed has len = {inputs_len}, but there are {inside_len} identifiers')
         return input_for_set
 
     def get_template(self):
@@ -354,7 +352,7 @@ class Basket():
             if isinstance(input_object, AiidaEntitySet):
                 if input_object.aiida_cls is aiida_class:
                     return input_object
-                raise TypeError('{}  has to  have {} as aiida_cls'.format(keyword, aiida_class))
+                raise TypeError(f'{keyword}  has to  have {aiida_class} as aiida_cls')
 
             else:
                 raise ValueError(
@@ -368,13 +366,13 @@ class Basket():
                 return DirectedEdgeSet(aiida_cls_to=cls_to, aiida_cls_from=cls_from)
             if isinstance(var, DirectedEdgeSet):
                 if var.aiida_cls_from is not cls_from:
-                    raise TypeError('{} has to  have {} as aiida_cls_from'.format(keyword, cls_from))
+                    raise TypeError(f'{keyword} has to  have {cls_from} as aiida_cls_from')
                 elif var.aiida_cls_to is not cls_to:
-                    raise TypeError('{} has to  have {} as aiida_cls_to'.format(keyword, cls_to))
+                    raise TypeError(f'{keyword} has to  have {cls_to} as aiida_cls_to')
                 else:
                     return var
             else:
-                raise TypeError('{} has to be an instance of DirectedEdgeSet'.format(keyword))
+                raise TypeError(f'{keyword} has to be an instance of DirectedEdgeSet')
 
         nodes = get_check_set_entity_set(nodes, 'nodes', orm.Node)
         groups = get_check_set_entity_set(groups, 'groups', orm.Group)
@@ -451,8 +449,8 @@ class Basket():
     def __repr__(self):
         ret_str = ''
         for key, val in self._dict.items():
-            ret_str += '  ' + key + ': '
-            ret_str += str(val) + '\n'
+            ret_str += f'  {key}: '
+            ret_str += f'{str(val)}\n'
         return ret_str
 
     def empty(self):

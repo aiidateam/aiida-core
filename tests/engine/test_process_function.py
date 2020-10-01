@@ -151,7 +151,7 @@ class TestProcessFunction(AiidaTestCase):
     def test_process_type(self):
         """Test that the process type correctly contains the module and name of original decorated function."""
         _, node = self.function_defaults.run_get_node()
-        process_type = '{}.{}'.format(self.function_defaults.__module__, self.function_defaults.__name__)
+        process_type = f'{self.function_defaults.__module__}.{self.function_defaults.__name__}'
         self.assertEqual(node.process_type, process_type)
 
     def test_exit_status(self):

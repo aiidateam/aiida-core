@@ -100,7 +100,7 @@ class TestComplex(AiidaTestCase):
             try:
                 orm.load_node(uuid)
             except NotExistent:
-                self.fail('Node with UUID {} and label {} was not found.'.format(uuid, label))
+                self.fail(f'Node with UUID {uuid} and label {label} was not found.')
 
     @with_temp_dir
     def test_reexport(self, temp_dir):
@@ -170,7 +170,7 @@ class TestComplex(AiidaTestCase):
 
         param = orm.Dict(dict=trial_dict)
         param.label = str(datetime.now())
-        param.description = 'd_' + str(datetime.now())
+        param.description = f'd_{str(datetime.now())}'
         param.store()
         calc = orm.CalculationNode()
         # setting also trial dict as attributes, but randomizing the keys)
@@ -196,7 +196,7 @@ class TestComplex(AiidaTestCase):
         # I export and reimport 3 times in a row:
         for i in range(3):
             # Always new filename:
-            filename = os.path.join(temp_dir, 'export-{}.aiida'.format(i))
+            filename = os.path.join(temp_dir, f'export-{i}.aiida')
             # Loading the group from the string
             group = orm.Group.get(label=grouplabel)
             # exporting based on all members of the group

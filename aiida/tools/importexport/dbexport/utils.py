@@ -131,10 +131,7 @@ def check_licenses(node_licenses, allowed_licenses, forbidden_licenses):
                         raise LicensingException
             except LicensingException:
                 raise LicensingException(
-                    'Node {} is licensed '
-                    'under {} license, which '
-                    'is not in the list of '
-                    'allowed licenses'.format(pk, license_)
+                    f'Node {pk} is licensed under {license_} license, which is not in the list of allowed licenses'
                 )
         if forbidden_licenses is not None:
             try:
@@ -149,10 +146,7 @@ def check_licenses(node_licenses, allowed_licenses, forbidden_licenses):
                         raise LicensingException
             except LicensingException:
                 raise LicensingException(
-                    'Node {} is licensed '
-                    'under {} license, which '
-                    'is in the list of '
-                    'forbidden licenses'.format(pk, license_)
+                    f'Node {pk} is licensed under {license_} license, which is in the list of forbidden licenses'
                 )
 
 
@@ -293,7 +287,7 @@ def summary(file_format, outfile, **kwargs):
 
     parameters = [['Archive', outfile], ['Format', file_format], ['Export version', EXPORT_VERSION]]
 
-    result = '\n{}'.format(tabulate(parameters, headers=['EXPORT', '']))
+    result = f"\n{tabulate(parameters, headers=['EXPORT', ''])}"
 
     include_comments = kwargs.get('include_comments', True)
     include_logs = kwargs.get('include_logs', True)
@@ -303,13 +297,13 @@ def summary(file_format, outfile, **kwargs):
     call_reversed = kwargs.get('call_reversed', False)
 
     inclusions = [['Include Comments', include_comments], ['Include Logs', include_logs]]
-    result += '\n\n{}'.format(tabulate(inclusions, headers=['Inclusion rules', '']))
+    result += f"\n\n{tabulate(inclusions, headers=['Inclusion rules', ''])}"
 
     traversal_rules = [['Follow INPUT Links forwards',
                         input_forward], ['Follow CREATE Links backwards', create_reversed],
                        ['Follow RETURN Links backwards', return_reversed],
                        ['Follow CALL Links backwards', call_reversed]]
-    result += '\n\n{}\n'.format(tabulate(traversal_rules, headers=['Traversal rules', '']))
+    result += f"\n\n{tabulate(traversal_rules, headers=['Traversal rules', ''])}\n"
 
     EXPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)
 
@@ -327,9 +321,9 @@ def deprecated_parameters(old, new):
     """
     if old.get('value', None) is not None:
         if new.get('value', None) is not None:
-            message = '`{}` is deprecated, the supplied `{}` input will be used'.format(old['name'], new['name'])
+            message = f"`{old['name']}` is deprecated, the supplied `{new['name']}` input will be used"
         else:
-            message = '`{}` is deprecated, please use `{}` instead'.format(old['name'], new['name'])
+            message = f"`{old['name']}` is deprecated, please use `{new['name']}` instead"
             new['value'] = old['value']
         warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
 

@@ -33,7 +33,7 @@ def validate_attribute_extra_key(key):
 
     if FIELD_SEPARATOR in key:
         raise exceptions.ValidationError(
-            'key for attributes or extras cannot contain the character `{}`'.format(FIELD_SEPARATOR)
+            f'key for attributes or extras cannot contain the character `{FIELD_SEPARATOR}`'
         )
 
 
@@ -78,7 +78,7 @@ def clean_value(value):
         # This is for float-like types, like ``numpy.float128`` that are not json-serializable
         # Note that `numbers.Real` also match booleans but they are already returned above
         if isinstance(val, numbers.Real):
-            string_representation = '{{:.{}g}}'.format(AIIDA_FLOAT_PRECISION).format(val)
+            string_representation = f'{{:.{AIIDA_FLOAT_PRECISION}g}}'.format(val)
             new_val = float(string_representation)
             if 'e' in string_representation and new_val.is_integer():
                 # This is indeed often quite unexpected, because it is going to change the type of the data
@@ -94,7 +94,7 @@ def clean_value(value):
             return new_val
 
         # Anything else we do not understand and we refuse
-        raise exceptions.ValidationError('type `{}` is not supported as it is not json-serializable'.format(type(val)))
+        raise exceptions.ValidationError(f'type `{type(val)}` is not supported as it is not json-serializable')
 
     if isinstance(value, BaseType):
         return clean_builtin(value.value)

@@ -133,7 +133,7 @@ class WorkChain(Process):
         elif awaitable.action == AwaitableAction.APPEND:
             self.ctx.setdefault(awaitable.key, []).append(awaitable)
         else:
-            assert 'Unknown awaitable action: {}'.format(awaitable.action)
+            assert f'Unknown awaitable action: {awaitable.action}'
 
         self._update_process_status()
 
@@ -156,9 +156,9 @@ class WorkChain(Process):
                     container[index] = value
                     break
             else:
-                assert 'Awaitable `{} was not found in `ctx.{}`'.format(awaitable.pk, awaitable.pk)
+                assert f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.pk}`'
         else:
-            assert 'Unknown awaitable action: {}'.format(awaitable.action)
+            assert f'Unknown awaitable action: {awaitable.action}'
 
         awaitable.resolved = True
 
@@ -178,7 +178,7 @@ class WorkChain(Process):
     def _update_process_status(self):
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = 'Waiting for child processes: {}'.format(', '.join([str(_.pk) for _ in self._awaitables]))
+            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
             self.node.set_process_status(status)
         else:
             self.node.set_process_status(None)
@@ -273,7 +273,7 @@ class WorkChain(Process):
                 callback = functools.partial(self._run_task, self.on_process_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
-                assert "invalid awaitable target '{}'".format(awaitable.target)
+                assert f"invalid awaitable target '{awaitable.target}'"
 
     def on_process_finished(self, awaitable):
         """Callback function called by the runner when the process instance identified by pk is completed.
@@ -288,7 +288,7 @@ class WorkChain(Process):
         try:
             node = load_node(awaitable.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError('provided pk<{}> could not be resolved to a valid Node instance'.format(awaitable.pk))
+            raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
 
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.get_outgoing()}

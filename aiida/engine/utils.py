@@ -52,7 +52,7 @@ def instantiate_process(runner, process, *args, **inputs):
     elif issubclass(process, Process):
         process_class = process
     else:
-        raise ValueError('invalid process {}, needs to be Process or ProcessBuilder'.format(type(process)))
+        raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
 
     process = process_class(runner=runner, inputs=inputs)
 
@@ -88,7 +88,7 @@ class InterruptableFuture(concurrent.Future):
         wait_iterator = gen.WaitIterator(yieldable, self)
         result = yield wait_iterator.next()  # pylint: disable=stop-iteration-return
         if not wait_iterator.current_index == 0:
-            raise RuntimeError("This interruptible future had it's result set unexpectedly to {}".format(result))
+            raise RuntimeError(f"This interruptible future had it's result set unexpectedly to {result}")
 
         result = yield [yieldable, self][0]
         raise gen.Return(result)
@@ -251,7 +251,7 @@ def set_process_state_change_timestamp(process):
         # This will only occur for testing, as in general users cannot launch plain Process classes
         return
     else:
-        raise ValueError('unsupported calculation node type {}'.format(type(process.node)))
+        raise ValueError(f'unsupported calculation node type {type(process.node)}')
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
@@ -261,7 +261,7 @@ def set_process_state_change_timestamp(process):
         manager = get_manager()
         manager.get_backend_manager().get_settings_manager().set(key, value, description)
     except UniquenessError as exception:
-        process.logger.debug('could not update the {} setting because of a UniquenessError: {}'.format(key, exception))
+        process.logger.debug(f'could not update the {key} setting because of a UniquenessError: {exception}')
 
 
 def get_process_state_change_timestamp(process_type=None):
@@ -282,7 +282,7 @@ def get_process_state_change_timestamp(process_type=None):
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
-        raise ValueError('invalid value for process_type, valid values are {}'.format(', '.join(valid_process_types)))
+        raise ValueError(f"invalid value for process_type, valid values are {', '.join(valid_process_types)}")
 
     if process_type is None:
         process_types = valid_process_types

@@ -48,10 +48,10 @@ def set_new_uuid(connection):
     # Create the key/value pairs
     key_values = ','.join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
 
-    update_stm = """
+    update_stm = f"""
         UPDATE db_dblog as t SET
             uuid = uuid(c.uuid)
-        from (values {}) as c(id, uuid) where c.id = t.id""".format(key_values)
+        from (values {key_values}) as c(id, uuid) where c.id = t.id"""
     connection.execute(update_stm)
 
 

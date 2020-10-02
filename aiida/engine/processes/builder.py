@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cell-var-from-loop, line-too-long
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
 
@@ -49,14 +48,14 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, default=port.default):
+                def fgetter(self, name=name, default=port.default):  # pylint: disable=cell-var-from-loop
                     return self._data.get(name, default)
             else:
 
                 def fgetter(self, name=name):
                     return self._data.get(name, None)
 
-            def fsetter(self, value):
+            def fsetter(self, value, name=name):
                 self._data[name] = value
 
             fgetter.__doc__ = str(port)

@@ -12,7 +12,13 @@ from enum import Enum, IntEnum
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
+__all__ = ('StashMode', 'CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
+
+
+class StashMode(Enum):
+    """Mode to use when stashing files from the working directory of a completed calculation job for safekeeping."""
+
+    COPY = 'copy'
 
 
 class CalcJobState(Enum):
@@ -21,8 +27,10 @@ class CalcJobState(Enum):
     UPLOADING = 'uploading'
     SUBMITTING = 'submitting'
     WITHSCHEDULER = 'withscheduler'
+    STASHING = 'stashing'
     RETRIEVING = 'retrieving'
     PARSING = 'parsing'
+    DONE = 'done'
 
 
 class CalcInfo(DefaultFieldsAttributeDict):

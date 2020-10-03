@@ -228,7 +228,7 @@ def deduplicate_uuids(table=None):
             uuid_new = str(get_new_uuid())
             mapping_new_uuid[pk] = uuid_new
 
-            messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_ref, uuid_new))
+            messages.append(f'updated UUID of {table} row<{pk}> from {uuid_ref} to {uuid_new}')
             dirpath_repo_ref = get_node_repository_sub_folder(uuid_ref)
             dirpath_repo_new = get_node_repository_sub_folder(uuid_new)
 

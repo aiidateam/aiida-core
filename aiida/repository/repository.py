@@ -33,6 +33,7 @@ class Repository:
     # pylint: disable=too-many-public-methods
 
     _backend = None
+    _file_cls = File
 
     def __init__(self, backend: AbstractRepositoryBackend = None):
         """Construct a new instance with empty metadata.
@@ -44,7 +45,7 @@ class Repository:
             backend = SandboxRepositoryBackend()
 
         self.set_backend(backend)
-        self._directory = File()
+        self.reset()
 
     @classmethod
     def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: typing.Dict) -> 'Repository':
@@ -57,9 +58,12 @@ class Repository:
 
         if serialized:
             for name, obj in serialized['o'].items():
-                instance.get_directory().objects[name] = File.from_serialized(obj, name)
+                instance.get_directory().objects[name] = cls._file_cls.from_serialized(obj, name)
 
         return instance
+
+    def reset(self):
+        self._directory = self._file_cls()
 
     def serialize(self) -> typing.Dict:
         """Serialize the metadata into a JSON-serializable format.
@@ -138,7 +142,7 @@ class Repository:
         else:
             directory = self.get_directory
 
-        directory.objects[path.name] = File(path.name, FileType.FILE, key)
+        directory.objects[path.name] = self._file_cls(path.name, FileType.FILE, key)
 
     def create_directory(self, path: FilePath) -> File:
         """Create a new directory with the given path.
@@ -155,7 +159,7 @@ class Repository:
 
         for part in path.parts:
             if part not in directory.objects:
-                directory.objects[part] = File(part)
+                directory.objects[part] = self._file_cls(part)
 
             directory = directory.objects[part]
 
@@ -402,7 +406,7 @@ class Repository:
         """
         for hash_key in self.get_hash_keys():
             self.backend.delete_object(hash_key)
-        self._directory = File()
+        self.reset()
 
     def clone(self, source: 'Repository'):
         """Clone the contents of another repository instance."""

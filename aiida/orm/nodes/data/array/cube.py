@@ -34,21 +34,21 @@ class GaussianCubeData(ArrayData):
         **kwargs
     ):
         super().__init__(**kwargs)
-        if comment:
+        if comment is not None:
             self.comment = comment
-        if voxel:
+        if voxel is not None:
             self.voxel = voxel
-        if origin:
+        if origin is not None:
             self.origin = origin
-        if atomic_numbers:
+        if atomic_numbers is not None:
             self.atomic_numbers = atomic_numbers
-        if atomic_charges:
+        if atomic_charges is not None:
             self.atomic_charges = atomic_charges
-        if atomic_coordinates:
+        if atomic_coordinates is not None:
             self.atomic_coordinates = atomic_coordinates
-        if data:
+        if data is not None:
             self.data = data
-        if data_units:
+        if data_units is not None:
             self.data_units = data_units
 
     @property

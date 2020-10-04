@@ -270,11 +270,15 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     # folders that would be empty when considering the `provenance_exclude_list` will *not* be copied to the repo. The
     # advantage of this explicit copying instead of deleting the files from `provenance_exclude_list` from the sandbox
     # first before moving the entire remaining content to the node's repository, is that in this way we are guaranteed
-    # not to accidentally move files to the repository that should not go there at all cost.
+    # not to accidentally move files to the repository that should not go there at all cost. Note that all entries in
+    # the provenance exclude list are normalized first, just as the paths that are in the sandbox folder, otherwise the
+    # direct equality test may fail, e.g.: './path/file.txt' != 'path/file.txt' even though they reference the same file
+    provenance_exclude_list = [os.path.normpath(entry) for entry in provenance_exclude_list]
+
     for root, _, filenames in os.walk(folder.abspath):
         for filename in filenames:
             filepath = os.path.join(root, filename)
-            relpath = os.path.relpath(filepath, folder.abspath)
+            relpath = os.path.normpath(os.path.relpath(filepath, folder.abspath))
             if relpath not in provenance_exclude_list:
                 with open(filepath, 'rb') as handle:
                     node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access

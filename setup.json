@@ -140,7 +140,7 @@
         "aiida.data": [
             "array = aiida.orm.nodes.data.array.array:ArrayData",
             "array.bands = aiida.orm.nodes.data.array.bands:BandsData",
-            "array.gaussiancube = aiida.orm.nodes.data.array.cube:GaussianCubeData",
+            "array.gaussian_cube = aiida.orm.nodes.data.array.gaussian_cube:GaussianCubeData",
             "array.kpoints = aiida.orm.nodes.data.array.kpoints:KpointsData",
             "array.projection = aiida.orm.nodes.data.array.projection:ProjectionData",
             "array.trajectory = aiida.orm.nodes.data.array.trajectory:TrajectoryData",

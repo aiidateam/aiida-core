@@ -127,12 +127,13 @@ class GaussianCubeData(ArrayData):
     def data_units(self, data_units):
         self.set_attribute('data_units', data_units)
 
-    def read(self, file, data_units=None):
+    def read(self, file, data_units=None, encoding='utf-8'):
         """Parse cube file."""
 
         # It should be either a string pointing to a file, or a file object.
         if isinstance(file, str):
-            fiter = iter(open(file).readlines())
+            with open(file, mode='r', encoding=encoding) as fobj:
+                fiter = iter(fobj.readlines())
         else:
             fiter = iter(file.readlines())
 
@@ -190,7 +191,7 @@ class GaussianCubeData(ArrayData):
                 print(f'The attribute `{attr}` is not set.')
         return all_good
 
-    def export(self, path, fileformat='cube', overwrite=False, **kwargs):
+    def export(self, path, fileformat='cube', encoding='utf-8', overwrite=False, **kwargs):
         """Export data to the selected file."""
 
         if not self.everything_ok():
@@ -201,7 +202,7 @@ class GaussianCubeData(ArrayData):
 
         if path:
             if overwrite or not os.path.isfile(path):
-                with open(path, 'w') as fobj:
+                with open(path, mode='w', encoding=encoding) as fobj:
                     fobj.write(content)
             else:
                 raise FileExistsError(

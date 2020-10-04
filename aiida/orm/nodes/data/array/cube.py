@@ -193,7 +193,7 @@ class GaussianCubeData(ArrayData):
 
         return all_good and super()._validate(), return_msg
 
-    def export(self, path, fileformat='cube', encoding='utf-8', overwrite=False, **kwargs):
+    def export(self, path, fileformat='cube', overwrite=False, **kwargs):
         """Export data to the selected file."""
 
         if not self._validate():
@@ -204,7 +204,7 @@ class GaussianCubeData(ArrayData):
 
         if path:
             if overwrite or not os.path.isfile(path):
-                with open(path, mode='w', encoding=encoding) as fobj:
+                with open(path, mode='w', encoding='utf-8') as fobj:
                     fobj.write(content)
             else:
                 raise FileExistsError(

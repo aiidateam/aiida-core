@@ -156,17 +156,13 @@ class GaussianCubeData(ArrayData):
         self.voxel = voxel
 
         # Atomic numbers, charges and positions.
-        numbers = np.empty(natoms, int)
-        charges = np.empty(natoms, int)
-        positions = np.empty((natoms, 3))
+        num_charge_pos = np.empty(natoms, int), np.empty(natoms, int), np.empty((natoms, 3))
         for i in range(natoms):
             line = next(fiter).split()
-            numbers[i] = int(line[0])
-            charges[i] = float(line[1])
-            positions[i] = [float(s) for s in line[2:]]
-        self.atomic_numbers = numbers
-        self.atomic_charges = charges
-        self.atomic_coordinates = positions
+            num_charge_pos[0][i] = int(line[0])
+            num_charge_pos[1][i] = float(line[1])
+            num_charge_pos[2][i] = [float(s) for s in line[2:]]
+        self.atomic_numbers, self.atomic_charges, self.atomic_coordinates = num_charge_pos
 
         # Data mesh.
         data = np.empty(shape[0] * shape[1] * shape[2], dtype=float)

@@ -180,21 +180,23 @@ class GaussianCubeData(ArrayData):
         if data_units:
             self.data_units = data_units
 
-    def everything_ok(self):
+    def _validate(self):
         """Check if the object contains all the data to construct a valid cube file."""
         all_good = True
+        return_msg = ''
         for attr in ['comment', 'voxel', 'origin', 'atomic_numbers', 'atomic_charges', 'atomic_coordinates', 'data']:
             try:
                 getattr(self, attr)
             except (AttributeError, KeyError):
                 all_good = False
-                print(f'The attribute `{attr}` is not set.')
-        return all_good
+                return_msg += f'The attribute `{attr}` is not set.\n'
+
+        return all_good and super()._validate(), return_msg
 
     def export(self, path, fileformat='cube', encoding='utf-8', overwrite=False, **kwargs):
         """Export data to the selected file."""
 
-        if not self.everything_ok():
+        if not self._validate():
             raise ValueError("Can't export the cube file.")
 
         if fileformat == 'cube':

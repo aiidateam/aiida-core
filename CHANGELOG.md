@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.2
+
+### Critical bug fixes
+- `CalcJob`: make sure `local_copy_list` files do not end up in the node's repository folder [[#4415]](https://github.com/aiidateam/aiida-core/pull/4415)
+
+
 ## v1.4.1
 
 ### Improvements

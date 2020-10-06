@@ -37,6 +37,10 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         self._valid_fields = []
         self._data = {}
 
+        # The name and port objects have to be passed to the defined functions as defaults for
+        # their arguments, because this way the content at the time of defining the method is
+        # saved. If they are used directly in the body, it will try to capture the value from
+        # its enclosing scope at the time of being called.
         for name, port in port_namespace.items():
 
             self._valid_fields.append(name)

@@ -15,15 +15,18 @@ from aiida.engine.processes.builder import ProcessBuilder
 from aiida import orm
 
 
-#@pytest.mark.usefixtures('clear_database_before_test')
 def test_access_methods():
-    """Test for the access methods (setter, getter, delete)."""
-    builder = ProcessBuilder(ArithmeticAddCalculation)
+    """Test for the access methods (setter, getter, delete).
 
+    The setters are used again after calling the delete in order to check that they still work
+    after the deletion (including the validation process).
+    """
     node_numb = orm.Int(4)
     node_dict = orm.Dict(dict={'value': 4})
 
     # AS ITEMS
+    builder = ProcessBuilder(ArithmeticAddCalculation)
+
     builder['x'] = node_numb
     assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
 
@@ -37,6 +40,9 @@ def test_access_methods():
     assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
 
     # AS ATTRIBUTES
+    del builder
+    builder = ProcessBuilder(ArithmeticAddCalculation)
+
     builder.x = node_numb
     assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
 

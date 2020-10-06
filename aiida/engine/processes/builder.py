@@ -193,5 +193,5 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
 
     @property
     def process_class(self):
-        """Straighforward wrapper for the process_class"""
+        """Return the process class for which this builder is constructed."""
         return self._process_class

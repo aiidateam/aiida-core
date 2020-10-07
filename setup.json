@@ -145,6 +145,8 @@
             "trajectory = aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory",
             "upf = aiida.cmdline.commands.cmd_data.cmd_upf:upf"
         ],
+        "aiida.cmdline.data.structure.import": [
+        ],
         "aiida.data": [
             "array = aiida.orm.nodes.data.array.array:ArrayData",
             "array.bands = aiida.orm.nodes.data.array.bands:BandsData",

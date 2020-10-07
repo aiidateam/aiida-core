@@ -84,6 +84,25 @@ def group_remove_nodes(group, nodes, clear, force):
         group.remove_nodes(nodes)
 
 
+@verdi_group.command('move-nodes')
+@options.SOURCE_GROUP(required=True)
+@options.TARGET_GROUP(required=True)
+@arguments.NODES()
+@options.FORCE()
+@with_dbenv()
+def group_move_nodes(source_group, target_group, nodes, force):
+    """Move nodes from one group to another."""
+    if not force:
+        click.confirm(
+            f'Do you really want to move {len(nodes)} nodes from Group<{source_group.label}> to '
+            f'Group<{target_group.label}>?',
+            abort=True
+        )
+
+    source_group.remove_nodes(nodes)
+    target_group.add_nodes(nodes)
+
+
 @verdi_group.command('delete')
 @arguments.GROUP()
 @options.FORCE()

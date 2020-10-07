@@ -309,6 +309,44 @@ class TestVerdiGroup(AiidaTestCase):
         self.assertIn('Aborted', result.output)
         self.assertEqual(group.count(), 1)
 
+    def test_move_nodes(self):
+        """Test `verdi group move-nodes` command."""
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.Int(1).store()
+        node_03 = orm.Bool(True).store()
+
+        # Add all three nodes to the first dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_add_nodes, ['--force', '--group=dummygroup1', node_01.uuid, node_02.uuid, node_03.uuid]
+        )
+        self.assertClickResultNoException(result)
+
+        # Check if all nodes have been added successfully to the first dummy group
+        result = self.cli_runner.invoke(cmd_group.group_show, ['dummygroup1'])
+        self.assertClickResultNoException(result)
+        self.assertIn('CalculationNode', result.output)
+        self.assertIn(str(node_01.pk), result.output)
+        self.assertIn('Int', result.output)
+        self.assertIn(str(node_02.pk), result.output)
+        self.assertIn('Bool', result.output)
+        self.assertIn(str(node_03.pk), result.output)
+
+        # Move all three nodes to the second dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_02.uuid, node_03.uuid]
+        )
+
+        # Check if all nodes have been added successfully to the second dummy group
+        result = self.cli_runner.invoke(cmd_group.group_show, ['dummygroup2'])
+        self.assertClickResultNoException(result)
+        self.assertIn('CalculationNode', result.output)
+        self.assertIn(str(node_01.pk), result.output)
+        self.assertIn('Int', result.output)
+        self.assertIn(str(node_02.pk), result.output)
+        self.assertIn('Bool', result.output)
+        self.assertIn(str(node_03.pk), result.output)
+
     def test_copy_existing_group(self):
         """Test user is prompted to continue if destination group exists and is not empty"""
         source_label = 'source_copy_existing_group'

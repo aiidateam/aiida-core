@@ -239,6 +239,7 @@ Below is a list with all available subcommands.
       delete        Delete a group and (optionally) the nodes it contains.
       description   Change the description of a group.
       list          Show a list of existing groups.
+      move-nodes    Move nodes from one group to another.
       path          Inspect groups of nodes, with delimited label paths.
       relabel       Change the label of a group.
       remove-nodes  Remove nodes from a group.

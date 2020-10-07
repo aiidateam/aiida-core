@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cell-var-from-loop
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
 
+from aiida.orm import Node
 from aiida.engine.processes.ports import PortNamespace
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
@@ -37,6 +37,10 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         self._valid_fields = []
         self._data = {}
 
+        # The name and port objects have to be passed to the defined functions as defaults for
+        # their arguments, because this way the content at the time of defining the method is
+        # saved. If they are used directly in the body, it will try to capture the value from
+        # its enclosing scope at the time of being called.
         for name, port in port_namespace.items():
 
             self._valid_fields.append(name)
@@ -48,14 +52,14 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, default=port.default):
+                def fgetter(self, name=name, default=port.default):  # pylint: disable=cell-var-from-loop
                     return self._data.get(name, default)
             else:
 
                 def fgetter(self, name=name):
                     return self._data.get(name, None)
 
-            def fsetter(self, value):
+            def fsetter(self, value, name=name):
                 self._data[name] = value
 
             fgetter.__doc__ = str(port)
@@ -112,6 +116,9 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
     def __delitem__(self, item):
         self._data.__delitem__(item)
 
+    def __delattr__(self, item):
+        self._data.__delitem__(item)
+
     def _update(self, *args, **kwds):
         """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
 
@@ -160,8 +167,6 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         :param value: a nested mapping of port values
         :return: the same mapping but without any nested namespace that is completely empty.
         """
-        from aiida.orm import Node
-
         if isinstance(value, collections.abc.Mapping) and not isinstance(value, Node):
             result = {}
             for key, sub_value in value.items():
@@ -174,7 +179,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         return value
 
 
-class ProcessBuilder(ProcessBuilderNamespace):
+class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ancestors
     """A process builder that helps setting up the inputs for creating a new process."""
 
     def __init__(self, process_class):
@@ -188,4 +193,5 @@ class ProcessBuilder(ProcessBuilderNamespace):
 
     @property
     def process_class(self):
+        """Return the process class for which this builder is constructed."""
         return self._process_class

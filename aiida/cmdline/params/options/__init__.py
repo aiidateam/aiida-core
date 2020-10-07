@@ -470,6 +470,10 @@ GROUP_CLEAR = OverridableOption(
     '-c', '--clear', is_flag=True, default=False, help='Remove all the nodes from the group.'
 )
 
+GROUP_DELETE_NODES = OverridableOption(
+    '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
+)
+
 RAW = OverridableOption(
     '-r',
     '--raw',

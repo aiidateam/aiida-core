@@ -59,35 +59,45 @@ def group_remove_nodes(group, nodes, clear, force):
 
 @verdi_group.command('delete')
 @arguments.GROUP()
-@options.GROUP_CLEAR(help='Remove all nodes before deleting the group itself.')
+@options.GROUP_DELETE_NODES()
 @options.FORCE()
 @with_dbenv()
-def group_delete(group, clear, force):
+def group_delete(group, delete_nodes, force):
     """Delete a group.
 
-    Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
-    group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
-    will not actually be deleted from the database.
+    Note that by default deleting a group will not delete the nodes in the group. Use the `--delete-nodes` flag to
+    delete the nodes as well, using the standard traversal rules.
     """
     from aiida import orm
+    from aiida.manage.database.delete.nodes import delete_nodes as delete_nodes_list
+    from aiida.tools.graph.graph_traversers import get_nodes_delete
 
     label = group.label
 
-    if group.count() > 0 and not clear:
-        echo.echo_critical((
-            'Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
-                label, group.count()
+    if group.count() > 0 and not force:
+        echo.echo_warning(f'Group <{label}> contains {group.count()} nodes.')
+
+    if group.count() > 0 and delete_nodes:
+        group_nodes = [node.pk for node in group.nodes]
+        node_pks_to_delete = get_nodes_delete(group_nodes)['nodes']
+
+        if not force:
+            echo.echo_warning(
+                f'Deleting all nodes in group <{label}> will result in the deletion of {len(node_pks_to_delete)} nodes!'
+                ' THIS CANNOT BE UNDONE!'
             )
-        ))
 
     if not force:
         click.confirm(f'Are you sure to delete Group<{label}>?', abort=True)
 
-    if clear:
-        group.clear()
-
+    group.clear()
     orm.Group.objects.delete(group.pk)
-    echo.echo_success(f'Group<{label}> deleted.')
+
+    if group.count() > 0 and delete_nodes:
+        delete_nodes_list(node_pks_to_delete, verbosity=0, force=True)
+        echo.echo_success(f'{len(node_pks_to_delete)} nodes deleted.')
+
+    echo.echo_success(f'Group <{label}> deleted.')
 
 
 @verdi_group.command('relabel')

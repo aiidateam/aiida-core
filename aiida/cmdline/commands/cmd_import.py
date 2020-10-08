@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi import` command."""
-# pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
+# pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches,global-statement
 from enum import Enum
+import sys
 import traceback
 import urllib.request
 
@@ -24,6 +25,8 @@ EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'a
 EXTRAS_MODE_NEW = ['import', 'none']
 COMMENT_MODE = ['newest', 'overwrite']
 
+RETURN_NON_ZERO = False
+
 
 class ExtrasImportCode(Enum):
     """Exit codes for the verdi command line."""
@@ -35,7 +38,7 @@ class ExtrasImportCode(Enum):
 
 
 def _echo_error(  # pylint: disable=unused-argument
-    message, non_interactive, more_archives, raised_exception, **kwargs
+    message, non_interactive, more_archives, raised_exception, fail_fast, **kwargs
 ):
     """Utility function to help write an error message for ``verdi import``
 
@@ -47,8 +50,13 @@ def _echo_error(  # pylint: disable=unused-argument
     :type more_archives: bool
     :param raised_exception: Exception raised during error.
     :type raised_exception: `Exception`
+    :param fail_fast: Exit the import/migration immediately if an error occurs.
+    :type fail_fast: bool
     """
     from aiida.tools.importexport import close_progress_bar, IMPORT_LOGGER
+
+    global RETURN_NON_ZERO
+    RETURN_NON_ZERO = True
 
     # Close progress bar, if it exists
     close_progress_bar(leave=False)
@@ -57,8 +65,11 @@ def _echo_error(  # pylint: disable=unused-argument
 
     exception = f'{raised_exception.__class__.__name__}: {str(raised_exception)}'
 
-    echo.echo_error(message)
-    echo.echo(exception)
+    if fail_fast:
+        echo.echo_critical(f'{message}\n{exception}')
+    else:
+        echo.echo_error(message)
+        echo.echo(exception)
 
     if more_archives:
         # There are more archives to go through
@@ -66,14 +77,17 @@ def _echo_error(  # pylint: disable=unused-argument
             # Continue to next archive
             pass
         else:
-            # Ask if one should continue to next archive
-            click.confirm('Do you want to continue?', abort=True)
+            try:
+                # Ask if one should continue to next archive
+                click.confirm('Do you want to continue?', abort=True)
+            except click.Abort:
+                sys.exit(1)
     else:
         # There are no more archives
-        click.Abort()
+        sys.exit(1)
 
 
-def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, **kwargs):
+def _try_import(migration_performed, file_to_import, archive, group, migration, non_interactive, fail_fast, **kwargs):
     """Utility function for `verdi import` to try to import archive
 
     :param migration_performed: Boolean to determine the exception message to throw for
@@ -83,6 +97,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     :param group: AiiDA Group into which the import will be associated.
     :param migration: Whether or not to force migration of archive, if needed.
     :param non_interactive: Whether or not the user should be asked for input for any reason.
+    :param fail_fast: Exit the import/migration immediately if an error occurs.
     :param kwargs: Key-word-arguments that _must_ contain:
         * `'extras_mode_existing'`: `import_data`'s `'extras_mode_existing'` keyword, determining import rules for
         Extras.
@@ -109,6 +124,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
                 f'{archive} has been migrated, but it still cannot be imported',
                 non_interactive=non_interactive,
                 raised_exception=exception,
+                fail_fast=fail_fast,
                 **kwargs
             )
         else:
@@ -133,6 +149,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
             f'an exception occurred while importing the archive {archive}',
             non_interactive=non_interactive,
             raised_exception=exception,
+            fail_fast=fail_fast,
             **kwargs
         )
     else:
@@ -141,7 +158,9 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     return migrate_archive
 
 
-def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, more_archives, silent, **kwargs):  # pylint: disable=unused-argument
+def _migrate_archive(  # pylint: disable=unused-argument
+    ctx, temp_folder, file_to_import, archive, non_interactive, more_archives, silent, fail_fast, **kwargs
+):
     """Utility function for `verdi import` to migrate archive
     Invoke click command `verdi export migrate`, passing in the archive,
     outputting the migrated archive in a temporary SandboxFolder.
@@ -154,6 +173,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     :param non_interactive: Whether or not the user should be asked for input for any reason.
     :param more_archives: Whether or not there are more archives to be imported.
     :param silent: Suppress console messages.
+    :param fail_fast: Exit the import/migration immediately if an error occurs.
     :return: Absolute path to migrated archive within SandboxFolder.
     """
     from aiida.cmdline.commands.cmd_export import migrate
@@ -175,7 +195,8 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
             "Use 'verdi export migrate' to update this export file.".format(archive),
             non_interactive=non_interactive,
             more_archives=more_archives,
-            raised_exception=exception
+            raised_exception=exception,
+            fail_fast=fail_fast,
         )
     else:
         # Success
@@ -235,11 +256,19 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     show_default=True,
     help='Force migration of export file archives, if needed.'
 )
+@click.option(
+    '--fail-fast',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Exit immediately if an error occurs during import or migration.',
+)
 @options.NON_INTERACTIVE()
 @decorators.with_dbenv()
 @click.pass_context
 def cmd_import(
-    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
+    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, fail_fast,
+    non_interactive
 ):
     """Import data from an AiiDA archive file.
 
@@ -269,7 +298,8 @@ def cmd_import(
                     f'an exception occurred while trying to discover archives at URL {webpage}',
                     non_interactive=non_interactive,
                     more_archives=webpage != webpages[-1] or archives_file or archives_url,
-                    raised_exception=exception
+                    raised_exception=exception,
+                    fail_fast=fail_fast,
                 )
             else:
                 echo.echo_success(f'{len(urls)} archive URLs discovered and added')
@@ -303,13 +333,17 @@ def cmd_import(
         import_opts['more_archives'] = archive != archives_file[-1] or archives_url
 
         # First attempt to import archive
-        migrate_archive = _try_import(migration_performed=False, **import_opts)
+        migrate_archive = _try_import(migration_performed=False, fail_fast=fail_fast, **import_opts)
 
         # Migrate archive if needed and desired
         if migrate_archive:
             with SandboxFolder() as temp_folder:
-                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
-                _try_import(migration_performed=True, **import_opts)
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, fail_fast=fail_fast, **import_opts)
+                _try_import(migration_performed=True, fail_fast=fail_fast, **import_opts)
+
+        # Check if exit with non-zero return code
+        if not import_opts['more_archives'] and RETURN_NON_ZERO:
+            sys.exit(1)
 
     # Import web-archives
     for archive in archives_url:
@@ -323,7 +357,9 @@ def cmd_import(
         try:
             response = urllib.request.urlopen(archive)
         except Exception as exception:
-            _echo_error(f'downloading archive {archive} failed', raised_exception=exception, **import_opts)
+            _echo_error(
+                f'downloading archive {archive} failed', raised_exception=exception, fail_fast=fail_fast, **import_opts
+            )
 
         with SandboxFolder() as temp_folder:
             temp_file = 'importfile.tar.gz'
@@ -334,9 +370,13 @@ def cmd_import(
 
             # First attempt to import archive
             import_opts['file_to_import'] = temp_folder.get_abs_path(temp_file)
-            migrate_archive = _try_import(migration_performed=False, **import_opts)
+            migrate_archive = _try_import(migration_performed=False, fail_fast=fail_fast, **import_opts)
 
             # Migrate archive if needed and desired
             if migrate_archive:
-                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
-                _try_import(migration_performed=True, **import_opts)
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, fail_fast=fail_fast, **import_opts)
+                _try_import(migration_performed=True, fail_fast=fail_fast, **import_opts)
+
+        # Check if exit with non-zero return code
+        if not import_opts['more_archives'] and RETURN_NON_ZERO:
+            sys.exit(1)

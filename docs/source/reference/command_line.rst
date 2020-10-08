@@ -351,6 +351,9 @@ Below is a list with all available subcommands.
       --migration / --no-migration    Force migration of export file archives, if needed.
                                       [default: True]
 
+      --fail-fast                     Exit immediately if an error occurs during import or
+                                      migration.  [default: False]
+
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but
                                       simply uses default values for options that define one.
 

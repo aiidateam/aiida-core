@@ -417,7 +417,10 @@ class CifData(SinglefileData):
         """
         if not kwargs and self._ase:
             return self.ase
-        return CifData.read_cif(self.open(), **kwargs)
+        with self.open() as handle:
+            cif = CifData.read_cif(handle, **kwargs)
+
+        return cif
 
     def set_ase(self, aseatoms):
         """

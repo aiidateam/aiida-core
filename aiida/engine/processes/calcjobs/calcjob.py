@@ -104,6 +104,20 @@ def validate_parser(parser_name, _):
             return f'invalid parser specified: {exception}'
 
 
+def validate_additional_retrieve_list(additional_retrieve_list, _):
+    """Validate the additional retrieve list.
+
+    :return: string with error message in case the input is invalid.
+    """
+    import os
+
+    if additional_retrieve_list is plumpy.UNSPECIFIED:
+        return
+
+    if any(not isinstance(value, str) or os.path.isabs(value) for value in additional_retrieve_list):
+        return f'`additional_retrieve_list` should only contain relative filepaths but got: {additional_retrieve_list}'
+
+
 class CalcJob(Process):
     """Implementation of the CalcJob process."""
 
@@ -186,6 +200,9 @@ class CalcJob(Process):
                  'script, just after the code execution',)
         spec.input('metadata.options.parser_name', valid_type=str, required=False, validator=validate_parser,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
+        spec.input('metadata.options.additional_retrieve_list', required=False,
+            valid_type=(list, tuple), validator=validate_additional_retrieve_list,
+            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,
             help='Input files necessary to run the process will be stored in this folder node.')
@@ -462,16 +479,16 @@ class CalcJob(Process):
             job_tmpl.sched_join_files = False
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
-        retrieve_list = (calc_info.retrieve_list if calc_info.retrieve_list is not None else [])
+        retrieve_list = calc_info.retrieve_list or []
         if (job_tmpl.sched_output_path is not None and job_tmpl.sched_output_path not in retrieve_list):
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
             if (job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
+        retrieve_list.extend(self.node.get_option('additional_retrieve_list') or [])
         self.node.set_retrieve_list(retrieve_list)
 
-        retrieve_singlefile_list = (calc_info.retrieve_singlefile_list
-                                    if calc_info.retrieve_singlefile_list is not None else [])
+        retrieve_singlefile_list = calc_info.retrieve_singlefile_list or []
         # a validation on the subclasses of retrieve_singlefile_list
         for _, subclassname, _ in retrieve_singlefile_list:
             file_sub_class = DataFactory(subclassname)
@@ -483,8 +500,7 @@ class CalcJob(Process):
             self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
-        retrieve_temporary_list = (calc_info.retrieve_temporary_list
-                                   if calc_info.retrieve_temporary_list is not None else [])
+        retrieve_temporary_list = calc_info.retrieve_temporary_list or []
         self.node.set_retrieve_temporary_list(retrieve_temporary_list)
 
         # the if is done so that if the method returns None, this is
@@ -526,17 +542,13 @@ class CalcJob(Process):
                 raise PluginInternalError('Invalid codes_info, must be a list of CodeInfo objects')
 
             if code_info.code_uuid is None:
-                raise PluginInternalError('CalcInfo should have '
-                                          'the information of the code '
-                                          'to be launched')
+                raise PluginInternalError('CalcInfo should have the information of the code to be launched')
             this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
             this_withmpi = code_info.withmpi  # to decide better how to set the default
             if this_withmpi is None:
                 if len(calc_info.codes_info) > 1:
-                    raise PluginInternalError('For more than one code, it is '
-                                              'necessary to set withmpi in '
-                                              'codes_info')
+                    raise PluginInternalError('For more than one code, it is necessary to set withmpi in codes_info')
                 else:
                     this_withmpi = self.node.get_option('withmpi')
 
@@ -558,8 +570,8 @@ class CalcJob(Process):
         if len(codes) > 1:
             try:
                 job_tmpl.codes_run_mode = calc_info.codes_run_mode
-            except KeyError:
-                raise PluginInternalError('Need to set the order of the code execution (parallel or serial?)')
+            except KeyError as exc:
+                raise PluginInternalError('Need to set the order of the code execution (parallel or serial?)') from exc
         else:
             job_tmpl.codes_run_mode = CodeRunMode.SERIAL
         ########################################################################
@@ -614,22 +626,26 @@ class CalcJob(Process):
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError(f'[presubmission of calc {this_pk}] local_copy_list format problem: {exc}')
+            raise PluginInternalError(
+                f'[presubmission of calc {this_pk}] local_copy_list format problem: {exc}'
+            ) from exc
 
         remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError(f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exc}')
+            raise PluginInternalError(
+                f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exc}'
+            ) from exc
 
         for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
             try:
                 Computer.objects.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
-            except exceptions.NotExistent:
+            except exceptions.NotExistent as exc:
                 raise PluginInternalError('[presubmission of calc {}] '
                                           'The remote copy requires a computer with UUID={}'
                                           'but no such computer was found in the '
-                                          'database'.format(this_pk, remote_computer_uuid))
+                                          'database'.format(this_pk, remote_computer_uuid)) from exc
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError('[presubmission of calc {}] '
                                           'The destination path of the remote copy '

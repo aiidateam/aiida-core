@@ -20,18 +20,19 @@ def edit_multiline_template(template_name, comment_marker='#=', extension=None, 
     :param comment_marker: the set of symbols that mark a comment line that should be stripped from the final value
     :param extension: the file extension to give to the rendered template file.
     :param kwargs: keywords that will be passed to the template rendering engine.
-    :return: the final string value entered in the editor with all comment lines stripped.
+    :return: the final string value entered in the editor with all comment lines stripped or an empty string if the
+        ``click.edit`` returned ``None``.
     """
     from aiida.cmdline.utils.templates import env
     template = env.get_template(template_name)
     rendered = template.render(**kwargs)
     content = click.edit(rendered, extension=extension)
 
-    if content:
+    if content is not None:
         # Remove all comments, which are all lines that start with the comment marker
-        value = re.sub(f'(^{re.escape(comment_marker)}.*$\n)+', '', content, flags=re.M).strip()
+        return re.sub(f'(^{re.escape(comment_marker)}.*$\n)+', '', content, flags=re.M).strip()
 
-    return value
+    return ''
 
 
 def edit_comment(old_cmt=''):

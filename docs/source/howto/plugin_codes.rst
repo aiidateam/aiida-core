@@ -9,6 +9,11 @@ How to write a plugin for an external code
     Before starting to write a new plugin, check the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
     If a plugin for your code is already available, you can skip straight to :ref:`how-to:run-codes`.
 
+.. tip::
+
+    This how to walks you through all logical steps of how AiiDA interacts with an external code.
+    If you already know the basics and would like to get started with a new plugin package quickly, check out :ref:`how-to:plugins`.
+
 To run an external code with AiiDA, you need a corresponding *calculation* plugin, which tells AiiDA how to:
 
 1. Prepare the required input files.

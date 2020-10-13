@@ -66,7 +66,7 @@ That is to say, if the safe interval is set to 60 seconds, any single worker is 
 Why would a process that runs fine locally raise an exception when submitted to the daemon?
 ===========================================================================================
 This is almost always caused by an import issue.
-To determine exactly what might be going wrong, first `set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
+To determine exactly what might be going wrong, first :ref:`set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
 
 .. code-block:: console
 

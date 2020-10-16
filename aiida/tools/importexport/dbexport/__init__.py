@@ -9,7 +9,9 @@
 ###########################################################################
 # pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
 """Provides export functionalities."""
+from abc import ABC, abstractmethod
 from collections import defaultdict
+from dataclasses import dataclass
 import logging
 import os
 import tarfile
@@ -24,6 +26,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -67,6 +70,176 @@ from aiida.tools.importexport.dbexport.utils import (
 from aiida.tools.importexport.dbexport.zip import ZipFolder
 
 __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
+
+
+@dataclass
+class ExportData:
+    """Class for storing data to export."""
+    metadata: dict
+    all_node_uuids: Set[str]
+    entity_data: Dict[str, Dict[int, dict]]
+    node_attributes: Dict[str, dict]
+    node_extras: Dict[str, dict]
+    groups_uuid: Dict[str, List[str]]
+    links_uuid: List[dict]
+
+
+class WriterAbstract(ABC):
+
+    def __init__(self, filename: str, **kwargs: Any):
+        """An archive writer
+
+        :param filename: the filename (possibly including the absolute path)
+            of the file on which to export.
+        """
+        # pylint: disable=unused-argument
+        self._filename = filename
+
+    @property
+    def filename(self) -> str:
+        return self._filename
+
+    @property
+    @abstractmethod
+    def file_format_verbose(self) -> str:
+        """The file format name."""
+
+    @abstractmethod
+    def write(
+        self,
+        export_data: ExportData,
+        silent: bool = False,
+    ) -> str:
+        """write the archive and return a message."""
+
+
+def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: ExportData, silent: bool = False) -> None:
+    """Store data to the archive."""
+    # subfolder inside the export package
+    nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
+
+    EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
+
+    data = {
+        'node_attributes': export_data.node_attributes,
+        'node_extras': export_data.node_extras,
+        'export_data': export_data.entity_data,
+        'links_uuid': export_data.links_uuid,
+        'groups_uuid': export_data.groups_uuid,
+    }
+
+    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
+    with folder.open('data.json', mode='w') as fhandle:
+        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
+        fhandle.write(json.dumps(data))
+
+    with folder.open('metadata.json', 'w') as fhandle:
+        fhandle.write(json.dumps(export_data.metadata))
+
+    EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
+
+    # If there are no nodes, there are no repository files to store
+    if export_data.all_node_uuids:
+
+        progress_bar = get_progress_bar(total=len(export_data.all_node_uuids), disable=silent)
+        pbar_base_str = 'Exporting repository - '
+
+        for uuid in export_data.all_node_uuids:
+            sharded_uuid = export_shard_uuid(uuid)
+
+            progress_bar.set_description_str(f"{pbar_base_str}UUID={uuid.split('-')[0]}", refresh=False)
+            progress_bar.update()
+
+            # Important to set create=False, otherwise creates twice a subfolder.
+            # Maybe this is a bug of insert_path?
+            thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
+
+            # Make sure the node's repository folder was not deleted
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
+            if not src.exists():
+                raise exceptions.ArchiveExportError(
+                    f'Unable to find the repository folder for Node with UUID={uuid} '
+                    'in the local repository'
+                )
+
+            # In this way, I copy the content of the folder, and not the folder itself
+            thisnodefolder.insert_path(src=src.abspath, dest_name='.')
+
+
+class WriterJsonZip(WriterAbstract):
+
+    def __init__(self, filename: str, **kwargs: Any):
+        """An archive writer
+
+        :param filename: the filename (possibly including the absolute path)
+            of the file on which to export.
+        :param use_compression: Whether or not to compress the zip file.
+
+        """
+        super().__init__(filename, **kwargs)
+        self._use_compression = kwargs.get('use_compression', True)
+
+    @property
+    def file_format_verbose(self) -> str:
+        return 'Zip (compressed)' if self._use_compression else 'Zip (uncompressed)'
+
+    def write(
+        self,
+        export_data: ExportData,
+        silent: bool = False,
+    ) -> str:
+        """write the archive
+
+        :param entities: a list of entity instances; they can belong to different models/entities.
+        :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
+            what rule names are toggleable and what the defaults are.
+
+        """
+        with ZipFolder(self.filename, mode='w', use_compression=self._use_compression) as folder:
+            time_start = time.time()
+            _write_to_json_archive(folder=folder, export_data=export_data, silent=silent)
+            time_end = time.time()
+
+        return f'Written in {time_end - time_start:6.2g} s.'
+
+
+class WriterJsonTar(WriterAbstract):
+
+    @property
+    def file_format_verbose(self) -> str:
+        return 'Gzipped tarball (compressed)'
+
+    def write(
+        self,
+        export_data: ExportData,
+        silent: bool = False,
+    ) -> str:
+        """write the archive
+
+        :param entities: a list of entity instances; they can belong to different models/entities.
+        :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
+            what rule names are toggleable and what the defaults are.
+
+        """
+        with SandboxFolder() as folder:
+            time_write_start = time.time()
+            _write_to_json_archive(folder=folder, export_data=export_data, silent=silent)
+            time_write_end = time.time()
+
+            with tarfile.open(self.filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
+                time_compress_start = time.time()
+                tar.add(folder.abspath, arcname='')
+                time_compress_end = time.time()
+
+        return (
+            f'Written in {time_write_end - time_write_start:6.2g} s, '
+            f'compressed in {time_compress_end - time_compress_start:6.2g} s, '
+            f'total: {time_compress_end - time_write_start:6.2g} s.'
+        )
+
+
+def get_writers() -> Dict[str, Type[WriterAbstract]]:
+    return {ExportFileFormat.ZIP: WriterJsonZip, ExportFileFormat.TAR_GZIPPED: WriterJsonTar}
 
 
 def export(
@@ -122,7 +295,7 @@ def export(
         Default: True, *include* logs in export.
     :type include_logs: bool
 
-    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`:
@@ -130,11 +303,11 @@ def export(
     :raises `~aiida.common.exceptions.LicensingException`:
         if any node is licensed under forbidden license.
     """
-    if file_format not in list(ExportFileFormat):
+    writers = get_writers()
+
+    if file_format not in list(writers):
         raise exceptions.ArchiveExportError(
-            'Can only export in the formats: {}, please specify one for "file_format".'.format(
-                tuple(_.value for _ in ExportFileFormat)
-            )
+            f'Can only export in the formats: {tuple(writers.keys())}, please specify one for "file_format".'
         )
 
     # Backwards-compatibility
@@ -180,202 +353,48 @@ def export(
     if silent:
         logging.disable(logging.CRITICAL)
 
-    if file_format == ExportFileFormat.TAR_GZIPPED:
-        file_format_verbose = 'Gzipped tarball (compressed)'
-    # Must be a zip then
-    elif use_compression:
-        file_format_verbose = 'Zip (compressed)'
-    else:
-        file_format_verbose = 'Zip (uncompressed)'
-    summary(file_format_verbose, filename, **traversal_rules)
+    writer = writers[file_format](filename=filename, use_compression=use_compression)
 
-    try:
-        if file_format == ExportFileFormat.TAR_GZIPPED:
-            times = export_tar(entities=entities, filename=filename, silent=silent, **traversal_rules)
-        else:  # zip
-            times = export_zip(
-                entities=entities,
-                filename=filename,
-                use_compression=use_compression,
-                silent=silent,
-                **traversal_rules,
-            )
-    except (exceptions.ArchiveExportError, LicensingException) as exc:
-        if os.path.exists(filename):
-            os.remove(filename)
-        raise exc
+    summary(writer.file_format_verbose, filename, **traversal_rules)
 
-    if len(times) == 2:
-        export_start, export_end = times  # pylint: disable=unbalanced-tuple-unpacking
-        EXPORT_LOGGER.debug('Exported in %6.2g s.', export_end - export_start)
-    elif len(times) == 4:
-        export_start, export_end, compress_start, compress_end = times
-        EXPORT_LOGGER.debug(
-            'Exported in %6.2g s, compressed in %6.2g s, total: %6.2g s.',
-            export_end - export_start,
-            compress_end - compress_start,
-            compress_end - export_start,
-        )
-    else:
-        EXPORT_LOGGER.debug('No information about the timing of the export.')
+    time_extract_start = time.time()
+    export_data = generate_data(entities=entities, silent=silent, **traversal_rules)
+    time_extract_stop = time.time()
+
+    if export_data is not None:
+
+        EXPORT_LOGGER.debug(f'Data extracted in {time_extract_stop - time_extract_start:6.2g} s.')
+
+        try:
+            message = writer.write(export_data=export_data, silent=silent)
+        except (exceptions.ArchiveExportError, LicensingException) as exc:
+            if os.path.exists(filename):
+                os.remove(filename)
+            raise exc
+
+        EXPORT_LOGGER.debug(message)
 
     # Reset logging level
     if silent:
         logging.disable(logging.NOTSET)
 
 
-def export_zip(
-    entities: Optional[Iterable[Any]] = None,
-    filename: Optional[str] = None,
-    use_compression: bool = True,
-    **traversal_rules: bool,
-) -> Tuple[float, ...]:
-    """Export in a zipped folder
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param filename: the filename
-        (possibly including the absolute path) of the file on which to export.
-
-    :param use_compression: Whether or not to compress the zip file.
-
-    """
-    # Backwards-compatibility
-    entities = cast(
-        Iterable[Any],
-        deprecated_parameters(
-            old={
-                'name': 'what',
-                'value': traversal_rules.pop('what', None)
-            },
-            new={
-                'name': 'entities',
-                'value': entities
-            },
-        ),
-    )
-    filename = cast(
-        str,
-        deprecated_parameters(
-            old={
-                'name': 'outfile',
-                'value': traversal_rules.pop('outfile', None)
-            },
-            new={
-                'name': 'filename',
-                'value': filename
-            },
-        ),
-    )
-
-    type_check(
-        entities,
-        (list, tuple, set),
-        msg='`entities` must be specified and given as a list of AiiDA entities',
-    )
-    entities = list(entities)
-
-    if type_check(filename, str, allow_none=True) is None:
-        filename = 'export_data.aiida'
-
-    with ZipFolder(filename, mode='w', use_compression=use_compression) as folder:
-        time_start = time.time()
-        export_tree(entities=entities, folder=folder, **traversal_rules)
-        time_end = time.time()
-
-    return (time_start, time_end)
-
-
-def export_tar(
-    entities: Optional[Iterable[Any]] = None,
-    filename: Optional[str] = None,
-    **traversal_rules: bool,
-) -> Tuple[float, ...]:
-    """Export the entries passed in the 'entities' list to a gzipped tar file.
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param filename: the filename (possibly including the absolute path)
-        of the file on which to export.
-    """
-    # Backwards-compatibility
-    entities = cast(
-        Iterable[Any],
-        deprecated_parameters(
-            old={
-                'name': 'what',
-                'value': traversal_rules.pop('what', None)
-            },
-            new={
-                'name': 'entities',
-                'value': entities
-            },
-        ),
-    )
-    filename = cast(
-        str,
-        deprecated_parameters(
-            old={
-                'name': 'outfile',
-                'value': traversal_rules.pop('outfile', None)
-            },
-            new={
-                'name': 'filename',
-                'value': filename
-            },
-        ),
-    )
-
-    type_check(
-        entities,
-        (list, tuple, set),
-        msg='`entities` must be specified and given as a list of AiiDA entities',
-    )
-    entities = list(entities)
-
-    if type_check(filename, str, allow_none=True) is None:
-        filename = 'export_data.aiida'
-
-    with SandboxFolder() as folder:
-        time_export_start = time.time()
-        export_tree(entities=entities, folder=folder, **traversal_rules)
-        time_export_end = time.time()
-
-        with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-            time_compress_start = time.time()
-            tar.add(folder.abspath, arcname='')
-            time_compress_end = time.time()
-
-    return (time_export_start, time_export_end, time_compress_start, time_compress_end)
-
-
 @override_log_formatter('%(message)s')
-def export_tree(
+def generate_data(
     entities: Optional[Iterable[Any]] = None,
-    folder: Optional[Union[Folder, ZipFolder]] = None,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     silent: bool = False,
     include_comments: bool = True,
     include_logs: bool = True,
     **traversal_rules: bool,
-) -> None:
+) -> Optional[ExportData]:
     """Export the entries passed in the 'entities' list to a file tree.
 
     .. deprecated:: 1.2.1
         Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
 
     :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param folder: a temporary folder to build the archive before compression.
 
     :param allowed_licenses: List or function.
         If a list, then checks whether all licenses of Data nodes are in the list.
@@ -432,13 +451,6 @@ def export_tree(
     )
     entities = list(entities)
 
-    type_check(
-        folder,
-        (Folder, ZipFolder),
-        msg='`folder` must be specified and given as an AiiDA Folder entity',
-    )
-    folder = cast(Union[Folder, ZipFolder], folder)
-
     all_fields_info, unique_identifiers = get_all_fields_info()
 
     entities_starting_set, given_node_entry_ids = get_starting_node_ids(entities, silent)
@@ -475,7 +487,7 @@ def export_tree(
     model_data = sum(len(model_data) for model_data in export_data.values())
     if not model_data:
         EXPORT_LOGGER.log(msg='Nothing to store, exiting...', level=LOG_LEVEL_REPORT)
-        return
+        return None
     EXPORT_LOGGER.log(
         msg=(
             f'Exporting a total of {model_data} database entries, '
@@ -506,8 +518,13 @@ def export_tree(
 
     all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported}
 
-    write_to_archive(
-        folder,
+    close_progress_bar(leave=False)
+
+    # Reset logging level
+    if silent:
+        logging.disable(logging.NOTSET)
+
+    return ExportData(
         metadata,
         all_node_uuids,
         export_data,
@@ -515,14 +532,7 @@ def export_tree(
         node_extras,
         groups_uuid,
         links_uuid,
-        silent,
     )
-
-    close_progress_bar(leave=False)
-
-    # Reset logging level
-    if silent:
-        logging.disable(logging.NOTSET)
 
 
 def get_starting_node_ids(entities: List[Any], silent: bool) -> Tuple[DefaultDict[str, Set[str]], Set[int]]:
@@ -905,69 +915,3 @@ def get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Di
             groups_uuid[group_uuid].append(node_uuid)
 
     return groups_uuid
-
-
-def write_to_archive(
-    folder: Union[Folder, ZipFolder],
-    metadata: dict,
-    all_node_uuids: Set[str],
-    export_data: Dict[str, Dict[int, dict]],
-    node_attributes: Dict[str, dict],
-    node_extras: Dict[str, dict],
-    groups_uuid: Dict[str, List[str]],
-    links_uuid: List[dict],
-    silent: bool,
-) -> None:
-    """Store data to the archive."""
-    ######################################
-    # Now collecting and storing
-    ######################################
-    # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
-
-    EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
-
-    data = {
-        'node_attributes': node_attributes,
-        'node_extras': node_extras,
-        'export_data': export_data,
-        'links_uuid': links_uuid,
-        'groups_uuid': groups_uuid,
-    }
-
-    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
-    with folder.open('data.json', mode='w') as fhandle:
-        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
-        fhandle.write(json.dumps(data))
-
-    with folder.open('metadata.json', 'w') as fhandle:
-        fhandle.write(json.dumps(metadata))
-
-    EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
-
-    # If there are no nodes, there are no repository files to store
-    if all_node_uuids:
-
-        progress_bar = get_progress_bar(total=len(all_node_uuids), disable=silent)
-        pbar_base_str = 'Exporting repository - '
-
-        for uuid in all_node_uuids:
-            sharded_uuid = export_shard_uuid(uuid)
-
-            progress_bar.set_description_str(f"{pbar_base_str}UUID={uuid.split('-')[0]}", refresh=False)
-            progress_bar.update()
-
-            # Important to set create=False, otherwise creates twice a subfolder.
-            # Maybe this is a bug of insert_path?
-            thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
-
-            # Make sure the node's repository folder was not deleted
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
-            if not src.exists():
-                raise exceptions.ArchiveExportError(
-                    f'Unable to find the repository folder for Node with UUID={uuid} '
-                    'in the local repository'
-                )
-
-            # In this way, I copy the content of the folder, and not the folder itself
-            thisnodefolder.insert_path(src=src.abspath, dest_name='.')

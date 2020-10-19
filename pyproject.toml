@@ -107,7 +107,7 @@ extras =
     rest
     tests
 whitelist_externals = bash
-commands = 
+commands =
     py36: bash -c "pip freeze | sed 1d | tee requirements/requirements-py-3.6.txt"
     py37: bash -c "pip freeze | sed 1d | tee requirements/requirements-py-3.7.txt"
     py38: bash -c "pip freeze | sed 1d | tee requirements/requirements-py-3.8.txt"

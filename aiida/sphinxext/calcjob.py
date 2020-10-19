@@ -10,7 +10,9 @@
 """
 Defines an rst directive to auto-document AiiDA calculation job.
 """
+import inspect
 
+from aiida.engine import CalcJob
 from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 
@@ -27,8 +29,7 @@ class AiidaCalcJobDocumenter(AiidaProcessDocumenter):
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        from aiida.engine import CalcJob
-        return issubclass(cls, CalcJob)
+        return inspect.isclass(member) and issubclass(member, CalcJob)
 
 
 class AiidaCalcJobDirective(AiidaProcessDirective):

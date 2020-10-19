@@ -10,7 +10,9 @@
 """
 Defines an rst directive to auto-document AiiDA workchains.
 """
+import inspect
 
+from aiida.engine import WorkChain
 from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 
@@ -27,8 +29,7 @@ class AiidaWorkChainDocumenter(AiidaProcessDocumenter):
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        from aiida.engine import WorkChain
-        return issubclass(cls, WorkChain)
+        return inspect.isclass(member) and issubclass(member, WorkChain)
 
 
 class AiidaWorkchainDirective(AiidaProcessDirective):

@@ -612,7 +612,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
-            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
+            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.
 
         Sharing your workflows
             Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.
@@ -644,7 +644,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
-            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
+            You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.
 
         Sharing your calculation plugin
             Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.

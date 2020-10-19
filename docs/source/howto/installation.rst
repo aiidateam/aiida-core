@@ -484,7 +484,7 @@ Instead, each AiiDA user should install AiiDA in a Unix/Windows account on their
 Under this account it is possible to configure all the credentials necessary to connect to remote computers.
 Using independent accounts will ensure that, for instance, the SSH credentials to connect to supercomputers are not shared with others.
 
-Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:data:share>`.
+Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:share:archives>`.
 Sharing (subsets of) the AiiDA graph can be done as often as needed.
 
 .. _#4122: https://github.com/aiidateam/aiida-core/issues/4122

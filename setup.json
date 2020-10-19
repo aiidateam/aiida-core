@@ -70,11 +70,11 @@
         "docs": [
             "docutils==0.15.2",
             "pygments~=2.5",
-            "pydata-sphinx-theme~=0.3.0",
-            "sphinx~=2.2",
+            "pydata-sphinx-theme~=0.4.0",
+            "sphinx~=3.2",
             "sphinxcontrib-details-directive~=0.1.0",
-            "sphinx-panels~=0.4.0",
-            "sphinx-copybutton~=0.2.12"
+            "sphinx-panels~=0.5.0",
+            "sphinx-copybutton~=0.3.0"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",

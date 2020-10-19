@@ -100,7 +100,7 @@ commands = pre-commit run {posargs}
 
 [testenv:py{36,37,38}-update-reqs]
 description = Update a requirements lock file
-extras = 
+extras =
     atomic_tools
     docs
     notebook

@@ -379,6 +379,9 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
             for fn_req in sorted(fn_reqs):
                 error_msg.append(f' - {fn_req.relative_to(ROOT)}')
 
+        error_msg.append('')
+        error_msg.append('To update the files, you can use: `pip install tox; tox -e py{36,37,38}-update-reqs`')
+
         if GITHUB_ACTIONS:
             # Set the step ouput error message which can be used, e.g., for display as part of an issue comment.
             print('::set-output name=error::' + '%0A'.join(error_msg))

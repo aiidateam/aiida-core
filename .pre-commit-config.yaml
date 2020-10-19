@@ -75,7 +75,20 @@ repos:
                 pyproject.toml
             )$
 
-    -   id: dependencies
+    -   id: dependencies-pip
+        name: Validate requirements/
+        entry: python ./utils/dependency_management.py check-requirements DEFAULT --no-github-annotate
+        language: system
+        pass_filenames: false
+        files: >-
+            (?x)^(
+                setup.json|
+                setup.py|
+                utils/dependency_management.py|
+                requirements/.*txt
+            )$
+
+    -   id: dependencies-conda
         name: Validate environment.yml
         entry: python ./utils/dependency_management.py validate-environment-yml
         language: system

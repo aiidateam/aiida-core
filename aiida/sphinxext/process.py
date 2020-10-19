@@ -31,7 +31,7 @@ from aiida.manage.configuration import load_profile
 
 def setup_extension(app):
     app.add_directive_to_domain('py', AiidaProcessDocumenter.directivetype, AiidaProcessDirective)
-    app.add_autodocumenter(AiidaProcessDocumenter)
+    # app.add_autodocumenter(AiidaProcessDocumenter)
 
 
 class AiidaProcessDocumenter(ClassDocumenter):

@@ -18,7 +18,7 @@ from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 def setup_extension(app):
     app.add_directive_to_domain('py', AiidaWorkChainDocumenter.directivetype, AiidaWorkchainDirective)
-    app.add_autodocumenter(AiidaWorkChainDocumenter)
+    # app.add_autodocumenter(AiidaWorkChainDocumenter)
 
 
 class AiidaWorkChainDocumenter(AiidaProcessDocumenter):

@@ -42,7 +42,7 @@ py:meth  click.Option.get_default
 
 py:class concurrent.futures._base.TimeoutError
 
-py:class docutils.parsers.rst.Directive
+py:class sphinx.util.docutils.SphinxDirective
 
 py:class frozenset
 

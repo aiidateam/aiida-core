@@ -18,7 +18,7 @@ from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 def setup_extension(app):
     app.add_directive_to_domain('py', AiidaCalcJobDocumenter.directivetype, AiidaCalcJobDirective)
-    app.add_autodocumenter(AiidaCalcJobDocumenter)
+    # app.add_autodocumenter(AiidaCalcJobDocumenter)
 
 
 class AiidaCalcJobDocumenter(AiidaProcessDocumenter):

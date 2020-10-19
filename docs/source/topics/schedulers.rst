@@ -7,7 +7,7 @@ Batch Job Schedulers
 Batch job schedulers manage the job queues and execution on a compute resource.
 AiiDA ships with plugins for a range of schedulers, and this section describes the interface of these plugins.
 
-See :ref:`this how-to <how-to:plugin-codes:scheduler>` for adding support for custom schedulers.
+Follow :ref:`these instructions <topics:schedulers:create_plugin>` to add support for custom schedulers.
 
 PBSPro
 ------
@@ -213,6 +213,12 @@ And setting the fields using the ``metadata.options`` input dictionary of the |C
             }
         }
     }
+
+.. _topics:schedulers:create_plugin:
+
+Create a new scheduler plugin
+-----------------------------
+
 
 
 .. |NodeNumberJobResource| replace:: :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`

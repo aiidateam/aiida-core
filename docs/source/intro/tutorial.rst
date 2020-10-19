@@ -615,7 +615,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
 
         Sharing your workflows
-            Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
+            Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.
 
     .. dropdown:: Run compute-intensive codes
         :container:
@@ -647,7 +647,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:data:share>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:data:serve>`.
 
         Sharing your calculation plugin
-            Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins>` for others to use.
+            Once you have a working plugin, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.
 
 .. You can do more with AiiDA than basic arithmetic! Check out some cool real-world examples of AiiDA in action on the `demo page <LINK HERE>
 

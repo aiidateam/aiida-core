@@ -1,4 +1,4 @@
-.. _how-to:plugins:
+.. _how-to:plugins-develop:
 
 **********************
 How to package plugins
@@ -12,7 +12,7 @@ For guides on writing specific extensions, see :ref:`how-to:plugin-codes:interfa
     For guides on writing specific extensions, see :ref:`how-to:plugin-codes:interfacing`, :ref:'how-to:plugin-codes:scheduler', :ref:'how-to:plugin-codes:transport' or :ref:`how-to:data:plugin`.
 
 
-.. _how-to:plugins:bundle:
+.. _how-to:plugins-develop:bundle:
 
 Creating a plugin package
 =========================
@@ -56,7 +56,7 @@ If you intend to eventually publish your plugin package, please go to the `AiiDA
 You are also encouraged to pre-register your package (instructions provided on the registry), both to reserve your plugin name and to inform others of your ongoing development.
 
 
-.. _how-to:plugins:bundle:folderstructure:
+.. _how-to:plugins-develop:bundle:folderstructure:
 
 Folder structure
 ----------------
@@ -96,7 +96,7 @@ A minimal plugin package instead might look like::
       setup.py
       setup.json
 
-.. _how-to:plugins:entrypoints:
+.. _how-to:plugins-develop:entrypoints:
 
 Registering plugins through entry points
 ========================================
@@ -128,8 +128,20 @@ Adding a new entry point consists of the following steps:
 
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
+.. note::
 
-.. _how-to:plugins:test:
+    Taking a package with the name ``aiida-diff`` as example, what does ``pip install aiida-diff`` do?
+
+    * It resolves and installs the dependencies on other python packages
+    * It creates a folder ``aiida_diff.egg-info/`` with metadata about the package
+    * If the ``-e`` option is given, a symbolic link from the python package search path to the ``aiida-diff`` directory is created and the ``.egg-info`` folder is put there instead.
+      Changes to the **source code** will be picked up by python without reinstalling (when restarting the interpreter),  but changes to the **metadata** will not.
+
+    For further details, see the Python `packaging user guide <https://packaging.python.org/distributing/#configuring-your-project>`_.
+
+
+
+.. _how-to:plugins-develop:test:
 
 Testing a plugin package
 =========================
@@ -204,7 +216,7 @@ pytest automatically discovers and executes files, classes and function names st
 .. _fixtures: https://docs.pytest.org/en/latest/fixture.html
 
 
-.. _how-to:plugins:document:
+.. _how-to:plugins-develop:document:
 
 Documenting a plugin package
 ============================
@@ -263,7 +275,7 @@ Here,
 
 
 
-.. _how-to:plugins:publish:
+.. _how-to:plugins-develop:publish:
 
 Publishing a plugin package
 ===========================
@@ -278,7 +290,7 @@ Before publishing your plugin, make sure your plugin comes with:
 
 For examples of these files, see the `aiida-diff demo plugin <aiida-diff>`_.
 
-.. _how-to:plugins:publish:plugin-registry:
+.. _how-to:plugins-develop:publish:plugin-registry:
 
 Publishing on the plugin registry
 ---------------------------------

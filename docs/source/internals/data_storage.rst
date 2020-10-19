@@ -162,6 +162,16 @@ Let's have a look at the contents of ``metadata.json``:
     }
 
 At the beginning of the file, we see the version of the export file and the version of the AiiDA code.
+New export versions are introduced for several different reasons; this may generally be when:
+
+* a change occurs in what can or cannot be exported for each entity,
+* the database and/or archive schemes are updated or changed,
+* or standardized exported property values are updated in AiiDA.
+
+.. note::
+    For archives of version 0.3 and older it is advisable that you manually try to convince yourself that the migration was completely successful.
+    While all migrations are tested, trying to include reasonable edge-cases, the migrations involed from version 0.3 to 0.4 are intricate and the possibility of a missing edge-case test is quite real.
+    It is worth noting that if you ever have an issue, please report it on `GitHub <https://www.github.com/aiidateam/aiida_core/issues/new>`_, join the `AiiDA mailing list <http://www.aiida.net/mailing-list/>`_, or use the `contact form <http://www.aiida.net/contact-new/>`_.
 
 The entities that are exported are mentioned in *unique_identifiers* with their respective unique identifiers.
 Knowing the unique IDs is useful for duplicate avoidance (in order to avoid the insertion of the node multiple times).

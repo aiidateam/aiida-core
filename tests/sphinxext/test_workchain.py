@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the AiiDA workchain Sphinx directive."""
-
-from os.path import join, dirname
-
 import pytest
 
 

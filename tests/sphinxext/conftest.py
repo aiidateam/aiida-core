@@ -12,13 +12,11 @@ import os
 from pathlib import Path
 import sys
 import shutil
-import tempfile
-import subprocess
 import xml.etree.ElementTree as ET
 
-import pytest
 from sphinx.testing.path import path as sphinx_path
 from sphinx.testing.util import SphinxTestApp
+import pytest
 
 SRC_DIR = Path(__file__).parent / 'sources'
 WORKCHAIN_DIR = Path(__file__).parent / 'workchains'
@@ -46,16 +44,17 @@ class SphinxBuild:
             self.app.build()
         finally:
             sys.path.pop()
-        assert self.warnings == '', self.status
+        if assert_pass:
+            assert self.warnings == '', self.status
         return self
 
     @property
     def status(self):
-        return self.app._status.getvalue()
+        return self.app._status.getvalue()  # pylint: disable=protected-access
 
     @property
     def warnings(self):
-        return self.app._warning.getvalue()
+        return self.app._warning.getvalue()  # pylint: disable=protected-access
 
     @property
     def outdir(self):

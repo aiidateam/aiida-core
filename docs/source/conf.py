@@ -278,6 +278,14 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# this is to avoid the error
+# aiida/orm/implementation/django/querybuilder.py:docstring of
+# aiida.orm.implementation.django.querybuilder.array_length._compiler_dispatch:1: WARNING: Unknown target name: "visit".
+autodoc_default_options = {
+    'exclude-members': '_compiler_dispatch'
+}
+
+
 def run_apidoc(_):
     """Runs sphinx-apidoc when building the documentation.
 

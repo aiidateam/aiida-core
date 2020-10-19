@@ -74,7 +74,8 @@
             "sphinx~=2.2",
             "sphinxcontrib-details-directive~=0.1.0",
             "sphinx-panels~=0.4.0",
-            "sphinx-copybutton~=0.2.12"
+            "sphinx-copybutton~=0.2.12",
+            "sphinxext-rediraffe~=0.2.4"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",

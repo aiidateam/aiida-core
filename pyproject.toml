@@ -99,7 +99,7 @@ commands =
     make debug
 
 [testenv:py{36,37,38}-docs-live]
-# tip remove apidocs before using this feature
+# tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =
     py36: -rrequirements/requirements-py-3.6.txt

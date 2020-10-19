@@ -15,7 +15,7 @@ import pytest
 
 from aiida.manage.configuration import Config, Profile, get_config
 
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
+pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
 
 @pytest.fixture()

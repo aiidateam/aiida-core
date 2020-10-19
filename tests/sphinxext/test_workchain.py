@@ -19,7 +19,7 @@ def test_workchain_build(sphinx_build_factory, xml_equal, reference_result):
 
     Builds Sphinx documentation for workchain and compares against expected XML result.
     """
-    sphinx_build = sphinx_build_factory("workchain", buildername='xml')
+    sphinx_build = sphinx_build_factory('workchain', buildername='xml')
     sphinx_build.build(assert_pass=True)
 
     index_file = sphinx_build.outdir / 'index.xml'
@@ -32,6 +32,6 @@ def test_broken_workchain_build(sphinx_build_factory):
     This test checks that the error raised in the WorkChain's define is correctly
     shown when building the documentation.
     """
-    sphinx_build = sphinx_build_factory("workchain_broken")
-    with pytest.raises(RuntimeError, match="The broken workchain says hi!"):
+    sphinx_build = sphinx_build_factory('workchain_broken')
+    with pytest.raises(RuntimeError, match='The broken workchain says hi!'):
         sphinx_build.build()

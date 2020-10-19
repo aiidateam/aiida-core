@@ -20,10 +20,8 @@ import pytest
 from sphinx.testing.path import path as sphinx_path
 from sphinx.testing.util import SphinxTestApp
 
-pytest_plugins = "sphinx.testing.fixtures"
-
-SRC_DIR = Path(__file__).parent / "sources"
-WORKCHAIN_DIR = Path(__file__).parent / "workchains"
+SRC_DIR = Path(__file__).parent / 'sources'
+WORKCHAIN_DIR = Path(__file__).parent / 'workchains'
 
 
 @pytest.fixture
@@ -37,6 +35,7 @@ def reference_result():
 
 
 class SphinxBuild:
+
     def __init__(self, app: SphinxTestApp, src: Path):
         self.app = app
         self.src = src
@@ -47,7 +46,7 @@ class SphinxBuild:
             self.app.build()
         finally:
             sys.path.pop()
-        assert self.warnings == "", self.status
+        assert self.warnings == '', self.status
         return self
 
     @property
@@ -65,11 +64,10 @@ class SphinxBuild:
 
 @pytest.fixture
 def sphinx_build_factory(make_app, tmp_path):
+
     def _func(src_folder, **kwargs):
         shutil.copytree(SRC_DIR / src_folder, tmp_path / src_folder)
-        app = make_app(
-            srcdir=sphinx_path(os.path.abspath((tmp_path / src_folder))), **kwargs
-        )
+        app = make_app(srcdir=sphinx_path(os.path.abspath((tmp_path / src_folder))), **kwargs)
         return SphinxBuild(app, tmp_path / src_folder)
 
     yield _func

@@ -12,7 +12,7 @@ How to write a plugin for an external code
 .. tip::
 
     This how to walks you through all logical steps of how AiiDA interacts with an external code.
-    If you already know the basics and would like to get started with a new plugin package quickly, check out :ref:`how-to:plugins`.
+    If you already know the basics and would like to get started with a new plugin package quickly, check out :ref:`how-to:plugins-develop`.
 
 To run an external code with AiiDA, you need a corresponding *calculation* plugin, which tells AiiDA how to:
 
@@ -213,7 +213,7 @@ If a particular parser should be used by default, the |CalcJob| ``define`` metho
         spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
 
 Note, that the default is not set to the |Parser| class itself, but the *entry point string* under which the parser class is registered.
-How to register a parser class through an entry point is explained in the how-to section on :ref:`registering plugins <how-to:plugins>`.
+How to register a parser class through an entry point is explained in the how-to section on :ref:`registering plugins <how-to:plugins-develop>`.
 
 
 .. _how-to:plugin-codes:parsing:errors:
@@ -273,7 +273,7 @@ The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calc
 Registering entry points
 ========================
 
-:ref:`Entry points <how-to:plugins:entrypoints>` are the preferred method of registering new calculation, parser and other plugins with AiiDA.
+:ref:`Entry points <how-to:plugins-develop:entrypoints>` are the preferred method of registering new calculation, parser and other plugins with AiiDA.
 
 With your ``calculations.py`` and ``parsers.py`` files at hand, let's register entry points for the plugins they contain:
 
@@ -306,13 +306,8 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
         The aiida-core documentation uses the term *package* a bit more loosely.
 
 
- * Install your new ``aiida-add`` plugin package:
-
-   .. code-block:: console
-
-      pip install -e .
-      reentry scan
-
+ * Install your new ``aiida-add`` plugin package.
+   See the :ref:`how-to:plugins-install` section for details.
 
 After this, you should see your plugins listed:
 
@@ -432,7 +427,7 @@ You can use the verdi command line interface to :ref:`monitor<topics:processes:u
 This marks the end of this how-to.
 
 The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-add`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
-Continue with :ref:`how-to:plugins` in order to learn how to quickly create a feature-rich new plugin package from scratch.
+Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
 
 .. todo::

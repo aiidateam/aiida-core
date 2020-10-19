@@ -1,3 +1,6 @@
+# developer_guide
+developer_guide/core/transport.rst topics/transport.rst
+
 # Installation
 install/quick_installation.rst intro/get_started.rst
 install/prerequisites.rst intro/get_started.rst
@@ -11,4 +14,5 @@ working_with_aiida/index.rst howto/index.rst
 get_started/index.rst intro/get_started.rst
 get_started/computers.rst howto/run_codes.rst
 get_started/codes.rst howto/run_codes.rst
+howto/plugins.rst howto/plugins_develop.rst
 verdi/verdi_user_guide.rst topics/cli.rst

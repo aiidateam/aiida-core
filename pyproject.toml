@@ -82,7 +82,7 @@ setenv =
 commands = pytest {posargs}
 
 [testenv:py{36,37,38}-docs-{clean,update}]
-description = 
+description =
     clean: Build the documentation (remove any existing build)
     update: Build the documentation (modify any existing build)
 deps =

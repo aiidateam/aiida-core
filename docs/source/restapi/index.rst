@@ -16,43 +16,6 @@ The response contains the data in ``JSON`` format.
 In this document, file paths are given relative to the AiiDA installation folder.
 The source files of the API are contained in the folder ``aiida/restapi``.
 
-Running the REST API
-++++++++++++++++++++
-
-To start the REST server open a terminal and type
-
-.. code-block:: bash
-
-    verdi restapi
-
-This command will hook up a REST API with the default parameters, namely on port ``5000`` of ``localhost``, connecting
-to the default AiiDA profile and assuming the default folder for the REST configuration files, namely ``common``.
-
-For an overview of options accepted by ``verdi restapi`` you can type
-
-.. code-block:: bash
-
-    verdi restapi --help
-
-
-Like all ``verdi`` commands, the AiiDA profile can be changed by putting ``-p PROFILE`` right after ``verdi``.
-
-.. code-block:: bash
-
-    verdi -p <another_profile> restapi
-
-The base URL for your REST API is::
-
-        http://localhost:5000/api/v4
-
-where the last field identifies the version of the API (currently ``v4``).
-Simply type this URL in your browser or use command-line tools such as ``curl`` or ``wget``.
-
-.. note:: Note that the ``v3`` version of the API was used for versions of AiiDA previous to 1.0.0b6.
-
-For the full list of configuration options, see the file ``aiida/restapi/common/config.py``.
-
-
 General form of the URLs
 ++++++++++++++++++++++++
 

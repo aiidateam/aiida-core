@@ -97,4 +97,18 @@ commands =
 [testenv:py{36,37,38}-pre-commit]
 extras = all
 commands = pre-commit run {posargs}
+
+[testenv:py{36,37,38}-update-reqs]
+description = Update a requirements lock file
+extras = 
+    atomic_tools
+    docs
+    notebook
+    rest
+    tests
+whitelist_externals = bash
+commands = 
+    py36: bash -c "pip freeze | sed 1d | tee requirements/requirements-py-3.6.txt"
+    py37: bash -c "pip freeze | sed 1d | tee requirements/requirements-py-3.7.txt"
+    py38: bash -c "pip freeze | sed 1d | tee requirements/requirements-py-3.8.txt"
 """

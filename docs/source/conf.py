@@ -100,7 +100,6 @@ exclude_patterns = [
     'internals/engine.rst',
     'internals/global_design.rst',
     'internals/orm.rst',
-    'internals/rest_api.rst',
     'scheduler/index.rst',
     'topics/daemon.rst',
     'topics/repository.rst',

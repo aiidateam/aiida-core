@@ -6,6 +6,6 @@ Reference
    :maxdepth: 1
 
    command_line
-   apidoc/aiida.rst
+   api/index
    rest_api
    backup_script

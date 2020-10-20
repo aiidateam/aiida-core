@@ -1,7 +1,7 @@
-.. _python_api_public_list:
+.. _reference:api:public:
 
-Public resources
-----------------
+Overview of public API
+----------------------
 
 The main package of ``aiida-core`` is called ``aiida``, which contains various sub-packages that we refer to as "second-level packages".
 These second level packages can have further nested hierarchies.
@@ -13,7 +13,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.cmdline``
-~~~~~~~~~~~~~~~~~
+.................
 
 ::
 
@@ -25,7 +25,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.common``
-~~~~~~~~~~~~~~~~
+................
 
 ::
 
@@ -37,7 +37,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.engine``
-~~~~~~~~~~~~~~~~
+................
 
 ::
 
@@ -61,7 +61,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.orm``
-~~~~~~~~~~~~~
+.............
 
 ::
 
@@ -105,7 +105,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.parsers``
-~~~~~~~~~~~~~~~~~
+.................
 
 ::
 
@@ -113,7 +113,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.plugins``
-~~~~~~~~~~~~~~~~~
+.................
 
 ::
 
@@ -128,7 +128,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.scheduler``
-~~~~~~~~~~~~~~~~~~~
+...................
 
 ::
 
@@ -136,7 +136,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.tools``
-~~~~~~~~~~~~~~~
+...............
 
 ::
 
@@ -149,7 +149,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 
 ``aiida.transport``
-~~~~~~~~~~~~~~~~~~~
+...................
 
 ::
 

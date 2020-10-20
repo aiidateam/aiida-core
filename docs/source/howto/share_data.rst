@@ -15,7 +15,7 @@ Sharing AiiDA archives
 You have performed your calculations with AiiDA and you would like to share your AiiDA provenance graph, for example to make your scientific study reproducible.
 
 Since AiiDA keeps track of the provenance of every computed result, this step is easy:
-tell AiiDA the **final results** you would like to be reproducible, and AiiDA will automatically include their entire provenance using the :ref:`topics:provenance:consistency:traversal-rules`.
+Tell AiiDA the **final results** you would like to be reproducible, and AiiDA will automatically include their entire provenance using the :ref:`topics:provenance:consistency:traversal-rules`.
 
 Exporting individual nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -30,20 +30,20 @@ As usual, you can use any identifier (label, PK or UUID) to specify the nodes to
 
 The resulting archive file ``my-calculations.aiida`` contains all information pertaining to the exported nodes.
 The default traversal rules make sure to include the complete provenance of any node specified and should be sufficient for most cases.
-See ``verdi export create -h`` for ways to modify the traversal rules.
+See ``verdi export create --help`` for ways to modify the traversal rules.
 
 .. tip::
 
-    If you want to make sure that the archive includes everything you intended, you can create a new profile and import it:
+    If you want to make sure the archive includes everything you intended, you can create a new profile and import it:
 
     .. code-block:: console
 
-            verdi quicksetup --profile test-export  # create new profile
-            verdi --profile test-export import my-calculations.aiida
+        $ verdi quicksetup --profile test-export  # create new profile
+        $ verdi --profile test-export import my-calculations.aiida
 
-            # now use e.g. the QueryBuilder to query the database
+    Now use, e.g. the :py:class:`~aiida.orm.querybuilder.QueryBuilder` to query the database.
 
-Please remember to use **UUIDs** when pointing your colleagues to data *inside* an AiiDA export file, since UUIDs are guaranteed to be universally unique (while PKs aren't).
+Please remember to use **UUIDs** when pointing your colleagues to data *inside* an AiiDA archive, since UUIDs are guaranteed to be universally unique (while PKs aren't).
 
 Using groups for data exporting
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -59,8 +59,7 @@ Publishing AiiDA archive files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 AiiDA archive files can be published on any research data repository, for example the `Materials Cloud Archive`_, `Zenodo`_, or the `Open Science Framework`_.
-When publishing AiiDA archive files on the `Materials Cloud Archive`_, you also get an interactive *EXPLORE* section, which allows peers to browse the AiiDA provenance graph directly in the browser.
-
+When publishing AiiDA archives on the `Materials Cloud Archive`_, you also get an interactive *EXPLORE* section, which allows peers to browse the AiiDA provenance graph directly in the browser.
 
 .. _Zenodo: https://zenodo.org
 .. _Open Science Framework: https://osf.io
@@ -84,7 +83,7 @@ Node extras and comments have special modes for determining how to import them -
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
     If an outdated archive version is detected during import, you will be prompted to confirm automatic migration of the archive file.
 
-    You can also use ``verdi export migrate`` to update existing archive files once and for all.
+    You can also use ``verdi export migrate`` to create updated archive files from existing archive files (or update them in place).
 
 .. tip:: In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi export inspect``:
 
@@ -141,7 +140,6 @@ Like all ``verdi`` commands, you can select a different AiiDA profile via the ``
 .. code-block:: bash
 
     verdi -p <another_profile> restapi
-
 
 .. note::
 

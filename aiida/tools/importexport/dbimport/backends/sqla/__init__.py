@@ -164,10 +164,10 @@ def import_data_sqla(
         ######################
         export_version = StrictVersion(str(metadata['export_version']))
         if export_version != expected_export_version:
-            msg = 'Export file version is {}, can import only version {}'\
+            msg = 'Archive file version is {}, can import only version {}'\
                     .format(metadata['export_version'], expected_export_version)
             if export_version < expected_export_version:
-                msg += "\nUse 'verdi export migrate' to update this export file."
+                msg += "\nUse 'verdi export migrate' to update this archive file."
             else:
                 msg += '\nUpdate your AiiDA version in order to import this file.'
 
@@ -336,7 +336,7 @@ def import_data_sqla(
 
                             elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
-                                # reasons in case the export file was generated
+                                # reasons in case the archive file was generated
                                 # with the Django export method. In Django the
                                 # metadata and the transport parameters are
                                 # stored as (unicode) strings of the serialized

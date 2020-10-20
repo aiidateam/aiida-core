@@ -1,20 +1,16 @@
-# developer_guide
 developer_guide/core/transport.rst topics/transport.rst
-
-# Installation
+get_started/index.rst intro/get_started.rst
+get_started/computers.rst howto/run_codes.rst
+get_started/codes.rst howto/run_codes.rst
+howto/plugins.rst howto/plugins_develop.rst
+import_export/main.html internals/data_storage.rst
 install/quick_installation.rst intro/get_started.rst
 install/prerequisites.rst intro/get_started.rst
 install/installation.rst intro/get_started.rst
 install/configuration.rst howto/installation.rst
 install/updating_installation.rst howto/installation.rst
 install/troubleshooting.rst intro/troubleshooting.rst
-
-# working_with_aiida
-working_with_aiida/index.rst howto/index.rst
-get_started/index.rst intro/get_started.rst
-get_started/computers.rst howto/run_codes.rst
-get_started/codes.rst howto/run_codes.rst
-howto/plugins.rst howto/plugins_develop.rst
 verdi/verdi_user_guide.rst topics/cli.rst
-
-import_export/main.html internals/data_storage.rst
+working_with_aiida/index.rst howto/index.rst
+working_with_aiida/python_api.rst reference/api/public.rst
+working_with_aiida/scripting.rst howto/interact.rst

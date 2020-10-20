@@ -95,7 +95,7 @@ In particular we will strive to:
  - if we are forced to change it anyway, deprecate a signifcant amount of time in advance
  - for backwards incompatible changes, increase the major version
 
-For better clarity, we are :ref:`curating a list of classes and functions<python_api_public_list>` (exposed at the second level) that are intended to be public and for which the above policy will be enforced
+For better clarity, we are :ref:`curating a list of classes and functions<reference:api:public>` (exposed at the second level) that are intended to be public and for which the above policy will be enforced
 
 Version 0.9.0
 +++++++++++++

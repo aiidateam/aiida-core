@@ -257,7 +257,7 @@ class GroupPath:
 
         :param filters: filters to apply to the node query
         :param node_class: return only nodes of a certain class (or list of classes)
-        :param int batch_size: The size of the batches to ask the backend to batch results in subcollections.
+        :param query_batch: The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Be aware though that is only safe if no commit will take place during this transaction.
         """

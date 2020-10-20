@@ -47,7 +47,7 @@ extensions = [
 ]
 ipython_mplbackend = ''
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
-copybutton_prompt_text = '>>> |\\\\$ |In \\\\[\\\\d\\\\]: |\\\\s+\\.\\.\\.: '
+copybutton_prompt_text = r'>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
 copybutton_prompt_is_regexp = True
 
 todo_include_todos = False
@@ -166,7 +166,7 @@ html_context = {
     'github_version': 'master',
     'doc_path': 'docs/source',
 }
-panels_add_boostrap_css = False  # pydata-sphinx-theme already loads this
+panels_add_bootstrap_css = False  # pydata-sphinx-theme already loads this
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -278,6 +278,14 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_domain_indices = True
+
+# this is to avoid the error
+# aiida/orm/implementation/django/querybuilder.py:docstring of
+# aiida.orm.implementation.django.querybuilder.array_length._compiler_dispatch:1: WARNING: Unknown target name: "visit".
+autodoc_default_options = {
+    'exclude-members': '_compiler_dispatch'
+}
+
 
 def run_apidoc(_):
     """Runs sphinx-apidoc when building the documentation.

@@ -1179,9 +1179,9 @@ Examples:
 
     would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
 
-.. |Computer| replace:: :py:class:`Computer <aiida.orm.Computer>`
-.. |Node| replace:: :py:class:`Node <aiida.orm.Node>`
-.. |ProcessNode| replace:: :py:class:`ProcessNode <aiida.orm.ProcessNode>`
-.. |CalcJobNode| replace:: :py:class:`CalcJobNode <aiida.orm.CalcJobNode>`
-.. |User| replace:: :py:class:`User <aiida.orm.User>`
+.. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer>`
+.. |Node| replace:: :py:class:`~aiida.orm.nodes.Node`
+.. |ProcessNode| replace:: :py:class:`~aiida.orm.nodes.process.ProcessNode`
+.. |CalcJobNode| replace:: :py:class:`~aiida.orm.nodes.process.CalcJobNode`
+.. |User| replace:: :py:class:`~aiida.orm.users.User`
 .. |Group| replace:: :py:class:`Group <aiida.orm.Group>`

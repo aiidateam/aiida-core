@@ -157,35 +157,35 @@ Querying the REST API
 
 A URL to query the REST API consists of:
 
-    1. The *base URL*, by default:
+1. The *base URL*, by default:
 
-        http://127.0.0.1:5000/api/v4
+    http://127.0.0.1:5000/api/v4
 
-        Querying the base URL returns a list of all available endpoints.
+   Querying the base URL returns a list of all available endpoints.
 
-    2. The *path* defining the requested *resource*, optionally followed by a more specific *endpoint*. For example::
+2. The *path* defining the requested *resource*, optionally followed by a more specific *endpoint*. For example::
 
-            /nodes
-            /nodes/page/2
-            /nodes/projectable_properties
-            /nodes/<uuid>
-            /nodes/<uuid>/links/outgoing
+        /nodes
+        /nodes/page/2
+        /nodes/projectable_properties
+        /nodes/<uuid>
+        /nodes/<uuid>/links/outgoing
 
-       If no endpoint is appended, the API returns a list of objects of that resource.
-       In order to request a specific object of a resource, append its *UUID*.
+   If no endpoint is appended, the API returns a list of objects of that resource.
+   In order to request a specific object of a resource, append its *UUID*.
 
-       .. note::
+   .. note::
 
-           As usual, you can use partial UUIDs as long as they are unique.
+       As usual, you can use partial UUIDs as long as they are unique.
 
-           In order to query by *PK* you need to use the ``id`` filter (see below).
-           This also applies to :py:class:`~aiida.orm.users.User` s, which don't have UUIDs (but instead uses email).
+       In order to query by *PK* you need to use the ``id`` filter (see below).
+       This also applies to :py:class:`~aiida.orm.users.User` s, which don't have UUIDs (but instead uses email).
 
-    3. (Optional) The *query string* for filtering, ordering and pagination of results. For example::
+3. (Optional) The *query string* for filtering, ordering and pagination of results. For example::
 
-        ?limit=20&offset=35
-        ?id=200
-        ?node_type=like="data%"
+    ?limit=20&offset=35
+    ?id=200
+    ?node_type=like="data%"
 
 Here are some examples to try::
 

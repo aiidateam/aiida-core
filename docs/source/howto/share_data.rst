@@ -76,7 +76,7 @@ Use ``verdi import`` to import AiiDA archives into your current AiiDA profile.
 
     $ verdi import "https://archive.materialscloud.org/record/file?file_id=2a59c9e7-9752-47a8-8f0e-79bcdb06842c&filename=SSSP_1.1_PBE_efficiency.aiida&record_id=23"
 
-During import, AiiDA will avoid identifier collisions and node duplication based on UUIDs (and email comparisons for :py:class:~`aiida.orm.users.User` entries).
+During import, AiiDA will avoid identifier collisions and node duplication based on UUIDs (and email comparisons for :py:class:`~aiida.orm.users.User` entries).
 By default, existing entities will be updated with the most recent changes.
 Node extras and comments have special modes for determining how to import them - for more details, see ``verdi import --help``.
 
@@ -108,11 +108,11 @@ Node extras and comments have special modes for determining how to import them -
 Serving data through the REST API
 =================================
 
-The AiiDA REST API allows to query your AiiDA database over HTTP(S).
+The AiiDA REST API allows to query your AiiDA database over HTTP(S) and returns results in :ref:`JSON format <reference:rest-api:endpoints-responses>`.
 
 .. note::
 
-    As of October 2020, the AiiDA REST API does *not* yet support workflow management.
+    As of October 2020, the AiiDA REST API only supports ``GET`` methods (reading); in particular, it does *not* yet support workflow management.
     This feature is, however, part of the `AiiDA roadmap <https://github.com/aiidateam/aiida-core/wiki/AiiDA-release-roadmap>`_.
 
 .. _how-to:share:serve:launch:
@@ -155,9 +155,45 @@ Like all ``verdi`` commands, you can select a different AiiDA profile via the ``
 Querying the REST API
 ^^^^^^^^^^^^^^^^^^^^^
 
-Open the base URL of the REST API (by default: `http://127.0.0.1:5000/api/v4 <http://127.0.0.1:5000/api/v4>`_) in your web browser in order to get an overview of the available endpoints.
+A URL to query the REST API consists of:
 
-For an extensive user documentation, see the :ref:`AiiDA REST API reference <reference:rest-api>`.
+
+    1. The *base URL*, by default:
+
+        http://127.0.0.1:5000/api/v4
+
+        Querying the base URL returns a list of all available endpoints.
+
+    2. The *path* defining the requested *resource*, optionally followed by a more specific *endpoint*. For example::
+
+            /nodes
+            /nodes/page/2
+            /nodes/projectable_properties
+            /nodes/<uuid>
+            /nodes/<uuid>/links/outgoing
+
+       If no endpoint is appended, the API returns a list of objects of that resource.
+       In order to request a specific object of a resource, append its *UUID*.
+
+       .. note::
+
+           As usual, you can use partial UUIDs as long as they are unique.
+
+           In order to query by *PK* you need to use the ``id`` filter (see below).
+           This also applies to :py:class:`~aiida.orm.User` s, which don't have UUIDs.
+
+
+    3. (Optional) The *query string* for filtering, ordering and pagination of results. For example::
+
+        ?limit=20&offset=35
+        ?id=200
+        ?node_type=like="data%"
+
+Here are some examples to try::
+
+  http://127.0.0.1:5000/api/v4/users/
+  http://127.0.0.1:5000/api/v4/computers?scheduler_type="slurm"
+  http://127.0.0.1:5000/api/v4/nodes/?id>45&node_type=like="data%"
 
 .. tip::
 
@@ -166,6 +202,11 @@ For an extensive user documentation, see the :ref:`AiiDA REST API reference <ref
     .. code-block:: console
 
        $ curl https://aiida-dev.materialscloud.org/2dstructures/api/v4/users
+
+
+
+For an extensive user documentation of the endpoints, the query string as well as the format of the responses, see the :ref:`AiiDA REST API reference <reference:rest-api>`.
+
 
 Deploying a REST API server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

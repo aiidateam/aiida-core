@@ -4,6 +4,10 @@
 AiiDA REST API
 **************
 
+AiiDA's `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_ `API <https://en.wikipedia.org/wiki/Application_programming_interface>`_ is implemented using the `Flask RESTful framework <https://flask-restful.readthedocs.io/en/latest/>`_ and returns responses in `JSON <https://www.json.org/json-en.html>`_ format.
+
+.. _reference:rest-api:endpoints-responses:
+
 Available endpoints and responses
 =================================
 
@@ -34,101 +38,10 @@ The JSON object further contains information on the request in the ``method``, `
 
 .. _restapi_apache:
 
-Computers
----------
-
-1. Get a list of the *Computers* objects.
-
-    REST URL::
-
-        http://localhost:5000/api/v4/computers?limit=3&offset=2&orderby=id
-
-    Description:
-
-        returns the list of three *Computer* objects (``limit=3``) starting from the 3rd row (``offset=2``) of the database table and the list will be ordered by ascending values of ``id``.
-
-    Response::
-
-        {
-          "data": {
-            "computers": [
-              {
-                "description": "Alpha Computer",
-                "hostname": "alpha.aiida.net",
-                "id": 3,
-                "name": "Alpha",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
-                "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
-              },
-              {
-                "description": "Beta Computer",
-                "hostname": "beta.aiida.net",
-                "id": 4,
-                "name": "Beta",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
-                "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
-              },
-              {
-                "description": "Gamma Computer",
-                "hostname": "gamma.aiida.net",
-                "id": 5,
-                "name": "Gamma",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
-                "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
-              }
-            ]
-          },
-          "id": null,
-          "method": "GET",
-          "path": "/api/v4/computers",
-          "query_string": "limit=3&offset=2&orderby=id",
-          "resource_type": "computers",
-          "url": "http://localhost:5000/api/v4/computers?limit=3&offset=2&orderby=id",
-          "url_root": "http://localhost:5000/"
-        }
-
-2. Get details of a single *Computer* object:
-
-    REST URL::
-
-        http://localhost:5000/api/v4/computers/5d490d77
-
-    Description:
-
-        returns the details of the *Computer* object ``uuid="5d490d77-638d..."``.
-
-    Response::
-
-        {
-          "data": {
-            "computers": [
-              {
-                "description": "Beta Computer",
-                "hostname": "beta.aiida.net",
-                "id": 4,
-                "name": "Beta",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
-                "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
-              }
-            ]
-          },
-          "id": null,
-          "method": "GET",
-          "path": "/api/v4/computers/5d490d77",
-          "query_string": "",
-          "resource_type": "computers",
-          "url": "http://localhost:5000/api/v4/computers/5d490d77",
-          "url_root": "http://localhost:5000/"
-        }
-
 Nodes
 -----
 
-1.  Get a list of *Node* objects.
+1.  Get a list of |Node| objects.
 
     REST URL::
 
@@ -136,7 +49,7 @@ Nodes
 
     Description:
 
-        returns the list of two *Node* objects (``limit=2``) starting from 9th row (``offset=8``) of the database table and the list will be ordered by ``id`` in descending order.
+        returns the list of two |Node| objects (``limit=2``) starting from 9th row (``offset=8``) of the database table and the list will be ordered by ``id`` in descending order.
 
     Response::
 
@@ -184,7 +97,7 @@ Nodes
 
     Description:
 
-        returns the list of *Node* objects. Every node object contains value of attribute called ``pbc1`` if present otherwise null.
+        returns the list of |Node| objects. Every node object contains value of attribute called ``pbc1`` if present otherwise null.
 
     Response::
 
@@ -227,7 +140,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-2. Get a list of all available node types from database.
+2. Get a list of all available |Node| types from database.
 
     REST URL::
 
@@ -308,7 +221,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-4. Get the details of a single *Node* object.
+4. Get the details of a single |Node| object.
 
     REST URL::
 
@@ -316,7 +229,7 @@ Nodes
 
     Description:
 
-        returns the details of the *Node* object with ``uuid="12f95e1c..."``.
+        returns the details of the |Node| object with ``uuid="12f95e1c..."``.
 
     Response::
 
@@ -345,7 +258,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-5. Get the list of incoming of a specific node.
+5. Get the list of incoming of a specific |Node|.
 
     REST URL::
 
@@ -353,7 +266,7 @@ Nodes
 
     Description:
 
-        returns the list of the first two input nodes (``limit=2``) of the *Node* object with ``uuid="de83b1..."``.
+        returns the list of the first two input nodes (``limit=2``) of the |Node| object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -397,7 +310,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-6. Filter the incoming/outgoing of a node by their full type.
+6. Filter the incoming/outgoing of a |Node| by their full type.
 
     REST URL::
 
@@ -405,7 +318,7 @@ Nodes
 
     Description:
 
-        returns the list of the `*dict* incoming nodes of the *Node* object with ``uuid="de83b1..."``.
+        returns the list of the `*dict* incoming nodes of the |Node| object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -442,7 +355,7 @@ Nodes
 
     Description:
 
-        returns the list of the *dict* outgoing nodes of the *Node* object with ``uuid="de83b1..."``.
+        returns the list of the *dict* outgoing nodes of the |Node| object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -473,7 +386,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-7. Getting the list of the attributes/extras of a specific node.
+7. Getting the list of the attributes/extras of a specific |Node|.
 
     REST URL::
 
@@ -481,7 +394,7 @@ Nodes
 
     Description:
 
-        returns the list of all attributes of the *Node* object with ``uuid="ffe11..."``.
+        returns the list of all attributes of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -510,7 +423,7 @@ Nodes
 
     Description:
 
-        returns the list of all the extras of the *Node* object with ``uuid="ffe11..."``.
+        returns the list of all the extras of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -532,7 +445,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-8. Getting a user-defined list of attributes/extras of a specific node.
+8. Getting a user-defined list of attributes/extras of a specific |Node|.
 
     REST URL::
 
@@ -540,7 +453,7 @@ Nodes
 
     Description:
 
-        returns a list of the attributes ``append_text`` and ``is_local`` of the *Node* object with ``uuid="ffe11..."``.
+        returns a list of the attributes ``append_text`` and ``is_local`` of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -566,7 +479,7 @@ Nodes
 
     Description:
 
-        returns a list of the extras ``trialBool`` and ``trialInt`` of the *Node* object with ``uuid="ffe11..."``.
+        returns a list of the extras ``trialBool`` and ``trialInt`` of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -586,7 +499,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-9. Get comments of specific node.
+9. Get comments of specific |Node|.
 
     REST URL::
 
@@ -594,7 +507,7 @@ Nodes
 
     Description:
 
-        returns comments of the given node
+        returns comments of the given |Node|
 
     Response::
 
@@ -611,7 +524,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-10. Get list of all the files/directories from node repository
+10. Get list of all the files/directories from the repository of a specific |Node|.
 
     REST URL::
 
@@ -657,7 +570,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-11. Download a file from node repository
+11. Download a file from the repository of a |Node|.
 
     REST URL::
 
@@ -689,7 +602,7 @@ Nodes
 Processes
 ---------
 
-1.  Get a process report.
+1.  Get the report of a |ProcessNode|.
 
     REST URL::
 
@@ -717,7 +630,7 @@ Processes
 CalcJobs
 --------
 
-1.  Get a list of input or output files of given calcjob node.
+1.  Get a list of input or output files of given |CalcJobNode|.
 
     REST URL::
 
@@ -758,10 +671,102 @@ CalcJobs
             "url_root": "http://localhost:5000/"
         }
 
+Computers
+---------
+
+1. Get a list of |Computer| objects.
+
+    REST URL::
+
+        http://localhost:5000/api/v4/computers?limit=3&offset=2&orderby=id
+
+    Description:
+
+        returns the list of three |Computer| objects (``limit=3``) starting from the 3rd row (``offset=2``) of the database table and the list will be ordered by ascending values of ``id``.
+
+    Response::
+
+        {
+          "data": {
+            "computers": [
+              {
+                "description": "Alpha Computer",
+                "hostname": "alpha.aiida.net",
+                "id": 3,
+                "name": "Alpha",
+                "scheduler_type": "slurm",
+                "transport_type": "ssh",
+                "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
+              },
+              {
+                "description": "Beta Computer",
+                "hostname": "beta.aiida.net",
+                "id": 4,
+                "name": "Beta",
+                "scheduler_type": "slurm",
+                "transport_type": "ssh",
+                "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
+              },
+              {
+                "description": "Gamma Computer",
+                "hostname": "gamma.aiida.net",
+                "id": 5,
+                "name": "Gamma",
+                "scheduler_type": "slurm",
+                "transport_type": "ssh",
+                "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
+              }
+            ]
+          },
+          "id": null,
+          "method": "GET",
+          "path": "/api/v4/computers",
+          "query_string": "limit=3&offset=2&orderby=id",
+          "resource_type": "computers",
+          "url": "http://localhost:5000/api/v4/computers?limit=3&offset=2&orderby=id",
+          "url_root": "http://localhost:5000/"
+        }
+
+2. Get details of a single |Computer| object:
+
+    REST URL::
+
+        http://localhost:5000/api/v4/computers/5d490d77
+
+    Description:
+
+        returns the details of the |Computer| object ``uuid="5d490d77-638d..."``.
+
+    Response::
+
+        {
+          "data": {
+            "computers": [
+              {
+                "description": "Beta Computer",
+                "hostname": "beta.aiida.net",
+                "id": 4,
+                "name": "Beta",
+                "scheduler_type": "slurm",
+                "transport_type": "ssh",
+                "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
+              }
+            ]
+          },
+          "id": null,
+          "method": "GET",
+          "path": "/api/v4/computers/5d490d77",
+          "query_string": "",
+          "resource_type": "computers",
+          "url": "http://localhost:5000/api/v4/computers/5d490d77",
+          "url_root": "http://localhost:5000/"
+        }
+
+
 Users
 -----
 
-1. Getting a list of the users
+1. Getting a list of the |User| s
 
     REST URL::
 
@@ -799,7 +804,7 @@ Users
           "url_root": "http://localhost:5000/"
         }
 
-2. Getting a list of users whose first name starts with a given string
+2. Getting a list of |User| s whose first name starts with a given string
 
     REST URL::
 
@@ -834,7 +839,7 @@ Users
 Groups
 ------
 
-1. Getting a list of groups
+1. Getting a list of |Group| s
 
     REST URL::
 
@@ -913,12 +918,48 @@ Groups
           "url_root": "http://localhost:5000/"
         }
 
+
+.. _reference:rest-api:pagination:
+
+Pagination
+==========
+
+Pages of 20 results each are accessed by appending ``/page/2`` (2nd page) to the URL path.
+The page limit can be controlled via the ``perpage=(PERPAGE)`` query string (maximum page limit is 400).
+Examples::
+
+    http://localhost:5000/api/v4/computers/page/1?
+    http://localhost:5000/api/v4/computers/page/1?perpage=5
+    http://localhost:5000/api/v4/computers/page
+
+If no page number is specified, the system redirects the request to page 1.
+When pagination is used, the **header** of the response contains two more non-empty fields:
+
+    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results
+      of all pages
+    - ``Links``: links to the first, previous, next, and last page. Suppose that you send a request whose results  fill
+      8 pages. Then the value of the ``Links`` field would look like::
+
+            <\http://localhost:5000/.../page/1?... >; rel=first,
+            <\http://localhost:5000/.../page/3?... >; rel=prev,
+            <\http://localhost:5000/.../page/5?... >; rel=next,
+            <\http://localhost:5000/.../page/8?... >; rel=last
+
+
+Besides pagination, the number of results can also be controlled using the ``limit`` and ``offset`` filters, see :ref:`below <reference:rest-api:filtering:unique>`.
+
+
+.. _reference:rest-api:filtering:
+
 Filtering results
 =================
 
 The filter query string is formed by one or more fields, separated by the special character ``&``.
 Each field has the form (``key``)(``operator``)(``value``).
-The same constraints that apply to the names of python variables determine what are the valid keys, namely, only alphanumeric characters plus ``_`` are allowed and the first character cannot be a number.
+
+Fields can only contain alphanumeric characters plus ``_``, and the first character cannot be a number (similar to Python variable names).
+
+.. _reference:rest-api:filtering:unique:
 
 Unique filters
 --------------
@@ -926,17 +967,13 @@ Unique filters
 Unique filters can be specified only once in a query string.
 All of them must be followed by the operator ``=``.
 
-    :limit: This key only supports integer values.
+    :limit: Number of results (integer).
 
-    :offset: Same format as ``limit``.
+    :offset: Skips the first ``offset`` results (integer).
 
-    :perpage: Same format as ``limit``.
+    :perpage: How many results to show per page when paginating (integer).
 
-    :orderby:
-        This key is used to impose a specific ordering to the results. Two orderings are supported, ascending or descending.
-        The value for the ``orderby`` key must be the name of the property with respect to which to order the results.
-        Additionally, ``+`` or ``-`` can be pre-pended to the value in order to select, respectively, ascending or descending order.
-        Specifying no leading character is equivalent to select ascending order.
+    :orderby: ``+<property>`` for ascending order and ``-<property>`` for descending order (``<property`` defaults to ascending).
         Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order).
         Examples:
 
@@ -947,9 +984,9 @@ All of them must be followed by the operator ``=``.
             http://localhost:5000/api/v4/computers?orderby=-uuid
 
     :attributes_filter:
-        This key is used to specify which attributes of a specific object have to be returned.
-        The desired attributes have to be provided as a comma-separated list of values.
-        It is used in the endpoints ``/contents/attributes`` and ``/nodes``.
+        A comma-separated list of attributes to return.
+        Use together with ``attributes=true``.
+        Available in the endpoints ``/contents/attributes`` and ``/nodes``.
         Example:
 
         ::
@@ -959,12 +996,10 @@ All of them must be followed by the operator ``=``.
     :extras_filter: Similar to ``attributes_filter`` but for extras. It is used in the endpoints ``/contents/extras`` and ``/nodes``.
 
     :attributes:
-        by default ``attributes`` are not returned in ``/nodes`` endpoint.
-        To get the list of all ``attributes`` specify ``attributes=true`` and to get selected ``attribute(s)`` list, use ``attributes=true&attributes_filters=<comma separated list of attributes you want to request>``.
+        Pass ``true`` in order to return attributes in the ``/nodes`` endpoint.
 
     :extras:
-        by default ``extras`` are not returned in ``/nodes`` endpoint.
-        To get the list of all ``extras`` specify ``extras=true`` and to get selected ``extras`` list, use ``extras=true&extras_filters=<comma separated list of extras you want to request>``.
+        Pass ``true`` in order to return extras in the ``/nodes`` endpoint.
 
     :download_format: to specify download format in ``/download`` endpoint.
 
@@ -1142,3 +1177,10 @@ Examples:
             http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
 
     would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
+
+.. |Computer| replace:: :py:class:`Computer <aiida.orm.Computer>`
+.. |Node| replace:: :py:class:`Node <aiida.orm.Node>`
+.. |ProcessNode| replace:: :py:class:`ProcessNode <aiida.orm.ProcessNode>`
+.. |CalcJobNode| replace:: :py:class:`CalcJobNode <aiida.orm.CalcJobNode>`
+.. |User| replace:: :py:class:`User <aiida.orm.User>`
+.. |Group| replace:: :py:class:`Group <aiida.orm.Group>`

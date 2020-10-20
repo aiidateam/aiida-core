@@ -20,12 +20,12 @@ The HTTP response of the REST API consists of a status code, a header, and a JSO
 
 Possible status codes are:
 
-    1. 200 for successful requests.
-    2. 400 for bad requests.
+    #. 200 for successful requests.
+    #. 400 for bad requests.
        The JSON object contains an error message describing the issue with the request.
-    3. 500 for a generic internal server error.
+    #. 500 for a generic internal server error.
        The JSON object contains a generic error message.
-    4. 404 for invalid URL.
+    #. 404 for invalid URL.
        The request does not match any resource, and no JSON is returned.
 
 The header is a standard HTTP response header with the additional custom fields
@@ -41,7 +41,7 @@ The JSON object further contains information on the request in the ``method``, `
 Nodes
 -----
 
-1.  Get a list of |Node| objects.
+#.  Get a list of |Node| objects.
 
     REST URL::
 
@@ -49,7 +49,7 @@ Nodes
 
     Description:
 
-        returns the list of two |Node| objects (``limit=2``) starting from 9th row (``offset=8``) of the database table and the list will be ordered by ``id`` in descending order.
+        Returns the list of two |Node| objects (``limit=2``) starting from 9th row (``offset=8``) of the database table and the list will be ordered by ``id`` in descending order.
 
     Response::
 
@@ -89,7 +89,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-    Get list of all nodes with attribute called ``pbc1``:
+#.  Get a list of all nodes with attribute called ``pbc1``:
 
     REST URL::
 
@@ -97,7 +97,7 @@ Nodes
 
     Description:
 
-        returns the list of |Node| objects.
+        Returns the list of |Node| objects.
         Every node object contains value of attribute called ``pbc1`` if present otherwise null.
 
     Response::
@@ -141,7 +141,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-2. Get a list of all available |Node| types from the database.
+#. Get a list of all available |Node| types from the database.
 
     REST URL::
 
@@ -149,7 +149,7 @@ Nodes
 
     Description:
 
-        returns the list of full_types from database.
+        Returns the list of full_types from database.
 
     Response::
 
@@ -170,7 +170,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-3. Get a list of all available download formats.
+#. Get a list of all available download formats.
 
     REST URL::
 
@@ -178,7 +178,7 @@ Nodes
 
     Description:
 
-        returns the list of available download formats.
+        Returns the list of available download formats.
 
     Response::
 
@@ -222,7 +222,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-4. Get the details of a single |Node| object.
+#. Get the details of a single |Node| object.
 
     REST URL::
 
@@ -230,7 +230,7 @@ Nodes
 
     Description:
 
-        returns the details of the |Node| object with ``uuid="12f95e1c..."``.
+        Returns the details of the |Node| object with ``uuid="12f95e1c..."``.
 
     Response::
 
@@ -259,7 +259,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-5. Get the list of incoming of a specific |Node|.
+#. Get the list of incoming of a specific |Node|.
 
     REST URL::
 
@@ -267,7 +267,7 @@ Nodes
 
     Description:
 
-        returns the list of the first two input nodes (``limit=2``) of the |Node| object with ``uuid="de83b1..."``.
+        Returns the list of the first two input nodes (``limit=2``) of the |Node| object with ``uuid="de83b#..."``.
 
     Response::
 
@@ -311,7 +311,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-6. Filter the incoming/outgoing of a |Node| by their full type.
+#. Filter the incoming/outgoing of a |Node| by their full type.
 
     REST URL::
 
@@ -319,7 +319,7 @@ Nodes
 
     Description:
 
-        returns the list of the `*dict* incoming nodes of the |Node| object with ``uuid="de83b1..."``.
+        Returns the list of the *dict* incoming nodes of the |Node| object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -356,7 +356,7 @@ Nodes
 
     Description:
 
-        returns the list of the *dict* outgoing nodes of the |Node| object with ``uuid="de83b1..."``.
+        Returns the list of the *dict* outgoing nodes of the |Node| object with ``uuid="de83b1..."``.
 
     Response::
 
@@ -387,7 +387,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-7. Getting the list of the attributes/extras of a specific |Node|.
+#. Getting the list of the attributes/extras of a specific |Node|.
 
     REST URL::
 
@@ -395,7 +395,7 @@ Nodes
 
     Description:
 
-        returns the list of all attributes of the |Node| object with ``uuid="ffe11..."``.
+        Returns the list of all attributes of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -424,7 +424,7 @@ Nodes
 
     Description:
 
-        returns the list of all the extras of the |Node| object with ``uuid="ffe11..."``.
+        Returns the list of all the extras of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -446,7 +446,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-8. Getting a user-defined list of attributes/extras of a specific |Node|.
+#. Getting a user-defined list of attributes/extras of a specific |Node|.
 
     REST URL::
 
@@ -454,7 +454,7 @@ Nodes
 
     Description:
 
-        returns a list of the attributes ``append_text`` and ``is_local`` of the |Node| object with ``uuid="ffe11..."``.
+        Returns a list of the attributes ``append_text`` and ``is_local`` of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -480,7 +480,7 @@ Nodes
 
     Description:
 
-        returns a list of the extras ``trialBool`` and ``trialInt`` of the |Node| object with ``uuid="ffe11..."``.
+        Returns a list of the extras ``trialBool`` and ``trialInt`` of the |Node| object with ``uuid="ffe11..."``.
 
     Response::
 
@@ -500,7 +500,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-9. Get comments of specific |Node|.
+#. Get comments of specific |Node|.
 
     REST URL::
 
@@ -508,7 +508,7 @@ Nodes
 
     Description:
 
-        returns comments of the given |Node|
+        Returns comments of the given |Node|.
 
     Response::
 
@@ -525,7 +525,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-10. Get list of all the files/directories from the repository of a specific |Node|.
+#. Get list of all the files/directories from the repository of a specific |Node|.
 
     REST URL::
 
@@ -533,7 +533,7 @@ Nodes
 
     Description:
 
-        returns list of all the files/directories from node repository
+        Returns a list of all the files/directories from node repository
 
     Response::
 
@@ -571,7 +571,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-11. Download a file from the repository of a |Node|.
+#. Download a file from the repository of a |Node|.
 
     REST URL::
 
@@ -579,13 +579,13 @@ Nodes
 
     Description:
 
-        downloads the file ``aiida.in`` from node repository
+        Downloads the file ``aiida.in`` from node repository
 
     Response::
 
         It downloads the file.
 
-12. There are specific download formats (check ``nodes/download_formats`` endpoint) available to download different types of nodes.
+#. There are specific download formats (check ``nodes/download_formats`` endpoint) available to download different types of nodes.
     This endpoint is used to download file in given format.
 
     REST URL::
@@ -594,7 +594,7 @@ Nodes
 
     Description:
 
-        downloads structure node of uuid=fafdsf in ``xsf`` format
+        Downloads structure node of uuid=fafdsf in ``xsf`` format
 
     Response::
 
@@ -611,7 +611,7 @@ Processes
 
     Description:
 
-        returns report of process of ``uuid="8b95cd85-...."``
+        Returns report of process of ``uuid="8b95cd85-...."``
 
     Response::
 
@@ -639,7 +639,7 @@ CalcJobs
 
     Description:
 
-        returns list of all input files of given calcjob node of ``uuid="sffs241j-...."``
+        Returns a list of all input files of given |CalcJobNode| of ``uuid="sffs241j-...."``
 
     Response::
 
@@ -683,7 +683,7 @@ Computers
 
     Description:
 
-        returns the list of three |Computer| objects (``limit=3``) starting from the 3rd row (``offset=2``) of the database table.
+        Returns the list of three |Computer| objects (``limit=3``) starting from the 3rd row (``offset=2``) of the database table.
         The list will be ordered by ascending values of ``id``.
 
     Response::
@@ -737,7 +737,7 @@ Computers
 
     Description:
 
-        returns the details of the |Computer| object ``uuid="5d490d77-638d..."``.
+        Returns the details of the |Computer| object ``uuid="5d490d77-638d..."``.
 
     Response::
 
@@ -776,7 +776,7 @@ Users
 
     Description:
 
-        returns a list of all the *User* objects.
+        Returns a list of all the *User* objects.
 
     Response::
 
@@ -814,7 +814,7 @@ Users
 
     Description:
 
-        returns a lists of the *User* objects whose first name starts with ``"aii"``, regardless the case of the characters.
+        Returns a lists of the *User* objects whose first name starts with ``"aii"``, regardless the case of the characters.
 
     Response::
 
@@ -849,7 +849,7 @@ Groups
 
     Description:
 
-        returns the list of ten *Group* objects (``limit=10``) starting from the 1st row of the database table (``offset=0``) and the list will be ordered by ``user_id`` in descending order.
+        Returns the list of ten *Group* objects (``limit=10``) starting from the 1st row of the database table (``offset=0``) and the list will be ordered by ``user_id`` in descending order.
 
     Response::
 
@@ -893,7 +893,7 @@ Groups
 
     Description:
 
-        returns the details of the *Group* object with ``uuid="a6e5b..."``.
+        Returns the details of the *Group* object with ``uuid="a6e5b..."``.
 
     Response::
 
@@ -1179,7 +1179,7 @@ Examples:
 
     would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
 
-.. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer>`
+.. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
 .. |Node| replace:: :py:class:`~aiida.orm.nodes.Node`
 .. |ProcessNode| replace:: :py:class:`~aiida.orm.nodes.process.ProcessNode`
 .. |CalcJobNode| replace:: :py:class:`~aiida.orm.nodes.process.CalcJobNode`

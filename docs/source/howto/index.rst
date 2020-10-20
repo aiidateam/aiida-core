@@ -5,6 +5,7 @@ How-To Guides
 .. toctree::
    :maxdepth: 1
 
+   interact
    plugins_install
    run_codes
    ssh

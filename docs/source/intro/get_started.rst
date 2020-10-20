@@ -1,7 +1,7 @@
 .. _intro:get_started:
 
 ****************
-Getting Started
+Getting started
 ****************
 
 An AiiDA installation consists of three core components (plus any external codes you wish to run):
@@ -10,213 +10,492 @@ An AiiDA installation consists of three core components (plus any external codes
 * |PostgreSQL|: The service that manages the database that AiiDA uses to store data.
 * |RabbitMQ|: The message broker used for communication within AiiDA.
 
+Setup
+=====
+
 There are multiple routes to setting up a working AiiDA environment.
-These are shown below, followed by a recommended "quick-install" route on your local computer.
+Which of those is optimal depends on your environment and use case.
+If you are unsure, use the :ref:`system-wide installation <intro:get_started:system-wide-install>` method.
 
 .. panels::
    :body: bg-light
    :footer: bg-light border-0
 
-   :fa:`desktop,mr-1` **Direct (Bare Metal)**
+   :fa:`desktop,mr-1` **System-wide installation**
 
-   *Install software directly into your local root directory.*
+   .. link-button:: intro:get_started:system-wide-install
+      :type: ref
+      :text: Install all software directly on your workstation or laptop.
+      :classes: stretched-link btn-link
 
-   The prerequisite software can be installed using most package managers, including: apt, Homebrew, MacPorts, Gentoo and Windows Subsystem for Linux.
-
-   +++
-
-   :link-badge:`intro:install:prerequisites,Prerequisites install,ref,badge-primary text-white`
-   :link-badge:`intro:install:aiida-core,aiida-core install,ref,badge-primary text-white`
+   Install the prerequisite services using standard package managers (apt, homebrew, etc.) with administrative privileges.
 
    ---------------
 
-   :fa:`folder,mr-1` **Virtual Environment**
+   :fa:`folder,mr-1` **Installation into Conda environment**
 
-   *Install software into an isolated directory on your machine.*
+   .. link-button:: intro:get_started:conda-install
+      :type: ref
+      :text: Install all software into an isolated conda environment.
+      :classes: stretched-link btn-link
 
-   Environment managers such as `Conda <https://docs.conda.io>`__, `pipenv <https://pipenv.pypa.io>`__  and `venv <https://docs.python.org/3/library/venv.html>`__ create isolated environments, allowing for installation of multiple versions of software on the same machine.
-   It is advised that you install ``aiida-core`` into one of these managed environments.
-
-   +++
-
-   :link-badge:`intro:install:virtual_environments,Environments Tutorial,ref,badge-primary text-white`
-   :link-badge:`https://anaconda.org/conda-forge/aiida-core,aiida-core on Conda,url,badge-primary text-white`
+   This method does not require administrative privileges, but involves manual management of start-up and shut-down of services.
 
    ---------------
 
-   :fa:`cube,mr-1` **Containers**
+   :fa:`cube,mr-1` **Run via docker container**
 
-   *Use a pre-made image of all the required software.*
+   .. link-button:: intro:get_started:docker
+      :type: ref
+      :text: Run AiiDA and prerequisite services as a single docker container.
+      :classes: stretched-link btn-link
 
-   AiiDA maintains a `Docker <https://www.docker.com/>`__ image, which is particularly useful for learning and testing purposes.
-   It is a great way to quickly get started on the tutorials.
-
-   +++
-
-   :link-badge:`intro:install:docker,Docker Tutorial,ref,badge-primary text-white`
-   :link-badge:`https://hub.docker.com/r/aiidateam/aiida-core,aiida-core on DockerHub,url,badge-primary text-white`
+   Does not require the separate installation of prerequisite services.
+   Especially well-suited to get directly started on the **tutorials**.
 
    ---------------
 
-   :fa:`cloud,mr-1` **Virtual Machines**
+   :fa:`cloud,mr-1` **Run via virtual machine**
 
-   *Use a pre-made machine with all the required software.*
+   .. link-button:: intro:get_started:virtual-machine
+      :type: ref
+      :text: Use a virtual machine with all the required software pre-installed.
+      :classes: stretched-link btn-link
 
    `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs,
    also incorporating pre-installed Materials Science codes.
 
-   +++
 
-   :link-badge:`https://materialscloud.org/quantum-mobile,Quantum Mobile,url,badge-primary text-white`
-   :link-badge:`https://aiidalab.materialscloud.org,AiiDA lab,url,badge-primary text-white`
+.. _intro:get_started:system-wide-install:
 
-.. _intro:quick_start:
-
-Quick Start
-===========
-
-Here we first provide a simple approach for installation and setup on your local computer.
-
-Install Software
-----------------
-
-.. panels::
-    :column: col-lg-6 col-md-6 col-sm-12 col-xs-12 p-2
-
-    :fa:`download,mr-1` **Install with conda**
-
-    .. parsed-literal::
-
-        conda create -n aiida -c conda-forge aiida-core=\ |release|\  aiida-core.services=\ |release|
-        conda activate aiida
-        reentry scan
-
-    `Conda <https://docs.conda.io>`__ provides a cross-platform package management system, from which we can install all the basic components of the AiiDA infrastructure in an isolated environment.
-
-    ----------------------------------------------
-
-    :fa:`download,mr-1` **Install with pip**
-
-    .. parsed-literal::
-
-        pip install aiida-core
-        reentry scan
-
-    ``aiida-core`` can be installed from `PyPi <https://pypi.org/project/aiida-core>`__.
-    It is strongly recommended that you install into a :ref:`virtual environment <intro:install:virtual_environments>`.
-    You will then need to install |PostgreSQL| and |RabbitMQ| depending on your operating system.
-
-    :link-badge:`intro:install:prerequisites,Install prerequisites,ref,badge-primary text-white`
-
-Initialise Data Storage
+System-wide installation
 ------------------------
 
-Before working with AiiDA, you must first initialize a database storage area on disk.
+The system-wide installation will install the prerequisite services (PostgreSQL and RabbitMQ) via standard package managers such that their startup and shut-down is largely managed by the operating system.
+The AiiDA (core) Python package is then installed either with Conda or pip.
 
-.. code-block:: console
+This is the *recommended* installation method to setup AiiDA on a personal laptop or workstation for the majority of users.
 
-    $ initdb -D mylocal_db
+.. panels::
+   :container: container-lg pb-3
+   :column: col-lg-12 p-2
+
+   **Install prerequisite services**
+
+      AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires a `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ shell, and Python >= 3.6.
+
+   .. tabbed:: Ubuntu
+
+      *AiiDA is tested on Ubuntu versions 14.04, 16.04, and 18.04.*
+
+      Open a terminal and execute:
+
+       .. code-block:: console
+
+           $ sudo apt install \
+              git python3-dev python3-pip \
+              postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
+
+   .. tabbed:: MacOS X (Homebrew)
+
+       The recommended installation method for Mac OS X is to use `Homebrew <https://brew.sh>`__.
+
+       #. Follow `this guide <https://docs.brew.sh/Installation>`__ to install Homebrew on your system if not installed yet.
+
+       #. Open a terminal and execute:
+
+          .. code-block:: console
+
+              $ brew install postgresql rabbitmq git python
+              $ brew services start postgresql
+              $ brew services start rabbitmq
+
+   .. tabbed:: Windows Subsystem for Linux
+
+      *The following instructions are for setting up AiiDA on WSL 2 in combination with Ubuntu.*
+
+      #. The `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_ should be installed and started.
+
+      #. Install Python and PostgreSQL:
+
+         .. code-block:: console
+
+             $ sudo apt-get install \
+                postgresql postgresql-server-dev-all postgresql-client \
+                git python3-dev python-pip
+             $ sudo service postgresql start
+
+      .. dropdown:: How to setup WSL to automatically start services after system boot.
+
+          Create a ``.sh`` file with the lines above, but *without* ``sudo``.
+          Make the file executeable, i.e., type:
+
+          .. code-block:: console
+
+             $ chmod +x /path/to/file.sh
+             $ sudo visudo
+
+          And add the line:
+
+          .. code-block:: sh
+
+             <username> ALL=(root) NOPASSWD: /path/to/file.sh
+
+          Replacing ``<username>`` with your Ubuntu username.
+          This will allow you to run *only* this specific ``.sh`` file with ``root`` access (without password), without lowering security on the rest of your system.
+
+      .. dropdown:: :fa:`wrench` How to resolve a timezone issue on Ubuntu 18.04.
+
+          There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not configured correctly out-of-the-box, which may cause a problem for the database.
+          The following command can be used to re-configure the time zone:
+
+          .. code-block:: console
+
+              $ sudo dpkg-reconfigure tzdata
+
+   .. tabbed:: Other
+
+      #. Install RabbitMQ following the `instructions applicable to your system <https://www.rabbitmq.com/download.html>`__.
+      #. Install PostgreSQL following the `instructions applicable to your system <https://www.postgresql.org/download/>`__.
+
+      .. hint::
+
+          Alternatively use the :ref:`pure conda installation method <intro:get_started:conda-install>`.
+
+   ---
+
+   **Install AiiDA (core)**
+
+   .. tabbed:: Conda
+
+      *Install the aiida-core package in a Conda environment.*
+
+      #. Make sure that conda is installed, e.g., by following `the instructions on installing Miniconda <https://docs.conda.io/en/latest/miniconda.html>`__.
+
+      #. Open a terminal and execute:
+
+         .. code-block:: console
+
+             $ conda create -n aiida -c conda-forge aiida-core
+             $ conda activate aiida
+             (aiida) $ reentry scan
+
+   .. tabbed:: pip + venv
+
+      *Install the aiida-core package from PyPI into a virtual environment.*
+
+      Open a terminal and execute:
+
+      .. code-block:: console
+
+          $ python -m pip venv ~/envs/aiida
+          $ source ~/envs/aiida/bin/activate
+          (aiida) $ pip install aiida-core
+          (aiida) $ reentry scan
+
+      .. dropdown:: :fa:`plus-circle` Installation extras
+
+         There are additional optional packages that you may want to install, which are grouped in the following categories:
+
+         * ``atomic_tools``: packages that allow importing and manipulating crystal structure from various formats
+         * ``ssh_kerberos``: adds support for ssh transport authentication through Kerberos
+         * ``REST``: allows a REST server to be ran locally to serve AiiDA data
+         * ``docs``: tools to build the documentation
+         * ``notebook``: jupyter notebook - to allow it to import AiiDA modules
+         * ``tests``: python modules required to run the automatic unit tests
+         * ``pre-commit``: pre-commit tools required for developers to enable automatic code linting and formatting
+
+         In order to install any of these package groups, simply append them as a comma separated list in the ``pip`` install command, for example:
+
+         .. code-block:: console
+
+             (aiida) $ pip install aiida-core[atomic_tools,docs]
+
+         .. dropdown:: :fa:`wrench` Kerberos on Ubuntu
+
+            If you are installing the optional ``ssh_kerberos`` and you are on Ubuntu you might encounter an error related to the ``gss`` package.
+            To fix this you need to install the ``libffi-dev`` and ``libkrb5-dev`` packages:
+
+            .. code-block:: console
+
+               $ sudo apt-get install libffi-dev libkrb5-dev
 
 
-This *database cluster* may contain a collection of databases (one per profile) that is managed by a single running server process.
-We start this process with:
 
-.. code-block:: console
+   .. tabbed:: From source
 
-    $ pg_ctl -D mylocal_db -l logfile start
+      *Install the aiida-core package directly from the cloned repository.*
 
-.. admonition:: Further Reading
-    :class: seealso title-icon-read-more
+      Open a terminal and execute:
 
-    - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
-    - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
+      .. code-block:: console
 
-Next, we set up an AiiDA configuration profile and related data storage, with the `quicksetup` command.
+          $ git clone https://github.com/aiidateam/aiida-core.git
+          $ cd aiida-core/
+          $ python -m pip venv ~/envs/aiida
+          $ source ~/envs/aiida/bin/activate
+          (aiida) $ pip install .
+          (aiida) $ reentry scan
 
-.. code-block:: console
+   ---
 
-    $ verdi quicksetup
-    Info: enter "?" for help
-    Info: enter "!" to ignore the default and set no value
-    Profile name: me
-    Email Address (for sharing data): me@user.com
-    First name: my
-    Last name: name
-    Institution: where-i-work
+   **Start verdi daemons**
 
-At this point you now have a working AiiDA environment, from which you can add and retrieve data.
+   Start the verdi daemon(s) that are used to run AiiDA workflows.
 
-.. admonition:: Tab Completion
-    :class: tip title-icon-lightbulb
+   .. code-block:: console
 
-    Enable tab completion of ``verdi`` commands in the terminal with:
+       (aiida) $ verdi daemon start 2
 
-    .. code-block:: console
+   .. important::
 
-        $ eval "$(_VERDI_COMPLETE=source verdi)"
+        The verdi daemon(s) must be restarted after a system reboot.
 
-    :link-badge:`how-to:installation:configure:tab-completion,Read More,ref,badge-primary text-white`
+   .. hint::
 
-Start Computation Services
---------------------------
+       Do not start more daemons then there are physical processors on your system.
 
-In order to run computations, some additional steps are required to start the services that manage these background processes.
-The |RabbitMQ| service is used, to manage communication between processes and retain process states, even after restarting your computer:
+   ---
 
-.. code-block:: console
+   **Setup profile**
 
-    $ rabbitmq-server -detached
+   Next, set up an AiiDA configuration profile and related data storage, with the ``verdi quicksetup`` command.
 
-We then start one or more "daemon" processes, which handle the execution and monitoring of all submitted computations.
+   .. code-block:: console
 
-.. code-block:: console
+       (aiida) $ verdi quicksetup
+       Info: enter "?" for help
+       Info: enter "!" to ignore the default and set no value
+       Profile name: me
+       Email Address (for sharing data): me@user.com
+       First name: my
+       Last name: name
+       Institution: where-i-work
 
-    $ verdi daemon start 2
+   ---
 
-Finally, to check that all services are running as expected use:
+   **Check setup**
 
-.. code-block:: console
+   To check that everything is set up correctly, execute:
 
-    $ verdi status
-    ✓ config dir:  /home/ubuntu/.aiida
-    ✓ profile:     On profile me
-    ✓ repository:  /home/ubuntu/.aiida/repository/me
-    ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
-    ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
-    ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
+   .. code-block:: console
 
-Awesome! You now have a fully operational installation from which to take the next steps!
+       (aiida) $ verdi status
+       ✓ config dir:  /home/ubuntu/.aiida
+       ✓ profile:     On profile me
+       ✓ repository:  /home/ubuntu/.aiida/repository/me
+       ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
+       ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
+       ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
 
-Stopping Services
------------------
+   At this point you should now have a working AiiDA environment, from which you can add and retrieve data.
 
-After finishing with your aiida session, particularly if switching between profiles, you may wish to power down the services:
+   .. admonition:: Missing a checkmark or ecountered some other issue?
+       :class: attention title-icon-troubleshoot
 
-.. code-block:: console
+       :ref:`See the troubleshooting section <intro:troubleshooting>`.
 
-    $ verdi daemon stop
-    $ pg_ctl stop
+   .. link-button:: intro:get_started:next
+       :type: ref
+       :text: What's next?
+       :classes: btn-outline-primary btn-block font-weight-bold
 
-Any computations that are still running at this point, will be picked up next time the services are started.
+.. _intro:get_started:conda-install:
 
+Installation into Conda environment
+-----------------------------------
 
-.. admonition:: Having problems?
-    :class: attention title-icon-troubleshoot
+This installation route installs all necessary software -- including the prerequisite services PostgreSQL and RabbitMQ -- into a Conda environment.
+This is the recommended method for users on shared systems and systems where the user has no administrative privileges.
 
-    :ref:`See the troubleshooting section <intro:troubleshooting>`.
+.. important::
+
+   This installation method installs **all** software into a conda environment, including PostgreSQL and RabbitMQ.
+   See the :ref:`system-wide installation <intro:get_started:system-wide-install>` to use Conda only to install the AiiDA (core) Python package.
+
+.. panels::
+   :container: container-lg pb-3
+   :column: col-lg-12 p-2
+
+   **Install prerequisite services + AiiDA (core)**
+
+   .. code-block:: console
+
+       $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
+       $ conda activate aiida
+       (aiida) $ reentry scan
+
+   ---
+
+   **Start-up services and initialize data storage**
+
+   Before working with AiiDA, you must first initialize a database storage area on disk.
+
+   .. code-block:: console
+
+       (aiida) $ initdb -D mylocal_db
+
+   This *database cluster* may contain a collection of databases (one per profile) that is managed by a single running server process.
+   We start this process with:
+
+   .. code-block:: console
+
+       (aiida) $ pg_ctl -D mylocal_db -l logfile start
+
+   .. admonition:: Further Reading
+       :class: seealso title-icon-read-more
+
+       - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
+       - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
+
+   Then, start the RabbitMQ server:
+
+   .. code-block:: console
+
+       (aiida) $ rabbitmq-server -detached
+
+   Finally, start the AiiDA daemon(s):
+
+   .. code-block:: console
+
+       (aiida) $ verdi daemon start 2
+
+   .. important::
+
+        The verdi daemon(s) must be restarted after a system reboot.
+
+   .. hint::
+
+       Do not start more daemons then there are physical processors on your system.
+
+   ---
+
+   **Setup profile**
+
+   Next, set up an AiiDA configuration profile and related data storage, with the ``verdi quicksetup`` command.
+
+   .. code-block:: console
+
+       (aiida) $ verdi quicksetup
+       Info: enter "?" for help
+       Info: enter "!" to ignore the default and set no value
+       Profile name: me
+       Email Address (for sharing data): me@user.com
+       First name: my
+       Last name: name
+       Institution: where-i-work
+
+   ---
+
+   **Check setup**
+
+   To check that everything is set up correctly, execute:
+
+   .. code-block:: console
+
+       (aiida) $ verdi status
+       ✓ config dir:  /home/ubuntu/.aiida
+       ✓ profile:     On profile me
+       ✓ repository:  /home/ubuntu/.aiida/repository/me
+       ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
+       ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
+       ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
+
+   At this point you now have a working AiiDA environment, from which you can add and retrieve data.
+
+   .. admonition:: Missing a checkmark or ecountered some other issue?
+       :class: attention title-icon-troubleshoot
+
+       :ref:`See the troubleshooting section <intro:troubleshooting>`.
+
+   .. link-button:: intro:get_started:next
+       :type: ref
+       :text: What's next?
+       :classes: btn-outline-primary btn-block font-weight-bold
+
+   ---
+
+   **Shut-down services**
+
+   After finishing with your aiida session, particularly if switching between profiles, you may wish to power down the services:
+
+   .. code-block:: console
+
+       (aiida) $ verdi daemon stop
+       (aiida) $ pg_ctl stop
+
+.. _intro:get_started:docker:
+
+Run AiiDA via a Docker image
+----------------------------
+
+.. _intro:get_started:virtual-machine:
+
+The AiiDA team maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core>`__.
+This image contains a fully pre-configured AiiDA environment which makes it particularly useful for learning and testing purposes.
+
+.. panels::
+   :container: container-lg pb-3
+   :column: col-lg-12 p-2
+
+   **Start container**
+
+   First, pull the image:
+
+   .. parsed-literal::
+
+      $ docker pull aiidateam/aiida-core:\ |release|\
+
+   Then start the container with:
+
+   .. parsed-literal::
+
+      $ docker run -d --name aiida-container aiidateam/aiida-core:\ |release|\
+
+   ---
+
+   **Check setup**
+
+   The default profile is created under the ``aiida`` user, so to execute commands you must add the ``--user aiida`` option.
+
+   For example, to check the verdi status, execute:
+
+   .. code-block:: console
+
+      $ docker exec -t --user aiida aiida-container /bin/bash -l -c 'verdi status'
+      ✓ config dir:  /home/aiida/.aiida
+      ✓ profile:     On profile default
+      ✓ repository:  /home/aiida/.aiida/repository/default
+      ✓ postgres:    Connected as aiida_qs_aiida_477d3dfc78a2042156110cb00ae3618f@localhost:5432
+      ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
+      ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
+
+   .. link-button:: intro:get_started:next
+       :type: ref
+       :text: What's next?
+       :classes: btn-outline-primary btn-block font-weight-bold
+
+Run AiiDA via a Virtual Machine
+-------------------------------
+
+The `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs, also incorporating additional pre-installed Materials Science codes.
+See `here <https://www.materialscloud.org/work/quantum-mobile>`__ for information on how to download and use the virtual machine.
+
+.. _intro:get_started:next:
+
+What's next?
+============
+
+If you are new to AiiDA, we recommed you go through the :ref:`Basic Tutorial <tutorial:basic>`,
+or see our :ref:`Next steps guide <tutorial:next-steps>`.
+
+If however, you encountered some issues, proceed to the :ref:`troubleshooting section <intro:troubleshooting>`.
 
 .. admonition:: In-depth instructions
     :class: seealso title-icon-read-more
 
-    For more ways to install AiiDA, :ref:`check the detailed installation section <intro:install>`.
-
     For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
-
-What Next?
-----------
-
-If you are new to AiiDA, go through the :ref:`Basic Tutorial <tutorial:basic>`,
-or see our :ref:`Next steps guide <tutorial:next-steps>`.
 
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__
 .. |RabbitMQ| replace:: `RabbitMQ <https://www.rabbitmq.com>`__
+.. |Homebrew| replace:: `Homebrew <https://brew.sh>`__

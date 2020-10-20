@@ -56,7 +56,7 @@ def inspect(archive, version, data, meta_data):
                 data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
                 echo.echo(tabulate.tabulate(data))
         except CorruptArchive as exception:
-            echo.echo_critical('corrupt archive: {}'.format(exception))
+            echo.echo_critical(f'corrupt archive: {exception}')
 
 
 @verdi_export.command('create')
@@ -135,9 +135,9 @@ def create(
     try:
         export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
-        echo.echo_critical('failed to write the archive file. Exception: {}'.format(exception))
+        echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:
-        echo.echo_success('wrote the export archive file to {}'.format(output_file))
+        echo.echo_success(f'wrote the export archive file to {output_file}')
 
 
 @verdi_export.command('migrate')
@@ -199,11 +199,11 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
             with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
         except IOError:
-            echo.echo_critical('export archive does not contain the required file {}'.format(fhandle.filename))
+            echo.echo_critical(f'export archive does not contain the required file {fhandle.filename}')
 
         old_version = migration.verify_metadata_version(metadata)
         if version <= old_version:
-            echo.echo_success('nothing to be done - archive already at version {} >= {}'.format(old_version, version))
+            echo.echo_success(f'nothing to be done - archive already at version {old_version} >= {version}')
             return
 
         try:
@@ -236,4 +236,4 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
             tempdir.cleanup()
 
         if not silent:
-            echo.echo_success('migrated the archive from version {} to {}'.format(old_version, new_version))
+            echo.echo_success(f'migrated the archive from version {old_version} to {new_version}')

@@ -87,7 +87,7 @@ class AiiDALoaderMagics(magic.Magics):
         else:
             profile = load_profile()
 
-        self.current_state = 'Loaded AiiDA DB environment - profile name: {}.'.format(profile.name)
+        self.current_state = f'Loaded AiiDA DB environment - profile name: {profile.name}.'
 
         user_ns = get_start_namespace()
         for key, value in user_ns.items():
@@ -126,7 +126,7 @@ class AiiDALoaderMagics(magic.Magics):
         if self.is_warning:
             latex = '\\emph{%s}\n' % self.current_state
         else:
-            latex = '%s\n' % self.current_state
+            latex = f'{self.current_state}\n'
 
         return latex
 
@@ -139,7 +139,7 @@ class AiiDALoaderMagics(magic.Magics):
             warning_str = '** '
         else:
             warning_str = ''
-        text = '%s%s\n' % (warning_str, self.current_state)
+        text = f'{warning_str}{self.current_state}\n'
 
         pretty_print.text(text)
 

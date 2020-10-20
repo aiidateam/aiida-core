@@ -105,7 +105,7 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError('Unknown source parameters: {}'.format(', '.join(unknown_attrs)))
+            raise KeyError(f"Unknown source parameters: {', '.join(unknown_attrs)}")
 
         self.set_attribute('source', source)
 
@@ -190,7 +190,7 @@ class Data(Node):
             raise ValueError('Path not recognized')
 
         if os.path.exists(path) and not overwrite:
-            raise OSError('A file was already found at {}'.format(path))
+            raise OSError(f'A file was already found at {path}')
 
         if fileformat is None:
             extension = os.path.splitext(path)[1]
@@ -211,10 +211,10 @@ class Data(Node):
         if not overwrite:
             for fname in extra_files:
                 if os.path.exists(fname):
-                    raise OSError('The file {} already exists, stopping.'.format(fname))
+                    raise OSError(f'The file {fname} already exists, stopping.')
 
             if os.path.exists(path):
-                raise OSError('The file {} already exists, stopping.'.format(path))
+                raise OSError(f'The file {path} already exists, stopping.')
 
         for additional_fname, additional_fcontent in extra_files.items():
             retlist.append(additional_fname)

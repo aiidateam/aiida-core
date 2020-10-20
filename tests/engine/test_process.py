@@ -263,7 +263,7 @@ class TestProcess(AiidaTestCase):
         process_class = CalculationFactory(entry_point)
         process = process_class(inputs=inputs)
 
-        expected_process_type = 'aiida.calculations:{}'.format(entry_point)
+        expected_process_type = f'aiida.calculations:{entry_point}'
         self.assertEqual(process.node.process_type, expected_process_type)
 
         # Verify that process_class on the calculation node returns the original entry point class
@@ -276,7 +276,7 @@ class TestProcess(AiidaTestCase):
         qualified class name
         """
         process = test_processes.DummyProcess()
-        expected_process_type = '{}.{}'.format(process.__class__.__module__, process.__class__.__name__)
+        expected_process_type = f'{process.__class__.__module__}.{process.__class__.__name__}'
         self.assertEqual(process.node.process_type, expected_process_type)
 
         # Verify that process_class on the calculation node returns the original entry point class

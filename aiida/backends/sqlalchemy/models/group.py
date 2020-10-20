@@ -64,4 +64,4 @@ class DbGroup(Base):
         return self.id
 
     def __str__(self):
-        return '<DbGroup [type: {}] "{}">'.format(self.type_string, self.label)
+        return f'<DbGroup [type: {self.type_string}] "{self.label}">'

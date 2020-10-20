@@ -30,11 +30,11 @@ def migration_data(request):
     """For a given tuple of two subsequent versions and corresponding migration method, return metadata and data."""
     version_old, version_new, migration_method = request.param
 
-    filepath_archive = 'export_v{}_simple.aiida'.format(version_new)
+    filepath_archive = f'export_v{version_new}_simple.aiida'
     metadata_new, data_new = get_json_files(filepath_archive, filepath='export/migrate')
     verify_metadata_version(metadata_new, version=version_new)
 
-    filepath_archive = get_archive_file('export_v{}_simple.aiida'.format(version_old), filepath='export/migrate')
+    filepath_archive = get_archive_file(f'export_v{version_old}_simple.aiida', filepath='export/migrate')
 
     with Archive(filepath_archive) as archive:
         metadata_old = copy.deepcopy(archive.meta_data)
@@ -63,7 +63,7 @@ def test_migrations(migration_data):
 
     # Assert conversion message in `metadata.json` is correct and then remove it for later assertions
     metadata_new.pop('conversion_info')
-    message = 'Converted from version {} to {} with AiiDA v{}'.format(version_old, version_new, get_version())
+    message = f'Converted from version {version_old} to {version_new} with AiiDA v{get_version()}'
     assert metadata_old.pop('conversion_info')[-1] == message, 'Conversion message after migration is wrong'
 
     assert metadata_old == metadata_new

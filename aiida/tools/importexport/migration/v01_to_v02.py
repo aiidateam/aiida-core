@@ -33,7 +33,7 @@ def migrate_v1_to_v2(metadata, data, *args):
     def get_new_string(old_string):
         """Replace the old module prefix with the new."""
         if old_string.startswith(old_start):
-            return '{}{}'.format(new_start, old_string[len(old_start):])
+            return f'{new_start}{old_string[len(old_start):]}'
 
         return old_string
 

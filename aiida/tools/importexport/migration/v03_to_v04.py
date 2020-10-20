@@ -45,7 +45,7 @@ def migration_base_data_plugin_type_string(data):
     for content in data['export_data'].get('Node', {}).values():
         if content.get('type', '').startswith('data.base.'):
             type_str = content['type'].replace('data.base.', '')
-            type_str = 'data.' + type_str.lower() + type_str
+            type_str = f'data.{type_str.lower()}{type_str}'
             content['type'] = type_str
 
 
@@ -83,8 +83,8 @@ def migration_add_node_uuid_unique_constraint(data):
         unique_uuids = set(all_uuids)
         if len(all_uuids) != len(unique_uuids):
             echo.echo_critical(
-                """{}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
-            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue.""".format(entry_type)
+                f"""{entry_type}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
+            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue."""
             )
 
 

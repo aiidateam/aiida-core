@@ -129,8 +129,8 @@ class ProjectionData(OrbitalData, ArrayData):
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
         out_list = [(
-            all_orbitals[i], self.get_array('pdos_{}'.format(self._from_index_to_arrayname(i))),
-            self.get_array('energy_{}'.format(self._from_index_to_arrayname(i)))
+            all_orbitals[i], self.get_array(f'pdos_{self._from_index_to_arrayname(i)}'),
+            self.get_array(f'energy_{self._from_index_to_arrayname(i)}')
         ) for i in retrieve_indices]
         return out_list
 
@@ -145,8 +145,9 @@ class ProjectionData(OrbitalData, ArrayData):
 
         """
         retrieve_indices, all_orbitals = self._find_orbitals_and_indices(**kwargs)
-        out_list = [(all_orbitals[i], self.get_array('proj_{}'.format(self._from_index_to_arrayname(i))))
-                    for i in retrieve_indices]
+        out_list = [
+            (all_orbitals[i], self.get_array(f'proj_{self._from_index_to_arrayname(i)}')) for i in retrieve_indices
+        ]
         return out_list
 
     @staticmethod
@@ -154,7 +155,7 @@ class ProjectionData(OrbitalData, ArrayData):
         """
         Used internally to determine the array names.
         """
-        return 'array_{}'.format(index)
+        return f'array_{index}'
 
     def set_projectiondata(
         self,
@@ -218,12 +219,9 @@ class ProjectionData(OrbitalData, ArrayData):
             a failure
             """
             if not all([isinstance(_, np.ndarray) for _ in array_list]):
-                raise exceptions.ValidationError('{} was not composed entirely of ndarrays'.format(array_name))
+                raise exceptions.ValidationError(f'{array_name} was not composed entirely of ndarrays')
             if len(array_list) != orb_length:
-                raise exceptions.ValidationError(
-                    '{} did not have the same length as the '
-                    'list of orbitals'.format(array_name)
-                )
+                raise exceptions.ValidationError(f'{array_name} did not have the same length as the list of orbitals')
 
         ##############
         list_of_orbitals = single_to_list(list_of_orbitals)
@@ -245,7 +243,7 @@ class ProjectionData(OrbitalData, ArrayData):
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')
             except KeyError:
-                raise exceptions.ValidationError('No _orbital_type key found in dictionary: {}'.format(orbital_dict))
+                raise exceptions.ValidationError(f'No _orbital_type key found in dictionary: {orbital_dict}')
             cls = OrbitalFactory(orbital_type)
             test_orbital = cls(**orbital_dict)
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())
@@ -260,7 +258,7 @@ class ProjectionData(OrbitalData, ArrayData):
                 array_name = self._from_index_to_arrayname(i)
                 if bands_check:
                     self._check_projections_bands(this_projection)
-                self.set_array('proj_{}'.format(array_name), this_projection)
+                self.set_array(f'proj_{array_name}', this_projection)
 
         # verifies and sets both pdos and energy
         if list_of_pdos:
@@ -274,8 +272,8 @@ class ProjectionData(OrbitalData, ArrayData):
                 array_name = self._from_index_to_arrayname(i)
                 if bands_check:
                     self._check_projections_bands(this_projection)
-                self.set_array('pdos_{}'.format(array_name), this_pdos)
-                self.set_array('energy_{}'.format(array_name), this_energy)
+                self.set_array(f'pdos_{array_name}', this_pdos)
+                self.set_array(f'energy_{array_name}', this_energy)
 
         # verifies and sets the tags
         if tags is not None:

@@ -21,7 +21,7 @@ class TestOrmImplementationUtils(AiidaTestCase):
     def test_invalid_attribute_extra_key(self):
         """Test supplying an invalid key to the `validate_attribute_extra_key` method."""
         non_string_key = 5
-        field_separator_key = 'invalid' + FIELD_SEPARATOR + 'key'
+        field_separator_key = f'invalid{FIELD_SEPARATOR}key'
 
         with self.assertRaises(exceptions.ValidationError):
             validate_attribute_extra_key(non_string_key)

@@ -71,15 +71,15 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         type_check(user, DjangoUser)
 
         if computer:
-            type_check(computer, DjangoComputer, 'computer is of type {}'.format(type(computer)))
+            type_check(computer, DjangoComputer, f'computer is of type {type(computer)}')
             arguments['dbcomputer'] = computer.dbmodel
 
         if ctime:
-            type_check(ctime, datetime, 'the given ctime is of type {}'.format(type(ctime)))
+            type_check(ctime, datetime, f'the given ctime is of type {type(ctime)}')
             arguments['ctime'] = ctime
 
         if mtime:
-            type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
+            type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
         self._dbmodel = dj_utils.ModelWrapper(models.DbNode(**arguments))
@@ -182,7 +182,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
             transaction.savepoint_commit(savepoint_id)
         except IntegrityError as exception:
             transaction.savepoint_rollback(savepoint_id)
-            raise exceptions.UniquenessError('failed to create the link: {}'.format(exception)) from exception
+            raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception
 
     def clean_values(self):
         self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
@@ -230,7 +230,7 @@ class DjangoNodeCollection(BackendNodeCollection):
         try:
             return self.ENTITY_CLASS.from_dbmodel(models.DbNode.objects.get(pk=pk), self.backend)
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from ObjectDoesNotExist
+            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from ObjectDoesNotExist
 
     def delete(self, pk):
         """Remove a Node entry from the collection with the given id
@@ -240,4 +240,4 @@ class DjangoNodeCollection(BackendNodeCollection):
         try:
             models.DbNode.objects.filter(pk=pk).delete()  # pylint: disable=no-member
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Node with pk '{}' not found".format(pk)) from ObjectDoesNotExist
+            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from ObjectDoesNotExist

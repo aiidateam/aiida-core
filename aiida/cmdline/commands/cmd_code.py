@@ -88,15 +88,15 @@ def setup_code(non_interactive, **kwargs):
     try:
         code = code_builder.new()
     except InputValidationError as exception:
-        echo.echo_critical('invalid inputs: {}'.format(exception))
+        echo.echo_critical(f'invalid inputs: {exception}')
 
     try:
         code.store()
         code.reveal()
     except ValidationError as exception:
-        echo.echo_critical('Unable to store the Code: {}'.format(exception))
+        echo.echo_critical(f'Unable to store the Code: {exception}')
 
-    echo.echo_success('Code<{}> {} created'.format(code.pk, code.full_label))
+    echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
 @verdi_code.command('duplicate')
@@ -138,9 +138,9 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
         new_code.store()
         new_code.reveal()
     except ValidationError as exception:
-        echo.echo_critical('Unable to store the Code: {}'.format(exception))
+        echo.echo_critical(f'Unable to store the Code: {exception}')
 
-    echo.echo_success('Code<{}> {} created'.format(new_code.pk, new_code.full_label))
+    echo.echo_success(f'Code<{new_code.pk}> {new_code.full_label} created')
 
 
 @verdi_code.command()
@@ -211,7 +211,7 @@ def hide(codes):
     """Hide one or more codes from `verdi code list`."""
     for code in codes:
         code.hide()
-        echo.echo_success('Code<{}> {} hidden'.format(code.pk, code.full_label))
+        echo.echo_success(f'Code<{code.pk}> {code.full_label} hidden')
 
 
 @verdi_code.command()
@@ -221,7 +221,7 @@ def reveal(codes):
     """Reveal one or more hidden codes in `verdi code list`."""
     for code in codes:
         code.reveal()
-        echo.echo_success('Code<{}> {} revealed'.format(code.pk, code.full_label))
+        echo.echo_success(f'Code<{code.pk}> {code.full_label} revealed')
 
 
 @verdi_code.command()
@@ -235,9 +235,9 @@ def relabel(code, label):
     try:
         code.relabel(label)
     except InputValidationError as exception:
-        echo.echo_critical('invalid code label: {}'.format(exception))
+        echo.echo_critical(f'invalid code label: {exception}')
     else:
-        echo.echo_success('Code<{}> relabeled from {} to {}'.format(code.pk, old_label, code.full_label))
+        echo.echo_success(f'Code<{code.pk}> relabeled from {old_label} to {code.full_label}')
 
 
 @verdi_code.command('list')
@@ -272,7 +272,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
                 '!has_key': Code.HIDDEN_KEY
             }
         }, {
-            'extras.{}'.format(Code.HIDDEN_KEY): {
+            f'extras.{Code.HIDDEN_KEY}': {
                 '==': False
             }
         }]
@@ -346,11 +346,11 @@ def print_list_res(qb_query, show_owner):
             return
 
         if show_owner:
-            owner_string = ' ({})'.format(useremail)
+            owner_string = f' ({useremail})'
         else:
             owner_string = ''
         if computername is None:
             computernamestring = ''
         else:
-            computernamestring = '@{}'.format(computername)
-        echo.echo('* pk {} - {}{}{}'.format(pk, label, computernamestring, owner_string))
+            computernamestring = f'@{computername}'
+        echo.echo(f'* pk {pk} - {label}{computernamestring}{owner_string}')

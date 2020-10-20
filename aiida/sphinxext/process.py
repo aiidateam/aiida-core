@@ -72,15 +72,13 @@ class AiidaProcessDirective(Directive):
 
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']
-        self.process_name = self.module_name + '.' + self.class_name
+        self.process_name = f'{self.module_name}.{self.class_name}'
         self.process = get_object_from_string(self.process_name)
 
         try:
             self.process_spec = self.process.spec()
         except Exception as exc:
-            raise RuntimeError(
-                "Error while building the spec for process '{}': '{!r}.'".format(self.process_name, exc)
-            ) from exc
+            raise RuntimeError(f"Error while building the spec for process '{self.process_name}': '{exc!r}.'") from exc
 
     def build_node_tree(self):
         """Returns the docutils node tree."""
@@ -93,7 +91,7 @@ class AiidaProcessDirective(Directive):
         """Returns the signature of the process."""
         signature = addnodes.desc_signature(first=False, fullname=self.signature)
         signature += addnodes.desc_annotation(text=self.annotation)
-        signature += addnodes.desc_addname(text=self.module_name + '.')
+        signature += addnodes.desc_addname(text=f'{self.module_name}.')
         signature += addnodes.desc_name(text=self.class_name)
         return signature
 
@@ -192,7 +190,7 @@ class AiidaProcessDirective(Directive):
             return valid_type.__name__
         except AttributeError:
             try:
-                return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
+                return f"({', '.join(v.__name__ for v in valid_type)})"
             except (AttributeError, TypeError):
                 return str(valid_type)
 

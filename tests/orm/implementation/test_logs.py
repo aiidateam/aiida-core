@@ -167,7 +167,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             count_logs_found,
             len(log_uuids),
-            msg='There should be {} Logs, instead {} Log(s) was/were found'.format(len(log_uuids), count_logs_found)
+            msg=f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
         )
 
         # Delete last two logs (log2, log3)
@@ -198,7 +198,7 @@ class TestBackendLog(AiidaTestCase):
         self.assertEqual(
             count_logs_found,
             len(log_uuids),
-            msg='There should be {} Logs, instead {} Log(s) was/were found'.format(len(log_uuids), count_logs_found)
+            msg=f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
         )
 
         # Delete logs for self.node
@@ -279,23 +279,20 @@ class TestBackendLog(AiidaTestCase):
         # delete_many should return an empty list
         deleted_entities = self.backend.logs.delete_many(filters={'id': id_})
         self.assertEqual(
-            deleted_entities, [],
-            msg='No entities should have been deleted, since Log id {} does not exist'.format(id_)
+            deleted_entities, [], msg=f'No entities should have been deleted, since Log id {id_} does not exist'
         )
 
         # Try to delete non-existing Log - using delete
         # NotExistent should be raised, since no entities are found
         with self.assertRaises(exceptions.NotExistent) as exc:
             self.backend.logs.delete(log_id=id_)
-        self.assertIn("Log with id '{}' not found".format(id_), str(exc.exception))
+        self.assertIn(f"Log with id '{id_}' not found", str(exc.exception))
 
         # Try to delete existing and non-existing Log - using delete_many
         # delete_many should return a list that *only* includes the existing Logs
         filters = {'id': {'in': [id_, log_id]}}
         deleted_entities = self.backend.logs.delete_many(filters=filters)
-        self.assertEqual([log_id],
-                         deleted_entities,
-                         msg='Only Log id {} should be returned from delete_many'.format(log_id))
+        self.assertEqual([log_id], deleted_entities, msg=f'Only Log id {log_id} should be returned from delete_many')
 
         # Make sure the existing Log was deleted
         builder = orm.QueryBuilder().append(orm.Log, filters={'uuid': log_uuid})

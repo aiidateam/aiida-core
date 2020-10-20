@@ -42,7 +42,7 @@ def get_loader(orm_class):
     if issubclass(orm_class, Node):
         return NodeEntityLoader
 
-    raise ValueError('no OrmEntityLoader available for {}'.format(orm_class))
+    raise ValueError(f'no OrmEntityLoader available for {orm_class}')
 
 
 class IdentifierType(Enum):
@@ -123,7 +123,7 @@ class OrmEntityLoader:
         if query_with_dashes:
             for dash_pos in [20, 16, 12, 8]:
                 if len(uuid) > dash_pos:
-                    uuid = '{}-{}'.format(uuid[:dash_pos], uuid[dash_pos:])
+                    uuid = f'{uuid[:dash_pos]}-{uuid[dash_pos:]}'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='entity', project=['*'])
@@ -132,7 +132,7 @@ class OrmEntityLoader:
         try:
             UUID(uuid)
         except ValueError:
-            builder.add_filter('entity', {'uuid': {'like': '{}%'.format(uuid)}})
+            builder.add_filter('entity', {'uuid': {'like': f'{uuid}%'}})
         else:
             builder.add_filter('entity', {'uuid': uuid})
 
@@ -212,10 +212,10 @@ class OrmEntityLoader:
         try:
             entity = builder.one()[0]
         except MultipleObjectsError:
-            error = 'multiple {} entries found with {}<{}>'.format(classes, identifier_type, identifier)
+            error = f'multiple {classes} entries found with {identifier_type}<{identifier}>'
             raise MultipleObjectsError(error)
         except NotExistent as exception:
-            error = 'no {} found with {}<{}>: {}'.format(classes, identifier_type, identifier, exception)
+            error = f'no {classes} found with {identifier_type}<{identifier}>: {exception}'
             raise NotExistent(error)
 
         return entity
@@ -237,11 +237,11 @@ class OrmEntityLoader:
             return (cls.orm_base_class,)
 
         if not isinstance(sub_classes, tuple):
-            raise TypeError('sub_classes should be a tuple: {}'.format(sub_classes))
+            raise TypeError(f'sub_classes should be a tuple: {sub_classes}')
 
         for sub_class in sub_classes:
             if not issubclass(sub_class, cls.orm_base_class):
-                raise ValueError('{} is not a sub class of the base orm class {}'.format(sub_class, cls.orm_base_class))
+                raise ValueError(f'{sub_class} is not a sub class of the base orm class {cls.orm_base_class}')
 
         return sub_classes
 
@@ -339,7 +339,7 @@ class ProcessEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='process', project=project, filters={'label': {operator: identifier}})
@@ -379,7 +379,7 @@ class CalculationEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='calculation', project=project, filters={'label': {operator: identifier}})
@@ -419,7 +419,7 @@ class WorkflowEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='workflow', project=project, filters={'label': {operator: identifier}})
@@ -465,7 +465,7 @@ class CodeEntityLoader(OrmEntityLoader):
             raise ValueError('the identifier needs to be a string')
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='code', project=project, filters={'label': {operator: identifier}})
@@ -508,7 +508,7 @@ class ComputerEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='computer', project=project, filters={'name': {operator: identifier}})
@@ -548,7 +548,7 @@ class DataEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='calculation', project=project, filters={'label': {operator: identifier}})
@@ -588,7 +588,7 @@ class GroupEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='group', project=project, filters={'label': {operator: identifier}})
@@ -628,7 +628,7 @@ class NodeEntityLoader(OrmEntityLoader):
         from aiida.common.escaping import escape_for_sql_like
 
         if operator == 'like':
-            identifier = escape_for_sql_like(identifier) + '%'
+            identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
         builder.append(cls=classes, tag='node', project=project, filters={'label': {operator: identifier}})

@@ -64,7 +64,7 @@ def setup(
     profile.broker_host = broker_host
     profile.broker_port = broker_port
     profile.broker_virtual_host = broker_virtual_host
-    profile.repository_uri = 'file://' + repository
+    profile.repository_uri = f'file://{repository}'
 
     config = get_config()
 
@@ -74,7 +74,7 @@ def setup(
 
     # Load the profile
     load_profile(profile.name)
-    echo.echo_success('created new profile `{}`.'.format(profile.name))
+    echo.echo_success(f'created new profile `{profile.name}`.')
 
     # Migrate the database
     echo.echo_info('migrating the database.')
@@ -84,7 +84,7 @@ def setup(
         backend.migrate()
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
-            'database migration failed, probably because connection details are incorrect:\n{}'.format(exception)
+            f'database migration failed, probably because connection details are incorrect:\n{exception}'
         )
     else:
         echo.echo_success('database migration completed.')

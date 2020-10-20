@@ -55,4 +55,4 @@ class DbLog(Base):
         self.dbnode_id = dbnode_id
 
     def __str__(self):
-        return 'DbLog: {} for node {}: {}'.format(self.levelname, self.dbnode.id, self.message)
+        return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'

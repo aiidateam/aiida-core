@@ -106,7 +106,7 @@ def validate_link_label(link_label):
     """
     import re
 
-    message = 'invalid link label `{}`: should be string type but is instead: {}'.format(link_label, type(link_label))
+    message = f'invalid link label `{link_label}`: should be string type but is instead: {type(link_label)}'
     type_check(link_label, str, message)
 
     allowed_character_set = '[a-zA-Z0-9_]'

@@ -1,6 +1,6 @@
 {
     "name": "aiida-core",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "url": "http://www.aiida.net/",
     "license": "MIT License",
     "author": "The AiiDA team",
@@ -74,7 +74,8 @@
             "sphinx~=2.2",
             "sphinxcontrib-details-directive~=0.1.0",
             "sphinx-panels~=0.4.0",
-            "sphinx-copybutton~=0.2.12"
+            "sphinx-copybutton~=0.2.12",
+            "sphinxext-rediraffe~=0.2.4"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",
@@ -99,10 +100,10 @@
             "aiida-export-migration-tests==0.9.0",
             "pg8000~=1.13",
             "pgtest~=1.3,>=1.3.1",
-            "pytest~=5.4",
+            "pytest~=6.0",
             "pytest-timeout~=1.3",
             "pytest-cov~=2.7",
-            "pytest-rerunfailures~=9.0",
+            "pytest-rerunfailures~=9.1,>=9.1.1",
             "pytest-benchmark~=3.2",
             "coverage<5.0",
             "sqlalchemy-diff~=0.1.3"

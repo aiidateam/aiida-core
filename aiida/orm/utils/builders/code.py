@@ -71,7 +71,7 @@ class CodeBuilder:
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
             raise self.CodeValidationError(
-                'Unknown parameters passed to the CodeBuilder: {}'.format(', '.join(sorted(passed_keys - used)))
+                f"Unknown parameters passed to the CodeBuilder: {', '.join(sorted(passed_keys - used))}"
             )
 
         return code
@@ -120,7 +120,7 @@ class CodeBuilder:
             try:
                 return self._code_spec[key]
             except KeyError:
-                raise KeyError("Attribute '{}' not set".format(key))
+                raise KeyError(f"Attribute '{key}' not set")
         return None
 
     def _get(self, key):
@@ -170,7 +170,7 @@ class CodeBuilder:
         """Make sure the code type is set correctly"""
         if self._get('code_type') and self.code_type not in self.CodeType:
             raise self.CodeValidationError(
-                'invalid code type: must be one of {}, not {}'.format(list(self.CodeType), self.code_type)
+                f'invalid code type: must be one of {list(self.CodeType)}, not {self.code_type}'
             )
 
     def validate_upload(self):
@@ -182,7 +182,7 @@ class CodeBuilder:
             if self._get('remote_abs_path'):
                 messages.append('invalid option for store-and-upload code: "remote_abs_path"')
         if messages:
-            raise self.CodeValidationError('{}'.format(messages))
+            raise self.CodeValidationError(f'{messages}')
 
     def validate_installed(self):
         """If the code is on-computer, catch invalid store-and-upload attributes"""
@@ -193,7 +193,7 @@ class CodeBuilder:
             if self._get('code_rel_path'):
                 messages.append('invalid options for on-computer code: "code_rel_path"')
         if messages:
-            raise self.CodeValidationError('{}'.format(messages))
+            raise self.CodeValidationError(f'{messages}')
 
     class CodeValidationError(Exception):
         """
@@ -211,7 +211,7 @@ class CodeBuilder:
             return self.msg
 
         def __repr__(self):
-            return '<CodeValidationError: {}>'.format(self)
+            return f'<CodeValidationError: {self}>'
 
     def is_local(self):
         """Analogous to Code.is_local()"""

@@ -191,8 +191,8 @@ class TestBackupScriptUnit(AiidaTestCase):
 
         self.assertEqual(
             input_variables, target_variables,
-            'The test string {} did not succeed'.format(input_string) + ' the serialization deserialization test.\n' +
-            'Input variables: {}\n'.format(input_variables) + 'Output variables: {}\n'.format(target_variables)
+            f'The test string {input_string} did not succeed' + ' the serialization deserialization test.\n' +
+            f'Input variables: {input_variables}\n' + f'Output variables: {target_variables}\n'
         )
 
     def test_full_deserialization_serialization_1(self):
@@ -248,19 +248,17 @@ class TestBackupScriptUnit(AiidaTestCase):
 
         self.assertIsNotNone(
             self._backup_setup_inst._oldest_object_bk.tzinfo,
-            'Timezone info should not be none (timestamp: {}).'.format(self._backup_setup_inst._oldest_object_bk)
+            f'Timezone info should not be none (timestamp: {self._backup_setup_inst._oldest_object_bk}).'
         )
 
         self.assertIsNotNone(
             self._backup_setup_inst._end_date_of_backup.tzinfo,
-            'Timezone info should not be none (timestamp: {}).'.format(self._backup_setup_inst._end_date_of_backup)
+            f'Timezone info should not be none (timestamp: {self._backup_setup_inst._end_date_of_backup}).'
         )
 
         self.assertIsNotNone(
             self._backup_setup_inst._internal_end_date_of_backup.tzinfo,
-            'Timezone info should not be none (timestamp: {}).'.format(
-                self._backup_setup_inst._internal_end_date_of_backup
-            )
+            f'Timezone info should not be none (timestamp: {self._backup_setup_inst._internal_end_date_of_backup}).'
         )
 
         # The destination directory of the _backup_setup_inst
@@ -351,7 +349,7 @@ class TestBackupScriptIntegration(AiidaTestCase):
 
     def create_backup_scripts(self, tmp_folder):
         """Utility function to create backup scripts"""
-        backup_full_path = '{}/{}/{}/'.format(tmp_folder, self._aiida_rel_path, self._backup_rel_path)
+        backup_full_path = f'{tmp_folder}/{self._aiida_rel_path}/{self._backup_rel_path}/'
         # The predefined answers for the setup script
         ac = utils.ArrayCounter()
         answers = [

@@ -38,7 +38,7 @@ def load_entity(
     from aiida.orm.utils.loaders import OrmEntityLoader, IdentifierType
 
     if entity_loader is None or not issubclass(entity_loader, OrmEntityLoader):
-        raise TypeError('entity_loader should be a sub class of {}'.format(type(OrmEntityLoader)))
+        raise TypeError(f'entity_loader should be a sub class of {type(OrmEntityLoader)}')
 
     inputs_provided = [value is not None for value in (identifier, pk, uuid, label)].count(True)
 

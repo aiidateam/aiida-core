@@ -309,7 +309,7 @@ class TestVerdiGraph(AiidaTestCase):
         """
         # Get a PK of a node which exists
         root_node = str(self.node.pk)
-        filename = root_node + '.dot.pdf'
+        filename = f'{root_node}.dot.pdf'
         options = [root_node]
         try:
             result = self.cli_runner.invoke(cmd_node.graph_generate, options)
@@ -329,7 +329,7 @@ class TestVerdiGraph(AiidaTestCase):
         # Forbidden pk
         for root_node in ['xyz', '-5', '3.14']:
             options = [root_node]
-            filename = root_node + '.dot.pdf'
+            filename = f'{root_node}.dot.pdf'
             try:
                 result = self.cli_runner.invoke(cmd_node.graph_generate, options)
                 self.assertIsNotNone(result.exception)
@@ -348,7 +348,7 @@ class TestVerdiGraph(AiidaTestCase):
             pass
         #  Make sure verdi graph rejects this non-existant pk
         try:
-            filename = str(root_node) + '.dot.pdf'
+            filename = f'{str(root_node)}.dot.pdf'
             options = [str(root_node)]
             result = self.cli_runner.invoke(cmd_node.graph_generate, options)
             self.assertIsNotNone(result.exception)
@@ -363,7 +363,7 @@ class TestVerdiGraph(AiidaTestCase):
         positive ints
         """
         root_node = str(self.node.pk)
-        filename = root_node + '.dot.pdf'
+        filename = f'{root_node}.dot.pdf'
 
         # Test that the options don't fail
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
@@ -402,7 +402,7 @@ class TestVerdiGraph(AiidaTestCase):
         Test the input and output flags work.
         """
         root_node = str(self.node.pk)
-        filename = root_node + '.dot.pdf'
+        filename = f'{root_node}.dot.pdf'
 
         for flag in ['-i', '--process-in', '-o', '--process-out']:
             options = [flag, root_node]
@@ -426,7 +426,7 @@ class TestVerdiGraph(AiidaTestCase):
             # we just use the built-ins dot and canon as a minimal check that
             # the option works. After all, this test is for the cmdline.
             for fileformat in ['pdf', 'png']:
-                filename = root_node + '.dot.' + fileformat
+                filename = f'{root_node}.dot.{fileformat}'
                 options = [option, fileformat, root_node]
                 try:
                     result = self.cli_runner.invoke(cmd_node.graph_generate, options)
@@ -440,7 +440,7 @@ class TestVerdiGraph(AiidaTestCase):
         Test that the node id label format can be specified
         """
         root_node = str(self.node.pk)
-        filename = root_node + '.dot.pdf'
+        filename = f'{root_node}.dot.pdf'
 
         for id_label_type in ['uuid', 'pk', 'label']:
             options = ['--identifier', id_label_type, root_node]
@@ -479,7 +479,7 @@ class TestVerdiUserCommand(AiidaTestCase):
 
     def test_comment_add(self):
         """Test adding a comment."""
-        options = ['-N', str(self.node.pk), '--', '{}'.format(COMMENT)]
+        options = ['-N', str(self.node.pk), '--', f'{COMMENT}']
         result = self.cli_runner.invoke(cmd_node.comment_add, options, catch_exceptions=False)
         self.assertEqual(result.exit_code, 0)
 
@@ -522,7 +522,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = []  # no option, will ask in the prompt
         result = self.cli_runner.invoke(cmd_node.rehash, options, input='y')
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_interactive_no(self):
         """Passing no options and answering 'N' to the command will abort the command."""
@@ -537,7 +537,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f']  # force, so no questions are asked
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_bool(self):
         """Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2."""
@@ -545,7 +545,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f', '-e', 'aiida.data:bool']
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_float(self):
         """Limiting the queryset by defining an entry point, in this case float, should limit nodes to 1."""
@@ -553,7 +553,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f', '-e', 'aiida.data:float']
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_int(self):
         """Limiting the queryset by defining an entry point, in this case int, should limit nodes to 1."""
@@ -561,7 +561,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f', '-e', 'aiida.data:int']
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_explicit_pk(self):
         """Limiting the queryset by defining explicit identifiers, should limit nodes to 2 in this example."""
@@ -569,7 +569,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f', str(self.node_bool_true.pk), str(self.node_float.uuid)]
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_explicit_pk_and_entry_point(self):
         """Limiting the queryset by defining explicit identifiers and entry point, should limit nodes to 1."""
@@ -577,7 +577,7 @@ class TestVerdiRehash(AiidaTestCase):
         options = ['-f', '-e', 'aiida.data:bool', str(self.node_bool_true.pk), str(self.node_float.uuid)]
         result = self.cli_runner.invoke(cmd_node.rehash, options)
         self.assertClickResultNoException(result)
-        self.assertTrue('{} nodes'.format(expected_node_count) in result.output)
+        self.assertTrue(f'{expected_node_count} nodes' in result.output)
 
     def test_rehash_entry_point_no_matches(self):
         """Limiting the queryset by defining explicit entry point, with no nodes should exit with non-zero status."""

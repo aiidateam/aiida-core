@@ -30,7 +30,7 @@ class TestPluginVersionProvider(AiidaTestCase):
         import uuid
 
         # Create a new module with a unique name and add the `plugin` and `plugin_version` as attributes
-        module_name = 'TestModule{}'.format(str(uuid.uuid4())[:5])
+        module_name = f'TestModule{str(uuid.uuid4())[:5]}'
         dynamic_module = types.ModuleType(module_name, 'Dynamically created module for testing purposes')
         setattr(plugin, '__module__', dynamic_module.__name__)  # pylint: disable=no-member
         setattr(dynamic_module, plugin.__name__, plugin)

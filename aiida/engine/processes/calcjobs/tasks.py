@@ -60,7 +60,7 @@ def task_upload_job(process, transport_queue, cancellable):
     node = process.node
 
     if node.get_state() == CalcJobState.SUBMITTING:
-        logger.warning('CalcJob<{}> already marked as SUBMITTING, skipping task_update_job'.format(node.pk))
+        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
         raise Return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -85,7 +85,7 @@ def task_upload_job(process, transport_queue, cancellable):
             raise Return
 
     try:
-        logger.info('scheduled request to upload CalcJob<{}>'.format(node.pk))
+        logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
         result = yield exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
@@ -95,10 +95,10 @@ def task_upload_job(process, transport_queue, cancellable):
     except plumpy.CancelledError:
         pass
     except Exception:
-        logger.warning('uploading CalcJob<{}> failed'.format(node.pk))
-        raise TransportTaskException('upload_calculation failed {} times consecutively'.format(max_attempts))
+        logger.warning(f'uploading CalcJob<{node.pk}> failed')
+        raise TransportTaskException(f'upload_calculation failed {max_attempts} times consecutively')
     else:
-        logger.info('uploading CalcJob<{}> successful'.format(node.pk))
+        logger.info(f'uploading CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.SUBMITTING)
         raise Return(result)
 
@@ -121,7 +121,7 @@ def task_submit_job(node, transport_queue, cancellable):
     """
     if node.get_state() == CalcJobState.WITHSCHEDULER:
         assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
-        logger.warning('CalcJob<{}> already marked as WITHSCHEDULER, skipping task_submit_job'.format(node.pk))
+        logger.warning(f'CalcJob<{node.pk}> already marked as WITHSCHEDULER, skipping task_submit_job')
         raise Return(node.get_job_id())
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -136,17 +136,17 @@ def task_submit_job(node, transport_queue, cancellable):
             raise Return(execmanager.submit_calculation(node, transport))
 
     try:
-        logger.info('scheduled request to submit CalcJob<{}>'.format(node.pk))
+        logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
         result = yield exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
         )
     except plumpy.Interruption:
         pass
     except Exception:
-        logger.warning('submitting CalcJob<{}> failed'.format(node.pk))
-        raise TransportTaskException('submit_calculation failed {} times consecutively'.format(max_attempts))
+        logger.warning(f'submitting CalcJob<{node.pk}> failed')
+        raise TransportTaskException(f'submit_calculation failed {max_attempts} times consecutively')
     else:
-        logger.info('submitting CalcJob<{}> successful'.format(node.pk))
+        logger.info(f'submitting CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.WITHSCHEDULER)
         raise Return(result)
 
@@ -169,7 +169,7 @@ def task_update_job(node, job_manager, cancellable):
     :raises: Return containing True if the tasks was successfully completed, False otherwise
     """
     if node.get_state() == CalcJobState.RETRIEVING:
-        logger.warning('CalcJob<{}> already marked as RETRIEVING, skipping task_update_job'.format(node.pk))
+        logger.warning(f'CalcJob<{node.pk}> already marked as RETRIEVING, skipping task_update_job')
         raise Return(True)
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -196,17 +196,17 @@ def task_update_job(node, job_manager, cancellable):
         raise Return(job_done)
 
     try:
-        logger.info('scheduled request to update CalcJob<{}>'.format(node.pk))
+        logger.info(f'scheduled request to update CalcJob<{node.pk}>')
         job_done = yield exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
         )
     except plumpy.Interruption:
         raise
     except Exception:
-        logger.warning('updating CalcJob<{}> failed'.format(node.pk))
-        raise TransportTaskException('update_calculation failed {} times consecutively'.format(max_attempts))
+        logger.warning(f'updating CalcJob<{node.pk}> failed')
+        raise TransportTaskException(f'update_calculation failed {max_attempts} times consecutively')
     else:
-        logger.info('updating CalcJob<{}> successful'.format(node.pk))
+        logger.info(f'updating CalcJob<{node.pk}> successful')
         if job_done:
             node.set_state(CalcJobState.RETRIEVING)
 
@@ -230,7 +230,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     if node.get_state() == CalcJobState.PARSING:
-        logger.warning('CalcJob<{}> already marked as PARSING, skipping task_retrieve_job'.format(node.pk))
+        logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
         raise Return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
@@ -252,7 +252,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
             try:
                 detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
             except FeatureNotAvailable:
-                logger.info('detailed job info not available for scheduler of CalcJob<{}>'.format(node.pk))
+                logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                 node.set_detailed_job_info(None)
             else:
                 node.set_detailed_job_info(detailed_job_info)
@@ -260,18 +260,18 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
             raise Return(execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder))
 
     try:
-        logger.info('scheduled request to retrieve CalcJob<{}>'.format(node.pk))
+        logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
         yield exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
         )
     except plumpy.Interruption:
         raise
     except Exception:
-        logger.warning('retrieving CalcJob<{}> failed'.format(node.pk))
-        raise TransportTaskException('retrieve_calculation failed {} times consecutively'.format(max_attempts))
+        logger.warning(f'retrieving CalcJob<{node.pk}> failed')
+        raise TransportTaskException(f'retrieve_calculation failed {max_attempts} times consecutively')
     else:
         node.set_state(CalcJobState.PARSING)
-        logger.info('retrieving CalcJob<{}> successful'.format(node.pk))
+        logger.info(f'retrieving CalcJob<{node.pk}> successful')
         raise Return
 
 
@@ -295,7 +295,7 @@ def task_kill_job(node, transport_queue, cancellable):
     max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
 
     if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
-        logger.warning('CalcJob<{}> killed, it was in the {} state'.format(node.pk, node.get_state()))
+        logger.warning(f'CalcJob<{node.pk}> killed, it was in the {node.get_state()} state')
         raise Return(True)
 
     authinfo = node.computer.get_authinfo(node.user)
@@ -307,15 +307,15 @@ def task_kill_job(node, transport_queue, cancellable):
             raise Return(execmanager.kill_calculation(node, transport))
 
     try:
-        logger.info('scheduled request to kill CalcJob<{}>'.format(node.pk))
+        logger.info(f'scheduled request to kill CalcJob<{node.pk}>')
         result = yield exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
     except plumpy.Interruption:
         raise
     except Exception:
-        logger.warning('killing CalcJob<{}> failed'.format(node.pk))
-        raise TransportTaskException('kill_calculation failed {} times consecutively'.format(max_attempts))
+        logger.warning(f'killing CalcJob<{node.pk}> failed')
+        raise TransportTaskException(f'kill_calculation failed {max_attempts} times consecutively')
     else:
-        logger.info('killing CalcJob<{}> successful'.format(node.pk))
+        logger.info(f'killing CalcJob<{node.pk}> successful')
         node.set_scheduler_state(JobState.DONE)
         raise Return(result)
 
@@ -344,7 +344,7 @@ class Waiting(plumpy.Waiting):
         transport_queue = self.process.runner.transport
         command = self.data
 
-        process_status = 'Waiting for transport task: {}'.format(command)
+        process_status = f'Waiting for transport task: {command}'
 
         try:
 
@@ -364,7 +364,7 @@ class Waiting(plumpy.Waiting):
                 while not job_done:
                     scheduler_state = node.get_scheduler_state()
                     scheduler_state_string = scheduler_state.name if scheduler_state else 'UNKNOWN'
-                    process_status = 'Monitoring scheduler: job state {}'.format(scheduler_state_string)
+                    process_status = f'Monitoring scheduler: job state {scheduler_state_string}'
                     node.set_process_status(process_status)
                     job_done = yield self._launch_task(task_update_job, node, self.process.runner.job_manager)
 
@@ -381,7 +381,7 @@ class Waiting(plumpy.Waiting):
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException as exception:
-            raise plumpy.PauseInterruption('Pausing after failed transport task: {}'.format(exception))
+            raise plumpy.PauseInterruption(f'Pausing after failed transport task: {exception}')
         except plumpy.KillInterruption:
             yield self._launch_task(task_kill_job, node, transport_queue)
             self._killing.set_result(True)
@@ -390,7 +390,7 @@ class Waiting(plumpy.Waiting):
             node.set_process_status(None)
             raise
         except (plumpy.Interruption, plumpy.CancelledError):
-            node.set_process_status('Transport task {} was interrupted'.format(command))
+            node.set_process_status(f'Transport task {command} was interrupted')
             raise
         finally:
             # If we were trying to kill but we didn't deal with it, make sure it's set here

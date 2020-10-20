@@ -26,7 +26,7 @@ class LazyChoice(click.ParamType):
 
     def __init__(self, get_choices):
         if not callable(get_choices):
-            raise TypeError("Must pass a callable, got '{}'".format(get_choices))
+            raise TypeError(f"Must pass a callable, got '{get_choices}'")
 
         super().__init__()
         self._get_choices = get_choices
@@ -62,4 +62,4 @@ class LazyChoice(click.ParamType):
         if self.__click_choice is None:
             return 'LazyChoice(UNINITIALISED)'
 
-        return 'LazyChoice(%r)' % list(self.choices)
+        return f'LazyChoice({list(self.choices)!r})'

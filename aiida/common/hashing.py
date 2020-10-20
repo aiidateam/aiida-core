@@ -68,7 +68,7 @@ def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEF
         # time a random string is required. This may change the
         # properties of the chosen random sequence slightly, but this
         # is better than absolute predictability.
-        random.seed(hashlib.sha256(('%s%s%s' % (random.getstate(), time.time(), HASHING_KEY)).encode('utf-8')).digest())
+        random.seed(hashlib.sha256(f'{random.getstate()}{time.time()}{HASHING_KEY}'.encode('utf-8')).digest())
     return ''.join(random.choice(allowed_chars) for i in range(length))
 
 
@@ -123,7 +123,7 @@ def _make_hash(object_to_hash, **_):
     Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
-    raise ValueError('Value of type {} cannot be hashed'.format(type(object_to_hash)))
+    raise ValueError(f'Value of type {type(object_to_hash)} cannot be hashed')
 
 
 def _single_digest(obj_type, obj_bytes=b''):
@@ -217,7 +217,7 @@ def _(val, **kwargs):
 @_make_hash.register(numbers.Integral)
 def _(val, **kwargs):
     """get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', '{}'.format(val).encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode('utf-8'))]
 
 
 @_make_hash.register(bool)
@@ -288,5 +288,5 @@ def float_to_text(value, sig):
     :param value: the float value to convert
     :param sig: choose how many digits after the comma should be output
     """
-    fmt = '{{:.{}g}}'.format(sig)
+    fmt = f'{{:.{sig}g}}'
     return fmt.format(value)

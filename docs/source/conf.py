@@ -43,7 +43,7 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton'
+    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton', 'sphinxext.rediraffe'
 ]
 ipython_mplbackend = ''
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
@@ -192,6 +192,7 @@ html_logo = 'images/logo_aiida_docs.png'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_css_files = ['aiida-custom.css']
+rediraffe_redirects = 'redirects.txt'
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.

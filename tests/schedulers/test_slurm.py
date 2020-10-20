@@ -200,7 +200,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#SBATCH --time=1-00:00:00' in submit_script_text)
         self.assertTrue('#SBATCH --nodes=1' in submit_script_text)
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_bad_shebang(self):
         """Test that first line of submit script is as expected."""
@@ -258,7 +258,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#SBATCH --ntasks-per-node=2' in submit_script_text)
         self.assertTrue('#SBATCH --cpus-per-task=12' in submit_script_text)
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_mpiproc(self):  # pylint: disable=invalid-name
         """
@@ -290,7 +290,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#SBATCH --ntasks-per-node=1' in submit_script_text)
         self.assertTrue('#SBATCH --cpus-per-task=24' in submit_script_text)
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):  # pylint: disable=invalid-name
         """
@@ -325,7 +325,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#SBATCH --ntasks-per-node=1' in submit_script_text)
         self.assertTrue('#SBATCH --cpus-per-task=24' in submit_script_text)
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):  # pylint: disable=invalid-name
         """
@@ -403,7 +403,7 @@ def test_parse_output_invalid(detailed_job_info, expected):
 def test_parse_output_valid():
     """Test `SlurmScheduler.parse_output` for valid arguments."""
     number_of_fields = len(SlurmScheduler._detailed_job_info_fields)  # pylint: disable=protected-access
-    detailed_job_info = {'stdout': 'Header\n{}'.format('|' * number_of_fields)}
+    detailed_job_info = {'stdout': f"Header\n{'|' * number_of_fields}"}
     scheduler = SlurmScheduler()
 
     assert scheduler.parse_output(detailed_job_info, '', '') is None

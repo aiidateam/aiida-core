@@ -179,7 +179,7 @@ class SqlaSettingsManager(SettingsManager):
         try:
             setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
         except NoResultFound:
-            raise NotExistent('setting `{}` does not exist'.format(key)) from NoResultFound
+            raise NotExistent(f'setting `{key}` does not exist') from NoResultFound
 
         return Setting(key, setting.getvalue(), setting.description, setting.time)
 
@@ -215,4 +215,4 @@ class SqlaSettingsManager(SettingsManager):
             setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
             setting.delete()
         except NoResultFound:
-            raise NotExistent('setting `{}` does not exist'.format(key)) from NoResultFound
+            raise NotExistent(f'setting `{key}` does not exist') from NoResultFound

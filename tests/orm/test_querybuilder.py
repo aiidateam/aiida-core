@@ -834,34 +834,30 @@ class TestAttributes(AiidaTestCase):
         # Here I am testing which values contain a number 1.
         # Both 1 and 1.0 are legitimate values if ask for either 1 or 1.0
         for val in (1.0, 1):
-            qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): val}, project='uuid')
+            qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': val}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_float.uuid, n_int.uuid)))
-            qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'>': 0.5}}, project='uuid')
+            qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'>': 0.5}}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_float.uuid, n_int.uuid)))
-            qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'<': 1.5}}, project='uuid')
+            qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'<': 1.5}}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_float.uuid, n_int.uuid)))
         # Now I am testing the boolean value:
-        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): True}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': True}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_bool.uuid,)))
 
-        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'like': '%n%'}}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '%n%'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str2.uuid,)))
-        qb = orm.QueryBuilder().append(
-            orm.Node, filters={'attributes.{}'.format(key): {
-                                   'ilike': 'On%'
-                               }}, project='uuid'
-        )
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'ilike': 'On%'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str2.uuid,)))
-        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'like': '1'}}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str.uuid,)))
-        qb = orm.QueryBuilder().append(orm.Node, filters={'attributes.{}'.format(key): {'==': '1'}}, project='uuid')
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'==': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         self.assertEqual(set(res), set((n_str.uuid,)))
         if configuration.PROFILE.database_backend == 'sqlalchemy':
@@ -869,11 +865,7 @@ class TestAttributes(AiidaTestCase):
             # so I exclude. Not the nicest way, But I would like to keep this piece
             # of code because of the initialization part, that would need to be
             # duplicated or wrapped otherwise.
-            qb = orm.QueryBuilder().append(
-                orm.Node, filters={'attributes.{}'.format(key): {
-                                       'of_length': 3
-                                   }}, project='uuid'
-            )
+            qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'of_length': 3}}, project='uuid')
             res = [str(_) for _, in qb.all()]
             self.assertEqual(set(res), set((n_arr.uuid,)))
 
@@ -987,7 +979,7 @@ class QueryBuilderJoinsTests(AiidaTestCase):
         students = [orm.Data() for i in range(10)]
         advisors = [orm.CalculationNode() for i in range(3)]
         for i, a in enumerate(advisors):
-            a.label = 'advisor {}'.format(i)
+            a.label = f'advisor {i}'
             a.set_attribute('advisor_id', i)
 
         for n in advisors + students:
@@ -995,15 +987,15 @@ class QueryBuilderJoinsTests(AiidaTestCase):
 
         # advisor 0 get student 0, 1
         for i in (0, 1):
-            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label='is_advisor_{}'.format(i))
+            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
 
         # advisor 1 get student 3, 4
         for i in (3, 4):
-            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label='is_advisor_{}'.format(i))
+            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
 
         # advisor 2 get student 5, 6, 7
         for i in (5, 6, 7):
-            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='is_advisor_{}'.format(i))
+            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
 
         # let's add a differnt relationship than advisor:
         students[9].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
@@ -1332,7 +1324,7 @@ class TestConsistency(AiidaTestCase):
         # adding 5 links going out:
         for inode in range(5):
             output_node = orm.Data().store()
-            output_node.add_incoming(parent, link_type=LinkType.CREATE, link_label='link_{}'.format(inode))
+            output_node.add_incoming(parent, link_type=LinkType.CREATE, link_label=f'link_{inode}')
         for projection in ('id', '*'):
             qb = orm.QueryBuilder()
             qb.append(orm.CalculationNode, filters={'id': parent.id}, tag='parent', project=projection)

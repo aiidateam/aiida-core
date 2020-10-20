@@ -116,9 +116,9 @@ def validate_link(source, target, link_type, link_label):
     from aiida.common.links import LinkType, validate_link_label
     from aiida.orm import Node, Data, CalculationNode, WorkflowNode
 
-    type_check(link_type, LinkType, 'link_type should be a LinkType enum but got: {}'.format(type(link_type)))
-    type_check(source, Node, 'source should be a `Node` but got: {}'.format(type(source)))
-    type_check(target, Node, 'target should be a `Node` but got: {}'.format(type(target)))
+    type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
+    type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
+    type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
 
     if source.uuid is None or target.uuid is None:
         raise ValueError('source or target node does not have a UUID')
@@ -129,7 +129,7 @@ def validate_link(source, target, link_type, link_label):
     try:
         validate_link_label(link_label)
     except ValueError as exception:
-        raise ValueError('invalid link label `{}`: {}'.format(link_label, exception))
+        raise ValueError(f'invalid link label `{link_label}`: {exception}')
 
     # For each link type, define a tuple that defines the valid types for the source and target node, as well as
     # the outdegree and indegree character. If the degree is `unique` that means that there can only be a single
@@ -148,7 +148,7 @@ def validate_link(source, target, link_type, link_label):
     type_source, type_target, outdegree, indegree = link_mapping[link_type]
 
     if not isinstance(source, type_source) or not isinstance(target, type_target):
-        raise ValueError('cannot add a {} link from {} to {}'.format(link_type, type(source), type(target)))
+        raise ValueError(f'cannot add a {link_type} link from {type(source)} to {type(target)}')
 
     if outdegree == 'unique_triple' or indegree == 'unique_triple':
         # For a `unique_triple` degree we just have to check if an identical triple already exist, either in the cache
@@ -157,13 +157,12 @@ def validate_link(source, target, link_type, link_label):
 
     # If the outdegree is `unique` there cannot already be any other outgoing link of that type
     if outdegree == 'unique' and source.get_outgoing(link_type=link_type, only_uuid=True).all():
-        raise ValueError('node<{}> already has an outgoing {} link'.format(source.uuid, link_type))
+        raise ValueError(f'node<{source.uuid}> already has an outgoing {link_type} link')
 
     # If the outdegree is `unique_pair`, then the link labels for outgoing links of this type should be unique
     elif outdegree == 'unique_pair' and source.get_outgoing(
             link_type=link_type, only_uuid=True, link_label_filter=link_label).all():
-        raise ValueError('node<{}> already has an outgoing {} link with label "{}"'.format(
-            source.uuid, link_type, link_label))
+        raise ValueError(f'node<{source.uuid}> already has an outgoing {link_type} link with label "{link_label}"')
 
     # If the outdegree is `unique_triple`, then the link triples of link type, link label and target should be unique
     elif outdegree == 'unique_triple' and duplicate_link_triple:
@@ -172,13 +171,12 @@ def validate_link(source, target, link_type, link_label):
 
     # If the indegree is `unique` there cannot already be any other incoming links of that type
     if indegree == 'unique' and target.get_incoming(link_type=link_type, only_uuid=True).all():
-        raise ValueError('node<{}> already has an incoming {} link'.format(target.uuid, link_type))
+        raise ValueError(f'node<{target.uuid}> already has an incoming {link_type} link')
 
     # If the indegree is `unique_pair`, then the link labels for incoming links of this type should be unique
     elif indegree == 'unique_pair' and target.get_incoming(
             link_type=link_type, link_label_filter=link_label, only_uuid=True).all():
-        raise ValueError('node<{}> already has an incoming {} link with label "{}"'.format(
-            target.uuid, link_type, link_label))
+        raise ValueError(f'node<{target.uuid}> already has an incoming {link_type} link with label "{link_label}"')
 
     # If the indegree is `unique_triple`, then the link triples of link type, link label and source should be unique
     elif indegree == 'unique_triple' and duplicate_link_triple:
@@ -295,11 +293,11 @@ class LinkManager:
                     matching_entry = entry.node
                 else:
                     raise exceptions.MultipleObjectsError(
-                        'more than one neighbor with the label {} found'.format(label)
+                        f'more than one neighbor with the label {label} found'
                     )
 
         if matching_entry is None:
-            raise exceptions.NotExistent('no neighbor with the label {} found'.format(label))
+            raise exceptions.NotExistent(f'no neighbor with the label {label} found')
 
         return matching_entry
 
@@ -332,7 +330,7 @@ class LinkManager:
 
             # Insert the node at the given port name
             if port_name in current_namespace:
-                raise KeyError("duplicate label '{}' in namespace '{}'".format(port_name, '.'.join(port_namespaces)))
+                raise KeyError(f"duplicate label '{port_name}' in namespace '{'.'.join(port_namespaces)}'")
 
             current_namespace[port_name] = entry.node
 

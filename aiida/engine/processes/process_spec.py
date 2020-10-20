@@ -60,19 +60,19 @@ class ProcessSpec(plumpy.ProcessSpec):
             with this exit code will not be considered for caching
         """
         if not isinstance(status, int):
-            raise TypeError('status should be of integer type and not of {}'.format(type(status)))
+            raise TypeError(f'status should be of integer type and not of {type(status)}')
 
         if status < 0:
-            raise ValueError('status should be a positive integer, received {}'.format(type(status)))
+            raise ValueError(f'status should be a positive integer, received {type(status)}')
 
         if not isinstance(label, str):
-            raise TypeError('label should be of str type and not of {}'.format(type(label)))
+            raise TypeError(f'label should be of str type and not of {type(label)}')
 
         if not isinstance(message, str):
-            raise TypeError('message should be of str type and not of {}'.format(type(message)))
+            raise TypeError(f'message should be of str type and not of {type(message)}')
 
         if not isinstance(invalidates_cache, bool):
-            raise TypeError('invalidates_cache should be of type bool and not of {}'.format(type(invalidates_cache)))
+            raise TypeError(f'invalidates_cache should be of type bool and not of {type(invalidates_cache)}')
 
         self._exit_codes[label] = ExitCode(status, message, invalidates_cache=invalidates_cache)
 
@@ -95,16 +95,14 @@ class CalcJobProcessSpec(ProcessSpec):
         from aiida.orm import Dict
 
         if port_name not in self.outputs:
-            raise ValueError('{} is not a registered output port'.format(port_name))
+            raise ValueError(f'{port_name} is not a registered output port')
 
         valid_type_port = self.outputs[port_name].valid_type
         valid_type_required = Dict
 
         if valid_type_port is not valid_type_required:
             raise ValueError(
-                'the valid type of a default output has to be a {} but it is {}'.format(
-                    valid_type_port, valid_type_required
-                )
+                f'the valid type of a default output has to be a {valid_type_port} but it is {valid_type_required}'
             )
 
         self._default_output_node = port_name

@@ -97,7 +97,8 @@ Nodes
 
     Description:
 
-        returns the list of |Node| objects. Every node object contains value of attribute called ``pbc1`` if present otherwise null.
+        returns the list of |Node| objects.
+        Every node object contains value of attribute called ``pbc1`` if present otherwise null.
 
     Response::
 
@@ -140,7 +141,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-2. Get a list of all available |Node| types from database.
+2. Get a list of all available |Node| types from the database.
 
     REST URL::
 
@@ -682,7 +683,8 @@ Computers
 
     Description:
 
-        returns the list of three |Computer| objects (``limit=3``) starting from the 3rd row (``offset=2``) of the database table and the list will be ordered by ascending values of ``id``.
+        returns the list of three |Computer| objects (``limit=3``) starting from the 3rd row (``offset=2``) of the database table.
+        The list will be ordered by ascending values of ``id``.
 
     Response::
 
@@ -935,10 +937,9 @@ Examples::
 If no page number is specified, the system redirects the request to page 1.
 When pagination is used, the **header** of the response contains two more non-empty fields:
 
-    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results
-      of all pages
-    - ``Links``: links to the first, previous, next, and last page. Suppose that you send a request whose results  fill
-      8 pages. Then the value of the ``Links`` field would look like::
+    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results of all pages.
+    - ``Links``: links to the first, previous, next, and last page. Suppose that you send a request whose results fill 8 pages.
+      Then the value of the ``Links`` field would look like::
 
             <\http://localhost:5000/.../page/1?... >; rel=first,
             <\http://localhost:5000/.../page/3?... >; rel=prev,
@@ -971,7 +972,7 @@ All of them must be followed by the operator ``=``.
 
     :offset: Skips the first ``offset`` results (integer).
 
-    :perpage: How many results to show per page when paginating (integer).
+    :perpage: How many results to show per page (integer).
 
     :orderby: ``+<property>`` for ascending order and ``-<property>`` for descending order (``<property`` defaults to ascending).
         Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order).
@@ -996,10 +997,10 @@ All of them must be followed by the operator ``=``.
     :extras_filter: Similar to ``attributes_filter`` but for extras. It is used in the endpoints ``/contents/extras`` and ``/nodes``.
 
     :attributes:
-        Pass ``true`` in order to return attributes in the ``/nodes`` endpoint.
+        Pass ``true`` in order to return attributes in the ``/nodes`` endpoint (excluded by default).
 
     :extras:
-        Pass ``true`` in order to return extras in the ``/nodes`` endpoint.
+        Pass ``true`` in order to return extras in the ``/nodes`` endpoint (excluded by default).
 
     :download_format: to specify download format in ``/download`` endpoint.
 

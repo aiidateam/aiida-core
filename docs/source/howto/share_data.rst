@@ -157,7 +157,6 @@ Querying the REST API
 
 A URL to query the REST API consists of:
 
-
     1. The *base URL*, by default:
 
         http://127.0.0.1:5000/api/v4
@@ -180,8 +179,7 @@ A URL to query the REST API consists of:
            As usual, you can use partial UUIDs as long as they are unique.
 
            In order to query by *PK* you need to use the ``id`` filter (see below).
-           This also applies to :py:class:`~aiida.orm.User` s, which don't have UUIDs.
-
+           This also applies to :py:class:`~aiida.orm.users.User` s, which don't have UUIDs (but instead uses email).
 
     3. (Optional) The *query string* for filtering, ordering and pagination of results. For example::
 

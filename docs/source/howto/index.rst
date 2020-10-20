@@ -14,4 +14,5 @@ How-To Guides
    visualising_graphs/visualising_graphs
    installation
    plugins_develop
+   cookbook
    faq

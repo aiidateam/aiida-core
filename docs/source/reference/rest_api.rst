@@ -955,26 +955,38 @@ Besides pagination, the number of results can also be controlled using the ``lim
 Filtering results
 =================
 
-The filter query string is formed by one or more fields, separated by the special character ``&``.
+The filter query string is formed by one or more **fields**, separated by the special character ``&``.
+
 Each field has the form (``key``)(``operator``)(``value``).
 
-Fields can only contain alphanumeric characters plus ``_``, and the first character cannot be a number (similar to Python variable names).
+.. note:: Fields can only contain alphanumeric characters plus ``_``, and the first character cannot be a number (similar to Python variable names).
+.. note:: In the following *id* is a synonym for the *PK* used in other sections of the documentation.
 
 .. _reference:rest-api:filtering:unique:
 
-Unique filters
---------------
+Filter keys
+-----------
 
 Unique filters can be specified only once in a query string.
 All of them must be followed by the operator ``=``.
 
-    :limit: Number of results (integer).
+.. list-table:: Unique filters
+    :header-rows: 1
 
-    :offset: Skips the first ``offset`` results (integer).
+    * - Filter key
+      - Description
 
-    :perpage: How many results to show per page (integer).
+    * - ``limit``
+      - Number of results (integer).
 
-    :orderby: ``+<property>`` for ascending order and ``-<property>`` for descending order (``<property`` defaults to ascending).
+    * - ``offset``
+      - Skips the first ``offset`` results (integer).
+
+    * - ``perpage``
+      - How many results to show per page (integer).
+
+    * - ``orderby``
+      - ``+<property>`` for ascending order and ``-<property>`` for descending order (``<property`` defaults to ascending).
         Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological) order.
         Examples:
 
@@ -984,8 +996,8 @@ All of them must be followed by the operator ``=``.
             http://localhost:5000/api/v4/computers?orderby=+name
             http://localhost:5000/api/v4/computers?orderby=-uuid
 
-    :attributes_filter:
-        A comma-separated list of attributes to return.
+    * - ``attributes_filter``
+      - A comma-separated list of attributes to return.
         Use together with ``attributes=true``.
         Available in the endpoints ``/contents/attributes`` and ``/nodes``.
         Example:
@@ -994,37 +1006,236 @@ All of them must be followed by the operator ``=``.
 
             http://localhost:5000/api/v4/nodes/4fb10ef1/contents/attributes?attributes_filter=append_text,prepend_text
 
-    :extras_filter: Similar to ``attributes_filter`` but for extras. It is used in the endpoints ``/contents/extras`` and ``/nodes``.
+    * - ``extras_filter``
+      - Similar to ``attributes_filter`` but for extras. It is used in the endpoints ``/contents/extras`` and ``/nodes``.
 
-    :attributes:
-        Pass ``true`` in order to return attributes in the ``/nodes`` endpoint (excluded by default).
+    * - ``attributes``
+      - Pass ``true`` in order to return attributes in the ``/nodes`` endpoint (excluded by default).
 
-    :extras:
-        Pass ``true`` in order to return extras in the ``/nodes`` endpoint (excluded by default).
+    * - ``extras``
+      - Pass ``true`` in order to return extras in the ``/nodes`` endpoint (excluded by default).
 
-    :download_format: to specify download format in ``/download`` endpoint.
+    * - ``download_format``
+      - to specify download format in ``/download`` endpoint.
 
-    :download: in ``/download`` endpoint, if ``download=false`` it displays the content in the browser instead of downloading a file.
+    * - ``download``
+      - in ``/download`` endpoint, if ``download=false`` it displays the content in the browser instead of downloading a file.
 
-    :filename: this filter is used to pass file name in ``/repo/list`` and ``/repo/contents`` endpoint.
+    * - ``filename``
+      - this filter is used to pass file name in ``/repo/list`` and ``/repo/contents`` endpoint.
 
-    :tree_in_limit: specifies the limit on tree incoming nodes.
+    * - ``tree_in_limit``
+      - specifies the limit on tree incoming nodes.
 
-    :tree_out_limit: specifies the limit on tree outgoing nodes.
+    * - ``tree_out_limit``
+      - specifies the limit on tree outgoing nodes.
 
-Regular filters
----------------
 
-Regular filters can be compounded (requiring all specified filters to apply):
+Regular filters can be compounded, requiring all specified filters to apply.
 
-    :string:
+
+.. list-table:: Regular filters
+    :header-rows: 1
+
+    * - Filter key
+      - Value type
+      - Supported resources
+    * - ``id``
+      - integer
+      - users, computers, groups, nodes
+    * - ``user_id``
+      - integer
+      - groups
+    * - ``uuid``
+      - string
+      - computers, groups, nodes
+    * - ``name``
+      - string
+      - computers
+    * - ``email`` \*
+      - string
+      - users
+    * - ``first_name``
+      - string
+      - users
+    * - ``last_name``
+      - string
+      - users
+    * - ``institution``
+      - string
+      - users
+    * - ``label``
+      - string
+      - groups, nodes,
+    * - ``description``
+      - string
+      - computers, groups
+    * - ``transport_type``
+      - string
+      - computers
+    * - ``scheduler_type``
+      - string
+      - computers
+    * - ``attributes``
+      - string
+      - nodes
+    * - ``ctime``
+      - datetime
+      - nodes
+    * - ``mtime``
+      - datetime
+      - nodes
+    * - ``node_type``
+      - string
+      - nodes
+    * - ``full_type``
+      - string
+      - nodes
+    * - ``type_string``
+      - string
+      - groups
+    * - ``hostname``
+      - string
+      - computers
+
+\* Key not available via the ``/users/`` endpoint for reasons of privacy.
+
+.. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
+    Examples:
+
+    - ``node_type="data.code.Code."`` selects only objects of type |Code|
+    - ``node_type="data.remote.RemoteData."`` selects only objects of type *RemoteData*
+
+.. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
+    For example, the request:
+
+        ::
+
+            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
+
+    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
+
+
+
+Filter operators
+----------------
+
+The operators supported by a specific filter key are uniquely determined by the value type associated with that key.
+
+For example, a key that requires a boolean value admits only the identity operator ``=``, whereas an integer value enables the usage of the comparison operators ``=``, ``<``, ``<=``, ``>``, ``>=`` plus the membership operator ``=in=``:
+
+.. list-table:: Filter operators
+    :header-rows: 1
+
+    * - Operator
+      - Meaning
+      - Accepted value types
+    * - ``=``
+      - identity
+      - integers, strings, bool, datetime
+    * - ``>``
+      - greater than
+      - integers, strings, datetime
+    * - ``<``
+      - less than
+      - integers, strings, datetime
+    * - ``>=``
+      - greater than or equal to
+      - integers, strings, datetime
+    * - ``<=``
+      - less than or equal to
+      - integers, strings, datetime
+    * - ``=like=``
+      - pattern matching
+      - strings
+    * - ``=ilike=``
+      - case-insensitive pattern matching
+      - strings
+    * - ``=in=``
+      - identity with one element of a list
+      - integers, strings, datetime
+
+
+Pattern matching
+^^^^^^^^^^^^^^^^
+
+The pattern matching operators ``=like=`` and ``=ilike=`` must be followed by the pattern definition, namely, a string where two characters assume special meaning:
+
+    1. ``%`` is used to replace an arbitrary sequence of characters, including no characters.
+    2. ``_`` is used to replace one or zero characters.
+
+.. note:: When special characters are required verbatim, escape them by pre-pending a backslash ``\``.
+
+.. list-table:: Pattern matching with ``=like=`` and ``=ilike=``
+    :header-rows: 1
+
+    * - Filter
+      - Matches
+      - Doesn't match
+    * -  ``name=like="a%d_"``
+      -  "aiida"
+      -  "AiiDA"
+    * -  ``name=ilike="a%d_"``
+      -  "aiida", "AiiDA"
+      -
+    * -  ``name=like="a_d_"``
+      -
+      -  "aiida"
+    * -  ``name=like="aii%d_a"``
+      -  "aiida"
+      -
+    * -  ``uuid=like="cdfd48%"``
+      - "cdfd48f9-7ed2-4969-ba06-09c752b83d2"
+      -
+    * - ``description=like="This calculation is %\% useful"``
+      - "This calculation is 100% useful"
+      -
+
+Membership
+^^^^^^^^^^
+
+The membership operator ``=in=`` has to be followed by a comma-separated list of values of the same type.
+The condition is fulfilled if the column value of an object is an element of the list.
+
+Examples::
+
+    http://localhost:5000/api/v4/nodes?id=in=45,56,78
+    http://localhost:5000/api/v4/computers/?scheduler_type=in="slurm","pbs"
+
+Comparison
+^^^^^^^^^^^^^^^^^^^^
+
+The comparison operators ``<``, ``>``, ``<=``, ``>=`` assume natural ordering for integers, (case-insensitive) alphabetical ordering for strings, and chronological ordering for datetime values.
+
+Examples:
+
+    - ``http://localhost:5000/api/v4/nodes?id>578`` selects the nodes having an id larger than 578.
+    - ``http://localhost:5000/api/v4/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
+
+
+
+
+Filter value types
+------------------
+
+Filter values should be specified as follows:
+
+.. list-table:: Regular filters
+    :header-rows: 1
+
+    * - Value type
+      - Description
+    * - ``string``
+      -
         Text enclosed in double quotes.
         If the string contains double quotes those have to be escaped as ``""`` (two double quotes).
         Note that in the unlikely occurrence of a sequence of double quotes you will have to escape it by writing twice as many double quotes.
 
-    :integer: Positive integer numbers.
+    * - ``integer``
+      - Positive integer numbers.
 
-    :datetime:
+    * - ``datetime``
+      -
         Datetime objects expressed in the format ``(DATE)T(TIME)(SHIFT)`` where ``(SHIFT)`` is the time difference with respect to the UTC time.
         This is required to avoid any problem arising from comparing datetime values expressed in different time zones.
         The formats of each field are:
@@ -1047,137 +1258,10 @@ Regular filters can be compounded (requiring all specified filters to apply):
             http://localhost:5000/api/v4/nodes?mtime>=2019-04-23
 
 
-    :bool: It can be either true or false (lower case).
-
-The following table reports what is the value type and the supported resources associated to each key.
-
-.. note:: In the following *id* is a synonym for *pk* (often used in other sections of the documentation).
+    * - ``bool``
+      - It can be either true or false (lower case).
 
 
-+--------------+----------+---------------------------------------------------+
-|key           |value type|resources                                          |
-+==============+==========+===================================================+
-|id            |integer   |users, computers, groups, nodes                    |
-+--------------+----------+---------------------------------------------------+
-|user_id       |integer   |groups                                             |
-+--------------+----------+---------------------------------------------------+
-|uuid          |string    |computers, groups, nodes                           |
-+--------------+----------+---------------------------------------------------+
-|name          |string    |computers                                          |
-+--------------+----------+---------------------------------------------------+
-|first_name    |string    |users                                              |
-+--------------+----------+---------------------------------------------------+
-|last_name     |string    |users                                              |
-+--------------+----------+---------------------------------------------------+
-|institution   |string    |users                                              |
-+--------------+----------+---------------------------------------------------+
-|label         |string    |groups, nodes,                                     |
-+--------------+----------+---------------------------------------------------+
-|description   |string    |computers, groups                                  |
-+--------------+----------+---------------------------------------------------+
-|transport_type|string    |computers                                          |
-+--------------+----------+---------------------------------------------------+
-|scheduler_type|string    |computers                                          |
-+--------------+----------+---------------------------------------------------+
-|attributes    |string    |nodes                                              |
-+--------------+----------+---------------------------------------------------+
-|ctime         |datetime  |nodes                                              |
-+--------------+----------+---------------------------------------------------+
-|mtime         |datetime  |nodes                                              |
-+--------------+----------+---------------------------------------------------+
-|node_type     |string    |nodes                                              |
-+--------------+----------+---------------------------------------------------+
-|full_type     |string    |nodes                                              |
-+--------------+----------+---------------------------------------------------+
-|type_string   |string    |groups                                             |
-+--------------+----------+---------------------------------------------------+
-|hostname      |string    |computers                                          |
-+--------------+----------+---------------------------------------------------+
-
-\* Key not available via the ``/users/`` endpoint for reasons of privacy.
-
-The operators supported by a specific key are uniquely determined by the value type associated to that key.
-For example, a key that requires a boolean value admits only the identity operator ``=``, whereas an integer value enables the usage of the relational operators ``=``, ``<``, ``<=``, ``>``, ``>=`` plus the membership operator ``=in=``.
-Please refer to the following table for a comprehensive list.
-
-+-----------+------------------------+---------------------------------+
-|operator   |meaning                 |accepted value types             |
-+===========+========================+=================================+
-|``=``      |identity                |integers, strings, bool, datetime|
-+-----------+------------------------+---------------------------------+
-|``>``      |greater than            |integers, strings, datetime      |
-+-----------+------------------------+---------------------------------+
-|``<``      |lower than              |integers, strings, datetime      |
-+-----------+------------------------+---------------------------------+
-|``>=``     |greater than or equal to|integers, strings, datetime      |
-+-----------+------------------------+---------------------------------+
-|``<=``     |lower than or equal to  |integers, strings, datetime      |
-+-----------+------------------------+---------------------------------+
-|``=like=`` |pattern matching        |strings                          |
-+-----------+------------------------+---------------------------------+
-|``=ilike=``|case-insensitive        |strings                          |
-|           |pattern matching        |                                 |
-+-----------+------------------------+---------------------------------+
-|``=in=``   |identity with one       |integers, strings, datetime      |
-|           |element of a list       |                                 |
-+-----------+------------------------+---------------------------------+
-
-The pattern matching operators ``=like=`` and ``=ilike=`` must be followed by the pattern definition, namely, a string where two characters assume special meaning:
-
-    1. ``%`` is used to replace an arbitrary sequence of characters, including no characters.
-    2. ``_`` is used to replace one or zero characters.
-
-Differently from ``=like=``, ``=ilike=`` assumes that two characters that only differ in the case are equal.
-
-To prevent interpreting special characters as wildcards, these have to be escaped by pre-pending the character ``\``.
-
-Examples:
-
-+-----------------------------------------------------+-------------------------------------+------------------+
-| Filter                                              | Matched string                      |Non-matched string|
-+=====================================================+=====================================+==================+
-| ``name=like="a%d_"``                                |       "aiida"                       |     "AiiDA"      |
-+-----------------------------------------------------+-------------------------------------+------------------+
-| ``name=ilike="a%d_"``                               |   "aiida", "AiiDA"                  |                  |
-+-----------------------------------------------------+-------------------------------------+------------------+
-| ``name=like="a_d_"``                                |                                     |     "aiida"      |
-+-----------------------------------------------------+-------------------------------------+------------------+
-| ``name=like="aii%d_a"``                             |        "aiida"                      |                  |
-+-----------------------------------------------------+-------------------------------------+------------------+
-| ``uuid=like="cdfd48%"``                             |"cdfd48f9-7ed2-4969-ba06-09c752b83d2"|                  |
-+-----------------------------------------------------+-------------------------------------+------------------+
-|``description=like="This calculation is %\% useful"``|"This calculation is 100% useful"    |                  |
-+-----------------------------------------------------+-------------------------------------+------------------+
-
-The membership operator ``=in=`` has to be followed by a comma-separated list of values of the same type.
-The condition is fulfilled if the column value of an object is an element of the list.
-
-Examples::
-
-    http://localhost:5000/api/v4/nodes?id=in=45,56,78
-    http://localhost:5000/api/v4/computers/?scheduler_type=in="slurm","pbs"
-
-The relational operators '<', '>', '<=', '>=' assume natural ordering for integers, (case-insensitive) alphabetical ordering for strings, and chronological ordering for datetime values.
-
-Examples:
-
-    - ``http://localhost:5000/api/v4/nodes?id>578`` selects the nodes having an id larger than 578.
-    - ``http://localhost:5000/api/v4/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
-
-.. note:: Node types have to be specified by a string that defines their position in the AiiDA source tree ending with a dot.
-    Examples:
-
-    - ``node_type="data.code.Code."`` selects only objects of *Code* type
-    - ``node_type="data.remote.RemoteData."`` selects only objects of *RemoteData* type
-
-.. note:: If you use in your request the endpoint *links/incoming* (*links/outgoing*) together with one or more filters, the latter are applied to the incoming (outgoing) nodes of the selected *id*.
-    For example, the request:
-
-        ::
-
-            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
-
-    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
 .. |Node| replace:: :py:class:`~aiida.orm.nodes.Node`

@@ -158,10 +158,10 @@ def import_data_dj(
         ######################
         export_version = StrictVersion(str(metadata['export_version']))
         if export_version != expected_export_version:
-            msg = 'Export file version is {}, can import only version {}'\
+            msg = 'Archive file version is {}, can import only version {}'\
                     .format(metadata['export_version'], expected_export_version)
             if export_version < expected_export_version:
-                msg += "\nUse 'verdi export migrate' to update this export file."
+                msg += "\nUse 'verdi export migrate' to update this archive file."
             else:
                 msg += '\nUpdate your AiiDA version in order to import this file.'
 

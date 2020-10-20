@@ -113,7 +113,7 @@ def remove_attribute_link_metadata(metadata):
 
 
 def migrate_v6_to_v7(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.6 to v0.7"""
+    """Migration of archive files from v0.6 to v0.7"""
     old_version = '0.6'
     new_version = '0.7'
 

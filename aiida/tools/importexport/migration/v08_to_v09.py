@@ -47,7 +47,7 @@ def migration_dbgroup_type_string(data):
 
 
 def migrate_v8_to_v9(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.8 to v0.9."""
+    """Migration of archive files from v0.8 to v0.9."""
     old_version = '0.8'
     new_version = '0.9'
 

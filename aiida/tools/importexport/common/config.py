@@ -34,7 +34,7 @@ USER_ENTITY_NAME = 'User'
 LOG_ENTITY_NAME = 'Log'
 COMMENT_ENTITY_NAME = 'Comment'
 
-# The signatures used to reference the entities in the import/export file
+# The signatures used to reference the entities in the archive file
 NODE_SIGNATURE = 'aiida.backends.djsite.db.models.DbNode'
 GROUP_SIGNATURE = 'aiida.backends.djsite.db.models.DbGroup'
 COMPUTER_SIGNATURE = 'aiida.backends.djsite.db.models.DbComputer'
@@ -82,7 +82,7 @@ entity_names_to_sqla_schema = {
     COMMENT_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.comment.DbComment'
 }
 
-# Mapping of the export file fields (that coincide with the Django fields) to
+# Mapping of the archive file fields (that coincide with the Django fields) to
 # model fields that can be used for the query of the database in both backends.
 # These are the names of the fields of the models that belong to the
 # corresponding entities.

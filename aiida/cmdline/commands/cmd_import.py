@@ -120,7 +120,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
                     migrate_archive = True
                 else:
                     migrate_archive = click.confirm(
-                        'Do you want to try and migrate {} to the newest export file version?\n'
+                        'Do you want to try and migrate {} to the newest archive file version?\n'
                         'Note: This will not change your current file.'.format(archive),
                         default=True,
                         abort=True
@@ -172,7 +172,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     except Exception as exception:
         _echo_error(
             'an exception occurred while migrating the archive {}.\n'
-            "Use 'verdi export migrate' to update this export file.".format(archive),
+            "Use 'verdi export migrate' to update this archive file.".format(archive),
             non_interactive=non_interactive,
             more_archives=more_archives,
             raised_exception=exception
@@ -233,7 +233,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     '--migration/--no-migration',
     default=True,
     show_default=True,
-    help='Force migration of export file archives, if needed.'
+    help='Force migration of archive file archives, if needed.'
 )
 @options.NON_INTERACTIVE()
 @decorators.with_dbenv()

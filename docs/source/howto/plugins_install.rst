@@ -5,7 +5,7 @@ How to install plugins
 **********************
 
 The functionality of AiiDA can be extended through plugins.
-There are various types of functionality that can be extended, such as new :ref:`data types<how-to:data:plugin>`, :ref:`calculation plugins<how-to:plugin-codes>` and much more.
+There are various types of functionality that can be extended, such as new :ref:`data types<topics:data_types:plugin>`, :ref:`calculation plugins<how-to:plugin-codes>` and much more.
 Multiple plugins can be bundled together and distributed in a :ref:`plugin package<how-to:plugins-develop>`.
 The `AiiDA plugin registry <https://aiidateam.github.io/aiida-registry>`_ gives an overview of public plugin packages.
 

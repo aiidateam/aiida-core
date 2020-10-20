@@ -145,9 +145,13 @@ Like all ``verdi`` commands, you can select a different AiiDA profile via the ``
 
     REST API version history:
 
-     * ``aiida-core`` >= 1.0.0b6: ``v4``
-     * ``aiida-core`` >= 1.0.0b3, <1.0.0b6: ``v3``
-     * ``aiida-core`` <1.0.0b3: ``v2``
+
+Version history
+---------------
+
+     * ``aiida-core`` >= 1.0.0b6: ``v4``. Simplified endpoints; only ``/nodes``, ``/processes``, ``/calcjobs``, ``/groups``, ``/computers`` and ``/servers`` remain.
+     * ``aiida-core`` >= 1.0.0b3, <1.0.0b6: ``v3``. Development version, never shipped with a stable release.
+     * ``aiida-core`` <1.0.0b3: ``v2``. First API version, with new endpoints added step by step.
 
 
 .. _how-to:share:serve:query:
@@ -171,77 +175,34 @@ Deploying a REST API server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``verdi restapi`` command runs the REST API through the ``werkzeug`` python-based HTTP server.
-In order to deploy production instances of the REST API for serving your data to others, we recommend using a fully fledged web server, such as `Apache <https://httpd.apache.org/>`_ or `NGINX <https://www.nginx.com/>`_.
+In order to deploy production instances of the REST API for serving your data to others, we recommend using a fully fledged web server, such as `Apache <https://httpd.apache.org/>`_ or `NGINX <https://www.nginx.com/>`_, which then runs the REST API python application through the `web server gateway interface (WSGI) <wsgi.readthedocs.io/>`_.
 
 .. note::
-    One Apache/NGINX server can host multiple APIs, e.g. connecting to different AiiDA profiles.
+    One Apache/NGINX server can host multiple instances of the REST APIs, e.g. serving data from different AiiDA profiles.
 
-In the following, we assume you have a working installation of Apache with the ``mod_wsgi`` `WSGI module <modwsgi.readthedocs.io/>`_ enabled.
+A ``myprofile-rest.wsgi`` script for an AiiDA profile ``myprofile`` would look like this:
 
-The goal of the example is to hookup the APIs ``django`` and ``sqlalchemy`` pointing to two AiiDA profiles, called for simplicity ``django`` and ``sqlalchemy``.
+.. literalinclude:: include/snippets/myprofile-rest.wsgi
 
-All the relevant files are enclosed under the path ``/docs/wsgi/`` starting from the AiiDA source code path.
-In each of the folders ``app1/`` and ``app2/``, there is a file named ``rest.wsgi`` containing a python script that instantiates and configures a python web app called ``application``, according to the rules of ``mod_wsgi``.
-For how the script is written, the object ``application`` is configured through the file ``config.py`` contained in the same folder.
-Indeed, in ``app1/config.py`` the variable ``aiida-profile`` is set to ``"django"``, whereas in ``app2/config.py`` its value is ``"sqlalchemy"``.
+.. note:: See the documentation of :py:func:`~aiida.restapi.run_api.configure_api` for all available configuration options.
 
-The path where you put the ``.wsgi`` file as well as its name are irrelevant as long as they are correctly referred to in the Apache configuration file, as shown later on.
-Similarly, you can place ``config.py`` in a custom path, provided you change the variable ``config_file_path`` in the ``wsgi file`` accordingly.
+In the following, we explain how to run this wsgi application using Apache on Ubuntu.
 
-In ``rest.wsgi`` the only options you might want to change is ``catch_internal_server``.
-When set to ``True``, it lets the exceptions thrown during the execution of the app propagate all the way through until they reach the logger of Apache.
-Especially when the app is not entirely stable yet, one would like to read the full python error traceback in the Apache error log.
+    #. Install and enable the ``mod_wsgi`` `WSGI module <modwsgi.readthedocs.io/>`_ module:
 
-Finally, you need to setup the Apache site through a proper configuration file.
-We provide two template files: ``one.conf`` or ``many.conf``.
-The first file tells Apache to bundle both apps in a unique Apache daemon process.
-Apache usually creates multiple processes dynamically and with this configuration each process will handle both apps.
+    .. code-block:: console
 
-The script ``many.conf``, instead, defines two different process groups, one for each app.
-So the processes created dynamically by Apache will always be handling one app each.
-The minimal number of Apache daemon processes equals the number of apps, contrarily to the first architecture, where one process is enough to handle two or even a larger number of apps.
+           $ sudo apt install libapache2-mod-wsgi-py3
+           $ sudo a2enmod wsgi
 
-Let us call the two apps for this example ``django`` and ``sqlalchemy``, matching with the chosen AiiDA profiles.
-In both ``one.conf`` and ``many.conf``, the important directives that should be updated if one changes the paths or names of the apps are:
+    #. Place the WSGI script in a folder on your server, for example ``/home/ubuntu/wsgi/myprofile-rest.wsgi``.
 
-    - ``WSGIProcessGroup`` to define the process groups for later reference.
-      In ``one.conf`` this directive appears only once to define the generic group ``profiles``, as there is only one kind of process handling both apps.
-      In ``many.conf`` this directive appears once per app and is embedded into a "Location" tag, e.g.::
+    #. Configure apache to run the WSGI application using a virtual host configuration similar to:
 
-        <Location /django>
-            WSGIProcessGroup sqlalchemy
-        <Location/>
+       .. literalinclude:: include/snippets/aiida-rest.conf
 
-    - ``WSGIDaemonProcess`` to define the path to the AiiDA virtual environment.
-      This appears once per app in both configurations.
+       Place this ``aiida-rest.conf`` file in ``/etc/apache2/sites-enabled``
 
-    - ``WSGIScriptAlias`` to define the absolute path of the ``.wsgi`` file of each app.
+    #. Restart apache: ``sudo service apache2 restart``.
 
-    - The ``<Directory>`` tag mainly used to grant Apache access to the files used by each app, e.g.::
-
-        <Directory "<aiida.source.code.path>/aiida/restapi/wsgi/app1">
-            Require all granted
-        </Directory>
-
-The latest step is to move either ``one.conf`` or ``many.conf`` into the Apache configuration folder and restart the Apache server.
-In Ubuntu, this is usually done with the commands:
-
-.. code-block:: bash
-
-    cp <conf_file>.conf /etc/apache2/sites-enabled/000-default.conf
-    sudo service apache2 restart
-
-We believe the two basic architectures we have just explained can be successfully applied in many different deployment scenarios.
-Nevertheless, we suggest users who need finer tuning of the deployment setup to look into to the official documentation of `Apache <https://httpd.apache.org/>`_ and, more importantly, `WSGI <wsgi.readthedocs.io/>`_.
-
-The URLs of the requests handled by Apache must start with one of the paths specified in the directives ``WSGIScriptAlias``.
-These paths identify uniquely each app and allow Apache to route the requests to their correct apps.
-Examples of well-formed URLs are:
-
-.. code-block:: bash
-
-    curl http://localhost/django/api/v4/computers -X GET
-    curl http://localhost/sqlalchemy/api/v4/computers -X GET
-
-The first (second) request will be handled by the app ``django`` (``sqlalchemy``), and will serve results fetched from the AiiDA profile ``django`` (``sqlalchemy``).
-Notice that we have not specified any port in the URLs since Apache listens conventionally to port 80, where any request lacking the port is automatically redirected (port 443 for HTTPS).
+You should now be able to reach your REST API at ``localhost/myprofile/api/v4`` (Port 80).

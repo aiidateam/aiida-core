@@ -16,3 +16,5 @@ get_started/computers.rst howto/run_codes.rst
 get_started/codes.rst howto/run_codes.rst
 howto/plugins.rst howto/plugins_develop.rst
 verdi/verdi_user_guide.rst topics/cli.rst
+
+import_export/main.html internals/data_storage.rst

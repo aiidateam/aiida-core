@@ -14,3 +14,10 @@ verdi/verdi_user_guide.rst topics/cli.rst
 working_with_aiida/index.rst howto/index.rst
 working_with_aiida/python_api.rst reference/api/public.rst
 working_with_aiida/scripting.rst howto/interact.rst
+
+# fix https://www.materialscloud.org/dmp 
+apidoc/aiida.orm.rst reference/apidoc/aiida.orm.rst
+import_export/main.rst
+querying/querybuilder/usage.rst 
+restapi/index.rst
+datatypes/index.rst

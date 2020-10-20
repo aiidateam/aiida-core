@@ -10,6 +10,8 @@ An AiiDA installation consists of three core components (plus any external codes
 * |PostgreSQL|: The service that manages the database that AiiDA uses to store data.
 * |RabbitMQ|: The message broker used for communication within AiiDA.
 
+.. _intro:get_started:setup:
+
 Setup
 =====
 
@@ -425,6 +427,7 @@ This is the recommended method for users on shared systems and systems where the
        (aiida) $ pg_ctl stop
 
 .. _intro:get_started:docker:
+.. _intro:install:docker:
 
 Run AiiDA via a Docker image
 ----------------------------
@@ -452,6 +455,12 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       $ docker run -d --name aiida-container aiidateam/aiida-core:\ |release|\
 
+   You can use the following command to block until all services have started up:
+
+   .. code-block:: console
+
+      $ docker exec -t aiida-container wait-for-services
+
    ---
 
    **Check setup**
@@ -474,6 +483,12 @@ This image contains a fully pre-configured AiiDA environment which makes it part
        :type: ref
        :text: What's next?
        :classes: btn-outline-primary btn-block font-weight-bold
+
+.. caution::
+
+    All data stored in the container will persist as long as you restart the same container, e.g., with (``docker start aiida-container``), however if you remove the container, all data will be lost.
+    Use `volumes <https://docs.docker.com/storage/volumes/>`__ to share data between containers and ensure its persistency on the host machine.
+
 
 Run AiiDA via a Virtual Machine
 -------------------------------

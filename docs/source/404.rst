@@ -1,0 +1,12 @@
+:orphan:
+
+===============
+ Oh, oh -- 404!
+===============
+
+We could not find this page 😢
+
+Please, try using the links from the sidebar to find what you are looking for.
+
+.. image:: images/logo_aiida_docs.png
+   :align: center

@@ -24,7 +24,7 @@ dependencies:
 - kiwipy[rmq]~=0.6.1
 - numpy~=1.17
 - paramiko~=2.7
-- plumpy~=0.16.1
+- plumpy~=0.17.1
 - pgsu~=0.1.0
 - psutil~=5.6
 - psycopg2>=2.8.3,~=2.8

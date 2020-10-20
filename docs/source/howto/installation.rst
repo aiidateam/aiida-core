@@ -218,13 +218,14 @@ the configuration directory ``~/project_a/.aiida`` will be used.
     If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you, so make sure to set the ``AIIDA_PATH`` correctly.
 
 
-.. todo::
+.. _how-to:installation:configure:daemon-as-service:
 
-    .. _how-to:installation:plugins:
+Daemon as a service
+===================
 
-    title: Installing plugins
-
-    `#4122`_
+The daemon can be set up as a system service, such that it automatically starts at system startup.
+How to do this, is operating system specific.
+For Ubuntu, here is `a template for the service file <https://github.com/marvel-nccr/ansible-role-aiida/blob/c709088dff74d1e1ae4d8379e740aba35fb2ef97/templates/aiida-daemon%40.service>`_ and `ansible instructions to install the service <https://github.com/marvel-nccr/ansible-role-aiida/blob/c709088dff74d1e1ae4d8379e740aba35fb2ef97/tasks/aiida-daemon.yml>`_.
 
 
 .. _how-to:installation:performance:

@@ -32,19 +32,11 @@ class RESTApiTestCase(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):  # pylint: disable=too-many-locals, too-many-statements
         """
-        Basides the standard setup we need to add few more objects in the
-        database to be able to explore different requests/filters/orderings etc.
+        Add objects to the database for different requests/filters/orderings etc.
         """
-        # call parent setUpClass method
         super().setUpClass()
 
-        # connect the app and the api
-        # Init the api by connecting it the the app (N.B. respect the following
-        # order, api.__init__)
-        kwargs = dict(PREFIX=cls._url_prefix, PERPAGE_DEFAULT=cls._PERPAGE_DEFAULT, LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
-
         api = configure_api(catch_internal_server=True)
-
         cls.app = api.app
         cls.app.config['TESTING'] = True
 

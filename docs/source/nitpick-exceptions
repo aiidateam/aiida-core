@@ -23,6 +23,9 @@ py:class builtins.dict
 # not quite clear why necessary...
 py:class WorkChainSpec
 
+py:class EntityType
+py:class aiida.tools.groups.paths.WalkNodeResult
+
 ### python packages
 # Note: These exceptions are needed if
 # * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
@@ -39,9 +42,11 @@ py:meth  click.Option.get_default
 
 py:class concurrent.futures._base.TimeoutError
 
-py:class docutils.parsers.rst.Directive
+py:class sphinx.util.docutils.SphinxDirective
 
 py:class frozenset
+
+py:class numpy.bool_
 
 py:class paramiko.proxy.ProxyCommand
 

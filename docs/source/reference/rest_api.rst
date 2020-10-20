@@ -975,7 +975,7 @@ All of them must be followed by the operator ``=``.
     :perpage: How many results to show per page (integer).
 
     :orderby: ``+<property>`` for ascending order and ``-<property>`` for descending order (``<property`` defaults to ascending).
-        Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological order).
+        Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological) order.
         Examples:
 
         ::

@@ -7,23 +7,30 @@ AiiDA REST API
 Available endpoints and responses
 =================================
 
-The HTTP response of the REST API consists in a JSON object, a header, and a status code.
-Possible status are:
+In order to obtain a list of all available endpoints, query the API base URL or the `/server/endpoints` endpoint::
+
+           http://localhost:5000/api/v4
+           http://localhost:5000/api/v4/server/endpoints
+
+The HTTP response of the REST API consists of a status code, a header, and a JSON object.
+
+Possible status codes are:
 
     1. 200 for successful requests.
     2. 400 for bad requests.
-       In this case, the JSON object contains only an error message describing the problem.
+       The JSON object contains an error message describing the issue with the request.
     3. 500 for a generic internal server error.
-       The JSON object contains only a generic error message.
+       The JSON object contains a generic error message.
     4. 404 for invalid URL.
-       Differently from the 400 status, it is returned when the REST API does not succeed in directing the request to a specific resource.
-       This typically happens when the path does not match any of the supported format.
-       No JSON is returned.
+       The request does not match any resource, and no JSON is returned.
 
-The header is a standard HTTP response header with the additional custom field ``X-Total-Counts`` and, only if paginated results are required, a non-empty ``Link`` field, as described in the Pagination section.
+The header is a standard HTTP response header with the additional custom fields
 
-The JSON object mainly contains the list of the results returned by the API (in the ``data`` key).
-It also contains information on the request (keys ``method``, ``url``, ``url_root``, ``path``, ``query_string``, and ``resource_type``).
+ * ``X-Total-Counts`` and
+ * ``Link`` (only if paginated results are required, see the Pagination section).
+
+The ``data`` field of the JSON object contains the main payload returned by the API.
+The JSON object further contains information on the request in the ``method``, ``url``, ``url_root``, ``path``, ``query_string``, and ``resource_type`` fields.
 
 .. _restapi_apache:
 

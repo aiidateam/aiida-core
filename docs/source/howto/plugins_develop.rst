@@ -5,11 +5,11 @@ How to package plugins
 **********************
 
 This section focuses on how to *package* AiiDA extensions (plugins) so that they can be tested, published and eventually reused by others.
-For guides on writing specific extensions, see :ref:`how-to:plugin-codes:interfacing` and :ref:`how-to:data:plugin`.
+For guides on writing specific extensions, see :ref:`how-to:plugin-codes:interfacing` and :ref:`topics:data_types:plugin`.
 
 .. todo::
 
-    For guides on writing specific extensions, see :ref:`how-to:plugin-codes:interfacing`, :ref:'how-to:plugin-codes:scheduler', :ref:'how-to:plugin-codes:transport' or :ref:`how-to:data:plugin`.
+    For guides on writing specific extensions, see :ref:`how-to:plugin-codes:interfacing`, :ref:'how-to:plugin-codes:scheduler', :ref:'how-to:plugin-codes:transport' or :ref:`topics:data_types:plugin`.
 
 
 .. _how-to:plugins-develop:bundle:

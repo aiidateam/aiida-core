@@ -79,9 +79,10 @@ class List(Data, MutableSequence):
     def pop(self, **kwargs):  # pylint: disable=arguments-differ
         """Remove and return item at index (default last)."""
         data = self.get_list()
-        data.pop(**kwargs)
+        item = data.pop(**kwargs)
         if not self._using_list_reference():
             self.set_list(data)
+        return item
 
     def index(self, value):  # pylint: disable=arguments-differ
         """Return first index of value.."""

@@ -10,6 +10,7 @@ An AiiDA installation consists of three core components (plus any external codes
 * |PostgreSQL|: The service that manages the database that AiiDA uses to store data.
 * |RabbitMQ|: The message broker used for communication within AiiDA.
 
+.. _intro:install:setup:
 .. _intro:get_started:setup:
 
 Setup

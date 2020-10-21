@@ -10,6 +10,7 @@ install/installation.rst intro/get_started.rst
 install/configuration.rst howto/installation.rst
 install/updating_installation.rst howto/installation.rst
 install/troubleshooting.rst intro/troubleshooting.rst
+restapi/index.rst reference/rest_api.rst
 verdi/verdi_user_guide.rst topics/cli.rst
 working_with_aiida/index.rst howto/index.rst
 working_with_aiida/python_api.rst reference/api/public.rst

@@ -60,8 +60,7 @@ If you are unsure, use the :ref:`system-wide installation <intro:get_started:sys
 
    :fa:`cloud,mr-1` **Run via virtual machine**
 
-   .. link-button:: intro:get_started:virtual-machine
-      :type: ref
+   .. link-button:: https://quantum-mobile.readthedocs.io/
       :text: Use a virtual machine with all the required software pre-installed.
       :classes: stretched-link btn-link
 
@@ -433,8 +432,6 @@ This is the recommended method for users on shared systems and systems where the
 Run AiiDA via a Docker image
 ----------------------------
 
-.. _intro:get_started:virtual-machine:
-
 The AiiDA team maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core>`__.
 This image contains a fully pre-configured AiiDA environment which makes it particularly useful for learning and testing purposes.
 
@@ -490,12 +487,6 @@ This image contains a fully pre-configured AiiDA environment which makes it part
     All data stored in the container will persist as long as you restart the same container, e.g., with (``docker start aiida-container``), however if you remove the container, all data will be lost.
     Use `volumes <https://docs.docker.com/storage/volumes/>`__ to share data between containers and ensure its persistency on the host machine.
 
-
-Run AiiDA via a Virtual Machine
--------------------------------
-
-The `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs, also incorporating additional pre-installed Materials Science codes.
-See `here <https://www.materialscloud.org/work/quantum-mobile>`__ for information on how to download and use the virtual machine.
 
 .. _intro:get_started:next:
 

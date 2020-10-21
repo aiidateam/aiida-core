@@ -1029,9 +1029,7 @@ All of them must be followed by the operator ``=``.
     * - ``tree_out_limit``
       - specifies the limit on tree outgoing nodes.
 
-
 Regular filters can be compounded, requiring all specified filters to apply.
-
 
 .. list-table:: Regular filters
     :header-rows: 1
@@ -1102,13 +1100,11 @@ Regular filters can be compounded, requiring all specified filters to apply.
 .. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
     Examples:
 
-    - ``node_type="data.code.Code."`` selects only objects of type |Code|
-    - ``node_type="data.remote.RemoteData."`` selects only objects of type *RemoteData*
+    - ``node_type="data.code.Code."`` selects only objects of type |Code|.
+    - ``node_type="data.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.nodes.data.remote.RemoteData`.
 
 .. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
-    For example, the request:
-
-        ::
+    For example, the request::
 
             http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
 
@@ -1210,8 +1206,6 @@ Examples:
 
     - ``http://localhost:5000/api/v4/nodes?id>578`` selects the nodes having an id larger than 578.
     - ``http://localhost:5000/api/v4/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
-
-
 
 
 Filter value types

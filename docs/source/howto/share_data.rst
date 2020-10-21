@@ -181,7 +181,8 @@ A URL to query the REST API consists of:
        In order to query by *PK* you need to use the ``id`` filter (see below).
        This also applies to :py:class:`~aiida.orm.users.User` s, which don't have UUIDs (but instead uses email).
 
-3. (Optional) The *query string* for filtering, ordering and pagination of results. For example::
+3. (Optional) The *query string* for filtering, ordering and pagination of results.
+   For example::
 
     ?limit=20&offset=35
     ?id=200

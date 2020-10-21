@@ -14,4 +14,5 @@ restapi/index.rst reference/rest_api.rst
 verdi/verdi_user_guide.rst topics/cli.rst
 working_with_aiida/index.rst howto/index.rst
 working_with_aiida/python_api.rst reference/api/public.rst
+working_with_aiida/resultmanager.rst howto/exploring.rst
 working_with_aiida/scripting.rst howto/interact.rst

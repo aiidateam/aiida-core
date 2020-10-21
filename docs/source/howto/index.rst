@@ -12,6 +12,7 @@ How-To Guides
    plugin_codes
    workflows
    data
+   exploring
    share_data
    visualising_graphs/visualising_graphs
    installation

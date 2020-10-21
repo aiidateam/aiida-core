@@ -195,6 +195,11 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
           (aiida) $ pip install aiida-core
           (aiida) $ reentry scan
 
+      .. hint::
+
+          See the `venv documentation <https://docs.python.org/3/library/venv.html>`__ if the activation command fails.
+          The exact command for activating a virtual environment differs slightly based on the used shell.
+
       .. dropdown:: :fa:`plus-circle` Installation extras
 
          There are additional optional packages that you may want to install, which are grouped in the following categories:

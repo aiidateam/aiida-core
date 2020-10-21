@@ -9,12 +9,12 @@ How to explore the provenance graph
 Incoming and outgoing links
 ===========================
 
-The provenance graph in AiiDA is a :ref:`directed acyclic graph <topics:provenance:concepts>`.
+The provenance graph in AiiDA is a :ref:`directed graph <topics:provenance:concepts>`.
 The vertices of the graph are the *nodes* and the edges that connect them are called *links*.
-Since the graph is directed, any node can have *incoming* and *outgoing* links that connects it to neighboring nodes.
+Since the graph is directed, any node can have *incoming* and *outgoing* links that connect it to neighboring nodes.
 
 To discover the neighbors of a given node, you can use the methods :meth:`~aiida.orm.nodes.node.Node.get_incoming` and :meth:`~aiida.orm.nodes.node.Node.get_outgoing`.
-They have the exact same interface but will return the neighbors from which the links are incoming, or to which the links are pointing, respectively.
+They have the exact same interface but will return the neighbors connected to the current node with link coming into it, or with links going out of it, respectively.
 For example, for a given ``node``, to inspect all the neighboring nodes from which a link is incoming to the ``node``:
 
 .. code-block:: python
@@ -44,8 +44,8 @@ Note that the :class:`~aiida.orm.utils.links.LinkManager` provides many convenie
 The :meth:`~aiida.orm.nodes.node.Node.get_incoming` and :meth:`~aiida.orm.nodes.node.Node.get_outgoing` methods accept various arguments that allow one to filter what neighboring nodes should be matched:
 
  * ``node_class``: accepts a subclass of :class:`~aiida.orm.nodes.node.Node`, only neighboring nodes with a class that matches this will be returned
- * ``link_type``: accepts a vale of :class:`~aiida.common.links.LinkType`, only neighboring nodes that are linked with this link type will be returned
- * ``link_label_filter``: accepts a string regex (with optional wildcards), only neighboring nodes that are linked with a link label that matches the regex will be returned
+ * ``link_type``: accepts a value of :class:`~aiida.common.links.LinkType`, only neighboring nodes that are linked with this link type will be returned
+ * ``link_label_filter``: accepts a string  expression (with optional wildcards using the syntax of SQL ``LIKE`` patterns, see below), only neighboring nodes that are linked with a link label that matches the pattern will be returned
 
 As an example:
 
@@ -53,8 +53,9 @@ As an example:
 
     node.get_incoming(node_class=Data, link_type=LinkType.INPUT_CALC, link_label_filter='output%node_').all_nodes()
 
-will return only neighboring data nodes that are linked to the ``node`` with a link of type ``LinkType.INPUT_CALC`` and where the link label matches the regex ``'output%node_'``.
-The ``%`` character matches one or more characters and the ``_`` character matches exactly one character.
+will return only neighboring data nodes that are linked to the ``node`` with a link of type ``LinkType.INPUT_CALC`` and where the link label matches the pattern ``'output%node_'``.
+Reminder on the syntax of SQL `LIKE` patterns: the ``%`` character matches any string of zero or more characters, while the ``_`` character matches exactly one character.
+These two special characters can be escaped by prepending them with a backslash (note that when putting a backslash in a Python string you have to escape the backslash itself, so you will need two backslashes: e.g., to match exactly a link label ``a_b`` you need to pass ``link_label_filter='a\\_b'``).
 
 
 .. _how-to:exploring:inputs-outputs:
@@ -72,8 +73,8 @@ Instead of using :meth:`~aiida.orm.nodes.node.Node.get_incoming` and :meth:`~aii
     inputs = process_node.inputs
     outputs = process_node.outputs
 
-These properties do not return the actual inputs and outputs directly, but instead return an instance of :class:`~aiida.orm.utils.managers.NodeLinksManager`
-The reason is because through the manager, the inputs or outputs are accessible through their link label and it is tab-completed.
+These properties do not return the actual inputs and outputs directly, but instead return an instance of :class:`~aiida.orm.utils.managers.NodeLinksManager`.
+The reason is because through the manager, the inputs or outputs are accessible through their link label (that, for inputs and outputs of processes, is unique) and can be tab-completed.
 For example, if the ``process_node`` has an output with the label ``result``, it can be retrieved as:
 
 .. code-block:: python
@@ -104,10 +105,14 @@ Similar to the ``inputs`` and ``outputs`` properties of process nodes, there are
     * :meth:`~aiida.orm.nodes.process.process.ProcessNode.called`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the list of process nodes called by this node.
       If this process node did not call any other processes, this property returns an empty list.
     * :meth:`~aiida.orm.nodes.process.process.ProcessNode.caller`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the process node that called this node.
-      If this ndoe was not called by a process, this property returns ``None``.
+      If this node was not called by a process, this property returns ``None``.
     * :meth:`~aiida.orm.nodes.data.Data.creator`: defined for :class:`~aiida.orm.nodes.data.Data` nodes and returns the process node that created it.
       If the node was not created by a process, this property returns ``None``.
 
+.. note::
+
+    Using the ``creator`` and ``inputs`` properties, one can easily move *up* the provenance graph.
+    For example, starting from some data node that represents the result of a long workflow, one can move up the provenance graph to find an initial input node of interest: ``result.creator.inputs.some_input.creator.inputs.initial_input``.
 
 .. _how-to:exploring:calcjob-results:
 
@@ -135,3 +140,9 @@ Individual keys can then be accessed through attribute dereferencing:
 
 In an interactive shell, the available keys are also tab-completed.
 If you type ``node.res.`` followed by the tab key twice, a list of the available keys is printed.
+
+.. note::
+
+    The :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.res` property is really just a shortcut to quickly and easily access an attribute of the default output node of a calculation job.
+    For example, if the default output node link label is ``output_parameters``, then ``node.res.some_key`` is exactly equivalent to ``node.outputs.output_parameters.dict.some_key``.
+    That is to say, when using ``res``, one is accessing attributes of one of the output nodes, and not of the calculation job node itself.

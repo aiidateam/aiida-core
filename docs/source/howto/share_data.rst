@@ -201,8 +201,6 @@ Here are some examples to try::
 
        $ curl https://aiida-dev.materialscloud.org/2dstructures/api/v4/users
 
-
-
 For an extensive user documentation of the endpoints, the query string as well as the format of the responses, see the :ref:`AiiDA REST API reference <reference:rest-api>`.
 
 

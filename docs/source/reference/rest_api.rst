@@ -98,7 +98,7 @@ Nodes
     Description:
 
         Returns the list of |Node| objects.
-        Every node object contains value of attribute called ``pbc1`` if present otherwise null.
+        Every node object contains value of attribute called ``pbc1`` if present otherwise ``null``.
 
     Response::
 
@@ -776,7 +776,7 @@ Users
 
     Description:
 
-        Returns a list of all the *User* objects.
+        Returns a list of all the |User| objects.
 
     Response::
 
@@ -814,7 +814,7 @@ Users
 
     Description:
 
-        Returns a lists of the *User* objects whose first name starts with ``"aii"``, regardless the case of the characters.
+        Returns a lists of the |User| objects whose first name starts with ``"aii"``, regardless the case of the characters.
 
     Response::
 
@@ -849,7 +849,7 @@ Groups
 
     Description:
 
-        Returns the list of ten *Group* objects (``limit=10``) starting from the 1st row of the database table (``offset=0``) and the list will be ordered by ``user_id`` in descending order.
+        Returns the list of ten |Group| objects (``limit=10``) starting from the 1st row of the database table (``offset=0``) and the list will be ordered by ``user_id`` in descending order.
 
     Response::
 
@@ -893,7 +893,7 @@ Groups
 
     Description:
 
-        Returns the details of the *Group* object with ``uuid="a6e5b..."``.
+        Returns the details of the |Group| object with ``uuid="a6e5b..."``.
 
     Response::
 
@@ -945,7 +945,6 @@ When pagination is used, the **header** of the response contains two more non-em
             <\http://localhost:5000/.../page/3?... >; rel=prev,
             <\http://localhost:5000/.../page/5?... >; rel=next,
             <\http://localhost:5000/.../page/8?... >; rel=last
-
 
 Besides pagination, the number of results can also be controlled using the ``limit`` and ``offset`` filters, see :ref:`below <reference:rest-api:filtering:unique>`.
 
@@ -1264,8 +1263,9 @@ Filter values should be specified as follows:
 
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
+.. |Code| replace:: :py:class:`~aiida.orm.nodes.Code`
 .. |Node| replace:: :py:class:`~aiida.orm.nodes.Node`
 .. |ProcessNode| replace:: :py:class:`~aiida.orm.nodes.process.ProcessNode`
 .. |CalcJobNode| replace:: :py:class:`~aiida.orm.nodes.process.CalcJobNode`
 .. |User| replace:: :py:class:`~aiida.orm.users.User`
-.. |Group| replace:: :py:class:`Group <aiida.orm.Group>`
+.. |Group| replace:: :py:class:`~aiida.orm.groups.Group`

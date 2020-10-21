@@ -163,7 +163,8 @@ A URL to query the REST API consists of:
 
    Querying the base URL returns a list of all available endpoints.
 
-2. The *path* defining the requested *resource*, optionally followed by a more specific *endpoint*. For example::
+2. The *path* defining the requested *resource*, optionally followed by a more specific *endpoint*.
+   For example::
 
         /nodes
         /nodes/page/2

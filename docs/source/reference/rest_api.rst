@@ -987,9 +987,7 @@ All of them must be followed by the operator ``=``.
     * - ``orderby``
       - ``+<property>`` for ascending order and ``-<property>`` for descending order (``<property`` defaults to ascending).
         Ascending (descending) order for strings corresponds to alphabetical (reverse-alphabetical) order, whereas for datetime objects it corresponds to chronological (reverse-chronological) order.
-        Examples:
-
-        ::
+        Examples::
 
             http://localhost:5000/api/v4/computers?orderby=+id
             http://localhost:5000/api/v4/computers?orderby=+name
@@ -999,9 +997,7 @@ All of them must be followed by the operator ``=``.
       - A comma-separated list of attributes to return.
         Use together with ``attributes=true``.
         Available in the endpoints ``/contents/attributes`` and ``/nodes``.
-        Example:
-
-        ::
+        Example::
 
             http://localhost:5000/api/v4/nodes/4fb10ef1/contents/attributes?attributes_filter=append_text,prepend_text
 
@@ -1037,65 +1033,67 @@ Regular filters can be compounded, requiring all specified filters to apply.
     * - Filter key
       - Value type
       - Supported resources
-    * - ``id``
-      - integer
-      - users, computers, groups, nodes
-    * - ``user_id``
-      - integer
-      - groups
-    * - ``uuid``
-      - string
-      - computers, groups, nodes
-    * - ``name``
-      - string
-      - computers
-    * - ``email`` \*
-      - string
-      - users
-    * - ``first_name``
-      - string
-      - users
-    * - ``last_name``
-      - string
-      - users
-    * - ``institution``
-      - string
-      - users
-    * - ``label``
-      - string
-      - groups, nodes,
-    * - ``description``
-      - string
-      - computers, groups
-    * - ``transport_type``
-      - string
-      - computers
-    * - ``scheduler_type``
-      - string
-      - computers
+
     * - ``attributes``
       - string
       - nodes
     * - ``ctime``
       - datetime
       - nodes
-    * - ``mtime``
-      - datetime
-      - nodes
-    * - ``node_type``
+    * - ``description``
       - string
-      - nodes
+      - computers, groups, nodes
+    * - ``email`` \*
+      - string
+      - users
+    * - ``first_name``
+      - string
+      - users
     * - ``full_type``
       - string
       - nodes
-    * - ``type_string``
-      - string
-      - groups
     * - ``hostname``
       - string
       - computers
+    * - ``id``
+      - integer
+      - users, computers, groups, nodes
+    * - ``institution``
+      - string
+      - users
+    * - ``label``
+      - string
+      - groups, nodes
+    * - ``last_name``
+      - string
+      - users
+    * - ``mtime``
+      - datetime
+      - nodes
+    * - ``name``
+      - string
+      - computers
+    * - ``node_type``
+      - string
+      - nodes
+    * - ``scheduler_type``
+      - string
+      - computers
+    * - ``transport_type``
+      - string
+      - computers
+    * - ``type_string``
+      - string
+      - groups
+    * - ``user_id``
+      - integer
+      - groups
+    * - ``uuid``
+      - string
+      - computers, groups, nodes
 
-\* Key not available via the ``/users/`` endpoint for reasons of privacy.
+
+\* Key filtered out in response of the ``/users/`` endpoint privacy reasons.
 
 .. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
     Examples:
@@ -1213,19 +1211,14 @@ Filter value types
 
 Filter values should be specified as follows:
 
-.. list-table:: Regular filters
+.. list-table:: Filter value types
     :header-rows: 1
 
     * - Value type
       - Description
-    * - ``string``
-      -
-        Text enclosed in double quotes.
-        If the string contains double quotes those have to be escaped as ``""`` (two double quotes).
-        Note that in the unlikely occurrence of a sequence of double quotes you will have to escape it by writing twice as many double quotes.
 
-    * - ``integer``
-      - Positive integer numbers.
+    * - ``bool``
+      - Either ``true`` or ``false`` (lower case).
 
     * - ``datetime``
       -
@@ -1242,18 +1235,19 @@ Filter values should be specified as follows:
 
         This format is ``ISO-8601`` compliant.
         Note that date and time fields have to be separated by the character ``T``.
-        Examples:
-
-        ::
+        Examples::
 
             http://localhost:5000/api/v4/nodes?ctime>2019-04-23T05:45+03:45
             http://localhost:5000/api/v4/nodes?ctime<2019-04-23T05:45
             http://localhost:5000/api/v4/nodes?mtime>=2019-04-23
 
+    * - ``integer``
+      - Positive integer numbers.
 
-    * - ``bool``
-      - It can be either true or false (lower case).
-
+    * - ``string``
+      - Text enclosed in double quotes.
+        If the string contains double quotes those have to be escaped as ``""`` (two double quotes).
+        Note that in the unlikely occurrence of a sequence of double quotes you will have to escape it by writing twice as many double quotes.
 
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`

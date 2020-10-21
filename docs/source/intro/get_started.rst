@@ -88,7 +88,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    .. tabbed:: Ubuntu
 
-      *AiiDA is tested on Ubuntu versions 14.04, 16.04, and 18.04.*
+      *AiiDA is tested on Ubuntu versions 16.04, 18.04, and 20.04.*
 
       Open a terminal and execute:
 

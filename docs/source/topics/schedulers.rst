@@ -7,7 +7,7 @@ Batch Job Schedulers
 Batch job schedulers manage the job queues and execution on a compute resource.
 AiiDA ships with plugins for a range of schedulers, and this section describes the interface of these plugins.
 
-Follow :ref:`these instructions <topics:schedulers:create_plugin>` to add support for custom schedulers.
+Follow :ref:`these instructions <topics:schedulers:develop_plugin>` to add support for a custom scheduler.
 
 PBSPro
 ------
@@ -214,11 +214,34 @@ And setting the fields using the ``metadata.options`` input dictionary of the |C
         }
     }
 
-.. _topics:schedulers:create_plugin:
+.. _topics:schedulers:develop_plugin:
 
-Create a new scheduler plugin
------------------------------
+Developing a plugin
+-------------------
 
+The scheduler class is not supposed to be used by the user.
+Instead, the AiiDA engine will employ it to create a submission script for submitting a job to a scheduler.
+
+When creating a job scheduler a user has to create two classes: one for validation of the resources and one for the actual scheduler. When creating the latter the user implement the following functions:
+
+    1) ``_get_joblist_command``: returns the command to report a full information on existing jobs.
+    2) ``_get_detailed_job_info_command``: returns the command to get the detailed information on  a job, even after the job has finished.
+    3) ``_get_submit_script_header``: return the submit script header.
+    4) ``_get_submit_command``: return the string to submit a given script.
+    5) ``_parse_joblist_output``: parse the queue output string, as returned by executing the command returned by `_get_joblist_command`.
+    6) ``_parse_submit_output``: parse the output of the submit command, as returned by executing the command returned by `_get_submit_command`.
+    7) ``_get_kill_command``: return the command to kill the job with specified jobid.
+    8) ``_parse_kill_output``: parse the output of the kill command.
+    9) ``parse_output``: parse the output of the scheduler.
+
+
+Download :download:`this template <scheduler_template.py>` as a starting point to implementing a new scheduler plugin.
+It contains the interface with all the methods that need to be implemented, including docstrings that will work with Sphinx documentation.
+
+.. note::
+
+    To inform AiiDA about your new scheduler plugin you must register an entry point in the ``aiida.schedulers`` entry point group.
+    Please visit the `AiiDA registry <https://aiidateam.github.io/aiida-registry/>`_ to see an example of how this can be done.
 
 
 .. |NodeNumberJobResource| replace:: :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`

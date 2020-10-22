@@ -113,6 +113,23 @@ class ArchiveData:
         ) + ')'
 
 
+@dataclass
+class ExportReport:
+    """Class for storing data about the archive process."""
+    # time in seconds
+    time_collect_start: float
+    time_collect_stop: float
+    # skipped if no data to write
+    time_write_start: Optional[float] = None
+    time_write_stop: Optional[float] = None
+    # additional data returned  by the writer
+    writer_data: Optional[Dict[str, Any]] = None
+
+    @property
+    def total_time(self):
+        return (self.time_write_stop or self.time_collect_stop) - self.time_collect_start
+
+
 class ArchiveWriterAbstract(ABC):
     """An abstract interface for AiiDA archive writers."""
 
@@ -368,7 +385,7 @@ def export(
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     writer_init: Optional[Dict[str, Any]] = None,
     **traversal_rules: bool,
-) -> dict:
+) -> ExportReport:
     """Export AiiDA data to an archive file.
 
     .. deprecated:: 1.2.1
@@ -475,9 +492,9 @@ def export(
             **traversal_rules
         )
 
-        output_data = {}
+        report_data: Dict[str, Any] = {'time_write_start': None, 'time_write_stop': None, 'writer_data': None}
 
-        output_data['time_collect_start'] = time.time()
+        report_data['time_collect_start'] = time.time()
         export_data = _collect_archive_data(
             entities=entities,
             silent=silent,
@@ -487,22 +504,22 @@ def export(
             include_logs=include_logs,
             **traversal_rules
         )
-        output_data['time_collect_stop'] = time.time()
+        report_data['time_collect_stop'] = time.time()
 
-        extract_time = output_data['time_collect_start'] - output_data['time_collect_stop']
+        extract_time = report_data['time_collect_stop'] - report_data['time_collect_start']
         EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
         if export_data is not None:
             try:
-                output_data['time_write_start'] = time.time()
-                output_data['writer'] = writer.write(export_data=export_data, silent=silent)  # type: ignore
-                output_data['time_write_stop'] = time.time()
+                report_data['time_write_start'] = time.time()
+                report_data['writer_data'] = writer.write(export_data=export_data, silent=silent)  # type: ignore
+                report_data['time_write_stop'] = time.time()
             except (exceptions.ArchiveExportError, LicensingException) as exc:
                 if os.path.exists(filename):
                     os.remove(filename)
                 raise exc
 
-            write_time = output_data['time_write_start'] - output_data['time_write_stop']
+            write_time = report_data['time_write_stop'] - report_data['time_write_start']
             EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
 
         else:
@@ -513,7 +530,7 @@ def export(
         if silent:
             logging.disable(logging.NOTSET)
 
-    return output_data
+    return ExportReport(**report_data)
 
 
 @override_log_formatter('%(message)s')
@@ -1106,7 +1123,7 @@ def export_zip(
     filename: Optional[str] = None,
     use_compression: bool = True,
     **kwargs: Any,
-) -> Tuple[float, ...]:
+) -> Tuple[float, float]:
     """Export in a zipped folder
 
     .. deprecated:: 1.2.1
@@ -1124,25 +1141,25 @@ def export_zip(
     warnings.warn(
         'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
     )  # pylint: disable=no-member
-    output_data = export(
+    report = export(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.ZIP,
         use_compression=use_compression,
         **kwargs,
     )
-    if 'time_write_stop' in output_data:
-        return (output_data['time_collect_start'], output_data['time_write_stop'])
+    if report.time_write_stop is not None:
+        return (report.time_collect_start, report.time_write_stop)
 
     # there was no data to write
-    return (output_data['time_collect_start'], output_data['time_collect_stop'])
+    return (report.time_collect_start, report.time_collect_stop)
 
 
 def export_tar(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,
     **kwargs: Any,
-) -> Tuple[float, ...]:
+) -> Tuple[float, float, float, float]:
     """Export the entries passed in the 'entities' list to a gzipped tar file.
 
     .. deprecated:: 1.2.1
@@ -1157,21 +1174,18 @@ def export_tar(
     warnings.warn(
         'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
     )  # pylint: disable=no-member
-    output_data = export(
+    report = export(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.TAR_GZIPPED,
         **kwargs,
     )
 
-    if 'writer' in output_data:
+    if report.writer_data is not None:
         return (
-            output_data['time_collect_start'], output_data['time_write_stop'],
-            output_data['writer']['compression_time_start'], output_data['writer']['compression_time_stop']
-        )
+            report.time_collect_start, report.time_write_stop, report.writer_data['compression_time_start'],
+            report.writer_data['compression_time_stop']
+        )  # type: ignore
 
     # there was no data to write
-    return (
-        output_data['time_collect_start'], output_data['time_collect_stop'], output_data['time_collect_stop'],
-        output_data['time_collect_stop']
-    )
+    return (report.time_collect_start, report.time_collect_stop, report.time_collect_stop, report.time_collect_stop)

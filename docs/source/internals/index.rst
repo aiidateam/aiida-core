@@ -7,11 +7,10 @@ Internal architecture
 
    data_storage
    plugin_system
+   rest_api
 
 .. todo::
 
      global_design
      orm
      engine
-     plugin_system
-     rest_api

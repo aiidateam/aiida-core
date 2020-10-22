@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
+# pylint: disable=fixme,too-many-lines
 """Provides export functionalities."""
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -56,6 +56,7 @@ from aiida.tools.importexport.common.config import (
     get_all_fields_info,
     model_fields_to_file_fields,
 )
+from aiida.tools.graph.graph_traversers import get_nodes_export
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
     EXPORT_LOGGER,
@@ -109,8 +110,11 @@ class WriterAbstract(ABC):
         self,
         export_data: ExportData,
         silent: bool = False,
-    ) -> str:
-        """write the archive and return a message."""
+    ) -> dict:
+        """write the archive and return a message.
+
+        :returns: process data, such as timings
+        """
 
 
 def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: ExportData, silent: bool = False) -> None:
@@ -187,7 +191,7 @@ class WriterJsonZip(WriterAbstract):
         self,
         export_data: ExportData,
         silent: bool = False,
-    ) -> str:
+    ) -> dict:
         """write the archive
 
         :param entities: a list of entity instances; they can belong to different models/entities.
@@ -196,11 +200,9 @@ class WriterJsonZip(WriterAbstract):
 
         """
         with ZipFolder(self.filename, mode='w', use_compression=self._use_compression) as folder:
-            time_start = time.time()
             _write_to_json_archive(folder=folder, export_data=export_data, silent=silent)
-            time_end = time.time()
 
-        return f'Written in {time_end - time_start:6.2g} s.'
+        return {}
 
 
 class WriterJsonTar(WriterAbstract):
@@ -213,7 +215,7 @@ class WriterJsonTar(WriterAbstract):
         self,
         export_data: ExportData,
         silent: bool = False,
-    ) -> str:
+    ) -> dict:
         """write the archive
 
         :param entities: a list of entity instances; they can belong to different models/entities.
@@ -222,20 +224,14 @@ class WriterJsonTar(WriterAbstract):
 
         """
         with SandboxFolder() as folder:
-            time_write_start = time.time()
             _write_to_json_archive(folder=folder, export_data=export_data, silent=silent)
-            time_write_end = time.time()
 
             with tarfile.open(self.filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
                 time_compress_start = time.time()
                 tar.add(folder.abspath, arcname='')
-                time_compress_end = time.time()
+                time_compress_stop = time.time()
 
-        return (
-            f'Written in {time_write_end - time_write_start:6.2g} s, '
-            f'compressed in {time_compress_end - time_compress_start:6.2g} s, '
-            f'total: {time_compress_end - time_write_start:6.2g} s.'
-        )
+        return {'compression_time_start': time_compress_start, 'compression_time_stop': time_compress_stop}
 
 
 def get_writers() -> Dict[str, Type[WriterAbstract]]:
@@ -250,7 +246,7 @@ def export(
     silent: bool = False,
     use_compression: bool = True,
     **traversal_rules: bool,
-) -> None:
+) -> dict:
     """Export AiiDA data
 
     .. deprecated:: 1.2.1
@@ -297,6 +293,8 @@ def export(
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
+
+    :returns: a dictionary of data regarding the export process (timings, etc)
 
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`:
         if there are any internal errors when exporting.
@@ -357,26 +355,36 @@ def export(
 
     summary(writer.file_format_verbose, filename, **traversal_rules)
 
-    time_extract_start = time.time()
+    output_data = {}
+
+    output_data['time_extract_start'] = time.time()
     export_data = generate_data(entities=entities, silent=silent, **traversal_rules)
-    time_extract_stop = time.time()
+    output_data['time_extract_stop'] = time.time()
+
+    extract_time = output_data['time_extract_start'] - output_data['time_extract_stop']
+    EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
     if export_data is not None:
-
-        EXPORT_LOGGER.debug(f'Data extracted in {time_extract_stop - time_extract_start:6.2g} s.')
-
         try:
-            message = writer.write(export_data=export_data, silent=silent)
+            output_data['time_write_start'] = time.time()
+            output_data['writer'] = writer.write(export_data=export_data, silent=silent)  # type: ignore
+            output_data['time_write_stop'] = time.time()
         except (exceptions.ArchiveExportError, LicensingException) as exc:
             if os.path.exists(filename):
                 os.remove(filename)
             raise exc
 
-        EXPORT_LOGGER.debug(message)
+        write_time = output_data['time_write_start'] - output_data['time_write_stop']
+        EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
+
+    else:
+        EXPORT_LOGGER.debug('No data to write.')
 
     # Reset logging level
     if silent:
         logging.disable(logging.NOTSET)
+
+    return output_data
 
 
 @override_log_formatter('%(message)s')
@@ -617,8 +625,6 @@ def collect_export_nodes(given_node_entry_ids: Set[int], silent: bool,
 
     :param silent: suppress console prints and progress bar.
     """
-    from aiida.tools.graph.graph_traversers import get_nodes_export
-
     progress_bar = get_progress_bar(total=1, disable=silent)
     progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
 
@@ -919,6 +925,51 @@ def get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Di
 
 # THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY
 
+
+@override_log_formatter('%(message)s')
+def export_tree(
+    entities: Optional[Iterable[Any]] = None,
+    folder: Optional[Union[Folder, ZipFolder]] = None,
+    allowed_licenses: Optional[Union[list, Callable]] = None,
+    forbidden_licenses: Optional[Union[list, Callable]] = None,
+    silent: bool = False,
+    include_comments: bool = True,
+    include_logs: bool = True,
+    **traversal_rules: bool,
+) -> None:
+    """Export the entries passed in the 'entities' list to a file tree.
+    .. deprecated:: 1.2.1
+        Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
+    :param entities: a list of entity instances; they can belong to different models/entities.
+
+    :param folder: a temporary folder to build the archive before compression.
+
+    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+
+    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+
+    :param silent: suppress console prints and progress bar.
+
+    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
+        Default: True, *include* comments in export (as well as relevant users).
+
+    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
+        Default: True, *include* logs in export.
+
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
+
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
+        exporting.
+    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
+    """
+    raise NotImplementedError
+
+
 def export_zip(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,
@@ -939,17 +990,18 @@ def export_zip(
     :param use_compression: Whether or not to compress the zip file.
 
     """
-    time_start = time.time()
-    export(
+    output_data = export(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.ZIP,
-        use_compression = use_compression,
+        use_compression=use_compression,
         **traversal_rules,
     )
-    time_end = time.time()
+    if 'time_write_stop' in output_data:
+        return (output_data['time_extract_start'], output_data['time_write_stop'])
 
-    return (time_start, time_end)
+    # there was no data to write
+    return (output_data['time_extract_start'], output_data['time_extract_stop'])
 
 
 def export_tar(
@@ -968,25 +1020,21 @@ def export_tar(
     :param filename: the filename (possibly including the absolute path)
         of the file on which to export.
     """
-    time_start = time.time()
-    export(
+    output_data = export(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.TAR_GZIPPED,
         **traversal_rules,
     )
-    time_end = time.time()
 
-    return (time_start, time_end)
+    if 'writer' in output_data:
+        return (
+            output_data['time_extract_start'], output_data['time_write_stop'],
+            output_data['writer']['compression_time_start'], output_data['writer']['compression_time_stop']
+        )
 
-    # with SandboxFolder() as folder:
-    #     time_export_start = time.time()
-    #     export_tree(entities=entities, folder=folder, **traversal_rules)
-    #     time_export_end = time.time()
-
-    #     with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-    #         time_compress_start = time.time()
-    #         tar.add(folder.abspath, arcname='')
-    #         time_compress_end = time.time()
-
-    # return (time_export_start, time_export_end, time_compress_start, time_compress_end)
+    # there was no data to write
+    return (
+        output_data['time_extract_start'], output_data['time_extract_stop'], output_data['time_extract_stop'],
+        output_data['time_extract_stop']
+    )

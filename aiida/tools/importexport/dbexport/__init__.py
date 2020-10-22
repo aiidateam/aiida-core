@@ -78,11 +78,15 @@ __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat', 'ArchiveWriterAbstract
 @dataclass
 class ArchiveData:
     """Class for storing data, to export to an AiiDA archive."""
+    # data regarding the archive paramaters
     metadata: dict
     node_uuids: Set[str]
+    # UUID of the group -> UUIDs of the entities it contains
     group_uuids: Dict[str, Set[str]]
+    # list of {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}
     link_uuids: List[dict]
     # all entity data from the database, except Node extras and attributes
+    # {'ENTITY_NAME': {<UUID>: {'db_key': 'value', ...}, ...}, ...}
     entity_data: Dict[str, Dict[int, dict]]
     # Iterable of Node (uuid, attributes, extras)
     node_data: Iterable[Tuple[str, dict, dict]]

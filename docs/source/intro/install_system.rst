@@ -47,44 +47,85 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       *The following instructions are for setting up AiiDA on WSL 2 in combination with Ubuntu.*
 
-      #. The `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_ should be installed and started.
+      #. Installing RabbitMQ:
+
+        #. On WSL 1, the `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_ should be installed and started.
+
+        #. On WSL 2, RabbitMQ can be installed inside WSL:
+
+           .. code-block:: console
+
+              $ sudo apt install rabbitmq-server
+              $ sudo service rabbitmq-server start
 
       #. Install Python and PostgreSQL:
 
          .. code-block:: console
 
-             $ sudo apt-get install \
+             $ sudo apt install \
                 postgresql postgresql-server-dev-all postgresql-client \
                 git python3-dev python-pip
              $ sudo service postgresql start
 
       .. dropdown:: How to setup WSL to automatically start services after system boot.
 
-          Create a ``.sh`` file with the lines above, but *without* ``sudo``.
-          Make the file executeable, i.e., type:
+          Create a ``.sh`` file containing the following lines:
 
           .. code-block:: console
 
-             $ chmod +x /path/to/file.sh
+             service postgresql start
+             service rabbitmq-server start # Only for WSL 2!
+
+
+          Make the file executeable, and make it editable only by root users by typing
+
+          .. code-block:: console
+
+             $ chmod a+x,go-w /path/to/file.sh
+             $ sudo chown root:root /path/to/file.sh
+
+          To allow running this file as sudo without requiring a password, run
+
+          .. code-block:: console
+
              $ sudo visudo
 
-          And add the line:
+          and add the line
 
           .. code-block:: sh
 
              <username> ALL=(root) NOPASSWD: /path/to/file.sh
 
-          Replacing ``<username>`` with your Ubuntu username.
+          replacing ``<username>`` with your Ubuntu username.
           This will allow you to run *only* this specific ``.sh`` file with ``root`` access (without password), without lowering security on the rest of your system.
 
-      .. dropdown:: :fa:`wrench` How to resolve a timezone issue on Ubuntu 18.04.
+          Now you can use the Windows Task Scheduler to automatically execute this file on startup:
 
-          There is a `known issue <https://github.com/Microsoft/WSL/issues/856>`_ in WSL Ubuntu 18.04 where the timezone is not configured correctly out-of-the-box, which may cause a problem for the database.
-          The following command can be used to re-configure the time zone:
+          #. Open Task Scheduler
 
-          .. code-block:: console
+          #. In the "Actions" menu, click "Create Task"
 
-              $ sudo dpkg-reconfigure tzdata
+          #. In "General/Security options", select "Run whether user is logged on or not".
+
+          #. In the "Triggers" tab, click "New..."
+
+             #. In the "Begin the task:" dropdown, select "At startup".
+
+             #. Click "OK" to confirm.
+
+          #. In the "Actions" tab, click "New..."
+
+             #. In the "Action" dropdown, select "Start a program".
+
+             #. In the "Program/script" text field, add ``C:\Windows\System32\bash.exe``
+
+             #. In the "Add arguments (optional)" text field, add ``-c "sudo /path/to/file.sh"``
+
+             #. Click "OK" to confirm.
+
+          #. Click "OK" to confirm the task.
+
+          The details of this task can be tweaked to fit your needs - use your own judgement as to when you would like the services to be started.
 
    .. tabbed:: Other
 

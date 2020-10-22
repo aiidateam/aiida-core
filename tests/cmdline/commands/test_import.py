@@ -238,7 +238,7 @@ class TestVerdiImport(AiidaTestCase):
         `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         """
         archive = get_archive_file('export_v0.1_simple.aiida', filepath=self.archive_path)
-        confirm_message = f'Do you want to try and migrate {archive} to the newest export file version?'
+        confirm_message = f'Do you want to try and migrate {archive} to the newest archive file version?'
         success_message = f'Success: imported archive {archive}'
 
         # Import "normally", but explicitly specifying `--migration`, make sure confirm message is present

@@ -152,7 +152,7 @@ class TestComplex(AiidaTestCase):
             ) for item in builder.dict()])
             return hash_
 
-        # Creating a folder for the import/export files
+        # Creating a folder for the archive files
         chars = string.ascii_uppercase + string.digits
         size = 10
         grouplabel = 'test-group'

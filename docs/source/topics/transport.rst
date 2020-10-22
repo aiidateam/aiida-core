@@ -1,8 +1,8 @@
-Transport plugins
-=================
+.. _topics:transport:
 
-.. toctree::
-   :maxdepth: 2
+*****************
+Transport plugins
+*****************
 
 The term `transport` in AiiDA refers to a class that the engine uses to perform operations on local or remote machines where its :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` are submitted.
 The base class :py:class:`~aiida.transports.transport.Transport` defines an interface for these operations, such as copying files and executing commands.
@@ -24,7 +24,9 @@ If not, a ``NotImplementedError`` will be raised, interrupting the managing of t
 
 As for the general functioning of the plugin, the :py:meth:`~aiida.transports.transport.Transport.__init__` method is used only to initialize the class instance, without actually opening the transport channel.
 The connection must be opened only by the :py:meth:`~aiida.transports.transport.Transport.__enter__` method, (and closed by :py:meth:`~aiida.transports.transport.Transport.__exit__`).
-The :py:meth:`~aiida.transports.transport.Transport.__enter__` method lets you use the transport class using the ``with`` statement (see `python docs <https://docs.python.org/3/reference/compound_stmts.html#with>`_), in a way similar to the following::
+The :py:meth:`~aiida.transports.transport.Transport.__enter__` method lets you use the transport class using the ``with`` statement (see `python docs <https://docs.python.org/3/reference/compound_stmts.html#with>`_), in a way similar to the following:
+
+.. code-block:: python
 
     with TransportPlugin() as transport:
         transport.some_method()
@@ -49,3 +51,8 @@ The function gives the freedom to execute a string as a remote command, thus it 
 
 Download :download:`this template <transport_template.py>` as a starting point to implementing a new transport plugin.
 It contains the interface with all the methods that need to be implemented, including docstrings that will work with Sphinx documentation.
+
+.. note::
+
+    To inform AiiDA about your new transport plugin you must register an entry point in the ``aiida.transports`` entry point group.
+    Please visit the `AiiDA registry <https://aiidateam.github.io/aiida-registry/>`_ to see an example of how this can be done.

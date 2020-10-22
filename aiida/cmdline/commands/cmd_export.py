@@ -90,7 +90,7 @@ def create(
 
     Besides Nodes of the provenance graph, you can export Groups, Codes, Computers, Comments and Logs.
 
-    By default, the export file will include not only the entities explicitly provided via the command line but also
+    By default, the archive file will include not only the entities explicitly provided via the command line but also
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """

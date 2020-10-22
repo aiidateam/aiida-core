@@ -99,20 +99,6 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    **Install AiiDA (core)**
 
-   .. tabbed:: Conda
-
-      *Install the aiida-core package in a Conda environment.*
-
-      #. Make sure that conda is installed, e.g., by following `the instructions on installing Miniconda <https://docs.conda.io/en/latest/miniconda.html>`__.
-
-      #. Open a terminal and execute:
-
-         .. code-block:: console
-
-             $ conda create -n aiida -c conda-forge aiida-core
-             $ conda activate aiida
-             (aiida) $ reentry scan
-
    .. tabbed:: pip + venv
 
       *Install the aiida-core package from PyPI into a virtual environment.*
@@ -158,7 +144,19 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
                $ sudo apt-get install libffi-dev libkrb5-dev
 
+   .. tabbed:: Conda
 
+      *Install the aiida-core package in a Conda environment.*
+
+      #. Make sure that conda is installed, e.g., by following `the instructions on installing Miniconda <https://docs.conda.io/en/latest/miniconda.html>`__.
+
+      #. Open a terminal and execute:
+
+         .. code-block:: console
+
+             $ conda create -n aiida -c conda-forge aiida-core
+             $ conda activate aiida
+             (aiida) $ reentry scan
 
    .. tabbed:: From source
 

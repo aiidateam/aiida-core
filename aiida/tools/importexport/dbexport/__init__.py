@@ -98,6 +98,7 @@ class WriterAbstract(ABC):
 
     @property
     def filename(self) -> str:
+        """Return the filename to write to."""
         return self._filename
 
     @property
@@ -111,7 +112,9 @@ class WriterAbstract(ABC):
         export_data: ExportData,
         silent: bool = False,
     ) -> dict:
-        """write the archive and return a message.
+        """write the archive.
+
+        :param silent: suppress console prints and progress bar.
 
         :returns: process data, such as timings
         """
@@ -235,6 +238,8 @@ class WriterJsonTar(WriterAbstract):
 
 
 def get_writers() -> Dict[str, Type[WriterAbstract]]:
+    """Return the available writer classes."""
+    # TODO this could be made an entrypoint
     return {ExportFileFormat.ZIP: WriterJsonZip, ExportFileFormat.TAR_GZIPPED: WriterJsonTar}
 
 
@@ -357,7 +362,13 @@ def export(
 
     writer = writers[file_format](filename=filename, use_compression=use_compression)
 
-    summary(writer.file_format_verbose, filename, **traversal_rules)
+    summary(
+        writer.file_format_verbose,
+        filename,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        **traversal_rules
+    )
 
     output_data = {}
 
@@ -409,7 +420,7 @@ def _generate_data(
     include_logs: bool = True,
     **traversal_rules: bool,
 ) -> Optional[ExportData]:
-    """Export the entries passed in the 'entities' list to a file tree.
+    """Generate data to be exported
 
     .. deprecated:: 1.2.1
         Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.

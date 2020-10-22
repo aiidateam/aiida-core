@@ -428,50 +428,52 @@ def export(
     if silent:
         logging.disable(logging.CRITICAL)
 
-    summary(
-        writer.file_format_verbose,
-        filename,
-        include_comments=include_comments,
-        include_logs=include_logs,
-        **traversal_rules
-    )
+    try:
+        summary(
+            writer.file_format_verbose,
+            filename,
+            include_comments=include_comments,
+            include_logs=include_logs,
+            **traversal_rules
+        )
 
-    output_data = {}
+        output_data = {}
 
-    output_data['time_collect_start'] = time.time()
-    export_data = _collect_archive_data(
-        entities=entities,
-        silent=silent,
-        allowed_licenses=allowed_licenses,
-        forbidden_licenses=forbidden_licenses,
-        include_comments=include_comments,
-        include_logs=include_logs,
-        **traversal_rules
-    )
-    output_data['time_collect_stop'] = time.time()
+        output_data['time_collect_start'] = time.time()
+        export_data = _collect_archive_data(
+            entities=entities,
+            silent=silent,
+            allowed_licenses=allowed_licenses,
+            forbidden_licenses=forbidden_licenses,
+            include_comments=include_comments,
+            include_logs=include_logs,
+            **traversal_rules
+        )
+        output_data['time_collect_stop'] = time.time()
 
-    extract_time = output_data['time_collect_start'] - output_data['time_collect_stop']
-    EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
+        extract_time = output_data['time_collect_start'] - output_data['time_collect_stop']
+        EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
-    if export_data is not None:
-        try:
-            output_data['time_write_start'] = time.time()
-            output_data['writer'] = writer.write(export_data=export_data, silent=silent)  # type: ignore
-            output_data['time_write_stop'] = time.time()
-        except (exceptions.ArchiveExportError, LicensingException) as exc:
-            if os.path.exists(filename):
-                os.remove(filename)
-            raise exc
+        if export_data is not None:
+            try:
+                output_data['time_write_start'] = time.time()
+                output_data['writer'] = writer.write(export_data=export_data, silent=silent)  # type: ignore
+                output_data['time_write_stop'] = time.time()
+            except (exceptions.ArchiveExportError, LicensingException) as exc:
+                if os.path.exists(filename):
+                    os.remove(filename)
+                raise exc
 
-        write_time = output_data['time_write_start'] - output_data['time_write_stop']
-        EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
+            write_time = output_data['time_write_start'] - output_data['time_write_stop']
+            EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
 
-    else:
-        EXPORT_LOGGER.debug('No data to write.')
+        else:
+            EXPORT_LOGGER.debug('No data to write.')
 
-    # Reset logging level
-    if silent:
-        logging.disable(logging.NOTSET)
+    finally:
+        # Reset logging level
+        if silent:
+            logging.disable(logging.NOTSET)
 
     return output_data
 

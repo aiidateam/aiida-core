@@ -77,9 +77,9 @@ __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 class ExportData:
     """Class for storing data to export."""
     metadata: dict
-    all_node_uuids: Set[str]
-    groups_uuid: Dict[str, List[str]]
-    links_uuid: List[dict]
+    node_uuids: Set[str]
+    group_uuids: Dict[str, List[str]]
+    link_uuids: List[dict]
     # all entity data from the database, except Node extras and attributes
     entity_data: Dict[str, Dict[int, dict]]
     # Iterable of Node (uuid, attributes, extras)
@@ -132,8 +132,8 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Export
         'node_attributes': {},
         'node_extras': {},
         'export_data': export_data.entity_data,
-        'links_uuid': export_data.links_uuid,
-        'groups_uuid': export_data.groups_uuid,
+        'links_uuid': export_data.link_uuids,
+        'groups_uuid': export_data.group_uuids,
     }
 
     for uuid, attributes, extras in export_data.node_data:
@@ -151,12 +151,12 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Export
     EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
 
     # If there are no nodes, there are no repository files to store
-    if export_data.all_node_uuids:
+    if export_data.node_uuids:
 
-        progress_bar = get_progress_bar(total=len(export_data.all_node_uuids), disable=silent)
+        progress_bar = get_progress_bar(total=len(export_data.node_uuids), disable=silent)
         pbar_base_str = 'Exporting repository - '
 
-        for uuid in export_data.all_node_uuids:
+        for uuid in export_data.node_uuids:
             sharded_uuid = export_shard_uuid(uuid)
 
             progress_bar.set_description_str(f"{pbar_base_str}UUID={uuid.split('-')[0]}", refresh=False)

@@ -11,7 +11,7 @@
 """Provides export functionalities."""
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field, asdict
 import logging
 import os
 import tarfile
@@ -76,10 +76,25 @@ __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat', 'ArchiveWriterAbstract
 
 
 @dataclass
+class ExportMetadata:
+    """Class for storing metadata about an export."""
+    graph_traversal_rules: Dict[str, bool]
+    # Entity type -> UUID list
+    entities_starting_set: Dict[str, Set[str]]
+    include_comments: bool
+    include_logs: bool
+    # Entity type -> database ID key
+    unique_identifiers: Dict[str, str] = field(repr=False)
+    # Entity type -> database key -> meta parameters
+    all_fields_info: Dict[str, Dict[str, Dict[str, str]]] = field(repr=False)
+    aiida_version: str = field(default_factory=get_version)
+    export_version: str = EXPORT_VERSION
+
+
+@dataclass
 class ArchiveData:
     """Class for storing data, to export to an AiiDA archive."""
-    # data regarding the archive paramaters
-    metadata: dict
+    metadata: ExportMetadata
     node_uuids: Set[str]
     # UUID of the group -> UUIDs of the entities it contains
     group_uuids: Dict[str, Set[str]]
@@ -90,6 +105,12 @@ class ArchiveData:
     entity_data: Dict[str, Dict[int, dict]]
     # Iterable of Node (uuid, attributes, extras)
     node_data: Iterable[Tuple[str, dict, dict]]
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return f'ArchiveData(metadata={self.metadata},' + ','.join(
+            f'#{k}={len(v)}' for k, v in self.entity_data.items()
+        ) + ')'
 
 
 class ArchiveWriterAbstract(ABC):
@@ -152,8 +173,21 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Archiv
         # fhandle.write(json.dumps(data, cls=UUIDEncoder))
         fhandle.write(json.dumps(data))
 
+    metadata = {
+        'aiida_version': export_data.metadata.aiida_version,
+        'export_version': export_data.metadata.export_version,
+        'all_fields_info': export_data.metadata.all_fields_info,
+        'unique_identifiers': export_data.metadata.unique_identifiers,
+        'export_parameters': {
+            'graph_traversal_rules': export_data.metadata.graph_traversal_rules,
+            'entities_starting_set': export_data.metadata.entities_starting_set,
+            'include_comments': export_data.metadata.include_comments,
+            'include_logs': export_data.metadata.include_logs,
+        },
+    }
+
     with folder.open('metadata.json', 'w') as fhandle:
-        fhandle.write(json.dumps(export_data.metadata))
+        fhandle.write(json.dumps(metadata))
 
     EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
 
@@ -604,18 +638,14 @@ def _collect_archive_data(
     for entity, entity_set in entities_starting_set.items():
         entities_starting_set[entity] = list(entity_set)  # type: ignore
 
-    metadata = {
-        'aiida_version': get_version(),
-        'export_version': EXPORT_VERSION,
-        'all_fields_info': all_fields_info,
-        'unique_identifiers': unique_identifiers,
-        'export_parameters': {
-            'graph_traversal_rules': traversal_rules,
-            'entities_starting_set': entities_starting_set,
-            'include_comments': include_comments,
-            'include_logs': include_logs,
-        },
-    }
+    metadata = ExportMetadata(
+        graph_traversal_rules=traversal_rules,
+        entities_starting_set=entities_starting_set,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        unique_identifiers=unique_identifiers,
+        all_fields_info=all_fields_info
+    )
 
     all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported}
 

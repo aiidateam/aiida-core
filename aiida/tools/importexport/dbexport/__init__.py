@@ -125,7 +125,8 @@ class ExportReport:
     writer_data: Optional[Dict[str, Any]] = None
 
     @property
-    def total_time(self):
+    def total_time(self) -> float:
+        """Return total time taken in seconds."""
         return (self.time_write_stop or self.time_collect_stop) - self.time_collect_start
 
 

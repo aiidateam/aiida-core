@@ -915,3 +915,78 @@ def get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Di
             groups_uuid[group_uuid].append(node_uuid)
 
     return groups_uuid
+
+
+# THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY
+
+def export_zip(
+    entities: Optional[Iterable[Any]] = None,
+    filename: Optional[str] = None,
+    use_compression: bool = True,
+    **traversal_rules: bool,
+) -> Tuple[float, ...]:
+    """Export in a zipped folder
+
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
+
+    :param entities: a list of entity instances; they can belong to different models/entities.
+
+    :param filename: the filename
+        (possibly including the absolute path) of the file on which to export.
+
+    :param use_compression: Whether or not to compress the zip file.
+
+    """
+    time_start = time.time()
+    export(
+        entities=entities,
+        filename=filename,
+        file_format=ExportFileFormat.ZIP,
+        use_compression = use_compression,
+        **traversal_rules,
+    )
+    time_end = time.time()
+
+    return (time_start, time_end)
+
+
+def export_tar(
+    entities: Optional[Iterable[Any]] = None,
+    filename: Optional[str] = None,
+    **traversal_rules: bool,
+) -> Tuple[float, ...]:
+    """Export the entries passed in the 'entities' list to a gzipped tar file.
+
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
+
+    :param entities: a list of entity instances; they can belong to different models/entities.
+
+    :param filename: the filename (possibly including the absolute path)
+        of the file on which to export.
+    """
+    time_start = time.time()
+    export(
+        entities=entities,
+        filename=filename,
+        file_format=ExportFileFormat.TAR_GZIPPED,
+        **traversal_rules,
+    )
+    time_end = time.time()
+
+    return (time_start, time_end)
+
+    # with SandboxFolder() as folder:
+    #     time_export_start = time.time()
+    #     export_tree(entities=entities, folder=folder, **traversal_rules)
+    #     time_export_end = time.time()
+
+    #     with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
+    #         time_compress_start = time.time()
+    #         tar.add(folder.abspath, arcname='')
+    #         time_compress_end = time.time()
+
+    # return (time_export_start, time_export_end, time_compress_start, time_compress_end)

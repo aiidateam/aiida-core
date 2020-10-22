@@ -76,11 +76,11 @@ __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
 
 @dataclass
-class ExportData:
-    """Class for storing data to export."""
+class ArchiveData:
+    """Class for storing data, to export to an AiiDA archive."""
     metadata: dict
     node_uuids: Set[str]
-    group_uuids: Dict[str, List[str]]
+    group_uuids: Dict[str, Set[str]]
     link_uuids: List[dict]
     # all entity data from the database, except Node extras and attributes
     entity_data: Dict[str, Dict[int, dict]]
@@ -89,6 +89,7 @@ class ExportData:
 
 
 class WriterAbstract(ABC):
+    """An abstract interface for AiiDA archive writers."""
 
     def __init__(self, filename: str, **kwargs: Any):
         """An archive writer
@@ -112,7 +113,7 @@ class WriterAbstract(ABC):
     @abstractmethod
     def write(
         self,
-        export_data: ExportData,
+        export_data: ArchiveData,
         silent: bool = False,
     ) -> dict:
         """write the archive.
@@ -123,8 +124,8 @@ class WriterAbstract(ABC):
         """
 
 
-def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: ExportData, silent: bool = False) -> None:
-    """Store data to the archive."""
+def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: ArchiveData, silent: bool = False) -> None:
+    """Write data to the archive."""
     # subfolder inside the export package
     nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
 
@@ -135,7 +136,7 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Export
         'node_extras': {},
         'export_data': export_data.entity_data,
         'links_uuid': export_data.link_uuids,
-        'groups_uuid': export_data.group_uuids,
+        'groups_uuid': {key: list(vals) for key, vals in export_data.group_uuids.items()},
     }
 
     for uuid, attributes, extras in export_data.node_data:
@@ -179,11 +180,18 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Export
             # In this way, I copy the content of the folder, and not the folder itself
             thisnodefolder.insert_path(src=src.abspath, dest_name='.')
 
+        close_progress_bar(leave=False)
+
 
 class WriterJsonZip(WriterAbstract):
+    """An archive writer,
+    which writes database data as a single JSON and repository data in a folder system.
+
+    The entire containing folder is then compressed as a zip file.
+    """
 
     def __init__(self, filename: str, **kwargs: Any):
-        """An archive writer
+        """A writer for zipped archives.
 
         :param filename: the filename (possibly including the absolute path)
             of the file on which to export.
@@ -199,7 +207,7 @@ class WriterJsonZip(WriterAbstract):
 
     def write(
         self,
-        export_data: ExportData,
+        export_data: ArchiveData,
         silent: bool = False,
     ) -> dict:
         """write the archive
@@ -216,6 +224,11 @@ class WriterJsonZip(WriterAbstract):
 
 
 class WriterJsonTar(WriterAbstract):
+    """An archive writer,
+    which writes database data as a single JSON and repository data in a folder system.
+
+    The entire containing folder is then compressed as a tar file.
+    """
 
     @property
     def file_format_verbose(self) -> str:
@@ -223,7 +236,7 @@ class WriterJsonTar(WriterAbstract):
 
     def write(
         self,
-        export_data: ExportData,
+        export_data: ArchiveData,
         silent: bool = False,
     ) -> dict:
         """write the archive
@@ -244,10 +257,17 @@ class WriterJsonTar(WriterAbstract):
         return {'compression_time_start': time_compress_start, 'compression_time_stop': time_compress_stop}
 
 
-def get_writers() -> Dict[str, Type[WriterAbstract]]:
+def get_writer(file_format: str) -> Type[WriterAbstract]:
     """Return the available writer classes."""
     # TODO this could be made an entrypoint
-    return {ExportFileFormat.ZIP: WriterJsonZip, ExportFileFormat.TAR_GZIPPED: WriterJsonTar}
+    writers = {ExportFileFormat.ZIP: WriterJsonZip, ExportFileFormat.TAR_GZIPPED: WriterJsonTar}
+
+    if file_format not in writers:
+        raise exceptions.ArchiveExportError(
+            f'Can only export in the formats: {tuple(writers.keys())}, please specify one for "file_format".'
+        )
+
+    return writers[file_format]
 
 
 def export(
@@ -317,13 +337,6 @@ def export(
     :raises `~aiida.common.exceptions.LicensingException`:
         if any node is licensed under forbidden license.
     """
-    writers = get_writers()
-
-    if file_format not in list(writers):
-        raise exceptions.ArchiveExportError(
-            f'Can only export in the formats: {tuple(writers.keys())}, please specify one for "file_format".'
-        )
-
     # Backwards-compatibility
     entities = cast(
         Iterable[Any],
@@ -364,10 +377,10 @@ def export(
     if not overwrite and os.path.exists(filename):
         raise exceptions.ArchiveExportError(f"The output file '{filename}' already exists")
 
+    writer = get_writer(file_format)(filename=filename, use_compression=use_compression)
+
     if silent:
         logging.disable(logging.CRITICAL)
-
-    writer = writers[file_format](filename=filename, use_compression=use_compression)
 
     summary(
         writer.file_format_verbose,
@@ -379,8 +392,8 @@ def export(
 
     output_data = {}
 
-    output_data['time_extract_start'] = time.time()
-    export_data = _generate_data(
+    output_data['time_collect_start'] = time.time()
+    export_data = _collect_archive_data(
         entities=entities,
         silent=silent,
         allowed_licenses=allowed_licenses,
@@ -389,9 +402,9 @@ def export(
         include_logs=include_logs,
         **traversal_rules
     )
-    output_data['time_extract_stop'] = time.time()
+    output_data['time_collect_stop'] = time.time()
 
-    extract_time = output_data['time_extract_start'] - output_data['time_extract_stop']
+    extract_time = output_data['time_collect_start'] - output_data['time_collect_stop']
     EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
     if export_data is not None:
@@ -418,7 +431,7 @@ def export(
 
 
 @override_log_formatter('%(message)s')
-def _generate_data(
+def _collect_archive_data(
     entities: Optional[Iterable[Any]] = None,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
@@ -426,8 +439,8 @@ def _generate_data(
     include_comments: bool = True,
     include_logs: bool = True,
     **traversal_rules: bool,
-) -> Optional[ExportData]:
-    """Generate data to be exported
+) -> Optional[ArchiveData]:
+    """Collect data to be exported
 
     .. deprecated:: 1.2.1
         Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
@@ -494,11 +507,11 @@ def _generate_data(
         node_pk_2_uuid_mapping,
         links_uuid,
         traversal_rules,
-    ) = _collect_export_nodes(given_node_entry_ids, silent, **traversal_rules)
+    ) = _collect_node_ids(given_node_entry_ids, silent, **traversal_rules)
 
     _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
 
-    entries_queries = _get_entry_queries(
+    entries_queries = _collect_entity_queries(
         node_ids_to_be_exported,
         entities_starting_set,
         node_pk_2_uuid_mapping,
@@ -507,7 +520,7 @@ def _generate_data(
         include_logs,
     )
 
-    export_data = _get_export_data(entries_queries, silent)
+    export_data = _perform_export_queries(entries_queries, silent)
 
     # Close progress up until this point in order to print properly
     close_progress_bar(leave=False)
@@ -529,6 +542,9 @@ def _generate_data(
         ),
         level=LOG_LEVEL_REPORT,
     )
+
+    # Instantiate new progress bar
+    get_progress_bar(total=1, leave=False, disable=silent)
 
     groups_uuid = _get_groups_uuid(export_data, silent)
 
@@ -553,11 +569,11 @@ def _generate_data(
 
     # we get the node data last, because it is generally the largest data source
     # and later we may look to stream this data in chunks
-    node_data = _get_node_data(node_ids_to_be_exported, silent)
+    node_data = _collect_node_data(node_ids_to_be_exported, silent)
 
     close_progress_bar(leave=False)
 
-    return ExportData(
+    return ArchiveData(
         metadata,
         all_node_uuids,
         groups_uuid,
@@ -573,7 +589,7 @@ def _get_starting_node_ids(entities: List[Any], silent: bool) -> Tuple[DefaultDi
     :param entities: a list of entity instances
     :param silent: suppress console prints and progress bar.
 
-    :raises exceptions.ArchiveExportError
+    :raises exceptions.ArchiveExportError:
     :return: entities_starting_set, given_node_entry_ids
     """
     # Instantiate progress bar - go through list of `entities`
@@ -641,8 +657,8 @@ def _get_starting_node_ids(entities: List[Any], silent: bool) -> Tuple[DefaultDi
     return entities_starting_set, given_node_entry_ids
 
 
-def _collect_export_nodes(given_node_entry_ids: Set[int], silent: bool,
-                          **traversal_rules: bool) -> Tuple[Set[int], Dict[int, str], List[dict], Dict[str, bool]]:
+def _collect_node_ids(given_node_entry_ids: Set[int], silent: bool,
+                      **traversal_rules: bool) -> Tuple[Set[int], Dict[int, str], List[dict], Dict[str, bool]]:
     """Iteratively explore the AiiDA graph to find further nodes that should also be exported
 
     At the same time, we will create the links_uuid list of dicts to be exported
@@ -650,7 +666,7 @@ def _collect_export_nodes(given_node_entry_ids: Set[int], silent: bool,
     :param silent: suppress console prints and progress bar.
     """
     progress_bar = get_progress_bar(total=1, disable=silent)
-    progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
+    progress_bar.set_description_str('Traversing provenance via links ...', refresh=True)
 
     traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **traversal_rules)
     node_ids_to_be_exported = traverse_output['nodes']
@@ -692,6 +708,7 @@ def _check_node_licenses(
     allowed_licenses: Optional[Union[list, Callable]],
     forbidden_licenses: Optional[Union[list, Callable]],
 ) -> None:
+    """Check the nodes to be archived for disallowed licences."""
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
@@ -708,7 +725,7 @@ def _check_node_licenses(
         check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
 
 
-def _get_entry_queries(
+def _collect_entity_queries(
     node_ids_to_be_exported: Set[int],
     entities_starting_set: DefaultDict[str, Set[str]],
     node_pk_2_uuid_mapping: Dict[int, str],
@@ -769,7 +786,7 @@ def _get_entry_queries(
         progress_bar = get_progress_bar(total=len(given_entities), disable=silent)
         pbar_base_str = 'Preparing entities'
 
-    entries_to_add = {}
+    entities_to_add = {}
     for given_entity in given_entities:
         progress_bar.set_description_str(f'{pbar_base_str} - {given_entity}s', refresh=False)
         progress_bar.update()
@@ -808,12 +825,12 @@ def _get_entry_queries(
             tag=given_entity,
             outerjoin=True,
         )
-        entries_to_add[given_entity] = builder
+        entities_to_add[given_entity] = builder
 
-    return entries_to_add
+    return entities_to_add
 
 
-def _get_export_data(entries_queries: Dict[str, orm.QueryBuilder], silent: bool) -> Dict[str, Dict[int, dict]]:
+def _perform_export_queries(entries_queries: Dict[str, orm.QueryBuilder], silent: bool) -> Dict[str, Dict[int, dict]]:
     """Start automatic recursive export data generation
 
     :param entries_queries: partial queries for all entities to export
@@ -872,7 +889,7 @@ def _get_export_data(entries_queries: Dict[str, orm.QueryBuilder], silent: bool)
     return export_data
 
 
-def _get_node_data(all_node_pks: Set[int], silent: bool) -> Iterable[Tuple[str, dict, dict]]:
+def _collect_node_data(all_node_pks: Set[int], silent: bool) -> Iterable[Tuple[str, dict, dict]]:
     """Gather attributes and extras for nodes
 
     :param export_data:  mappings by entity type -> pk -> db_columns
@@ -882,10 +899,6 @@ def _get_node_data(all_node_pks: Set[int], silent: bool) -> Iterable[Tuple[str, 
     :return: iterable of (uuid, attributes, extras)
 
     """
-
-    # Instantiate new progress bar
-    progress_bar = get_progress_bar(total=1, leave=False, disable=silent)
-
     # ATTRIBUTES and EXTRAS
     EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')
     node_data = []
@@ -912,10 +925,10 @@ def _get_node_data(all_node_pks: Set[int], silent: bool) -> Iterable[Tuple[str, 
     return node_data
 
 
-def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Dict[str, List[str]]:
+def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Dict[str, Set[str]]:
     """Get node UUIDs per group."""
     EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
-    groups_uuid = defaultdict(list)
+    groups_uuid = defaultdict(set)
     # If a group is in the exported data, we export the group/node correlation
     if GROUP_ENTITY_NAME in export_data:
         group_uuids_with_node_uuids = (
@@ -940,7 +953,7 @@ def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> D
         for group_uuid, node_uuid in group_uuids_with_node_uuids.iterall():
             progress_bar.update()
 
-            groups_uuid[group_uuid].append(node_uuid)
+            groups_uuid[group_uuid].add(node_uuid)
 
     return groups_uuid
 
@@ -990,7 +1003,9 @@ def export_tree(
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
     # pylint: disable=unused-argument
-    warnings.warn('function is deprecated, use `export` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+    warnings.warn(
+        'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
+    )  # pylint: disable=no-member
     raise NotImplementedError
 
 
@@ -1014,7 +1029,9 @@ def export_zip(
     :param use_compression: Whether or not to compress the zip file.
 
     """
-    warnings.warn('function is deprecated, use `export` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+    warnings.warn(
+        'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
+    )  # pylint: disable=no-member
     output_data = export(
         entities=entities,
         filename=filename,
@@ -1023,10 +1040,10 @@ def export_zip(
         **kwargs,
     )
     if 'time_write_stop' in output_data:
-        return (output_data['time_extract_start'], output_data['time_write_stop'])
+        return (output_data['time_collect_start'], output_data['time_write_stop'])
 
     # there was no data to write
-    return (output_data['time_extract_start'], output_data['time_extract_stop'])
+    return (output_data['time_collect_start'], output_data['time_collect_stop'])
 
 
 def export_tar(
@@ -1045,7 +1062,9 @@ def export_tar(
     :param filename: the filename (possibly including the absolute path)
         of the file on which to export.
     """
-    warnings.warn('function is deprecated, use `export` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
+    warnings.warn(
+        'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
+    )  # pylint: disable=no-member
     output_data = export(
         entities=entities,
         filename=filename,
@@ -1055,12 +1074,12 @@ def export_tar(
 
     if 'writer' in output_data:
         return (
-            output_data['time_extract_start'], output_data['time_write_stop'],
+            output_data['time_collect_start'], output_data['time_write_stop'],
             output_data['writer']['compression_time_start'], output_data['writer']['compression_time_stop']
         )
 
     # there was no data to write
     return (
-        output_data['time_extract_start'], output_data['time_extract_stop'], output_data['time_extract_stop'],
-        output_data['time_extract_stop']
+        output_data['time_collect_start'], output_data['time_collect_stop'], output_data['time_collect_stop'],
+        output_data['time_collect_stop']
     )

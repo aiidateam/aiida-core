@@ -25,7 +25,7 @@ EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 
 
 class ExportFileFormat(str, Enum):
-    """Export file formats"""
+    """Archive file formats"""
     ZIP = 'zip'
     TAR_GZIPPED = 'tar.gz'
 

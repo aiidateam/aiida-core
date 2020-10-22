@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.6 to 0.7"""
+"""Test archive file migration from export version 0.6 to 0.7"""
 from aiida.tools.importexport.migration.v06_to_v07 import migrate_v6_to_v7
 
 from . import ArchiveMigrationTest

@@ -132,7 +132,7 @@ def migration_migrate_legacy_job_calculation_data(data):
 
 
 def migrate_v5_to_v6(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.5 to v0.6"""
+    """Migration of archive files from v0.5 to v0.6"""
     old_version = '0.5'
     new_version = '0.6'
 

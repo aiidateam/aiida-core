@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-"""Test export file migration from export version 0.3 to 0.4"""
+"""Test archive file migration from export version 0.3 to 0.4"""
 import tarfile
 import zipfile
 
@@ -113,10 +113,10 @@ class TestMigrate(ArchiveMigrationTest):
         for link in data['links_uuid']:
             self.assertIn(link['type'], legal_link_types)
         for link in illegal_links:
-            self.assertNotIn(link, data['links_uuid'], msg=f'{link} should not be in the migrated export file')
+            self.assertNotIn(link, data['links_uuid'], msg=f'{link} should not be in the migrated archive file')
 
         # Check Groups
-        # There is one Group in the export file, it is a user group
+        # There is one Group in the archive file, it is a user group
         updated_attrs = {'label', 'type_string'}
         legal_group_type = {'user'}
         for attr in updated_attrs:
@@ -168,7 +168,7 @@ class TestMigrate(ArchiveMigrationTest):
                     )
 
         # Check TrajectoryData
-        # There should be minimum one TrajectoryData in the export file
+        # There should be minimum one TrajectoryData in the archive file
         trajectorydata_nodes = []
         for node_id, content in data['export_data']['Node'].items():
             if content['node_type'] == 'data.array.trajectory.TrajectoryData.':
@@ -320,7 +320,7 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertEqual(
                 len(data_v3[field]),
                 len(data_v4[field]) - correction,
-                msg=f'Number of entities in {field} differs for the export files'
+                msg=f'Number of entities in {field} differs for the archive files'
             )
 
         number_of_links_v3 = {
@@ -350,7 +350,7 @@ class TestMigrate(ArchiveMigrationTest):
         self.assertDictEqual(
             number_of_links_v3,
             number_of_links_v4,
-            msg='There are a different number of specific links in the migrated export file than the AiiDA made one.'
+            msg='There are a different number of specific links in the migrated archive file than the AiiDA made one.'
         )
 
         self.assertEqual(number_of_links_v3['unspecified'], 0)
@@ -387,7 +387,7 @@ class TestMigrate(ArchiveMigrationTest):
             except IOError:
                 raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
-            # Check illegal create links are present in org. export file
+            # Check illegal create links are present in org. archive file
             links_count = len(data['links_uuid'])
             links_count_migrated = links_count - known_illegal_links
 

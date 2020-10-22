@@ -76,9 +76,10 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     :type flask_app: :py:class:`flask.Flask`
     :param flask_api: flask_restful API class to be used to wrap the app
     :type flask_api: :py:class:`flask_restful.Api`
-    :param config: directory containing the config.py file used to configure the RESTapi
-    :param catch_internal_server:  If true, catch and print all inter server errors
-    :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
+    :param config: directory containing the config.py configuration file
+    :param catch_internal_server:  If true, catch and print internal server errors with full python traceback.
+        Useful during app development.
+    :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in the web application
 
     :returns: Flask RESTful API
     :rtype: :py:class:`flask_restful.Api`

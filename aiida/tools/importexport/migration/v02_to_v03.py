@@ -18,7 +18,7 @@ from aiida.tools.importexport.migration.utils import verify_metadata_version, up
 
 def migrate_v2_to_v3(metadata, data, *args):
     """
-    Migration of export files from v0.2 to v0.3, which means adding the link
+    Migration of archive files from v0.2 to v0.3, which means adding the link
     types to the link entries and making the entity key names backend agnostic
     by effectively removing the prefix 'aiida.backends.djsite.db.models'
 

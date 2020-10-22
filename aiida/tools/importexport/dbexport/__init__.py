@@ -36,6 +36,7 @@ from aiida import get_version, orm
 from aiida.common import json
 from aiida.common.exceptions import LicensingException
 from aiida.common.folders import Folder, RepositoryFolder, SandboxFolder
+from aiida.common.links import GraphTraversalRules
 from aiida.common.lang import type_check
 from aiida.common.log import LOG_LEVEL_REPORT, override_log_formatter
 from aiida.common.warnings import AiidaDeprecationWarning
@@ -58,7 +59,7 @@ from aiida.tools.importexport.common.config import (
     get_all_fields_info,
     model_fields_to_file_fields,
 )
-from aiida.tools.graph.graph_traversers import get_nodes_export
+from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
     EXPORT_LOGGER,
@@ -152,6 +153,11 @@ class ArchiveWriterAbstract(ABC):
     def file_format_verbose(self) -> str:
         """The file format name."""
 
+    @property
+    @abstractmethod
+    def export_version(self) -> str:
+        """The export version."""
+
     @abstractmethod
     def write(
         self,
@@ -166,7 +172,9 @@ class ArchiveWriterAbstract(ABC):
         """
 
 
-def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: ArchiveData, silent: bool = False) -> None:
+def _write_to_json_archive(
+    folder: Union[Folder, ZipFolder], export_data: ArchiveData, export_version: str, silent: bool = False
+) -> None:
     """Write data to the archive."""
     # subfolder inside the export package
     nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
@@ -191,7 +199,7 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Archiv
         fhandle.write(json.dumps(data))
 
     metadata = {
-        'export_version': EXPORT_VERSION,
+        'export_version': export_version,
         'aiida_version': export_data.metadata.aiida_version,
         'all_fields_info': export_data.metadata.all_fields_info,
         'unique_identifiers': export_data.metadata.unique_identifiers,
@@ -260,6 +268,10 @@ class WriterJsonZip(ArchiveWriterAbstract):
     def file_format_verbose(self) -> str:
         return 'Zip (compressed)' if self._use_compression else 'Zip (uncompressed)'
 
+    @property
+    def export_version(self) -> str:
+        return EXPORT_VERSION
+
     def write(
         self,
         export_data: ArchiveData,
@@ -273,7 +285,9 @@ class WriterJsonZip(ArchiveWriterAbstract):
 
         """
         with ZipFolder(self.filename, mode='w', use_compression=self._use_compression) as folder:
-            _write_to_json_archive(folder=folder, export_data=export_data, silent=silent)
+            _write_to_json_archive(
+                folder=folder, export_data=export_data, export_version=self.export_version, silent=silent
+            )
 
         return {}
 
@@ -289,6 +303,10 @@ class WriterJsonTar(ArchiveWriterAbstract):
     def file_format_verbose(self) -> str:
         return 'Gzipped tarball (compressed)'
 
+    @property
+    def export_version(self) -> str:
+        return EXPORT_VERSION
+
     def write(
         self,
         export_data: ArchiveData,
@@ -302,7 +320,9 @@ class WriterJsonTar(ArchiveWriterAbstract):
 
         """
         with SandboxFolder() as folder:
-            _write_to_json_archive(folder=folder, export_data=export_data, silent=silent)
+            _write_to_json_archive(
+                folder=folder, export_data=export_data, export_version=self.export_version, silent=silent
+            )
 
             with tarfile.open(self.filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
                 time_compress_start = time.time()
@@ -338,6 +358,10 @@ class WriterJsonFolder(ArchiveWriterAbstract):
     def file_format_verbose(self) -> str:
         return str(self._folder.__class__)
 
+    @property
+    def export_version(self) -> str:
+        return EXPORT_VERSION
+
     def write(
         self,
         export_data: ArchiveData,
@@ -350,7 +374,9 @@ class WriterJsonFolder(ArchiveWriterAbstract):
             what rule names are toggleable and what the defaults are.
 
         """
-        _write_to_json_archive(folder=self._folder, export_data=export_data, silent=silent)
+        _write_to_json_archive(
+            folder=self._folder, export_data=export_data, export_version=self.export_version, silent=silent
+        )
 
         return {}
 
@@ -478,6 +504,12 @@ def export(
     if not overwrite and os.path.exists(filename):
         raise exceptions.ArchiveExportError(f"The output file '{filename}' already exists")
 
+    # validate the traversal rules and generate a full set for reporting
+    validate_traversal_rules(GraphTraversalRules.EXPORT, **traversal_rules)
+    full_traversal_rules = {
+        name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
+    }
+
     writer = get_writer(file_format)(filename=filename, use_compression=use_compression, **(writer_init or {}))
 
     if silent:
@@ -485,11 +517,12 @@ def export(
 
     try:
         summary(
-            writer.file_format_verbose,
-            filename,
+            file_format=writer.file_format_verbose,
+            export_version=writer.export_version,
+            outfile=filename,
             include_comments=include_comments,
             include_logs=include_logs,
-            **traversal_rules
+            traversal_rules=full_traversal_rules
         )
 
         report_data: Dict[str, Any] = {'time_write_start': None, 'time_write_stop': None, 'writer_data': None}

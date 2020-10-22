@@ -362,7 +362,7 @@ def export(
     output_data = {}
 
     output_data['time_extract_start'] = time.time()
-    export_data = generate_data(
+    export_data = _generate_data(
         entities=entities,
         silent=silent,
         allowed_licenses=allowed_licenses,
@@ -400,7 +400,7 @@ def export(
 
 
 @override_log_formatter('%(message)s')
-def generate_data(
+def _generate_data(
     entities: Optional[Iterable[Any]] = None,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
@@ -443,10 +443,6 @@ def generate_data(
     :raises `~aiida.common.exceptions.LicensingException`:
         if any node is licensed under forbidden license.
     """
-
-    if silent:
-        logging.disable(logging.CRITICAL)
-
     EXPORT_LOGGER.debug('STARTING EXPORT...')
 
     # Backwards-compatibility
@@ -473,18 +469,18 @@ def generate_data(
 
     all_fields_info, unique_identifiers = get_all_fields_info()
 
-    entities_starting_set, given_node_entry_ids = get_starting_node_ids(entities, silent)
+    entities_starting_set, given_node_entry_ids = _get_starting_node_ids(entities, silent)
 
     (
         node_ids_to_be_exported,
         node_pk_2_uuid_mapping,
         links_uuid,
         traversal_rules,
-    ) = collect_export_nodes(given_node_entry_ids, silent, **traversal_rules)
+    ) = _collect_export_nodes(given_node_entry_ids, silent, **traversal_rules)
 
-    check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
+    _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
 
-    entries_queries = get_entry_queries(
+    entries_queries = _get_entry_queries(
         node_ids_to_be_exported,
         entities_starting_set,
         node_pk_2_uuid_mapping,
@@ -493,7 +489,7 @@ def generate_data(
         include_logs,
     )
 
-    export_data = get_export_data(entries_queries, silent)
+    export_data = _get_export_data(entries_queries, silent)
 
     # Close progress up until this point in order to print properly
     close_progress_bar(leave=False)
@@ -516,8 +512,8 @@ def generate_data(
         level=LOG_LEVEL_REPORT,
     )
 
-    node_attributes, node_extras = get_node_data(node_ids_to_be_exported, silent)
-    groups_uuid = get_groups_uuid(export_data, silent)
+    node_attributes, node_extras = _get_node_data(node_ids_to_be_exported, silent)
+    groups_uuid = _get_groups_uuid(export_data, silent)
 
     # Turn sets into lists to be able to export them as JSON metadata.
     for entity, entity_set in entities_starting_set.items():
@@ -540,10 +536,6 @@ def generate_data(
 
     close_progress_bar(leave=False)
 
-    # Reset logging level
-    if silent:
-        logging.disable(logging.NOTSET)
-
     return ExportData(
         metadata,
         all_node_uuids,
@@ -555,7 +547,7 @@ def generate_data(
     )
 
 
-def get_starting_node_ids(entities: List[Any], silent: bool) -> Tuple[DefaultDict[str, Set[str]], Set[int]]:
+def _get_starting_node_ids(entities: List[Any], silent: bool) -> Tuple[DefaultDict[str, Set[str]], Set[int]]:
     """Get the starting node UUIDs and PKs
 
     :param entities: a list of entity instances
@@ -629,8 +621,8 @@ def get_starting_node_ids(entities: List[Any], silent: bool) -> Tuple[DefaultDic
     return entities_starting_set, given_node_entry_ids
 
 
-def collect_export_nodes(given_node_entry_ids: Set[int], silent: bool,
-                         **traversal_rules: bool) -> Tuple[Set[int], Dict[int, str], List[dict], Dict[str, bool]]:
+def _collect_export_nodes(given_node_entry_ids: Set[int], silent: bool,
+                          **traversal_rules: bool) -> Tuple[Set[int], Dict[int, str], List[dict], Dict[str, bool]]:
     """Iteratively explore the AiiDA graph to find further nodes that should also be exported
 
     At the same time, we will create the links_uuid list of dicts to be exported
@@ -675,7 +667,7 @@ def collect_export_nodes(given_node_entry_ids: Set[int], silent: bool,
     )
 
 
-def check_node_licenses(
+def _check_node_licenses(
     node_ids_to_be_exported: Set[int],
     allowed_licenses: Optional[Union[list, Callable]],
     forbidden_licenses: Optional[Union[list, Callable]],
@@ -696,7 +688,7 @@ def check_node_licenses(
         check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
 
 
-def get_entry_queries(
+def _get_entry_queries(
     node_ids_to_be_exported: Set[int],
     entities_starting_set: DefaultDict[str, Set[str]],
     node_pk_2_uuid_mapping: Dict[int, str],
@@ -801,7 +793,7 @@ def get_entry_queries(
     return entries_to_add
 
 
-def get_export_data(entries_queries: Dict[str, orm.QueryBuilder], silent: bool) -> Dict[str, Dict[int, dict]]:
+def _get_export_data(entries_queries: Dict[str, orm.QueryBuilder], silent: bool) -> Dict[str, Dict[int, dict]]:
     """Start automatic recursive export data generation
 
     :param entries_queries: partial queries for all entities to export
@@ -860,7 +852,7 @@ def get_export_data(entries_queries: Dict[str, orm.QueryBuilder], silent: bool) 
     return export_data
 
 
-def get_node_data(all_node_pks: Set[int], silent: bool) -> Tuple[Dict[str, dict], Dict[str, dict]]:
+def _get_node_data(all_node_pks: Set[int], silent: bool) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     """Gather attributes and extras for nodes
 
     :param export_data:  mappings by entity type -> pk -> db_columns
@@ -902,7 +894,7 @@ def get_node_data(all_node_pks: Set[int], silent: bool) -> Tuple[Dict[str, dict]
     return node_attributes, node_extras
 
 
-def get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Dict[str, List[str]]:
+def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Dict[str, List[str]]:
     """Get node UUIDs per group."""
     EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
     groups_uuid = defaultdict(list)

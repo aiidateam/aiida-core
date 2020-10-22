@@ -30,6 +30,7 @@ from typing import (
     Union,
     cast,
 )
+import warnings
 
 from aiida import get_version, orm
 from aiida.common import json
@@ -37,6 +38,7 @@ from aiida.common.exceptions import LicensingException
 from aiida.common.folders import Folder, RepositoryFolder, SandboxFolder
 from aiida.common.lang import type_check
 from aiida.common.log import LOG_LEVEL_REPORT, override_log_formatter
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport.common import (
     close_progress_bar,
@@ -987,6 +989,8 @@ def export_tree(
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
+    # pylint: disable=unused-argument
+    warnings.warn('function is deprecated, use `export` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     raise NotImplementedError
 
 
@@ -1010,6 +1014,7 @@ def export_zip(
     :param use_compression: Whether or not to compress the zip file.
 
     """
+    warnings.warn('function is deprecated, use `export` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     output_data = export(
         entities=entities,
         filename=filename,
@@ -1040,6 +1045,7 @@ def export_tar(
     :param filename: the filename (possibly including the absolute path)
         of the file on which to export.
     """
+    warnings.warn('function is deprecated, use `export` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
     output_data = export(
         entities=entities,
         filename=filename,

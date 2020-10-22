@@ -245,6 +245,10 @@ def export(
     overwrite: bool = False,
     silent: bool = False,
     use_compression: bool = True,
+    include_comments: bool = True,
+    include_logs: bool = True,
+    allowed_licenses: Optional[Union[list, Callable]] = None,
+    forbidden_licenses: Optional[Union[list, Callable]] = None,
     **traversal_rules: bool,
 ) -> dict:
     """Export AiiDA data
@@ -358,7 +362,15 @@ def export(
     output_data = {}
 
     output_data['time_extract_start'] = time.time()
-    export_data = generate_data(entities=entities, silent=silent, **traversal_rules)
+    export_data = generate_data(
+        entities=entities,
+        silent=silent,
+        allowed_licenses=allowed_licenses,
+        forbidden_licenses=forbidden_licenses,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        **traversal_rules
+    )
     output_data['time_extract_stop'] = time.time()
 
     extract_time = output_data['time_extract_start'] - output_data['time_extract_stop']
@@ -974,7 +986,7 @@ def export_zip(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,
     use_compression: bool = True,
-    **traversal_rules: bool,
+    **kwargs: Any,
 ) -> Tuple[float, ...]:
     """Export in a zipped folder
 
@@ -995,7 +1007,7 @@ def export_zip(
         filename=filename,
         file_format=ExportFileFormat.ZIP,
         use_compression=use_compression,
-        **traversal_rules,
+        **kwargs,
     )
     if 'time_write_stop' in output_data:
         return (output_data['time_extract_start'], output_data['time_write_stop'])
@@ -1007,7 +1019,7 @@ def export_zip(
 def export_tar(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,
-    **traversal_rules: bool,
+    **kwargs: Any,
 ) -> Tuple[float, ...]:
     """Export the entries passed in the 'entities' list to a gzipped tar file.
 
@@ -1024,7 +1036,7 @@ def export_tar(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.TAR_GZIPPED,
-        **traversal_rules,
+        **kwargs,
     )
 
     if 'writer' in output_data:

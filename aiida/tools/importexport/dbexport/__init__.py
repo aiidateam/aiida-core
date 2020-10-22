@@ -115,7 +115,7 @@ class ArchiveData:
 
 @dataclass
 class ExportReport:
-    """Class for storing data about the archive process."""
+    """Class for storing data about the export process."""
     # time in seconds
     time_collect_start: float
     time_collect_stop: float

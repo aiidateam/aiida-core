@@ -19,14 +19,11 @@ disable = [
     "inconsistent-return-statements",
     "locally-disabled",
     "logging-fstring-interpolation",
-    "missing-class-docstring",
-    "missing-function-docstring",
     "no-else-raise",
     "too-few-public-methods",
     "too-many-ancestors",
     "too-many-arguments",
     "too-many-instance-attributes",
-    "too-many-locals",
     "useless-suppression",
 ]
 
@@ -44,6 +41,11 @@ good-names = [
     "ArithmeticAddCalculation",
     "MultiplyAddWorkChain"
 ]
+no-docstring-rgx = "^_,setUp,tearDown"
+docstring-min-length = 5
+
+[tool.pylint.design]
+max-locals = 20
 
 [tool.pytest.ini_options]
 minversion = "6.0"

@@ -72,7 +72,7 @@ from aiida.tools.importexport.dbexport.utils import (
 )
 from aiida.tools.importexport.dbexport.zip import ZipFolder
 
-__all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
+__all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat', 'ArchiveWriterAbstract')
 
 
 @dataclass
@@ -88,7 +88,7 @@ class ArchiveData:
     node_data: Iterable[Tuple[str, dict, dict]]
 
 
-class WriterAbstract(ABC):
+class ArchiveWriterAbstract(ABC):
     """An abstract interface for AiiDA archive writers."""
 
     def __init__(self, filename: str, **kwargs: Any):
@@ -183,7 +183,7 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Archiv
         close_progress_bar(leave=False)
 
 
-class WriterJsonZip(WriterAbstract):
+class WriterJsonZip(ArchiveWriterAbstract):
     """An archive writer,
     which writes database data as a single JSON and repository data in a folder system.
 
@@ -223,7 +223,7 @@ class WriterJsonZip(WriterAbstract):
         return {}
 
 
-class WriterJsonTar(WriterAbstract):
+class WriterJsonTar(ArchiveWriterAbstract):
     """An archive writer,
     which writes database data as a single JSON and repository data in a folder system.
 
@@ -257,10 +257,57 @@ class WriterJsonTar(WriterAbstract):
         return {'compression_time_start': time_compress_start, 'compression_time_stop': time_compress_stop}
 
 
-def get_writer(file_format: str) -> Type[WriterAbstract]:
+class WriterJsonFolder(ArchiveWriterAbstract):
+    """An archive writer,
+    which writes database data as a single JSON and repository data in a folder system.
+
+    This writer is mainly intended for backward compatibility with `export_tree`.
+    """
+
+    def __init__(self, filename: str, **kwargs: Any):
+        """A writer for zipped archives.
+
+        :param filename: the filename (possibly including the absolute path)
+            of the file on which to export.
+        :param folder: a folder to write the archive to.
+
+        """
+        super().__init__(filename, **kwargs)
+        type_check(
+            kwargs.get('folder', None), (Folder, ZipFolder),
+            msg='`folder` must be specified and given as an AiiDA Folder entity'
+        )
+        self._folder = kwargs.get('folder')
+
+    @property
+    def file_format_verbose(self) -> str:
+        return str(self._folder.__class__)
+
+    def write(
+        self,
+        export_data: ArchiveData,
+        silent: bool = False,
+    ) -> dict:
+        """write the archive
+
+        :param entities: a list of entity instances; they can belong to different models/entities.
+        :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
+            what rule names are toggleable and what the defaults are.
+
+        """
+        _write_to_json_archive(folder=self._folder, export_data=export_data, silent=silent)
+
+        return {}
+
+
+def get_writer(file_format: str) -> Type[ArchiveWriterAbstract]:
     """Return the available writer classes."""
     # TODO this could be made an entrypoint
-    writers = {ExportFileFormat.ZIP: WriterJsonZip, ExportFileFormat.TAR_GZIPPED: WriterJsonTar}
+    writers = {
+        ExportFileFormat.ZIP: WriterJsonZip,
+        ExportFileFormat.TAR_GZIPPED: WriterJsonTar,
+        'folder': WriterJsonFolder,
+    }
 
     if file_format not in writers:
         raise exceptions.ArchiveExportError(
@@ -281,6 +328,7 @@ def export(
     include_logs: bool = True,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
+    writer_init: Optional[Dict[str, Any]] = None,
     **traversal_rules: bool,
 ) -> dict:
     """Export AiiDA data to an archive file.
@@ -311,21 +359,19 @@ def export(
         If a list, then checks whether all licenses of Data nodes are in the list. If a function,
         then calls function for licenses of Data nodes expecting True if license is allowed, False
         otherwise.
-    :type allowed_licenses: list
 
     :param forbidden_licenses: List or function. If a list,
         then checks whether all licenses of Data nodes are in the list. If a function,
         then calls function for licenses of Data nodes expecting True if license is allowed, False
         otherwise.
-    :type forbidden_licenses: list
 
     :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
         Default: True, *include* comments in export (as well as relevant users).
-    :type include_comments: bool
 
     :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
         Default: True, *include* logs in export.
-    :type include_logs: bool
+
+    :param writer_init: Additional key-word arguments to pass to the writer class init
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
@@ -377,7 +423,7 @@ def export(
     if not overwrite and os.path.exists(filename):
         raise exceptions.ArchiveExportError(f"The output file '{filename}' already exists")
 
-    writer = get_writer(file_format)(filename=filename, use_compression=use_compression)
+    writer = get_writer(file_format)(filename=filename, use_compression=use_compression, **(writer_init or {}))
 
     if silent:
         logging.disable(logging.CRITICAL)
@@ -961,7 +1007,6 @@ def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> D
 # THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY
 
 
-@override_log_formatter('%(message)s')
 def export_tree(
     entities: Optional[Iterable[Any]] = None,
     folder: Optional[Union[Folder, ZipFolder]] = None,
@@ -1002,11 +1047,22 @@ def export_tree(
         exporting.
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
-    # pylint: disable=unused-argument
     warnings.warn(
         'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
     )  # pylint: disable=no-member
-    raise NotImplementedError
+    export(
+        entities=entities,
+        filename='none',
+        overwrite=True,
+        file_format='folder',
+        allowed_licenses=allowed_licenses,
+        forbidden_licenses=forbidden_licenses,
+        silent=silent,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        writer_init={'folder': folder},
+        **traversal_rules,
+    )
 
 
 def export_zip(

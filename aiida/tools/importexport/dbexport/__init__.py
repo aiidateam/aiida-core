@@ -256,7 +256,7 @@ def export(
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     **traversal_rules: bool,
 ) -> dict:
-    """Export AiiDA data
+    """Export AiiDA data to an archive file.
 
     .. deprecated:: 1.2.1
         Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
@@ -523,7 +523,6 @@ def _generate_data(
         level=LOG_LEVEL_REPORT,
     )
 
-    node_attributes, node_extras = _get_node_data(node_ids_to_be_exported, silent)
     groups_uuid = _get_groups_uuid(export_data, silent)
 
     # Turn sets into lists to be able to export them as JSON metadata.
@@ -544,6 +543,10 @@ def _generate_data(
     }
 
     all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported}
+
+    # we get the node data last, because it is generally the largest data source
+    # and later we may look to stream this data in chunks
+    node_attributes, node_extras = _get_node_data(node_ids_to_be_exported, silent)
 
     close_progress_bar(leave=False)
 

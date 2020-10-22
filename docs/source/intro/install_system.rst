@@ -49,14 +49,14 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       #. Installing RabbitMQ:
 
-        #. On WSL 1, the `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_ should be installed and started.
+         #. On WSL 1, the `Windows native RabbitMQ <https://www.rabbitmq.com/install-windows.html>`_ should be installed and started.
 
-        #. On WSL 2, RabbitMQ can be installed inside WSL:
+         #. On WSL 2, RabbitMQ can be installed inside WSL:
 
-           .. code-block:: console
+            .. code-block:: console
 
-              $ sudo apt install rabbitmq-server
-              $ sudo service rabbitmq-server start
+                $ sudo apt install rabbitmq-server
+                $ sudo service rabbitmq-server start
 
       #. Install Python and PostgreSQL:
 
@@ -84,7 +84,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
              $ chmod a+x,go-w /path/to/file.sh
              $ sudo chown root:root /path/to/file.sh
 
-          To allow running this file as sudo without requiring a password, run
+          Next, run
 
           .. code-block:: console
 
@@ -101,25 +101,25 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
           Now you can use the Windows Task Scheduler to automatically execute this file on startup:
 
-          #. Open Task Scheduler
+          #. Open Task Scheduler.
 
-          #. In the "Actions" menu, click "Create Task"
+          #. In the "Actions" menu, click "Create Task".
 
           #. In "General/Security options", select "Run whether user is logged on or not".
 
-          #. In the "Triggers" tab, click "New..."
+          #. In the "Triggers" tab, click "New...".
 
              #. In the "Begin the task:" dropdown, select "At startup".
 
              #. Click "OK" to confirm.
 
-          #. In the "Actions" tab, click "New..."
+          #. In the "Actions" tab, click "New...".
 
              #. In the "Action" dropdown, select "Start a program".
 
-             #. In the "Program/script" text field, add ``C:\Windows\System32\bash.exe``
+             #. In the "Program/script" text field, add ``C:\Windows\System32\bash.exe``.
 
-             #. In the "Add arguments (optional)" text field, add ``-c "sudo /path/to/file.sh"``
+             #. In the "Add arguments (optional)" text field, add ``-c "sudo /path/to/file.sh"``.
 
              #. Click "OK" to confirm.
 

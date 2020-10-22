@@ -88,7 +88,6 @@ class ExportMetadata:
     # Entity type -> database key -> meta parameters
     all_fields_info: Dict[str, Dict[str, Dict[str, str]]] = field(repr=False)
     aiida_version: str = field(default_factory=get_version)
-    export_version: str = EXPORT_VERSION
 
 
 @dataclass
@@ -191,8 +190,8 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Archiv
         fhandle.write(json.dumps(data))
 
     metadata = {
+        'export_version': EXPORT_VERSION,
         'aiida_version': export_data.metadata.aiida_version,
-        'export_version': export_data.metadata.export_version,
         'all_fields_info': export_data.metadata.all_fields_info,
         'unique_identifiers': export_data.metadata.unique_identifiers,
         'export_parameters': {

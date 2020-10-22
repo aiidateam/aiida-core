@@ -78,11 +78,12 @@ class ExportData:
     """Class for storing data to export."""
     metadata: dict
     all_node_uuids: Set[str]
-    entity_data: Dict[str, Dict[int, dict]]
-    node_attributes: Dict[str, dict]
-    node_extras: Dict[str, dict]
     groups_uuid: Dict[str, List[str]]
     links_uuid: List[dict]
+    # all entity data from the database, except Node extras and attributes
+    entity_data: Dict[str, Dict[int, dict]]
+    # Iterable of Node (uuid, attributes, extras)
+    node_data: Iterable[Tuple[str, dict, dict]]
 
 
 class WriterAbstract(ABC):
@@ -127,13 +128,17 @@ def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: Export
 
     EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
 
-    data = {
-        'node_attributes': export_data.node_attributes,
-        'node_extras': export_data.node_extras,
+    data: Dict[str, Any] = {
+        'node_attributes': {},
+        'node_extras': {},
         'export_data': export_data.entity_data,
         'links_uuid': export_data.links_uuid,
         'groups_uuid': export_data.groups_uuid,
     }
+
+    for uuid, attributes, extras in export_data.node_data:
+        data['node_attributes'][uuid] = attributes
+        data['node_extras'][uuid] = extras
 
     # N.B. We're really calling zipfolder.open (if exporting a zipfile)
     with folder.open('data.json', mode='w') as fhandle:
@@ -546,18 +551,17 @@ def _generate_data(
 
     # we get the node data last, because it is generally the largest data source
     # and later we may look to stream this data in chunks
-    node_attributes, node_extras = _get_node_data(node_ids_to_be_exported, silent)
+    node_data = _get_node_data(node_ids_to_be_exported, silent)
 
     close_progress_bar(leave=False)
 
     return ExportData(
         metadata,
         all_node_uuids,
-        export_data,
-        node_attributes,
-        node_extras,
         groups_uuid,
         links_uuid,
+        export_data,
+        node_data,
     )
 
 
@@ -866,14 +870,14 @@ def _get_export_data(entries_queries: Dict[str, orm.QueryBuilder], silent: bool)
     return export_data
 
 
-def _get_node_data(all_node_pks: Set[int], silent: bool) -> Tuple[Dict[str, dict], Dict[str, dict]]:
+def _get_node_data(all_node_pks: Set[int], silent: bool) -> Iterable[Tuple[str, dict, dict]]:
     """Gather attributes and extras for nodes
 
     :param export_data:  mappings by entity type -> pk -> db_columns
     :param all_node_pks: set of pks
     :param silent: for progress printing
 
-    :return: attributes, extras
+    :return: iterable of (uuid, attributes, extras)
 
     """
 
@@ -882,8 +886,7 @@ def _get_node_data(all_node_pks: Set[int], silent: bool) -> Tuple[Dict[str, dict
 
     # ATTRIBUTES and EXTRAS
     EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')
-    node_attributes = {}
-    node_extras = {}
+    node_data = []
 
     # Another QueryBuilder query to get the attributes and extras.
     # TODO: See if this can be optimized
@@ -902,10 +905,9 @@ def _get_node_data(all_node_pks: Set[int], silent: bool) -> Tuple[Dict[str, dict
         for node_pk, attributes, extras in all_nodes_query.iterall():
             progress_bar.update()
 
-            node_attributes[str(node_pk)] = attributes
-            node_extras[str(node_pk)] = extras
+            node_data.append((str(node_pk), attributes, extras))
 
-    return node_attributes, node_extras
+    return node_data
 
 
 def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]], silent: bool) -> Dict[str, List[str]]:

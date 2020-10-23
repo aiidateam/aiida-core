@@ -631,6 +631,7 @@ def _collect_archive_data(
     :raises `~aiida.common.exceptions.LicensingException`:
         if any node is licensed under forbidden license.
     """
+    # pylint: disable=too-many-locals
     EXPORT_LOGGER.debug('STARTING EXPORT...')
 
     # Backwards-compatibility
@@ -876,6 +877,7 @@ def _collect_entity_queries(
     include_logs: bool = True,
 ) -> Dict[str, orm.QueryBuilder]:
     """Gather partial queries for all entities to export."""
+    # pylint: disable=too-many-locals
     given_log_entry_ids = set()
     given_comment_entry_ids = set()
     all_fields_info, _ = get_all_fields_info()

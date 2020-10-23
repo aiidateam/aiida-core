@@ -187,9 +187,8 @@ class MpdsDbImporter(DbImporter):
         content = self.get_response_content(response, fmt=ApiFormat.JSON)
 
         count = content['count']
-        npages = content['npages']
 
-        for page in range(npages):
+        for page in range(content['npages']):
 
             response = self.get(q=json.dumps(query), fmt=fmt, pagesize=pagesize, page=page)
             content = self.get_response_content(response, fmt=fmt)
@@ -209,9 +208,8 @@ class MpdsDbImporter(DbImporter):
 
             elif fmt == ApiFormat.CIF:
 
-                lines = content.splitlines()
                 cif = []
-                for line in lines:
+                for line in content.splitlines():
                     if cif:
                         if line.startswith('data_'):
                             text = '\n'.join(cif)
@@ -219,9 +217,8 @@ class MpdsDbImporter(DbImporter):
                             yield text
                         else:
                             cif.append(line)
-                    else:
-                        if line.startswith('data_'):
-                            cif.append(line)
+                    elif line.startswith('data_'):
+                        cif.append(line)
                 if cif:
                     yield '\n'.join(cif)
 

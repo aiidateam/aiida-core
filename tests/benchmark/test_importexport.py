@@ -23,7 +23,7 @@ from aiida.orm import CalcFunctionNode, Dict, load_node
 from aiida.tools.importexport import import_data, export
 
 
-def recursive_provenance(in_node, depth, breadth, num_objects=0):
+def recursive_provenance(in_node, depth, breadth, num_objects=0, num_attributes=10, file_size=10000, attr_size=10):
     """Recursively build a provenance tree."""
     if not in_node.is_stored:
         in_node.store()
@@ -37,9 +37,9 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
         calcfunc.add_incoming(in_node, link_type=LinkType.INPUT_CALC, link_label='input')
         calcfunc.store()
 
-        out_node = Dict(dict={str(i): i for i in range(10)})
+        out_node = Dict(dict={str(i): 'a' * attr_size for i in range(num_attributes)})
         for idx in range(num_objects):
-            out_node.put_object_from_filelike(StringIO('a' * 10000), f'key{str(idx)}')
+            out_node.put_object_from_filelike(StringIO('a' * file_size), f'key{str(idx)}')
         out_node.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
         out_node.store()
 

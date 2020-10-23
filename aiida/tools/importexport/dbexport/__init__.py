@@ -261,9 +261,7 @@ def _write_to_json_archive(
 
 class WriterJsonZip(ArchiveWriterAbstract):
     """An archive writer,
-    which writes database data as a single JSON and repository data in a folder system.
-
-    The entire containing folder is then compressed as a zip file.
+    which writes database data as a single JSON and repository data in a zipped folder system.
     """
 
     def __init__(self, filename: str, progress_context: Optional[ProgressContext] = None, **kwargs: Any):
@@ -311,6 +309,18 @@ class WriterJsonTar(ArchiveWriterAbstract):
     The entire containing folder is then compressed as a tar file.
     """
 
+    def __init__(self, filename: str, progress_context: Optional[ProgressContext] = None, **kwargs: Any):
+        """A writer for zipped archives.
+
+        :param filename: the filename (possibly including the absolute path)
+            of the file on which to export.
+        :param progress_context: A context manager for creating and updating a progress bar
+        :param sandbox_in_repo: Create the temporary uncompressed folder within the aiida repository
+
+        """
+        super().__init__(filename, progress_context, **kwargs)
+        self.sandbox_in_repo = kwargs.get('sandbox_in_repo', True)
+
     @property
     def file_format_verbose(self) -> str:
         return 'Gzipped tarball (compressed)'
@@ -326,7 +336,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
         :returns: A dictionary of data about the write process
 
         """
-        with SandboxFolder() as folder:
+        with SandboxFolder(sandbox_in_repo=self.sandbox_in_repo) as folder:
             _write_to_json_archive(
                 folder=folder,
                 export_data=export_data,

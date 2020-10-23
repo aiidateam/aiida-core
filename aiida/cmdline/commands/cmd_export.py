@@ -67,6 +67,7 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
+@options.VERBOSE()
 @options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
@@ -83,7 +84,7 @@ def inspect(archive, version, data, meta_data):
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbose
 ):
     """
     Export subsets of the provenance graph to file for sharing.
@@ -133,7 +134,7 @@ def create(
         export_format = ExportFileFormat.TAR_GZIPPED
 
     try:
-        export(entities, filename=output_file, file_format=export_format, **kwargs)
+        export(entities, filename=output_file, file_format=export_format, verbose=verbose, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:

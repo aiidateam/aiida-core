@@ -23,7 +23,6 @@ from typing import (
     ContextManager,
     DefaultDict,
     Dict,
-    Generator,
     Iterable,
     List,
     Optional,
@@ -142,19 +141,27 @@ ProgressContext = Callable[..., ContextManager[tqdm]]
 class ArchiveWriterAbstract(ABC):
     """An abstract interface for AiiDA archive writers."""
 
-    def __init__(self, filename: str, **kwargs: Any):
+    def __init__(self, filename: str, progress_context: Optional[ProgressContext] = None, **kwargs: Any):
         """An archive writer
 
         :param filename: the filename (possibly including the absolute path)
             of the file on which to export.
+        :param progress_context: A context manager for creating and updating a progress bar
+
         """
         # pylint: disable=unused-argument
         self._filename = filename
+        self._progress_context = progress_context or partial(tqdm, bar_format=BAR_FORMAT)
 
     @property
     def filename(self) -> str:
         """Return the filename to write to."""
         return self._filename
+
+    @property
+    def progress_context(self) -> ProgressContext:
+        """Return the progress bar context manager."""
+        return self._progress_context
 
     @property
     @abstractmethod
@@ -170,13 +177,12 @@ class ArchiveWriterAbstract(ABC):
     def write(
         self,
         export_data: ArchiveData,
-        progress_context: ProgressContext,
     ) -> dict:
         """write the archive.
 
-        :param silent: suppress console prints and progress bar.
+        :param export_data: The data to export
+        :returns: A dictionary of data about the write process
 
-        :returns: process data, such as timings
         """
 
 
@@ -260,15 +266,16 @@ class WriterJsonZip(ArchiveWriterAbstract):
     The entire containing folder is then compressed as a zip file.
     """
 
-    def __init__(self, filename: str, **kwargs: Any):
+    def __init__(self, filename: str, progress_context: Optional[ProgressContext] = None, **kwargs: Any):
         """A writer for zipped archives.
 
         :param filename: the filename (possibly including the absolute path)
             of the file on which to export.
+        :param progress_context: A context manager for creating and updating a progress bar
         :param use_compression: Whether or not to compress the zip file.
 
         """
-        super().__init__(filename, **kwargs)
+        super().__init__(filename, progress_context, **kwargs)
         self._use_compression = kwargs.get('use_compression', True)
 
     @property
@@ -279,12 +286,11 @@ class WriterJsonZip(ArchiveWriterAbstract):
     def export_version(self) -> str:
         return EXPORT_VERSION
 
-    def write(self, export_data: ArchiveData, progress_context: ProgressContext) -> dict:
+    def write(self, export_data: ArchiveData) -> dict:
         """write the archive
 
-        :param entities: a list of entity instances; they can belong to different models/entities.
-        :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
-            what rule names are toggleable and what the defaults are.
+        :param export_data: The data to export
+        :returns: A dictionary of data about the write process
 
         """
         with ZipFolder(self.filename, mode='w', use_compression=self._use_compression) as folder:
@@ -292,7 +298,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
                 folder=folder,
                 export_data=export_data,
                 export_version=self.export_version,
-                progress_context=progress_context
+                progress_context=self.progress_context
             )
 
         return {}
@@ -313,12 +319,11 @@ class WriterJsonTar(ArchiveWriterAbstract):
     def export_version(self) -> str:
         return EXPORT_VERSION
 
-    def write(self, export_data: ArchiveData, progress_context: ProgressContext) -> dict:
+    def write(self, export_data: ArchiveData) -> dict:
         """write the archive
 
-        :param entities: a list of entity instances; they can belong to different models/entities.
-        :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
-            what rule names are toggleable and what the defaults are.
+        :param export_data: The data to export
+        :returns: A dictionary of data about the write process
 
         """
         with SandboxFolder() as folder:
@@ -326,7 +331,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
                 folder=folder,
                 export_data=export_data,
                 export_version=self.export_version,
-                progress_context=progress_context
+                progress_context=self.progress_context
             )
 
             with tarfile.open(self.filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
@@ -344,15 +349,16 @@ class WriterJsonFolder(ArchiveWriterAbstract):
     This writer is mainly intended for backward compatibility with `export_tree`.
     """
 
-    def __init__(self, filename: str, **kwargs: Any):
+    def __init__(self, filename: str, progress_context: Optional[ProgressContext] = None, **kwargs: Any):
         """A writer for zipped archives.
 
         :param filename: the filename (possibly including the absolute path)
             of the file on which to export.
+        :param progress_context: A context manager for creating and updating a progress bar
         :param folder: a folder to write the archive to.
 
         """
-        super().__init__(filename, **kwargs)
+        super().__init__(filename, progress_context, **kwargs)
         type_check(
             kwargs.get('folder', None), (Folder, ZipFolder),
             msg='`folder` must be specified and given as an AiiDA Folder entity'
@@ -367,19 +373,18 @@ class WriterJsonFolder(ArchiveWriterAbstract):
     def export_version(self) -> str:
         return EXPORT_VERSION
 
-    def write(self, export_data: ArchiveData, progress_context: ProgressContext) -> dict:
+    def write(self, export_data: ArchiveData) -> dict:
         """write the archive
 
-        :param entities: a list of entity instances; they can belong to different models/entities.
-        :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
-            what rule names are toggleable and what the defaults are.
+        :param export_data: The data to export
+        :returns: A dictionary of data about the write process
 
         """
         _write_to_json_archive(
             folder=self._folder,
             export_data=export_data,
             export_version=self.export_version,
-            progress_context=progress_context
+            progress_context=self.progress_context
         )
 
         return {}
@@ -515,12 +520,13 @@ def export(
         name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
     }
 
-    writer = get_writer(file_format)(filename=filename, use_compression=use_compression, **(writer_init or {}))
+    progress_context = partial(tqdm, bar_format=BAR_FORMAT, leave=verbose)
+    writer = get_writer(file_format)(
+        filename=filename, progress_context=progress_context, use_compression=use_compression, **(writer_init or {})
+    )
 
     if silent:
         logging.disable(logging.CRITICAL)
-
-    progress_context = partial(tqdm, bar_format=BAR_FORMAT, leave=verbose)
 
     try:
         summary(
@@ -552,9 +558,7 @@ def export(
         if export_data is not None:
             try:
                 report_data['time_write_start'] = time.time()
-                report_data['writer_data'] = writer.write(
-                    export_data=export_data, progress_context=progress_context
-                )  # type: ignore
+                report_data['writer_data'] = writer.write(export_data=export_data)  # type: ignore
                 report_data['time_write_stop'] = time.time()
             except (exceptions.ArchiveExportError, LicensingException) as exc:
                 if os.path.exists(filename):

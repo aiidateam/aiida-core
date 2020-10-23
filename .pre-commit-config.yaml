@@ -37,7 +37,8 @@ repos:
         files: >-
             (?x)^(
                 aiida/engine/processes/calcjobs/calcjob.py|
-                aiida/tools/groups/paths.py
+                aiida/tools/groups/paths.py|
+                aiida/tools/importexport/dbexport/__init__.py
             )$
 
 -   repo: local

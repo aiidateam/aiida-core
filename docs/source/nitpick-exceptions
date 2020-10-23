@@ -20,8 +20,10 @@ py:class builtins.dict
 
 ### AiiDA
 
-# not quite clear why necessary...
+# issues with order of object processing and type hinting
 py:class WorkChainSpec
+py:class aiida.tools.importexport.dbexport.ExportReport
+py:class aiida.tools.importexport.dbexport.ArchiveData
 
 py:class EntityType
 py:class aiida.tools.groups.paths.WalkNodeResult

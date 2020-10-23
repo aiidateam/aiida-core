@@ -280,29 +280,18 @@ def check_process_nodes_sealed(nodes):
 
 
 @override_log_formatter('%(message)s')
-def summary(file_format, outfile, **kwargs):
+def summary(*, file_format, export_version, outfile, include_comments, include_logs, traversal_rules):
     """Print summary for export"""
     from tabulate import tabulate
-    from aiida.tools.importexport.common.config import EXPORT_VERSION
 
-    parameters = [['Archive', outfile], ['Format', file_format], ['Export version', EXPORT_VERSION]]
+    parameters = [['Archive', outfile], ['Format', file_format], ['Export version', export_version]]
 
     result = f"\n{tabulate(parameters, headers=['EXPORT', ''])}"
-
-    include_comments = kwargs.get('include_comments', True)
-    include_logs = kwargs.get('include_logs', True)
-    input_forward = kwargs.get('input_forward', False)
-    create_reversed = kwargs.get('create_reversed', True)
-    return_reversed = kwargs.get('return_reversed', False)
-    call_reversed = kwargs.get('call_reversed', False)
 
     inclusions = [['Include Comments', include_comments], ['Include Logs', include_logs]]
     result += f"\n\n{tabulate(inclusions, headers=['Inclusion rules', ''])}"
 
-    traversal_rules = [['Follow INPUT Links forwards',
-                        input_forward], ['Follow CREATE Links backwards', create_reversed],
-                       ['Follow RETURN Links backwards', return_reversed],
-                       ['Follow CALL Links backwards', call_reversed]]
+    traversal_rules = [[f"Follow links {' '.join(name.split('_'))}s", value] for name, value in traversal_rules.items()]
     result += f"\n\n{tabulate(traversal_rules, headers=['Traversal rules', ''])}\n"
 
     EXPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)

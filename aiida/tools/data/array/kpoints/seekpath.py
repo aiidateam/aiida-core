@@ -138,22 +138,19 @@ def get_kpoints_path(structure, parameters):
     result = {}
     rawdict = seekpath.get_path(structure=structure_tuple, **parameters)
 
+    result['parameters'] = Dict(dict=rawdict)
+
     # Replace conv structure with AiiDA StructureData
     conv_lattice = rawdict.pop('conv_lattice')
     conv_positions = rawdict.pop('conv_positions')
     conv_types = rawdict.pop('conv_types')
-    conv_tuple = (conv_lattice, conv_positions, conv_types)
-    conv_structure = spglib_tuple_to_structure(conv_tuple, kind_info, kinds)
+    result['conv_structure'] = spglib_tuple_to_structure((conv_lattice, conv_positions, conv_types), kind_info, kinds)
 
     # Replace primitive structure with AiiDA StructureData
     primitive_lattice = rawdict.pop('primitive_lattice')
     primitive_positions = rawdict.pop('primitive_positions')
     primitive_types = rawdict.pop('primitive_types')
-    primitive_tuple = (primitive_lattice, primitive_positions, primitive_types)
-    primitive_structure = spglib_tuple_to_structure(primitive_tuple, kind_info, kinds)
-
-    result['parameters'] = Dict(dict=rawdict)
-    result['primitive_structure'] = primitive_structure
-    result['conv_structure'] = conv_structure
+    result['primitive_structure'] = spglib_tuple_to_structure((primitive_lattice, primitive_positions, primitive_types),
+                                                              kind_info, kinds)
 
     return result

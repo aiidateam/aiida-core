@@ -1,0 +1,27 @@
+# A small configuration for use in local CI testing,
+# to create a container with the current code installed.
+
+# Simply install docker, then run:
+# $ docker-compose -f .ci/docker-aiida-core.yml up -d --build
+# $ docker exec aiida-core wait-for-services
+# $ docker exec -it --user aiida aiida-core /bin/bash
+
+# and to power down, after testing:
+# $ docker-compose -f .ci/docker-aiida-core.yml down
+
+
+version: '3.4'
+services:
+  aiida:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    image: "aiidateam/aiida-core:latest"
+    container_name: aiida-core
+    networks:
+      - aiida-core
+    volumes:
+      - "../:/tmp/mount_folder"
+
+networks:
+  aiida-core:

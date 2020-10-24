@@ -291,7 +291,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
     The entire containing folder is then compressed as a tar file.
     """
 
-    def __init__(self, filename: str, **kwargs: Any):
+    def __init__(self, filename: str, sandbox_in_repo: bool = True, **kwargs: Any):
         """A writer for zipped archives.
 
         :param filename: the filename (possibly including the absolute path)
@@ -300,7 +300,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
 
         """
         super().__init__(filename, **kwargs)
-        self.sandbox_in_repo = kwargs.get('sandbox_in_repo', True)
+        self.sandbox_in_repo = sandbox_in_repo
 
     @property
     def file_format_verbose(self) -> str:

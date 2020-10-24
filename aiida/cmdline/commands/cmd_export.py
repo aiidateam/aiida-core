@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
-from functools import partial
 import os
 import tempfile
 
@@ -144,7 +143,7 @@ def create(
         export_format = ExportFileFormat.TAR_GZIPPED
 
     if verbosity in ['DEBUG', 'INFO']:
-        set_progress_reporter(partial(tqdm, bar_format=BAR_FORMAT, leave=(verbosity == 'DEBUG')))
+        set_progress_reporter(tqdm, bar_format=BAR_FORMAT, leave=(verbosity == 'DEBUG'))
     EXPORT_LOGGER.setLevel(verbosity)
 
     try:

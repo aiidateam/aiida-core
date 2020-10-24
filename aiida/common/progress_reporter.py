@@ -14,10 +14,11 @@ The interface is inspired by `tqdm <https://github.com/tqdm/tqdm>`,
 and indeed a valid implementation is::
 
     from tqdm import tqdm
-    set_progress_reporter(tqdm)
+    set_progress_reporter(tqdm, bar_format='{l_bar}{bar}{r_bar}')
 
 """
 from contextlib import contextmanager
+from functools import partial
 from typing import Any, Callable, ContextManager, Iterator, Optional
 
 __all__ = ('get_progress_reporter', 'set_progress_reporter', 'progress_reporter_base', 'ProgressIncrementerBase')
@@ -82,11 +83,13 @@ def get_progress_reporter() -> Callable[..., ContextManager[Any]]:
     return PROGRESS_REPORTER  # type: ignore
 
 
-def set_progress_reporter(reporter: Optional[Callable[..., ContextManager[Any]]] = None):
+def set_progress_reporter(reporter: Optional[Callable[..., ContextManager[Any]]] = None, **kwargs: Any):
     """Set the progress reporter implementation
 
     :param reporter: A context manager for providing a progress reporter for a process.
         If None, reset to default null reporter
+
+    :param kwargs: If present, set a partial function with these kwargs
 
     The reporter should be a context manager that implements the
     :func:`~aiida.common.progress_reporter.progress_reporter_base` interface.
@@ -100,4 +103,9 @@ def set_progress_reporter(reporter: Optional[Callable[..., ContextManager[Any]]]
 
     """
     global PROGRESS_REPORTER
-    PROGRESS_REPORTER = reporter or progress_reporter_base  # type: ignore
+    if reporter is None:
+        PROGRESS_REPORTER = progress_reporter_base  # type: ignore
+    elif kwargs:
+        PROGRESS_REPORTER = partial(reporter, **kwargs)  # type: ignore
+    else:
+        PROGRESS_REPORTER = reporter  # type: ignore

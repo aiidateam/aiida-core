@@ -39,7 +39,7 @@ repos:
                 aiida/engine/processes/calcjobs/calcjob.py|
                 aiida/tools/groups/paths.py|
                 aiida/tools/importexport/dbexport/__init__.py|
-                aiida/tools/importexport/common/progress_reporter.py|
+                aiida/common/progress_reporter.py|
             )$
 
 -   repo: local

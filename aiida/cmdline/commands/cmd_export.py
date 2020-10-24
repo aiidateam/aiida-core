@@ -67,7 +67,13 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
-@options.VERBOSE(help='Do not remove progress bars after a process completes')
+@click.option(
+    '-v',
+    '--verbosity',
+    default='INFO',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
+    help='Control the verbosity of console logging'
+)
 @options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
@@ -84,7 +90,7 @@ def inspect(archive, version, data, meta_data):
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbose
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbosity
 ):
     """
     Export subsets of the provenance graph to file for sharing.
@@ -97,7 +103,7 @@ def create(
     """
     from tqdm import tqdm
     from aiida.common.progress_reporter import set_progress_reporter
-    from aiida.tools.importexport import export, ExportFileFormat
+    from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
     from aiida.tools.importexport.common.config import BAR_FORMAT
 
@@ -136,7 +142,9 @@ def create(
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
 
-    set_progress_reporter(partial(tqdm, bar_format=BAR_FORMAT, leave=verbose))
+    if verbosity in ['DEBUG', 'INFO']:
+        set_progress_reporter(partial(tqdm, bar_format=BAR_FORMAT, leave=(verbosity == 'DEBUG')))
+    EXPORT_LOGGER.setLevel(verbosity)
 
     try:
         export(entities, filename=output_file, file_format=export_format, **kwargs)

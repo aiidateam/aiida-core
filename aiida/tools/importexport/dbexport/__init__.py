@@ -397,7 +397,7 @@ def export(
     filename: Optional[str] = None,
     file_format: str = ExportFileFormat.ZIP,
     overwrite: bool = False,
-    silent: bool = False,
+    silent: Optional[bool] = None,
     use_compression: bool = True,
     include_comments: bool = True,
     include_logs: bool = True,
@@ -407,6 +407,21 @@ def export(
     **traversal_rules: bool,
 ) -> ExportReport:
     """Export AiiDA data to an archive file.
+
+    Note, the logging level and progress reporter should be set externally, for example::
+
+        from functools import partial
+        from tqdm import tqdm
+        from aiida.common.progress_reporter import set_progress_reporter
+        from aiida.tools.importexport.common.config import BAR_FORMAT
+
+        EXPORT_LOGGER.setLevel('DEBUG')
+        set_progress_reporter(partial(tqdm, bar_format=BAR_FORMAT, leave=True))
+        export(...)
+
+    .. deprecated:: 1.5.0
+        Support for the parameter `silent` will be removed in `v2.0.0`.
+        Please set the logger level and progress bar implementation independently.
 
     .. deprecated:: 1.2.1
         Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
@@ -424,8 +439,6 @@ def export(
         If False, raise an
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError`
         if the output file already exists.
-
-    :param silent: suppress console prints and progress bar.
 
     :param use_compression: Whether or not to compress the archive file
         (only valid for the zip file format).
@@ -485,6 +498,11 @@ def export(
             },
         ),
     )
+    if silent is not None:
+        warnings.warn(
+            'silent keyword is deprecated and will be removed in AiiDA v2.0.0, set the logger level explicitly instead',
+            AiidaDeprecationWarning
+        )  # pylint: disable=no-member
 
     type_check(
         entities,
@@ -506,55 +524,46 @@ def export(
 
     writer = get_writer(file_format)(filename=filename, use_compression=use_compression, **(writer_init or {}))
 
-    if silent:
-        logging.disable(logging.CRITICAL)
+    summary(
+        file_format=writer.file_format_verbose,
+        export_version=writer.export_version,
+        outfile=filename,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        traversal_rules=full_traversal_rules
+    )
 
-    try:
-        summary(
-            file_format=writer.file_format_verbose,
-            export_version=writer.export_version,
-            outfile=filename,
-            include_comments=include_comments,
-            include_logs=include_logs,
-            traversal_rules=full_traversal_rules
-        )
+    report_data: Dict[str, Any] = {'time_write_start': None, 'time_write_stop': None, 'writer_data': None}
 
-        report_data: Dict[str, Any] = {'time_write_start': None, 'time_write_stop': None, 'writer_data': None}
+    report_data['time_collect_start'] = time.time()
+    export_data = _collect_archive_data(
+        entities=entities,
+        allowed_licenses=allowed_licenses,
+        forbidden_licenses=forbidden_licenses,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        **traversal_rules
+    )
+    report_data['time_collect_stop'] = time.time()
 
-        report_data['time_collect_start'] = time.time()
-        export_data = _collect_archive_data(
-            entities=entities,
-            allowed_licenses=allowed_licenses,
-            forbidden_licenses=forbidden_licenses,
-            include_comments=include_comments,
-            include_logs=include_logs,
-            **traversal_rules
-        )
-        report_data['time_collect_stop'] = time.time()
+    extract_time = report_data['time_collect_stop'] - report_data['time_collect_start']
+    EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
-        extract_time = report_data['time_collect_stop'] - report_data['time_collect_start']
-        EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
+    if export_data is not None:
+        try:
+            report_data['time_write_start'] = time.time()
+            report_data['writer_data'] = writer.write(export_data=export_data)  # type: ignore
+            report_data['time_write_stop'] = time.time()
+        except (exceptions.ArchiveExportError, LicensingException) as exc:
+            if os.path.exists(filename):
+                os.remove(filename)
+            raise exc
 
-        if export_data is not None:
-            try:
-                report_data['time_write_start'] = time.time()
-                report_data['writer_data'] = writer.write(export_data=export_data)  # type: ignore
-                report_data['time_write_stop'] = time.time()
-            except (exceptions.ArchiveExportError, LicensingException) as exc:
-                if os.path.exists(filename):
-                    os.remove(filename)
-                raise exc
+        write_time = report_data['time_write_stop'] - report_data['time_write_start']
+        EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
 
-            write_time = report_data['time_write_stop'] - report_data['time_write_start']
-            EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
-
-        else:
-            EXPORT_LOGGER.debug('No data to write.')
-
-    finally:
-        # Reset logging level
-        if silent:
-            logging.disable(logging.NOTSET)
+    else:
+        EXPORT_LOGGER.debug('No data to write.')
 
     return ExportReport(**report_data)
 
@@ -842,7 +851,7 @@ def _collect_entity_queries(
     given_comment_entry_ids = set()
     all_fields_info, _ = get_all_fields_info()
 
-    total = 1 + ((1 if include_logs else 0) + (1 if include_logs else 0) if node_ids_to_be_exported else 0)
+    total = 1 + (((1 if include_logs else 0) + (1 if include_comments else 0)) if node_ids_to_be_exported else 0)
     with get_progress_reporter()(desc='Initializing export of all entities', total=total) as progress:
 
         # Universal "entities" attributed to all types of nodes

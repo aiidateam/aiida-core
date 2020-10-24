@@ -220,9 +220,7 @@ def override_log_formatter_context(fmt: str):
     Be aware! This may fail if the number of handlers is changed within the decorated function/method.
     """
     temp_formatter = logging.Formatter(fmt=fmt)
-    cached_formatters = []
-    for handler in AIIDA_LOGGER.handlers:
-        cached_formatters.append(handler.formatter)
+    cached_formatters = [handler.formatter for handler in AIIDA_LOGGER.handlers]
 
     for handler in AIIDA_LOGGER.handlers:
         handler.setFormatter(temp_formatter)

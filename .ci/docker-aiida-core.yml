@@ -4,6 +4,8 @@
 # Simply install docker, then run:
 # $ docker-compose -f .ci/docker-aiida-core.yml up -d --build
 # $ docker exec aiida-core wait-for-services
+# use local aiida-core code
+# $ docker exec -i aiida-core /bin/bash -c 'pip install --no-deps -e tmp/mount_folder/'
 # $ docker exec -it --user aiida aiida-core /bin/bash
 
 # and to power down, after testing:

@@ -89,6 +89,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
         * `'extras_mode_new'`: `import_data`'s `'extras_mode_new'` keyword, determining import rules for Extras.
         * `'comment_mode'`: `import_data`'s `'comment_mode'` keyword, determining import rules for Comments.
     """
+    from aiida.common.log import override_log_formatter_context
     from aiida.tools.importexport import import_data, IncompatibleArchiveVersionError
 
     # Checks
@@ -101,7 +102,8 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     migrate_archive = False
 
     try:
-        import_data(file_to_import, group, **kwargs)
+        with override_log_formatter_context('%(message)s'):
+            import_data(file_to_import, group, **kwargs)
     except IncompatibleArchiveVersionError as exception:
         if migration_performed:
             # Migration has been performed, something is still wrong
@@ -235,18 +237,34 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
     show_default=True,
     help='Force migration of archive file archives, if needed.'
 )
+@click.option(
+    '-v',
+    '--verbosity',
+    default='INFO',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
+    help='Control the verbosity of console logging'
+)
 @options.NON_INTERACTIVE()
 @decorators.with_dbenv()
 @click.pass_context
 def cmd_import(
-    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
+    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive,
+    verbosity
 ):
     """Import data from an AiiDA archive file.
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
+    from tqdm import tqdm
     from aiida.common.folders import SandboxFolder
+    from aiida.common.progress_reporter import set_progress_reporter
+    from aiida.tools.importexport.common.config import BAR_FORMAT
     from aiida.tools.importexport.common.utils import get_valid_import_links
+    from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
+
+    if verbosity in ['DEBUG', 'INFO']:
+        set_progress_reporter(tqdm, bar_format=BAR_FORMAT, leave=(verbosity == 'DEBUG'))
+    IMPORT_LOGGER.setLevel(verbosity)
 
     archives_url = []
     archives_file = []

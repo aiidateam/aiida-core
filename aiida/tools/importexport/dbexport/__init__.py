@@ -101,9 +101,9 @@ class ArchiveData:
     # list of {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}
     link_uuids: List[dict]
     # all entity data from the database, except Node extras and attributes
-    # {'ENTITY_NAME': {<UUID>: {'db_key': 'value', ...}, ...}, ...}
+    # {'ENTITY_NAME': {<PK>: {'db_key': 'value', ...}, ...}, ...}
     entity_data: Dict[str, Dict[int, dict]]
-    # Iterable of Node (uuid, attributes, extras)
+    # Iterable of Node (pk, attributes, extras)
     node_data: Iterable[Tuple[str, dict, dict]]
 
     def __repr__(self) -> str:

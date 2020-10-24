@@ -43,7 +43,6 @@ from aiida.tools.importexport.dbimport.utils import (
 from aiida.tools.importexport.dbimport.backends.sqla.utils import validate_uuid
 
 
-@override_log_formatter('%(message)s')
 def import_data_sqla(
     in_path,
     group=None,
@@ -124,9 +123,6 @@ def import_data_sqla(
             raise exceptions.ImportValidationError('group must be a Group entity')
         elif not group.is_stored:
             group.store()
-
-    if silent:
-        logging.disable(level=logging.CRITICAL)
 
     ################
     # EXTRACT DATA #
@@ -785,9 +781,5 @@ def import_data_sqla(
             IMPORT_LOGGER.debug('Rolling back')
             session.rollback()
             raise
-
-    # Reset logging level
-    if silent:
-        logging.disable(level=logging.NOTSET)
 
     return ret_dict

@@ -9,13 +9,10 @@
 ###########################################################################
 # pylint: disable=protected-access,fixme,too-many-arguments,too-many-locals,too-many-statements,too-many-branches,too-many-nested-blocks
 """ Django-specific import of AiiDA entities """
-
 from distutils.version import StrictVersion
+from itertools import chain
 import logging
 import os
-import tarfile
-import zipfile
-from itertools import chain
 
 from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
@@ -38,8 +35,9 @@ from aiida.tools.importexport.dbimport.utils import (
     deserialize_field, merge_comment, merge_extras, start_summary, result_summary, IMPORT_LOGGER
 )
 
+from aiida.tools.importexport.dbimport.readers import ReaderJsonZip
 
-@override_log_formatter('%(message)s')
+
 def import_data_dj(
     in_path,
     group=None,
@@ -121,45 +119,14 @@ def import_data_dj(
         elif not group.is_stored:
             group.store()
 
-    if silent:
-        logging.disable(level=logging.CRITICAL)
+    with ReaderJsonZip(in_path) as reader:
 
-    ################
-    # EXTRACT DATA #
-    ################
-    # The sandbox has to remain open until the end
-    with SandboxFolder() as folder:
-        if os.path.isdir(in_path):
-            extract_tree(in_path, folder)
-        else:
-            if tarfile.is_tarfile(in_path):
-                extract_tar(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
-            elif zipfile.is_zipfile(in_path):
-                extract_zip(in_path, folder, silent=silent, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER, **kwargs)
-            else:
-                raise exceptions.ImportValidationError(
-                    'Unable to detect the input file format, it is neither a '
-                    'tar file, nor a (possibly compressed) zip file.'
-                )
-
-        if not folder.get_content_list():
-            raise exceptions.CorruptArchive(f'The provided file/folder ({in_path}) is empty')
-        try:
-            with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                metadata = json.load(fhandle)
-
-            with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                data = json.load(fhandle)
-        except IOError as error:
-            raise exceptions.CorruptArchive(f'Unable to find the file {error.filename} in the import file or folder')
-
-        ######################
-        # PRELIMINARY CHECKS #
-        ######################
-        export_version = StrictVersion(str(metadata['export_version']))
+        # Check version
+        # TODO move to reader
+        export_version = StrictVersion(reader.metadata.export_version)
         if export_version != expected_export_version:
             msg = 'Archive file version is {}, can import only version {}'\
-                    .format(metadata['export_version'], expected_export_version)
+                    .format(reader.metadata.export_version, expected_export_version)
             if export_version < expected_export_version:
                 msg += "\nUse 'verdi export migrate' to update this archive file."
             else:
@@ -172,13 +139,9 @@ def import_data_dj(
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
         ##########################################################################
-        linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in data['links_uuid']))
-        group_nodes = set(chain.from_iterable(data['groups_uuid'].values()))
-
-        if NODE_ENTITY_NAME in data['export_data']:
-            import_nodes_uuid = set(v['uuid'] for v in data['export_data'][NODE_ENTITY_NAME].values())
-        else:
-            import_nodes_uuid = set()
+        linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in reader.iter_link_uuids()))
+        group_nodes = set(chain.from_iterable((uuids for _, uuids in reader.iter_group_uuids())))
+        import_nodes_uuid = set(v for v in reader.iter_node_uuids())
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
         # the set of import_nodes_uuid was received from the stuff actually referred to in export_data
@@ -200,15 +163,13 @@ def import_data_dj(
             COMMENT_ENTITY_NAME
         )
 
-        for import_field_name in metadata['all_fields_info']:
-            if import_field_name not in model_order:
-                raise exceptions.ImportValidationError(
-                    f"You are trying to import an unknown model '{import_field_name}'!"
-                )
+        for entity_name in reader.entity_names:
+            if entity_name not in model_order:
+                raise exceptions.ImportValidationError(f"You are trying to import an unknown model '{entity_name}'!")
 
         for idx, model_name in enumerate(model_order):
             dependencies = []
-            for field in metadata['all_fields_info'][model_name].values():
+            for field in reader.metadata.all_fields_info[model_name].values():
                 try:
                     dependencies.append(field['requires'])
                 except KeyError:
@@ -223,13 +184,13 @@ def import_data_dj(
         ###################################################
         # CREATE IMPORT DATA DIRECT UNIQUE_FIELD MAPPINGS #
         ###################################################
-        import_unique_ids_mappings = {}
-        for model_name, import_data in data['export_data'].items():
-            if model_name in metadata['unique_identifiers']:
-                # I have to reconvert the pk to integer
-                import_unique_ids_mappings[model_name] = {
-                    int(k): v[metadata['unique_identifiers'][model_name]] for k, v in import_data.items()
-                }
+        # import_unique_ids_mappings = {}
+        # for model_name, import_data in data['export_data'].items():
+        #     if model_name in metadata['unique_identifiers']:
+        #         # I have to reconvert the pk to integer
+        #         import_unique_ids_mappings[model_name] = {
+        #             int(k): v[metadata['unique_identifiers'][model_name]] for k, v in import_data.items()
+        #         }
 
         ###############
         # IMPORT DATA #
@@ -259,8 +220,8 @@ def import_data_dj(
             for model_name in model_order:
                 cls_signature = entity_names_to_signatures[model_name]
                 model = get_object_from_string(cls_signature)
-                fields_info = metadata['all_fields_info'].get(model_name, {})
-                unique_identifier = metadata['unique_identifiers'].get(model_name, None)
+                fields_info = reader.metadata.all_fields_info.get(model_name, {})
+                unique_identifier = reader.metadata.unique_identifiers.get(model_name, None)
 
                 new_entries[model_name] = {}
                 existing_entries[model_name] = {}
@@ -268,12 +229,12 @@ def import_data_dj(
                 foreign_ids_reverse_mappings[model_name] = {}
 
                 # Not necessarily all models are exported
-                if model_name in data['export_data']:
+                if model_name in reader.entity_names:
 
                     IMPORT_LOGGER.debug('  %s...', model_name)
 
                     progress_bar.set_description_str(pbar_base_str + model_name, refresh=False)
-                    number_of_entities += len(data['export_data'][model_name])
+                    number_of_entities += reader.entity_count(model_name)
 
                     # skip nodes that are already present in the DB
                     if unique_identifier is not None:
@@ -768,9 +729,5 @@ def import_data_dj(
 
     # Summarize import
     result_summary(ret_dict, getattr(group, 'label', None))
-
-    # Reset logging level
-    if silent:
-        logging.disable(level=logging.NOTSET)
 
     return ret_dict

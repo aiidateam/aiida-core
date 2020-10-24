@@ -67,7 +67,7 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
-@options.VERBOSE()
+@options.VERBOSE(help='Do not remove progress bars after a process completes')
 @options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',

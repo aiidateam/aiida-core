@@ -297,13 +297,170 @@ Once the *required* inputs of the workflow have been provided to the builder, yo
 
     For more detail on the process builder, see the :ref:`corresponding topics section<topics:processes:usage:builder>`.
 
+.. _how-to:workflows:extend:
 
-.. todo::
+Extending workflows
+===================
 
-    .. _how-to:workflows:extend:
+When designing workflows, there are many cases where you want to reuse an existing process.
+This section explains how to extend workflows by wrapping them around other processes or linking them together.
 
-    title: Extending workflows
+As an example, let's say you want to extend the ``MultiplyAddWorkChain`` by adding another step of analysis that checks whether the result is an even number or not.
+This final step can be written as a simple ``calcfunction``:
 
-    `#3993`_
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: is_even
 
-.. _#3993: https://github.com/aiidateam/aiida-core/issues/3993
+We could simply write a new workflow based off ``MultiplyAddWorkChain`` that includes an extra step in the outline which runs the ``is_even`` calculation function.
+However, this would lead to a lot of code duplication, and longer workflows consisting of multiple work chains would become very cumbersome to deal with (see the dropdown panel below).
+
+.. dropdown:: ``BadMultiplyAddIsEvenWorkChain``
+
+    .. literalinclude:: include/snippets/extend_workflows.py
+        :language: python
+        :pyobject: BadMultiplyAddIsEvenWorkChain
+.. note::
+
+    We've removed the ``result`` step from the outline, as well as the ``result`` output.
+    For this work chain, we're assuming that for now we are only interested in whether or not the result is even.
+
+We can avoid some code duplication by simply submitting the ``MultiplyAddWorkChain`` within one of the steps of our new work chain.
+In order to do this, we replace the ``multiply``, ``add`` and ``validate_result`` steps in the outline with one ``multiply_add`` step, in which we ``submit`` the ``MultiplyAddWorkChain`` and add the returned ``WorkChainNode`` to the context:
+
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: BetterMultiplyAddIsEvenWorkChain
+
+This already simplifies the extended work chain, and avoids duplicating the steps of the ``MultiplyAddWorkChain`` in the outline.
+However, we still had copy all of the input definitions of the ``MultiplyAddWorkChain``, and manually extract them from the inputs before passing them to the ``self.submit`` method.
+Fortunately, there is a better way of *exposing* the inputs and outputs of subprocesses of the work chain.
+
+Exposing inputs and outputs
+---------------------------
+
+Any work chain *needs* to *expose* the inputs of the subprocess it wraps, and perhaps *wants* to do the same for the outputs it produces, although the latter is not necessary.
+For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``MultiplyAddWorkChain`` was not too troublesome.
+However, this quickly becomes tedious, and more importantly, error-prone once you start to wrap processes with quite a few more inputs.
+
+To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs` methods.
+Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` class, will automatically copy the inputs of the class into the inputs namespace of the process specification:
+
+.. code-block:: python
+
+    @classmethod
+    def define(cls, spec):
+        """Specify inputs and outputs."""
+        super().define(spec)
+        spec.expose_inputs(MultiplyAddWorkChain)  # Expose the inputs instead of copying their definition
+        spec.outline(
+            cls.multiply_add,
+            cls.is_even,
+        )
+        spec.output('is_even', valid_type=Bool)
+
+Be aware that any inputs that already exist in the namespace will be overridden.
+To prevent this, the method accepts the ``namespace`` argument, which will cause the inputs to be copied into that namespace instead of the top-level namespace.
+This is especially useful for exposing inputs since *all* processes have the ``metadata`` input.
+If you expose the inputs without a namespace, the ``metadata`` input port of the exposed class will override the one of the host, which is often not desirable.
+Let's copy the inputs of the ``MultiplyAddWorkChain`` into the ``multiply_add`` namespace:
+
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: MultiplyAddIsEvenWorkChain.define
+    :dedent: 4
+
+That takes care of exposing the port specification of the wrapped process class in a very efficient way.
+To easily retrieve the inputs that have been passed to the process, one can use the :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method.
+Note the past tense of the method name.
+The method takes a process class and an optional namespace as arguments, and will return the inputs that have been passed into that namespace when it was launched.
+This utility now allows us to simplify the ``multiply_add`` step in the outline:
+
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: MultiplyAddIsEvenWorkChain.multiply_add
+    :dedent: 4
+
+This way we don't have to manually fish out all the individual inputs from the ``self.inputs`` but have to just call this single method, saving time and lines of code.
+The final ``MultiplyAddIsEvenWorkChain`` can be found in the dropdown panel below.
+
+.. dropdown:: ``MultiplyAddIsEvenWorkChain``
+
+    .. literalinclude:: include/snippets/extend_workflows.py
+        :language: python
+        :pyobject: MultiplyAddIsEvenWorkChain
+
+When submitting or running the work chain using namespaced inputs (``multiply_add`` in the example above), it is important to use the namespace when providing the inputs:
+
+.. code-block:: python
+
+    add_code = load_code(label='add')
+    inputs = {
+        'multiply_add': {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
+    }
+
+    workchain_node = submit(MultiplyAddWorkChain, **inputs)
+
+After running the ``MultiplyAddIsEvenWorkChain``, you can see a hierarchical overview of the processes called by the work chain using the ``verdi process status`` command:
+
+.. code-block:: console
+
+    $ verdi process status 164
+    MultiplyAddIsEvenWorkChain<164> Finished [0] [1:is_even]
+        ├── MultiplyAddWorkChain<165> Finished [0] [3:result]
+        │   ├── multiply<166> Finished [0]
+        │   └── ArithmeticAddCalculation<168> Finished [0]
+        └── is_even<172> Finished [0]
+
+Note that this command also recursively shows the processes called by the subprocesses of the ``MultiplyAddIsEvenWorkChain`` work chain.
+
+As mentioned earlier, you can also expose the outputs of the ``MultiplyAddWorkChain`` using the :meth:`~plumpy.ProcessSpec.expose_outputs` method.
+Say we want to add the ``result`` of the ``MultiplyAddWorkChain`` as one of the outputs of the extended work chain:
+
+.. code-block:: python
+
+    @classmethod
+    def define(cls, spec):
+        """Specify inputs and outputs."""
+        super().define(spec)
+        spec.expose_inputs(MultiplyAddWorkChain, namespace='multiply_add')
+        spec.outline(
+            cls.multiply_add,
+            cls.is_even,
+        )
+        spec.expose_outputs(MultiplyAddWorkChain)
+        spec.output('is_even', valid_type=Bool)
+
+Since there is not one output port that is shared by all process classes, it is less critical to use the ``namespace`` argument when exposing outputs.
+However, we still need to pass the ``result`` of the ``MultiplyAddWorkChain`` to the outputs of the parent work chain.
+For example, we could do this in the ``is_even`` step by using the ``self.out`` method:
+
+.. code-block:: python
+
+    def is_even(self):
+        """Check if the result is even."""
+        result = self.ctx.multi_addition.outputs.result
+        result_is_even = is_even(result)
+
+        self.out('result', result)
+        self.out('is_even', result_is_even)
+
+This works fine if we want to pass a single output to the parent work chain, but once again becomes tedious and error-prone when passing multiple outputs.
+Instead we can use the :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method in combination with the :meth:`~aiida.engine.processes.process.Process.out_many` method:
+
+.. code-block:: python
+
+    def is_even(self):
+        """Check if the result is even."""
+        result_is_even = is_even(self.ctx.multi_addition.outputs.result)
+
+        self.out_many(self.exposed_outputs(self.ctx.multi_addition, MultiplyAddWorkChain))
+        self.out('is_even', result_is_even)
+
+The :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method returns a dictionary of the exposed outputs of the ``MultiplyAddWorkChain``, extracted from the workchain node stored in the ``multi_addition`` key of the context.
+The :meth:`~aiida.engine.processes.process.Process.out_many` method takes this dictionary and assigns its values to the output ports with names equal to the corresponding keys.
+
+.. important::
+
+    Besides avoiding code duplication and errors, using the methods for exposing inputs and outputs also has the advantage that our parent work chain doesn't have to be adjusted in case the inputs or outputs of the child work chain change.
+    This makes the code much easier to maintain.

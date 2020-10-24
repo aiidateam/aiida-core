@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
-
+from functools import partial
 import os
 import tempfile
 
@@ -95,8 +95,11 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    from tqdm import tqdm
+    from aiida.common.progress_reporter import set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
+    from aiida.tools.importexport.common.config import BAR_FORMAT
 
     entities = []
 
@@ -133,8 +136,10 @@ def create(
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
 
+    set_progress_reporter(partial(tqdm, bar_format=BAR_FORMAT, leave=verbose))
+
     try:
-        export(entities, filename=output_file, file_format=export_format, verbose=verbose, **kwargs)
+        export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:

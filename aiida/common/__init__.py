@@ -20,5 +20,9 @@ from .exceptions import *
 from .extendeddicts import *
 from .links import *
 from .log import *
+from .progress_reporter import *
 
-__all__ = (datastructures.__all__ + exceptions.__all__ + extendeddicts.__all__ + links.__all__ + log.__all__)
+__all__ = (
+    datastructures.__all__ + exceptions.__all__ + extendeddicts.__all__ + links.__all__ + log.__all__ +
+    progress_reporter.__all__
+)

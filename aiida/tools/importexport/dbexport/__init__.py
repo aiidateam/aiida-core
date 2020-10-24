@@ -39,7 +39,7 @@ from aiida.common.exceptions import LicensingException
 from aiida.common.folders import Folder, RepositoryFolder, SandboxFolder
 from aiida.common.links import GraphTraversalRules
 from aiida.common.lang import type_check
-from aiida.common.log import LOG_LEVEL_REPORT, override_log_formatter
+from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.utils._repository import Repository
@@ -568,7 +568,6 @@ def export(
     return ExportReport(**report_data)
 
 
-@override_log_formatter('%(message)s')
 def _collect_archive_data(
     entities: Optional[Iterable[Any]] = None,
     allowed_licenses: Optional[Union[list, Callable]] = None,

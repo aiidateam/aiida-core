@@ -102,6 +102,7 @@ def create(
     You can modify some of those rules using options of this command.
     """
     from tqdm import tqdm
+    from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
@@ -147,7 +148,8 @@ def create(
     EXPORT_LOGGER.setLevel(verbosity)
 
     try:
-        export(entities, filename=output_file, file_format=export_format, **kwargs)
+        with override_log_formatter_context('%(message)s'):
+            export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:

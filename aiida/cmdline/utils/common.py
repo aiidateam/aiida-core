@@ -506,7 +506,7 @@ def check_worker_load(active_slots):
 
     if active_workers is not None:
         available_slots = active_workers * slots_per_worker
-        percent_load = (active_slots / available_slots)
+        percent_load = 1.0 if not available_slots else (active_slots / available_slots)
         if percent_load > warning_threshold:
             echo.echo('')  # New line
             echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')

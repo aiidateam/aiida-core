@@ -9,7 +9,6 @@
 ###########################################################################
 """Archive reader classes."""
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
 import dataclasses
 import json
 import os
@@ -136,6 +135,13 @@ class ArchiveReaderAbstract(ABC):
     def iter_link_uuids(self) -> Iterable[dict]:
         """Iterate links: {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}"""
 
+    @abstractmethod
+    def node_repository(self, uuid: str) -> Folder:
+        """Return a temporary folder containing the contents of the repository for a single node.
+
+        :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
+        """
+
 
 class ReaderJsonZip(ArchiveReaderAbstract):
     """A reader for a Json zip compressed format."""
@@ -194,32 +200,21 @@ class ReaderJsonZip(ArchiveReaderAbstract):
         return self._data
 
     @ensure_within_context
-    def _extract(self):
-        """Extract the repository data to a temporary folder.
+    def _extract(self, path_prefix: str = ''):
+        """Extract repository data to a temporary folder.
+
+        :param path_prefix: Only extract paths starting with this prefix.
 
         :raises TypeError: if parameter types are not respected
-        :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
-            incorrect formats
         """
-        # pylint: disable=fixme
-        if self._extracted:
-            return
         try:
             with zipfile.ZipFile(self.filename, 'r', allowZip64=True) as handle:
-
-                if not handle.namelist():
-                    raise CorruptArchive('no files detected in archive')
-
                 for membername in handle.namelist():
-                    # Check that we are only exporting nodes within the subfolder!
-                    # TODO: better check such that there are no .. in the
-                    # path; use probably the folder limit checks
-                    if not membername.startswith(self._nodes_export_subfolder + os.sep):
+                    if not membername.startswith(path_prefix):
                         continue
-
                     handle.extract(path=self._sandbox.abspath, member=membername)
         except zipfile.BadZipfile:
-            raise ValueError('The input file format is not valid (not a zip file)')
+            raise TypeError('The input file format is not valid (not a zip file)')
         self._extracted = True
 
     def __enter__(self):
@@ -269,6 +264,7 @@ class ReaderJsonZip(ArchiveReaderAbstract):
             raise ValueError(f'Unknown entity name: {name}')
         data = self._get_data()['export_data'].get(name, {})
         if name == 'Node':
+            # here we merge in the attributes and extras before yielding
             attributes = self._get_data().get('node_attributes', {})
             extras = self._get_data().get('node_extras', {})
             for pk, all_fields in data.items():
@@ -294,12 +290,11 @@ class ReaderJsonZip(ArchiveReaderAbstract):
         for value in self._get_data()['links_uuid']:
             yield value
 
-    def node_folder(self, uuid) -> Folder:
-        self._extract()
-        subfolder = self._sandbox.get_subfolder(os.path.join(self._nodes_export_subfolder, export_shard_uuid(uuid)))
+    def node_repository(self, uuid: str) -> Folder:
+        path_prefix = os.path.join(self._nodes_export_subfolder, export_shard_uuid(uuid)) + os.sep
+        subfolder = self._sandbox.get_subfolder(path_prefix)
         if not subfolder.exists():
-            raise CorruptArchive(
-                'Unable to find the repository folder for Node with UUID={} in the exported '
-                'file'.format(uuid)
-            )
+            self._extract(path_prefix=path_prefix)
+        if not subfolder.exists():
+            raise CorruptArchive(f'Unable to find the repository folder for Node with UUID={uuid} in the exported file')
         return subfolder

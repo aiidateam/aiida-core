@@ -35,3 +35,5 @@ def test_basic():
                 }
             }
         )
+        subfolder = reader.node_repository(next(reader.iter_entity_fields('Node', fields=('uuid',)))[-1]['uuid'])
+        assert subfolder.get_subfolder('path').get_content_list() == ['key1', 'key0']

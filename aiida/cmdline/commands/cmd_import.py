@@ -255,15 +255,13 @@ def cmd_import(
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
-    from tqdm import tqdm
     from aiida.common.folders import SandboxFolder
-    from aiida.common.progress_reporter import set_progress_reporter
-    from aiida.tools.importexport.common.config import BAR_FORMAT
+    from aiida.common.progress_reporter import set_progress_bar_tqdm
     from aiida.tools.importexport.common.utils import get_valid_import_links
     from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
     if verbosity in ['DEBUG', 'INFO']:
-        set_progress_reporter(tqdm, bar_format=BAR_FORMAT, leave=(verbosity == 'DEBUG'))
+        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
     IMPORT_LOGGER.setLevel(verbosity)
 
     archives_url = []

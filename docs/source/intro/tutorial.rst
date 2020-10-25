@@ -570,7 +570,7 @@ Depending on which step the workflow is running, you should get something like t
 We can see that the ``MultiplyAddWorkChain`` is currently waiting for its *child process*, the ``ArithmeticAddCalculation``, to finish.
 Check the process list again for *all* processes (You should know how by now!).
 After about half a minute, all the processes should be in the ``Finished`` state.
-You can also see a nice overview of the processes called by the work chain with the ``verdi process status`` command:
+The ``verdi process status`` command prints a *hierarchical* overview of the processes called by the work chain:
 
 .. code-block:: console
 

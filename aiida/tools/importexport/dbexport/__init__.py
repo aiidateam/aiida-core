@@ -546,7 +546,7 @@ def export(
     extract_time = report_data['time_collect_stop'] - report_data['time_collect_start']
     EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
-    if export_data is None:
+    if export_data is not None:
         try:
             report_data['time_write_start'] = time.time()
             report_data['writer_data'] = writer.write(export_data=export_data)  # type: ignore

@@ -136,7 +136,7 @@ def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = N
 
 
 def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Optional[bool] = False, **kwargs: Any):
-    """Set a `tqdm <https://github.com/tqdm/tqdm>` implementation of the progress reporter interface.
+    """Set a `tqdm <https://github.com/tqdm/tqdm>`__ implementation of the progress reporter interface.
 
     See :func:`~aiida.common.progress_reporter.set_progress_reporter` for details.
 

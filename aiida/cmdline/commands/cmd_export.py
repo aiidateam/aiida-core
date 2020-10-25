@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
-
 import os
 import tempfile
 
@@ -67,6 +66,13 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
+@click.option(
+    '-v',
+    '--verbosity',
+    default='INFO',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
+    help='Control the verbosity of console logging'
+)
 @options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
@@ -83,7 +89,7 @@ def inspect(archive, version, data, meta_data):
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbosity
 ):
     """
     Export subsets of the provenance graph to file for sharing.
@@ -94,7 +100,9 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.tools.importexport import export, ExportFileFormat
+    from aiida.common.log import override_log_formatter_context
+    from aiida.common.progress_reporter import set_progress_bar_tqdm
+    from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
     entities = []
@@ -132,8 +140,13 @@ def create(
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
 
+    if verbosity in ['DEBUG', 'INFO']:
+        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    EXPORT_LOGGER.setLevel(verbosity)
+
     try:
-        export(entities, filename=output_file, file_format=export_format, **kwargs)
+        with override_log_formatter_context('%(message)s'):
+            export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:

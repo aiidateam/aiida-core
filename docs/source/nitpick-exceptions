@@ -18,6 +18,8 @@ py:class builtins.object
 py:class builtins.str
 py:class builtins.dict
 
+py:class traceback
+
 ### AiiDA
 
 # issues with order of object processing and type hinting
@@ -60,6 +62,8 @@ py:class topika.Connection
 
 py:class tornado.ioloop.IOLoop
 py:class tornado.concurrent.Future
+
+py:class tqdm.std.tqdm
 
 py:class IPython.core.magic.Magics
 

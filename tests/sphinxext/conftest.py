@@ -33,12 +33,16 @@ def reference_result():
 
 
 class SphinxBuild:
+    """Class for testing sphinx builds"""
 
     def __init__(self, app: SphinxTestApp, src: Path):
         self.app = app
         self.src = src
 
     def build(self, assert_pass=True):
+        """Build sphinx app.
+
+        :param assert_pass: if True, assert that no warnings are raised during build"""
         try:
             sys.path.append(os.path.abspath(WORKCHAIN_DIR))
             self.app.build()
@@ -63,6 +67,15 @@ class SphinxBuild:
 
 @pytest.fixture
 def sphinx_build_factory(make_app, tmp_path):
+    """SphinxBuild factory fixture
+
+    Usage::
+
+        def test_wc(sphinx_build_factory):
+            ...
+            sphinx_build = sphinx_build_factory('workchain', buildername='xml')
+            sphinx_build.build(assert_pass=True)
+    """
 
     def _func(src_folder, **kwargs):
         shutil.copytree(SRC_DIR / src_folder, tmp_path / src_folder)

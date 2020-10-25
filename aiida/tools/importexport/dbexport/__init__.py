@@ -101,7 +101,7 @@ class ArchiveData:
     # list of {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}
     link_uuids: List[dict]
     # all entity data from the database, except Node extras and attributes
-    # {'ENTITY_NAME': {<PK>: {'db_key': 'value', ...}, ...}, ...}
+    # {'ENTITY_NAME': {<Pk>: {'db_key': 'value', ...}, ...}, ...}
     entity_data: Dict[str, Dict[int, dict]]
     # Iterable of Node (pk, attributes, extras)
     node_data: Iterable[Tuple[str, dict, dict]]
@@ -410,13 +410,10 @@ def export(
 
     Note, the logging level and progress reporter should be set externally, for example::
 
-        from functools import partial
-        from tqdm import tqdm
-        from aiida.common.progress_reporter import set_progress_reporter
-        from aiida.tools.importexport.common.config import BAR_FORMAT
+        from aiida.common.progress_reporter import set_progress_bar_tqdm
 
         EXPORT_LOGGER.setLevel('DEBUG')
-        set_progress_reporter(partial(tqdm, bar_format=BAR_FORMAT, leave=True))
+        set_progress_bar_tqdm(leave=True)
         export(...)
 
     .. deprecated:: 1.5.0
@@ -549,7 +546,7 @@ def export(
     extract_time = report_data['time_collect_stop'] - report_data['time_collect_start']
     EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
-    if export_data is not None:
+    if export_data is None:
         try:
             report_data['time_write_start'] = time.time()
             report_data['writer_data'] = writer.write(export_data=export_data)  # type: ignore

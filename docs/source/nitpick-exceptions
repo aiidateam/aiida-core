@@ -18,7 +18,7 @@ py:class builtins.object
 py:class builtins.str
 py:class builtins.dict
 
-py:class AbstractContextManager
+py:class traceback
 
 ### AiiDA
 

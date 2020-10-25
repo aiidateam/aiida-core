@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from aiida.common.lang import type_check
 
-from aiida.tools.importexport.common.config import BAR_FORMAT
+from aiida.common.progress_reporter import TQDM_BAR_FORMAT as BAR_FORMAT
 from aiida.tools.importexport.common.exceptions import ProgressBarError
 
 __all__ = ('get_progress_bar', 'close_progress_bar')

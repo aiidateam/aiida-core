@@ -3,11 +3,28 @@
 Overview of public API
 ----------------------
 
-The main package of ``aiida-core`` is called ``aiida``, which contains various sub-packages that we refer to as "second-level packages".
-These second level packages can have further nested hierarchies.
-Certain resources within these packages, for example modules, classes, functions and variables, are intended for internal use, whereas others *are meant* to be used by users of the ``aiida-core`` package.
-To make it easier for users to locate these resources that are intended for external use, as well as to distinguish them from internal resources *that are not supposed to be used*, they are exposed directly on the second-level package.
-This means that any resource that can be directly imported from a second-level package, *is intended for external use*.
+The top-level package of the ``aiida-core`` distribution is called ``aiida``.
+It contains various sub-packages that we refer to as "second-level packages".
+
+.. admonition:: Rule
+    :class: tip title-icon-lightbulb
+
+    **Any resource that can be imported directly from the top level or from a second-level package is part of the public python API** and intended for external use.
+    Resources at deeper nesting level are considered internal and are not intended for use outside ``aiida-core``.
+
+    For example:
+
+    .. code-block:: python
+
+        from aiida import load_profile  # OK, top-level import
+        from aiida.orm import QueryBuilder  # OK, second-level import
+        from aiida.tools.importexport import Archive # NOT PUBLIC API
+
+.. warning::
+
+    The implementation of resources that are *not* considered part of the public API can change between minor AiiDA releases.
+    When relying on such resources in scripts or AiiDA plugins, your code can therefore break in between minor AiiDA releases.
+
 Below we provide a list of the resources per second-level package that are exposed in this way.
 If a module is mentioned, then all the resources defined in its ``__all__`` are included
 
@@ -41,23 +58,23 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 ::
 
-    processes.process.Process
-    processes.process.ProcessState
-    processes.workchains.ToContext
-    processes.workchains.assign_
-    processes.workchains.append_
-    processes.workchains.WorkChain
-    processes.workchains.while_
-    processes.workchains.return_
-    processes.workchains.if_
-    processes.calcjobs.CalcJob
-    processes.functions.calcfunction
-    processes.functions.workfunction
-    processes.exit_code.ExitCode
-    launch.run
-    launch.run_get_node
-    launch.run_get_pid
-    launch.submit
+    Process
+    ProcessState
+    ToContext
+    assign_
+    append_
+    WorkChain
+    while_
+    return_
+    if_
+    CalcJob
+    calcfunction
+    workfunction
+    ExitCode
+    run
+    run_get_node
+    run_get_pid
+    submit
 
 
 ``aiida.orm``

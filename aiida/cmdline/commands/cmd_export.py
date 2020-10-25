@@ -100,12 +100,10 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from tqdm import tqdm
     from aiida.common.log import override_log_formatter_context
-    from aiida.common.progress_reporter import set_progress_reporter
+    from aiida.common.progress_reporter import set_progress_bar_tqdm
     from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
-    from aiida.tools.importexport.common.config import BAR_FORMAT
 
     entities = []
 
@@ -143,7 +141,7 @@ def create(
         export_format = ExportFileFormat.TAR_GZIPPED
 
     if verbosity in ['DEBUG', 'INFO']:
-        set_progress_reporter(tqdm, bar_format=BAR_FORMAT, leave=(verbosity == 'DEBUG'))
+        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
     EXPORT_LOGGER.setLevel(verbosity)
 
     try:

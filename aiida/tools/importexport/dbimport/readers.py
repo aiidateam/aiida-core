@@ -16,12 +16,15 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import zipfile
 import tarfile
 
+from distutils.version import StrictVersion
 from wrapt import decorator
 
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
-from aiida.tools.importexport.common.exceptions import CorruptArchive, ImportValidationError
+from aiida.tools.importexport.common.exceptions import (
+    CorruptArchive, ImportValidationError, IncompatibleArchiveVersionError
+)
 from aiida.tools.importexport.common.utils import export_shard_uuid
 
 
@@ -42,11 +45,11 @@ def detect_file_type(in_path):
 @dataclasses.dataclass
 class ExportMetadata:
     """Class for storing metadata about an export."""
-    graph_traversal_rules: Dict[str, bool]
+    graph_traversal_rules: Optional[Dict[str, bool]]
     # Entity type -> UUID list
-    entities_starting_set: Dict[str, Set[str]]
-    include_comments: bool
-    include_logs: bool
+    entities_starting_set: Optional[Dict[str, Set[str]]]
+    include_comments: Optional[bool]
+    include_logs: Optional[bool]
     # Entity type -> database ID key
     unique_identifiers: Dict[str, str] = dataclasses.field(repr=False)
     # Entity type -> database key -> meta parameters
@@ -107,13 +110,32 @@ class ArchiveReaderAbstract(ABC):
     def metadata(self) -> ExportMetadata:
         """Return the export metadata."""
 
+    def check_version(self):
+        """Check the version compatibility of the archive.
+
+        :raises: `~aiida.tools.importexport.common.exceptions.IncompatibleArchiveVersionError`:
+            If the version is not compatible
+
+        """
+        file_version = StrictVersion(self.metadata.export_version)
+        expected_version = StrictVersion(self.compatible_export_version)
+
+        if file_version != expected_version:
+            msg = f'Archive file version is {file_version}, can read only version {expected_version}'
+            if file_version < expected_version:
+                msg += "\nUse 'verdi export migrate' to update this archive file."
+            else:
+                msg += '\nUpdate your AiiDA version in order to import this file.'
+
+            raise IncompatibleArchiveVersionError(msg)
+
     @property
     def entity_names(self) -> List[str]:
         """Return list of all entity names."""
         return list(self.metadata.all_fields_info.keys())
 
     @abstractmethod
-    def entity_count(self, name: str) -> Optional[int]:
+    def entity_count(self, name: str) -> int:
         """Return the count of an entity or None if not contained in the archive."""
 
     @property
@@ -124,15 +146,19 @@ class ArchiveReaderAbstract(ABC):
     @abstractmethod
     def iter_entity_fields(self,
                            name: str,
-                           fields: Optional[Tuple[str, ...]] = None) -> Iterable[Tuple[int, str, Dict[str, Any]]]:
-        """Iterate over entities and yield their pk, unique identifier, and database fields."""
+                           fields: Optional[Tuple[str, ...]] = None) -> Iterable[Tuple[int, Dict[str, Any]]]:
+        """Iterate over entities and yield their pk and database fields."""
+
+    @abstractmethod
+    def iter_node_uuids(self) -> Iterable[str]:
+        """Iterate node UUIDs."""
 
     @abstractmethod
     def iter_group_uuids(self) -> Iterable[Tuple[str, Set[str]]]:
-        """Iterate groups and the nodes they contain."""
+        """Iterate group UUIDs and the a set of the node UUIDs they contain."""
 
     @abstractmethod
-    def iter_link_uuids(self) -> Iterable[dict]:
+    def iter_link_data(self) -> Iterable[dict]:
         """Iterate links: {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}"""
 
     @abstractmethod
@@ -234,21 +260,22 @@ class ReaderJsonZip(ArchiveReaderAbstract):
     def metadata(self) -> ExportMetadata:
         """Return the export metadata."""
         metadata = self._get_metadata()
+        export_parameters = metadata.get('export_parameters', {})
         output = {
             'export_version': metadata['export_version'],
             'aiida_version': metadata['aiida_version'],
             'all_fields_info': metadata['all_fields_info'],
             'unique_identifiers': metadata['unique_identifiers'],
-            'graph_traversal_rules': metadata['export_parameters']['graph_traversal_rules'],
-            'entities_starting_set': metadata['export_parameters']['entities_starting_set'],
-            'include_comments': metadata['export_parameters']['include_comments'],
-            'include_logs': metadata['export_parameters']['include_logs'],
+            'graph_traversal_rules': export_parameters.get('graph_traversal_rules', None),
+            'entities_starting_set': export_parameters.get('entities_starting_set', None),
+            'include_comments': export_parameters.get('include_comments', None),
+            'include_logs': export_parameters.get('include_logs', None),
         }
         return ExportMetadata(**output)
 
-    def entity_count(self, name: str) -> Optional[int]:
-        data = self._get_data().get('export_data', {}).get(name, None)
-        return len(data) if data is not None else None
+    def entity_count(self, name: str) -> int:
+        data = self._get_data().get('export_data', {}).get(name, {})
+        return len(data)
 
     @property
     def link_count(self) -> int:
@@ -256,11 +283,8 @@ class ReaderJsonZip(ArchiveReaderAbstract):
 
     def iter_entity_fields(self,
                            name: str,
-                           fields: Optional[Tuple[str, ...]] = None) -> Iterable[Tuple[int, str, Dict[str, Any]]]:
-        identifiers = self.metadata.unique_identifiers
-        try:
-            identifier = identifiers[name]
-        except KeyError:
+                           fields: Optional[Tuple[str, ...]] = None) -> Iterable[Tuple[int, Dict[str, Any]]]:
+        if name not in self.entity_names:
             raise ValueError(f'Unknown entity name: {name}')
         data = self._get_data()['export_data'].get(name, {})
         if name == 'Node':
@@ -275,18 +299,22 @@ class ReaderJsonZip(ArchiveReaderAbstract):
                 all_fields = {**all_fields, **{'attributes': attributes[pk], 'extras': extras[pk]}}
                 if fields is not None:
                     all_fields = {k: v for k, v in all_fields.items() if k in fields}
-                yield int(pk), identifier, all_fields
+                yield int(pk), all_fields
         else:
             for pk, all_fields in data.items():
                 if fields is not None:
                     all_fields = {k: v for k, v in all_fields.items() if k in fields}
-                yield int(pk), identifier, all_fields
+                yield int(pk), all_fields
+
+    def iter_node_uuids(self) -> Iterable[str]:
+        for _, fields in self.iter_entity_fields('Node', fields=('uuid',)):
+            yield fields['uuid']
 
     def iter_group_uuids(self) -> Iterable[Tuple[str, Set[str]]]:
         for key, values in self._get_data()['groups_uuid'].items():
             yield key, set(values)
 
-    def iter_link_uuids(self) -> Iterable[dict]:
+    def iter_link_data(self) -> Iterable[dict]:
         for value in self._get_data()['links_uuid']:
             yield value
 

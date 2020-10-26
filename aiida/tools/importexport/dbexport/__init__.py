@@ -11,15 +11,13 @@
 """Provides export functionalities."""
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
-import logging
+from dataclasses import dataclass, field
 import os
 import tarfile
 import time
 from typing import (
     Any,
     Callable,
-    ContextManager,
     DefaultDict,
     Dict,
     Iterable,
@@ -93,6 +91,7 @@ class ExportReport:
     def total_time(self) -> float:
         """Return total time taken in seconds."""
         return (self.time_write_stop or self.time_collect_stop) - self.time_collect_start
+
 
 
 def export(
@@ -361,7 +360,7 @@ def _collect_archive_data(
 
     _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
 
-    entries_queries = _collect_entity_queries(
+    entity_queries = _collect_entity_queries(
         node_ids_to_be_exported,
         entities_starting_set,
         node_pk_2_uuid_mapping,
@@ -369,7 +368,7 @@ def _collect_archive_data(
         include_logs,
     )
 
-    entity_data = _perform_export_queries(entries_queries)
+    entity_data = _perform_export_queries(entity_queries)
 
     # note this was originally below the attributes and group_uuid gather
     check_process_nodes_sealed({
@@ -389,7 +388,8 @@ def _collect_archive_data(
         level=LOG_LEVEL_REPORT,
     )
 
-    groups_uuid = _get_groups_uuid(entity_data)
+    group_node_uuids = _get_group_node_uuids(entity_data)
+    group_data = _get_group_data(entity_data)
 
     # Turn sets into lists to be able to export them as JSON metadata.
     for entity, entity_set in entities_starting_set.items():
@@ -415,7 +415,8 @@ def _collect_archive_data(
     return ArchiveData(
         metadata=metadata,
         node_uuids=all_node_uuids,
-        group_uuids=groups_uuid,
+        group_uuids=group_node_uuids,
+        group_data=group_data,
         link_uuids=links_uuid,
         entity_data=entity_data,
         node_data=node_data,
@@ -725,7 +726,8 @@ def _perform_export_queries(entries_queries: Dict[str, orm.QueryBuilder]) -> Dic
     return export_data
 
 
-def _collect_node_data(all_node_pks: Set[int]) -> Iterable[Tuple[str, dict, dict]]:
+def \
+        _collect_node_data(all_node_pks: Set[int]) -> Iterable[Tuple[str, dict, dict]]:
     """Gather attributes and extras for nodes
 
     :param export_data:  mappings by entity type -> pk -> db_columns
@@ -759,15 +761,20 @@ def _collect_node_data(all_node_pks: Set[int]) -> Iterable[Tuple[str, dict, dict
     return node_data
 
 
-def _get_groups_uuid(entity_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[str]]:
-    """Get node UUIDs per group."""
-    EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
-    groups_uuid: Dict[str, Set[str]] = defaultdict(set)
-    # If a group is in the exported data, we export the group/node correlation
-    if GROUP_ENTITY_NAME not in entity_data:
-        return groups_uuid
+def _get_group_node_uuids(entity_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[str]]:
+    """Get  UUIDs of the nodes contained in groups.
 
-    group_uuids_with_node_uuids = (
+    :param entity_data: dictionary of entities to export
+    :returns: group_node_uuids (group uuids => set of node uuids)
+    """
+    EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
+    group_node_uuids: Dict[str, Set[str]] = defaultdict(set)
+
+    # We only consider groups whose export is explicitly requested
+    if GROUP_ENTITY_NAME not in entity_data:
+        return group_node_uuids
+
+    group_data_with_node_uuids = (
         orm.QueryBuilder().append(
             orm.Group,
             filters={
@@ -780,22 +787,58 @@ def _get_groups_uuid(entity_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[s
         ).append(orm.Node, project='uuid', with_group='groups')
     )
 
-    total_node_uuids_for_groups = group_uuids_with_node_uuids.count()
+    total_node_uuids_for_groups = group_data_with_node_uuids.count()
 
     if not total_node_uuids_for_groups:
-        return groups_uuid
+        return group_node_uuids
 
-    with get_progress_reporter()(desc='Exporting Groups ...', total=total_node_uuids_for_groups) as progress:
+    with get_progress_reporter()(
+        desc='Collecting Nodes from Groups ...', total=total_node_uuids_for_groups
+    ) as progress:
 
-        for group_uuid, node_uuid in group_uuids_with_node_uuids.iterall():
+        for group_uuid, node_uuid in group_data_with_node_uuids.iterall():
             progress.update()
+            group_node_uuids[group_uuid].add(node_uuid)
 
-            groups_uuid[group_uuid].add(node_uuid)
-
-    return groups_uuid
+    return group_node_uuids
 
 
-# THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY
+def _get_group_data(entity_data: Dict[str, Dict[int, dict]]) -> List[Tuple[str, dict]]:
+    """Get Group extras.
+
+    :param entity_data: dictionary of entities to export
+    :returns: group_extras (tuple: group_uuid, extras)
+    """
+    EXPORT_LOGGER.debug('GATHERING GROUP EXTRAS...')
+    group_data: List[Tuple[str, dict]] = []
+
+    # We only consider groups whose export is explicitly requested
+    if GROUP_ENTITY_NAME not in entity_data:
+        return group_data
+
+    group_extras_qb = (
+        orm.QueryBuilder().append(
+            orm.Group,
+            filters={'id': {
+                'in': entity_data[GROUP_ENTITY_NAME]
+            }},
+            project=['uuid', 'extras'],
+        )
+    )
+
+    total_extras = group_extras_qb.count()
+
+    with get_progress_reporter()(desc='Collecting Group extras ...', total=total_extras) as progress:
+
+        for group_uuid, extras in group_extras_qb.iterall():
+            progress.update()
+            group_data.append((group_uuid, extras))
+
+    return group_data
+
+
+# THE FUNCTIONS BELOW ARE ONLY ADDED FOR BACK-COMPATIBILITY
+# AND WILL BE REMOVED IN AIIDA 2.0
 
 
 def export_tree(

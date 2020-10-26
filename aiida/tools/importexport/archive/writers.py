@@ -53,8 +53,10 @@ class ArchiveData:
     # all entity data from the database, except Node extras and attributes
     # {'ENTITY_NAME': {<Pk>: {'db_key': 'value', ...}, ...}, ...}
     entity_data: Dict[str, Dict[int, dict]]
-    # Iterable of Node (pk, attributes, extras)
+    # Iterable of Node (uuid, attributes, extras)
     node_data: Iterable[Tuple[str, dict, dict]]
+    # Iterable of Group (uuid, extras)
+    group_data: Iterable[Tuple[str, dict]]
 
     def __repr__(self) -> str:
         """Return string representation."""
@@ -116,11 +118,15 @@ def _write_to_json_archive(
         'export_data': export_data.entity_data,
         'links_uuid': export_data.link_uuids,
         'groups_uuid': {key: list(vals) for key, vals in export_data.group_uuids.items()},
+        'group_extras': {},
     }
 
     for uuid, attributes, extras in export_data.node_data:
         data['node_attributes'][uuid] = attributes
         data['node_extras'][uuid] = extras
+
+    for uuid, extras in export_data.group_data:
+        data['group_extras'][uuid] = extras
 
     # N.B. We're really calling zipfolder.open (if exporting a zipfile)
     with folder.open('data.json', mode='w') as fhandle:

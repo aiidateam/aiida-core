@@ -36,7 +36,8 @@ from aiida.tools.importexport.dbimport.utils import (
     deserialize_field, merge_comment, merge_extras, start_summary, result_summary, IMPORT_LOGGER
 )
 
-from aiida.tools.importexport.dbimport.readers import ArchiveReaderAbstract, ReaderJsonZip, detect_file_type
+from aiida.tools.importexport.archive.common import detect_archive_type
+from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract, get_reader
 
 
 def import_data_dj(
@@ -81,7 +82,7 @@ def import_data_dj(
     :param extras_mode_new: 'import' to import extras of new nodes or 'none' to ignore them.
     :type extras_mode_new: str
 
-    :param comment_mode: Comment import modes (when same UUIDs are found).
+    :param comment_mode: Comment import nodes (when same UUIDs are found).
         Can be either:
         'newest' (will keep the Comment with the most recent modification time (mtime)) or
         'overwrite' (will overwrite existing Comments with the ones from the import file).
@@ -114,6 +115,7 @@ def import_data_dj(
         raise exceptions.ImportValidationError(
             f"Unknown extras_mode_new value: {extras_mode_new}, should be either 'import' or 'none'"
         )
+    reader_cls = get_reader(detect_archive_type(in_path))
 
     if group:
         if not isinstance(group, Group):
@@ -122,13 +124,10 @@ def import_data_dj(
             group.store()
 
     # The returned dictionary with new and existing nodes and links
-    ret_dict = {}
+    # model_name -> new or existing -> list pk
+    ret_dict: Dict[str, dict] = {}
 
-    file_type = detect_file_type(in_path)
-    if file_type != 'zip':
-        raise NotImplementedError(f'file type: {file_type}')
-
-    with ReaderJsonZip(in_path) as reader:
+    with reader_cls(in_path) as reader:
 
         reader.check_version()
 
@@ -188,6 +187,7 @@ def import_data_dj(
 
         # count total number of entities to import
         number_of_entities: int = sum(reader.entity_count(model_name) for model_name in model_order)
+        IMPORT_LOGGER.debug('Importing %s entities', number_of_entities)
 
         # batch size for bulk create operations
         batch_size: int = get_config_option('db.batch_size')
@@ -203,7 +203,7 @@ def import_data_dj(
             # model_name -> identifier -> pk
             foreign_ids_reverse_mappings: Dict[str, Dict[str, int]] = {}
 
-            IMPORT_LOGGER.debug('GENERATING LIST OF DATA...')
+            IMPORT_LOGGER.debug('ASSESSING IMPORT DATA...')
             for model_name in model_order:
                 _generate_model_data(
                     model_name=model_name,
@@ -215,21 +215,19 @@ def import_data_dj(
                 )
 
             IMPORT_LOGGER.debug('STORING ENTITIES...')
-            with get_progress_reporter()(total=number_of_entities, desc='Store Entity Data') as progress_bar:
-                for model_name in model_order:
-                    _store_model_data(
-                        reader=reader,
-                        model_name=model_name,
-                        batch_size=batch_size,
-                        comment_mode=comment_mode,
-                        extras_mode_existing=extras_mode_existing,
-                        new_entries=new_entries,
-                        existing_entries=existing_entries,
-                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings,
-                        import_unique_ids_mappings=import_unique_ids_mappings,
-                        progress_bar=progress_bar,
-                        ret_dict=ret_dict
-                    )
+            for model_name in model_order:
+                _store_model_data(
+                    reader=reader,
+                    model_name=model_name,
+                    batch_size=batch_size,
+                    comment_mode=comment_mode,
+                    extras_mode_existing=extras_mode_existing,
+                    new_entries=new_entries,
+                    existing_entries=existing_entries,
+                    foreign_ids_reverse_mappings=foreign_ids_reverse_mappings,
+                    import_unique_ids_mappings=import_unique_ids_mappings,
+                    ret_dict=ret_dict
+                )
 
             IMPORT_LOGGER.debug('STORING NODE LINKS...')
             _store_node_links(
@@ -263,15 +261,6 @@ def import_data_dj(
     return ret_dict
 
 
-# def _all_in_one(*, model_name: str, reader: ArchiveReaderAbstract):
-#     # Not necessarily all models are exported
-#     if model_name not in reader.entity_names:
-#         return
-
-#     for pk, fields in reader.iter_entity_fields(model_name):
-#         pass
-
-
 def _generate_model_data(
     *, model_name: str, reader: ArchiveReaderAbstract, new_entries: Dict[str, Dict[str, dict]],
     existing_entries: Dict[str, Dict[str, dict]], foreign_ids_reverse_mappings: Dict[str, Dict[str, int]],
@@ -285,8 +274,6 @@ def _generate_model_data(
     # Not necessarily all models are exported
     if model_name not in reader.entity_names:
         return
-
-    IMPORT_LOGGER.debug('  %s...', model_name)
 
     existing_entries.setdefault(model_name, {})
     new_entries.setdefault(model_name, {})
@@ -305,7 +292,7 @@ def _generate_model_data(
         relevant_db_entries_result = model.objects.filter(**{f'{unique_identifier}__in': import_unique_ids})
         if relevant_db_entries_result.count():
             with get_progress_reporter()(
-                desc=f'Generating list of data - {model_name}', total=relevant_db_entries_result.count()
+                desc=f'Finding existing entities - {model_name}', total=relevant_db_entries_result.count()
             ) as progress:
                 # Imitating QueryBuilder.iterall() with default settings
                 for object_ in relevant_db_entries_result.iterator(chunk_size=100):
@@ -315,50 +302,54 @@ def _generate_model_data(
 
     foreign_ids_reverse_mappings[model_name] = {k: v.pk for k, v in relevant_db_entries.items()}
 
-    IMPORT_LOGGER.debug('    GOING THROUGH ARCHIVE...')
+    entity_count = reader.entity_count(model_name)
+    if not entity_count:
+        return
 
-    imported_comp_names = set()
-    for pk, fields in reader.iter_entity_fields(model_name):  # TODO this will also return attributes and extras
-        if model_name == GROUP_ENTITY_NAME:
-            # Check if there is already a group with the same name
-            dupl_counter = 0
-            orig_label = fields['label']
-            while model.objects.filter(label=fields['label']):
-                fields['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
-                dupl_counter += 1
-                if dupl_counter == 100:
-                    raise exceptions.ImportUniquenessError(
-                        f'A group of that label ( {orig_label} ) already exists and I could not create a new one'
-                    )
+    with get_progress_reporter()(desc=f'Reading archived entities - {model_name}', total=entity_count) as progress:
+        imported_comp_names = set()
+        for pk, fields in reader.iter_entity_fields(model_name):
+            progress.update()
+            if model_name == GROUP_ENTITY_NAME:
+                # Check if there is already a group with the same name
+                dupl_counter = 0
+                orig_label = fields['label']
+                while model.objects.filter(label=fields['label']):
+                    fields['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                    dupl_counter += 1
+                    if dupl_counter == 100:
+                        raise exceptions.ImportUniquenessError(
+                            f'A group of that label ( {orig_label} ) already exists and I could not create a new one'
+                        )
 
-        elif model_name == COMPUTER_ENTITY_NAME:
-            # Check if there is already a computer with the same name in the database
-            dupl = (model.objects.filter(name=fields['name']) or fields['name'] in imported_comp_names)
-            orig_name = fields['name']
-            dupl_counter = 0
-            while dupl:
-                # Rename the new computer
-                fields['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+            elif model_name == COMPUTER_ENTITY_NAME:
+                # Check if there is already a computer with the same name in the database
                 dupl = (model.objects.filter(name=fields['name']) or fields['name'] in imported_comp_names)
-                dupl_counter += 1
-                if dupl_counter == 100:
-                    raise exceptions.ImportUniquenessError(
-                        f'A computer of that name ( {orig_name} ) already exists and I could not create a new one'
-                    )
+                orig_name = fields['name']
+                dupl_counter = 0
+                while dupl:
+                    # Rename the new computer
+                    fields['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                    dupl = (model.objects.filter(name=fields['name']) or fields['name'] in imported_comp_names)
+                    dupl_counter += 1
+                    if dupl_counter == 100:
+                        raise exceptions.ImportUniquenessError(
+                            f'A computer of that name ( {orig_name} ) already exists and I could not create a new one'
+                        )
 
-            imported_comp_names.add(fields['name'])
+                imported_comp_names.add(fields['name'])
 
-        if fields[unique_identifier] in relevant_db_entries:
-            # Already in DB
-            existing_entries[model_name][str(pk)] = fields
-        else:
-            # To be added
-            if model_name == NODE_ENTITY_NAME:
-                # format extras
-                fields = _sanitize_extras(fields)
-                if extras_mode_new != 'import':
-                    fields.pop('extras', None)
-            new_entries[model_name][str(pk)] = fields
+            if fields[unique_identifier] in relevant_db_entries:
+                # Already in DB
+                existing_entries[model_name][str(pk)] = fields
+            else:
+                # To be added
+                if model_name == NODE_ENTITY_NAME:
+                    # format extras
+                    fields = _sanitize_extras(fields)
+                    if extras_mode_new != 'import':
+                        fields.pop('extras', None)
+                new_entries[model_name][str(pk)] = fields
 
 
 def _sanitize_extras(fields):
@@ -373,15 +364,15 @@ def _sanitize_extras(fields):
 def _store_model_data(
     *, reader: ArchiveReaderAbstract, model_name: str, batch_size: int, comment_mode: str, extras_mode_existing: str,
     new_entries: Dict[str, Dict[str, dict]], existing_entries: Dict[str, Dict[str, dict]],
-    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]], import_unique_ids_mappings: Dict[str, Dict[int, str]],
-    ret_dict: dict, progress_bar: ProgressReporterAbstract
+    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]], import_unique_ids_mappings: Dict[str,
+                                                                                              Dict[int,
+                                                                                                   str]], ret_dict: dict
 ):
     """Store the model data."""
     from aiida.backends.djsite.db import models
 
     # Progress bar initialization - Model
     pbar_base_str = f'{model_name}s - '
-    progress_bar.set_description_str(f'{pbar_base_str}Initializing', refresh=True)
 
     cls_signature = entity_names_to_signatures[model_name]
     model = get_object_from_string(cls_signature)
@@ -390,37 +381,43 @@ def _store_model_data(
 
     # EXISTING ENTRIES
     if existing_entries[model_name]:
-        # Progress bar update - Model
-        progress_bar.set_description_str(
-            f'{pbar_base_str}{len(existing_entries[model_name])} existing entries', refresh=True
-        )
 
-    for import_entry_pk, entry_data in existing_entries[model_name].items():
-        unique_id = entry_data[unique_identifier]
-        existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
-        import_data = dict(
-            deserialize_field(
-                k,
-                v,
-                fields_info=fields_info,
-                import_unique_ids_mappings=import_unique_ids_mappings,
-                foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
-            ) for k, v in entry_data.items()
-        )
-        # TODO COMPARE, AND COMPARE ATTRIBUTES
+        with get_progress_reporter()(
+            total=len(existing_entries[model_name]), desc=f'{pbar_base_str} existing entries'
+        ) as progress:
 
-        if model is models.DbComment:
-            new_entry_uuid = merge_comment(import_data, comment_mode)
-            if new_entry_uuid is not None:
-                entry_data[unique_identifier] = new_entry_uuid
-                new_entries[model_name][import_entry_pk] = entry_data
+            for import_entry_pk, entry_data in existing_entries[model_name].items():
 
-        if model_name not in ret_dict:
-            ret_dict[model_name] = {'new': [], 'existing': []}
-        ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
-        IMPORT_LOGGER.debug('Existing %s: %s (%s->%s)', model_name, unique_id, import_entry_pk, existing_entry_id)
-        # print('  `-> WARNING: NO DUPLICITY CHECK DONE!')
-        # CHECK ALSO FILES!
+                # TODO prints too many lines
+                # IMPORT_LOGGER.debug('Existing %s: %s (%s->%s)',
+                #                     model_name, unique_id, import_entry_pk, existing_entry_id)
+                progress.update()
+
+                unique_id = entry_data[unique_identifier]
+                existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                import_data = dict(
+                    deserialize_field(
+                        k,
+                        v,
+                        fields_info=fields_info,
+                        import_unique_ids_mappings=import_unique_ids_mappings,
+                        foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
+                    ) for k, v in entry_data.items()
+                )
+                # TODO COMPARE, AND COMPARE ATTRIBUTES
+
+                if model is models.DbComment:
+                    new_entry_uuid = merge_comment(import_data, comment_mode)
+                    if new_entry_uuid is not None:
+                        entry_data[unique_identifier] = new_entry_uuid
+                        new_entries[model_name][import_entry_pk] = entry_data
+
+                if model_name not in ret_dict:
+                    ret_dict[model_name] = {'new': [], 'existing': []}
+                ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
+
+                # print('  `-> WARNING: NO DUPLICITY CHECK DONE!')
+                # CHECK ALSO FILES!
 
     # Store all objects for this model in a list, and store them all in once at the end.
     objects_to_create = []
@@ -428,10 +425,6 @@ def _store_model_data(
     import_new_entry_pks = {}
 
     # NEW ENTRIES
-    if new_entries[model_name]:
-        # Progress bar update - Model
-        progress_bar.set_description_str(f'{pbar_base_str}{len(new_entries[model_name])} new entries', refresh=True)
-
     for import_entry_pk, entry_data in new_entries[model_name].items():
         unique_id = entry_data[unique_identifier]
         import_data = dict(
@@ -448,85 +441,80 @@ def _store_model_data(
         import_new_entry_pks[unique_id] = import_entry_pk
 
     if model_name == NODE_ENTITY_NAME:
-        IMPORT_LOGGER.debug('STORING NEW NODE REPOSITORY FILES...')
 
-        # NEW NODES
-        for object_ in objects_to_create:
-            import_entry_uuid = object_.uuid
-            import_entry_pk = import_new_entry_pks[import_entry_uuid]
-
-            # Progress bar initialization - Node
-            progress_bar.update()
-            pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
-
-            # Before storing entries in the DB, I store the files (if these are nodes).
-            # Note: only for new entries!
-            subfolder = reader.node_repository(import_entry_uuid)
+        # Before storing entries in the DB, I store the files (if these are nodes).
+        # Note: only for new entries!
+        if objects_to_create:
+            IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
+        uuids_to_create = [obj.uuid for obj in objects_to_create]
+        for import_entry_uuid, subfolder in zip(
+            uuids_to_create,
+            reader.iter_node_repos(uuids_to_create, progress=True, description='Copying Repository Folders')
+        ):
             destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
             # Replace the folder, possibly destroying existing previous folders, and move the files
             # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
-            progress_bar.set_description_str(f'{pbar_node_base_str}Repository', refresh=True)
             destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
-        # EXISTING NODES (Extras)
         # For the existing nodes that are also in the imported list we also update their extras if necessary
-        IMPORT_LOGGER.debug('UPDATING EXISTING NODE EXTRAS...')
+        if existing_entries[model_name]:
 
-        import_existing_entry_pks = {
-            entry_data[unique_identifier]: import_entry_pk
-            for import_entry_pk, entry_data in existing_entries[model_name].items()
-        }
-        for node in models.DbNode.objects.filter(uuid__in=import_existing_entry_pks).all():  # pylint: disable=no-member
-            import_entry_uuid = str(node.uuid)
-            import_entry_pk = import_existing_entry_pks[import_entry_uuid]
+            with get_progress_reporter()(
+                total=len(existing_entries[model_name]), desc='Updating existing node extras'
+            ) as progress:
 
-            # Progress bar initialization - Node
-            pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
-            progress_bar.set_description_str(f'{pbar_node_base_str}Extras', refresh=False)
-            progress_bar.update()
+                import_existing_entry_pks = {
+                    entry_data[unique_identifier]: import_entry_pk
+                    for import_entry_pk, entry_data in existing_entries[model_name].items()
+                }
+                for node in models.DbNode.objects.filter(uuid__in=import_existing_entry_pks).all():  # pylint: disable=no-member
+                    progress.update()
+                    import_entry_uuid = str(node.uuid)
+                    import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
-            old_extras = node.extras.copy()
-            extras = existing_entries[model_name][str(import_entry_pk)].get('extras', {})
+                    old_extras = node.extras.copy()
+                    extras = existing_entries[model_name][str(import_entry_pk)].get('extras', {})
 
-            new_extras = merge_extras(node.extras, extras, extras_mode_existing)
+                    new_extras = merge_extras(node.extras, extras, extras_mode_existing)
 
-            if new_extras != old_extras:
-                # Already saving existing node here to update its extras
-                node.extras = new_extras
-                node.save()
+                    if new_extras != old_extras:
+                        # Already saving existing node here to update its extras
+                        node.extras = new_extras
+                        node.save()
 
-    else:
-        # Update progress bar with new non-Node entries
-        progress_bar.update(n=len(existing_entries[model_name]) + len(new_entries[model_name]))
+    if not objects_to_create:
+        return
 
-    progress_bar.set_description_str(f'{pbar_base_str}Storing', refresh=True)
+    with get_progress_reporter()(total=len(objects_to_create), desc=f'{pbar_base_str} storing new') as progress:
 
-    # If there is an mtime in the field, disable the automatic update
-    # to keep the mtime that we have set here
-    if 'mtime' in [field.name for field in model._meta.local_fields]:
-        with models.suppress_auto_now([(model, ['mtime'])]):
-            # Store them all in once; however, the PK are not set in this way...
+        # If there is an mtime in the field, disable the automatic update
+        # to keep the mtime that we have set here
+        if 'mtime' in [field.name for field in model._meta.local_fields]:
+            with models.suppress_auto_now([(model, ['mtime'])]):
+                # Store them all in once; however, the PK are not set in this way...
+                model.objects.bulk_create(objects_to_create, batch_size=batch_size)
+        else:
             model.objects.bulk_create(objects_to_create, batch_size=batch_size)
-    else:
-        model.objects.bulk_create(objects_to_create, batch_size=batch_size)
 
-    # Get back the just-saved entries
-    just_saved_queryset = model.objects.filter(**{
-        f'{unique_identifier}__in': import_new_entry_pks.keys()
-    }).values_list(unique_identifier, 'pk')
-    # note: convert uuids from type UUID to strings
-    just_saved = {str(key): value for key, value in just_saved_queryset}
+        # Get back the just-saved entries
+        just_saved_queryset = model.objects.filter(**{
+            f'{unique_identifier}__in': import_new_entry_pks.keys()
+        }).values_list(unique_identifier, 'pk')
+        # note: convert uuids from type UUID to strings
+        just_saved = {str(key): value for key, value in just_saved_queryset}
 
-    # Now I have the PKs, print the info
-    # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
-    for unique_id, new_pk in just_saved.items():
-        import_entry_pk = import_new_entry_pks[unique_id]
-        foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
-        if model_name not in ret_dict:
-            ret_dict[model_name] = {'new': [], 'existing': []}
-        ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
+        # Now I have the PKs, print the info
+        # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
+        for unique_id, new_pk in just_saved.items():
+            import_entry_pk = import_new_entry_pks[unique_id]
+            foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
+            if model_name not in ret_dict:
+                ret_dict[model_name] = {'new': [], 'existing': []}
+            ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
 
-        IMPORT_LOGGER.debug(f'New {model_name}: {unique_id} ({import_entry_pk}->{new_pk})')
+            progress.update()
+            # TODO prints too many lines
+            # IMPORT_LOGGER.debug(f'New {model_name}: {unique_id} ({import_entry_pk}->{new_pk})')
 
 
 def _store_node_links(

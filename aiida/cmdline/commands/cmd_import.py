@@ -48,10 +48,7 @@ def _echo_error(  # pylint: disable=unused-argument
     :param raised_exception: Exception raised during error.
     :type raised_exception: `Exception`
     """
-    from aiida.tools.importexport import close_progress_bar, IMPORT_LOGGER
-
-    # Close progress bar, if it exists
-    close_progress_bar(leave=False)
+    from aiida.tools.importexport import IMPORT_LOGGER
 
     IMPORT_LOGGER.debug('%s', traceback.format_exc())
 
@@ -255,6 +252,7 @@ def cmd_import(
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
+    # pylint: disable=too-many-statements
     from aiida.common.folders import SandboxFolder
     from aiida.common.progress_reporter import set_progress_bar_tqdm
     from aiida.tools.importexport.common.utils import get_valid_import_links
@@ -305,7 +303,6 @@ def cmd_import(
         'extras_mode_new': extras_mode_new,
         'comment_mode': comment_mode,
         'non_interactive': non_interactive,
-        'silent': False,
     }
 
     # Import local archives
@@ -324,7 +321,7 @@ def cmd_import(
         # Migrate archive if needed and desired
         if migrate_archive:
             with SandboxFolder() as temp_folder:
-                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, silent=False, **import_opts)
                 _try_import(migration_performed=True, **import_opts)
 
     # Import web-archives
@@ -354,5 +351,5 @@ def cmd_import(
 
             # Migrate archive if needed and desired
             if migrate_archive:
-                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, silent=False, **import_opts)
                 _try_import(migration_performed=True, **import_opts)

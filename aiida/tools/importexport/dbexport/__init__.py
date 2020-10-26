@@ -60,10 +60,11 @@ from aiida.tools.importexport.common.config import (
     model_fields_to_file_fields,
 )
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
+from aiida.tools.importexport.archive.writers import ArchiveData, ArchiveMetadata, get_writer
+from aiida.tools.importexport.common.config import ExportFileFormat
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
     EXPORT_LOGGER,
-    ExportFileFormat,
     check_licenses,
     check_process_nodes_sealed,
     deprecated_parameters,
@@ -71,46 +72,9 @@ from aiida.tools.importexport.dbexport.utils import (
     serialize_dict,
     summary,
 )
-from aiida.tools.importexport.dbexport.zip import ZipFolder
+from aiida.tools.importexport.common.zip_folder import ZipFolder
 
-__all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat', 'ArchiveWriterAbstract')
-
-
-@dataclass
-class ExportMetadata:
-    """Class for storing metadata about an export."""
-    graph_traversal_rules: Dict[str, bool]
-    # Entity type -> UUID list
-    entities_starting_set: Dict[str, Set[str]]
-    include_comments: bool
-    include_logs: bool
-    # Entity type -> database ID key
-    unique_identifiers: Dict[str, str] = field(repr=False)
-    # Entity type -> database key -> meta parameters
-    all_fields_info: Dict[str, Dict[str, Dict[str, str]]] = field(repr=False)
-    aiida_version: str = field(default_factory=get_version)
-
-
-@dataclass
-class ArchiveData:
-    """Class for storing data, to export to an AiiDA archive."""
-    metadata: ExportMetadata
-    node_uuids: Set[str]
-    # UUID of the group -> UUIDs of the entities it contains
-    group_uuids: Dict[str, Set[str]]
-    # list of {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}
-    link_uuids: List[dict]
-    # all entity data from the database, except Node extras and attributes
-    # {'ENTITY_NAME': {<Pk>: {'db_key': 'value', ...}, ...}, ...}
-    entity_data: Dict[str, Dict[int, dict]]
-    # Iterable of Node (pk, attributes, extras)
-    node_data: Iterable[Tuple[str, dict, dict]]
-
-    def __repr__(self) -> str:
-        """Return string representation."""
-        return f'ArchiveData(metadata={self.metadata},' + ','.join(
-            f'#{k}={len(v)}' for k, v in self.entity_data.items()
-        ) + ')'
+__all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
 
 @dataclass
@@ -129,267 +93,6 @@ class ExportReport:
     def total_time(self) -> float:
         """Return total time taken in seconds."""
         return (self.time_write_stop or self.time_collect_stop) - self.time_collect_start
-
-
-class ArchiveWriterAbstract(ABC):
-    """An abstract interface for AiiDA archive writers."""
-
-    def __init__(self, filename: str, **kwargs: Any):
-        """An archive writer
-
-        :param filename: the filename (possibly including the absolute path)
-            of the file on which to export.
-
-        """
-        # pylint: disable=unused-argument
-        self._filename = filename
-
-    @property
-    def filename(self) -> str:
-        """Return the filename to write to."""
-        return self._filename
-
-    @property
-    @abstractmethod
-    def file_format_verbose(self) -> str:
-        """The file format name."""
-
-    @property
-    @abstractmethod
-    def export_version(self) -> str:
-        """The export version."""
-
-    @abstractmethod
-    def write(
-        self,
-        export_data: ArchiveData,
-    ) -> dict:
-        """write the archive.
-
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
-
-        """
-
-
-def _write_to_json_archive(folder: Union[Folder, ZipFolder], export_data: ArchiveData, export_version: str) -> None:
-    """Write data to the archive."""
-    # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
-
-    EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
-
-    data: Dict[str, Any] = {
-        'node_attributes': {},
-        'node_extras': {},
-        'export_data': export_data.entity_data,
-        'links_uuid': export_data.link_uuids,
-        'groups_uuid': {key: list(vals) for key, vals in export_data.group_uuids.items()},
-    }
-
-    for uuid, attributes, extras in export_data.node_data:
-        data['node_attributes'][uuid] = attributes
-        data['node_extras'][uuid] = extras
-
-    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
-    with folder.open('data.json', mode='w') as fhandle:
-        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
-        fhandle.write(json.dumps(data))
-
-    metadata = {
-        'export_version': export_version,
-        'aiida_version': export_data.metadata.aiida_version,
-        'all_fields_info': export_data.metadata.all_fields_info,
-        'unique_identifiers': export_data.metadata.unique_identifiers,
-        'export_parameters': {
-            'graph_traversal_rules': export_data.metadata.graph_traversal_rules,
-            'entities_starting_set': export_data.metadata.entities_starting_set,
-            'include_comments': export_data.metadata.include_comments,
-            'include_logs': export_data.metadata.include_logs,
-        },
-    }
-
-    with folder.open('metadata.json', 'w') as fhandle:
-        fhandle.write(json.dumps(metadata))
-
-    EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
-
-    # If there are no nodes, there are no repository files to store
-    if not export_data.node_uuids:
-        return
-
-    pbar_base_str = 'Exporting repository - '
-    with get_progress_reporter()(total=len(export_data.node_uuids)) as progress:
-
-        for uuid in export_data.node_uuids:
-            sharded_uuid = export_shard_uuid(uuid)
-
-            progress.set_description_str(f"{pbar_base_str}UUID={uuid.split('-')[0]}", refresh=False)
-            progress.update()
-
-            # Important to set create=False, otherwise creates twice a subfolder.
-            # Maybe this is a bug of insert_path?
-            thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
-
-            # Make sure the node's repository folder was not deleted
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
-            if not src.exists():
-                raise exceptions.ArchiveExportError(
-                    f'Unable to find the repository folder for Node with UUID={uuid} '
-                    'in the local repository'
-                )
-
-            # In this way, I copy the content of the folder, and not the folder itself
-            thisnodefolder.insert_path(src=src.abspath, dest_name='.')
-
-
-class WriterJsonZip(ArchiveWriterAbstract):
-    """An archive writer,
-    which writes database data as a single JSON and repository data in a zipped folder system.
-    """
-
-    def __init__(self, filename: str, use_compression: bool = True, **kwargs: Any):
-        """A writer for zipped archives.
-
-        :param filename: the filename (possibly including the absolute path)
-            of the file on which to export.
-        :param use_compression: Whether or not to compress the zip file.
-
-        """
-        super().__init__(filename, **kwargs)
-        self._use_compression = use_compression
-
-    @property
-    def file_format_verbose(self) -> str:
-        return 'Zip (compressed)' if self._use_compression else 'Zip (uncompressed)'
-
-    @property
-    def export_version(self) -> str:
-        return EXPORT_VERSION
-
-    def write(self, export_data: ArchiveData) -> dict:
-        """write the archive
-
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
-
-        """
-        with ZipFolder(self.filename, mode='w', use_compression=self._use_compression) as folder:
-            _write_to_json_archive(
-                folder=folder,
-                export_data=export_data,
-                export_version=self.export_version,
-            )
-
-        return {}
-
-
-class WriterJsonTar(ArchiveWriterAbstract):
-    """An archive writer,
-    which writes database data as a single JSON and repository data in a folder system.
-
-    The entire containing folder is then compressed as a tar file.
-    """
-
-    def __init__(self, filename: str, sandbox_in_repo: bool = True, **kwargs: Any):
-        """A writer for zipped archives.
-
-        :param filename: the filename (possibly including the absolute path)
-            of the file on which to export.
-        :param sandbox_in_repo: Create the temporary uncompressed folder within the aiida repository
-
-        """
-        super().__init__(filename, **kwargs)
-        self.sandbox_in_repo = sandbox_in_repo
-
-    @property
-    def file_format_verbose(self) -> str:
-        return 'Gzipped tarball (compressed)'
-
-    @property
-    def export_version(self) -> str:
-        return EXPORT_VERSION
-
-    def write(self, export_data: ArchiveData) -> dict:
-        """write the archive
-
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
-
-        """
-        with SandboxFolder(sandbox_in_repo=self.sandbox_in_repo) as folder:
-            _write_to_json_archive(
-                folder=folder,
-                export_data=export_data,
-                export_version=self.export_version,
-            )
-
-            with tarfile.open(self.filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-                time_compress_start = time.time()
-                tar.add(folder.abspath, arcname='')
-                time_compress_stop = time.time()
-
-        return {'compression_time_start': time_compress_start, 'compression_time_stop': time_compress_stop}
-
-
-class WriterJsonFolder(ArchiveWriterAbstract):
-    """An archive writer,
-    which writes database data as a single JSON and repository data in a folder system.
-
-    This writer is mainly intended for backward compatibility with `export_tree`.
-    """
-
-    def __init__(self, filename: str, folder: Union[Folder, ZipFolder] = None, **kwargs: Any):
-        """A writer for zipped archives.
-
-        :param filename: the filename (possibly including the absolute path)
-            of the file on which to export.
-        :param folder: a folder to write the archive to.
-
-        """
-        super().__init__(filename, **kwargs)
-        type_check(folder, (Folder, ZipFolder), msg='`folder` must be specified and given as an AiiDA Folder entity')
-        self._folder = cast(Union[Folder, ZipFolder], folder)
-
-    @property
-    def file_format_verbose(self) -> str:
-        return str(self._folder.__class__)
-
-    @property
-    def export_version(self) -> str:
-        return EXPORT_VERSION
-
-    def write(self, export_data: ArchiveData) -> dict:
-        """write the archive
-
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
-
-        """
-        _write_to_json_archive(
-            folder=self._folder,
-            export_data=export_data,
-            export_version=self.export_version,
-        )
-
-        return {}
-
-
-def get_writer(file_format: str) -> Type[ArchiveWriterAbstract]:
-    """Return the available writer classes."""
-    # TODO this could be made an entrypoint
-    writers = {
-        ExportFileFormat.ZIP: WriterJsonZip,
-        ExportFileFormat.TAR_GZIPPED: WriterJsonTar,
-        'folder': WriterJsonFolder,
-    }
-
-    if file_format not in writers:
-        raise exceptions.ArchiveExportError(
-            f'Can only export in the formats: {tuple(writers.keys())}, please specify one for "file_format".'
-        )
-
-    return cast(Type[ArchiveWriterAbstract], writers[file_format])
 
 
 def export(
@@ -547,9 +250,24 @@ def export(
     EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
 
     if export_data is not None:
+
+        EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
+
+        def _get_node_repo(uuid):
+            # Make sure the node's repository folder was not deleted
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
+            if not src.exists():
+                raise exceptions.ArchiveExportError(
+                    f'Unable to find the repository folder for Node with UUID={uuid} '
+                    'in the local repository'
+                )
+            return src
+
         try:
             report_data['time_write_start'] = time.time()
-            report_data['writer_data'] = writer.write(export_data=export_data)  # type: ignore
+            report_data['writer_data'] = writer.write(
+                export_data=export_data, get_node_repo=_get_node_repo
+            )  # type: ignore
             report_data['time_write_stop'] = time.time()
         except (exceptions.ArchiveExportError, LicensingException) as exc:
             if os.path.exists(filename):
@@ -677,13 +395,15 @@ def _collect_archive_data(
     for entity, entity_set in entities_starting_set.items():
         entities_starting_set[entity] = list(entity_set)  # type: ignore
 
-    metadata = ExportMetadata(
+    metadata = ArchiveMetadata(
+        export_version=EXPORT_VERSION,
+        aiida_version=get_version(),
+        unique_identifiers=unique_identifiers,
+        all_fields_info=all_fields_info,
         graph_traversal_rules=traversal_rules,
         entities_starting_set=entities_starting_set,
         include_comments=include_comments,
         include_logs=include_logs,
-        unique_identifiers=unique_identifiers,
-        all_fields_info=all_fields_info
     )
 
     all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported}
@@ -1122,7 +842,8 @@ def export_tree(
     :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
     """
     warnings.warn(
-        'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
+        'export_tree function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
+        AiidaDeprecationWarning
     )  # pylint: disable=no-member
     export(
         entities=entities,
@@ -1160,7 +881,8 @@ def export_zip(
 
     """
     warnings.warn(
-        'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
+        'export_zip function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
+        AiidaDeprecationWarning
     )  # pylint: disable=no-member
     report = export(
         entities=entities,
@@ -1193,7 +915,8 @@ def export_tar(
         of the file on which to export.
     """
     warnings.warn(
-        'function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead', AiidaDeprecationWarning
+        'export_tar function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
+        AiidaDeprecationWarning
     )  # pylint: disable=no-member
     report = export(
         entities=entities,

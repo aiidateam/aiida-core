@@ -20,7 +20,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_export
-from aiida.tools.importexport import EXPORT_VERSION, Archive
+from aiida.tools.importexport import EXPORT_VERSION, ReaderJsonZip
 
 from tests.utils.archives import get_archive_file
 
@@ -176,8 +176,8 @@ class TestVerdiExport(AiidaTestCase):
             self.assertTrue(os.path.isfile(filename_output))
             self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
 
-            with Archive(filename_output) as archive_object:
-                self.assertEqual(archive_object.version_format, target_version)
+            with ReaderJsonZip(filename_output) as archive_object:
+                self.assertEqual(archive_object.metadata.export_version, target_version)
         finally:
             delete_temporary_file(filename_output)
 
@@ -229,8 +229,8 @@ class TestVerdiExport(AiidaTestCase):
             self.assertTrue(os.path.isfile(filename_tmp))
             # check that files in zip file are ok
             self.assertEqual(zipfile.ZipFile(filename_tmp).testzip(), None)
-            with Archive(filename_tmp) as archive_object:
-                self.assertEqual(archive_object.version_format, target_version)
+            with ReaderJsonZip(filename_tmp) as archive_object:
+                self.assertEqual(archive_object.metadata.export_version, target_version)
         finally:
             os.remove(filename_tmp)
 

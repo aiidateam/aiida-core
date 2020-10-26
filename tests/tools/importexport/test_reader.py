@@ -8,9 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for archive reader."""
-from aiida.tools.importexport.dbimport.readers import ReaderJsonZip
+from aiida.tools.importexport.archive.readers import ReaderJsonZip
 
-PATH = '/Users/chrisjsewell/Documents/GitHub/aiida_core_develop/out.aiida'
+# from tests.utils.archives import get_archive_file
+
+PATH = '/Users/chrisjsewell/Documents/GitHub/aiida_core_develop/out2.aiida'
 
 
 def test_json_zip():
@@ -23,12 +25,12 @@ def test_json_zip():
         assert sum(1 for _ in reader.iter_entity_fields('Node')) == 40065
         assert reader.entity_count('Computer') == 0
         assert reader.entity_count('User') == 1
-        assert reader.entity_count('Group') == 0
-        assert sum(1 for _ in reader.iter_group_uuids()) == 0
+        assert reader.entity_count('Group') == 1
+        assert sum(1 for _ in reader.iter_group_uuids()) == 1
         assert reader.link_count == 40064
         assert sum(1 for _ in reader.iter_link_data()) == 40064
         assert next(reader.iter_entity_fields('Node', fields=('label', 'node_type', 'attributes'))) == (
-            15663, {
+            1, {
                 'node_type': 'data.dict.Dict.',
                 'label': '',
                 'attributes': {
@@ -45,5 +47,30 @@ def test_json_zip():
                 }
             }
         )
+        assert next(reader.iter_entity_fields('Group', fields=('type_string', 'user'))
+                    ) == (1, {
+                        'user': 1,
+                        'type_string': 'core.import'
+                    })
         subfolder = reader.node_repository(next(reader.iter_node_uuids()))
         assert subfolder.get_subfolder('path').get_content_list() == ['key1', 'key0']
+
+    # def test_context_required(self):
+    #     """Verify that accessing a property of an Archive outside of a context manager raises."""
+    #     with self.assertRaises(InvalidOperation):
+    #         filepath = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
+    #         archive = Archive(filepath)
+    #         archive.version_format  # pylint: disable=pointless-statement
+
+    # def test_version_format(self):
+    #     """Verify that `version_format` return the correct archive format version."""
+    #     filepath = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
+    #     with Archive(filepath) as archive:
+    #         self.assertEqual(archive.version_format, '0.1')
+
+    # def test_empty_archive(self):
+    #     """Verify that attempting to unpack an empty archive raises a `CorruptArchive` exception."""
+    #     filepath = get_archive_file('empty.aiida', filepath='export/migrate')
+    #     with self.assertRaises(CorruptArchive):
+    #         with Archive(filepath) as archive:
+    #             archive.version_format  # pylint: disable=pointless-statement

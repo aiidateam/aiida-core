@@ -39,21 +39,35 @@ def inspect(archive, version, data, meta_data):
     By default a summary of the archive contents will be printed. The various options can be used to change exactly what
     information is displayed.
     """
-    from aiida.tools.importexport import Archive, CorruptArchive
+    import dataclasses
+    from aiida.tools.importexport import CorruptArchive, detect_archive_type, get_reader
 
-    with Archive(archive) as archive_object:
+    reader_cls = get_reader(detect_archive_type(archive))
+
+    with reader_cls(archive) as reader:
         try:
             if version:
-                echo.echo(archive_object.version_format)
+                echo.echo(reader.export_version)
             elif data:
-                echo.echo_dictionary(archive_object.data)
+                # data is an internal implementation detail
+                echo.echo_deprecated('--data is deprecated and will be removed in v2.0.0')
+                echo.echo_dictionary(reader._get_data())  # pylint: disable=protected-access
             elif meta_data:
-                echo.echo_dictionary(archive_object.meta_data)
+                echo.echo_dictionary(dataclasses.asdict(reader.metadata))
             else:
-                info = archive_object.get_info()
-                data = sorted([(k.capitalize(), v) for k, v in info.items()])
-                data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
-                echo.echo(tabulate.tabulate(data))
+                statistics = {
+                    'Version aiida': reader.metadata.aiida_version,
+                    'Version format': reader.metadata.export_version,
+                    'Computers': reader.entity_count('Computer'),
+                    'Groups': reader.entity_count('Group'),
+                    'Links': reader.link_count,
+                    'Nodes': reader.entity_count('Node'),
+                    'Users': reader.entity_count('User'),
+                }
+                if reader.metadata.conversion_info:
+                    statistics['Conversion info'] = '\n'.join(reader.metadata.conversion_info)
+
+                echo.echo(tabulate.tabulate(statistics.items()))
         except CorruptArchive as exception:
             echo.echo_critical(f'corrupt archive: {exception}')
 

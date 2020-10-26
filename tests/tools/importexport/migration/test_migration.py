@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from old export versions to the newest"""
+from copy import deepcopy
 import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport import import_data, ArchiveMigrationError, Archive, EXPORT_VERSION as newest_version
+from aiida.tools.importexport import detect_archive_type, get_reader
+from aiida.tools.importexport import import_data, ArchiveMigrationError, EXPORT_VERSION as newest_version
 from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
 
 from tests.utils.archives import get_archive_file, get_json_files, migrate_archive
@@ -104,20 +106,24 @@ class TestExportFileMigration(AiidaTestCase):
         """Test the `version` argument of the `migrate_recursively` function."""
         filepath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
 
-        with Archive(filepath_archive) as archive:
+        reader_cls = get_reader(detect_archive_type(filepath_archive))
+        with reader_cls(filepath_archive) as archive:
+
+            metadata = deepcopy(archive._get_metadata())  # pylint: disable=protected-access
+            data = deepcopy(archive._get_data())  # pylint: disable=protected-access
 
             # Incorrect type
             with self.assertRaises(TypeError):
-                migrate_recursively(archive.meta_data, archive.data, None, version=0.2)
+                migrate_recursively(metadata, data, None, version=0.2)
 
             # Backward migrations are not supported
             with self.assertRaises(ArchiveMigrationError):
-                migrate_recursively(archive.meta_data, archive.data, None, version='0.2')
+                migrate_recursively(metadata, data, None, version='0.2')
 
-            migrate_recursively(archive.meta_data, archive.data, None, version='0.3')
+            migrate_recursively(metadata, data, None, version='0.3')
 
             migrated_version = '0.5'
-            version = migrate_recursively(archive.meta_data, archive.data, None, version=migrated_version)
+            version = migrate_recursively(metadata, data, None, version=migrated_version)
             self.assertEqual(version, migrated_version)
 
     @with_temp_dir

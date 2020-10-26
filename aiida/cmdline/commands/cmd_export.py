@@ -11,6 +11,7 @@
 """`verdi export` command."""
 import os
 import tempfile
+import shutil
 
 import click
 import tabulate
@@ -245,7 +246,7 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
                 archive.add(folder.abspath, arcname='')
 
         if in_place:
-            os.rename(output_file, input_file)
+            shutil.move(output_file, input_file)
             tempdir.cleanup()
 
         if not silent:

@@ -26,7 +26,7 @@ from aiida.schedulers.datastructures import JobState
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
-execlogger = AIIDA_LOGGER.getChild('execmanager')
+EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
 def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=False):
@@ -47,7 +47,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
     link_label = 'remote_folder'
     if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
-        execlogger.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
+        EXEC_LOGGER.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
         return calc_info
 
     computer = node.computer
@@ -57,7 +57,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
 
     logger_extra = get_dblogger_extra(node)
     transport.set_logger_extra(logger_extra)
-    logger = LoggerAdapter(logger=execlogger, extra=logger_extra)
+    logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
     if not dry_run and node.has_cached_links():
         raise ValueError(
@@ -159,6 +159,16 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     remote_symlink_list = calc_info.remote_symlink_list or []
     provenance_exclude_list = calc_info.provenance_exclude_list or []
 
+    # First creates the directory structure locally before copying the sandbox folder, so that all the intermediate
+    # folders for the files in the copy_lists are there before calling the copy methods of the transport (or else
+    # these will fail).
+    # Alternatively, one would have to call the path creation methods of the transports just before calling the
+    # copy methods to make sure each path is there, unnecessarily duplicating the number of connections requested.
+    for _, _, target_relpath in local_copy_list + remote_copy_list + remote_symlink_list:
+        dirname = os.path.dirname(target_relpath)
+        if dirname:
+            os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
+
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
@@ -190,9 +200,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         if data_node is None:
             logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
         else:
-            dirname = os.path.dirname(target)
-            if dirname:
-                os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
             with folder.open(target, 'wb') as handle:
                 with data_node.open(filename, 'rb') as source:
                     shutil.copyfileobj(source, handle)
@@ -336,15 +343,15 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     logger_extra = get_dblogger_extra(calculation)
     workdir = calculation.get_remote_workdir()
 
-    execlogger.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
-    execlogger.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
+    EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
+    EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
 
     # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
     link_label = calculation.link_label_retrieved
     if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
-        execlogger.warning(
+        EXEC_LOGGER.warning(
             f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping retrieval'
         )
         return
@@ -377,13 +384,13 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
-                execlogger.debug(
+                EXEC_LOGGER.debug(
                     f"[retrieval of calc {calculation.pk}] Retrieved temporary file or folder '{filename}'",
                     extra=logger_extra
                 )
 
         # Store everything
-        execlogger.debug(
+        EXEC_LOGGER.debug(
             f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
         )
         retrieved_files.store()
@@ -420,7 +427,9 @@ def kill_calculation(calculation, transport):
         if job is not None and job.job_state != JobState.DONE:
             raise exceptions.RemoteOperationError(f'scheduler.kill({job_id}) was unsuccessful')
         else:
-            execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
+            EXEC_LOGGER.warning(
+                'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
+            )
 
     return True
 
@@ -429,7 +438,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
     """Retrieve files specified through the singlefile list mechanism."""
     singlefile_list = []
     for (linkname, subclassname, filename) in retrieve_file_list:
-        execlogger.debug(
+        EXEC_LOGGER.debug(
             '[retrieval of calc {}] Trying '
             "to retrieve remote singlefile '{}'".format(job.pk, filename),
             extra=logger_extra
@@ -450,7 +459,7 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
         singlefiles.append(singlefile)
 
     for fil in singlefiles:
-        execlogger.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
+        EXEC_LOGGER.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
         fil.store()
 
 

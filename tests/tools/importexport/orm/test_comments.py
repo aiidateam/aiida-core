@@ -419,25 +419,25 @@ class TestComments(AiidaTestCase):
 
         Part I:
         Create CalculationNode and 1 Comment for it.
-        Export CalculationNode with its 1 Comment to export file #1 "EXISTING database".
+        Export CalculationNode with its 1 Comment to archive file #1 "EXISTING database".
         Add 3 Comments to CalculationNode.
-        Export CalculationNode with its 4 Comments to export file #2 "FULL database".
+        Export CalculationNode with its 4 Comments to archive file #2 "FULL database".
         Reset database.
 
         Part II:
-        Reimport export file #1 "EXISTING database".
+        Reimport archive file #1 "EXISTING database".
         Add 3 Comments to CalculationNode.
-        Export CalculationNode with its 4 Comments to export file #3 "NEW database".
+        Export CalculationNode with its 4 Comments to archive file #3 "NEW database".
         Reset database.
 
         Part III:
-        Reimport export file #1 "EXISTING database" (1 CalculationNode, 1 Comment).
-        Import export file #2 "FULL database" (1 CalculationNode, 4 Comments).
+        Reimport archive file #1 "EXISTING database" (1 CalculationNode, 1 Comment).
+        Import archive file #2 "FULL database" (1 CalculationNode, 4 Comments).
         Check the database EXACTLY contains 1 CalculationNode and 4 Comments,
         with matching UUIDS all the way through all previous Parts.
 
         Part IV:
-        Import export file #3 "NEW database" (1 CalculationNode, 4 Comments).
+        Import archive file #3 "NEW database" (1 CalculationNode, 4 Comments).
         Check the database EXACTLY contains 1 CalculationNode and 7 Comments,
         with matching UUIDS all the way through all previous Parts.
         NB! There should now be 7 Comments in the database. 6 of which are identical

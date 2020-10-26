@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration export files from old export versions to the newest, used by `verdi export migrate` command."""
+"""Migration archive files from old export versions to the newest, used by `verdi export migrate` command."""
 from aiida.common.lang import type_check
 from aiida.tools.importexport import EXPORT_VERSION
 from aiida.tools.importexport.common.exceptions import DanglingLinkError, ArchiveMigrationError
@@ -37,7 +37,7 @@ MIGRATE_FUNCTIONS = {
 
 
 def migrate_recursively(metadata, data, folder, version=EXPORT_VERSION):
-    """Recursive migration of export files from v0.1 to a newer version.
+    """Recursive migration of archive files from v0.1 to a newer version.
 
     See specific migration functions for detailed descriptions.
 
@@ -62,7 +62,7 @@ def migrate_recursively(metadata, data, folder, version=EXPORT_VERSION):
     except ValueError as exception:
         raise ArchiveMigrationError(exception)
     except DanglingLinkError:
-        raise ArchiveMigrationError('Export file is invalid because it contains dangling links')
+        raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
 
     new_version = verify_metadata_version(metadata)
 

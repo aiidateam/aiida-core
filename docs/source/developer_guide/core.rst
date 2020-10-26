@@ -7,7 +7,6 @@ Core development
 
     core/internals
     core/transport
-    core/modifying_the_schema
     core/extend_restapi
     core/caching
     core/plugin_system

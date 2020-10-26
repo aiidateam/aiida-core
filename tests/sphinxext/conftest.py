@@ -9,13 +9,17 @@
 ###########################################################################
 """Pytest fixtures for AiiDA sphinx extension tests."""
 import os
+from pathlib import Path
 import sys
 import shutil
-import tempfile
-import subprocess
 import xml.etree.ElementTree as ET
 
+from sphinx.testing.path import path as sphinx_path
+from sphinx.testing.util import SphinxTestApp
 import pytest
+
+SRC_DIR = Path(__file__).parent / 'sources'
+WORKCHAIN_DIR = Path(__file__).parent / 'workchains'
 
 
 @pytest.fixture
@@ -28,33 +32,57 @@ def reference_result():
     return inner
 
 
-@pytest.fixture
-def build_dir():
-    """Create directory to build documentation."""
-    with tempfile.TemporaryDirectory() as dirpath:
-        yield dirpath
+class SphinxBuild:
+    """Class for testing sphinx builds"""
+
+    def __init__(self, app: SphinxTestApp, src: Path):
+        self.app = app
+        self.src = src
+
+    def build(self, assert_pass=True):
+        """Build sphinx app.
+
+        :param assert_pass: if True, assert that no warnings are raised during build"""
+        try:
+            sys.path.append(os.path.abspath(WORKCHAIN_DIR))
+            self.app.build()
+        finally:
+            sys.path.pop()
+        if assert_pass:
+            assert self.warnings == '', self.status
+        return self
+
+    @property
+    def status(self):
+        return self.app._status.getvalue()  # pylint: disable=protected-access
+
+    @property
+    def warnings(self):
+        return self.app._warning.getvalue()  # pylint: disable=protected-access
+
+    @property
+    def outdir(self):
+        return Path(self.app.outdir)
 
 
 @pytest.fixture
-def build_sphinx(build_dir):  # pylint: disable=redefined-outer-name
-    """Returns function to run sphinx to build documentation."""
+def sphinx_build_factory(make_app, tmp_path):
+    """SphinxBuild factory fixture
 
-    def inner(source_dir, builder='xml'):
-        """Run sphinx to build documentation."""
-        doctree_dir = os.path.join(build_dir, 'doctrees')
-        out_dir = os.path.join(build_dir, builder)
+    Usage::
 
-        completed_proc = subprocess.run(  # pylint: disable=subprocess-run-check
-            [sys.executable, '-m', 'sphinx', '-b', builder, '-d', doctree_dir, source_dir, out_dir],
-            # add demo_workchain.py to the PYTHONPATH
-            cwd=os.path.join(source_dir, os.pardir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
+        def test_wc(sphinx_build_factory):
+            ...
+            sphinx_build = sphinx_build_factory('workchain', buildername='xml')
+            sphinx_build.build(assert_pass=True)
+    """
 
-        return out_dir, completed_proc
+    def _func(src_folder, **kwargs):
+        shutil.copytree(SRC_DIR / src_folder, tmp_path / src_folder)
+        app = make_app(srcdir=sphinx_path(os.path.abspath((tmp_path / src_folder))), **kwargs)
+        return SphinxBuild(app, tmp_path / src_folder)
 
-    return inner
+    yield _func
 
 
 @pytest.fixture
@@ -65,7 +93,11 @@ def xml_equal():
         if not os.path.isfile(reference_file):
             shutil.copyfile(test_file, reference_file)
             raise ValueError('Reference file does not exist!')
-        assert _flatten_xml(test_file) == _flatten_xml(reference_file)
+        try:
+            assert _flatten_xml(test_file) == _flatten_xml(reference_file)
+        except AssertionError:
+            print(Path(test_file.read_text()))
+            raise
 
     return inner
 

@@ -1,0 +1,17 @@
+:orphan:
+
+===============
+ Oh, oh -- 404!
+===============
+
+We could not find this page 🤔
+
+Please, try using the links from the sidebar to find what you are looking for.
+
+If you believe that the documentation page should be at this link, or should redirect to a suitable page, we would be grateful if you could inform the AiiDA developers by opening an issue on GitHub:
+
+`Click here to open an issue <https://github.com/aiidateam/aiida-core/issues/new?assignees=&labels=topic%2Fdocumentation&template=doc-improvements.md&title=Docs%3A+404>`__
+
+.. image:: images/logo_aiida_docs.png
+   :align: center
+   :width: 250px

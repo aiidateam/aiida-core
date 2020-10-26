@@ -19,14 +19,11 @@ disable = [
     "inconsistent-return-statements",
     "locally-disabled",
     "logging-fstring-interpolation",
-    "missing-class-docstring",
-    "missing-function-docstring",
     "no-else-raise",
     "too-few-public-methods",
     "too-many-ancestors",
     "too-many-arguments",
     "too-many-instance-attributes",
-    "too-many-locals",
     "useless-suppression",
 ]
 
@@ -44,6 +41,11 @@ good-names = [
     "ArithmeticAddCalculation",
     "MultiplyAddWorkChain"
 ]
+no-docstring-rgx = "^_,setUp,tearDown"
+docstring-min-length = 5
+
+[tool.pylint.design]
+max-locals = 20
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -61,6 +63,9 @@ filterwarnings = [
     "ignore::DeprecationWarning:jsonbackend:",
     "ignore::DeprecationWarning:reentry:",
     "ignore::DeprecationWarning:pkg_resources:",
+]
+markers = [
+    "sphinx: set parameters for the sphinx `app` fixture"
 ]
 
 [tool.tox]
@@ -82,10 +87,14 @@ setenv =
 commands = pytest {posargs}
 
 [testenv:py{36,37,38}-docs-{clean,update}]
+description =
+    clean: Build the documentation (remove any existing build)
+    update: Build the documentation (modify any existing build)
 deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
+passenv = RUN_APIDOC
 setenv =
     update: RUN_APIDOC = False
 changedir = docs
@@ -94,7 +103,24 @@ commands =
     clean: make clean
     make debug
 
+[testenv:py{36,37,38}-docs-live]
+# tip: remove apidocs before using this feature (`cd docs; make clean`)
+description = Build the documentation and launch browser (with live updates)
+deps =
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
+    sphinx-autobuild
+setenv =
+    RUN_APIDOC = False
+commands =
+    sphinx-autobuild \
+        --re-ignore build/.* \
+        --port 0 --open-browser \
+        -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
+
 [testenv:py{36,37,38}-pre-commit]
+description = Run the pre-commit checks
 extras = all
 commands = pre-commit run {posargs}
 """

@@ -37,12 +37,12 @@ class TestSpecificImport(AiidaTestCase):
 
     def test_simple_import(self):
         """
-        This is a very simple test which checks that an export file with nodes
+        This is a very simple test which checks that an archive file with nodes
         that are not associated to a computer is imported correctly. In Django
         when such nodes are exported, there is an empty set for computers
-        in the export file. In SQLA there is such a set only when a computer is
+        in the archive file. In SQLA there is such a set only when a computer is
         associated with the exported nodes. When an empty computer set is
-        found at the export file (when imported to an SQLA profile), the SQLA
+        found at the archive file (when imported to an SQLA profile), the SQLA
         import code used to crash. This test demonstrates this problem.
         """
         parameters = orm.Dict(
@@ -201,14 +201,14 @@ class TestSpecificImport(AiidaTestCase):
             export([node], filename=filename, silent=True)
 
         self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
-        self.assertFalse(os.path.exists(filename), msg='The export file should not exist')
+        self.assertFalse(os.path.exists(filename), msg='The archive file should not exist')
 
     @with_temp_dir
     def test_missing_node_repo_folder_import(self, temp_dir):
         """
         Make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised during import when missing
         Node repository folder.
-        Create and export a Node and manually remove its repository folder in the export file.
+        Create and export a Node and manually remove its repository folder in the archive file.
         Attempt to import it and make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised,
         due to the missing folder.
         """
@@ -233,23 +233,23 @@ class TestSpecificImport(AiidaTestCase):
         export([node], filename=filename, file_format='tar.gz', silent=True)
         self.reset_database()
 
-        # Untar export file, remove repository folder, re-tar
+        # Untar archive file, remove repository folder, re-tar
         node_shard_uuid = export_shard_uuid(node_uuid)
         node_top_folder = node_shard_uuid.split('/')[0]
         with SandboxFolder() as folder:
             extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
             self.assertTrue(
-                node_folder.exists(), msg="The Node's repository folder should still exist in the export file"
+                node_folder.exists(), msg="The Node's repository folder should still exist in the archive file"
             )
 
-            # Removing the Node's repository folder from the export file
+            # Removing the Node's repository folder from the archive file
             shutil.rmtree(
                 folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True
             )
             self.assertFalse(
                 node_folder.exists(),
-                msg="The Node's repository folder should now have been removed in the export file"
+                msg="The Node's repository folder should now have been removed in the archive file"
             )
 
             filename_corrupt = os.path.join(temp_dir, 'export_corrupt.aiida')

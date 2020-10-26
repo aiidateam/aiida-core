@@ -50,7 +50,7 @@ def migration_drop_computer_transport_params(metadata, data):
 
 def migrate_v4_to_v5(metadata, data, *args):  # pylint: disable=unused-argument
     """
-    Migration of export files from v0.4 to v0.5
+    Migration of archive files from v0.4 to v0.5
 
     This is from migration 0034 (drop_node_columns_nodeversion_public) and onwards
     """

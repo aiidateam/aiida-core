@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=too-many-branches
-"""Test export file migration from export version 0.2 to 0.3"""
+"""Test archive file migration from export version 0.2 to 0.3"""
 from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
 
 from tests.utils.archives import get_json_files
@@ -25,7 +25,7 @@ class TestMigrate(ArchiveMigrationTest):
         # Check link types
         legal_link_types = {'unspecified', 'createlink', 'returnlink', 'inputlink', 'calllink'}
         for link in data['links_uuid']:
-            self.assertIn('type', link, msg="key 'type' was not added to link: {}".format(link))
+            self.assertIn('type', link, msg=f"key 'type' was not added to link: {link}")
             self.assertIn(link['type'], legal_link_types)
 
         # Check entity names
@@ -35,9 +35,7 @@ class TestMigrate(ArchiveMigrationTest):
                 self.assertIn(
                     entity,
                     legal_entity_names,
-                    msg="'{}' should now be equal to anyone of these: {}, but is not".format(
-                        entity, legal_entity_names
-                    )
+                    msg=f"'{entity}' should now be equal to anyone of these: {legal_entity_names}, but is not"
                 )
 
                 if field == 'all_fields_info':
@@ -55,7 +53,7 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertIn(
                 entity,
                 legal_entity_names,
-                msg="'{}' should now be equal to anyone of these: {}, but is not".format(entity, legal_entity_names)
+                msg=f"'{entity}' should now be equal to anyone of these: {legal_entity_names}, but is not"
             )
 
     def test_compare_migration_with_aiida_made(self):
@@ -125,7 +123,7 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertListEqual(
                 sorted(details['migrated']),
                 sorted(details['made']),
-                msg='Number of {}-entities differ, see diff for details'.format(entity)
+                msg=f'Number of {entity}-entities differ, see diff for details'
             )
 
         fields = {'export_data', 'groups_uuid', 'node_attributes_conversion', 'node_attributes'}
@@ -133,7 +131,7 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertEqual(
                 len(data_v2[field]),
                 len(data_v3[field]),
-                msg='Number of entities in {} differs for the export files'.format(field)
+                msg=f'Number of entities in {field} differs for the archive files'
             )
 
         number_of_links_v2 = {
@@ -153,12 +151,12 @@ class TestMigrate(ArchiveMigrationTest):
         self.assertDictEqual(
             number_of_links_v2,
             number_of_links_v3,
-            msg='There are a different number of specific links in the migrated export file than the AiiDA made one.'
+            msg='There are a different number of specific links in the migrated archive file than the AiiDA made one.'
         )
 
         self.assertEqual(number_of_links_v2['unspecified'], 0)
         self.assertEqual(number_of_links_v3['unspecified'], 0)
 
         # Special for data['export_data']['User']
-        # There is an extra user in the AiiDA made export file
+        # There is an extra user in the AiiDA made archive file
         self.assertEqual(len(data_v2['export_data']['User']) + 1, len(data_v3['export_data']['User']))

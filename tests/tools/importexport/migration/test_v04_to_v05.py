@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.4 to 0.5"""
+"""Test archive file migration from export version 0.4 to 0.5"""
 from aiida.tools.importexport.migration.v04_to_v05 import migrate_v4_to_v5
 
 from . import ArchiveMigrationTest
@@ -26,20 +26,20 @@ class TestMigrate(ArchiveMigrationTest):
         for change in removed_computer_attrs:
             # data.json
             for computer in data['export_data']['Computer'].values():
-                self.assertNotIn(change, computer, msg="'{}' unexpectedly found for {}".format(change, computer))
+                self.assertNotIn(change, computer, msg=f"'{change}' unexpectedly found for {computer}")
             # metadata.json
             self.assertNotIn(
                 change,
                 metadata['all_fields_info']['Computer'],
-                msg="'{}' unexpectedly found in metadata.json for Computer".format(change)
+                msg=f"'{change}' unexpectedly found in metadata.json for Computer"
             )
         for change in removed_node_attrs:
             # data.json
             for node in data['export_data']['Node'].values():
-                self.assertNotIn(change, node, msg="'{}' unexpectedly found for {}".format(change, node))
+                self.assertNotIn(change, node, msg=f"'{change}' unexpectedly found for {node}")
             # metadata.json
             self.assertNotIn(
                 change,
                 metadata['all_fields_info']['Node'],
-                msg="'{}' unexpectedly found in metadata.json for Node".format(change)
+                msg=f"'{change}' unexpectedly found in metadata.json for Node"
             )

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Remove legacy workflow."""
 
 import sys
@@ -68,7 +68,7 @@ def export_workflow_data(apps, _):
 
     # If delete_on_close is False, we are running for the user and add additional message of file location
     if not delete_on_close:
-        echo.echo_info('Exported workflow data to {}'.format(filename))
+        echo.echo_info(f'Exported workflow data to {filename}')
 
 
 class Migration(migrations.Migration):

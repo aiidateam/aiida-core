@@ -31,7 +31,7 @@ class TemplatereplacerDoublerParser(Parser):
             with output_folder.open(output_file, 'r') as handle:
                 result = self.parse_stdout(handle)
         except (OSError, IOError):
-            self.logger.exception('unable to parse the output for CalcJobNode<{}>'.format(self.node.pk))
+            self.logger.exception(f'unable to parse the output for CalcJobNode<{self.node.pk}>')
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
 
         output_dict = {'value': result, 'retrieved_temporary_files': []}

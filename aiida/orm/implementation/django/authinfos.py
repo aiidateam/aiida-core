@@ -134,7 +134,7 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         try:
             DbAuthInfo.objects.get(pk=pk).delete()
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent('AuthInfo<{}> does not exist'.format(pk))
+            raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
 
     def get(self, computer, user):
         """Return an entry from the collection that is configured for the given computer and user
@@ -151,12 +151,10 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         try:
             authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent(
-                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.name)
-            )
+            raise exceptions.NotExistent(f'User<{user.email}> has no configuration for Computer<{computer.name}>')
         except MultipleObjectsReturned:
             raise exceptions.MultipleObjectsError(
-                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.name)
+                f'User<{user.email}> has multiple configurations for Computer<{computer.name}>'
             )
         else:
             return self.from_dbmodel(authinfo)

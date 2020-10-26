@@ -48,7 +48,7 @@ def upgrade():
 
     for pk, uuid in nodes:
         connection.execute(
-            text("""UPDATE db_dbnode SET attributes = attributes #- '{{array|symbols}}' WHERE id = {}""".format(pk)))
+            text(f"""UPDATE db_dbnode SET attributes = attributes #- '{{array|symbols}}' WHERE id = {pk}"""))
         utils.delete_numpy_array_from_repository(uuid, 'symbols')
 
 

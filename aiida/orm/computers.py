@@ -126,10 +126,10 @@ class Computer(entities.Entity):
             self.set_workdir(workdir)
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
     def __str__(self):
-        return '{} ({}), pk: {}'.format(self.label, self.hostname, self.pk)
+        return f'{self.label} ({self.hostname}), pk: {self.pk}'
 
     @property
     def full_text_info(self):
@@ -143,19 +143,19 @@ class Computer(entities.Entity):
         """
         warnings.warn('this property is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
         ret_lines = []
-        ret_lines.append('Computer name:     {}'.format(self.label))
-        ret_lines.append(' * PK:             {}'.format(self.pk))
-        ret_lines.append(' * UUID:           {}'.format(self.uuid))
-        ret_lines.append(' * Description:    {}'.format(self.description))
-        ret_lines.append(' * Hostname:       {}'.format(self.hostname))
-        ret_lines.append(' * Transport type: {}'.format(self.transport_type))
-        ret_lines.append(' * Scheduler type: {}'.format(self.scheduler_type))
-        ret_lines.append(' * Work directory: {}'.format(self.get_workdir()))
-        ret_lines.append(' * Shebang:        {}'.format(self.get_shebang()))
-        ret_lines.append(' * mpirun command: {}'.format(' '.join(self.get_mpirun_command())))
+        ret_lines.append(f'Computer name:     {self.label}')
+        ret_lines.append(f' * PK:             {self.pk}')
+        ret_lines.append(f' * UUID:           {self.uuid}')
+        ret_lines.append(f' * Description:    {self.description}')
+        ret_lines.append(f' * Hostname:       {self.hostname}')
+        ret_lines.append(f' * Transport type: {self.transport_type}')
+        ret_lines.append(f' * Scheduler type: {self.scheduler_type}')
+        ret_lines.append(f' * Work directory: {self.get_workdir()}')
+        ret_lines.append(f' * Shebang:        {self.get_shebang()}')
+        ret_lines.append(f" * mpirun command: {' '.join(self.get_mpirun_command())}")
         def_cpus_machine = self.get_default_mpiprocs_per_machine()
         if def_cpus_machine is not None:
-            ret_lines.append(' * Default number of cpus per machine: {}'.format(def_cpus_machine))
+            ret_lines.append(f' * Default number of cpus per machine: {def_cpus_machine}')
         # pylint: disable=fixme
         # TODO: Put back following line when we port Node to new backend system
         # ret_lines.append(" * Used by:        {} nodes".format(len(self._dbcomputer.dbnodes.all())))
@@ -163,13 +163,13 @@ class Computer(entities.Entity):
         ret_lines.append(' * prepend text:')
         if self.get_prepend_text().strip():
             for line in self.get_prepend_text().split('\n'):
-                ret_lines.append('   {}'.format(line))
+                ret_lines.append(f'   {line}')
         else:
             ret_lines.append('   # No prepend text.')
         ret_lines.append(' * append text:')
         if self.get_append_text().strip():
             for line in self.get_append_text().split('\n'):
-                ret_lines.append('   {}'.format(line))
+                ret_lines.append(f'   {line}')
         else:
             ret_lines.append('   # No append text.')
 
@@ -245,9 +245,9 @@ class Computer(entities.Entity):
         try:
             convertedwd = workdir.format(username='test')
         except KeyError as exc:
-            raise exceptions.ValidationError('In workdir there is an unknown replacement field {}'.format(exc.args[0]))
+            raise exceptions.ValidationError(f'In workdir there is an unknown replacement field {exc.args[0]}')
         except ValueError as exc:
-            raise exceptions.ValidationError("Error in the string: '{}'".format(exc))
+            raise exceptions.ValidationError(f"Error in the string: '{exc}'")
 
         if not os.path.isabs(convertedwd):
             raise exceptions.ValidationError('The workdir must be an absolute path')
@@ -272,9 +272,9 @@ class Computer(entities.Entity):
             for arg in mpirun_cmd:
                 arg.format(**subst)
         except KeyError as exc:
-            raise exceptions.ValidationError('In workdir there is an unknown replacement field {}'.format(exc.args[0]))
+            raise exceptions.ValidationError(f'In workdir there is an unknown replacement field {exc.args[0]}')
         except ValueError as exc:
-            raise exceptions.ValidationError("Error in the string: '{}'".format(exc))
+            raise exceptions.ValidationError(f"Error in the string: '{exc}'")
 
     def validate(self):
         """
@@ -446,7 +446,7 @@ class Computer(entities.Entity):
             self.metadata = olddata
         except KeyError:
             if raise_exception:
-                raise AttributeError("'{}' property not found".format(name))
+                raise AttributeError(f"'{name}' property not found")
 
     def set_property(self, name, value):
         """
@@ -477,7 +477,7 @@ class Computer(entities.Entity):
             return olddata[name]
         except KeyError:
             if not args:
-                raise AttributeError("'{}' property not found".format(name))
+                raise AttributeError(f"'{name}' property not found")
             return args[0]
 
     def get_prepend_text(self):
@@ -570,9 +570,9 @@ class Computer(entities.Entity):
         :param str val: A valid shebang line
         """
         if not isinstance(val, str):
-            raise ValueError('{} is invalid. Input has to be a string'.format(val))
+            raise ValueError(f'{val} is invalid. Input has to be a string')
         if not val.startswith('#!'):
-            raise ValueError('{} is invalid. A shebang line has to start with #!'.format(val))
+            raise ValueError(f'{val} is invalid. A shebang line has to start with #!')
         metadata = self.metadata
         metadata['shebang'] = val
         self.metadata = metadata
@@ -656,7 +656,7 @@ class Computer(entities.Entity):
             return TransportFactory(self.transport_type)
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(
-                'No transport found for {} [type {}], message: {}'.format(self.label, self.transport_type, exception)
+                f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
             )
 
     def get_scheduler(self):
@@ -672,7 +672,7 @@ class Computer(entities.Entity):
             return scheduler_class()
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(
-                'No scheduler found for {} [type {}], message: {}'.format(self.label, self.scheduler_type, exception)
+                f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
             )
 
     def configure(self, user=None, **kwargs):
@@ -692,11 +692,7 @@ class Computer(entities.Entity):
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError(
-                '{transport}: received invalid authentication parameter(s) "{invalid}"'.format(
-                    transport=transport_cls, invalid=invalid_keys
-                )
-            )
+            raise ValueError(f'{transport_cls}: received invalid authentication parameter(s) "{invalid_keys}"')
 
         try:
             authinfo = self.get_authinfo(user)

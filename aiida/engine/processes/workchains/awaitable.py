@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-few-public-methods
 """Enums and function for the awaitables of Processes."""
 from enum import Enum
 
@@ -53,7 +52,7 @@ def construct_awaitable(target):
     if isinstance(target, ProcessNode):
         awaitable_target = AwaitableTarget.PROCESS
     else:
-        raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
+        raise ValueError(f'invalid class for awaitable target: {type(target)}')
 
     awaitable = Awaitable(
         **{

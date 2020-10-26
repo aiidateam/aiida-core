@@ -28,13 +28,13 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
     filetext = []
     filetext += get_file_header(comment_char='').splitlines()
     filetext.append('')
-    filetext.append('Dumped from BandsData UUID={}'.format(uuid))
+    filetext.append(f'Dumped from BandsData UUID={uuid}')
     filetext.append('\tpoints\tbands')
     filetext.append('\t{}\t{}'.format(*plot_info['y'].shape))
     filetext.append('')
     filetext.append('\tlabel\tpoint')
     for label in plot_info['raw_labels']:
-        filetext.append('\t{}\t{:.8f}'.format(label[1], label[0]))
+        filetext.append(f'\t{label[1]}\t{label[0]:.8f}')
 
     return '\n'.join('{} {}'.format(comment_char, line) for line in filetext)
 
@@ -280,8 +280,7 @@ class BandsData(KpointsData):
             the_occupations = numpy.array(occupations)
             if the_occupations.shape != the_bands.shape:
                 raise ValueError(
-                    'Shape of occupations {} different from shape'
-                    'shape of bands {}'.format(the_occupations.shape, the_bands.shape)
+                    f'Shape of occupations {the_occupations.shape} different from shapeshape of bands {the_bands.shape}'
                 )
 
             if not the_bands.dtype.type == numpy.float64:
@@ -298,7 +297,7 @@ class BandsData(KpointsData):
             try:
                 [float(_) for _ in x.flatten() if _ is not None]
             except (TypeError, ValueError):
-                raise ValueError('The {} array can only contain float or None values'.format(msg))
+                raise ValueError(f'The {msg} array can only contain float or None values')
 
         # check the labels
         if labels is not None:
@@ -582,10 +581,10 @@ class BandsData(KpointsData):
         if comments:
             batch.append(prepare_header_comment(self.uuid, plot_info, comment_char='#'))
 
-        batch.append('READ XY "{}"'.format(dat_filename))
+        batch.append(f'READ XY "{dat_filename}"')
 
         # axis limits
-        batch.append('world {}, {}, {}, {}'.format(x_min_lim, y_min_lim, x_max_lim, y_max_lim))
+        batch.append(f'world {x_min_lim}, {y_min_lim}, {x_max_lim}, {y_max_lim}')
 
         # axis label
         batch.append('yaxis label "Dispersion"')
@@ -593,11 +592,11 @@ class BandsData(KpointsData):
         # axis ticks
         batch.append('xaxis  tick place both')
         batch.append('xaxis  tick spec type both')
-        batch.append('xaxis  tick spec {}'.format(len(labels)))
+        batch.append(f'xaxis  tick spec {len(labels)}')
         # set the name of the special points
         for index, label in enumerate(labels):
-            batch.append('xaxis  tick major {}, {}'.format(index, label[0]))
-            batch.append('xaxis  ticklabel {}, "{}"'.format(index, label[1]))
+            batch.append(f'xaxis  tick major {index}, {label[0]}')
+            batch.append(f'xaxis  ticklabel {index}, "{label[1]}"')
         batch.append('xaxis  tick major color 7')
         batch.append('xaxis  tick major grid on')
 
@@ -612,8 +611,8 @@ class BandsData(KpointsData):
 
         # set color and linewidths of bands
         for index in range(num_bands):
-            batch.append('s{} line color 1'.format(index))
-            batch.append('s{} linewidth 1'.format(index))
+            batch.append(f's{index} line color 1')
+            batch.append(f's{index} linewidth 1')
 
         batch_data = '\n'.join(batch) + '\n'
         extra_files = {dat_filename: raw_data}
@@ -639,7 +638,7 @@ class BandsData(KpointsData):
             return_text.append(prepare_header_comment(self.uuid, plot_info, comment_char='#'))
 
         for i in zip(x, bands):
-            line = ['{:.8f}'.format(i[0])] + ['{:.8f}'.format(j) for j in i[1]]
+            line = [f'{i[0]:.8f}'] + [f'{j:.8f}' for j in i[1]]
             return_text.append('\t'.join(line))
 
         return ('\n'.join(return_text) + '\n').encode('utf-8'), {}
@@ -664,7 +663,7 @@ class BandsData(KpointsData):
 
         for band in numpy.transpose(bands):
             for i in zip(x, band):
-                line = ['{:.8f}'.format(i[0]), '{:.8f}'.format(i[1])]
+                line = [f'{i[0]:.8f}', f'{i[1]:.8f}']
                 return_text.append('\t'.join(line))
             return_text.append('')
             return_text.append('')
@@ -778,7 +777,7 @@ class BandsData(KpointsData):
         all_data['tick_labels'] = tick_labels
         all_data['legend_text'] = legend
         all_data['legend_text2'] = legend2
-        all_data['yaxis_label'] = 'Dispersion ({})'.format(self.units)
+        all_data['yaxis_label'] = f'Dispersion ({self.units})'
         all_data['title'] = title
         if comments:
             all_data['comment'] = prepare_header_comment(self.uuid, plot_info, comment_char='#')
@@ -797,7 +796,7 @@ class BandsData(KpointsData):
 
         for key, value in kwargs.items():
             if key not in valid_additional_keywords:
-                raise TypeError("_matplotlib_get_dict() got an unexpected keyword argument '{}'".format(key))
+                raise TypeError(f"_matplotlib_get_dict() got an unexpected keyword argument '{key}'")
             all_data[key] = value
 
         return all_data
@@ -1054,17 +1053,17 @@ class BandsData(KpointsData):
         # Actual logic
         script.append('set termopt enhanced')  # Properly deals with e.g. subscripts
         script.append('set encoding utf8')  # To deal with Greek letters
-        script.append('set xtics ({})'.format(xtics_string))
+        script.append(f'set xtics ({xtics_string})')
         script.append('unset key')
-        script.append('set yrange [{}:{}]'.format(y_min_lim, y_max_lim))
-        script.append('set ylabel "{}"'.format('Dispersion ({})'.format(self.units)))
+        script.append(f'set yrange [{y_min_lim}:{y_max_lim}]')
+        script.append(f"set ylabel \"Dispersion ({self.units})\"")
 
         if title:
             script.append('set title "{}"'.format(title.replace('"', '\"')))
 
         # Plot, escaping filename
         if len(x) > 1:
-            script.append('set xrange [{}:{}]'.format(x_min_lim, x_max_lim))
+            script.append(f'set xrange [{x_min_lim}:{x_max_lim}]')
             script.append('set grid xtics lt 1 lc rgb "#888888"')
             script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
         else:
@@ -1133,9 +1132,9 @@ class BandsData(KpointsData):
         import math
         # load the x and y of every set
         if color_number > MAX_NUM_AGR_COLORS:
-            raise ValueError('Color number is too high (should be less than {})'.format(MAX_NUM_AGR_COLORS))
+            raise ValueError(f'Color number is too high (should be less than {MAX_NUM_AGR_COLORS})')
         if color_number2 > MAX_NUM_AGR_COLORS:
-            raise ValueError('Color number 2 is too high (should be less than {})'.format(MAX_NUM_AGR_COLORS))
+            raise ValueError(f'Color number 2 is too high (should be less than {MAX_NUM_AGR_COLORS})')
 
         bands = plot_info['y']
         x = plot_info['x']
@@ -1170,7 +1169,7 @@ class BandsData(KpointsData):
         for band in the_bands:
             this_set = ''
             for i in zip(x, band):
-                line = '{:.8f}'.format(i[0]) + '\t' + '{:.8f}'.format(i[1]) + '\n'
+                line = f'{i[0]:.8f}' + '\t' + f'{i[1]:.8f}' + '\n'
                 this_set += line
             all_sets.append(this_set)
 
@@ -1195,7 +1194,7 @@ class BandsData(KpointsData):
             y_min_lim=y_min_lim,
             x_max_lim=x_max_lim,
             y_max_lim=y_max_lim,
-            yaxislabel='Dispersion ({})'.format(units),
+            yaxislabel=f'Dispersion ({units})',
             xticks_template=xticks,
             set_descriptions=set_descriptions,
             ytick_spacing=ytick_spacing,

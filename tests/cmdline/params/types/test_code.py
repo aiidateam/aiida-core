@@ -45,7 +45,7 @@ def setup_codes(clear_database_before_test, aiida_localhost):
 def test_get_by_id(setup_codes, parameter_type):
     """Verify that using the ID will retrieve the correct entity."""
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}'.format(entity_01.pk)
+    identifier = f'{entity_01.pk}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 
@@ -53,7 +53,7 @@ def test_get_by_id(setup_codes, parameter_type):
 def test_get_by_uuid(setup_codes, parameter_type):
     """Verify that using the UUID will retrieve the correct entity."""
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}'.format(entity_01.uuid)
+    identifier = f'{entity_01.uuid}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 
@@ -61,7 +61,7 @@ def test_get_by_uuid(setup_codes, parameter_type):
 def test_get_by_label(setup_codes, parameter_type):
     """Verify that using the LABEL will retrieve the correct entity."""
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}'.format(entity_01.label)
+    identifier = f'{entity_01.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 
@@ -69,7 +69,7 @@ def test_get_by_label(setup_codes, parameter_type):
 def test_get_by_fullname(setup_codes, parameter_type):
     """Verify that using the LABEL@machinename will retrieve the correct entity."""
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}@{}'.format(entity_01.label, entity_01.computer.label)
+    identifier = f'{entity_01.label}@{entity_01.computer.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 
@@ -81,11 +81,11 @@ def test_ambiguous_label_pk(setup_codes, parameter_type):
     Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
     """
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}'.format(entity_02.label)
+    identifier = f'{entity_02.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 
-    identifier = '{}{}'.format(entity_02.label, OrmEntityLoader.label_ambiguity_breaker)
+    identifier = f'{entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_02.uuid
 
@@ -97,11 +97,11 @@ def test_ambiguous_label_uuid(setup_codes, parameter_type):
     Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
     """
     entity_01, entity_02, entity_03 = setup_codes
-    identifier = '{}'.format(entity_03.label)
+    identifier = f'{entity_03.label}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_01.uuid
 
-    identifier = '{}{}'.format(entity_03.label, OrmEntityLoader.label_ambiguity_breaker)
+    identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_03.uuid
 
@@ -110,12 +110,12 @@ def test_entry_point_validation(setup_codes):
     """Verify that when an `entry_point` is defined in the constructor, it is respected in the validation."""
     entity_01, entity_02, entity_03 = setup_codes
     parameter_type = CodeParamType(entry_point='arithmetic.add')
-    identifier = '{}'.format(entity_02.pk)
+    identifier = f'{entity_02.pk}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_02.uuid
 
     with pytest.raises(click.BadParameter):
-        identifier = '{}'.format(entity_03.pk)
+        identifier = f'{entity_03.pk}'
         result = parameter_type.convert(identifier, None, None)
 
 

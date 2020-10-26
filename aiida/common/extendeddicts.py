@@ -40,7 +40,7 @@ class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
 
     def __repr__(self):
         """Representation of the object."""
-        return '%s(%s)' % (self.__class__.__name__, dict.__repr__(self))
+        return f'{self.__class__.__name__}({dict.__repr__(self)})'
 
     def __getattr__(self, attr):
         """Read a key as an attribute.
@@ -50,7 +50,7 @@ class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
         try:
             return self[attr]
         except KeyError:
-            errmsg = "'{}' object has no attribute '{}'".format(self.__class__.__name__, attr)
+            errmsg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
             raise AttributeError(errmsg)
 
     def __setattr__(self, attr, value):
@@ -59,8 +59,7 @@ class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
             self[attr] = value
         except KeyError:
             raise AttributeError(
-                "AttributeError: '{}' is not a valid attribute of the object "
-                "'{}'".format(attr, self.__class__.__name__)
+                f"AttributeError: '{attr}' is not a valid attribute of the object '{self.__class__.__name__}'"
             )
 
     def __delattr__(self, attr):
@@ -71,7 +70,7 @@ class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
         try:
             del self[attr]
         except KeyError:
-            errmsg = "'{}' object has no attribute '{}'".format(self.__class__.__name__, attr)
+            errmsg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
             raise AttributeError(errmsg)
 
     def __deepcopy__(self, memo=None):
@@ -114,7 +113,7 @@ class FixedFieldsAttributeDict(AttributeDict):
 
         for key in init:
             if key not in self._valid_fields:
-                errmsg = "'{}' is not a valid key for object '{}'".format(key, self.__class__.__name__)
+                errmsg = f"'{key}' is not a valid key for object '{self.__class__.__name__}'"
                 raise KeyError(errmsg)
         super().__init__(init)
 
@@ -123,7 +122,7 @@ class FixedFieldsAttributeDict(AttributeDict):
         Set a key as an attribute.
         """
         if item not in self._valid_fields:
-            errmsg = "'{}' is not a valid key for object '{}'".format(item, self.__class__.__name__)
+            errmsg = f"'{item}' is not a valid key for object '{self.__class__.__name__}'"
             raise KeyError(errmsg)
         super().__setitem__(item, value)
 
@@ -210,14 +209,12 @@ class DefaultFieldsAttributeDict(AttributeDict):
         for key in self.get_default_fields():
             # I get the attribute starting with validate_ and containing the name of the key
             # I set a dummy function if there is no validate_KEY function defined
-            validator = getattr(self, 'validate_{}'.format(key), lambda value: None)
+            validator = getattr(self, f'validate_{key}', lambda value: None)
             if callable(validator):
                 try:
                     validator(self[key])
                 except Exception as exc:
-                    raise exceptions.ValidationError(
-                        "Invalid value for key '{}' [{}]: {}".format(key, exc.__class__.__name__, exc)
-                    )
+                    raise exceptions.ValidationError(f"Invalid value for key '{key}' [{exc.__class__.__name__}]: {exc}")
 
     def __setattr__(self, attr, value):
         """

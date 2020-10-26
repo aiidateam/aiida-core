@@ -37,12 +37,12 @@ class TestSpecificImport(AiidaTestCase):
 
     def test_simple_import(self):
         """
-        This is a very simple test which checks that an export file with nodes
+        This is a very simple test which checks that an archive file with nodes
         that are not associated to a computer is imported correctly. In Django
         when such nodes are exported, there is an empty set for computers
-        in the export file. In SQLA there is such a set only when a computer is
+        in the archive file. In SQLA there is such a set only when a computer is
         associated with the exported nodes. When an empty computer set is
-        found at the export file (when imported to an SQLA profile), the SQLA
+        found at the archive file (when imported to an SQLA profile), the SQLA
         import code used to crash. This test demonstrates this problem.
         """
         parameters = orm.Dict(
@@ -200,17 +200,15 @@ class TestSpecificImport(AiidaTestCase):
         with self.assertRaises(exceptions.ArchiveExportError) as exc:
             export([node], filename=filename, silent=True)
 
-        self.assertIn(
-            'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
-        )
-        self.assertFalse(os.path.exists(filename), msg='The export file should not exist')
+        self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
+        self.assertFalse(os.path.exists(filename), msg='The archive file should not exist')
 
     @with_temp_dir
     def test_missing_node_repo_folder_import(self, temp_dir):
         """
         Make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised during import when missing
         Node repository folder.
-        Create and export a Node and manually remove its repository folder in the export file.
+        Create and export a Node and manually remove its repository folder in the archive file.
         Attempt to import it and make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised,
         due to the missing folder.
         """
@@ -235,23 +233,23 @@ class TestSpecificImport(AiidaTestCase):
         export([node], filename=filename, file_format='tar.gz', silent=True)
         self.reset_database()
 
-        # Untar export file, remove repository folder, re-tar
+        # Untar archive file, remove repository folder, re-tar
         node_shard_uuid = export_shard_uuid(node_uuid)
         node_top_folder = node_shard_uuid.split('/')[0]
         with SandboxFolder() as folder:
             extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
             self.assertTrue(
-                node_folder.exists(), msg="The Node's repository folder should still exist in the export file"
+                node_folder.exists(), msg="The Node's repository folder should still exist in the archive file"
             )
 
-            # Removing the Node's repository folder from the export file
+            # Removing the Node's repository folder from the archive file
             shutil.rmtree(
                 folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True
             )
             self.assertFalse(
                 node_folder.exists(),
-                msg="The Node's repository folder should now have been removed in the export file"
+                msg="The Node's repository folder should now have been removed in the archive file"
             )
 
             filename_corrupt = os.path.join(temp_dir, 'export_corrupt.aiida')
@@ -262,9 +260,7 @@ class TestSpecificImport(AiidaTestCase):
         with self.assertRaises(exceptions.CorruptArchive) as exc:
             import_data(filename_corrupt, silent=True)
 
-        self.assertIn(
-            'Unable to find the repository folder for Node with UUID={}'.format(node_uuid), str(exc.exception)
-        )
+        self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
 
     @with_temp_dir
     def test_empty_repo_folder_export(self, temp_dir):
@@ -287,9 +283,7 @@ class TestSpecificImport(AiidaTestCase):
                 shutil.rmtree(abspath_filename, ignore_errors=False)
         self.assertFalse(
             node_repo.get_content_list(),
-            msg='Repository folder should be empty, instead the following was found: {}'.format(
-                node_repo.get_content_list()
-            )
+            msg=f'Repository folder should be empty, instead the following was found: {node_repo.get_content_list()}'
         )
 
         archive_variants = {
@@ -305,7 +299,7 @@ class TestSpecificImport(AiidaTestCase):
         for variant, filename in archive_variants.items():
             self.reset_database()
             node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
-            self.assertEqual(node_count, 0, msg='After DB reset {} Dict Nodes was (wrongly) found'.format(node_count))
+            self.assertEqual(node_count, 0, msg=f'After DB reset {node_count} Dict Nodes was (wrongly) found')
 
             import_data(filename, silent=True)
             builder = orm.QueryBuilder().append(orm.Dict, project='uuid')

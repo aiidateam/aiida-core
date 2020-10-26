@@ -39,7 +39,7 @@ def migration_default_link_label(data):
 
 
 def migrate_v7_to_v8(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of export files from v0.7 to v0.8."""
+    """Migration of archive files from v0.7 to v0.8."""
     old_version = '0.7'
     new_version = '0.8'
 

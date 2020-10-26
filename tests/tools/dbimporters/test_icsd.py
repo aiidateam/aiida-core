@@ -74,7 +74,7 @@ class TestIcsd(AiidaTestCase):
         """
         Test Icsd intranet webinterface
         """
-        urllib.request.urlopen(self.server + 'icsd/').read()
+        urllib.request.urlopen(f'{self.server}icsd/').read()
 
     def test_mysqldb(self):
         """

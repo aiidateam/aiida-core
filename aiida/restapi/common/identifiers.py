@@ -53,15 +53,11 @@ def validate_full_type(full_type):
 
     if FULL_TYPE_CONCATENATOR not in full_type:
         raise ValueError(
-            'full type `{}` does not include the required concatenator symbol `{}`.'.format(
-                full_type, FULL_TYPE_CONCATENATOR
-            )
+            f'full type `{full_type}` does not include the required concatenator symbol `{FULL_TYPE_CONCATENATOR}`.'
         )
     elif full_type.count(FULL_TYPE_CONCATENATOR) > 1:
         raise ValueError(
-            'full type `{}` includes the concatenator symbol `{}` more than once.'.format(
-                full_type, FULL_TYPE_CONCATENATOR
-            )
+            f'full type `{full_type}` includes the concatenator symbol `{FULL_TYPE_CONCATENATOR}` more than once.'
         )
 
 
@@ -78,7 +74,7 @@ def construct_full_type(node_type, process_type):
     if process_type is None:
         process_type = ''
 
-    return '{}{}{}'.format(node_type, FULL_TYPE_CONCATENATOR, process_type)
+    return f'{node_type}{FULL_TYPE_CONCATENATOR}{process_type}'
 
 
 def get_full_type_filters(full_type):
@@ -96,10 +92,10 @@ def get_full_type_filters(full_type):
 
     for entry in (node_type, process_type):
         if entry.count(LIKE_OPERATOR_CHARACTER) > 1:
-            raise ValueError('full type component `{}` contained more than one like-operator character'.format(entry))
+            raise ValueError(f'full type component `{entry}` contained more than one like-operator character')
 
         if LIKE_OPERATOR_CHARACTER in entry and entry[-1] != LIKE_OPERATOR_CHARACTER:
-            raise ValueError('like-operator character in full type component `{}` is not at the end'.format(entry))
+            raise ValueError(f'like-operator character in full type component `{entry}` is not at the end')
 
     if LIKE_OPERATOR_CHARACTER in node_type:
         # Remove the trailing `LIKE_OPERATOR_CHARACTER`, escape the string and reattach the character
@@ -144,7 +140,7 @@ def load_entry_point_from_full_type(full_type):
         try:
             return load_entry_point_from_string(process_type)
         except EntryPointError:
-            raise EntryPointError('could not load entry point `{}`'.format(process_type))
+            raise EntryPointError(f'could not load entry point `{process_type}`')
 
     elif node_type.startswith(data_prefix):
 
@@ -154,7 +150,7 @@ def load_entry_point_from_full_type(full_type):
         try:
             return load_entry_point('aiida.data', entry_point_name)
         except EntryPointError:
-            raise EntryPointError('could not load entry point `{}`'.format(process_type))
+            raise EntryPointError(f'could not load entry point `{process_type}`')
 
     # Here we are dealing with a `ProcessNode` with a `process_type` that is not an entry point string.
     # Which means it is most likely a full module path (the fallback option) and we cannot necessarily load the
@@ -233,7 +229,7 @@ class Namespace(MutableMapping):
                     full_type = full_type_template.format(plugin_name=plugin_name)
                     return full_type
 
-        full_type += '.{}{}'.format(LIKE_OPERATOR_CHARACTER, FULL_TYPE_CONCATENATOR)
+        full_type += f'.{LIKE_OPERATOR_CHARACTER}{FULL_TYPE_CONCATENATOR}'
 
         if full_type.startswith('process.'):
             full_type += LIKE_OPERATOR_CHARACTER
@@ -290,7 +286,7 @@ class Namespace(MutableMapping):
         :raises: ValueError if any sub namespace is occupied by a non-Namespace port
         """
         if not isinstance(name, str):
-            raise ValueError('name has to be a string type, not {}'.format(type(name)))
+            raise ValueError(f'name has to be a string type, not {type(name)}')
 
         if not name:
             raise ValueError('name cannot be an empty string')
@@ -298,7 +294,7 @@ class Namespace(MutableMapping):
         namespace = name.split(self.namespace_separator)
         port_name = namespace.pop(0)
 
-        path = '{}{}{}'.format(self._path, self.namespace_separator, port_name)
+        path = f'{self._path}{self.namespace_separator}{port_name}'
 
         # If this is True, the (sub) port namespace does not yet exist, so we create it
         if port_name not in self:
@@ -323,7 +319,7 @@ class Namespace(MutableMapping):
             # namespace is the "concrete" version of the namespace, so we add the leaf version to the namespace.
             elif not self[port_name].is_leaf and not namespace:
                 kwargs['is_leaf'] = True
-                self[port_name][port_name] = self.__class__(port_name, path='{}.{}'.format(path, port_name), **kwargs)
+                self[port_name][port_name] = self.__class__(port_name, path=f'{path}.{port_name}', **kwargs)
 
         # If there is still `namespace` left, we create the next namespace
         if namespace:

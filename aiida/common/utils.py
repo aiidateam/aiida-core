@@ -85,7 +85,7 @@ def get_unique_filename(filename, list_of_filenames):
     # Not optimized, but for the moment this should be fast enough
     append_int = 1
     while True:
-        new_filename = '{:s}-{:d}{:s}'.format(basename, append_int, ext)
+        new_filename = f'{basename:s}-{append_int:d}{ext:s}'
         if new_filename not in list_of_filenames:
             break
         append_int += 1
@@ -157,7 +157,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
 
     # Return the resulting string, appending a suitable string if the time
     # is negative
-    return '{}{}'.format(raw_string, negative_string)
+    return f'{raw_string}{negative_string}'
 
 
 def get_class_string(obj):
@@ -168,9 +168,9 @@ def get_class_string(obj):
     It works both for classes and for class instances.
     """
     if inspect.isclass(obj):
-        return '{}.{}'.format(obj.__module__, obj.__name__)
+        return f'{obj.__module__}.{obj.__name__}'
 
-    return '{}.{}'.format(obj.__module__, obj.__class__.__name__)
+    return f'{obj.__module__}.{obj.__class__.__name__}'
 
 
 def get_object_from_string(class_string):
@@ -264,7 +264,7 @@ def are_dir_trees_equal(dir1, dir2):
         if not res:
             return False, msg
 
-    return True, 'The given directories ({} and {}) are equal'.format(dir1, dir2)
+    return True, f'The given directories ({dir1} and {dir2}) are equal'
 
 
 class Prettifier:
@@ -419,9 +419,7 @@ class Prettifier:
         try:
             self._prettifier_f = self.prettifiers[format]  # pylint: disable=unsubscriptable-object
         except KeyError:
-            raise ValueError(
-                'Unknown prettifier format {}; valid formats: {}'.format(format, ', '.join(self.get_prettifiers()))
-            )
+            raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
 
     def prettify(self, label):
         """
@@ -582,4 +580,4 @@ class ErrorAccumulator:
 
     def raise_errors(self, raise_cls):
         if not self.success():
-            raise raise_cls('The following errors were encountered: {}'.format(self.errors))
+            raise raise_cls(f'The following errors were encountered: {self.errors}')

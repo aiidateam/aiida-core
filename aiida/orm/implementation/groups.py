@@ -165,7 +165,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any([not isinstance(node, BackendNode) for node in nodes]):
-            raise TypeError('nodes have to be of type {}'.format(BackendNode))
+            raise TypeError(f'nodes have to be of type {BackendNode}')
 
     def remove_nodes(self, nodes):
         """Remove a set of nodes from the group.
@@ -181,16 +181,16 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError('nodes has to be a list or tuple')
 
         if any([not isinstance(node, BackendNode) for node in nodes]):
-            raise TypeError('nodes have to be of type {}'.format(BackendNode))
+            raise TypeError(f'nodes have to be of type {BackendNode}')
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
     def __str__(self):
         if self.type_string:
-            return '"{}" [type {}], of user {}'.format(self.label, self.type_string, self.user.email)
+            return f'"{self.label}" [type {self.type_string}], of user {self.user.email}'
 
-        return '"{}" [user-defined], of user {}'.format(self.label, self.user.email)
+        return f'"{self.label}" [user-defined], of user {self.user.email}'
 
 
 class BackendGroupCollection(BackendCollection[BackendGroup]):
@@ -260,9 +260,9 @@ class BackendGroupCollection(BackendCollection[BackendGroup]):
         """
         results = self.query(**filters)
         if len(results) > 1:
-            raise exceptions.MultipleObjectsError("Found multiple groups matching criteria '{}'".format(filters))
+            raise exceptions.MultipleObjectsError(f"Found multiple groups matching criteria '{filters}'")
         if not results:
-            raise exceptions.NotExistent("No group bound matching criteria '{}'".format(filters))
+            raise exceptions.NotExistent(f"No group bound matching criteria '{filters}'")
         return results[0]
 
     @abc.abstractmethod

@@ -237,25 +237,25 @@ class TestLogs(AiidaTestCase):
 
         Part I:
         Create CalculationNode and 1 Log for it.
-        Export CalculationNode with its 1 Log to export file #1 "EXISTING database".
+        Export CalculationNode with its 1 Log to archive file #1 "EXISTING database".
         Add 2 Logs to CalculationNode.
-        Export CalculationNode with its 3 Logs to export file #2 "FULL database".
+        Export CalculationNode with its 3 Logs to archive file #2 "FULL database".
         Reset database.
 
         Part II:
-        Reimport export file #1 "EXISTING database".
+        Reimport archive file #1 "EXISTING database".
         Add 2 Logs to CalculationNode (different UUID than for "FULL database").
-        Export CalculationNode with its 3 Logs to export file #3 "NEW database".
+        Export CalculationNode with its 3 Logs to archive file #3 "NEW database".
         Reset database.
 
         Part III:
-        Reimport export file #1 "EXISTING database" (1 CalculationNode, 1 Log).
-        Import export file #2 "FULL database" (1 CalculationNode, 3 Logs).
+        Reimport archive file #1 "EXISTING database" (1 CalculationNode, 1 Log).
+        Import archive file #2 "FULL database" (1 CalculationNode, 3 Logs).
         Check the database EXACTLY contains 1 CalculationNode and 3 Logs,
         with matching UUIDS all the way through all previous Parts.
 
         Part IV:
-        Import export file #3 "NEW database" (1 CalculationNode, 3 Logs).
+        Import archive file #3 "NEW database" (1 CalculationNode, 3 Logs).
         Check the database EXACTLY contains 1 CalculationNode and 5 Logs,
         with matching UUIDS all the way through all previous Parts.
         NB! There should now be 5 Logs in the database. 4 of which are identical

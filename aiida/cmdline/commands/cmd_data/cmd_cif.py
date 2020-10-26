@@ -67,7 +67,7 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
         echo.echo(tabulate(cif_list_data, tablefmt='plain'))
     else:
         echo.echo(tabulate(cif_list_data, headers='firstrow'))
-        echo.echo('\nTotal results: {}\n'.format(counter))
+        echo.echo(f'\nTotal results: {counter}\n')
 
 
 @cif.command('show')
@@ -77,9 +77,9 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
 def cif_show(data, fmt):
     """Visualize CifData objects."""
     try:
-        show_function = getattr(cmd_show, '_show_{}'.format(fmt))
+        show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
-        echo.echo_critical('visualization format {} is not supported'.format(fmt))
+        echo.echo_critical(f'visualization format {fmt} is not supported')
 
     show_function(fmt, data)
 
@@ -93,7 +93,7 @@ def cif_content(data):
         try:
             echo.echo(node.get_content())
         except IOError as exception:
-            echo.echo_warning('could not read the content for CifData<{}>: {}'.format(node.pk, str(exception)))
+            echo.echo_warning(f'could not read the content for CifData<{node.pk}>: {str(exception)}')
 
 
 @cif.command('export')
@@ -122,6 +122,6 @@ def cif_import(filename):
 
     try:
         node, _ = CifData.get_or_create(filename)
-        echo.echo_success('imported {}'.format(str(node)))
+        echo.echo_success(f'imported {str(node)}')
     except ValueError as err:
         echo.echo_critical(err)

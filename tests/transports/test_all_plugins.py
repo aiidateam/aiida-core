@@ -53,14 +53,14 @@ def get_all_custom_transports():
     try:
         test_modules.remove(thisbasename)
     except IndexError:
-        print('Warning, this module ({}) was not found!'.format(thisbasename))
+        print(f'Warning, this module ({thisbasename}) was not found!')
 
     all_custom_transports = {}
     for module in test_modules:
         module = importlib.import_module('.'.join([modulename, module]))
         custom_transport = module.__dict__.get('plugin_transport', None)
         if custom_transport is None:
-            print('Define the plugin_transport variable inside the {} module!'.format(module))
+            print(f'Define the plugin_transport variable inside the {module} module!')
         else:
             all_custom_transports[module] = custom_transport
 
@@ -99,7 +99,7 @@ def run_for_all_plugins(actual_test_method):
 
             messages = ['*** At least one test for a subplugin failed. See below ***', '']
             for exc in exceptions:
-                messages.append("*** [For plugin {}]: Exception '{}': {}".format(exc[2], type(exc[0]).__name__, exc[0]))
+                messages.append(f"*** [For plugin {exc[2]}]: Exception '{type(exc[0]).__name__}': {exc[0]}")
                 messages.append(exc[1])
 
             raise exception_to_raise('\n'.join(messages))
@@ -385,7 +385,7 @@ class TestDirectoryManipulation(unittest.TestCase):
                 directory += random.choice(string.ascii_uppercase + string.digits)
             transport.mkdir(directory)
 
-            dest_directory = directory + '_copy'
+            dest_directory = f'{directory}_copy'
             transport.copy(directory, dest_directory)
 
             with self.assertRaises(ValueError):

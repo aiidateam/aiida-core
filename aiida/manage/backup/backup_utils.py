@@ -48,12 +48,12 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
                     raise ValueError
             # If it is not parsable...
             except ValueError:
-                sys.stdout.write('The given value could not be parsed. Type expected: {}\n'.format(reply_type))
+                sys.stdout.write(f'The given value could not be parsed. Type expected: {reply_type}\n')
                 # If the timestamp could not have been parsed,
                 # ask again the same question.
                 continue
 
-        if query_yes_no('{} was parsed. Is it correct?'.format(final_answer), default='yes'):
+        if query_yes_no(f'{final_answer} was parsed. Is it correct?', default='yes'):
             break
     return final_answer
 
@@ -76,7 +76,7 @@ def query_yes_no(question, default='yes'):
     elif default == 'no':
         prompt = ' [y/N] '
     else:
-        raise ValueError("invalid default answer: '%s'" % default)
+        raise ValueError(f"invalid default answer: '{default}'")
 
     while True:
         choice = input(question + prompt).lower()
@@ -109,7 +109,7 @@ def query_string(question, default):
     if default is None or not default:
         prompt = ''
     else:
-        prompt = ' [{}]'.format(default)
+        prompt = f' [{default}]'
 
     while True:
         reply = input(question + prompt)

@@ -35,7 +35,7 @@ class TestVerdiCommentCommand(AiidaTestCase):
 
     def test_comment_add(self):
         """Test adding a comment."""
-        options = ['-N', str(self.node.pk), '--', '{}'.format(COMMENT)]
+        options = ['-N', str(self.node.pk), '--', f'{COMMENT}']
         result = self.cli_runner.invoke(cmd_comment.add, options, catch_exceptions=False)
         self.assertEqual(result.exit_code, 0)
 

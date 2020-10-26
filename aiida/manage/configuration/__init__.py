@@ -94,12 +94,12 @@ def load_config(create=False):
     filepath = get_config_path()
 
     if not os.path.isfile(filepath) and not create:
-        raise exceptions.MissingConfigurationError('configuration file {} does not exist'.format(filepath))
+        raise exceptions.MissingConfigurationError(f'configuration file {filepath} does not exist')
 
     try:
         config = Config.from_file(filepath)
     except ValueError:
-        raise exceptions.ConfigurationError('configuration file {} contains invalid JSON'.format(filepath))
+        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON')
 
     return config
 

@@ -19,7 +19,5 @@ __all__ = ('CalculationTools',)
 class CalculationTools:
     """Base class for CalculationTools."""
 
-    # pylint: disable=too-few-public-methods
-
     def __init__(self, node):
         self._node = node

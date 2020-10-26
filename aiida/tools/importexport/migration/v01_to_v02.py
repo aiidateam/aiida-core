@@ -15,7 +15,7 @@ from aiida.tools.importexport.migration.utils import verify_metadata_version, up
 
 def migrate_v1_to_v2(metadata, data, *args):
     """
-    Migration of export files from v0.1 to v0.2, which means generalizing the
+    Migration of archive files from v0.1 to v0.2, which means generalizing the
     field names with respect to the database backend
 
     :param metadata: the content of an export archive metadata.json file
@@ -33,7 +33,7 @@ def migrate_v1_to_v2(metadata, data, *args):
     def get_new_string(old_string):
         """Replace the old module prefix with the new."""
         if old_string.startswith(old_start):
-            return '{}{}'.format(new_start, old_string[len(old_start):])
+            return f'{new_start}{old_string[len(old_start):]}'
 
         return old_string
 

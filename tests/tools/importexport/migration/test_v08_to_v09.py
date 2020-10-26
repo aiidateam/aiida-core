@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.8 to 0.9"""
+"""Test archive file migration from export version 0.8 to 0.9"""
 from aiida.tools.importexport.migration.v08_to_v09 import migrate_v8_to_v9, migration_dbgroup_type_string
 
 from . import ArchiveMigrationTest
@@ -22,7 +22,7 @@ class TestMigrate(ArchiveMigrationTest):
 
         for attributes in data.get('export_data', {}).get('Group', {}).values():
             if attributes['type_string'] not in ['core', 'core.upf', 'core.import', 'core.auto']:
-                raise AssertionError('encountered illegal type string `{}`'.format(attributes['type_string']))
+                raise AssertionError(f"encountered illegal type string `{attributes['type_string']}`")
 
     def test_migration_dbgroup_type_string(self):
         """Test the `migration_dbgroup_type_string` function directly."""

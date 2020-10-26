@@ -918,8 +918,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue(submit_script_text.startswith('#!/bin/bash -l'))
         self.assertTrue('#PBS -l walltime=24:00:00' in submit_script_text)
         self.assertTrue('#PBS -l select=1' in submit_script_text)
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + \
-                        " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_bad_shebang(self):
         """
@@ -979,7 +978,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -l select=1:mpiprocs=2' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
         """
@@ -1012,7 +1011,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
         """
@@ -1046,7 +1045,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
         """

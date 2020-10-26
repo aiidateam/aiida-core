@@ -246,9 +246,8 @@ class TestSettingsToJSONMigration(TestMigrations):
         super().tearDown()
 
 
-# pylint: disable=no-init, old-style-class, too-few-public-methods, dangerous-default-value, too-many-statements
-# pylint: disable= no-else-return, too-many-arguments, too-many-branches, fixme
-class DbMultipleValueAttributeBaseClass():
+# pylint: disable=no-init,dangerous-default-value,too-many-statements,no-else-return,too-many-arguments,too-many-branches,fixme
+class DbMultipleValueAttributeBaseClass:
     """
     Abstract base class for tables storing attribute + value data, of
     different data types (without any association to a Node).
@@ -413,9 +412,7 @@ class DbMultipleValueAttributeBaseClass():
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:
                 raise ValueError(
-                    'You cannot specify a subspecifier value for '
-                    'class {} because it has no subspecifiers'
-                    ''.format(cls.__name__)
+                    f'You cannot specify a subspecifier value for class {cls.__name__} because it has no subspecifiers'
                 )
             if issubclass(cls, DbAttributeFunctionality):
                 new_entry = db_attribute_base_model(key=key, **other_attribs)
@@ -509,9 +506,7 @@ class DbMultipleValueAttributeBaseClass():
                 # expect no concurrency)
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
-                    cls.create_value(
-                        key=('{}{}{:d}'.format(key, cls._sep, i)), value=subv, subspecifier_value=subspecifier_value
-                    )
+                    cls.create_value(key=f'{key}{cls._sep}{i:d}', value=subv, subspecifier_value=subspecifier_value)
                 )
 
         elif isinstance(value, dict):
@@ -531,17 +526,14 @@ class DbMultipleValueAttributeBaseClass():
                 # expect no concurrency)
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
-                    cls.create_value(
-                        key='{}{}{}'.format(key, cls._sep, subk), value=subv, subspecifier_value=subspecifier_value
-                    )
+                    cls.create_value(key=f'{key}{cls._sep}{subk}', value=subv, subspecifier_value=subspecifier_value)
                 )
         else:
             try:
                 jsondata = json.dumps(value)
             except TypeError:
                 raise ValueError(
-                    'Unable to store the value: it must be either a basic datatype, or json-serializable: {}'.
-                    format(value)
+                    f'Unable to store the value: it must be either a basic datatype, or json-serializable: {value}'
                 )
 
             new_entry.datatype = 'json'

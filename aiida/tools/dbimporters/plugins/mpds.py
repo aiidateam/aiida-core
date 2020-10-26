@@ -166,7 +166,7 @@ class MpdsDbImporter(DbImporter):
 
             search_results = MpdsSearchResults(results, return_class=MpdsCifEntry)
         else:
-            raise ValueError('Unsupported collection: {}'.format(collection))
+            raise ValueError(f'Unsupported collection: {collection}')
 
         return search_results
 
@@ -187,9 +187,8 @@ class MpdsDbImporter(DbImporter):
         content = self.get_response_content(response, fmt=ApiFormat.JSON)
 
         count = content['count']
-        npages = content['npages']
 
-        for page in range(npages):
+        for page in range(content['npages']):
 
             response = self.get(q=json.dumps(query), fmt=fmt, pagesize=pagesize, page=page)
             content = self.get_response_content(response, fmt=fmt)
@@ -209,9 +208,8 @@ class MpdsDbImporter(DbImporter):
 
             elif fmt == ApiFormat.CIF:
 
-                lines = content.splitlines()
                 cif = []
-                for line in lines:
+                for line in content.splitlines():
                     if cif:
                         if line.startswith('data_'):
                             text = '\n'.join(cif)
@@ -219,9 +217,8 @@ class MpdsDbImporter(DbImporter):
                             yield text
                         else:
                             cif.append(line)
-                    else:
-                        if line.startswith('data_'):
-                            cif.append(line)
+                    elif line.startswith('data_'):
+                        cif.append(line)
                 if cif:
                     yield '\n'.join(cif)
 
@@ -247,14 +244,14 @@ class MpdsDbImporter(DbImporter):
         :raises ValueError: HTTP response 200 contained non zero error message
         """
         if not response.ok:
-            raise RuntimeError('HTTP[{}] request failed: {}'.format(response.status_code, response.text))
+            raise RuntimeError(f'HTTP[{response.status_code}] request failed: {response.text}')
 
         if fmt == ApiFormat.JSON:
             content = response.json()
             error = content.get('error', None)
 
             if error is not None:
-                raise ValueError('Got error response: {}'.format(error))
+                raise ValueError(f'Got error response: {error}')
 
             return content
 

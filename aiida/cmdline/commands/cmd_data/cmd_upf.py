@@ -44,7 +44,7 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     """
     from aiida.orm.nodes.data.upf import upload_upf_family
     files_found, files_uploaded = upload_upf_family(folder, group_label, group_description, stop_if_existing)
-    echo.echo_success('UPF files found: {}. New files uploaded: {}'.format(files_found, files_uploaded))
+    echo.echo_success(f'UPF files found: {files_found}. New files uploaded: {files_uploaded}')
 
 
 @upf.command('listfamilies')
@@ -82,11 +82,11 @@ def upf_listfamilies(elements, with_description):
             query.append(UpfData, project=['id'], with_group='thisgroup')
 
             if with_description:
-                description_string = ': {}'.format(group_desc)
+                description_string = f': {group_desc}'
             else:
                 description_string = ''
 
-            echo.echo_success('* {} [{} pseudos]{}'.format(group_label, query.count(), description_string))
+            echo.echo_success(f'* {group_label} [{query.count()} pseudos]{description_string}')
 
     else:
         echo.echo_warning('No valid UPF pseudopotential family found.')
@@ -102,7 +102,7 @@ def upf_exportfamily(folder, group):
     Call without parameters to get some help.
     """
     if group.is_empty:
-        echo.echo_critical('Group<{}> contains no pseudos'.format(group.label))
+        echo.echo_critical(f'Group<{group.label}> contains no pseudos')
 
     for node in group.nodes:
         dest_path = os.path.join(folder, node.filename)
@@ -110,7 +110,7 @@ def upf_exportfamily(folder, group):
             with open(dest_path, 'w', encoding='utf8') as handle:
                 handle.write(node.get_content())
         else:
-            echo.echo_warning('File {} is already present in the destination folder'.format(node.filename))
+            echo.echo_warning(f'File {node.filename} is already present in the destination folder')
 
 
 @upf.command('import')
@@ -123,7 +123,7 @@ def upf_import(filename):
     from aiida.orm import UpfData
 
     node, _ = UpfData.get_or_create(filename)
-    echo.echo_success('Imported: {}'.format(node))
+    echo.echo_success(f'Imported: {node}')
 
 
 @upf.command('export')

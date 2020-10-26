@@ -21,9 +21,6 @@ DUPL_SUFFIX = ' (Imported #{})'
 # The name of the subfolder in which the node files are stored
 NODES_EXPORT_SUBFOLDER = 'nodes'
 
-# Progress bar
-BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
-
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
 # references to them).
@@ -34,7 +31,7 @@ USER_ENTITY_NAME = 'User'
 LOG_ENTITY_NAME = 'Log'
 COMMENT_ENTITY_NAME = 'Comment'
 
-# The signatures used to reference the entities in the import/export file
+# The signatures used to reference the entities in the archive file
 NODE_SIGNATURE = 'aiida.backends.djsite.db.models.DbNode'
 GROUP_SIGNATURE = 'aiida.backends.djsite.db.models.DbGroup'
 COMPUTER_SIGNATURE = 'aiida.backends.djsite.db.models.DbComputer'
@@ -82,7 +79,7 @@ entity_names_to_sqla_schema = {
     COMMENT_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.comment.DbComment'
 }
 
-# Mapping of the export file fields (that coincide with the Django fields) to
+# Mapping of the archive file fields (that coincide with the Django fields) to
 # model fields that can be used for the query of the database in both backends.
 # These are the names of the fields of the models that belong to the
 # corresponding entities.

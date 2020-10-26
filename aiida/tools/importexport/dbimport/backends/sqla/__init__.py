@@ -21,6 +21,7 @@ from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.log import override_log_formatter
+from aiida.common.progress_reporter import TQDM_BAR_FORMAT as BAR_FORMAT
 from aiida.common.utils import get_object_from_string
 from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 from aiida.orm.utils.links import link_triple_exists, validate_link
@@ -28,7 +29,7 @@ from aiida.orm.utils._repository import Repository
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -147,7 +148,7 @@ def import_data_sqla(
                 )
 
         if not folder.get_content_list():
-            raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
+            raise exceptions.CorruptArchive(f'The provided file/folder ({in_path}) is empty')
         try:
             IMPORT_LOGGER.debug('CACHING metadata.json')
             with open(folder.get_abs_path('metadata.json'), encoding='utf8') as fhandle:
@@ -157,19 +158,17 @@ def import_data_sqla(
             with open(folder.get_abs_path('data.json'), encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
-            raise exceptions.CorruptArchive(
-                'Unable to find the file {} in the import file or folder'.format(error.filename)
-            )
+            raise exceptions.CorruptArchive(f'Unable to find the file {error.filename} in the import file or folder')
 
         ######################
         # PRELIMINARY CHECKS #
         ######################
         export_version = StrictVersion(str(metadata['export_version']))
         if export_version != expected_export_version:
-            msg = 'Export file version is {}, can import only version {}'\
+            msg = 'Archive file version is {}, can import only version {}'\
                     .format(metadata['export_version'], expected_export_version)
             if export_version < expected_export_version:
-                msg += "\nUse 'verdi export migrate' to update this export file."
+                msg += "\nUse 'verdi export migrate' to update this archive file."
             else:
                 msg += '\nUpdate your AiiDA version in order to import this file.'
 
@@ -217,7 +216,7 @@ def import_data_sqla(
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in entity_order:
                 raise exceptions.ImportValidationError(
-                    "You are trying to import an unknown model '{}'!".format(import_field_name)
+                    f"You are trying to import an unknown model '{import_field_name}'!"
                 )
 
         for idx, entity_name in enumerate(entity_order):
@@ -232,7 +231,7 @@ def import_data_sqla(
             for dependency in dependencies:
                 if dependency not in entity_order[:idx]:
                     raise exceptions.ArchiveImportError(
-                        'Entity {} requires {} but would be loaded first; stopping...'.format(entity_name, dependency)
+                        f'Entity {entity_name} requires {dependency} but would be loaded first; stopping...'
                     )
 
         ###################################################
@@ -338,7 +337,7 @@ def import_data_sqla(
 
                             elif entity_name == COMPUTER_ENTITY_NAME:
                                 # The following is done for compatibility
-                                # reasons in case the export file was generated
+                                # reasons in case the archive file was generated
                                 # with the Django export method. In Django the
                                 # metadata and the transport parameters are
                                 # stored as (unicode) strings of the serialized
@@ -402,14 +401,14 @@ def import_data_sqla(
                     progress_bar = get_progress_bar(total=reset_progress_bar['total'], disable=silent)
                     progress_bar.n = reset_progress_bar['n']
                     reset_progress_bar = {}
-                pbar_base_str = '{}s - '.format(entity_name)
-                progress_bar.set_description_str(pbar_base_str + 'Initializing', refresh=True)
+                pbar_base_str = f'{entity_name}s - '
+                progress_bar.set_description_str(f'{pbar_base_str}Initializing', refresh=True)
 
                 # EXISTING ENTRIES
                 if existing_entries[entity_name]:
                     # Progress bar update - Model
                     progress_bar.set_description_str(
-                        pbar_base_str + '{} existing entries'.format(len(existing_entries[entity_name])), refresh=True
+                        f'{pbar_base_str}{len(existing_entries[entity_name])} existing entries', refresh=True
                     )
 
                 for import_entry_pk, entry_data in existing_entries[entity_name].items():
@@ -451,7 +450,7 @@ def import_data_sqla(
                 if new_entries[entity_name]:
                     # Progress bar update - Model
                     progress_bar.set_description_str(
-                        pbar_base_str + '{} new entries'.format(len(new_entries[entity_name])), refresh=True
+                        f'{pbar_base_str}{len(new_entries[entity_name])} new entries', refresh=True
                     )
 
                 for import_entry_pk, entry_data in new_entries[entity_name].items():
@@ -504,7 +503,7 @@ def import_data_sqla(
 
                         # Progress bar initialization - Node
                         progress_bar.update()
-                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+                        pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
 
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
@@ -519,32 +518,32 @@ def import_data_sqla(
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
-                        progress_bar.set_description_str(pbar_node_base_str + 'Repository', refresh=True)
+                        progress_bar.set_description_str(f'{pbar_node_base_str}Repository', refresh=True)
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For Nodes, we also have to store Attributes!
                         IMPORT_LOGGER.debug('STORING NEW NODE ATTRIBUTES...')
-                        progress_bar.set_description_str(pbar_node_base_str + 'Attributes', refresh=True)
+                        progress_bar.set_description_str(f'{pbar_node_base_str}Attributes', refresh=True)
 
                         # Get attributes from import file
                         try:
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
+                                f'Unable to find attribute info for Node with UUID={import_entry_uuid}'
                             )
 
                         # For DbNodes, we also have to store extras
                         if extras_mode_new == 'import':
                             IMPORT_LOGGER.debug('STORING NEW NODE EXTRAS...')
-                            progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=True)
+                            progress_bar.set_description_str(f'{pbar_node_base_str}Extras', refresh=True)
 
                             # Get extras from import file
                             try:
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.CorruptArchive(
-                                    'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
+                                    f'Unable to find extra info for Node with UUID={import_entry_uuid}'
                                 )
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
@@ -573,8 +572,8 @@ def import_data_sqla(
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
                         # Progress bar initialization - Node
-                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
-                        progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=False)
+                        pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
+                        progress_bar.set_description_str(f'{pbar_node_base_str}Extras', refresh=False)
                         progress_bar.update()
 
                         # Get extras from import file
@@ -582,7 +581,7 @@ def import_data_sqla(
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
+                                f'Unable to find extra info for Node with UUID={import_entry_uuid}'
                             )
 
                         old_extras = node.extras.copy()
@@ -602,7 +601,7 @@ def import_data_sqla(
                     # Update progress bar with new non-Node entries
                     progress_bar.update(n=len(existing_entries[entity_name]) + len(new_entries[entity_name]))
 
-                progress_bar.set_description_str(pbar_base_str + 'Storing', refresh=True)
+                progress_bar.set_description_str(f'{pbar_base_str}Storing', refresh=True)
 
                 # Store them all in once; However, the PK are not set in this way...
                 if objects_to_create:
@@ -631,7 +630,7 @@ def import_data_sqla(
 
                         just_saved.update({entry[0]: entry[1]})
 
-                progress_bar.set_description_str(pbar_base_str + 'Done!', refresh=True)
+                progress_bar.set_description_str(f'{pbar_base_str}Done!', refresh=True)
 
                 # Now I have the PKs, print the info
                 # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
@@ -657,7 +656,7 @@ def import_data_sqla(
 
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
-                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']), refresh=False)
+                progress_bar.set_description_str(f"{pbar_base_str}label={link['label']}", refresh=False)
                 progress_bar.update()
 
                 try:
@@ -684,7 +683,7 @@ def import_data_sqla(
                 try:
                     validate_link(source, target, link_type, link['label'])
                 except ValueError as why:
-                    raise exceptions.ImportValidationError('Error occurred during Link validation: {}'.format(why))
+                    raise exceptions.ImportValidationError(f'Error occurred during Link validation: {why}')
 
                 # New link
                 session.add(DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type']))
@@ -707,7 +706,7 @@ def import_data_sqla(
                 qb_group = QueryBuilder().append(Group, filters={'uuid': {'==': groupuuid}})
                 group_ = qb_group.first()[0]
 
-                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(group_.label), refresh=False)
+                progress_bar.set_description_str(f'{pbar_base_str}label={group_.label}', refresh=False)
                 progress_bar.update()
 
                 nodes_ids_to_add = [
@@ -740,7 +739,7 @@ def import_data_sqla(
                     group_label = basename
                     while session.query(DbGroup).filter(DbGroup.label == group_label).count() > 0:
                         counter += 1
-                        group_label = '{}_{}'.format(basename, counter)
+                        group_label = f'{basename}_{counter}'
 
                         if counter == 100:
                             raise exceptions.ImportUniquenessError(

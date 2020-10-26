@@ -348,7 +348,7 @@ Below is a list with all available subcommands.
                                       (default).overwrite: Replace existing Comments with
                                       those from the import file.
 
-      --migration / --no-migration    Force migration of export file archives, if needed.
+      --migration / --no-migration    Force migration of archive file archives, if needed.
                                       [default: True]
 
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but
@@ -500,8 +500,8 @@ Below is a list with all available subcommands.
 
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
-      --broker-virtual-host HOSTNAME  Name of the virtual host for the message broker. Forward
-                                      slashes need to be encoded  [default: ]
+      --broker-virtual-host TEXT      Name of the virtual host for the message broker without
+                                      leading forward slash.  [default: ]
 
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILEORURL              Load option values from configuration file in yaml
@@ -638,8 +638,8 @@ Below is a list with all available subcommands.
                                       required]
 
       --broker-port INTEGER           Port for the message broker.  [default: 5672; required]
-      --broker-virtual-host HOSTNAME  Name of the virtual host for the message broker. Forward
-                                      slashes need to be encoded  [default: ; required]
+      --broker-virtual-host TEXT      Name of the virtual host for the message broker without
+                                      leading forward slash.  [default: ; required]
 
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILEORURL              Load option values from configuration file in yaml

@@ -87,13 +87,13 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write(
-                """---
+                f"""---
 profile: testing
 first_name: Leopold
 last_name: Talirz
 institution: EPFL
-db_backend: {}
-email: 123@234.de""".format(self.backend)
+db_backend: {self.backend}
+email: 123@234.de"""
             )
             handle.flush()
             result = self.cli_runner.invoke(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])

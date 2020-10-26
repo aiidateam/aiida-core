@@ -77,7 +77,7 @@ class MostSimilarCommandGroup(click.Group):
                 '{matches}'.format(cmd=cmd_name, matches='\n'.join('\t{}'.format(m) for m in sorted(matches)))
             )
         else:
-            ctx.fail("'{cmd}' is not a verdi command.\n\nNo similar commands found.".format(cmd=cmd_name))
+            ctx.fail(f"'{cmd_name}' is not a verdi command.\n\nNo similar commands found.")
 
         return None
 

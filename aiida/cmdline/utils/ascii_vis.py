@@ -38,7 +38,7 @@ class NodeTreePrinter:
 
         echo.echo(get_node_summary(node))
 
-        tree_string = '({});'.format(cls._build_tree(node, max_depth=max_depth, follow_links=follow_links))
+        tree_string = f'({cls._build_tree(node, max_depth=max_depth, follow_links=follow_links)});'
         tmp = Tree(tree_string, format=1)
         echo.echo(tmp.get_ascii(show_internal=True))
 
@@ -69,7 +69,7 @@ class NodeTreePrinter:
         lab = node.__class__.__name__
 
         if show_pk:
-            lab += ' [{}]'.format(node.pk)
+            lab += f' [{node.pk}]'
 
         out_values.append(lab)
 
@@ -154,7 +154,7 @@ def get_ascii_tree(node, node_label=None, show_pk=True, max_depth=1, follow_link
     warnings.warn('function is deprecated and will be removed in `aiida-core==2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
     from ete3 import Tree
     tree_string = build_tree(node, node_label, show_pk, max_depth, follow_links_of_type, descend)
-    tree = Tree('({});'.format(tree_string), format=1)
+    tree = Tree(f'({tree_string});', format=1)
     return tree.get_ascii(show_internal=True)
 
 
@@ -206,7 +206,7 @@ def build_tree(node, node_label=None, show_pk=True, max_depth=1, follow_links_of
             )
 
         if relatives:
-            out_values.append('({})'.format(', '.join(relatives)))
+            out_values.append(f"({', '.join(relatives)})")
 
     out_values.append(_generate_node_label(node, node_label, show_pk))
 
@@ -252,7 +252,7 @@ def _generate_node_label(node, node_attr, show_pk):
         label = node.__class__.__name__
 
     if show_pk:
-        label += ' [{}]'.format(node.pk)
+        label += f' [{node.pk}]'
 
     return label
 
@@ -262,19 +262,19 @@ def calc_info(node):
     from aiida.orm import ProcessNode, WorkChainNode
 
     if not isinstance(node, ProcessNode):
-        raise TypeError('Unknown type: {}'.format(type(node)))
+        raise TypeError(f'Unknown type: {type(node)}')
 
     process_label = node.process_label
     process_state = node.process_state.value.capitalize()
     exit_status = node.exit_status
 
     if exit_status is not None:
-        string = '{}<{}> {} [{}]'.format(process_label, node.pk, process_state, exit_status)
+        string = f'{process_label}<{node.pk}> {process_state} [{exit_status}]'
     else:
-        string = '{}<{}> {}'.format(process_label, node.pk, process_state)
+        string = f'{process_label}<{node.pk}> {process_state}'
 
     if isinstance(node, WorkChainNode) and node.stepper_state_info:
-        string += ' [{}]'.format(node.stepper_state_info)
+        string += f' [{node.stepper_state_info}]'
 
     return string
 
@@ -315,20 +315,20 @@ def format_tree_descending(tree, prefix='', pos=-1):
     if pos == -1:
         pre = ''
     elif pos == 0:
-        pre = '{}{}'.format(prefix, TREE_FIRST_ENTRY)
+        pre = f'{prefix}{TREE_FIRST_ENTRY}'
     elif pos == 1:
-        pre = '{}{}'.format(prefix, TREE_MIDDLE_ENTRY)
+        pre = f'{prefix}{TREE_MIDDLE_ENTRY}'
     else:
-        pre = '{}{}'.format(prefix, TREE_LAST_ENTRY)
-    text.append('{}{}'.format(pre, info))
+        pre = f'{prefix}{TREE_LAST_ENTRY}'
+    text.append(f'{pre}{info}')
 
     if isinstance(tree, tuple):
         _, value = tree
         num_entries = len(value)
         if pos in [-1, 2]:
-            new_prefix = '{}    '.format(prefix)
+            new_prefix = f'{prefix}    '
         else:
-            new_prefix = '{}\u2502   '.format(prefix)
+            new_prefix = f'{prefix}│   '
         for i, entry in enumerate(value):
             if i == num_entries - 1:
                 pos = 2

@@ -343,9 +343,7 @@ class TestLinks(AiidaTestCase):
                 )
 
                 self.assertEqual(
-                    builder.count(),
-                    13,
-                    msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
+                    builder.count(), 13, msg=f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
                 )
 
                 export_links = builder.all()
@@ -364,7 +362,7 @@ class TestLinks(AiidaTestCase):
                 self.assertSetEqual(
                     set(export_set),
                     set(import_set),
-                    msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
+                    msg=f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
                 )
 
     @staticmethod
@@ -404,7 +402,7 @@ class TestLinks(AiidaTestCase):
                         )
                     )
                     for node_uuid in builder.iterall():
-                        self.assertIn(node_uuid[0], expected_nodes[node_type], msg='Failed for test: "{}"'.format(test))
+                        self.assertIn(node_uuid[0], expected_nodes[node_type], msg=f'Failed for test: "{test}"')
 
     def link_flags_export_helper(self, name, all_nodes, temp_dir, nodes_to_export, flags, expected_nodes):  # pylint: disable=too-many-arguments
         """Helper function"""
@@ -429,30 +427,26 @@ class TestLinks(AiidaTestCase):
             expected_nodes.append(expected_nodes_uuid)
 
         ret = {
-            '{}_follow_none'.format(name): (
-                os.path.join(temp_dir, '{}_none.aiida'.format(name)), {
-                    calc_flag: False,
-                    work_flag: False
-                }, expected_nodes[0]
-            ),
-            '{}_follow_only_calc'.format(name): (
-                os.path.join(temp_dir, '{}_calc.aiida'.format(name)), {
-                    calc_flag: True,
-                    work_flag: False
-                }, expected_nodes[1]
-            ),
-            '{}_follow_only_work'.format(name): (
-                os.path.join(temp_dir, '{}_work.aiida'.format(name)), {
-                    calc_flag: False,
-                    work_flag: True
-                }, expected_nodes[2]
-            ),
-            '{}_follow_only_all'.format(name): (
-                os.path.join(temp_dir, '{}_all.aiida'.format(name)), {
-                    calc_flag: True,
-                    work_flag: True
-                }, expected_nodes[3]
-            )
+            f'{name}_follow_none':
+            (os.path.join(temp_dir, f'{name}_none.aiida'), {
+                calc_flag: False,
+                work_flag: False
+            }, expected_nodes[0]),
+            f'{name}_follow_only_calc':
+            (os.path.join(temp_dir, f'{name}_calc.aiida'), {
+                calc_flag: True,
+                work_flag: False
+            }, expected_nodes[1]),
+            f'{name}_follow_only_work':
+            (os.path.join(temp_dir, f'{name}_work.aiida'), {
+                calc_flag: False,
+                work_flag: True
+            }, expected_nodes[2]),
+            f'{name}_follow_only_all':
+            (os.path.join(temp_dir, f'{name}_all.aiida'), {
+                calc_flag: True,
+                work_flag: True
+            }, expected_nodes[3])
         }
 
         self.prepare_link_flags_export(nodes_to_export, ret)
@@ -654,7 +648,7 @@ class TestLinks(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             1,
-            msg='There should be a single CalculationNode, instead {} has been found'.format(builder.count())
+            msg=f'There should be a single CalculationNode, instead {builder.count()} has been found'
         )
         self.assertEqual(builder.all()[0][0], calc_uuid)
 
@@ -665,9 +659,7 @@ class TestLinks(AiidaTestCase):
         import_data(filename, ignore_unknown_nodes=True, silent=True)
         builder = orm.QueryBuilder().append(orm.StructureData, project='uuid')
         self.assertEqual(
-            builder.count(),
-            1,
-            msg='There should be a single StructureData, instead {} has been found'.format(builder.count())
+            builder.count(), 1, msg=f'There should be a single StructureData, instead {builder.count()} has been found'
         )
         self.assertEqual(builder.all()[0][0], struct_uuid)
 
@@ -703,14 +695,12 @@ class TestLinks(AiidaTestCase):
 
         no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
         self.assertEqual(
-            no_of_work, 0, msg='{} WorkflowNode(s) was/were found, however, none should be present'.format(no_of_work)
+            no_of_work, 0, msg=f'{no_of_work} WorkflowNode(s) was/were found, however, none should be present'
         )
 
         nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
         self.assertEqual(
-            nodes.count(),
-            2,
-            msg='{} Node(s) was/were found, however, exactly two should be present'.format(no_of_work)
+            nodes.count(), 2, msg=f'{no_of_work} Node(s) was/were found, however, exactly two should be present'
         )
         for node in nodes.iterall():
             self.assertIn(node[0], [data_uuid, calc_uuid])
@@ -733,16 +723,12 @@ class TestLinks(AiidaTestCase):
 
         no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
         self.assertEqual(
-            no_of_work,
-            1,
-            msg='{} WorkflowNode(s) was/were found, however, exactly one should be present'.format(no_of_work)
+            no_of_work, 1, msg=f'{no_of_work} WorkflowNode(s) was/were found, however, exactly one should be present'
         )
 
         nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
         self.assertEqual(
-            nodes.count(),
-            3,
-            msg='{} Node(s) was/were found, however, exactly three should be present'.format(no_of_work)
+            nodes.count(), 3, msg=f'{no_of_work} Node(s) was/were found, however, exactly three should be present'
         )
         for node in nodes.iterall():
             self.assertIn(node[0], [data_uuid, calc_uuid, work_uuid])
@@ -751,7 +737,6 @@ class TestLinks(AiidaTestCase):
         self.assertEqual(
             len(links),
             2,
-            msg='Exactly two Links are expected, instead {} were found '
-            '(in, out, label, type): {}'.format(len(links), links)
+            msg=f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
         )
         self.assertListEqual(sorted(links), sorted(before_links))

@@ -182,16 +182,7 @@ class Manager:
         if task_prefetch_count is None:
             task_prefetch_count = self.get_config().get_option('daemon.worker_process_slots', profile.name)
 
-        url = profile.get_rmq_url()
         prefix = profile.rmq_prefix
-
-        # This needs to be here, because the verdi commands will call this function and when called in unit tests the
-        # testing_mode cannot be set.
-        testing_mode = profile.is_test_profile
-
-        message_exchange = rmq.get_message_exchange_name(prefix)
-        task_exchange = rmq.get_task_exchange_name(prefix)
-        task_queue = rmq.get_launch_queue_name(prefix)
 
         if with_orm:
             from aiida.orm.utils import serialize
@@ -204,14 +195,16 @@ class Manager:
             decoder = json.loads
 
         return kiwipy.rmq.RmqThreadCommunicator.connect(
-            connection_params={'url': url},
-            message_exchange=message_exchange,
+            connection_params={'url': profile.get_rmq_url()},
+            message_exchange=rmq.get_message_exchange_name(prefix),
             encoder=encoder,
             decoder=decoder,
-            task_exchange=task_exchange,
-            task_queue=task_queue,
+            task_exchange=rmq.get_task_exchange_name(prefix),
+            task_queue=rmq.get_launch_queue_name(prefix),
             task_prefetch_count=task_prefetch_count,
-            testing_mode=testing_mode,
+            # This is needed because the verdi commands will call this function and when called in unit tests the
+            # testing_mode cannot be set.
+            testing_mode=profile.is_test_profile,
         )
 
     def get_daemon_client(self):

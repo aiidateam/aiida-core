@@ -32,19 +32,11 @@ class RESTApiTestCase(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):  # pylint: disable=too-many-locals, too-many-statements
         """
-        Basides the standard setup we need to add few more objects in the
-        database to be able to explore different requests/filters/orderings etc.
+        Add objects to the database for different requests/filters/orderings etc.
         """
-        # call parent setUpClass method
         super().setUpClass()
 
-        # connect the app and the api
-        # Init the api by connecting it the the app (N.B. respect the following
-        # order, api.__init__)
-        kwargs = dict(PREFIX=cls._url_prefix, PERPAGE_DEFAULT=cls._PERPAGE_DEFAULT, LIMIT_DEFAULT=cls._LIMIT_DEFAULT)
-
         api = configure_api(catch_internal_server=True)
-
         cls.app = api.app
         cls.app.config['TESTING'] = True
 
@@ -265,7 +257,7 @@ class RESTApiTestCase(AiidaTestCase):
         self.assertEqual(response['path'], path)
         self.assertEqual(response['id'], uuid)
         self.assertEqual(response['query_string'], query_string)
-        self.assertEqual(response['url'], 'http://localhost' + url)
+        self.assertEqual(response['url'], f'http://localhost{url}')
         self.assertEqual(response['url_root'], 'http://localhost/')
 
     # node details and list with limit, offset, page, perpage
@@ -348,7 +340,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Test that /server endpoint returns AiiDA version
         """
-        url = self.get_url_prefix() + '/server'
+        url = f'{self.get_url_prefix()}/server'
         from aiida import __version__
 
         with self.app.test_client() as client:
@@ -358,11 +350,22 @@ class RESTApiTestSuite(RESTApiTestCase):
             self.assertEqual(__version__, data['AiiDA_version'])
             self.assertEqual(self.get_url_prefix(), data['API_prefix'])
 
+    def test_base_url(self):
+        """
+        Test that / returns list of endpoints
+        """
+        with self.app.test_client() as client:
+            data_base = json.loads(client.get(self.get_url_prefix() + '/').data)['data']
+            data_server = json.loads(client.get(self.get_url_prefix() + '/server/endpoints').data)['data']
+
+            self.assertTrue(len(data_base['available_endpoints']) > 0)
+            self.assertDictEqual(data_base, data_server)
+
     def test_cors_headers(self):
         """
         Test that REST API sets cross-origin resource sharing headers
         """
-        url = self.get_url_prefix() + '/server'
+        url = f'{self.get_url_prefix()}/server'
 
         with self.app.test_client() as client:
             response = client.get(url)
@@ -377,7 +380,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_uuid = self.get_dummy_data()['computers'][1]['uuid']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers/' + str(node_uuid), expected_list_ids=[1], uuid=node_uuid
+            self, 'computers', f'/computers/{str(node_uuid)}', expected_list_ids=[1], uuid=node_uuid
         )
 
     def test_computers_list(self):
@@ -490,7 +493,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
 
-        RESTApiTestCase.process_test(self, 'computers', '/computers?id=' + str(node_pk), expected_list_ids=[1])
+        RESTApiTestCase.process_test(self, 'computers', f'/computers?id={str(node_pk)}', expected_list_ids=[1])
 
     def test_computers_filter_id2(self):
         """
@@ -499,7 +502,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?id>' + str(node_pk) + '&orderby=+id', expected_range=[2, None]
+            self, 'computers', f'/computers?id>{str(node_pk)}&orderby=+id', expected_range=[2, None]
         )
 
     def test_computers_filter_pk(self):
@@ -508,7 +511,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         list (e.g. id=1)
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
-        RESTApiTestCase.process_test(self, 'computers', '/computers?pk=' + str(node_pk), expected_list_ids=[1])
+        RESTApiTestCase.process_test(self, 'computers', f'/computers?pk={str(node_pk)}', expected_list_ids=[1])
 
     def test_computers_filter_name(self):
         """
@@ -563,7 +566,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?pk>' + str(node_pk) + '&orderby=name', expected_list_ids=[1, 2, 3, 4]
+            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=name', expected_list_ids=[1, 2, 3, 4]
         )
 
     def test_computers_orderby_name_asc_sign(self):
@@ -573,7 +576,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?pk>' + str(node_pk) + '&orderby=+name', expected_list_ids=[1, 2, 3, 4]
+            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=+name', expected_list_ids=[1, 2, 3, 4]
         )
 
     def test_computers_orderby_name_desc(self):
@@ -583,7 +586,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?pk>' + str(node_pk) + '&orderby=-name', expected_list_ids=[4, 3, 2, 1]
+            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=-name', expected_list_ids=[4, 3, 2, 1]
         )
 
     def test_computers_orderby_scheduler_type_asc(self):
@@ -595,7 +598,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?transport_type="ssh"&pk>' + str(node_pk) + '&orderby=scheduler_type',
+            f"/computers?transport_type=\"ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
             expected_list_ids=[1, 4, 2]
         )
 
@@ -608,7 +611,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?transport_type="ssh"&pk>' + str(node_pk) + '&orderby=+scheduler_type',
+            f"/computers?transport_type=\"ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
             expected_list_ids=[1, 4, 2]
         )
 
@@ -621,7 +624,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?pk>' + str(node_pk) + '&transport_type="ssh"&orderby=-scheduler_type',
+            f"/computers?pk>{str(node_pk)}&transport_type=\"ssh\"&orderby=-scheduler_type",
             expected_list_ids=[2, 4, 1]
         )
 
@@ -636,7 +639,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?pk>' + str(node_pk) + '&orderby=transport_type,id',
+            f'/computers?pk>{str(node_pk)}&orderby=transport_type,id',
             expected_list_ids=[3, 1, 2, 4]
         )
 
@@ -650,7 +653,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?pk>' + str(node_pk) + '&orderby=-scheduler_type,name',
+            f'/computers?pk>{str(node_pk)}&orderby=-scheduler_type,name',
             expected_list_ids=[2, 3, 4, 1]
         )
 
@@ -690,7 +693,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?id>' + str(node_pk) + '&hostname="test1.epfl.ch"', expected_list_ids=[1]
+            self, 'computers', f"/computers?id>{str(node_pk)}&hostname=\"test1.epfl.ch\"", expected_list_ids=[1]
         )
 
     def test_computers_filter_mixed2(self):
@@ -702,7 +705,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?id>' + str(node_pk) + '&hostname="test3.epfl.ch"&transport_type="ssh"',
+            f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"ssh\"",
             empty_list=True
         )
 
@@ -713,7 +716,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?id>' + str(node_pk) + '&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
+            self, 'computers', f'/computers?id>{str(node_pk)}&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
         )
 
     def test_computers_mixed2(self):
@@ -722,10 +725,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self,
-            'computers',
-            '/computers/page/2?id>' + str(node_pk) + '&perpage=2&orderby=+id',
-            expected_list_ids=[3, 4]
+            self, 'computers', f'/computers/page/2?id>{str(node_pk)}&perpage=2&orderby=+id', expected_list_ids=[3, 4]
         )
 
     def test_computers_mixed3(self):
@@ -736,7 +736,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            '/computers?id>=' + str(node_pk) + '&transport_type="ssh"&orderby=-id&limit=2',
+            f"/computers?id>={str(node_pk)}&transport_type=\"ssh\"&orderby=-id&limit=2",
             expected_list_ids=[4, 2]
         )
 
@@ -755,7 +755,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get the list of given calculation retrieved_inputs
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calcjobs/' + str(node_uuid) + '/input_files'
+        url = f'{self.get_url_prefix()}/calcjobs/{str(node_uuid)}/input_files'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -766,7 +766,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get the list of given calculation retrieved_outputs
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/calcjobs/' + str(node_uuid) + '/output_files'
+        url = f'{self.get_url_prefix()}/calcjobs/{str(node_uuid)}/output_files'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -780,7 +780,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
             'nodes',
-            '/nodes/' + str(node_uuid) + '/links/incoming?orderby=id',
+            f'/nodes/{str(node_uuid)}/links/incoming?orderby=id',
             expected_list_ids=[5, 3],
             uuid=node_uuid,
             result_node_type='data',
@@ -794,7 +794,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
             'nodes',
-            '/nodes/' + str(node_uuid) + '/links/incoming?node_type="data.dict.Dict."',
+            f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.dict.Dict.\"",
             expected_list_ids=[3],
             uuid=node_uuid,
             result_node_type='data',
@@ -806,7 +806,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get filtered incoming list for given calculations
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/links/tree?in_limit=1&out_limit=1'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/links/tree?in_limit=1&out_limit=1'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -836,7 +836,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             },
         }
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/attributes'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/attributes'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -849,7 +849,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get list of calculation attributes with filter attributes_filter
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/attributes?attributes_filter="attr1"'
+        url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/attributes?attributes_filter=\"attr1\""
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -871,7 +871,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             },
         }
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '?attributes=true'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}?attributes=true'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -884,7 +884,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         extras = {'extra1': False, 'extra2': 'extra_info'}
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '?extras=true&extras_filter=extra1,extra2'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}?extras=true&extras_filter=extra1,extra2'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -898,7 +898,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '?attributes=true&attributes_filter=cell'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}?attributes=true&attributes_filter=cell'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -911,7 +911,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         returned as a dictionary when pagination is set
         """
         expected_attributes = ['resources', 'cell']
-        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&attributes=true&attributes_filter=resources,cell'
+        url = f'{self.get_url_prefix()}/nodes/page/1?perpage=10&attributes=true&attributes_filter=resources,cell'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -931,7 +931,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         only this attribute is returned as a dictionary when pagination is set
         """
         expected_attribute = ['resources']
-        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&attributes=true&attributes_filter=resources'
+        url = f'{self.get_url_prefix()}/nodes/page/1?perpage=10&attributes=true&attributes_filter=resources'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -946,7 +946,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         returned as a dictionary when pagination is set
         """
         expected_extras = ['extra1', 'extra2']
-        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&extras=true&extras_filter=extra1,extra2'
+        url = f'{self.get_url_prefix()}/nodes/page/1?perpage=10&extras=true&extras_filter=extra1,extra2'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -966,7 +966,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         only this extra is returned as a dictionary when pagination is set
         """
         expected_extra = ['extra2']
-        url = self.get_url_prefix() + '/nodes/page/1?perpage=10&extras=true&extras_filter=extra2'
+        url = f'{self.get_url_prefix()}/nodes/page/1?perpage=10&extras=true&extras_filter=extra2'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -984,7 +984,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             if calc['node_type'] == 'process.calculation.calcjob.CalcJobNode.':
                 expected_node_uuids.append(calc['uuid'])
 
-        url = self.get_url_prefix() + '/nodes/' + '?full_type="process.calculation.calcjob.CalcJobNode.|"'
+        url = f"{self.get_url_prefix()}/nodes/?full_type=\"process.calculation.calcjob.CalcJobNode.|\""
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -997,7 +997,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get the list of give calculation incoming
         """
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/derived_properties'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/derived_properties'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -1019,7 +1019,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + node_uuid + '/download?download_format=xsf'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=xsf'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
         structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
@@ -1032,7 +1032,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['cifdata'][0]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + node_uuid + '/download?download_format=cif'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=cif'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
         cif = load_node(node_uuid)._prepare_cif()[0]  # pylint: disable=protected-access
@@ -1044,7 +1044,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         test projectable_properties endpoint
         """
         for nodetype in ['nodes', 'processes', 'computers', 'users', 'groups']:
-            url = self.get_url_prefix() + '/' + nodetype + '/projectable_properties'
+            url = f'{self.get_url_prefix()}/{nodetype}/projectable_properties'
             with self.app.test_client() as client:
                 rv_obj = client.get(url)
                 response = json.loads(rv_obj.data)
@@ -1067,7 +1067,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Test the rest api call to get list of available node namespace
         """
-        url = self.get_url_prefix() + '/nodes/full_types'
+        url = f'{self.get_url_prefix()}/nodes/full_types'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
@@ -1082,7 +1082,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Get the node comments
         """
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/contents/comments'
+        url = f'{self.get_url_prefix()}/nodes/{str(node_uuid)}/contents/comments'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)['data']['comments']
@@ -1098,13 +1098,13 @@ class RESTApiTestSuite(RESTApiTestCase):
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/repo/list?filename="calcjob_inputs"'
+        url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/repo/list?filename=\"calcjob_inputs\""
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
             self.assertEqual(response['data']['repo_list'], [{'type': 'FILE', 'name': 'aiida.in'}])
 
-        url = self.get_url_prefix() + '/nodes/' + str(node_uuid) + '/repo/contents?filename="calcjob_inputs/aiida.in"'
+        url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/repo/contents?filename=\"calcjob_inputs/aiida.in\""
         with self.app.test_client() as client:
             response_obj = client.get(url)
             input_file = load_node(node_uuid).get_object_content('calcjob_inputs/aiida.in', mode='rb')
@@ -1115,7 +1115,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Test process report
         """
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
-        url = self.get_url_prefix() + '/processes/' + str(node_uuid) + '/report'
+        url = f'{self.get_url_prefix()}/processes/{str(node_uuid)}/report'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
@@ -1132,7 +1132,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         test for download format endpoint
         """
-        url = self.get_url_prefix() + '/nodes/download_formats'
+        url = f'{self.get_url_prefix()}/nodes/download_formats'
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)

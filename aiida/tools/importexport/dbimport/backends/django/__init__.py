@@ -21,6 +21,7 @@ from aiida.common import timezone, json
 from aiida.common.folders import SandboxFolder, RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
 from aiida.common.log import override_log_formatter
+from aiida.common.progress_reporter import TQDM_BAR_FORMAT as BAR_FORMAT
 from aiida.common.utils import grouper, get_object_from_string
 from aiida.manage.configuration import get_config_option
 from aiida.orm.utils._repository import Repository
@@ -28,7 +29,7 @@ from aiida.orm import QueryBuilder, Node, Group, ImportGroup
 
 from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
 from aiida.tools.importexport.common.archive import extract_tree, extract_tar, extract_zip
-from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, BAR_FORMAT
+from aiida.tools.importexport.common.config import DUPL_SUFFIX, EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.config import (
     NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
 )
@@ -143,7 +144,7 @@ def import_data_dj(
                 )
 
         if not folder.get_content_list():
-            raise exceptions.CorruptArchive('The provided file/folder ({}) is empty'.format(in_path))
+            raise exceptions.CorruptArchive(f'The provided file/folder ({in_path}) is empty')
         try:
             with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
@@ -151,19 +152,17 @@ def import_data_dj(
             with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
                 data = json.load(fhandle)
         except IOError as error:
-            raise exceptions.CorruptArchive(
-                'Unable to find the file {} in the import file or folder'.format(error.filename)
-            )
+            raise exceptions.CorruptArchive(f'Unable to find the file {error.filename} in the import file or folder')
 
         ######################
         # PRELIMINARY CHECKS #
         ######################
         export_version = StrictVersion(str(metadata['export_version']))
         if export_version != expected_export_version:
-            msg = 'Export file version is {}, can import only version {}'\
+            msg = 'Archive file version is {}, can import only version {}'\
                     .format(metadata['export_version'], expected_export_version)
             if export_version < expected_export_version:
-                msg += "\nUse 'verdi export migrate' to update this export file."
+                msg += "\nUse 'verdi export migrate' to update this archive file."
             else:
                 msg += '\nUpdate your AiiDA version in order to import this file.'
 
@@ -205,7 +204,7 @@ def import_data_dj(
         for import_field_name in metadata['all_fields_info']:
             if import_field_name not in model_order:
                 raise exceptions.ImportValidationError(
-                    "You are trying to import an unknown model '{}'!".format(import_field_name)
+                    f"You are trying to import an unknown model '{import_field_name}'!"
                 )
 
         for idx, model_name in enumerate(model_order):
@@ -219,7 +218,7 @@ def import_data_dj(
             for dependency in dependencies:
                 if dependency not in model_order[:idx]:
                     raise exceptions.ArchiveImportError(
-                        'Model {} requires {} but would be loaded first; stopping...'.format(model_name, dependency)
+                        f'Model {model_name} requires {dependency} but would be loaded first; stopping...'
                     )
 
         ###################################################
@@ -284,7 +283,7 @@ def import_data_dj(
                         relevant_db_entries = {}
                         if import_unique_ids:
                             relevant_db_entries_result = model.objects.filter(
-                                **{'{}__in'.format(unique_identifier): import_unique_ids}
+                                **{f'{unique_identifier}__in': import_unique_ids}
                             )
 
                             # Note: UUIDs need to be converted to strings
@@ -353,8 +352,8 @@ def import_data_dj(
             # I import data from the given model
             for model_name in model_order:
                 # Progress bar initialization - Model
-                pbar_base_str = '{}s - '.format(model_name)
-                progress_bar.set_description_str(pbar_base_str + 'Initializing', refresh=True)
+                pbar_base_str = f'{model_name}s - '
+                progress_bar.set_description_str(f'{pbar_base_str}Initializing', refresh=True)
 
                 cls_signature = entity_names_to_signatures[model_name]
                 model = get_object_from_string(cls_signature)
@@ -365,7 +364,7 @@ def import_data_dj(
                 if existing_entries[model_name]:
                     # Progress bar update - Model
                     progress_bar.set_description_str(
-                        pbar_base_str + '{} existing entries'.format(len(existing_entries[model_name])), refresh=True
+                        f'{pbar_base_str}{len(existing_entries[model_name])} existing entries', refresh=True
                     )
 
                 for import_entry_pk, entry_data in existing_entries[model_name].items():
@@ -406,7 +405,7 @@ def import_data_dj(
                 if new_entries[model_name]:
                     # Progress bar update - Model
                     progress_bar.set_description_str(
-                        pbar_base_str + '{} new entries'.format(len(new_entries[model_name])), refresh=True
+                        f'{pbar_base_str}{len(new_entries[model_name])} new entries', refresh=True
                     )
 
                 for import_entry_pk, entry_data in new_entries[model_name].items():
@@ -434,7 +433,7 @@ def import_data_dj(
 
                         # Progress bar initialization - Node
                         progress_bar.update()
-                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
+                        pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
 
                         # Before storing entries in the DB, I store the files (if these are nodes).
                         # Note: only for new entries!
@@ -449,32 +448,32 @@ def import_data_dj(
                         destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
                         # Replace the folder, possibly destroying existing previous folders, and move the files
                         # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
-                        progress_bar.set_description_str(pbar_node_base_str + 'Repository', refresh=True)
+                        progress_bar.set_description_str(f'{pbar_node_base_str}Repository', refresh=True)
                         destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
                         # For DbNodes, we also have to store its attributes
                         IMPORT_LOGGER.debug('STORING NEW NODE ATTRIBUTES...')
-                        progress_bar.set_description_str(pbar_node_base_str + 'Attributes', refresh=True)
+                        progress_bar.set_description_str(f'{pbar_node_base_str}Attributes', refresh=True)
 
                         # Get attributes from import file
                         try:
                             object_.attributes = data['node_attributes'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                'Unable to find attribute info for Node with UUID={}'.format(import_entry_uuid)
+                                f'Unable to find attribute info for Node with UUID={import_entry_uuid}'
                             )
 
                         # For DbNodes, we also have to store its extras
                         if extras_mode_new == 'import':
                             IMPORT_LOGGER.debug('STORING NEW NODE EXTRAS...')
-                            progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=True)
+                            progress_bar.set_description_str(f'{pbar_node_base_str}Extras', refresh=True)
 
                             # Get extras from import file
                             try:
                                 extras = data['node_extras'][str(import_entry_pk)]
                             except KeyError:
                                 raise exceptions.CorruptArchive(
-                                    'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
+                                    f'Unable to find extra info for Node with UUID={import_entry_uuid}'
                                 )
                             # TODO: remove when aiida extras will be moved somewhere else
                             # from here
@@ -504,8 +503,8 @@ def import_data_dj(
                         import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
                         # Progress bar initialization - Node
-                        pbar_node_base_str = pbar_base_str + 'UUID={} - '.format(import_entry_uuid.split('-')[0])
-                        progress_bar.set_description_str(pbar_node_base_str + 'Extras', refresh=False)
+                        pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
+                        progress_bar.set_description_str(f'{pbar_node_base_str}Extras', refresh=False)
                         progress_bar.update()
 
                         # Get extras from import file
@@ -513,7 +512,7 @@ def import_data_dj(
                             extras = data['node_extras'][str(import_entry_pk)]
                         except KeyError:
                             raise exceptions.CorruptArchive(
-                                'Unable to find extra info for Node with UUID={}'.format(import_entry_uuid)
+                                f'Unable to find extra info for Node with UUID={import_entry_uuid}'
                             )
 
                         old_extras = node.extras.copy()
@@ -534,7 +533,7 @@ def import_data_dj(
                     # Update progress bar with new non-Node entries
                     progress_bar.update(n=len(existing_entries[model_name]) + len(new_entries[model_name]))
 
-                progress_bar.set_description_str(pbar_base_str + 'Storing', refresh=True)
+                progress_bar.set_description_str(f'{pbar_base_str}Storing', refresh=True)
 
                 # If there is an mtime in the field, disable the automatic update
                 # to keep the mtime that we have set here
@@ -546,11 +545,9 @@ def import_data_dj(
                     model.objects.bulk_create(objects_to_create, batch_size=batch_size)
 
                 # Get back the just-saved entries
-                just_saved_queryset = model.objects.filter(
-                    **{
-                        '{}__in'.format(unique_identifier): import_new_entry_pks.keys()
-                    }
-                ).values_list(unique_identifier, 'pk')
+                just_saved_queryset = model.objects.filter(**{
+                    f'{unique_identifier}__in': import_new_entry_pks.keys()
+                }).values_list(unique_identifier, 'pk')
                 # note: convert uuids from type UUID to strings
                 just_saved = {str(key): value for key, value in just_saved_queryset}
 
@@ -563,7 +560,7 @@ def import_data_dj(
                         ret_dict[model_name] = {'new': [], 'existing': []}
                     ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
 
-                    IMPORT_LOGGER.debug('New %s: %s (%s->%s)' % (model_name, unique_id, import_entry_pk, new_pk))
+                    IMPORT_LOGGER.debug(f'New {model_name}: {unique_id} ({import_entry_pk}->{new_pk})')
 
             IMPORT_LOGGER.debug('STORING NODE LINKS...')
             import_links = data['links_uuid']
@@ -596,7 +593,7 @@ def import_data_dj(
 
             for link in import_links:
                 # Check for dangling Links within the, supposed, self-consistent archive
-                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(link['label']), refresh=False)
+                progress_bar.set_description_str(f"{pbar_base_str}label={link['label']}", refresh=False)
                 progress_bar.update()
 
                 try:
@@ -619,7 +616,7 @@ def import_data_dj(
                 try:
                     validate_link_label(link['label'])
                 except ValueError as why:
-                    raise exceptions.ImportValidationError('Error during Link label validation: {}'.format(why))
+                    raise exceptions.ImportValidationError(f'Error during Link label validation: {why}')
 
                 source = models.DbNode.objects.get(id=in_id)
                 target = models.DbNode.objects.get(id=out_id)
@@ -633,20 +630,20 @@ def import_data_dj(
                 # Check if source Node is a valid type
                 if not source.node_type.startswith(type_source):
                     raise exceptions.ImportValidationError(
-                        'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
+                        f'Cannot add a {link_type} link from {source.node_type} to {target.node_type}'
                     )
 
                 # Check if target Node is a valid type
                 if not target.node_type.startswith(type_target):
                     raise exceptions.ImportValidationError(
-                        'Cannot add a {} link from {} to {}'.format(link_type, source.node_type, target.node_type)
+                        f'Cannot add a {link_type} link from {source.node_type} to {target.node_type}'
                     )
 
                 # If the outdegree is `unique` there cannot already be any other outgoing link of that type,
                 # i.e., the source Node may not have a LinkType of current LinkType, going out, existing already.
                 if outdegree == 'unique' and (in_id, link['type']) in existing_outgoing_unique:
                     raise exceptions.ImportValidationError(
-                        'Node<{}> already has an outgoing {} link'.format(source.uuid, link_type)
+                        f'Node<{source.uuid}> already has an outgoing {link_type} link'
                     )
 
                 # If the outdegree is `unique_pair`,
@@ -656,16 +653,14 @@ def import_data_dj(
                 elif outdegree == 'unique_pair' and \
                 (in_id, link['label'], link['type']) in existing_outgoing_unique_pair:
                     raise exceptions.ImportValidationError(
-                        'Node<{}> already has an outgoing {} link with label "{}"'.format(
-                            source.uuid, link_type, link['label']
-                        )
+                        f"Node<{source.uuid}> already has an outgoing {link_type} link with label \"{link['label']}\""
                     )
 
                 # If the indegree is `unique` there cannot already be any other incoming links of that type,
                 # i.e., the target Node may not have a LinkType of current LinkType, coming in, existing already.
                 if indegree == 'unique' and (out_id, link['type']) in existing_incoming_unique:
                     raise exceptions.ImportValidationError(
-                        'Node<{}> already has an incoming {} link'.format(target.uuid, link_type)
+                        f'Node<{target.uuid}> already has an incoming {link_type} link'
                     )
 
                 # If the indegree is `unique_pair`,
@@ -675,9 +670,7 @@ def import_data_dj(
                 elif indegree == 'unique_pair' and \
                 (out_id, link['label'], link['type']) in existing_incoming_unique_pair:
                     raise exceptions.ImportValidationError(
-                        'Node<{}> already has an incoming {} link with label "{}"'.format(
-                            target.uuid, link_type, link['label']
-                        )
+                        f"Node<{target.uuid}> already has an incoming {link_type} link with label \"{link['label']}\""
                     )
 
                 # New link
@@ -715,7 +708,7 @@ def import_data_dj(
                 # TODO: cache these to avoid too many queries
                 group_ = models.DbGroup.objects.get(uuid=groupuuid)
 
-                progress_bar.set_description_str(pbar_base_str + 'label={}'.format(group_.label), refresh=False)
+                progress_bar.set_description_str(f'{pbar_base_str}label={group_.label}', refresh=False)
                 progress_bar.update()
 
                 nodes_to_store = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes]
@@ -743,7 +736,7 @@ def import_data_dj(
 
                 while Group.objects.find(filters={'label': group_label}):
                     counter += 1
-                    group_label = '{}_{}'.format(basename, counter)
+                    group_label = f'{basename}_{counter}'
 
                     if counter == 100:
                         raise exceptions.ImportUniquenessError(

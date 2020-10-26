@@ -123,7 +123,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
     try:
         index_start, index_end = determine_block_positions(lines, block_start_marker, block_end_marker)
     except RuntimeError as exception:
-        raise RuntimeError('problem rewriting file `{}`:: {}'.format(filepath, exception))
+        raise RuntimeError(f'problem rewriting file `{filepath}`:: {exception}')
 
     lines = replace_line_block(lines, block, index_start, index_end)
 
@@ -158,22 +158,22 @@ def validate_verdi_documentation():
     # Generate the new block with the command help strings
     header = 'Commands'
     message = 'Below is a list with all available subcommands.'
-    block = ['{}\n{}\n{}\n\n'.format(header, '=' * len(header), message)]
+    block = [f"{header}\n{'=' * len(header)}\n{message}\n\n"]
 
     for name, command in sorted(verdi.commands.items()):
         ctx = click.Context(command, terminal_width=width)
 
-        header_label = '.. _reference:command-line:verdi-{name:}:'.format(name=name)
-        header_string = '``verdi {name:}``'.format(name=name)
+        header_label = f'.. _reference:command-line:verdi-{name}:'
+        header_string = f'``verdi {name}``'
         header_underline = '-' * len(header_string)
 
-        block.append(header_label + '\n\n')
-        block.append(header_string + '\n')
-        block.append(header_underline + '\n\n')
+        block.append(f'{header_label}\n\n')
+        block.append(f'{header_string}\n')
+        block.append(f'{header_underline}\n\n')
         block.append('.. code:: console\n\n')  # Mark the beginning of a literal block
         for line in ctx.get_help().split('\n'):
             if line:
-                block.append('    {}\n'.format(line))
+                block.append(f'    {line}\n')
             else:
                 block.append('\n')
         block.append('\n\n')
@@ -203,9 +203,9 @@ def validate_version():
     setup_content = get_setup_json()
     if version != setup_content['version']:
         click.echo('Version number mismatch detected:')
-        click.echo("Version number in '{}': {}".format(FILENAME_SETUP_JSON, setup_content['version']))
-        click.echo("Version number in '{}/__init__.py': {}".format('aiida', version))
-        click.echo("Updating version in '{}' to: {}".format(FILENAME_SETUP_JSON, version))
+        click.echo(f"Version number in '{FILENAME_SETUP_JSON}': {setup_content['version']}")
+        click.echo(f"Version number in 'aiida/__init__.py': {version}")
+        click.echo(f"Updating version in '{FILENAME_SETUP_JSON}' to: {version}")
 
         setup_content['version'] = version
         write_setup_json(setup_content)

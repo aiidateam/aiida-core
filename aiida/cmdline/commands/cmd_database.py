@@ -111,7 +111,7 @@ def detect_duplicate_uuid(table, apply_patch):
     try:
         messages = deduplicate_uuids(table=table, dry_run=not apply_patch)
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('integrity check failed: {}'.format(str(exception)))
+        echo.echo_critical(f'integrity check failed: {str(exception)}')
     else:
         for message in messages:
             echo.echo_info(message)
@@ -141,7 +141,7 @@ def detect_invalid_links():
 
         if result:
             integrity_violated = True
-            echo.echo_warning('{}:\n'.format(check.message))
+            echo.echo_warning(f'{check.message}:\n')
             echo.echo(tabulate(result, headers=check.headers))
 
     if not integrity_violated:
@@ -169,7 +169,7 @@ def detect_invalid_nodes():
 
         if result:
             integrity_violated = True
-            echo.echo_warning('{}:\n'.format(check.message))
+            echo.echo_warning(f'{check.message}:\n')
             echo.echo(tabulate(result, headers=check.headers))
 
     if not integrity_violated:

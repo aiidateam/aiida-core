@@ -60,7 +60,7 @@ def create_directory(path):
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
-            raise ConfigurationError("could not create the '{}' configuration directory".format(path))
+            raise ConfigurationError(f"could not create the '{path}' configuration directory")
 
 
 def set_configuration_directory():

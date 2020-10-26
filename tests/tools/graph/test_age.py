@@ -58,7 +58,7 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
             for label_id in range(branching):
 
                 new_node = current_class()
-                new_node.add_incoming(previous_node, link_type=current_links, link_label='link{}'.format(label_id))
+                new_node.add_incoming(previous_node, link_type=current_links, link_label=f'link{label_id}')
                 new_node.store()
 
                 current_nodes.append(new_node)
@@ -554,7 +554,7 @@ class TestAiidaGraphExplorer(AiidaTestCase):
 
         groups = []
         for idx in range(total_groups):
-            new_group = orm.Group(label='group-{}'.format(idx)).store()
+            new_group = orm.Group(label=f'group-{idx}').store()
             groups.append(new_group)
 
         nodes = []

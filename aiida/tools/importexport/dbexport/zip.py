@@ -132,7 +132,7 @@ class ZipFolder:
             raise ValueError('src must be an absolute path in insert_file')
 
         if not overwrite and self.exists(base_filename):
-            raise IOError('destination already exists: {}'.format(base_filename))
+            raise IOError(f'destination already exists: {base_filename}')
 
         if os.path.isdir(src):
             for dirpath, dirnames, filenames in os.walk(src):

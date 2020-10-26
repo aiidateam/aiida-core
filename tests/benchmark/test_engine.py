@@ -55,7 +55,7 @@ class WorkchainLoopWcSerial(WorkchainLoop):
 
     def run_task(self):
         future = self.submit(WorkchainLoop, iterations=Int(1))
-        return ToContext(**{'wkchain' + str(self.ctx.counter): future})
+        return ToContext(**{f'wkchain{str(self.ctx.counter)}': future})
 
 
 class WorkchainLoopWcThreaded(WorkchainLoop):
@@ -68,7 +68,7 @@ class WorkchainLoopWcThreaded(WorkchainLoop):
     def run_task(self):
 
         context = {
-            'wkchain' + str(i): self.submit(WorkchainLoop, iterations=Int(1))
+            f'wkchain{str(i)}': self.submit(WorkchainLoop, iterations=Int(1))
             for i in range(self.inputs.iterations.value)
         }
         return ToContext(**context)
@@ -102,7 +102,7 @@ class WorkchainLoopCalcThreaded(WorkchainLoop):
                 'y': Int(2),
                 'code': self.inputs.code,
             }
-            futures['addition' + str(i)] = self.submit(ArithmeticAddCalculation, **inputs)
+            futures[f'addition{str(i)}'] = self.submit(ArithmeticAddCalculation, **inputs)
         return ToContext(**futures)
 
 

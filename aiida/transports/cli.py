@@ -28,9 +28,7 @@ def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
     if computer.transport_type != transport_type:
         echo.echo_critical(
-            'Computer {} has transport of type "{}", not {}!'.format(
-                computer.label, computer.transport_type, transport_type
-            )
+            f'Computer {computer.label} has transport of type "{computer.transport_type}", not {transport_type}!'
         )
     return computer
 
@@ -42,12 +40,12 @@ def configure_computer_main(computer, user, **kwargs):
 
     user = user or orm.User.objects.get_default()
 
-    echo.echo_info('Configuring computer {} for user {}.'.format(computer.label, user.email))
+    echo.echo_info(f'Configuring computer {computer.label} for user {user.email}.')
     if user.email != get_manager().get_profile().default_user:
         echo.echo_info('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)
-    echo.echo_success('{} successfully configured for {}'.format(computer.label, user.email))
+    echo.echo_success(f'{computer.label} successfully configured for {user.email}')
 
 
 def common_params(command_func):
@@ -60,7 +58,7 @@ def common_params(command_func):
 def transport_option_default(name, computer):
     """Determine the default value for an auth_param key."""
     transport_cls = computer.get_transport_class()
-    suggester_name = '_get_{}_suggestion_string'.format(name)
+    suggester_name = f'_get_{name}_suggestion_string'
     members = dict(inspect.getmembers(transport_cls))
     suggester = members.get(suggester_name, None)
     default = None
@@ -110,7 +108,7 @@ def create_option(name, spec):
 
     spec = deepcopy(spec)
     name_dashed = name.replace('_', '-')
-    option_name = '--{}'.format(name_dashed)
+    option_name = f'--{name_dashed}'
     existing_option = spec.pop('option', None)
 
     if spec.pop('switch', False):
@@ -155,7 +153,7 @@ def transport_options(transport_type):
 
 def create_configure_cmd(transport_type):
     """Create verdi computer configure subcommand for a transport type."""
-    help_text = """Configure COMPUTER for {} transport.""".format(transport_type)
+    help_text = f"""Configure COMPUTER for {transport_type} transport."""
 
     # pylint: disable=unused-argument
     def transport_configure_command(computer, user, non_interactive, **kwargs):

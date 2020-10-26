@@ -43,14 +43,14 @@ class ArrayData(Data):
 
         :param name: The name of the array to delete from the node.
         """
-        fname = '{}.npy'.format(name)
+        fname = f'{name}.npy'
         if fname not in self.list_object_names():
-            raise KeyError("Array with name '{}' not found in node pk= {}".format(name, self.pk))
+            raise KeyError(f"Array with name '{name}' not found in node pk= {self.pk}")
 
         # remove both file and attribute
         self.delete_object(fname)
         try:
-            self.delete_attribute('{}{}'.format(self.array_prefix, name))
+            self.delete_attribute(f'{self.array_prefix}{name}')
         except (KeyError, AttributeError):
             # Should not happen, but do not crash if for some reason the property was not set.
             pass
@@ -86,7 +86,7 @@ class ArrayData(Data):
 
         :param name: The name of the array.
         """
-        return tuple(self.get_attribute('{}{}'.format(self.array_prefix, name)))
+        return tuple(self.get_attribute(f'{self.array_prefix}{name}'))
 
     def get_iterarrays(self):
         """
@@ -108,10 +108,10 @@ class ArrayData(Data):
 
         def get_array_from_file(self, name):
             """Return the array stored in a .npy file"""
-            filename = '{}.npy'.format(name)
+            filename = f'{name}.npy'
 
             if filename not in self.list_object_names():
-                raise KeyError('Array with name `{}` not found in ArrayData<{}>'.format(name, self.pk))
+                raise KeyError(f'Array with name `{name}` not found in ArrayData<{self.pk}>')
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
             with self.open(filename, mode='rb') as handle:
@@ -169,10 +169,10 @@ class ArrayData(Data):
             handle.seek(0)
 
             # Write the numpy array to the repository, keeping the byte representation
-            self.put_object_from_filelike(handle, '{}.npy'.format(name), mode='wb', encoding=None)
+            self.put_object_from_filelike(handle, f'{name}.npy', mode='wb', encoding=None)
 
         # Store the array name and shape for querying purposes
-        self.set_attribute('{}{}'.format(self.array_prefix, name), list(array.shape))
+        self.set_attribute(f'{self.array_prefix}{name}', list(array.shape))
 
     def _validate(self):
         """
@@ -188,7 +188,6 @@ class ArrayData(Data):
 
         if set(files) != set(properties):
             raise ValidationError(
-                'Mismatch of files and properties for ArrayData'
-                ' node (pk= {}): {} vs. {}'.format(self.pk, files, properties)
+                f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
             )
         super()._validate()

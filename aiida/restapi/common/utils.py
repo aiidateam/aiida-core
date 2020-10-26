@@ -63,7 +63,6 @@ class CustomJSONEncoder(JSONEncoder):
 
 
 class DatetimePrecision:
-    # pylint: disable=too-few-public-methods
     """
     A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
@@ -138,7 +137,7 @@ class Utils:
         if path.startswith(self.prefix):
             return path[len(self.prefix):]
 
-        raise ValidationError('path has to start with {}'.format(self.prefix))
+        raise ValidationError(f'path has to start with {self.prefix}')
 
     @staticmethod
     def split_path(path):
@@ -220,7 +219,7 @@ class Utils:
             query_type = path.pop(0)
         elif path[0] in ['repo']:
             path.pop(0)
-            query_type = 'repo_' + path.pop(0)
+            query_type = f'repo_{path.pop(0)}'
 
         if not path:
             return (resource_type, page, node_id, query_type)
@@ -314,8 +313,7 @@ class Utils:
         #  and next page
         if page > last_page or page < 1:
             raise RestInputValidationError(
-                'Non existent page requested. The '
-                'page range is [{} : {}]'.format(first_page, last_page)
+                f'Non existent page requested. The page range is [{first_page} : {last_page}]'
             )
 
         limit = perpage
@@ -384,8 +382,7 @@ class Utils:
 
         def make_rel_url(rel, page):
             new_path_elems = path_elems + ['page', str(page)]
-            return '<' + '/'.join(new_path_elems) + \
-                   question_mark + query_string + '>; rel={}, '.format(rel)
+            return f"<{'/'.join(new_path_elems)}{question_mark}{query_string}>; rel={rel}, "
 
         ## Setting non-mandatory parameters
         # set links to related pages
@@ -706,7 +703,7 @@ class Utils:
 
         ## Define grammar
         # key types
-        key = Word(alphas + '_', alphanums + '_')
+        key = Word(f'{alphas}_', f'{alphanums}_')
         # operators
         operator = (
             Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
@@ -843,7 +840,7 @@ def list_routes():
             continue
 
         methods = ','.join(rule.methods)
-        line = urllib.parse.unquote('{:15s} {:20s} {}'.format(rule.endpoint, methods, rule))
+        line = urllib.parse.unquote(f'{rule.endpoint:15s} {methods:20s} {rule}')
         output.append(line)
 
     return sorted(set(output))

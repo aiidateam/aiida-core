@@ -329,21 +329,21 @@ class TestWorkchain(AiidaTestCase):
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.items():
             if step not in ['step3', 'step4', 'is_b']:
-                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
+                self.assertTrue(finished, f'Step {step} was not called by workflow')
 
         # Try the elif(..) part
         finished_steps = launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'step4']:
-                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
+                self.assertTrue(finished, f'Step {step} was not called by workflow')
 
         # Try the else... part
         finished_steps = launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'is_b', 'step3']:
-                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
+                self.assertTrue(finished, f'Step {step} was not called by workflow')
 
     def test_incorrect_outline(self):
 
@@ -507,21 +507,21 @@ class TestWorkchain(AiidaTestCase):
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['step3', 'step4', 'is_b']:
-                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
+                self.assertTrue(finished, f'Step {step} was not called by workflow')
 
         # Try the elif(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'step4']:
-                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
+                self.assertTrue(finished, f'Step {step} was not called by workflow')
 
         # Try the else... part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'is_b', 'step3']:
-                self.assertTrue(finished, 'Step {} was not called by workflow'.format(step))
+                self.assertTrue(finished, f'Step {step} was not called by workflow')
 
     def test_return(self):
 
@@ -1446,6 +1446,4 @@ class TestDefaultUniqueness(AiidaTestCase):
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
         node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
-        self.assertEqual(
-            len(uuids), len(nodes), 'Only {} unique UUIDS for {} input nodes'.format(len(uuids), len(nodes))
-        )
+        self.assertEqual(len(uuids), len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes')

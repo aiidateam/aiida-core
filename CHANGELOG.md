@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4.2
+
+### Critical bug fixes
+- `CalcJob`: make sure `local_copy_list` files do not end up in the node's repository folder [[#4415]](https://github.com/aiidateam/aiida-core/pull/4415)
+
+
+## v1.4.1
+
+### Improvements
+- `verdi setup`: forward broker defaults to interactive mode [[#4405]](https://github.com/aiidateam/aiida-core/pull/4405)
+
+### Bug fixes
+- `verdi setup`: improve validation and help string of broker virtual host [[#4408]](https://github.com/aiidateam/aiida-core/pull/4408)
+- Implement `next` and `iter` for the `Node.open` deprecation wrapper [[#4399]](https://github.com/aiidateam/aiida-core/pull/4399)
+- Dependencies: increase minimum version requirement `plumpy~=0.15.1` to suppress noisy warning at end of interpreter that ran processes [[#4398]](https://github.com/aiidateam/aiida-core/pull/4398)
+
+
 ## v1.4.0
 
 ### Improvements
@@ -393,9 +410,9 @@ Changes between 1.0 alpha/beta releases are not included - for those see the cha
 - Implement the exporting and importing of node extras [[#2416]](https://github.com/aiidateam/aiida-core/pull/2416)
 - Implement the exporting and importing of comments [[#2413]](https://github.com/aiidateam/aiida-core/pull/2413)
 - Implement the exporting and importing of logs [[#2393]](https://github.com/aiidateam/aiida-core/pull/2393)
-- Add `export_parameters` to the `metadata.json` in archive export files [[#3386]](https://github.com/aiidateam/aiida-core/pull/3386)
+- Add `export_parameters` to the `metadata.json` in archive files [[#3386]](https://github.com/aiidateam/aiida-core/pull/3386)
 - Simplify the data format of export archives, greatly reducing file size [[#3090]](https://github.com/aiidateam/aiida-core/pull/3090)
-- `verdi import` automatically migrates export files of old formats [[#2820]](https://github.com/aiidateam/aiida-core/pull/2820)
+- `verdi import` automatically migrates archive files of old formats [[#2820]](https://github.com/aiidateam/aiida-core/pull/2820)
 
 #### Miscellaneous
 - Refactor unit test managers and add basic fixtures for `pytest` [[#3319]](https://github.com/aiidateam/aiida-core/pull/3319)
@@ -509,7 +526,7 @@ Changes between 1.0 alpha/beta releases are not included - for those see the cha
 - Delete nodes via `verdi node delete` [[#1083]](https://github.com/aiidateam/aiida-core/pull/1083)
 - Import structures using ASE [[#1085]](https://github.com/aiidateam/aiida-core/pull/1085)
 - `StructureData` - `pymatgen` - `StructureData` roundtrip works for arbitrary kind names [[#1285]](https://github.com/aiidateam/aiida-core/pull/1285) [[#1306]](https://github.com/aiidateam/aiida-core/pull/1306) [[#1357]](https://github.com/aiidateam/aiida-core/pull/1357)
-- Output format of export file can now be defined for `verdi export migrate` [[#1383]](https://github.com/aiidateam/aiida-core/pull/1383)
+- Output format of archive file can now be defined for `verdi export migrate` [[#1383]](https://github.com/aiidateam/aiida-core/pull/1383)
 - Automatic reporting of code coverage by unit tests has been added [[#1422]](https://github.com/aiidateam/aiida-core/pull/1422)
 
 ### Critical bug fixes

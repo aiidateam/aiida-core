@@ -70,7 +70,7 @@ class CalcJobNode(CalculationNode):
                 except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
                     self.logger.warning(
-                        'could not load the calculation tools entry point {}: {}'.format(entry_point.name, exception)
+                        f'could not load the calculation tools entry point {entry_point.name}: {exception}'
                     )
 
         return self._tools
@@ -230,7 +230,7 @@ class CalcJobNode(CalculationNode):
         :raise: ValueError if state is invalid
         """
         if not isinstance(state, CalcJobState):
-            raise ValueError('{} is not a valid CalcJobState'.format(state))
+            raise ValueError(f'{state} is not a valid CalcJobState')
 
         self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)
 
@@ -273,7 +273,7 @@ class CalcJobNode(CalculationNode):
 
             # Otherwise, it has to be a tuple of length three with specific requirements
             if not isinstance(directive, (tuple, list)) or len(directive) != 3:
-                raise ValueError('invalid directive, not a list or tuple of length three: {}'.format(directive))
+                raise ValueError(f'invalid directive, not a list or tuple of length three: {directive}')
 
             if not isinstance(directive[0], str):
                 raise ValueError('invalid directive, first element has to be a string representing remote path')
@@ -385,7 +385,7 @@ class CalcJobNode(CalculationNode):
         from aiida.schedulers.datastructures import JobState
 
         if not isinstance(state, JobState):
-            raise ValueError('scheduler state should be an instance of JobState, got: {}'.format(state))
+            raise ValueError(f'scheduler state should be an instance of JobState, got: {state}')
 
         self.set_attribute(self.SCHEDULER_STATE_KEY, state.value)
         self.set_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.datetime_to_isoformat(timezone.now()))

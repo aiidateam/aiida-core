@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration archive files from old export versions to the newest, used by `verdi export migrate` command."""
+from distutils.version import StrictVersion
+
 from aiida.common.lang import type_check
 from aiida.tools.importexport import EXPORT_VERSION
 from aiida.tools.importexport.common.exceptions import DanglingLinkError, ArchiveMigrationError
@@ -53,7 +55,7 @@ def migrate_recursively(metadata, data, folder, version=EXPORT_VERSION):
     try:
         if old_version == version:
             return old_version
-        if old_version > version:
+        if StrictVersion(old_version) > StrictVersion(version):
             raise ArchiveMigrationError('Backward migrations are not supported')
         elif old_version in MIGRATE_FUNCTIONS:
             MIGRATE_FUNCTIONS[old_version](metadata, data, folder)

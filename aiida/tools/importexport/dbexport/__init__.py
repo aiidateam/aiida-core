@@ -369,27 +369,27 @@ def _collect_archive_data(
         include_logs,
     )
 
-    export_data = _perform_export_queries(entries_queries)
+    entity_data = _perform_export_queries(entries_queries)
 
     # note this was originally below the attributes and group_uuid gather
     check_process_nodes_sealed({
-        node_pk for node_pk, content in export_data.get(NODE_ENTITY_NAME, {}).items()
+        node_pk for node_pk, content in entity_data.get(NODE_ENTITY_NAME, {}).items()
         if content['node_type'].startswith('process.')
     })
 
-    model_data = sum(len(model_data) for model_data in export_data.values())
-    if not model_data:
+    number_of_entities = sum(len(entities) for entities in entity_data.values())
+    if not number_of_entities:
         EXPORT_LOGGER.log(msg='Nothing to store, exiting...', level=LOG_LEVEL_REPORT)
         return None
     EXPORT_LOGGER.log(
         msg=(
-            f'Exporting a total of {model_data} database entries, '
+            f'Exporting a total of {number_of_entities} database entries, '
             f'of which {len(node_ids_to_be_exported)} are Nodes.'
         ),
         level=LOG_LEVEL_REPORT,
     )
 
-    groups_uuid = _get_groups_uuid(export_data)
+    groups_uuid = _get_groups_uuid(entity_data)
 
     # Turn sets into lists to be able to export them as JSON metadata.
     for entity, entity_set in entities_starting_set.items():
@@ -413,12 +413,12 @@ def _collect_archive_data(
     node_data = _collect_node_data(node_ids_to_be_exported)
 
     return ArchiveData(
-        metadata,
-        all_node_uuids,
-        groups_uuid,
-        links_uuid,
-        export_data,
-        node_data,
+        metadata=metadata,
+        node_uuids=all_node_uuids,
+        group_uuids=groups_uuid,
+        link_uuids=links_uuid,
+        entity_data=entity_data,
+        node_data=node_data,
     )
 
 
@@ -762,12 +762,12 @@ def _collect_node_data(all_node_pks: Set[int]) -> Iterable[Tuple[str, dict, dict
     return node_data
 
 
-def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[str]]:
+def _get_groups_uuid(entity_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[str]]:
     """Get node UUIDs per group."""
     EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
     groups_uuid: Dict[str, Set[str]] = defaultdict(set)
     # If a group is in the exported data, we export the group/node correlation
-    if GROUP_ENTITY_NAME not in export_data:
+    if GROUP_ENTITY_NAME not in entity_data:
         return groups_uuid
 
     group_uuids_with_node_uuids = (
@@ -775,7 +775,7 @@ def _get_groups_uuid(export_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[s
             orm.Group,
             filters={
                 'id': {
-                    'in': export_data[GROUP_ENTITY_NAME]
+                    'in': entity_data[GROUP_ENTITY_NAME]
                 }
             },
             project='uuid',

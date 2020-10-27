@@ -39,6 +39,10 @@ def inspect(archive, version, data, meta_data):
 
     By default a summary of the archive contents will be printed. The various options can be used to change exactly what
     information is displayed.
+
+    .. deprecated:: 1.5.0
+        Support for the --data flag
+
     """
     import dataclasses
     from aiida.tools.importexport import CorruptArchive, detect_archive_type, get_reader

@@ -17,7 +17,11 @@ __all__ = ('ArchiveMetadata', 'detect_archive_type')
 
 @dataclasses.dataclass
 class ArchiveMetadata:
-    """Class for storing metadata about this archive."""
+    """Class for storing metadata about this archive.
+
+    Required fields are necessary for importing the data back into AiiDA,
+    whereas optional fields capture information about the export/migration process(es)
+    """
     export_version: str
     aiida_version: str
     # Entity type -> database ID key

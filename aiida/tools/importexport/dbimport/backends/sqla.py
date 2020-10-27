@@ -20,7 +20,7 @@ from aiida.common import json
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.common.utils import get_object_from_string
+from aiida.common.utils import get_object_from_string, validate_uuid
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import QueryBuilder, Node, Group
 from aiida.orm.utils.links import link_triple_exists, validate_link
@@ -41,7 +41,9 @@ from aiida.tools.importexport.dbimport.utils import (
 from aiida.tools.importexport.archive.common import detect_archive_type
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract, get_reader
 
-from aiida.tools.importexport.dbimport.backends.common import _make_import_group, _sanitize_extras, _validate_uuid
+from aiida.tools.importexport.dbimport.backends.common import (
+    _make_import_group, _sanitize_extras, MAX_COMPUTERS, MAX_GROUPS
+)
 
 
 def import_data_sqla(
@@ -148,8 +150,8 @@ def import_data_sqla(
         group_nodes = set(chain.from_iterable((uuids for _, uuids in reader.iter_group_uuids())))
 
         # Check that UUIDs are valid
-        linked_nodes = set(x for x in linked_nodes if _validate_uuid(x))
-        group_nodes = set(x for x in group_nodes if _validate_uuid(x))
+        linked_nodes = set(x for x in linked_nodes if validate_uuid(x))
+        group_nodes = set(x for x in group_nodes if validate_uuid(x))
 
         import_nodes_uuid = set(v for v in reader.iter_node_uuids())
 
@@ -217,7 +219,7 @@ def import_data_sqla(
 
             IMPORT_LOGGER.debug('ASSESSING IMPORT DATA...')
             for entity_name in entity_order:
-                _generate_entity_data(
+                _select_entity_data(
                     entity_name=entity_name,
                     reader=reader,
                     new_entries=new_entries,
@@ -253,7 +255,7 @@ def import_data_sqla(
             )
 
             IMPORT_LOGGER.debug('STORING GROUP ELEMENTS...')
-            _import_groups(
+            _add_nodes_to_groups(
                 group_count=reader.entity_count(GROUP_ENTITY_NAME),
                 group_uuids=reader.iter_group_uuids(),
                 foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
@@ -291,18 +293,18 @@ def sql_transaction():
         raise
 
 
-def _generate_entity_data(
+def _select_entity_data(
     *, entity_name: str, reader: ArchiveReaderAbstract, new_entries: Dict[str, Dict[str, dict]],
     existing_entries: Dict[str, Dict[str, dict]], foreign_ids_reverse_mappings: Dict[str, Dict[str, int]],
     extras_mode_new: str
 ):
-    """Generate the data to import."""
+    """Select the data to import by comparing the AiiDA database to the archive contents."""
     entity = entity_names_to_entities[entity_name]
 
     # entity = entity_names_to_entities[entity_name]
     unique_identifier = reader.metadata.unique_identifiers.get(entity_name, None)
 
-    # Not necessarily all models are exported
+    # Not necessarily all models are present in the archive
     if entity_name not in reader.entity_names:
         return
 
@@ -350,7 +352,7 @@ def _generate_entity_data(
                     # Rename the new group
                     fields['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
                     dupl_counter += 1
-                    if dupl_counter == 100:
+                    if dupl_counter == MAX_GROUPS:
                         raise exceptions.ImportUniquenessError(
                             f'A group of that label ( {orig_label} ) already exists and I could not create a new one'
                         )
@@ -380,7 +382,7 @@ def _generate_entity_data(
                     builder.append(entity, filters={'name': {'==': fields['name']}}, project=['*'], tag='res')
                     dupl = builder.count() or fields['name'] in imported_comp_names
                     dupl_counter += 1
-                    if dupl_counter == 100:
+                    if dupl_counter == MAX_COMPUTERS:
                         raise exceptions.ImportUniquenessError(
                             f'A computer of that name ( {orig_name} ) already exists and I could not create a new one'
                         )
@@ -406,7 +408,7 @@ def _store_entity_data(
     foreign_ids_reverse_mappings: Dict[str, Dict[str, int]], import_unique_ids_mappings: Dict[str, Dict[int, str]],
     ret_dict: dict, session: Session
 ):
-    """Store the model data."""
+    """Store the entity data on the AiiDA profile."""
     from aiida.backends.sqlalchemy.utils import flag_modified
     from aiida.backends.sqlalchemy.models.node import DbNode
 
@@ -652,11 +654,11 @@ def _store_node_links(
     IMPORT_LOGGER.debug('   (%d new links...)', len(ret_dict.get('Link', {}).get('new', [])))
 
 
-def _import_groups(
+def _add_nodes_to_groups(
     *, group_count: int, group_uuids: Iterable[Tuple[str, Set[str]]], foreign_ids_reverse_mappings: Dict[str, Dict[str,
                                                                                                                    int]]
 ):
-    """Import groups."""
+    """Add nodes to imported groups."""
     if not group_count:
         return
 

@@ -121,7 +121,7 @@ def export(
 
     .. deprecated:: 1.5.0
         Support for the parameter `silent` will be removed in `v2.0.0`.
-        Please set the logger level and progress bar implementation independently.
+        Please set the log level and progress bar implementation independently.
 
     .. deprecated:: 1.2.1
         Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.

@@ -200,6 +200,8 @@ class ArchiveReaderAbstract(ABC):
     def node_repository(self, uuid: str) -> Folder:
         """Return a temporary folder with the contents of the repository for a single node.
 
+        :param uuid: The UUID of the node
+
         :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
         """
         return next(self.iter_node_repos([uuid], progress=False))

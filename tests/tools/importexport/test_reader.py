@@ -19,7 +19,11 @@ from tests.utils.archives import get_archive_file
 
 @pytest.fixture
 def archive_reader():
-    """Return an initiated archive reader."""
+    """Return an initiated archive reader.
+
+    If a filename is given, instantiate with that file,
+    otherwise instantiate with the latest archive version.
+    """
 
     def _func(filename=None):
         archive_path = get_archive_file(filename or f'export_v{EXPORT_VERSION}_simple.aiida', 'export/migrate')
@@ -33,7 +37,7 @@ def test_reader(archive_reader):
     """Test reader API."""
 
     with archive_reader() as archive:
-        assert archive.export_version == '0.9'
+        assert archive.export_version == EXPORT_VERSION
         assert archive.metadata.aiida_version == '1.1.1'
         assert sorted(archive.entity_names) == ['Comment', 'Computer', 'Group', 'Log', 'Node', 'User']
         assert archive.entity_count('Node') == 10
@@ -78,4 +82,4 @@ def test_empty_archive(archive_reader):
     """Verify that attempting to unpack an empty archive raises a `CorruptArchive` exception."""
     with pytest.raises(CorruptArchive, match='input file cannot be read'):
         with archive_reader('empty.aiida') as archive:
-            assert archive.export_version == '0.9'
+            assert archive.export_version == EXPORT_VERSION

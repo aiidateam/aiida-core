@@ -7,11 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,fixme,too-many-arguments,too-many-locals,too-many-statements,too-many-branches,too-many-nested-blocks
 """Common import functions for both database backend"""
 import copy
 from typing import Dict
-from uuid import UUID
 
 from aiida.common import timezone
 from aiida.common.progress_reporter import get_progress_reporter
@@ -19,6 +17,9 @@ from aiida.orm import Group, ImportGroup, Node, QueryBuilder
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import NODE_ENTITY_NAME
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
+
+MAX_COMPUTERS = 100
+MAX_GROUPS = 100
 
 
 def _make_import_group(
@@ -35,7 +36,7 @@ def _make_import_group(
 
     # So that we do not create empty groups
     if not pks_for_group:
-        IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
+        IMPORT_LOGGER.debug('No nodes to import, so no import group created')
         return group
 
     # If user specified a group, import all things into it
@@ -49,10 +50,9 @@ def _make_import_group(
             counter += 1
             group_label = f'{basename}_{counter}'
 
-            if counter == 100:
+            if counter == MAX_GROUPS:
                 raise exceptions.ImportUniquenessError(
-                    "Overflow of import groups (more than 100 import groups exists with basename '{}')"
-                    ''.format(basename)
+                    f"Overflow of import groups (more than {MAX_GROUPS} groups exists with basename '{basename}')"
                 )
         group = ImportGroup(label=group_label).store()
 
@@ -77,21 +77,12 @@ def _make_import_group(
     return group
 
 
-def _validate_uuid(given_uuid):
-    """A simple check for the UUID validity."""
-    try:
-        parsed_uuid = UUID(given_uuid, version=4)
-    except ValueError:
-        # If not a valid UUID
-        return False
+def _sanitize_extras(fields: dict) -> dict:
+    """Remove unwanted extra keys.
 
-    # Check if there was any kind of conversion of the hex during
-    # the validation
-    return str(parsed_uuid) == given_uuid
+    :param fields: the database fields for the entity
 
-
-def _sanitize_extras(fields):
-    """Remove unwanted extra keys."""
+    """
     fields = copy.copy(fields)
     fields['extras'] = {key: value for key, value in fields['extras'].items() if not key.startswith('_aiida_')}
     if fields.get('node_type', '').endswith('code.Code.'):

@@ -570,6 +570,17 @@ Depending on which step the workflow is running, you should get something like t
 We can see that the ``MultiplyAddWorkChain`` is currently waiting for its *child process*, the ``ArithmeticAddCalculation``, to finish.
 Check the process list again for *all* processes (You should know how by now!).
 After about half a minute, all the processes should be in the ``Finished`` state.
+The ``verdi process status`` command prints a *hierarchical* overview of the processes called by the work chain:
+
+.. code-block:: console
+
+    $ verdi process status 19
+    MultiplyAddWorkChain<19> Finished [0] [3:result]
+        ├── multiply<20> Finished [0]
+        └── ArithmeticAddCalculation<22> Finished [0]
+
+The bracket ``[3:result]`` indicates the current step in the outline of the :py:class:`~aiida.workflows.arithmetic.multiply_add.MultiplyAddWorkChain` (step 3, with name ``result``).
+The ``process status`` is particularly useful for debugging complex work chains, since it helps pinpoint where a problem occurred.
 
 We can now generate the full provenance graph for the ``WorkChain`` with:
 

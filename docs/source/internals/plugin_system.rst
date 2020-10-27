@@ -5,7 +5,7 @@ Plugin system
 *************
 
 .. note:: This page explains how to contribute to the plugin system in ``aiida-core``.
-   For instrucions on how to develop plugins, see :ref:`how-to:plugins`.
+   For instrucions on how to develop plugins, see :ref:`how-to:plugins-develop`.
 
 Design Principles
 =================

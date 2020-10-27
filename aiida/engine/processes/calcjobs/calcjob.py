@@ -53,10 +53,10 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
         return 'no computer has been specified in `metadata.computer` nor via `code`.'
 
     if computer_from_code and not computer_from_code.is_stored:
-        return 'the Computer<{}> is not stored'.format(computer_from_code)
+        return f'the Computer<{computer_from_code}> is not stored'
 
     if computer_from_metadata and not computer_from_metadata.is_stored:
-        return 'the Computer<{}> is not stored'.format(computer_from_metadata)
+        return f'the Computer<{computer_from_metadata}> is not stored'
 
     if computer_from_code and computer_from_metadata and computer_from_code.uuid != computer_from_metadata.uuid:
         return (
@@ -87,7 +87,7 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
     try:
         scheduler.validate_resources(**resources)
     except ValueError as exception:
-        return 'input `metadata.options.resources` is not valid for the `{}` scheduler: {}'.format(scheduler, exception)
+        return f'input `metadata.options.resources` is not valid for the `{scheduler}` scheduler: {exception}'
 
 
 def validate_parser(parser_name, _):
@@ -101,7 +101,7 @@ def validate_parser(parser_name, _):
         try:
             ParserFactory(parser_name)
         except exceptions.EntryPointError as exception:
-            return 'invalid parser specified: {}'.format(exception)
+            return f'invalid parser specified: {exception}'
 
 
 class CalcJob(Process):
@@ -137,7 +137,7 @@ class CalcJob(Process):
             help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
         spec.input('metadata.computer', valid_type=orm.Computer, required=False,
             help='When using a "local" code, set the computer on which the calculation should be run.')
-        spec.input_namespace('{}.{}'.format(spec.metadata_key, spec.options_key), required=False)
+        spec.input_namespace(f'{spec.metadata_key}.{spec.options_key}', required=False)
         spec.input('metadata.options.input_filename', valid_type=str, required=False,
             help='Filename to which the input for the code that is to be run is written.')
         spec.input('metadata.options.output_filename', valid_type=str, required=False,
@@ -303,8 +303,8 @@ class CalcJob(Process):
             # If an exit code is returned by the scheduler output parser, we log it and set it on the node. This will
             # allow the actual `Parser` implementation, if defined in the inputs, to inspect it and decide to keep it,
             # or override it with a more specific exit code, if applicable.
-            args = (exit_code_scheduler.status, exit_code_scheduler.message)
-            self.logger.warning('scheduler parser returned exit code<{}>: {}'.format(*args))
+            msg = f'scheduler parser returned exit code<{exit_code_scheduler.status}>: {exit_code_scheduler.message}'
+            self.logger.warning(msg)
             self.node.set_exit_status(exit_code_scheduler.status)
             self.node.set_exit_message(exit_code_scheduler.message)
 
@@ -316,8 +316,8 @@ class CalcJob(Process):
                 shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
 
         if exit_code_retrieved is not None and exit_code_retrieved.status > 0:
-            args = (exit_code_retrieved.status, exit_code_retrieved.message)
-            self.logger.warning('output parser returned exit code<{}>: {}'.format(*args))
+            msg = f'output parser returned exit code<{exit_code_retrieved.status}>: {exit_code_retrieved.message}'
+            self.logger.warning(msg)
 
         # The final exit code is that of the scheduler, unless the output parser returned one
         if exit_code_retrieved is not None:
@@ -338,20 +338,24 @@ class CalcJob(Process):
         filename_stdout = self.node.get_option('scheduler_stdout')
 
         detailed_job_info = self.node.get_detailed_job_info()
+
         if detailed_job_info is None:
-            self.logger.warning('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+            self.logger.info('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+        elif detailed_job_info.get('retval', 0) != 0:
+            self.logger.info('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
+            detailed_job_info = None
 
         try:
             scheduler_stderr = retrieved.get_object_content(filename_stderr)
         except FileNotFoundError:
             scheduler_stderr = None
-            self.logger.warning('could not parse scheduler output: the `{}` file is missing'.format(filename_stderr))
+            self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
 
         try:
             scheduler_stdout = retrieved.get_object_content(filename_stdout)
         except FileNotFoundError:
             scheduler_stdout = None
-            self.logger.warning('could not parse scheduler output: the `{}` file is missing'.format(filename_stdout))
+            self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         # Only attempt to call the scheduler parser if all three resources of information are available
         if any(entry is None for entry in [detailed_job_info, scheduler_stderr, scheduler_stdout]):
@@ -359,11 +363,11 @@ class CalcJob(Process):
 
         try:
             exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
-        except exceptions.FeatureNotAvailable as exception:
-            self.logger.warning('could not parse scheduler output: {}'.format(exception))
+        except exceptions.FeatureNotAvailable:
+            self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
             return
         except Exception as exception:  # pylint: disable=broad-except
-            self.logger.warning('the `parse_output` method of the scheduler excepted: {}'.format(exception))
+            self.logger.error(f'the `parse_output` method of the scheduler excepted: {exception}')
             return
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
@@ -391,7 +395,7 @@ class CalcJob(Process):
             try:
                 self.out(link_label, node)
             except ValueError as exception:
-                self.logger.error('invalid value {} specified with label {}: {}'.format(node, link_label, exception))
+                self.logger.error(f'invalid value {node} specified with label {link_label}: {exception}')
                 exit_code = self.exit_codes.ERROR_INVALID_OUTPUT  # pylint: disable=no-member
                 break
 
@@ -449,7 +453,7 @@ class CalcJob(Process):
         job_tmpl.rerunnable = False
         job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
-        job_tmpl.job_name = 'aiida-{}'.format(self.node.pk)
+        job_tmpl.job_name = f'aiida-{self.node.pk}'
         job_tmpl.sched_output_path = self.options.scheduler_stdout
         if self.options.scheduler_stderr == self.options.scheduler_stdout:
             job_tmpl.sched_join_files = True
@@ -610,15 +614,13 @@ class CalcJob(Process):
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError('[presubmission of calc {}] '
-                                      'local_copy_list format problem: {}'.format(this_pk, exc))
+            raise PluginInternalError(f'[presubmission of calc {this_pk}] local_copy_list format problem: {exc}')
 
         remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
         except ValidationError as exc:
-            raise PluginInternalError('[presubmission of calc {}] '
-                                      'remote_copy_list format problem: {}'.format(this_pk, exc))
+            raise PluginInternalError(f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exc}')
 
         for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
             try:

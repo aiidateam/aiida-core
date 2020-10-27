@@ -101,7 +101,7 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
-        return '{} IN ({})'.format(key, ', '.join(str(int(i)) for i in values))
+        return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
 
     def _str_exact_clause(self, key, alias, values):
         """
@@ -378,7 +378,7 @@ class IcsdDbImporter(DbImporter):
         for key, value in kwargs.items():
             if not isinstance(value, list):
                 value = [value]
-            sql_where_query.append('({})'.format(self.keywords_db[key][1](self, self.keywords_db[key][0], key, value)))
+            sql_where_query.append(f'({self.keywords_db[key][1](self, self.keywords_db[key][0], key, value)})')
         if 'crystal_system' in kwargs:  # to query another table than the main one, add LEFT JOIN in front of WHERE
             sql_query = 'LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT '\
                         'JOIN space_group_number ON '\
@@ -419,7 +419,7 @@ class IcsdDbImporter(DbImporter):
                 else:
                     self.actual_args[realname] = newv
             except KeyError as exc:
-                raise TypeError("ICSDImporter got an unexpected keyword argument '{}'".format(exc.args[0]))
+                raise TypeError(f"ICSDImporter got an unexpected keyword argument '{exc.args[0]}'")
 
         url_values = urlencode(self.actual_args)
         query_url = self.db_parameters['urladd'] + url_values
@@ -538,7 +538,7 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             sql_from_query = 'FROM icsd.icsd_database_information '
 
             self._connect_db()
-            query_statement = '{}{}'.format(sql_select_query, sql_from_query)
+            query_statement = f'{sql_select_query}{sql_from_query}'
             self.cursor.execute(query_statement)
             self.db.commit()
 

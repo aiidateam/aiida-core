@@ -45,7 +45,7 @@ def migration_base_data_plugin_type_string(data):
     for content in data['export_data'].get('Node', {}).values():
         if content.get('type', '').startswith('data.base.'):
             type_str = content['type'].replace('data.base.', '')
-            type_str = 'data.' + type_str.lower() + type_str
+            type_str = f'data.{type_str.lower()}{type_str}'
             content['type'] = type_str
 
 
@@ -73,7 +73,7 @@ def migration_code_sub_class_of_data(data):
 
 def migration_add_node_uuid_unique_constraint(data):
     """Apply migration: 0014 - REV. 1.0.14, 0018 - REV. 1.0.18
-    Check that no entries with the same uuid are present in the export file
+    Check that no entries with the same uuid are present in the archive file
     if yes - stop the import process
     """
     for entry_type in ['Group', 'Computer', 'Node']:
@@ -83,8 +83,8 @@ def migration_add_node_uuid_unique_constraint(data):
         unique_uuids = set(all_uuids)
         if len(all_uuids) != len(unique_uuids):
             echo.echo_critical(
-                """{}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
-            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue.""".format(entry_type)
+                f"""{entry_type}s with exactly the same UUID found, cannot proceed further. Please contact AiiDA
+            developers: http://www.aiida.net/mailing-list/ to help you resolve this issue."""
             )
 
 
@@ -434,7 +434,7 @@ def add_extras(data):
 
 def migrate_v3_to_v4(metadata, data, *args):
     """
-    Migration of export files from v0.3 to v0.4
+    Migration of archive files from v0.3 to v0.4
 
     Note concerning migration 0032 - REV. 1.0.32:
     Remove legacy workflow tables: DbWorkflow, DbWorkflowData, DbWorkflowStep

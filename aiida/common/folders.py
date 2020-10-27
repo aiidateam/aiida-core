@@ -188,7 +188,7 @@ class Folder:
                     # This automatically overwrites files
                     shutil.copyfile(src, dest_abs_path)
                 else:
-                    raise IOError('destination already exists: {}'.format(os.path.join(dest_abs_path)))
+                    raise IOError(f'destination already exists: {os.path.join(dest_abs_path)}')
             else:
                 shutil.copyfile(src, dest_abs_path)
         elif os.path.isdir(src):
@@ -201,7 +201,7 @@ class Folder:
                     # This automatically overwrites files
                     shutil.copytree(src, dest_abs_path)
                 else:
-                    raise IOError('destination already exists: {}'.format(os.path.join(dest_abs_path)))
+                    raise IOError(f'destination already exists: {os.path.join(dest_abs_path)}')
             else:
                 shutil.copytree(src, dest_abs_path)
         else:
@@ -262,12 +262,12 @@ class Folder:
         dest_abs_path = os.path.join(self.abspath, relpath)
 
         if not os.path.commonprefix([dest_abs_path, self.folder_limit]) == self.folder_limit:
-            errstr = "You didn't specify a valid filename: {}".format(relpath)
+            errstr = f"You didn't specify a valid filename: {relpath}"
             raise ValueError(errstr)
 
         if check_existence:
             if not os.path.exists(dest_abs_path):
-                raise OSError('{} does not exist within the folder {}'.format(relpath, self.abspath))
+                raise OSError(f'{relpath} does not exist within the folder {self.abspath}')
 
         return dest_abs_path
 
@@ -366,7 +366,7 @@ class Folder:
         if overwrite:
             self.erase()
         elif self.exists():
-            raise IOError('Location {} already exists, and overwrite is set to False'.format(self.abspath))
+            raise IOError(f'Location {self.abspath} already exists, and overwrite is set to False')
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)
@@ -466,7 +466,7 @@ class SubmitTestFolder(Folder):
 
         while True:
             counter += 1
-            subfolder_path = os.path.join(self.abspath, '{}-{:05d}'.format(subfolder_basename, counter))
+            subfolder_path = os.path.join(self.abspath, f'{subfolder_basename}-{counter:05d}')
 
             try:
                 os.mkdir(subfolder_path)
@@ -500,10 +500,7 @@ class RepositoryFolder(Folder):
         Pass the uuid as a string.
         """
         if section not in VALID_SECTIONS:
-            retstr = (
-                "Repository section '{}' not allowed. "
-                'Valid sections are: {}'.format(section, ','.join(VALID_SECTIONS))
-            )
+            retstr = (f"Repository section '{section}' not allowed. Valid sections are: {','.join(VALID_SECTIONS)}")
             raise ValueError(retstr)
         self._section = section
         self._uuid = uuid

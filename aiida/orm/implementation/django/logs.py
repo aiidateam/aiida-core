@@ -107,7 +107,7 @@ class DjangoLogCollection(BackendLogCollection):
         try:
             models.DbLog.objects.get(id=log_id).delete()
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Log with id '{}' not found".format(log_id))
+            raise exceptions.NotExistent(f"Log with id '{log_id}' not found")
 
     def delete_all(self):
         """
@@ -120,7 +120,7 @@ class DjangoLogCollection(BackendLogCollection):
             with transaction.atomic():
                 models.DbLog.objects.all().delete()
         except Exception as exc:
-            raise exceptions.IntegrityError('Could not delete all Logs. Full exception: {}'.format(exc))
+            raise exceptions.IntegrityError(f'Could not delete all Logs. Full exception: {exc}')
 
     def delete_many(self, filters):
         """

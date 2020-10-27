@@ -18,7 +18,7 @@ from aiida.tools.importexport.migration.utils import verify_metadata_version, up
 
 def migrate_v2_to_v3(metadata, data, *args):
     """
-    Migration of export files from v0.2 to v0.3, which means adding the link
+    Migration of archive files from v0.2 to v0.3, which means adding the link
     types to the link entries and making the entity key names backend agnostic
     by effectively removing the prefix 'aiida.backends.djsite.db.models'
 
@@ -29,7 +29,7 @@ def migrate_v2_to_v3(metadata, data, *args):
     old_version = '0.2'
     new_version = '0.3'
 
-    class LinkType(enum.Enum):  # pylint: disable=too-few-public-methods
+    class LinkType(enum.Enum):
         """This was the state of the `aiida.common.links.LinkType` enum before aiida-core v1.0.0a5"""
 
         UNSPECIFIED = 'unspecified'
@@ -38,7 +38,7 @@ def migrate_v2_to_v3(metadata, data, *args):
         INPUT = 'inputlink'
         CALL = 'calllink'
 
-    class NodeType(enum.Enum):  # pylint: disable=too-few-public-methods
+    class NodeType(enum.Enum):
         """A simple enum of relevant node types"""
 
         NONE = 'none'
@@ -92,7 +92,7 @@ def migrate_v2_to_v3(metadata, data, *args):
             input_type = NodeType(mapping[link['input']])
             output_type = NodeType(mapping[link['output']])
         except KeyError:
-            raise DanglingLinkError('Unknown node UUID {} or {}'.format(link['input'], link['output']))
+            raise DanglingLinkError(f"Unknown node UUID {link['input']} or {link['output']}")
 
         # The following table demonstrates the logic for inferring the link type
         # (CODE, DATA) -> (WORK, CALC) : INPUT

@@ -52,18 +52,18 @@ class CalcJobResultManager:
         try:
             process_class = self._node.process_class
         except ValueError as exception:
-            raise ValueError('cannot load results because process class cannot be loaded: {}'.format(exception))
+            raise ValueError(f'cannot load results because process class cannot be loaded: {exception}')
 
         process_spec = process_class.spec()
         default_output_node_label = process_spec.default_output_node
 
         if default_output_node_label is None:
-            raise ValueError('cannot load results as {} does not specify a default output node'.format(process_class))
+            raise ValueError(f'cannot load results as {process_class} does not specify a default output node')
 
         try:
             default_output_node = self.node.get_outgoing().get_node_by_label(default_output_node_label)
         except exceptions.NotExistent as exception:
-            raise ValueError('cannot load results as the default node could not be retrieved: {}'.format(exception))
+            raise ValueError(f'cannot load results as the default node could not be retrieved: {exception}')
 
         self._result_node = default_output_node
         self._results = default_output_node.get_dict()
@@ -100,7 +100,7 @@ class CalcJobResultManager:
         except ValueError as exception:
             raise AttributeError from exception
         except KeyError:
-            raise AttributeError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))
+            raise AttributeError(f"Default result node<{self._result_node.pk}> does not contain key '{name}'")
 
     def __getitem__(self, name):
         """Return an attribute from the results dictionary.
@@ -114,4 +114,4 @@ class CalcJobResultManager:
         except ValueError as exception:
             raise KeyError from exception
         except KeyError:
-            raise KeyError("Default result node<{}> does not contain key '{}'".format(self._result_node.pk, name))
+            raise KeyError(f"Default result node<{self._result_node.pk}> does not contain key '{name}'")

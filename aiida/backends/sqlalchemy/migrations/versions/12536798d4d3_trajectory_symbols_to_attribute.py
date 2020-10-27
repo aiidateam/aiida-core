@@ -69,4 +69,4 @@ def downgrade():
 
     for pk, _ in nodes:
         connection.execute(
-            text("""UPDATE db_dbnode SET attributes = attributes #- '{{symbols}}' WHERE id = {}""".format(pk)))
+            text(f"""UPDATE db_dbnode SET attributes = attributes #- '{{symbols}}' WHERE id = {pk}"""))

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-"""Test export file migration from export version 0.3 to 0.4"""
+"""Test archive file migration from export version 0.3 to 0.4"""
 import tarfile
 import zipfile
 
@@ -47,7 +47,7 @@ class TestMigrate(ArchiveMigrationTest):
                 with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                     metadata = jsonload(fhandle)
             except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+                raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
             verify_metadata_version(metadata, version='0.3')
 
@@ -75,12 +75,10 @@ class TestMigrate(ArchiveMigrationTest):
         for change in new_node_attrs:
             # data.json
             for node in data['export_data']['Node'].values():
-                self.assertIn(change, node, msg="'{}' not found for {}".format(change, node))
+                self.assertIn(change, node, msg=f"'{change}' not found for {node}")
             # metadata.json
             self.assertIn(
-                change,
-                metadata['all_fields_info']['Node'],
-                msg="'{}' not found in metadata.json for Node".format(change)
+                change, metadata['all_fields_info']['Node'], msg=f"'{change}' not found in metadata.json for Node"
             )
 
         # Check Node types
@@ -95,14 +93,12 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertIn(
                 node['node_type'],
                 legal_node_types,
-                msg='{} is not a legal node_type. Legal node types: {}'.format(node['node_type'], legal_node_types)
+                msg=f"{node['node_type']} is not a legal node_type. Legal node types: {legal_node_types}"
             )
             self.assertIn(
                 node['process_type'],
                 legal_process_types,
-                msg='{} is not a legal process_type. Legal process types: {}'.format(
-                    node['process_type'], legal_node_types
-                )
+                msg=f"{node['process_type']} is not a legal process_type. Legal process types: {legal_node_types}"
             )
 
         # Check links
@@ -117,23 +113,23 @@ class TestMigrate(ArchiveMigrationTest):
         for link in data['links_uuid']:
             self.assertIn(link['type'], legal_link_types)
         for link in illegal_links:
-            self.assertNotIn(link, data['links_uuid'], msg='{} should not be in the migrated export file'.format(link))
+            self.assertNotIn(link, data['links_uuid'], msg=f'{link} should not be in the migrated archive file')
 
         # Check Groups
-        # There is one Group in the export file, it is a user group
+        # There is one Group in the archive file, it is a user group
         updated_attrs = {'label', 'type_string'}
         legal_group_type = {'user'}
         for attr in updated_attrs:
             # data.json
             for group in data['export_data']['Group'].values():
-                self.assertIn(attr, group, msg='{} not found in Group {}'.format(attr, group))
+                self.assertIn(attr, group, msg=f'{attr} not found in Group {group}')
                 self.assertIn(
                     group['type_string'],
                     legal_group_type,
-                    msg='{} is not a legal Group type_string'.format(group['type_string'])
+                    msg=f"{group['type_string']} is not a legal Group type_string"
                 )
             # metadata.json
-            self.assertIn(attr, metadata['all_fields_info']['Group'], msg='{} not found in metadata.json'.format(attr))
+            self.assertIn(attr, metadata['all_fields_info']['Group'], msg=f'{attr} not found in metadata.json')
 
         # Check node_attributes*
         calcjob_nodes = []
@@ -154,7 +150,7 @@ class TestMigrate(ArchiveMigrationTest):
                     self.assertIn(
                         attr,
                         data[field][node_id],
-                        msg="Updated attribute name '{}' not found in {} for node_id: {}".format(attr, field, node_id)
+                        msg=f"Updated attribute name '{attr}' not found in {field} for node_id: {node_id}"
                     )
                 for old, new in optional_updated_calcjob_attrs.items():
                     self.assertNotIn(
@@ -168,11 +164,11 @@ class TestMigrate(ArchiveMigrationTest):
                     self.assertIn(
                         attr,
                         data[field][node_id],
-                        msg="Updated attribute name '{}' not found in {} for node_id: {}".format(attr, field, node_id)
+                        msg=f"Updated attribute name '{attr}' not found in {field} for node_id: {node_id}"
                     )
 
         # Check TrajectoryData
-        # There should be minimum one TrajectoryData in the export file
+        # There should be minimum one TrajectoryData in the archive file
         trajectorydata_nodes = []
         for node_id, content in data['export_data']['Node'].items():
             if content['node_type'] == 'data.array.trajectory.TrajectoryData.':
@@ -197,13 +193,13 @@ class TestMigrate(ArchiveMigrationTest):
             # data.json
             for computer in data['export_data']['Computer'].values():
                 self.assertNotIn(
-                    attr, computer, msg="'{}' should have been removed from Computer {}".format(attr, computer['name'])
+                    attr, computer, msg=f"'{attr}' should have been removed from Computer {computer['name']}"
                 )
             # metadata.json
             self.assertNotIn(
                 attr,
                 metadata['all_fields_info']['Computer'],
-                msg="'{}' should have been removed from Computer in metadata.json".format(attr)
+                msg=f"'{attr}' should have been removed from Computer in metadata.json"
             )
 
         # Check new entities
@@ -211,7 +207,7 @@ class TestMigrate(ArchiveMigrationTest):
         fields = {'all_fields_info', 'unique_identifiers'}
         for entity in new_entities:
             for field in fields:
-                self.assertIn(entity, metadata[field], msg='{} not found in {} in metadata.json'.format(entity, field))
+                self.assertIn(entity, metadata[field], msg=f'{entity} not found in {field} in metadata.json')
 
         # Check extras
         # Dicts with key, vales equal to node_id, {} should be present
@@ -219,7 +215,7 @@ class TestMigrate(ArchiveMigrationTest):
         attrs_count = len(data['node_attributes'])
         new_fields = {'node_extras', 'node_extras_conversion'}
         for field in new_fields:
-            self.assertIn(field, list(data.keys()), msg="New field '{}' not found in data.json".format(field))
+            self.assertIn(field, list(data.keys()), msg=f"New field '{field}' not found in data.json")
             self.assertEqual(
                 len(data[field]),
                 attrs_count,
@@ -253,7 +249,7 @@ class TestMigrate(ArchiveMigrationTest):
                 with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                     metadata_v3 = jsonload(fhandle)
             except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+                raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
             # Migrate to v0.4
             migrate_v3_to_v4(metadata_v3, data_v3, folder)
@@ -309,7 +305,7 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertListEqual(
                 sorted(details['migrated']),
                 sorted(details['made']),
-                msg='Number of {}-entities differ, see diff for details'.format(entity)
+                msg=f'Number of {entity}-entities differ, see diff for details'
             )
 
         fields = {
@@ -324,7 +320,7 @@ class TestMigrate(ArchiveMigrationTest):
             self.assertEqual(
                 len(data_v3[field]),
                 len(data_v4[field]) - correction,
-                msg='Number of entities in {} differs for the export files'.format(field)
+                msg=f'Number of entities in {field} differs for the archive files'
             )
 
         number_of_links_v3 = {
@@ -354,7 +350,7 @@ class TestMigrate(ArchiveMigrationTest):
         self.assertDictEqual(
             number_of_links_v3,
             number_of_links_v4,
-            msg='There are a different number of specific links in the migrated export file than the AiiDA made one.'
+            msg='There are a different number of specific links in the migrated archive file than the AiiDA made one.'
         )
 
         self.assertEqual(number_of_links_v3['unspecified'], 0)
@@ -389,9 +385,9 @@ class TestMigrate(ArchiveMigrationTest):
                 with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                     metadata = jsonload(fhandle)
             except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+                raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
-            # Check illegal create links are present in org. export file
+            # Check illegal create links are present in org. archive file
             links_count = len(data['links_uuid'])
             links_count_migrated = links_count - known_illegal_links
 
@@ -419,9 +415,7 @@ class TestMigrate(ArchiveMigrationTest):
         self.assertEqual(
             len(data['links_uuid']),
             links_count_migrated,
-            msg='{} links were expected, instead {} was/were found'.format(
-                links_count_migrated, len(data['links_uuid'])
-            )
+            msg=f"{links_count_migrated} links were expected, instead {len(data['links_uuid'])} was/were found"
         )
 
         workfunc_uuids = {
@@ -434,5 +428,5 @@ class TestMigrate(ArchiveMigrationTest):
             if link['input'] in workfunc_uuids and link['type'] == 'create':
                 violations.append(link)
         self.assertEqual(
-            len(violations), 0, msg='0 illegal links were expected, instead {} was/were found'.format(len(violations))
+            len(violations), 0, msg=f'0 illegal links were expected, instead {len(violations)} was/were found'
         )

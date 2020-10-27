@@ -893,7 +893,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
         self.assertTrue('#PBS -l nodes=1:ppn=1,walltime=24:00:00' in submit_script_text)
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine(self):
         """
@@ -923,7 +923,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
         self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
         """
@@ -953,7 +953,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
         self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
         """
@@ -985,7 +985,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
         self.assertTrue('#PBS -l nodes=1:ppn=24,walltime=24:00:00' in submit_script_text)
-        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
         """

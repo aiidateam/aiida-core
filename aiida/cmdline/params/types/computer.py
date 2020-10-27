@@ -55,7 +55,7 @@ class ShebangParamType(StringParamType):
         if newval is None:
             return None
         if not newval.startswith('#!'):
-            self.fail('The shebang line should start with the two caracters #!, it is instead: {}'.format(newval))
+            self.fail(f'The shebang line should start with the two caracters #!, it is instead: {newval}')
         return newval
 
     def __repr__(self):
@@ -87,7 +87,7 @@ class MpirunCommandParamType(StringParamType):
             try:
                 job_resource_keys = scheduler_ep.load().job_resource_class.get_valid_keys()
             except ImportError:
-                self.fail("Unable to load the '{}' scheduler".format(scheduler_ep.name))
+                self.fail(f"Unable to load the '{scheduler_ep.name}' scheduler")
         else:
             self.fail(
                 'Scheduler not specified for this computer! The mpirun-command must always be asked '
@@ -101,8 +101,8 @@ class MpirunCommandParamType(StringParamType):
         try:
             newval.format(**subst)
         except KeyError as exc:
-            self.fail("In workdir there is an unknown replacement field '{}'".format(exc.args[0]))
+            self.fail(f"In workdir there is an unknown replacement field '{exc.args[0]}'")
         except ValueError as exc:
-            self.fail("Error in the string: '{}'".format(exc))
+            self.fail(f"Error in the string: '{exc}'")
 
         return newval

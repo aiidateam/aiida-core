@@ -46,4 +46,4 @@ class DbComputer(Base):
         return self.id
 
     def __str__(self):
-        return '{} ({})'.format(self.name, self.hostname)
+        return f'{self.name} ({self.hostname})'

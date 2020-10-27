@@ -47,7 +47,7 @@ class KpointsData(ArrayData):
             )
         except AttributeError:
             try:
-                return '(Path of {} kpts)'.format(len(self.get_kpoints()))
+                return f'(Path of {len(self.get_kpoints())} kpts)'
             except OSError:
                 return self.node_type
 
@@ -370,10 +370,10 @@ class KpointsData(ArrayData):
                 # replace by singletons
                 kpoints = kpoints.reshape(kpoints.shape[0], 1)
             else:
-                raise ValueError('kpoints must be a list of lists in {}D case'.format(self._dimension))
+                raise ValueError(f'kpoints must be a list of lists in {self._dimension}D case')
 
         if kpoints.dtype != numpy.dtype(numpy.float):
-            raise ValueError('kpoints must be an array of type floats. Found instead {}'.format(kpoints.dtype))
+            raise ValueError(f'kpoints must be an array of type floats. Found instead {kpoints.dtype}')
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
@@ -384,9 +384,9 @@ class KpointsData(ArrayData):
         if weights is not None:
             weights = numpy.array(weights)
             if weights.shape[0] != kpoints.shape[0]:
-                raise ValueError('Found {} weights but {} kpoints'.format(weights.shape[0], kpoints.shape[0]))
+                raise ValueError(f'Found {weights.shape[0]} weights but {kpoints.shape[0]} kpoints')
             if weights.dtype != numpy.dtype(numpy.float):
-                raise ValueError('weights must be an array of type floats. Found instead {}'.format(weights.dtype))
+                raise ValueError(f'weights must be an array of type floats. Found instead {weights.dtype}')
 
         return kpoints, weights
 
@@ -436,10 +436,7 @@ class KpointsData(ArrayData):
                 fill_values = [fill_values] * (3 - the_kpoints.shape[1])
 
             if len(fill_values) < 3 - the_kpoints.shape[1]:
-                raise ValueError(
-                    'fill_values should be either a scalar or a '
-                    'length-{} list'.format(3 - the_kpoints.shape[1])
-                )
+                raise ValueError(f'fill_values should be either a scalar or a length-{3 - the_kpoints.shape[1]} list')
             else:
                 tmp_kpoints = numpy.zeros((the_kpoints.shape[0], 0))
                 i_kpts = 0

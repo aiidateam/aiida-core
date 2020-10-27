@@ -24,7 +24,7 @@ VERDI_BIN = shutil.which('verdi')
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 
-class ControllerProtocol(enum.Enum):  # pylint: disable=too-few-public-methods
+class ControllerProtocol(enum.Enum):
     """
     The protocol to use to for the controller of the Circus daemon
     """
@@ -98,7 +98,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
                 "Unable to find 'verdi' in the path. Make sure that you are working "
                 "in a virtual environment, or that at least the 'verdi' executable is on the PATH"
             )
-        return '{} -p {} devel run_daemon'.format(VERDI_BIN, self.profile.name)
+        return f'{VERDI_BIN} -p {self.profile.name} devel run_daemon'
 
     @property
     def loglevel(self):
@@ -254,7 +254,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint(self.get_circus_port())
         else:
-            raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
+            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
 
         return endpoint
 
@@ -270,7 +270,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
-            raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
+            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
 
         return endpoint
 
@@ -286,7 +286,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         elif self._ENDPOINT_PROTOCOL == ControllerProtocol.TCP:
             endpoint = self.get_tcp_endpoint()
         else:
-            raise ValueError('invalid controller protocol {}'.format(self._ENDPOINT_PROTOCOL))
+            raise ValueError(f'invalid controller protocol {self._ENDPOINT_PROTOCOL}')
 
         return endpoint
 

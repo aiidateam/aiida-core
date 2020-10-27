@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.5 to 0.6"""
+"""Test archive file migration from export version 0.5 to 0.6"""
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 from aiida.tools.importexport.migration.utils import verify_metadata_version
 from aiida.tools.importexport.migration.v05_to_v06 import migrate_v5_to_v6
@@ -26,7 +26,7 @@ class TestMigrate(ArchiveMigrationTest):
         # Explicitly check that conversion dictionaries were removed
         illegal_data_dicts = {'node_attributes_conversion', 'node_extras_conversion'}
         for dict_ in illegal_data_dicts:
-            self.assertNotIn(dict_, data, msg="dictionary '{}' should have been removed from data.json".format(dict_))
+            self.assertNotIn(dict_, data, msg=f"dictionary '{dict_}' should have been removed from data.json")
 
     def test_migrate_v5_to_v6_calc_states(self):
         """Test the data migration of legacy `JobCalcState` attributes.
@@ -85,7 +85,7 @@ class TestMigrate(ArchiveMigrationTest):
                 continue
 
             serialized_original = values['scheduler_lastchecktime']
-            msg = 'the serialized datetime before migration should not contain a plus: {}'.format(serialized_original)
+            msg = f'the serialized datetime before migration should not contain a plus: {serialized_original}'
             self.assertTrue('+' not in serialized_original, msg=msg)
 
             # Migrate to v0.6
@@ -93,7 +93,7 @@ class TestMigrate(ArchiveMigrationTest):
             verify_metadata_version(metadata, version='0.6')
 
             serialized_migrated = data['node_attributes'][key]['scheduler_lastchecktime']
-            self.assertEqual(serialized_migrated, serialized_original + '+00:00')
+            self.assertEqual(serialized_migrated, f'{serialized_original}+00:00')
             break
 
         else:

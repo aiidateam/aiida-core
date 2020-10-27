@@ -12,7 +12,7 @@
 
 from aiida.engine import calcfunction
 from aiida.orm import CifData
-from aiida.orm.utils.node import clean_value
+from aiida.orm.implementation.utils import clean_value
 
 
 class InvalidOccupationsError(Exception):
@@ -63,12 +63,12 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
             elif matrix[i][j] < -eps:
                 sign = '-'
             if sign:
-                parts[i] = format('{}{}{}'.format(parts[i], sign, axes[j]))
+                parts[i] = format(f'{parts[i]}{sign}{axes[j]}')
         if tr[i] < -eps or tr[i] > eps:
             sign = '+'
             if tr[i] < -eps:
                 sign = '-'
-            parts[i] = format('{}{}{}'.format(parts[i], sign, abs(tr[i])))
+            parts[i] = format(f'{parts[i]}{sign}{abs(tr[i])}')
         parts[i] = re.sub(r'^\+', '', parts[i])
     return ','.join(parts)
 
@@ -141,12 +141,12 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
             structures = parser.get_structures(**parameters)
         except ValueError:
             # If it still fails, the occupancies were not the reason for failure
-            raise ValueError('pymatgen failed to provide a structure from the cif file')
+            raise ValueError('pymatgen failed to provide a structure from the cif file') from ValueError
         else:
             # If it now succeeds, non-unity occupancies were the culprit
             raise InvalidOccupationsError(
                 'detected atomic sites with an occupation number larger than the occupation tolerance'
-            )
+            ) from ValueError
 
     return {'structure': StructureData(pymatgen_structure=structures[0])}
 

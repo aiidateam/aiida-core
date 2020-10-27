@@ -44,7 +44,7 @@ class ProfileParamType(LabelStringType):
             profile = Profile(value, {})
         else:
             if self._cannot_exist:
-                self.fail(str('the profile `{}` already exists'.format(value)))
+                self.fail(str(f'the profile `{value}` already exists'))
 
         if self._load_profile:
             load_profile(profile.name)

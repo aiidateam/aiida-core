@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
 """Tests for the `aiida.manage.external.rmq` module."""
 import pytest
 
@@ -23,7 +31,7 @@ def test_get_rmq_url(args, kwargs, expected):
         url = rmq.get_rmq_url(*args, **kwargs)
         assert url.startswith(expected)
         for key, value in kwargs.items():
-            assert '{}={}'.format(key, value) in url
+            assert f'{key}={value}' in url
     else:
         with pytest.raises(expected):
             rmq.get_rmq_url(*args, **kwargs)

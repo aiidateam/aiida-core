@@ -140,8 +140,8 @@ class DbNode(Base):
         simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
-            return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
-        return '{} node [{}]'.format(simplename, self.pk)
+            return f'{simplename} node [{self.pk}]: {self.label}'
+        return f'{simplename} node [{self.pk}]'
 
 
 class DbLink(Base):

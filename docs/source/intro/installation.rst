@@ -13,7 +13,7 @@ AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operati
 
 * `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or
   `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ (The shell)
-* `python`_ >= 3.5 (The programming language used by AiiDA)
+* `python`_ >= 3.6 (The programming language used by AiiDA)
 * `python3-pip`_ (Python 3 package manager)
 * `postgresql`_ (Database software, version 9.4 or higher)
 * `RabbitMQ`_ (A message broker necessary for AiiDA to communicate between processes)
@@ -687,7 +687,7 @@ The following parameters can be configured:
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
 | Port         | ``--broker-port``         | ``5672``      | The port to which the server listens.                                                                                   |
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
-| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. If defined, needs to start with a forward slash.                                                 |
+| Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. Should not contain the leading forward slash, this will be added automatically by AiiDA.         |
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
 
 

@@ -17,7 +17,7 @@ class AbstractQueryManager(abc.ABC):
     def __init__(self, backend):
         """
         :param backend: The AiiDA backend
-        :type backend: :class:`aiida.orm.implementation.sql.SqlBackend`
+        :type backend: :class:`aiida.orm.implementation.sql.backends.SqlBackend`
         """
         self._backend = backend
 
@@ -31,15 +31,15 @@ class AbstractQueryManager(abc.ABC):
         :return: list of tuples of (id, uuid) of rows with duplicate UUIDs
         :rtype list:
         """
-        query = """
-            SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {})
+        query = f"""
+            SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {table})
             AS s WHERE c > 1
-            """.format(table)
+            """
         return self._backend.execute_raw(query)
 
     def apply_new_uuid_mapping(self, table, mapping):
         for pk, uuid in mapping.items():
-            query = """UPDATE {table:} SET uuid = '{uuid:}' WHERE id = {pk:}""".format(table=table, uuid=uuid, pk=pk)
+            query = f"""UPDATE {table} SET uuid = '{uuid}' WHERE id = {pk}"""
             with self._backend.cursor() as cursor:
                 cursor.execute(query)
 

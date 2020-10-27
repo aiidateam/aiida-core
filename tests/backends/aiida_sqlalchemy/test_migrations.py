@@ -59,7 +59,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         self.current_autogroup = autogroup.CURRENT_AUTOGROUP
         autogroup.CURRENT_AUTOGROUP = None
         assert self.migrate_from and self.migrate_to, \
-            "TestCase '{}' must define migrate_from and migrate_to properties".format(type(self).__name__)
+            f"TestCase '{type(self).__name__}' must define migrate_from and migrate_to properties"
 
         try:
             self.migrate_db_down(self.migrate_from)
@@ -202,7 +202,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         attributes = node.attributes
         if attributes is None:
             attributes = {}
-        attributes['array|{}'.format(name)] = list(array.shape)
+        attributes[f'array|{name}'] = list(array.shape)
         node.attributes = attributes
         flag_modified(node, 'attributes')
 
@@ -347,7 +347,7 @@ class TestProvenanceRedesignMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -447,7 +447,7 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
 
         with self.get_session() as session:
             try:
-                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
+                default_user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(default_user)
                 session.commit()
 
@@ -533,7 +533,7 @@ class TestCalcAttributeKeysMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -657,7 +657,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -898,7 +898,7 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1007,7 +1007,7 @@ class TestDbLogUUIDAddition(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1064,7 +1064,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1129,7 +1129,7 @@ class TestTrajectoryDataMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1188,7 +1188,7 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1242,7 +1242,7 @@ class TestParameterDataToDictMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1293,7 +1293,7 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1358,7 +1358,7 @@ class TestResetHash(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1410,7 +1410,7 @@ class TestLegacyProcessAttributeMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1511,7 +1511,7 @@ class TestSealUnsealedProcessesMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1606,7 +1606,7 @@ class TestDefaultLinkLabelMigration(TestMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                user = DbUser(email='{}@aiida.net'.format(self.id()))
+                user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(user)
                 session.commit()
 
@@ -1657,7 +1657,7 @@ class TestGroupTypeStringMigration(TestMigrationsSQLA):
 
         with self.get_session() as session:
             try:
-                default_user = DbUser(email='{}@aiida.net'.format(self.id()))
+                default_user = DbUser(email=f'{self.id()}@aiida.net')
                 session.add(default_user)
                 session.commit()
 
@@ -1706,5 +1706,44 @@ class TestGroupTypeStringMigration(TestMigrationsSQLA):
                 # test auto.run group type_string: 'auto.run' -> 'core.auto'
                 group_autorun = session.query(DbGroup).filter(DbGroup.id == self.group_autorun_pk).one()
                 self.assertEqual(group_autorun.type_string, 'core.auto')
+            finally:
+                session.close()
+
+
+class TestGroupExtrasMigration(TestMigrationsSQLA):
+    """Test migration to add the `extras` JSONB column to the `DbGroup` model."""
+
+    migrate_from = 'bf591f31dd12'  # bf591f31dd12_dbgroup_type_string.py
+    migrate_to = '0edcdd5a30f0'  # 0edcdd5a30f0_dbgroup_extras.py
+
+    def setUpBeforeMigration(self):
+        """Create a DbGroup."""
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+        DbUser = self.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                default_user = DbUser(email=f'{self.id()}@aiida.net')
+                session.add(default_user)
+                session.commit()
+
+                group = DbGroup(label='01', user_id=default_user.id, type_string='user')
+                session.add(group)
+                session.commit()
+
+                # Store values for later tests
+                self.group_pk = group.id
+
+            finally:
+                session.close()
+
+    def test_group_string_update(self):
+        """Test that the model now has an extras column with empty dictionary as default."""
+        DbGroup = self.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+
+        with self.get_session() as session:
+            try:
+                group = session.query(DbGroup).filter(DbGroup.id == self.group_pk).one()
+                self.assertEqual(group.extras, {})
             finally:
                 session.close()

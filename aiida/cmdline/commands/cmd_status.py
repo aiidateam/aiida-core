@@ -74,7 +74,7 @@ def verdi_status(print_traceback, no_rmq):
 
     try:
         profile = manager.get_profile()
-        print_status(ServiceStatus.UP, 'profile', 'On profile {}'.format(profile.name))
+        print_status(ServiceStatus.UP, 'profile', f'On profile {profile.name}')
     except Exception as exc:
         message = 'Unable to read AiiDA profile'
         print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
@@ -115,11 +115,11 @@ def verdi_status(print_traceback, no_rmq):
                     comm = manager.create_communicator(with_orm=False)
                     comm.stop()
         except Exception as exc:
-            message = 'Unable to connect to rabbitmq with URL: {}'.format(profile.get_rmq_url())
+            message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            print_status(ServiceStatus.UP, 'rabbitmq', 'Connected as {}'.format(profile.get_rmq_url()))
+            print_status(ServiceStatus.UP, 'rabbitmq', f'Connected as {profile.get_rmq_url()}')
 
     # Getting the daemon status
     try:
@@ -152,11 +152,11 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    click.secho(' {} '.format(symbol['string']), fg=symbol['color'], nl=False)
-    click.secho('{:12s} {}'.format(service + ':', msg))
+    click.secho(f" {symbol['string']} ", fg=symbol['color'], nl=False)
+    click.secho(f"{service + ':':12s} {msg}")
 
     if exception is not None:
-        echo.echo_error('{}: {}'.format(type(exception).__name__, exception))
+        echo.echo_error(f'{type(exception).__name__}: {exception}')
 
     if print_traceback:
         import traceback

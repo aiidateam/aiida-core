@@ -43,7 +43,7 @@ def verify_node_uuid_uniqueness():
 
     if duplicates:
         table = 'db_dbnode'
-        command = '`verdi database integrity detect-duplicate-uuid {table}`'.format(table=table)
+        command = f'`verdi database integrity detect-duplicate-uuid {table}`'
         raise IntegrityError(
             'Your table "{}" contains entries with duplicate UUIDS.\nRun {} '
             'to return to a consistent state'.format(table, command)

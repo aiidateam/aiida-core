@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from aiida.common.lang import type_check
 
-from aiida.tools.importexport.common.config import BAR_FORMAT
+from aiida.common.progress_reporter import TQDM_BAR_FORMAT as BAR_FORMAT
 from aiida.tools.importexport.common.exceptions import ProgressBarError
 
 __all__ = ('get_progress_bar', 'close_progress_bar')
@@ -67,8 +67,7 @@ def get_progress_bar(iterable=None, total=None, leave=None, **kwargs):
                 setattr(PROGRESS_BAR, attribute, value)
             except AttributeError:
                 raise ProgressBarError(
-                    'The given attribute {} either can not be set or does not exist for the progress bar.'.
-                    format(attribute)
+                    f'The given attribute {attribute} either can not be set or does not exist for the progress bar.'
                 )
 
     return PROGRESS_BAR

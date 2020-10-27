@@ -37,7 +37,7 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
         'database_name': kwargs.pop('database_name', name),
         'database_username': kwargs.pop('database_username', 'user'),
         'database_password': kwargs.pop('database_password', 'pass'),
-        'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
+        'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
     }
 
     return Profile(name, profile_dictionary)

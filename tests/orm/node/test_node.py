@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods
 """Tests for the Node ORM class."""
+import io
 import os
 import tempfile
 
@@ -335,6 +336,20 @@ class TestNodeAttributesExtras(AiidaTestCase):
 
     def test_delete_extra_many(self):
         """Test the `Node.delete_extra_many` method."""
+        self.node.set_extra('valid_key', 'value')
+        self.assertEqual(self.node.get_extra('valid_key'), 'value')
+        self.node.delete_extra('valid_key')
+
+        with self.assertRaises(AttributeError):
+            self.node.delete_extra('valid_key')
+
+        # Repeat with stored group
+        self.node.set_extra('valid_key', 'value')
+        self.node.store()
+
+        self.node.delete_extra('valid_key')
+        with self.assertRaises(AttributeError):
+            load_node(self.node.pk).get_extra('valid_key')
 
     def test_clear_extras(self):
         """Test the `Node.clear_extras` method."""
@@ -828,3 +843,20 @@ def test_store_from_cache():
     assert clone.is_stored
     assert clone.get_cache_source() == data.uuid
     assert data.get_hash() == clone.get_hash()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_open_wrapper():
+    """Test the wrapper around the return value of ``Node.open``.
+
+    This should be remove in v2.0.0 because the wrapper should be removed.
+    """
+    filename = 'test'
+    node = Node()
+    node.put_object_from_filelike(io.StringIO('test'), filename)
+
+    # Both `iter` and `next` should not raise
+    next(node.open(filename))
+    iter(node.open(filename))
+    node.open(filename).__next__()
+    node.open(filename).__iter__()

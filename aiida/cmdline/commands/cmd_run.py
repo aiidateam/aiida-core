@@ -47,7 +47,7 @@ def validate_entrypoint_string(ctx, param, value):  # pylint: disable=unused-arg
     try:
         autogroup.Autogroup.validate(value)
     except Exception as exc:
-        raise click.BadParameter(str(exc) + ' ({})'.format(value))
+        raise click.BadParameter(f'{str(exc)} ({value})')
 
     return value
 
@@ -106,7 +106,7 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, ex
 
     # Dynamically load modules (the same of verdi shell) - but in globals_dict, not in the current environment
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
-        globals_dict['{}'.format(alias)] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
+        globals_dict[f'{alias}'] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
     if group_name:
         warnings.warn('--group-name is deprecated, use `--auto-group-label-prefix` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
@@ -137,7 +137,7 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, ex
         # Here we use a standard open and not open, as exec will later fail if passed a unicode type string.
         handle = open(scriptname, 'r')
     except IOError:
-        echo.echo_critical("Unable to load file '{}'".format(scriptname))
+        echo.echo_critical(f"Unable to load file '{scriptname}'")
     else:
         try:
             # Must add also argv[0]

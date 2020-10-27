@@ -70,7 +70,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             try:
                 self._dbmodel.save()
             except Exception:
-                raise UniquenessError('a group of the same type with the label {} already exists'.format(label))
+                raise UniquenessError(f'a group of the same type with the label {label} already exists') \
+                    from Exception
 
     @property
     def description(self):
@@ -109,7 +110,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         if not self.is_stored:
             return None
 
-        return self._dbnode.id
+        return self._dbnode.id  # pylint: disable=no-member
 
     @property
     def is_stored(self):
@@ -193,7 +194,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         def check_node(given_node):
             """ Check if given node is of correct type and stored """
             if not isinstance(given_node, SqlaNode):
-                raise TypeError('invalid type {}, has to be {}'.format(type(given_node), SqlaNode))
+                raise TypeError(f'invalid type {type(given_node)}, has to be {SqlaNode}')
 
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -251,7 +252,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         def check_node(node):
             if not isinstance(node, SqlaNode):
-                raise TypeError('invalid type {}, has to be {}'.format(type(node), SqlaNode))
+                raise TypeError(f'invalid type {type(node)}, has to be {SqlaNode}')
 
             if node.id is None:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -348,11 +349,11 @@ class SqlaGroupCollection(BackendGroupCollection):
                 if not value:
                     continue
                 if key == 'startswith':
-                    filters.append(DbGroup.label.like('{}%'.format(value)))
+                    filters.append(DbGroup.label.like(f'{value}%'))
                 elif key == 'endswith':
-                    filters.append(DbGroup.label.like('%{}'.format(value)))
+                    filters.append(DbGroup.label.like(f'%{value}'))
                 elif key == 'contains':
-                    filters.append(DbGroup.label.like('%{}%'.format(value)))
+                    filters.append(DbGroup.label.like(f'%{value}%'))
 
         if node_attributes:
             _LOGGER.warning("SQLA query doesn't support node attribute filters, ignoring '%s'", node_attributes)

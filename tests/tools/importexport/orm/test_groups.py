@@ -153,11 +153,11 @@ class TestGroups(AiidaTestCase):
         import_data(filename, silent=True)
         # The import should have created a new group with a suffix
         # I check for this:
-        builder = orm.QueryBuilder().append(orm.Group, filters={'label': {'like': grouplabel + '%'}})
+        builder = orm.QueryBuilder().append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}})
         self.assertEqual(builder.count(), 2)
         # Now I check for the group having one member, and whether the name is different:
         builder = orm.QueryBuilder()
-        builder.append(orm.Group, filters={'label': {'like': grouplabel + '%'}}, tag='g', project='label')
+        builder.append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}}, tag='g', project='label')
         builder.append(orm.StructureData, with_group='g')
         self.assertEqual(builder.count(), 1)
         # I check that the group name was changed:
@@ -165,7 +165,7 @@ class TestGroups(AiidaTestCase):
         # I import another name, the group should not be imported again
         import_data(filename, silent=True)
         builder = orm.QueryBuilder()
-        builder.append(orm.Group, filters={'label': {'like': grouplabel + '%'}})
+        builder.append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}})
         self.assertEqual(builder.count(), 2)
 
     @with_temp_dir
@@ -205,8 +205,7 @@ class TestGroups(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             1,
-            msg='There should be exactly one Group with label {}. '
-            'Instead {} was found.'.format(group_label, builder.count())
+            msg=f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
         )
         imported_group = load_group(builder.all()[0][0])
         self.assertEqual(imported_group.uuid, group_uuid)

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Data migration for `TrajectoryData` nodes where symbol lists are moved from repository array to attribute.
 
 This process has to be done in two separate consecutive migrations to prevent data loss in between.

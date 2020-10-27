@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from old export versions to the newest"""
+"""Test archive file migration from old export versions to the newest"""
 import os
 
 from aiida import orm
@@ -20,14 +20,14 @@ from tests.utils.configuration import with_temp_dir
 
 
 class TestExportFileMigration(AiidaTestCase):
-    """Test export file migrations"""
+    """Test archive file migrations"""
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Add variables (once) to be used by all tests"""
         super().setUpClass(*args, **kwargs)
 
-        # Known export file content used for checks
+        # Known archive file content used for checks
         cls.node_count = 25
         cls.struct_count = 2
         cls.known_struct_label = ''
@@ -91,7 +91,7 @@ class TestExportFileMigration(AiidaTestCase):
                 with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                     metadata = jsonload(fhandle)
             except IOError:
-                raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+                raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
             verify_metadata_version(metadata, version='0.1')
 
@@ -122,7 +122,7 @@ class TestExportFileMigration(AiidaTestCase):
 
     @with_temp_dir
     def test_no_node_export(self, temp_dir):
-        """Test migration of export file that has no Nodes"""
+        """Test migration of archive file that has no Nodes"""
         input_file = get_archive_file('export_v0.3_no_Nodes.aiida', **self.external_archive)
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
@@ -130,7 +130,7 @@ class TestExportFileMigration(AiidaTestCase):
         computer_uuids = [self.computer.uuid]  # pylint: disable=no-member
         user_emails = [orm.User.objects.get_default().email]
 
-        # Known export file content used for checks
+        # Known archive file content used for checks
         node_count = 0
         computer_count = 1 + 1  # localhost is always present
         computer_uuids.append('4f33c6fd-b624-47df-9ffb-a58f05d323af')
@@ -153,7 +153,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertIn(users, user_emails)
 
     def test_wrong_versions(self):
-        """Test correct errors are raised if export files have wrong version numbers"""
+        """Test correct errors are raised if archive files have wrong version numbers"""
         from aiida.tools.importexport.migration import MIGRATE_FUNCTIONS
 
         wrong_versions = ['0.0', '0.1.0', '0.99']
@@ -169,7 +169,7 @@ class TestExportFileMigration(AiidaTestCase):
             self.assertNotIn(
                 version,
                 legal_versions,
-                msg="'{}' was not expected to be a legal version, legal version: {}".format(version, legal_versions)
+                msg=f"'{version}' was not expected to be a legal version, legal version: {legal_versions}"
             )
 
         # Make sure migrate_recursively throws an ArchiveMigrationError
@@ -193,7 +193,7 @@ class TestExportFileMigration(AiidaTestCase):
     @with_temp_dir
     def test_v02_to_newest(self, temp_dir):
         """Test migration of exported files from v0.2 to newest export version"""
-        # Get export file with export version 0.2
+        # Get archive file with export version 0.2
         input_file = get_archive_file('export_v0.2.aiida', **self.external_archive)
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
@@ -219,9 +219,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg='There should be {} StructureData, instead {} were/was found'.format(
-                self.struct_count, builder.count()
-            )
+            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
         )
         for structures in builder.all():
             structure = structures[0]
@@ -232,7 +230,7 @@ class TestExportFileMigration(AiidaTestCase):
         for [kinds] in builder.iterall():
             self.assertEqual(len(kinds), len(self.known_kinds))
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()
@@ -274,9 +272,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg='There should be {} StructureData, instead {} were/was found'.format(
-                self.struct_count, builder.count()
-            )
+            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
         )
         for structures in builder.all():
             structure = structures[0]
@@ -287,7 +283,7 @@ class TestExportFileMigration(AiidaTestCase):
         for [kinds] in builder.iterall():
             self.assertEqual(len(kinds), len(self.known_kinds))
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()
@@ -329,9 +325,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg='There should be {} StructureData, instead {} were/was found'.format(
-                self.struct_count, builder.count()
-            )
+            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
         )
         for structures in builder.all():
             structure = structures[0]
@@ -342,7 +336,7 @@ class TestExportFileMigration(AiidaTestCase):
         for [kinds] in builder.iterall():
             self.assertEqual(len(kinds), len(self.known_kinds))
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()
@@ -384,9 +378,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg='There should be {} StructureData, instead {} were/was found'.format(
-                self.struct_count, builder.count()
-            )
+            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
         )
         for structures in builder.all():
             structure = structures[0]
@@ -397,7 +389,7 @@ class TestExportFileMigration(AiidaTestCase):
         for [kinds] in builder.iterall():
             self.assertEqual(len(kinds), len(self.known_kinds))
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()
@@ -439,9 +431,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg='There should be {} StructureData, instead {} were/was found'.format(
-                self.struct_count, builder.count()
-            )
+            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
         )
         for structures in builder.all():
             structure = structures[0]
@@ -452,7 +442,7 @@ class TestExportFileMigration(AiidaTestCase):
         for [kinds] in builder.iterall():
             self.assertEqual(len(kinds), len(self.known_kinds))
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()
@@ -494,9 +484,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             self.struct_count,
-            msg='There should be {} StructureData, instead {} were/was found'.format(
-                self.struct_count, builder.count()
-            )
+            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
         )
         for structures in builder.all():
             structure = structures[0]
@@ -507,7 +495,7 @@ class TestExportFileMigration(AiidaTestCase):
         for [kinds] in builder.iterall():
             self.assertEqual(len(kinds), len(self.known_kinds))
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg="Kind '{}' not found in: {}".format(kind, self.known_kinds))
+                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()

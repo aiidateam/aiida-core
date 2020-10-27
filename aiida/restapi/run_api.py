@@ -59,7 +59,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
 
     if hookup:
         # Run app through built-in werkzeug server
-        print(' * REST API running on http://{}:{}{}'.format(hostname, port, API_CONFIG['PREFIX']))
+        print(f" * REST API running on http://{hostname}:{port}{API_CONFIG['PREFIX']}")
         api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
 
     else:
@@ -76,9 +76,10 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     :type flask_app: :py:class:`flask.Flask`
     :param flask_api: flask_restful API class to be used to wrap the app
     :type flask_api: :py:class:`flask_restful.Api`
-    :param config: directory containing the config.py file used to configure the RESTapi
-    :param catch_internal_server:  If true, catch and print all inter server errors
-    :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
+    :param config: directory containing the config.py configuration file
+    :param catch_internal_server:  If true, catch and print internal server errors with full python traceback.
+        Useful during app development.
+    :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in the web application
 
     :returns: Flask RESTful API
     :rtype: :py:class:`flask_restful.Api`
@@ -90,7 +91,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     wsgi_profile = kwargs.pop('wsgi_profile', CLI_DEFAULTS['WSGI_PROFILE'])
 
     if kwargs:
-        raise ValueError('Unknown keyword arguments: {}'.format(kwargs))
+        raise ValueError(f'Unknown keyword arguments: {kwargs}')
 
     # Import the configuration file
     spec = importlib.util.spec_from_file_location(os.path.join(config, 'config'), os.path.join(config, 'config.py'))

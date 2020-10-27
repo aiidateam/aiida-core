@@ -36,7 +36,7 @@ class DbSetting(Base):
     time = Column(DateTime(timezone=True), default=UTC, onupdate=timezone.now)
 
     def __str__(self):
-        return "'{}'={}".format(self.key, self.getvalue())
+        return f"'{self.key}'={self.getvalue()}"
 
     @classmethod
     def set_value(cls, key, value, other_attribs=None, stop_if_existing=False):

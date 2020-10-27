@@ -49,25 +49,23 @@ class TestVerdiCodeSetup(AiidaTestCase):
         """Test non-interactive remote code setup."""
         label = 'noninteractive_remote'
         options = [
-            '--non-interactive', '--label={}'.format(label), '--description=description',
-            '--input-plugin=arithmetic.add', '--on-computer', '--computer={}'.format(self.computer.label),
-            '--remote-abs-path=/remote/abs/path'
+            '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=arithmetic.add',
+            '--on-computer', f'--computer={self.computer.label}', '--remote-abs-path=/remote/abs/path'
         ]
         result = self.cli_runner.invoke(setup_code, options)
         self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string('{}@{}'.format(label, self.computer.label)), orm.Code)
+        self.assertIsInstance(orm.Code.get_from_string(f'{label}@{self.computer.label}'), orm.Code)
 
     def test_noninteractive_upload(self):
         """Test non-interactive code setup."""
         label = 'noninteractive_upload'
         options = [
-            '--non-interactive', '--label={}'.format(label), '--description=description',
-            '--input-plugin=arithmetic.add', '--store-in-db', '--code-folder={}'.format(self.this_folder),
-            '--code-rel-path={}'.format(self.this_file)
+            '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=arithmetic.add',
+            '--store-in-db', f'--code-folder={self.this_folder}', f'--code-rel-path={self.this_file}'
         ]
         result = self.cli_runner.invoke(setup_code, options)
         self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
+        self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
 
     def test_from_config(self):
         """Test setting up a code from a config file.
@@ -96,7 +94,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
                 ['--non-interactive', '--config', os.path.realpath(handle.name)]
             )
         self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
+        self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
 
         # url
         label = 'noninteractive_config_url'
@@ -108,7 +106,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
             result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', fake_url])
 
             self.assertClickResultNoException(result)
-            self.assertIsInstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
+            self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
 
 
 class TestVerdiCodeCommands(AiidaTestCase):
@@ -189,7 +187,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
             code.label = 'code2'
             code.store()
 
-        options = ['-A', '-a', '-o', '--input-plugin=arithmetic.add', '--computer={}'.format(self.computer.label)]
+        options = ['-A', '-a', '-o', '--input-plugin=arithmetic.add', f'--computer={self.computer.label}']
         result = self.cli_runner.invoke(code_list, options)
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
@@ -218,7 +216,7 @@ class TestVerdiCodeCommands(AiidaTestCase):
     def test_code_duplicate_non_interactive(self):
         """Test code duplication non-interactive."""
         label = 'code_duplicate_noninteractive'
-        result = self.cli_runner.invoke(code_duplicate, ['--non-interactive', '--label=' + label, str(self.code.pk)])
+        result = self.cli_runner.invoke(code_duplicate, ['--non-interactive', f'--label={label}', str(self.code.pk)])
         self.assertIsNone(result.exception, result.output)
 
         new_code = orm.Code.get_from_string(label)
@@ -246,7 +244,7 @@ def test_interactive_remote(clear_database_before_test, aiida_localhost, non_int
     user_input = '\n'.join([label, 'description', 'arithmetic.add', 'yes', aiida_localhost.label, '/remote/abs/path'])
     result = CliRunner().invoke(setup_code, input=user_input)
     assert result.exception is None
-    assert isinstance(orm.Code.get_from_string('{}@{}'.format(label, aiida_localhost.label)), orm.Code)
+    assert isinstance(orm.Code.get_from_string(f'{label}@{aiida_localhost.label}'), orm.Code)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
@@ -258,7 +256,7 @@ def test_interactive_upload(clear_database_before_test, aiida_localhost, non_int
     user_input = '\n'.join([label, 'description', 'arithmetic.add', 'no', dirname, basename])
     result = CliRunner().invoke(setup_code, input=user_input)
     assert result.exception is None
-    assert isinstance(orm.Code.get_from_string('{}'.format(label)), orm.Code)
+    assert isinstance(orm.Code.get_from_string(f'{label}'), orm.Code)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
@@ -270,14 +268,14 @@ def test_mixed(clear_database_before_test, aiida_localhost, non_interactive_edit
     user_input = '\n'.join([label, 'arithmetic.add', aiida_localhost.label])
     result = CliRunner().invoke(setup_code, options, input=user_input)
     assert result.exception is None
-    assert isinstance(Code.get_from_string('{}@{}'.format(label, aiida_localhost.label)), Code)
+    assert isinstance(Code.get_from_string(f'{label}@{aiida_localhost.label}'), Code)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_duplicate_interactive(clear_database_before_test, aiida_local_code_factory, non_interactive_editor):
     """Test code duplication interactive."""
     label = 'code_duplicate_interactive'
-    user_input = label + '\n\n\n\n\n\n'
+    user_input = f'{label}\n\n\n\n\n\n'
     code = aiida_local_code_factory('arithmetic.add', '/bin/cat', label='code')
     result = CliRunner().invoke(code_duplicate, [str(code.pk)], input=user_input)
     assert result.exception is None, result.exception
@@ -295,7 +293,7 @@ def test_code_duplicate_ignore(clear_database_before_test, aiida_local_code_fact
     Regression test for: https://github.com/aiidateam/aiida-core/issues/3770
     """
     label = 'code_duplicate_interactive'
-    user_input = label + '\n!\n\n\n\n\n'
+    user_input = f'{label}\n!\n\n\n\n\n'
     code = aiida_local_code_factory('arithmetic.add', '/bin/cat', label='code')
     result = CliRunner().invoke(code_duplicate, [str(code.pk)], input=user_input, catch_exceptions=False)
     assert result.exception is None, result.exception

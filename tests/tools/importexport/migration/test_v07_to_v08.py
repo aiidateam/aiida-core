@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from export version 0.7 to 0.8"""
+"""Test archive file migration from export version 0.7 to 0.8"""
 from aiida.tools.importexport.migration.v07_to_v08 import migrate_v7_to_v8, migration_default_link_label
 
 from . import ArchiveMigrationTest

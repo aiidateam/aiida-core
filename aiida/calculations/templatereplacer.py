@@ -113,12 +113,12 @@ class TemplatereplacerCalculation(CalcJob):
 
         if template:
             raise exceptions.InputValidationError(
-                'The following keys could not be used in the template node: {}'.format(template.keys()))
+                f'The following keys could not be used in the template node: {template.keys()}')
 
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
         except ValidationError as exc:
-            raise exceptions.InputValidationError('invalid file_to_copy format: {}'.format(exc))
+            raise exceptions.InputValidationError(f'invalid file_to_copy format: {exc}')
 
         local_copy_list = []
         remote_copy_list = []

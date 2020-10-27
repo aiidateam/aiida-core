@@ -145,7 +145,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#BSUB -W 24:00' in submit_script_text)
         self.assertTrue('#BSUB -n 2' in submit_script_text)
 
-        self.assertTrue("'mpirun' '-np' '2' 'pw.x' '-npool' '1'" + " < 'aiida.in'" in submit_script_text)
+        self.assertTrue("'mpirun' '-np' '2' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_machines(self):
         """

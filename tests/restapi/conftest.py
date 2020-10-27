@@ -44,9 +44,7 @@ def restapi_server():
 def server_url():
     from aiida.restapi.common.config import CLI_DEFAULTS, API_CONFIG
 
-    return 'http://{hostname}:{port}{api}'.format(
-        hostname=CLI_DEFAULTS['HOST_NAME'], port=CLI_DEFAULTS['PORT'], api=API_CONFIG['PREFIX']
-    )
+    return f"http://{CLI_DEFAULTS['HOST_NAME']}:{CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"
 
 
 @pytest.fixture

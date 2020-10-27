@@ -26,7 +26,7 @@ def check_if_tests_can_run():
     """Verify that the currently loaded profile is a test profile, otherwise raise `TestsNotAllowedError`."""
     profile = configuration.PROFILE
     if not profile.is_test_profile:
-        raise TestsNotAllowedError('currently loaded profile {} is not a valid test profile'.format(profile.name))
+        raise TestsNotAllowedError(f'currently loaded profile {profile.name} is not a valid test profile')
 
 
 class AiidaTestCase(unittest.TestCase):

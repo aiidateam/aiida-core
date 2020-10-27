@@ -180,7 +180,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
     def test_with_subclasses(self):
         from aiida.plugins import DataFactory
 
-        extra_name = self.__class__.__name__ + '/test_with_subclasses'
+        extra_name = f'{self.__class__.__name__}/test_with_subclasses'
 
         Dict = DataFactory('dict')
 
@@ -1027,7 +1027,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
 
         # Test that the code2 can be loaded correctly with its label
-        q_code_2 = orm.Code.get_from_string(code2.label + '@' + self.computer.label)  # pylint: disable=no-member
+        q_code_2 = orm.Code.get_from_string(f'{code2.label}@{self.computer.label}')  # pylint: disable=no-member
         self.assertEqual(q_code_2.id, code2.id)
         self.assertEqual(q_code_2.label, code2.label)
         self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
@@ -2024,9 +2024,9 @@ class TestNodeDeletion(AiidaTestCase):
         for ii in range(total_calcs):
             new_calc = orm.CalculationNode()
             new_data = orm.Data().store()
-            new_calc.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label='inp' + str(ii))
+            new_calc.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label=f'inp{str(ii)}')
             new_calc.store()
-            new_data.add_incoming(new_calc, link_type=LinkType.CREATE, link_label='out' + str(ii))
+            new_data.add_incoming(new_calc, link_type=LinkType.CREATE, link_label=f'out{str(ii)}')
             node_list.append(new_calc)
             node_list.append(new_data)
             old_data = new_data

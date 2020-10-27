@@ -8,9 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Implementation of RESTful API for materialscloud.org based on flask +
-flask_restful module
-For the time being the API returns the parsed valid endpoints upon GET request
+Implementation of RESTful API for AiiDA based on flask and flask_restful.
+
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
 
@@ -104,6 +103,7 @@ class AiidaApi(Api):
 
         self.add_resource(
             ServerInfo,
+            '/',
             '/server/',
             '/server/endpoints/',
             endpoint='server',

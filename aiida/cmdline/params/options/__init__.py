@@ -79,7 +79,7 @@ def graph_traversal_rules(rules):
             if traversal_rule.toggleable:
                 option_name = name.replace('_', '-')
                 option_label = '--{option_name}/--no-{option_name}'.format(option_name=option_name)
-                help_string = 'Whether to expand the node set by following {}.'.format(TRAVERSAL_RULE_HELP_STRING[name])
+                help_string = f'Whether to expand the node set by following {TRAVERSAL_RULE_HELP_STRING[name]}.'
                 click.option(option_label, default=traversal_rule.default, show_default=True, help=help_string)(command)
 
         return command
@@ -315,10 +315,10 @@ BROKER_PORT = OverridableOption(
 
 BROKER_VIRTUAL_HOST = OverridableOption(
     '--broker-virtual-host',
-    type=types.HostnameType(),
+    type=click.types.StringParamType(),
     default=BROKER_DEFAULTS.virtual_host,
     show_default=True,
-    help='Name of the virtual host for the message broker. Forward slashes need to be encoded'
+    help='Name of the virtual host for the message broker without leading forward slash.'
 )
 
 REPOSITORY_PATH = OverridableOption(

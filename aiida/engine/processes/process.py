@@ -52,7 +52,6 @@ class Process(plumpy.Process):
         """
         Keys used to identify things in the saved instance state bundle.
         """
-        # pylint: disable=too-few-public-methods
         CALC_ID = 'calc_id'
 
     @classmethod
@@ -60,13 +59,13 @@ class Process(plumpy.Process):
         # yapf: disable
         super().define(spec)
         spec.input_namespace(spec.metadata_key, required=False, non_db=True)
-        spec.input('{}.store_provenance'.format(spec.metadata_key), valid_type=bool, default=True,
+        spec.input(f'{spec.metadata_key}.store_provenance', valid_type=bool, default=True,
             help='If set to `False` provenance will not be stored in the database.')
-        spec.input('{}.description'.format(spec.metadata_key), valid_type=str, required=False,
+        spec.input(f'{spec.metadata_key}.description', valid_type=str, required=False,
             help='Description to set on the process node.')
-        spec.input('{}.label'.format(spec.metadata_key), valid_type=str, required=False,
+        spec.input(f'{spec.metadata_key}.label', valid_type=str, required=False,
             help='Label to set on the process node.')
-        spec.input('{}.call_link_label'.format(spec.metadata_key), valid_type=str, default='CALL',
+        spec.input(f'{spec.metadata_key}.call_link_label', valid_type=str, default='CALL',
             help='The label to use for the `CALL` link if the process is called by another process.')
         spec.exit_code(1, 'ERROR_UNSPECIFIED', message='The process has failed with an unspecified error.')
         spec.exit_code(2, 'ERROR_LEGACY_FAILURE', message='The process failed with legacy failure mode.')
@@ -246,7 +245,7 @@ class Process(plumpy.Process):
         else:
             self._pid = self._create_and_setup_db_record()
 
-        self.node.logger.info('Loaded process<{}> from saved state'.format(self.node.pk))
+        self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
     def kill(self, msg=None):
         """
@@ -257,7 +256,7 @@ class Process(plumpy.Process):
 
         :rtype: bool
         """
-        self.node.logger.info('Request to kill Process<{}>'.format(self.node.pk))
+        self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
         had_been_terminated = self.has_terminated()
 
@@ -268,7 +267,7 @@ class Process(plumpy.Process):
             killing = []
             for child in self.node.called:
                 try:
-                    result = self.runner.controller.kill_process(child.pk, 'Killed by parent<{}>'.format(self.node.pk))
+                    result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
                     if isinstance(result, plumpy.Future):
                         killing.append(result)
                 except ConnectionClosed:
@@ -346,7 +345,7 @@ class Process(plumpy.Process):
         if self._enable_persistence:
             try:
                 self.runner.persister.delete_checkpoint(self.pid)
-            except BaseException:
+            except Exception:  # pylint: disable=broad-except
                 self.logger.exception('Failed to delete checkpoint')
 
         try:
@@ -427,7 +426,7 @@ class Process(plumpy.Process):
 
         # Note that `PortNamespaces` should be able to receive non `Data` types such as a normal dictionary
         if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
-            raise TypeError('Processes can only return `orm.Data` instances as output, got {}'.format(value.__class__))
+            raise TypeError(f'Processes can only return `orm.Data` instances as output, got {value.__class__}')
 
     def set_status(self, status):
         """
@@ -490,7 +489,7 @@ class Process(plumpy.Process):
 
         # If no entry point was found, default to fully qualified path name
         if process_type is None:
-            return '{}.{}'.format(class_module, class_name)
+            return f'{class_module}.{class_name}'
 
         return process_type
 
@@ -508,7 +507,7 @@ class Process(plumpy.Process):
         :param kwargs: kwargs to pass to the log call
         :type kwargs: dict
         """
-        message = '[{}|{}|{}]: {}'.format(self.node.pk, self.__class__.__name__, inspect.stack()[1][3], msg)
+        message = f'[{self.node.pk}|{self.__class__.__name__}|{inspect.stack()[1][3]}]: {msg}'
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
     def _create_and_setup_db_record(self):
@@ -526,7 +525,7 @@ class Process(plumpy.Process):
                 if self.node.is_finished_ok:
                     self._state = ProcessState.FINISHED
                     for entry in self.node.get_outgoing(link_type=LinkType.RETURN):
-                        if entry.link_label.endswith('_{pk}'.format(pk=entry.node.pk)):
+                        if entry.link_label.endswith(f'_{entry.node.pk}'):
                             continue
                         self.out(entry.link_label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
@@ -651,7 +650,7 @@ class Process(plumpy.Process):
                 for option_name, option_value in metadata.items():
                     self.node.set_option(option_name, option_value)
             else:
-                raise RuntimeError('unsupported metadata key: {}'.format(name))
+                raise RuntimeError(f'unsupported metadata key: {name}')
 
     def _setup_inputs(self):
         """Create the links between the input nodes and the ProcessNode that represents this process."""
@@ -810,7 +809,7 @@ class Process(plumpy.Process):
                 try:
                     port_namespace = self.spec().inputs.get_port(sub_namespace)
                 except KeyError:
-                    raise ValueError('this process does not contain the "{}" input namespace'.format(sub_namespace))
+                    raise ValueError(f'this process does not contain the "{sub_namespace}" input namespace')
 
             # Get the list of ports that were exposed for the given Process class in the current sub_namespace
             exposed_inputs_list = self.spec()._exposed_inputs[sub_namespace][process_class]  # pylint: disable=protected-access
@@ -921,7 +920,7 @@ def get_query_string_from_process_type_string(process_type_string):  # pylint: d
     :rtype: str
     """
     if ':' in process_type_string:
-        return process_type_string + '.'
+        return f'{process_type_string}.'
 
     path = process_type_string.rsplit('.', 2)[0]
-    return path + '.'
+    return f'{path}.'

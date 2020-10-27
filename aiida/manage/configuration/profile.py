@@ -83,7 +83,7 @@ class Profile:  # pylint: disable=too-many-public-methods
 
     def __init__(self, name, attributes, from_config=False):
         if not isinstance(attributes, collections.abc.Mapping):
-            raise TypeError('attributes should be a mapping but is {}'.format(type(attributes)))
+            raise TypeError(f'attributes should be a mapping but is {type(attributes)}')
 
         self._name = name
         self._attributes = {}
@@ -95,9 +95,7 @@ class Profile:  # pylint: disable=too-many-public-methods
                 except KeyError:
                     from aiida.cmdline.utils import echo
                     echo.echo_warning(
-                        'removed unsupported key `{}` with value `{}` from profile `{}`'.format(
-                            internal_key, value, name
-                        )
+                        f'removed unsupported key `{internal_key}` with value `{value}` from profile `{name}`'
                     )
                     continue
             setattr(self, internal_key, value)
@@ -359,7 +357,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise exceptions.ConfigurationError(
-                    'could not create the configured repository `{}`: {}'.format(self.repository_path, str(exception))
+                    f'could not create the configured repository `{self.repository_path}`: {str(exception)}'
                 )
 
     @property

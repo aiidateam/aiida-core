@@ -114,23 +114,23 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     valid, error = validate(expression)
 
     if not valid:
-        click.echo("the expression '{}' is invalid: {}".format(expression, error))
+        click.echo(f"the expression '{expression}' is invalid: {error}")
         sys.exit(1)
 
-    filename = 'polish_{}.py'.format(str(uuid.uuid4().hex))
+    filename = f'polish_{str(uuid.uuid4().hex)}.py'
     evaluated = evaluate(expression, modulo)
     outlines, stack = generate_outlines(expression)
     outlines_string = format_outlines(outlines, use_calculations, use_calcfunctions)
     write_workchain(outlines_string, filename=filename)
 
-    click.echo('Expression: {}'.format(expression))
+    click.echo(f'Expression: {expression}')
 
     if not dry_run:
         try:
-            workchain_module = 'polish_workchains.{}'.format(filename.replace('.py', ''))
+            workchain_module = f"polish_workchains.{filename.replace('.py', '')}"
             workchains = importlib.import_module(workchain_module)
         except ImportError:
-            click.echo('could not import the {} module'.format(workchain_module))
+            click.echo(f'could not import the {workchain_module} module')
             sys.exit(1)
 
         inputs = {'modulo': Int(modulo), 'operands': Str(' '.join(stack))}
@@ -153,8 +153,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             if timed_out:
                 click.secho('Failed: ', fg='red', bold=True, nl=False)
                 click.secho(
-                    'the workchain<{}> did not finish in time and the operation timed out'.format(workchain.pk),
-                    bold=True
+                    f'the workchain<{workchain.pk}> did not finish in time and the operation timed out', bold=True
                 )
                 sys.exit(1)
 
@@ -162,17 +161,17 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
                 result = workchain.outputs.result
             except AttributeError:
                 click.secho('Failed: ', fg='red', bold=True, nl=False)
-                click.secho('the workchain<{}> did not return a result output node'.format(workchain.pk), bold=True)
+                click.secho(f'the workchain<{workchain.pk}> did not return a result output node', bold=True)
                 sys.exit(1)
 
         else:
             results, workchain = run_get_node(workchains.Polish00WorkChain, **inputs)
             result = results['result']
 
-    click.echo('Evaluated : {}'.format(evaluated))
+    click.echo(f'Evaluated : {evaluated}')
 
     if not dry_run:
-        click.echo('Workchain : {} <{}>'.format(result, workchain.pk))
+        click.echo(f'Workchain : {result} <{workchain.pk}>')
 
         if result != evaluated:
             click.secho('Failed: ', fg='red', bold=True, nl=False)

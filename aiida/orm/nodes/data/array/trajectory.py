@@ -206,8 +206,7 @@ class TrajectoryData(ArrayData):
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
             raise ValidationError(
-                'The TrajectoryData did not validate. '
-                'Error: {} with message {}'.format(type(exception).__name__, exception)
+                f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
             )
 
     @property
@@ -315,7 +314,7 @@ class TrajectoryData(ArrayData):
         try:
             return numpy.where(self.get_stepids() == stepid)[0][0]
         except IndexError:
-            raise ValueError('{} not among the stepids'.format(stepid))
+            raise ValueError(f'{stepid} not among the stepids')
 
     def get_step_data(self, index):
         r"""
@@ -340,10 +339,7 @@ class TrajectoryData(ArrayData):
         :raises KeyError: if you did not store the trajectory yet.
         """
         if index >= self.numsteps:
-            raise IndexError(
-                'You have only {} steps, but you are looking beyond'
-                ' (index={})'.format(self.numsteps, index)
-            )
+            raise IndexError(f'You have only {self.numsteps} steps, but you are looking beyond (index={index})')
 
         vel = self.get_velocities()
         if vel is not None:
@@ -426,7 +422,7 @@ class TrajectoryData(ArrayData):
         indices = list(range(self.numsteps))
         if index is not None:
             indices = [index]
-        return_string = 'ANIMSTEPS {}\nCRYSTAL\n'.format(len(indices))
+        return_string = f'ANIMSTEPS {len(indices)}\nCRYSTAL\n'
         # Do the checks once and for all here:
         structure = self.get_step_structure(index=0)
         if structure.is_alloy or structure.has_vacancies:
@@ -440,15 +436,15 @@ class TrajectoryData(ArrayData):
         nat = len(symbols)
 
         for idx in indices:
-            return_string += 'PRIMVEC {}\n'.format(idx + 1)
+            return_string += f'PRIMVEC {idx + 1}\n'
             for cell_vector in cells[idx]:
                 return_string += ' '.join(['{:18.5f}'.format(i) for i in cell_vector])
                 return_string += '\n'
-            return_string += 'PRIMCOORD {}\n'.format(idx + 1)
-            return_string += '{} 1\n'.format(nat)
+            return_string += f'PRIMCOORD {idx + 1}\n'
+            return_string += f'{nat} 1\n'
             for atn, pos in zip(atomic_numbers_list, positions[idx]):
                 try:
-                    return_string += '{} {:18.10f} {:18.10f} {:18.10f}\n'.format(atn, pos[0], pos[1], pos[2])
+                    return_string += f'{atn} {pos[0]:18.10f} {pos[1]:18.10f} {pos[2]:18.10f}\n'
                 except:
                     print(atn, pos)
                     raise
@@ -636,9 +632,9 @@ class TrajectoryData(ArrayData):
         elif colors == 'cpk':
             from ase.data.colors import cpk_colors as colors
         else:
-            raise InputValidationError('Unknown color spec {}'.format(colors))
+            raise InputValidationError(f'Unknown color spec {colors}')
         if kwargs:
-            raise InputValidationError('Unrecognized keyword {}'.format(kwargs.keys()))
+            raise InputValidationError(f'Unrecognized keyword {kwargs.keys()}')
 
         if element_list is None:
             # If not all elements are allowed
@@ -879,7 +875,7 @@ def plot_positions_XYZ(  # pylint: disable=too-many-arguments,too-many-locals,in
     plt.xlim(*tlim)
     ax3 = fig.add_subplot(gridspec[2])
     plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
-    plt.xlabel('Time [{}]'.format(times_unit))
+    plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     sparse_indices = np.linspace(*index_range, num=label_sparsity, dtype=int)
 

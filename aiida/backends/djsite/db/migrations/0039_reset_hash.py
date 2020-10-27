@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """
 Invalidating node hash - User should rehash nodes for caching
 """
@@ -41,8 +41,8 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(notify_user, reverse_code=notify_user),
         migrations.RunSQL(
-            """UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""",
-            reverse_sql="""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];"""
+            f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];",
+            reverse_sql=f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];"
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

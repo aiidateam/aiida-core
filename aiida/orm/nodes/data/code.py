@@ -98,7 +98,7 @@ class Code(Data):
     def __str__(self):
         local_str = 'Local' if self.is_local() else 'Remote'
         computer_str = self.computer.label
-        return "{} code '{}' on {}, pk: {}, uuid: {}".format(local_str, self.label, computer_str, self.pk, self.uuid)
+        return f"{local_str} code '{self.label}' on {computer_str}, pk: {self.pk}, uuid: {self.uuid}"
 
     def get_computer_name(self):
         """Get label of this code's computer.
@@ -118,7 +118,7 @@ class Code(Data):
 
         Returns label of the form <code-label>@<computer-name>.
         """
-        return '{}@{}'.format(self.label, self.get_computer_label())
+        return f'{self.label}@{self.get_computer_label()}'
 
     @property
     def label(self):
@@ -151,7 +151,7 @@ class Code(Data):
             Will remove raise_error in `v2.0.0`. Use `try/except` instead.
         """
         # pylint: disable=unused-argument
-        suffix = '@{}'.format(self.computer.label)
+        suffix = f'@{self.computer.label}'
         if new_label.endswith(suffix):
             new_label = new_label[:-len(suffix)]
 
@@ -162,7 +162,7 @@ class Code(Data):
 
         :return: string description of this Code instance
         """
-        return '{}'.format(self.description)
+        return f'{self.description}'
 
     @classmethod
     def get_code_helper(cls, label, machinename=None):
@@ -184,11 +184,11 @@ class Code(Data):
             query.append(Computer, filters={'name': machinename}, with_node='code')
 
         if query.count() == 0:
-            raise NotExistent("'{}' is not a valid code name.".format(label))
+            raise NotExistent(f"'{label}' is not a valid code name.")
         elif query.count() > 1:
             codes = query.all(flat=True)
-            retstr = ("There are multiple codes with label '{}', having IDs: ".format(label))
-            retstr += ', '.join(sorted([str(c.pk) for c in codes])) + '.\n'
+            retstr = f"There are multiple codes with label '{label}', having IDs: "
+            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"
             retstr += ('Relabel them (using their ID), or refer to them with their ID.')
             raise MultipleObjectsError(retstr)
         else:
@@ -217,9 +217,9 @@ class Code(Data):
             try:
                 return load_code(pk=code_int)
             except exceptions.NotExistent:
-                raise ValueError('{} is not valid code pk'.format(pk))
+                raise ValueError(f'{pk} is not valid code pk')
             except exceptions.MultipleObjectsError:
-                raise exceptions.MultipleObjectsError("More than one code in the DB with pk='{}'!".format(pk))
+                raise exceptions.MultipleObjectsError(f"More than one code in the DB with pk='{pk}'!")
 
         # check if label (and machinename) is provided
         elif label is not None:
@@ -258,9 +258,9 @@ class Code(Data):
         try:
             return cls.get_code_helper(label, machinename)
         except NotExistent:
-            raise NotExistent('{} could not be resolved to a valid code label'.format(code_string))
+            raise NotExistent(f'{code_string} could not be resolved to a valid code label')
         except MultipleObjectsError:
-            raise MultipleObjectsError('{} could not be uniquely resolved'.format(code_string))
+            raise MultipleObjectsError(f'{code_string} could not be uniquely resolved')
 
     @classmethod
     def list_for_plugin(cls, plugin, labels=True):
@@ -464,7 +464,7 @@ class Code(Data):
         For remote codes, it is the absolute path to the executable.
         """
         if self.is_local():
-            return './{}'.format(self.get_local_executable())
+            return f'./{self.get_local_executable()}'
 
         return self.get_remote_exec_path()
 
@@ -489,7 +489,7 @@ class Code(Data):
         try:
             process_class = CalculationFactory(plugin_name)
         except exceptions.EntryPointError:
-            raise exceptions.EntryPointError('the calculation entry point `{}` could not be loaded'.format(plugin_name))
+            raise exceptions.EntryPointError(f'the calculation entry point `{plugin_name}` could not be loaded')
 
         builder = process_class.get_builder()
         builder.code = self
@@ -505,7 +505,7 @@ class Code(Data):
         :return: list of lists where each entry consists of two elements: a key and a value
         """
         warnings.warn('this property is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
-        from aiida.orm.utils.repository import FileType
+        from aiida.repository import FileType
 
         result = []
         result.append(['PK', self.pk])
@@ -522,7 +522,7 @@ class Code(Data):
             result.append(['Exec name', self.get_execname()])
             result.append(['List of files/folders:', ''])
             for obj in self.list_objects():
-                if obj.type == FileType.DIRECTORY:
+                if obj.file_type == FileType.DIRECTORY:
                     result.append(['directory', obj.name])
                 else:
                     result.append(['file', obj.name])

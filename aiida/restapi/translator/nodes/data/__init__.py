@@ -56,7 +56,7 @@ class DataTranslator(NodeTranslator):
                 try:
                     response['filename'] = node.filename
                 except AttributeError:
-                    response['filename'] = node.uuid + '.' + download_format
+                    response['filename'] = f'{node.uuid}.{download_format}'
             except LicensingException as exc:
                 response['status'] = 500
                 response['data'] = str(exc)

@@ -61,7 +61,7 @@ def get_archive_file(archive, filepath=None, external_module=None):
 
     if not os.path.isfile(dirpath_archive):
         dirpath_parent = os.path.dirname(dirpath_archive)
-        raise ValueError('archive {} does not exist in the archives directory {}'.format(archive, dirpath_parent))
+        raise ValueError(f'archive {archive} does not exist in the archives directory {dirpath_parent}')
 
     return dirpath_archive
 
@@ -106,7 +106,7 @@ def get_json_files(archive, silent=True, filepath=None, external_module=None):
             with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
         except IOError:
-            raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+            raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
     # Return metadata.json and data.json
     return metadata, data
@@ -137,7 +137,7 @@ def migrate_archive(input_file, output_file, silent=True):
             with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
                 metadata = json.load(fhandle)
         except IOError:
-            raise NotExistent('export archive does not contain the required file {}'.format(fhandle.filename))
+            raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
 
         # Migrate
         migrate_recursively(metadata, data, folder)

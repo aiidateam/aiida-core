@@ -31,7 +31,7 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
     """
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
-        raise BadParameter('{} is not a valid positive number'.format(value))
+        raise BadParameter(f'{value} is not a valid positive number')
 
 
 class Transport(abc.ABC):
@@ -151,7 +151,7 @@ class Transport(abc.ABC):
         raise NotImplementedError
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
     # redefine this in each subclass
     def __str__(self):
@@ -707,14 +707,11 @@ class Transport(abc.ABC):
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
             if stderr.strip():
-                self.logger.warning('There was nonempty stderr in the whoami command: {}'.format(stderr))
+                self.logger.warning(f'There was nonempty stderr in the whoami command: {stderr}')
             return username.strip()
 
-        self.logger.error(
-            "Problem executing whoami. Exit code: {}, stdout: '{}', "
-            "stderr: '{}'".format(retval, username, stderr)
-        )
-        raise IOError('Error while executing whoami. Exit code: {}'.format(retval))
+        self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
+        raise IOError(f'Error while executing whoami. Exit code: {retval}')
 
     def path_exists(self, path):
         """

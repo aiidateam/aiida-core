@@ -68,10 +68,10 @@ class ArchiveReaderAbstract(ABC):
     """
 
     def __init__(self, filename: str, **kwargs: Any):
-        """An archive writer
+        """An archive reader
 
         :param filename: the filename (possibly including the absolute path)
-            of the file on which to import.
+            of the file to import.
 
         """
         # pylint: disable=unused-argument
@@ -80,7 +80,7 @@ class ArchiveReaderAbstract(ABC):
 
     @property
     def filename(self) -> str:
-        """Return the filename to write to."""
+        """Return the name of the file that is being read from."""
         return self._filename
 
     @property
@@ -146,7 +146,7 @@ class ArchiveReaderAbstract(ABC):
     @property
     @abstractmethod
     def metadata(self) -> ArchiveMetadata:
-        """Return the full (validated) export metadata."""
+        """Return the full (validated) archive metadata."""
 
     @property
     def entity_names(self) -> List[str]:
@@ -170,15 +170,15 @@ class ArchiveReaderAbstract(ABC):
 
     @abstractmethod
     def iter_node_uuids(self) -> Iterator[str]:
-        """Iterate node UUIDs."""
+        """Iterate over node UUIDs."""
 
     @abstractmethod
     def iter_group_uuids(self) -> Iterator[Tuple[str, Set[str]]]:
-        """Iterate group UUIDs and the a set of the node UUIDs they contain."""
+        """Iterate over group UUIDs and the a set of node UUIDs they contain."""
 
     @abstractmethod
     def iter_link_data(self) -> Iterator[dict]:
-        """Iterate links: {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}"""
+        """Iterate over links: {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}"""
 
     @abstractmethod
     def iter_node_repos(self,
@@ -187,7 +187,7 @@ class ArchiveReaderAbstract(ABC):
                         description='Iterating node repos') -> Iterator[Folder]:
         """Yield temporary folders containing the contents of the repository for each node.
 
-        :param uuids: The node UUIDs to yield
+        :param uuids: UUIDs of the nodes over whose repository folders to iterate
         :param progress: report progress
         :param description: description for progress report
 
@@ -195,7 +195,7 @@ class ArchiveReaderAbstract(ABC):
         """
 
     def node_repository(self, uuid: str) -> Folder:
-        """Return a temporary folder containing the contents of the repository for a single node.
+        """Return a temporary folder with the contents of the repository for a single node.
 
         :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
         """
@@ -210,7 +210,7 @@ class ReaderJsonBase(ArchiveReaderAbstract):
     REPO_FOLDER = NODES_EXPORT_SUBFOLDER
 
     def __init__(self, filename: str, sandbox_in_repo: bool = False, **kwargs: Any):
-        """A writer for zipped archives.
+        """A reader for JSON compressed archives.
 
         :param filename: the filename (possibly including the absolute path)
             of the file on which to export.

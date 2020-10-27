@@ -36,7 +36,7 @@ class ArchiveMetadata:
 
 
 def detect_archive_type(in_path: str) -> str:
-    """For back-compatibility, but should be replaced with direct specification of classes."""
+    """For back-compatibility, but should be replaced with direct comparison of classes."""
     import tarfile
     import zipfile
     from aiida.tools.importexport.common.config import ExportFileFormat

@@ -41,7 +41,7 @@ class ArchiveMetadata:
 
 def detect_archive_type(in_path: str) -> str:
     """For back-compatibility, but should be replaced with direct comparison of classes.
-    
+
     :param in_path: the path to the file
     :returns: the archive type identifier (currently one of 'zip', 'tar.gz', 'folder')
 

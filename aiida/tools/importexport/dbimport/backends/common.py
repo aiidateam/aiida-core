@@ -9,7 +9,7 @@
 ###########################################################################
 """Common import functions for both database backend"""
 import copy
-from typing import Dict
+from typing import Dict, Optional
 
 from aiida.common import timezone
 from aiida.common.progress_reporter import get_progress_reporter
@@ -23,10 +23,17 @@ MAX_GROUPS = 100
 
 
 def _make_import_group(
-    *, group, existing_entries: Dict[str, Dict[str, dict]], new_entries: Dict[str, Dict[str, dict]],
-    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]]
-):
-    """Make an import group containing all imported nodes."""
+    *, group: Optional[ImportGroup], existing_entries: Dict[str, Dict[str, dict]],
+    new_entries: Dict[str, Dict[str, dict]], foreign_ids_reverse_mappings: Dict[str, Dict[str, int]]
+) -> ImportGroup:
+    """Make an import group containing all imported nodes.
+
+    :param group: Use an existing group
+    :param existing_entries: Entities that already exist in the AiiDA database: entity_name -> str(pk) -> fields
+    :param new_entries: Entities that are new to the AiiDA database: entity_name -> str(pk) -> fields
+    :param foreign_ids_reverse_mappings: Mapping of identifiers to primary keys: entity_name -> identifier -> pk
+
+    """
     existing = existing_entries.get(NODE_ENTITY_NAME, {})
     existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in existing.values()]
     new = new_entries.get(NODE_ENTITY_NAME, {})

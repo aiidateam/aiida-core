@@ -8,69 +8,74 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for archive reader."""
-# from aiida.tools.importexport.archive.readers import ReaderJsonZip
+# pylint: disable=pointless-statement,redefined-outer-name
+import pytest
 
-# from tests.utils.archives import get_archive_file
+from aiida.common import InvalidOperation
+from aiida.tools.importexport import EXPORT_VERSION, CorruptArchive
+from aiida.tools.importexport.archive import get_reader
+from tests.utils.archives import get_archive_file
 
-# PATH = '/Users/chrisjsewell/Documents/GitHub/aiida_core_develop/out2.aiida'
+
+@pytest.fixture
+def archive_reader():
+    """Return an initiated archive reader."""
+
+    def _func(filename=None):
+        archive_path = get_archive_file(filename or f'export_v{EXPORT_VERSION}_simple.aiida', 'export/migrate')
+        reader_cls = get_reader('zip')
+        return reader_cls(archive_path)
+
+    return _func
 
 
-def test_json_zip():
-    """Test the JSON zip reader."""
-    # with ReaderJsonZip(PATH) as reader:
-    #     assert reader.metadata.export_version == '0.9'
-    #     assert reader.metadata.aiida_version == '1.4.2'
-    #     assert sorted(reader.entity_names) == ['Comment', 'Computer', 'Group', 'Log', 'Node', 'User']
-    #     assert reader.entity_count('Node') == 40065
-    #     assert sum(1 for _ in reader.iter_entity_fields('Node')) == 40065
-    #     assert reader.entity_count('Computer') == 0
-    #     assert reader.entity_count('User') == 1
-    #     assert reader.entity_count('Group') == 1
-    #     assert sum(1 for _ in reader.iter_group_uuids()) == 1
-    #     assert reader.link_count == 40064
-    #     assert sum(1 for _ in reader.iter_link_data()) == 40064
-    #     assert next(reader.iter_entity_fields('Node', fields=('label', 'node_type', 'attributes'))) == (
-    #         1, {
-    #             'node_type': 'data.dict.Dict.',
-    #             'label': '',
-    #             'attributes': {
-    #                 '0': 0,
-    #                 '1': 1,
-    #                 '2': 2,
-    #                 '3': 3,
-    #                 '4': 4,
-    #                 '5': 5,
-    #                 '6': 6,
-    #                 '7': 7,
-    #                 '8': 8,
-    #                 '9': 9
-    #             }
-    #         }
-    #     )
-    #     assert next(reader.iter_entity_fields('Group', fields=('type_string', 'user'))
-    #                 ) == (1, {
-    #                     'user': 1,
-    #                     'type_string': 'core.import'
-    #                 })
-    #     subfolder = reader.node_repository(next(reader.iter_node_uuids()))
-    #     assert subfolder.get_subfolder('path').get_content_list() == ['key1', 'key0']
+def test_reader(archive_reader):
+    """Test reader API."""
 
-    # def test_context_required(self):
-    #     """Verify that accessing a property of an Archive outside of a context manager raises."""
-    #     with self.assertRaises(InvalidOperation):
-    #         filepath = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
-    #         archive = Archive(filepath)
-    #         archive.version_format  # pylint: disable=pointless-statement
+    with archive_reader() as archive:
+        assert archive.export_version == '0.9'
+        assert archive.metadata.aiida_version == '1.1.1'
+        assert sorted(archive.entity_names) == ['Comment', 'Computer', 'Group', 'Log', 'Node', 'User']
+        assert archive.entity_count('Node') == 10
+        assert sum(1 for _ in archive.iter_entity_fields('Node')) == 10
+        assert archive.entity_count('Computer') == 1
+        assert archive.entity_count('User') == 1
+        assert archive.entity_count('Group') == 4
+        assert sum(1 for _ in archive.iter_group_uuids()) == 4
+        assert archive.link_count == 8
+        assert sum(1 for _ in archive.iter_link_data()) == 8
+        assert next(archive.iter_entity_fields('Node', fields=('label', 'node_type', 'attributes'))) == (
+            837, {
+                'label': 'pw.x',
+                'node_type': 'data.code.Code.',
+                'attributes': {
+                    'is_local': False,
+                    'append_text': '',
+                    'remote_exec_path': '/ssoft/quantum-espresso/5.1.1/RH6/intel-15.0.0/x86_E5v2/intel/pw.x',
+                    'input_plugin': 'quantumespresso.pw',
+                    'prepend_text': 'module load quantum-espresso/5.1.1/intel-15.0.0'
+                }
+            }
+        )
+        assert next(archive.iter_entity_fields('Group', fields=('type_string', 'user'))
+                    ) == (50, {
+                        'user': 1,
+                        'type_string': 'core'
+                    })
+        subfolder = archive.node_repository(next(archive.iter_node_uuids()))
+        assert subfolder.get_subfolder('path').get_content_list() == ['.gitignore']
 
-    # def test_version_format(self):
-    #     """Verify that `version_format` return the correct archive format version."""
-    #     filepath = get_archive_file('export_v0.1_simple.aiida', filepath='export/migrate')
-    #     with Archive(filepath) as archive:
-    #         self.assertEqual(archive.version_format, '0.1')
 
-    # def test_empty_archive(self):
-    #     """Verify that attempting to unpack an empty archive raises a `CorruptArchive` exception."""
-    #     filepath = get_archive_file('empty.aiida', filepath='export/migrate')
-    #     with self.assertRaises(CorruptArchive):
-    #         with Archive(filepath) as archive:
-    #             archive.version_format  # pylint: disable=pointless-statement
+def test_context_required(archive_reader):
+    """Verify that accessing a property of an Archive outside of a context manager raises."""
+    archive = archive_reader()
+    with pytest.raises(InvalidOperation, match='should be used within a context'):
+        uuid = next(archive.iter_node_uuids())
+        archive.node_repository(uuid)
+
+
+def test_empty_archive(archive_reader):
+    """Verify that attempting to unpack an empty archive raises a `CorruptArchive` exception."""
+    with pytest.raises(CorruptArchive, match='input file cannot be read'):
+        with archive_reader('empty.aiida') as archive:
+            assert archive.export_version == '0.9'

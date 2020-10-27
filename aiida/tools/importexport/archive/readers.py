@@ -25,6 +25,7 @@ from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
 from aiida.tools.importexport.archive.common import ArchiveMetadata
+from aiida.tools.importexport.common.config import NODE_ENTITY_NAME, GROUP_ENTITY_NAME
 from aiida.tools.importexport.common.utils import export_shard_uuid
 
 __all__ = (
@@ -302,7 +303,7 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         if name not in self.entity_names:
             raise ValueError(f'Unknown entity name: {name}')
         data = self._get_data()['export_data'].get(name, {})
-        if name == 'Node':
+        if name == NODE_ENTITY_NAME:
             # here we merge in the attributes and extras before yielding
             attributes = self._get_data().get('node_attributes', {})
             extras = self._get_data().get('node_extras', {})
@@ -322,12 +323,14 @@ class ReaderJsonBase(ArchiveReaderAbstract):
                 yield int(pk), all_fields
 
     def iter_node_uuids(self) -> Iterator[str]:
-        for _, fields in self.iter_entity_fields('Node', fields=('uuid',)):
+        for _, fields in self.iter_entity_fields(NODE_ENTITY_NAME, fields=('uuid',)):
             yield fields['uuid']
 
     def iter_group_uuids(self) -> Iterator[Tuple[str, Set[str]]]:
-        for key, values in self._get_data()['groups_uuid'].items():
-            yield key, set(values)
+        group_uuids = self._get_data()['groups_uuid']
+        for _, fields in self.iter_entity_fields(GROUP_ENTITY_NAME, fields=('uuid',)):
+            key = fields['uuid']
+            yield key, set(group_uuids.get(key, set()))
 
     def iter_link_data(self) -> Iterator[dict]:
         for value in self._get_data()['links_uuid']:
@@ -382,8 +385,8 @@ class ReaderJsonZip(ReaderJsonBase):
                 self._metadata = json.loads(
                     zipfile.ZipFile(self.filename, 'r', allowZip64=True).read(self.FILENAME_METADATA).decode('utf8')
                 )
-            except zipfile.BadZipfile:
-                raise ValueError('The input file format is not valid (not a zip file)')
+            except zipfile.BadZipfile as error:
+                raise CorruptArchive(f'The input file cannot be read: {error}')
             except KeyError:
                 raise CorruptArchive(f'required file `{self.FILENAME_METADATA}` is not included')
         return self._metadata
@@ -394,8 +397,8 @@ class ReaderJsonZip(ReaderJsonBase):
                 self._data = json.loads(
                     zipfile.ZipFile(self.filename, 'r', allowZip64=True).read(self.FILENAME_DATA).decode('utf8')
                 )
-            except zipfile.BadZipfile:
-                raise ValueError('The input file format is not valid (not a zip file)')
+            except zipfile.BadZipfile as error:
+                raise CorruptArchive(f'The input file cannot be read: {error}')
             except KeyError:
                 raise CorruptArchive(f'required file {self.FILENAME_DATA} is not included')
         return self._data
@@ -414,8 +417,8 @@ class ReaderJsonZip(ReaderJsonBase):
                 else:
                     for membername in members:
                         handle.extract(path=self._sandbox.abspath, member=membername)
-        except zipfile.BadZipfile:
-            raise TypeError('The input file format is not valid (not a zip file)')
+        except zipfile.BadZipfile as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')
 
 
 class ReaderJsonTar(ReaderJsonBase):

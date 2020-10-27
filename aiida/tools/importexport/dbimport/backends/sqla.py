@@ -664,6 +664,9 @@ def _import_groups(
 
     with get_progress_reporter()(total=group_count, desc=pbar_base_str) as progress:
         for groupuuid, groupnodes in group_uuids:
+            if not groupnodes:
+                progress.update()
+                continue
             # TODO: cache these to avoid too many queries
             qb_group = QueryBuilder().append(Group, filters={'uuid': {'==': groupuuid}})
             group_ = qb_group.first()[0]

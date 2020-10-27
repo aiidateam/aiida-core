@@ -18,7 +18,9 @@ py:class builtins.object
 py:class builtins.str
 py:class builtins.dict
 
+# typing
 py:class traceback
+py:class IO
 
 ### AiiDA
 

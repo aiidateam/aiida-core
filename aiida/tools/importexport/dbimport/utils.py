@@ -218,6 +218,8 @@ def deserialize_attributes(attributes_data, conversion_data):
 
 def deserialize_field(key, value, fields_info, import_unique_ids_mappings, foreign_ids_reverse_mappings):
     """Deserialize field using deserialize attributes"""
+    if key in ('attributes', 'extras'):
+        return (key, value)
     try:
         field_info = fields_info[key]
     except KeyError:

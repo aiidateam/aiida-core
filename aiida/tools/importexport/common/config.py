@@ -9,12 +9,20 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """ Configuration file for AiiDA Import/Export module """
+from enum import Enum
 from aiida.orm import Computer, Group, Node, User, Log, Comment
 
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
 EXPORT_VERSION = '0.9'
+
+
+class ExportFileFormat(str, Enum):
+    """Archive file formats"""
+    ZIP = 'zip'
+    TAR_GZIPPED = 'tar.gz'
+
 
 DUPL_SUFFIX = ' (Imported #{})'
 

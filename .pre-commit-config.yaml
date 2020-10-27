@@ -36,10 +36,13 @@ repos:
         pass_filenames: true
         files: >-
             (?x)^(
+                aiida/common/progress_reporter.py|
                 aiida/engine/processes/calcjobs/calcjob.py|
                 aiida/tools/groups/paths.py|
+                aiida/tools/importexport/archive/.*py|
+                aiida/tools/importexport/common/zip_folder.py|
                 aiida/tools/importexport/dbexport/__init__.py|
-                aiida/common/progress_reporter.py|
+                aiida/tools/importexport/dbimport/backends/.*.py|
             )$
 
 -   repo: local

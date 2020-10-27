@@ -19,7 +19,7 @@ from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import InputValidationError
-from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
+from aiida.common.log import LOG_LEVELS, AIIDA_LOGGER
 
 
 @verdi.group('code')
@@ -175,7 +175,7 @@ def show(code):
     table.append(['Prepend text', code.get_prepend_text()])
     table.append(['Append text', code.get_append_text()])
 
-    if VERDI_LOGGER.level <= LOG_LEVELS['DEBUG']:
+    if AIIDA_LOGGER.level <= LOG_LEVELS['DEBUG']:
         table.append(['Calculations', len(code.get_outgoing().all())])
 
     click.echo(tabulate.tabulate(table))
@@ -194,7 +194,7 @@ def delete(codes, dry_run, force):
     from aiida.manage.database.delete.nodes import delete_nodes
 
     if force:
-        VERDI_LOGGER.setLevel('CRITICAL')
+        AIIDA_LOGGER.setLevel('CRITICAL')
 
     node_pks_to_delete = [code.pk for code in codes]
     delete_nodes(node_pks_to_delete, dry_run=dry_run, force=force)

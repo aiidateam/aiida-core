@@ -37,9 +37,8 @@ LOG_LEVELS = {
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
 
-# The AiiDA loggers
+# The AiiDA logger
 AIIDA_LOGGER = logging.getLogger('aiida')
-VERDI_LOGGER = logging.getLogger('verdi')
 
 
 class ClickHandler(logging.Handler):
@@ -112,45 +111,38 @@ LOGGING = {
         'aiida': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.aiida_loglevel'),
-            'propagate': False,
         },
         'tornado': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.tornado_loglevel'),
-            'propagate': False,
         },
         'plumpy': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.plumpy_loglevel'),
-            'propagate': False,
         },
         'kiwipy': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.kiwipy_loglevel'),
-            'propagate': False,
         },
         'paramiko': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.paramiko_loglevel'),
-            'propagate': False,
         },
         'alembic': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.alembic_loglevel'),
-            'propagate': False,
         },
         'sqlalchemy': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),
-            'propagate': False,
             'qualname': 'sqlalchemy.engine',
         },
         'py.warnings': {
             'handlers': ['console'],
         },
-        'verdi': {
-            'level': lambda: get_config_option('logging.verdi_loglevel'),
-            'handlers': ['click']
+        'aiida.cmdline': {
+            'handlers': ['click'],
+            'propagate': False,
         }
     },
 }
@@ -194,7 +186,6 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     # currently configured profile. Pass a deep copy of `LOGGING` to ensure that the original remains unaltered.
     config = evaluate_logging_configuration(copy.deepcopy(LOGGING))
     daemon_handler_name = 'daemon_log_file'
-
     # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
 

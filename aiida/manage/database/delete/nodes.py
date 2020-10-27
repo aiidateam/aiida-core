@@ -12,7 +12,7 @@
 import warnings
 import click
 from aiida.cmdline.utils import echo
-from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
+from aiida.common.log import LOG_LEVELS, AIIDA_LOGGER
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
 
@@ -68,11 +68,11 @@ def delete_nodes(pks, verbosity=None, force=False, dry_run=False, **kwargs):
             AiidaDeprecationWarning,
         )  # pylint: disable=no-member
         if verbosity == 0:
-            VERDI_LOGGER.setLevel('CRITICAL')
+            AIIDA_LOGGER.setLevel('CRITICAL')
         elif verbosity == 1:
-            VERDI_LOGGER.setLevel('INFO')
+            AIIDA_LOGGER.setLevel('INFO')
         elif verbosity == 2:
-            VERDI_LOGGER.setLevel('DEBUG')
+            AIIDA_LOGGER.setLevel('DEBUG')
 
     starting_pks = []
     for pk in pks:
@@ -97,13 +97,13 @@ def delete_nodes(pks, verbosity=None, force=False, dry_run=False, **kwargs):
     )
 
     # Let's not perform the query, if it isn't needed
-    if VERDI_LOGGER.level <= LOG_LEVELS['DEBUG']:
+    if AIIDA_LOGGER.level <= LOG_LEVELS['DEBUG']:
         builder = QueryBuilder().append(
             Node, filters={'id': {
                 'in': pks_set_to_delete
             }}, project=('uuid', 'id', 'node_type', 'label')
         )
-        echo.echo_debug('The nodes I {'would' if dry_run else 'will'} delete:')
+        echo.echo_debug('The nodes I {"would" if dry_run else "will"} delete:')
         for uuid, pk, type_string, label in builder.iterall():
             try:
                 short_type_string = type_string.split('.')[-2]

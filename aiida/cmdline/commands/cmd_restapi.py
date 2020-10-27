@@ -17,7 +17,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options import HOSTNAME, PORT
-from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
+from aiida.common.log import LOG_LEVELS, AIIDA_LOGGER
 from aiida.restapi.common import config
 
 
@@ -53,7 +53,7 @@ def restapi(hostname, port, config_dir, wsgi_profile, hookup):
         hostname=hostname,
         port=port,
         config=config_dir,
-        debug=VERDI_LOGGER.level <= LOG_LEVELS['DEBUG'],
+        debug=AIIDA_LOGGER.level <= LOG_LEVELS['DEBUG'],
         wsgi_profile=wsgi_profile,
         hookup=hookup,
     )

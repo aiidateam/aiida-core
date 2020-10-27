@@ -10,7 +10,8 @@
 """Option for setting global verbosity of verdi command line interface."""
 
 import click
-from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
+from aiida.common.log import LOG_LEVELS
+from aiida.cmdline import CMDLINE_LOGGER
 from aiida.manage.configuration import get_config_option
 from .overridable import OverridableOption
 
@@ -40,14 +41,13 @@ class VerbosityOption(OverridableOption):
         :param kwargs: default keyword arguments to be used that can be overridden in the call
         """
         levels_str = ', '.join(LOG_LEVELS.keys())
-        self.logger = kwargs.pop('logger', VERDI_LOGGER)
-
+        self.logger = kwargs.pop('logger', CMDLINE_LOGGER)
         kwargs.setdefault('default', get_config_option('logging.verdi_loglevel'))
         kwargs.setdefault('show_default', True)
         kwargs.setdefault('expose_value', False)
         kwargs.setdefault(
-            'help', 'Control the verbosity of messages emitted by the command' +
-            ' by setting the minimum log level to one of: {}.'.format(levels_str)
+            'help', 'Filter out log messages emitted by the command' +
+            f' below one of the following priority levels: {levels_str}.'
         )
         kwargs.setdefault('is_eager', True)
         kwargs.setdefault('callback', self._set_level)
@@ -75,5 +75,5 @@ class VerbosityOption(OverridableOption):
         level = LOG_LEVELS.get(value.upper(), None)
         if level is None:
             levels_str = ', '.join(LOG_LEVELS.keys())
-            raise click.BadParameter('Must be one of {}.'.format(levels_str))
+            raise click.BadParameter(f'Must be one of {levels_str}.')
         self.logger.setLevel(level)

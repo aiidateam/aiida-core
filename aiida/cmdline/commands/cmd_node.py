@@ -23,7 +23,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 from aiida.common import timezone
 from aiida.common.links import GraphTraversalRules
-from aiida.common.log import VERDI_LOGGER
+from aiida.cmdline import CMDLINE_LOGGER
 
 
 @verdi.group('node')
@@ -312,7 +312,7 @@ def node_delete(nodes, dry_run, force, **kwargs):
     from aiida.manage.database.delete.nodes import delete_nodes
 
     if force:
-        VERDI_LOGGER.setLevel('CRITICAL')
+        CMDLINE_LOGGER.setLevel('CRITICAL')
 
     node_pks_to_delete = [node.pk for node in nodes]
 

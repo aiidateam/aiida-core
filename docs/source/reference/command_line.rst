@@ -179,9 +179,9 @@ Below is a list with all available subcommands.
       Inspect, create and manage data nodes.
 
     Options:
-      -v, --verbosity LEVEL  Control the verbosity of messages emitted by the command by
-                             setting the minimum log level to one of: NOTSET, DEBUG, INFO,
-                             REPORT, WARNING, ERROR, CRITICAL.  [default: INFO]
+      -v, --verbosity LEVEL  Filter out log messages emitted by the command below one of the
+                             following priority levels: NOTSET, DEBUG, INFO, REPORT, WARNING,
+                             ERROR, CRITICAL.  [default: INFO]
 
       --help                 Show this message and exit.
 

@@ -32,7 +32,6 @@ def plugin_list(entry_point_group, entry_point):
     from aiida.cmdline.utils.common import print_process_info
     from aiida.engine import Process
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
-
     if entry_point_group is None:
         echo.echo_info('Available entry point groups:')
         for group in sorted(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()):

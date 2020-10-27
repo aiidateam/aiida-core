@@ -13,7 +13,7 @@
 import alembic
 import click
 
-from aiida.common.log import VERDI_LOGGER, LOG_LEVELS
+from aiida.common.log import LOG_LEVELS, AIIDA_LOGGER
 
 from aiida.cmdline.params import options
 
@@ -28,7 +28,7 @@ def execute_alembic_command(command_name, **kwargs):
 
     manager = SqlaBackendManager()
 
-    if VERDI_LOGGER.level <= LOG_LEVELS['DEBUG']:
+    if AIIDA_LOGGER.level <= LOG_LEVELS['DEBUG']:
         kwargs.setdefault('verbose', True)
 
     with manager.alembic_config() as config:

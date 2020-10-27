@@ -9,12 +9,11 @@
 ###########################################################################
 # pylint: disable=wildcard-import,undefined-variable
 """The command line interface of AiiDA."""
-
+from .utils.echo import *
 from .params.arguments import *
 from .params.options import *
 from .params.types import *
 from .utils.decorators import *
-from .utils.echo import *
 
 __all__ = (
     params.arguments.__all__ + params.options.__all__ + params.types.__all__ + utils.decorators.__all__ +

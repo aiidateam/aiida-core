@@ -10,13 +10,15 @@
 """
 Defines an rst directive to auto-document AiiDA workchains.
 """
+import inspect
 
+from aiida.engine import WorkChain
 from .process import AiidaProcessDocumenter, AiidaProcessDirective
 
 
 def setup_extension(app):
     app.add_directive_to_domain('py', AiidaWorkChainDocumenter.directivetype, AiidaWorkchainDirective)
-    app.add_autodocumenter(AiidaWorkChainDocumenter)
+    # app.add_autodocumenter(AiidaWorkChainDocumenter)
 
 
 class AiidaWorkChainDocumenter(AiidaProcessDocumenter):
@@ -27,8 +29,7 @@ class AiidaWorkChainDocumenter(AiidaProcessDocumenter):
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        from aiida.engine import WorkChain
-        return issubclass(cls, WorkChain)
+        return inspect.isclass(member) and issubclass(member, WorkChain)
 
 
 class AiidaWorkchainDirective(AiidaProcessDirective):

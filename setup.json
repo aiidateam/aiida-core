@@ -27,6 +27,7 @@
         "click-config-file~=0.6.0",
         "click-spinner~=0.1.8",
         "click~=7.0",
+        "dataclasses~=0.7; python_version < '3.7.0'",
         "django~=2.2",
         "ete3~=3.1",
         "graphviz~=0.13",
@@ -70,11 +71,13 @@
         "docs": [
             "docutils==0.15.2",
             "pygments~=2.5",
-            "pydata-sphinx-theme~=0.3.0",
-            "sphinx~=2.2",
+            "pydata-sphinx-theme~=0.4.0",
+            "sphinx~=3.2",
             "sphinxcontrib-details-directive~=0.1.0",
-            "sphinx-panels~=0.4.0",
-            "sphinx-copybutton~=0.2.12"
+            "sphinx-panels~=0.5.0",
+            "sphinx-copybutton~=0.3.0",
+            "sphinx-notfound-page~=0.5",
+            "sphinxext-rediraffe~=0.2.4"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",

@@ -18,10 +18,19 @@ py:class builtins.object
 py:class builtins.str
 py:class builtins.dict
 
+# typing
+py:class traceback
+py:class IO
+
 ### AiiDA
 
-# not quite clear why necessary...
+# issues with order of object processing and type hinting
 py:class WorkChainSpec
+py:class aiida.tools.importexport.dbexport.ExportReport
+py:class aiida.tools.importexport.dbexport.ArchiveData
+
+py:class EntityType
+py:class aiida.tools.groups.paths.WalkNodeResult
 
 ### python packages
 # Note: These exceptions are needed if
@@ -39,9 +48,11 @@ py:meth  click.Option.get_default
 
 py:class concurrent.futures._base.TimeoutError
 
-py:class docutils.parsers.rst.Directive
+py:class sphinx.util.docutils.SphinxDirective
 
 py:class frozenset
+
+py:class numpy.bool_
 
 py:class paramiko.proxy.ProxyCommand
 
@@ -53,6 +64,8 @@ py:class topika.Connection
 
 py:class tornado.ioloop.IOLoop
 py:class tornado.concurrent.Future
+
+py:class tqdm.std.tqdm
 
 py:class IPython.core.magic.Magics
 

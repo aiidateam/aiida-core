@@ -24,7 +24,7 @@ class TestExtras(AiidaTestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        """Only run to prepare an export file"""
+        """Only run to prepare an archive file"""
         super().setUpClass()
 
         data = orm.Data()

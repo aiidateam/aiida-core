@@ -13,21 +13,30 @@ from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 __all__ = ('import_data', 'IMPORT_LOGGER')
 
 
-def import_data(in_path, group=None, silent=False, **kwargs):
+def import_data(in_path, group=None, **kwargs):
     """Import exported AiiDA archive to the AiiDA database and repository.
 
     Proxy function for the backend-specific import functions.
     If ``in_path`` is a folder, calls extract_tree; otherwise, tries to detect the compression format
     (zip, tar.gz, tar.bz2, ...) and calls the correct function.
 
+    Note, the logging level and progress reporter should be set externally, for example::
+
+        from aiida.common.progress_reporter import set_progress_bar_tqdm
+
+        IMPORT_LOGGER.setLevel('DEBUG')
+        set_progress_bar_tqdm(leave=True)
+        import_data(...)
+
+    .. deprecated:: 1.5.0
+        Support for the parameter `silent` will be removed in `v2.0.0`.
+        Please set the log level and progress bar implementation independently.
+
     :param in_path: the path to a file or folder that can be imported in AiiDA.
     :type in_path: str
 
     :param group: Group wherein all imported Nodes will be placed.
     :type group: :py:class:`~aiida.orm.groups.Group`
-
-    :param silent: suppress prints.
-    :type silent: bool
 
     :param extras_mode_existing: 3 letter code that will identify what to do with the extras import.
         The first letter acts on extras that are present in the original node and not present in the imported node.
@@ -70,12 +79,12 @@ def import_data(in_path, group=None, silent=False, **kwargs):
     if backend == BACKEND_SQLA:
         from aiida.tools.importexport.dbimport.backends.sqla import import_data_sqla
         IMPORT_LOGGER.debug('Calling import function import_data_sqla for the %s backend.', backend)
-        return import_data_sqla(in_path, group=group, silent=silent, **kwargs)
+        return import_data_sqla(in_path, group=group, **kwargs)
 
     if backend == BACKEND_DJANGO:
         from aiida.tools.importexport.dbimport.backends.django import import_data_dj
         IMPORT_LOGGER.debug('Calling import function import_data_dj for the %s backend.', backend)
-        return import_data_dj(in_path, group=group, silent=silent, **kwargs)
+        return import_data_dj(in_path, group=group, **kwargs)
 
     # else
     raise ArchiveImportError(f'Unknown backend: {backend}')

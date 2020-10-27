@@ -348,9 +348,11 @@ Below is a list with all available subcommands.
                                       (default).overwrite: Replace existing Comments with
                                       those from the import file.
 
-      --migration / --no-migration    Force migration of export file archives, if needed.
+      --migration / --no-migration    Force migration of archive file archives, if needed.
                                       [default: True]
 
+      -v, --verbosity [DEBUG|INFO|WARNING|CRITICAL]
+                                      Control the verbosity of console logging
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but
                                       simply uses default values for options that define one.
 

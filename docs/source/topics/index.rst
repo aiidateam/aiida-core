@@ -10,9 +10,11 @@ Topics
    calculations/index
    workflows/index
    provenance/index
+   data_types
    database
    plugins
    schedulers
+   transport
 
 .. todo::
 

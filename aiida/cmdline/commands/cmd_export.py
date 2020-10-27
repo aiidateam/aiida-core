@@ -9,9 +9,9 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
-
 import os
 import tempfile
+import shutil
 
 import click
 import tabulate
@@ -39,22 +39,40 @@ def inspect(archive, version, data, meta_data):
 
     By default a summary of the archive contents will be printed. The various options can be used to change exactly what
     information is displayed.
-    """
-    from aiida.tools.importexport import Archive, CorruptArchive
 
-    with Archive(archive) as archive_object:
+    .. deprecated:: 1.5.0
+        Support for the --data flag
+
+    """
+    import dataclasses
+    from aiida.tools.importexport import CorruptArchive, detect_archive_type, get_reader
+
+    reader_cls = get_reader(detect_archive_type(archive))
+
+    with reader_cls(archive) as reader:
         try:
             if version:
-                echo.echo(archive_object.version_format)
+                echo.echo(reader.export_version)
             elif data:
-                echo.echo_dictionary(archive_object.data)
+                # data is an internal implementation detail
+                echo.echo_deprecated('--data is deprecated and will be removed in v2.0.0')
+                echo.echo_dictionary(reader._get_data())  # pylint: disable=protected-access
             elif meta_data:
-                echo.echo_dictionary(archive_object.meta_data)
+                echo.echo_dictionary(dataclasses.asdict(reader.metadata))
             else:
-                info = archive_object.get_info()
-                data = sorted([(k.capitalize(), v) for k, v in info.items()])
-                data.extend(sorted([(k.capitalize(), v) for k, v in archive_object.get_data_statistics().items()]))
-                echo.echo(tabulate.tabulate(data))
+                statistics = {
+                    'Version aiida': reader.metadata.aiida_version,
+                    'Version format': reader.metadata.export_version,
+                    'Computers': reader.entity_count('Computer'),
+                    'Groups': reader.entity_count('Group'),
+                    'Links': reader.link_count,
+                    'Nodes': reader.entity_count('Node'),
+                    'Users': reader.entity_count('User'),
+                }
+                if reader.metadata.conversion_info:
+                    statistics['Conversion info'] = '\n'.join(reader.metadata.conversion_info)
+
+                echo.echo(tabulate.tabulate(statistics.items()))
         except CorruptArchive as exception:
             echo.echo_critical(f'corrupt archive: {exception}')
 
@@ -67,6 +85,13 @@ def inspect(archive, version, data, meta_data):
 @options.NODES()
 @options.ARCHIVE_FORMAT()
 @options.FORCE(help='overwrite output file if it already exists')
+@click.option(
+    '-v',
+    '--verbosity',
+    default='INFO',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
+    help='Control the verbosity of console logging'
+)
 @options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
@@ -83,18 +108,20 @@ def inspect(archive, version, data, meta_data):
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbosity
 ):
     """
     Export subsets of the provenance graph to file for sharing.
 
     Besides Nodes of the provenance graph, you can export Groups, Codes, Computers, Comments and Logs.
 
-    By default, the export file will include not only the entities explicitly provided via the command line but also
+    By default, the archive file will include not only the entities explicitly provided via the command line but also
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.tools.importexport import export, ExportFileFormat
+    from aiida.common.log import override_log_formatter_context
+    from aiida.common.progress_reporter import set_progress_bar_tqdm
+    from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
     entities = []
@@ -132,8 +159,13 @@ def create(
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
 
+    if verbosity in ['DEBUG', 'INFO']:
+        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    EXPORT_LOGGER.setLevel(verbosity)
+
     try:
-        export(entities, filename=output_file, file_format=export_format, **kwargs)
+        with override_log_formatter_context('%(message)s'):
+            export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:
@@ -232,7 +264,7 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
                 archive.add(folder.abspath, arcname='')
 
         if in_place:
-            os.rename(output_file, input_file)
+            shutil.move(output_file, input_file)
             tempdir.cleanup()
 
         if not silent:

@@ -97,7 +97,7 @@ class TestSimple(AiidaTestCase):
 
     def test_check_for_export_format_version(self):
         """Test the check for the export format version."""
-        # Creating a folder for the import/export files
+        # Creating a folder for the archive files
         export_file_tmp_folder = tempfile.mkdtemp()
         unpack_tmp_folder = tempfile.mkdtemp()
         try:

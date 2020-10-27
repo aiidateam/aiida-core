@@ -7,12 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test export file migration from old export versions to the newest"""
+"""Test archive file migration from old export versions to the newest"""
+from copy import deepcopy
 import os
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport import import_data, ArchiveMigrationError, Archive, EXPORT_VERSION as newest_version
+from aiida.tools.importexport import detect_archive_type, get_reader
+from aiida.tools.importexport import import_data, ArchiveMigrationError, EXPORT_VERSION as newest_version
 from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
 
 from tests.utils.archives import get_archive_file, get_json_files, migrate_archive
@@ -20,14 +22,14 @@ from tests.utils.configuration import with_temp_dir
 
 
 class TestExportFileMigration(AiidaTestCase):
-    """Test export file migrations"""
+    """Test archive file migrations"""
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         """Add variables (once) to be used by all tests"""
         super().setUpClass(*args, **kwargs)
 
-        # Known export file content used for checks
+        # Known archive file content used for checks
         cls.node_count = 25
         cls.struct_count = 2
         cls.known_struct_label = ''
@@ -104,25 +106,29 @@ class TestExportFileMigration(AiidaTestCase):
         """Test the `version` argument of the `migrate_recursively` function."""
         filepath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
 
-        with Archive(filepath_archive) as archive:
+        reader_cls = get_reader(detect_archive_type(filepath_archive))
+        with reader_cls(filepath_archive) as archive:
+
+            metadata = deepcopy(archive._get_metadata())  # pylint: disable=protected-access
+            data = deepcopy(archive._get_data())  # pylint: disable=protected-access
 
             # Incorrect type
             with self.assertRaises(TypeError):
-                migrate_recursively(archive.meta_data, archive.data, None, version=0.2)
+                migrate_recursively(metadata, data, None, version=0.2)
 
             # Backward migrations are not supported
             with self.assertRaises(ArchiveMigrationError):
-                migrate_recursively(archive.meta_data, archive.data, None, version='0.2')
+                migrate_recursively(metadata, data, None, version='0.2')
 
-            migrate_recursively(archive.meta_data, archive.data, None, version='0.3')
+            migrate_recursively(metadata, data, None, version='0.3')
 
             migrated_version = '0.5'
-            version = migrate_recursively(archive.meta_data, archive.data, None, version=migrated_version)
+            version = migrate_recursively(metadata, data, None, version=migrated_version)
             self.assertEqual(version, migrated_version)
 
     @with_temp_dir
     def test_no_node_export(self, temp_dir):
-        """Test migration of export file that has no Nodes"""
+        """Test migration of archive file that has no Nodes"""
         input_file = get_archive_file('export_v0.3_no_Nodes.aiida', **self.external_archive)
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 
@@ -130,7 +136,7 @@ class TestExportFileMigration(AiidaTestCase):
         computer_uuids = [self.computer.uuid]  # pylint: disable=no-member
         user_emails = [orm.User.objects.get_default().email]
 
-        # Known export file content used for checks
+        # Known archive file content used for checks
         node_count = 0
         computer_count = 1 + 1  # localhost is always present
         computer_uuids.append('4f33c6fd-b624-47df-9ffb-a58f05d323af')
@@ -153,7 +159,7 @@ class TestExportFileMigration(AiidaTestCase):
         self.assertIn(users, user_emails)
 
     def test_wrong_versions(self):
-        """Test correct errors are raised if export files have wrong version numbers"""
+        """Test correct errors are raised if archive files have wrong version numbers"""
         from aiida.tools.importexport.migration import MIGRATE_FUNCTIONS
 
         wrong_versions = ['0.0', '0.1.0', '0.99']
@@ -193,7 +199,7 @@ class TestExportFileMigration(AiidaTestCase):
     @with_temp_dir
     def test_v02_to_newest(self, temp_dir):
         """Test migration of exported files from v0.2 to newest export version"""
-        # Get export file with export version 0.2
+        # Get archive file with export version 0.2
         input_file = get_archive_file('export_v0.2.aiida', **self.external_archive)
         output_file = os.path.join(temp_dir, 'output_file.aiida')
 

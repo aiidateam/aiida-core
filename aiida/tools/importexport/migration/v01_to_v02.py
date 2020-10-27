@@ -15,7 +15,7 @@ from aiida.tools.importexport.migration.utils import verify_metadata_version, up
 
 def migrate_v1_to_v2(metadata, data, *args):
     """
-    Migration of export files from v0.1 to v0.2, which means generalizing the
+    Migration of archive files from v0.1 to v0.2, which means generalizing the
     field names with respect to the database backend
 
     :param metadata: the content of an export archive metadata.json file

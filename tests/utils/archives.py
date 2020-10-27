@@ -20,7 +20,7 @@ from aiida.common.folders import SandboxFolder
 from tests.static import STATIC_DIR
 
 
-def get_archive_file(archive, filepath=None, external_module=None):
+def get_archive_file(archive: str, filepath=None, external_module=None) -> str:
     """Return the absolute path of the archive file used for testing purposes.
 
     The expected path for these files:

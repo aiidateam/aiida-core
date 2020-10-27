@@ -41,7 +41,7 @@ repos:
                 aiida/tools/groups/paths.py|
                 aiida/tools/importexport/dbexport/__init__.py|
                 aiida/tools/importexport/archive/.*py|
-                aiida/tools/importexport/dbimport/backends/django/__init__.py|
+                aiida/tools/importexport/dbimport/backends/.*.py|
             )$
 
 -   repo: local

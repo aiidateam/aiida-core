@@ -9,22 +9,18 @@
 ###########################################################################
 # pylint: disable=protected-access,fixme,too-many-arguments,too-many-locals,too-many-statements,too-many-branches,too-many-nested-blocks
 """ Django-specific import of AiiDA entities """
-import copy
 from itertools import chain
-import logging
-import os
 from typing import Any, Dict, Iterable, Optional, Set, Tuple
 import warnings
 
-from aiida.common import timezone, json
 from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
-from aiida.common.progress_reporter import get_progress_reporter, ProgressReporterAbstract
-from aiida.common.utils import grouper, get_object_from_string
+from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.utils import get_object_from_string
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config_option
 from aiida.orm.utils._repository import Repository
-from aiida.orm import QueryBuilder, Node, Group, ImportGroup
+from aiida.orm import Group
 
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import DUPL_SUFFIX
@@ -38,6 +34,8 @@ from aiida.tools.importexport.dbimport.utils import (
 
 from aiida.tools.importexport.archive.common import detect_archive_type
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract, get_reader
+
+from aiida.tools.importexport.dbimport.backends.common import _make_import_group, _sanitize_extras, _validate_uuid
 
 
 def import_data_dj(
@@ -102,8 +100,6 @@ def import_data_dj(
     :raises `~aiida.tools.importexport.common.exceptions.ImportUniquenessError`: if a new unique entity can not be
         created.
     """
-    from django.db import transaction  # pylint: disable=import-error,no-name-in-module
-
     # Initial check(s)
     if silent is not None:
         warnings.warn(
@@ -124,7 +120,7 @@ def import_data_dj(
             group.store()
 
     # The returned dictionary with new and existing nodes and links
-    # model_name -> new or existing -> list pk
+    # entity_name -> new or existing -> list pk
     ret_dict: Dict[str, dict] = {}
 
     with reader_cls(in_path) as reader:
@@ -136,8 +132,15 @@ def import_data_dj(
         ##########################################################################
         # CREATE UUID REVERSE TABLES AND CHECK IF I HAVE ALL NODES FOR THE LINKS #
         ##########################################################################
+        IMPORT_LOGGER.debug('CHECKING IF NODES FROM LINKS ARE IN DB OR ARCHIVE...')
+
         linked_nodes = set(chain.from_iterable((l['input'], l['output']) for l in reader.iter_link_data()))
         group_nodes = set(chain.from_iterable((uuids for _, uuids in reader.iter_group_uuids())))
+
+        # Check that UUIDs are valid
+        linked_nodes = set(x for x in linked_nodes if _validate_uuid(x))
+        group_nodes = set(x for x in group_nodes if _validate_uuid(x))
+
         import_nodes_uuid = set(v for v in reader.iter_node_uuids())
 
         # the combined set of linked_nodes and group_nodes was obtained from looking at all the links
@@ -155,58 +158,61 @@ def import_data_dj(
         # DOUBLE-CHECK MODEL DEPENDENCIES #
         ###################################
         # The entity import order. It is defined by the database model relationships.
-        model_order = (
+        entity_order = (
             USER_ENTITY_NAME, COMPUTER_ENTITY_NAME, NODE_ENTITY_NAME, GROUP_ENTITY_NAME, LOG_ENTITY_NAME,
             COMMENT_ENTITY_NAME
         )
 
         for entity_name in reader.entity_names:
-            if entity_name not in model_order:
+            if entity_name not in entity_order:
                 raise exceptions.ImportValidationError(f"You are trying to import an unknown model '{entity_name}'!")
 
-        for idx, model_name in enumerate(model_order):
+        for idx, entity_name in enumerate(entity_order):
             dependencies = []
-            for field in reader.metadata.all_fields_info[model_name].values():
+            for field in reader.metadata.all_fields_info[entity_name].values():
                 try:
                     dependencies.append(field['requires'])
                 except KeyError:
                     # (No ForeignKey)
                     pass
             for dependency in dependencies:
-                if dependency not in model_order[:idx]:
+                if dependency not in entity_order[:idx]:
                     raise exceptions.ArchiveImportError(
-                        f'Model {model_name} requires {dependency} but would be loaded first; stopping...'
+                        f'Entity {entity_name} requires {dependency} but would be loaded first; stopping...'
                     )
 
-        # model_name -> pk -> unique id
+        IMPORT_LOGGER.debug('CREATING PK-2-UUID/EMAIL MAPPING...')
+        # entity_name -> pk -> unique id
         import_unique_ids_mappings: Dict[str, Dict[int, str]] = {}
-        for model_name, identifier in reader.metadata.unique_identifiers.items():
-            import_unique_ids_mappings[model_name] = {
-                int(k): f[identifier] for k, f in reader.iter_entity_fields(model_name, fields=(identifier,))
+        for entity_name, identifier in reader.metadata.unique_identifiers.items():
+            import_unique_ids_mappings[entity_name] = {
+                int(k): f[identifier] for k, f in reader.iter_entity_fields(entity_name, fields=(identifier,))
             }
 
         # count total number of entities to import
-        number_of_entities: int = sum(reader.entity_count(model_name) for model_name in model_order)
+        number_of_entities: int = sum(reader.entity_count(entity_name) for entity_name in entity_order)
         IMPORT_LOGGER.debug('Importing %s entities', number_of_entities)
-
-        # batch size for bulk create operations
-        batch_size: int = get_config_option('db.batch_size')
 
         ###########################################
         # IMPORT ALL DATA IN A SINGLE TRANSACTION #
         ###########################################
+        from django.db import transaction  # pylint: disable=import-error,no-name-in-module
+
+        # batch size for bulk create operations
+        batch_size: int = get_config_option('db.batch_size')
+
         with transaction.atomic():
 
-            # model_name -> str(pk) -> fields
+            # entity_name -> str(pk) -> fields
             new_entries: Dict[str, Dict[str, dict]] = {}
             existing_entries: Dict[str, Dict[str, dict]] = {}
-            # model_name -> identifier -> pk
+            # entity_name -> identifier -> pk
             foreign_ids_reverse_mappings: Dict[str, Dict[str, int]] = {}
 
             IMPORT_LOGGER.debug('ASSESSING IMPORT DATA...')
-            for model_name in model_order:
-                _generate_model_data(
-                    model_name=model_name,
+            for entity_name in entity_order:
+                _generate_entity_data(
+                    entity_name=entity_name,
                     reader=reader,
                     new_entries=new_entries,
                     existing_entries=existing_entries,
@@ -215,27 +221,29 @@ def import_data_dj(
                 )
 
             IMPORT_LOGGER.debug('STORING ENTITIES...')
-            for model_name in model_order:
-                _store_model_data(
+            for entity_name in entity_order:
+                _store_entity_data(
                     reader=reader,
-                    model_name=model_name,
-                    batch_size=batch_size,
+                    entity_name=entity_name,
                     comment_mode=comment_mode,
                     extras_mode_existing=extras_mode_existing,
                     new_entries=new_entries,
                     existing_entries=existing_entries,
                     foreign_ids_reverse_mappings=foreign_ids_reverse_mappings,
                     import_unique_ids_mappings=import_unique_ids_mappings,
-                    ret_dict=ret_dict
+                    ret_dict=ret_dict,
+                    batch_size=batch_size,
+                    # session=session
                 )
 
             IMPORT_LOGGER.debug('STORING NODE LINKS...')
             _store_node_links(
                 reader=reader,
                 ignore_unknown_nodes=ignore_unknown_nodes,
-                batch_size=batch_size,
                 foreign_ids_reverse_mappings=foreign_ids_reverse_mappings,
-                ret_dict=ret_dict
+                ret_dict=ret_dict,
+                batch_size=batch_size,
+                # session=session
             )
 
             IMPORT_LOGGER.debug('STORING GROUP ELEMENTS...')
@@ -248,6 +256,7 @@ def import_data_dj(
         ######################################
         # Put everything in a specific group #
         ######################################
+        # Note this is done in a separate transaction
         group = _make_import_group(
             group=group,
             existing_entries=existing_entries,
@@ -261,30 +270,30 @@ def import_data_dj(
     return ret_dict
 
 
-def _generate_model_data(
-    *, model_name: str, reader: ArchiveReaderAbstract, new_entries: Dict[str, Dict[str, dict]],
+def _generate_entity_data(
+    *, entity_name: str, reader: ArchiveReaderAbstract, new_entries: Dict[str, Dict[str, dict]],
     existing_entries: Dict[str, Dict[str, dict]], foreign_ids_reverse_mappings: Dict[str, Dict[str, int]],
     extras_mode_new: str
 ):
     """Generate the data to import."""
-    cls_signature = entity_names_to_signatures[model_name]
+    cls_signature = entity_names_to_signatures[entity_name]
     model = get_object_from_string(cls_signature)
-    unique_identifier = reader.metadata.unique_identifiers.get(model_name, None)
+    unique_identifier = reader.metadata.unique_identifiers.get(entity_name, None)
 
     # Not necessarily all models are exported
-    if model_name not in reader.entity_names:
+    if entity_name not in reader.entity_names:
         return
 
-    existing_entries.setdefault(model_name, {})
-    new_entries.setdefault(model_name, {})
+    existing_entries.setdefault(entity_name, {})
+    new_entries.setdefault(entity_name, {})
 
     if unique_identifier is None:
-        new_entries[model_name] = {str(pk): fields for pk, fields in reader.iter_entity_fields(model_name)}
+        new_entries[entity_name] = {str(pk): fields for pk, fields in reader.iter_entity_fields(entity_name)}
         return
 
     # skip nodes that are already present in the DB
     import_unique_ids = set(
-        f[unique_identifier] for _, f in reader.iter_entity_fields(model_name, fields=(unique_identifier,))
+        f[unique_identifier] for _, f in reader.iter_entity_fields(entity_name, fields=(unique_identifier,))
     )
 
     relevant_db_entries = {}
@@ -292,7 +301,7 @@ def _generate_model_data(
         relevant_db_entries_result = model.objects.filter(**{f'{unique_identifier}__in': import_unique_ids})
         if relevant_db_entries_result.count():
             with get_progress_reporter()(
-                desc=f'Finding existing entities - {model_name}', total=relevant_db_entries_result.count()
+                desc=f'Finding existing entities - {entity_name}', total=relevant_db_entries_result.count()
             ) as progress:
                 # Imitating QueryBuilder.iterall() with default settings
                 for object_ in relevant_db_entries_result.iterator(chunk_size=100):
@@ -300,17 +309,17 @@ def _generate_model_data(
                     # Note: UUIDs need to be converted to strings
                     relevant_db_entries.update({str(getattr(object_, unique_identifier)): object_})
 
-    foreign_ids_reverse_mappings[model_name] = {k: v.pk for k, v in relevant_db_entries.items()}
+    foreign_ids_reverse_mappings[entity_name] = {k: v.pk for k, v in relevant_db_entries.items()}
 
-    entity_count = reader.entity_count(model_name)
+    entity_count = reader.entity_count(entity_name)
     if not entity_count:
         return
 
-    with get_progress_reporter()(desc=f'Reading archived entities - {model_name}', total=entity_count) as progress:
+    with get_progress_reporter()(desc=f'Reading archived entities - {entity_name}', total=entity_count) as progress:
         imported_comp_names = set()
-        for pk, fields in reader.iter_entity_fields(model_name):
+        for pk, fields in reader.iter_entity_fields(entity_name):
             progress.update()
-            if model_name == GROUP_ENTITY_NAME:
+            if entity_name == GROUP_ENTITY_NAME:
                 # Check if there is already a group with the same name
                 dupl_counter = 0
                 orig_label = fields['label']
@@ -322,7 +331,7 @@ def _generate_model_data(
                             f'A group of that label ( {orig_label} ) already exists and I could not create a new one'
                         )
 
-            elif model_name == COMPUTER_ENTITY_NAME:
+            elif entity_name == COMPUTER_ENTITY_NAME:
                 # Check if there is already a computer with the same name in the database
                 dupl = (model.objects.filter(name=fields['name']) or fields['name'] in imported_comp_names)
                 orig_name = fields['name']
@@ -341,60 +350,46 @@ def _generate_model_data(
 
             if fields[unique_identifier] in relevant_db_entries:
                 # Already in DB
-                existing_entries[model_name][str(pk)] = fields
+                existing_entries[entity_name][str(pk)] = fields
             else:
                 # To be added
-                if model_name == NODE_ENTITY_NAME:
+                if entity_name == NODE_ENTITY_NAME:
                     # format extras
                     fields = _sanitize_extras(fields)
                     if extras_mode_new != 'import':
                         fields.pop('extras', None)
-                new_entries[model_name][str(pk)] = fields
+                new_entries[entity_name][str(pk)] = fields
 
 
-def _sanitize_extras(fields):
-    """Remove unwanted extra keys."""
-    fields = copy.copy(fields)
-    fields['extras'] = {key: value for key, value in fields['extras'].items() if not key.startswith('_aiida_')}
-    if fields.get('node_type', '').endswith('code.Code.'):
-        fields['extras'] = {key: value for key, value in fields['extras'].items() if not key == 'hidden'}
-    return fields
-
-
-def _store_model_data(
-    *, reader: ArchiveReaderAbstract, model_name: str, batch_size: int, comment_mode: str, extras_mode_existing: str,
+def _store_entity_data(
+    *, reader: ArchiveReaderAbstract, entity_name: str, comment_mode: str, extras_mode_existing: str,
     new_entries: Dict[str, Dict[str, dict]], existing_entries: Dict[str, Dict[str, dict]],
-    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]], import_unique_ids_mappings: Dict[str,
-                                                                                              Dict[int,
-                                                                                                   str]], ret_dict: dict
+    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]], import_unique_ids_mappings: Dict[str, Dict[int, str]],
+    ret_dict: dict, batch_size: int
 ):
     """Store the model data."""
     from aiida.backends.djsite.db import models
 
-    # Progress bar initialization - Model
-    pbar_base_str = f'{model_name}s - '
-
-    cls_signature = entity_names_to_signatures[model_name]
+    cls_signature = entity_names_to_signatures[entity_name]
     model = get_object_from_string(cls_signature)
-    fields_info = reader.metadata.all_fields_info.get(model_name, {})
-    unique_identifier = reader.metadata.unique_identifiers.get(model_name, None)
+    fields_info = reader.metadata.all_fields_info.get(entity_name, {})
+    unique_identifier = reader.metadata.unique_identifiers.get(entity_name, None)
+
+    pbar_base_str = f'{entity_name}s - '
 
     # EXISTING ENTRIES
-    if existing_entries[model_name]:
+    if existing_entries[entity_name]:
 
         with get_progress_reporter()(
-            total=len(existing_entries[model_name]), desc=f'{pbar_base_str} existing entries'
+            total=len(existing_entries[entity_name]), desc=f'{pbar_base_str} existing entries'
         ) as progress:
 
-            for import_entry_pk, entry_data in existing_entries[model_name].items():
+            for import_entry_pk, entry_data in existing_entries[entity_name].items():
 
-                # TODO prints too many lines
-                # IMPORT_LOGGER.debug('Existing %s: %s (%s->%s)',
-                #                     model_name, unique_id, import_entry_pk, existing_entry_id)
                 progress.update()
 
                 unique_id = entry_data[unique_identifier]
-                existing_entry_id = foreign_ids_reverse_mappings[model_name][unique_id]
+                existing_entry_id = foreign_ids_reverse_mappings[entity_name][unique_id]
                 import_data = dict(
                     deserialize_field(
                         k,
@@ -410,11 +405,11 @@ def _store_model_data(
                     new_entry_uuid = merge_comment(import_data, comment_mode)
                     if new_entry_uuid is not None:
                         entry_data[unique_identifier] = new_entry_uuid
-                        new_entries[model_name][import_entry_pk] = entry_data
+                        new_entries[entity_name][import_entry_pk] = entry_data
 
-                if model_name not in ret_dict:
-                    ret_dict[model_name] = {'new': [], 'existing': []}
-                ret_dict[model_name]['existing'].append((import_entry_pk, existing_entry_id))
+                if entity_name not in ret_dict:
+                    ret_dict[entity_name] = {'new': [], 'existing': []}
+                ret_dict[entity_name]['existing'].append((import_entry_pk, existing_entry_id))
 
                 # print('  `-> WARNING: NO DUPLICITY CHECK DONE!')
                 # CHECK ALSO FILES!
@@ -425,7 +420,7 @@ def _store_model_data(
     import_new_entry_pks = {}
 
     # NEW ENTRIES
-    for import_entry_pk, entry_data in new_entries[model_name].items():
+    for import_entry_pk, entry_data in new_entries[entity_name].items():
         unique_id = entry_data[unique_identifier]
         import_data = dict(
             deserialize_field(
@@ -440,7 +435,7 @@ def _store_model_data(
         objects_to_create.append(model(**import_data))
         import_new_entry_pks[unique_id] = import_entry_pk
 
-    if model_name == NODE_ENTITY_NAME:
+    if entity_name == NODE_ENTITY_NAME:
 
         # Before storing entries in the DB, I store the files (if these are nodes).
         # Note: only for new entries!
@@ -457,23 +452,26 @@ def _store_model_data(
             destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
         # For the existing nodes that are also in the imported list we also update their extras if necessary
-        if existing_entries[model_name]:
+        if existing_entries[entity_name]:
 
             with get_progress_reporter()(
-                total=len(existing_entries[model_name]), desc='Updating existing node extras'
+                total=len(existing_entries[entity_name]), desc='Updating existing node extras'
             ) as progress:
 
                 import_existing_entry_pks = {
                     entry_data[unique_identifier]: import_entry_pk
-                    for import_entry_pk, entry_data in existing_entries[model_name].items()
+                    for import_entry_pk, entry_data in existing_entries[entity_name].items()
                 }
                 for node in models.DbNode.objects.filter(uuid__in=import_existing_entry_pks).all():  # pylint: disable=no-member
-                    progress.update()
                     import_entry_uuid = str(node.uuid)
                     import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
+                    pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
+                    progress.set_description_str(f'{pbar_node_base_str}Extras', refresh=False)
+                    progress.update()
+
                     old_extras = node.extras.copy()
-                    extras = existing_entries[model_name][str(import_entry_pk)].get('extras', {})
+                    extras = existing_entries[entity_name][str(import_entry_pk)].get('extras', {})
 
                     new_extras = merge_extras(node.extras, extras, extras_mode_existing)
 
@@ -507,19 +505,23 @@ def _store_model_data(
         # Moreover, add newly created Nodes to foreign_ids_reverse_mappings
         for unique_id, new_pk in just_saved.items():
             import_entry_pk = import_new_entry_pks[unique_id]
-            foreign_ids_reverse_mappings[model_name][unique_id] = new_pk
-            if model_name not in ret_dict:
-                ret_dict[model_name] = {'new': [], 'existing': []}
-            ret_dict[model_name]['new'].append((import_entry_pk, new_pk))
+            foreign_ids_reverse_mappings[entity_name][unique_id] = new_pk
+            if entity_name not in ret_dict:
+                ret_dict[entity_name] = {'new': [], 'existing': []}
+            ret_dict[entity_name]['new'].append((import_entry_pk, new_pk))
 
             progress.update()
             # TODO prints too many lines
-            # IMPORT_LOGGER.debug(f'New {model_name}: {unique_id} ({import_entry_pk}->{new_pk})')
+            # IMPORT_LOGGER.debug(f'New {entity_name}: {unique_id} ({import_entry_pk}->{new_pk})')
 
 
 def _store_node_links(
-    *, reader: ArchiveReaderAbstract, ignore_unknown_nodes: bool, batch_size: int,
-    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]], ret_dict: dict
+    *,
+    reader: ArchiveReaderAbstract,
+    ignore_unknown_nodes: bool,
+    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]],
+    ret_dict: dict,
+    batch_size: int,
 ):
     """Store node links to the database."""
     from aiida.backends.djsite.db import models
@@ -549,108 +551,106 @@ def _store_node_links(
 
     link_count = reader.link_count
 
-    if link_count:
+    if not link_count:
+        IMPORT_LOGGER.debug('   (0 new links...)')
+        return
 
-        pbar_base_str = 'Links - '
-        with get_progress_reporter()(total=link_count, desc=pbar_base_str) as progress_bar:
+    pbar_base_str = 'Links - '
+    with get_progress_reporter()(total=link_count, desc=pbar_base_str) as progress_bar:
 
-            for link in reader.iter_link_data():
+        for link in reader.iter_link_data():
 
-                progress_bar.set_description_str(f"{pbar_base_str}label={link['label']}", refresh=False)
-                progress_bar.update()
+            progress_bar.set_description_str(f"{pbar_base_str}label={link['label']}", refresh=False)
+            progress_bar.update()
 
-                # Check for dangling Links within the, supposed, self-consistent archive
-                try:
-                    in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
-                    out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
-                except KeyError:
-                    if ignore_unknown_nodes:
-                        continue
-                    raise exceptions.ImportValidationError(
-                        'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, out_uuid={}, '
-                        'label={}, type={})'.format(link['input'], link['output'], link['label'], link['type'])
-                    )
-
-                # Check if link already exists, skip if it does
-                # This is equivalent to an existing triple link (i.e. unique_triple from below)
-                if (in_id, out_id, link['label'], link['type']) in existing_links:
+            # Check for dangling Links within the, supposed, self-consistent archive
+            try:
+                in_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['input']]
+                out_id = foreign_ids_reverse_mappings[NODE_ENTITY_NAME][link['output']]
+            except KeyError:
+                if ignore_unknown_nodes:
                     continue
-
-                # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
-                try:
-                    validate_link_label(link['label'])
-                except ValueError as why:
-                    raise exceptions.ImportValidationError(f'Error during Link label validation: {why}')
-
-                source = models.DbNode.objects.get(id=in_id)
-                target = models.DbNode.objects.get(id=out_id)
-
-                if source.uuid == target.uuid:
-                    raise exceptions.ImportValidationError('Cannot add a link to oneself')
-
-                link_type = LinkType(link['type'])
-                type_source, type_target, outdegree, indegree = link_mapping[link_type]
-
-                # Check if source Node is a valid type
-                if not source.node_type.startswith(type_source):
-                    raise exceptions.ImportValidationError(
-                        f'Cannot add a {link_type} link from {source.node_type} to {target.node_type}'
-                    )
-
-                # Check if target Node is a valid type
-                if not target.node_type.startswith(type_target):
-                    raise exceptions.ImportValidationError(
-                        f'Cannot add a {link_type} link from {source.node_type} to {target.node_type}'
-                    )
-
-                # If the outdegree is `unique` there cannot already be any other outgoing link of that type,
-                # i.e., the source Node may not have a LinkType of current LinkType, going out, existing already.
-                if outdegree == 'unique' and (in_id, link['type']) in existing_outgoing_unique:
-                    raise exceptions.ImportValidationError(
-                        f'Node<{source.uuid}> already has an outgoing {link_type} link'
-                    )
-
-                # If the outdegree is `unique_pair`,
-                # then the link labels for outgoing links of this type should be unique,
-                # i.e., the source Node may not have a LinkType of current LinkType, going out,
-                # that also has the current Link label, existing already.
-                elif outdegree == 'unique_pair' and \
-                (in_id, link['label'], link['type']) in existing_outgoing_unique_pair:
-                    raise exceptions.ImportValidationError(
-                        f"Node<{source.uuid}> already has an outgoing {link_type} link with label \"{link['label']}\""
-                    )
-
-                # If the indegree is `unique` there cannot already be any other incoming links of that type,
-                # i.e., the target Node may not have a LinkType of current LinkType, coming in, existing already.
-                if indegree == 'unique' and (out_id, link['type']) in existing_incoming_unique:
-                    raise exceptions.ImportValidationError(
-                        f'Node<{target.uuid}> already has an incoming {link_type} link'
-                    )
-
-                # If the indegree is `unique_pair`,
-                # then the link labels for incoming links of this type should be unique,
-                # i.e., the target Node may not have a LinkType of current LinkType, coming in
-                # that also has the current Link label, existing already.
-                elif indegree == 'unique_pair' and \
-                (out_id, link['label'], link['type']) in existing_incoming_unique_pair:
-                    raise exceptions.ImportValidationError(
-                        f"Node<{target.uuid}> already has an incoming {link_type} link with label \"{link['label']}\""
-                    )
-
-                # New link
-                links_to_store.append(
-                    models.DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
+                raise exceptions.ImportValidationError(
+                    'Trying to create a link with one or both unknown nodes, stopping (in_uuid={}, out_uuid={}, '
+                    'label={}, type={})'.format(link['input'], link['output'], link['label'], link['type'])
                 )
-                if 'Link' not in ret_dict:
-                    ret_dict['Link'] = {'new': []}
-                ret_dict['Link']['new'].append((in_id, out_id))
 
-                # Add new Link to sets of existing Links 'input PK', 'output PK', 'label', 'type'
-                existing_links.add((in_id, out_id, link['label'], link['type']))
-                existing_outgoing_unique.add((in_id, link['type']))
-                existing_outgoing_unique_pair.add((in_id, link['label'], link['type']))
-                existing_incoming_unique.add((out_id, link['type']))
-                existing_incoming_unique_pair.add((out_id, link['label'], link['type']))
+            # Check if link already exists, skip if it does
+            # This is equivalent to an existing triple link (i.e. unique_triple from below)
+            if (in_id, out_id, link['label'], link['type']) in existing_links:
+                continue
+
+            # Since backend specific Links (DbLink) are not validated upon creation, we will now validate them.
+            try:
+                validate_link_label(link['label'])
+            except ValueError as why:
+                raise exceptions.ImportValidationError(f'Error during Link label validation: {why}')
+
+            source = models.DbNode.objects.get(id=in_id)
+            target = models.DbNode.objects.get(id=out_id)
+
+            if source.uuid == target.uuid:
+                raise exceptions.ImportValidationError('Cannot add a link to oneself')
+
+            link_type = LinkType(link['type'])
+            type_source, type_target, outdegree, indegree = link_mapping[link_type]
+
+            # Check if source Node is a valid type
+            if not source.node_type.startswith(type_source):
+                raise exceptions.ImportValidationError(
+                    f'Cannot add a {link_type} link from {source.node_type} to {target.node_type}'
+                )
+
+            # Check if target Node is a valid type
+            if not target.node_type.startswith(type_target):
+                raise exceptions.ImportValidationError(
+                    f'Cannot add a {link_type} link from {source.node_type} to {target.node_type}'
+                )
+
+            # If the outdegree is `unique` there cannot already be any other outgoing link of that type,
+            # i.e., the source Node may not have a LinkType of current LinkType, going out, existing already.
+            if outdegree == 'unique' and (in_id, link['type']) in existing_outgoing_unique:
+                raise exceptions.ImportValidationError(f'Node<{source.uuid}> already has an outgoing {link_type} link')
+
+            # If the outdegree is `unique_pair`,
+            # then the link labels for outgoing links of this type should be unique,
+            # i.e., the source Node may not have a LinkType of current LinkType, going out,
+            # that also has the current Link label, existing already.
+            elif outdegree == 'unique_pair' and \
+            (in_id, link['label'], link['type']) in existing_outgoing_unique_pair:
+                raise exceptions.ImportValidationError(
+                    f"Node<{source.uuid}> already has an outgoing {link_type} link with label \"{link['label']}\""
+                )
+
+            # If the indegree is `unique` there cannot already be any other incoming links of that type,
+            # i.e., the target Node may not have a LinkType of current LinkType, coming in, existing already.
+            if indegree == 'unique' and (out_id, link['type']) in existing_incoming_unique:
+                raise exceptions.ImportValidationError(f'Node<{target.uuid}> already has an incoming {link_type} link')
+
+            # If the indegree is `unique_pair`,
+            # then the link labels for incoming links of this type should be unique,
+            # i.e., the target Node may not have a LinkType of current LinkType, coming in
+            # that also has the current Link label, existing already.
+            elif indegree == 'unique_pair' and \
+            (out_id, link['label'], link['type']) in existing_incoming_unique_pair:
+                raise exceptions.ImportValidationError(
+                    f"Node<{target.uuid}> already has an incoming {link_type} link with label \"{link['label']}\""
+                )
+
+            # New link
+            links_to_store.append(
+                models.DbLink(input_id=in_id, output_id=out_id, label=link['label'], type=link['type'])
+            )
+            if 'Link' not in ret_dict:
+                ret_dict['Link'] = {'new': []}
+            ret_dict['Link']['new'].append((in_id, out_id))
+
+            # Add new Link to sets of existing Links 'input PK', 'output PK', 'label', 'type'
+            existing_links.add((in_id, out_id, link['label'], link['type']))
+            existing_outgoing_unique.add((in_id, link['type']))
+            existing_outgoing_unique_pair.add((in_id, link['label'], link['type']))
+            existing_incoming_unique.add((out_id, link['type']))
+            existing_incoming_unique_pair.add((out_id, link['label'], link['type']))
 
     # Store new links
     if links_to_store:
@@ -684,59 +684,3 @@ def _import_groups(
             nodes_to_store = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][node_uuid] for node_uuid in groupnodes]
             if nodes_to_store:
                 group_.dbnodes.add(*nodes_to_store)
-
-
-def _make_import_group(
-    *, group, existing_entries: Dict[str, Dict[str, dict]], new_entries: Dict[str, Dict[str, dict]],
-    foreign_ids_reverse_mappings: Dict[str, Dict[str, int]]
-):
-    """Make an import group containing all imported nodes."""
-    existing = existing_entries.get(NODE_ENTITY_NAME, {})
-    existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in existing.values()]
-    new = new_entries.get(NODE_ENTITY_NAME, {})
-    new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in new.values()]
-
-    pks_for_group = existing_pk + new_pk
-
-    # So that we do not create empty groups
-    if not pks_for_group:
-        IMPORT_LOGGER.debug('No Nodes to import, so no Group created, if it did not already exist')
-        return group
-
-    # If user specified a group, import all things into it
-    if not group:
-        # Get an unique name for the import group, based on the current (local) time
-        basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
-        counter = 0
-        group_label = basename
-
-        while Group.objects.find(filters={'label': group_label}):
-            counter += 1
-            group_label = f'{basename}_{counter}'
-
-            if counter == 100:
-                raise exceptions.ImportUniquenessError(
-                    "Overflow of import groups (more than 100 import groups exists with basename '{}')"
-                    ''.format(basename)
-                )
-        group = ImportGroup(label=group_label).store()
-
-    # Add all the nodes to the new group
-    builder = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}})
-
-    first = True
-    nodes = []
-    description = 'Creating import Group - Preprocessing'
-
-    with get_progress_reporter()(total=len(pks_for_group), desc=description) as progress:
-        for entry in builder.iterall():
-            if first:
-                progress.set_description_str('Creating import Group', refresh=False)
-                first = False
-            progress.update()
-            nodes.append(entry[0])
-
-        group.add_nodes(nodes)
-        progress.set_description_str('Done (cleaning up)', refresh=True)
-
-    return group

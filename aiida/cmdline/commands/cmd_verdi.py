@@ -64,9 +64,8 @@ class VerdiCommandGroup(click.Group):
             # add verbosity option to all commands (but don't add it twice)
             # Note: this is needed if `get_command` is called more than once on the same command
             # within the same cli execution (e.g. `verdi help` does this).
-            if '_has_verbosity' in cmd.__dict__:
+            if 'verbosity' in [param.name for param in cmd.params]:
                 return cmd
-            cmd._has_verbosity = True  # pylint: disable=protected-access
             return options.VERBOSITY()(cmd)
 
         if int(cmd_name.lower().encode('utf-8').hex(), 16) == 0x6769757365707065:
@@ -86,14 +85,11 @@ class VerdiCommandGroup(click.Group):
 
         if matches:
             ctx.fail(
-                "'{cmd}' is not a {group} command.\n\n"
-                'Similar commands are: \n'
-                '{matches}'.format(
-                    cmd=cmd_name, group=self.name, matches='\n'.join('\t{}'.format(m) for m in sorted(matches))
-                )
+                f"'{cmd_name}' is not a {self.name} command.\n\n"
+                'Similar commands are:\n{matches}'.format(matches='\n'.join('\t{}'.format(m) for m in sorted(matches)))
             )
         else:
-            ctx.fail(f"'{cmd_name}' is not a {group} command.\n\nNo similar commands found.")
+            ctx.fail(f"'{cmd_name}' is not a {self.name} command.\n\nNo similar commands found.")
 
         return None
 

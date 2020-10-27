@@ -122,7 +122,7 @@ class ZipFolder:
         """Return the pathname working directory within the zipfile."""
         return self._pwd
 
-    def open(self, fname: str, mode: str = 'r') -> Union['_ZipFileWriter', IO[bytes]]:
+    def open(self, fname: str, mode: str = 'r') -> Union['_ZipFileWriter', IO]:
         """Open a path in the zipfile, for reading/writing
 
         :param fname: An internal path in the zipfile

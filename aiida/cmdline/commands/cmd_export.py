@@ -9,10 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-arguments,import-error,too-many-locals
 """`verdi export` command."""
-import os
-import tempfile
-import shutil
-
 import click
 import tabulate
 
@@ -195,6 +191,10 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
     """Migrate an export archive to a more recent format version."""
     import tarfile
     import zipfile
+    import os
+    import tempfile
+    import shutil
+    from distutils.version import StrictVersion
 
     from aiida.common import json
     from aiida.common.folders import SandboxFolder
@@ -234,7 +234,7 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
             echo.echo_critical(f'export archive does not contain the required file {fhandle.filename}')
 
         old_version = migration.verify_metadata_version(metadata)
-        if version <= old_version:
+        if StrictVersion(version) <= StrictVersion(old_version):
             echo.echo_success(f'nothing to be done - archive already at version {old_version} >= {version}')
             return
 

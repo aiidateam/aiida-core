@@ -93,7 +93,6 @@ class ExportReport:
         return (self.time_write_stop or self.time_collect_stop) - self.time_collect_start
 
 
-
 def export(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,

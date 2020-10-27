@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 import json
 import os
 from pathlib import Path
+from types import TracebackType
 from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
 import zipfile
 import tarfile
@@ -97,7 +98,9 @@ class ArchiveReaderAbstract(ABC):
         self._in_context = True
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self, exctype: Optional[Type[BaseException]], excinst: Optional[BaseException], exctb: Optional[TracebackType]
+    ):
         self._in_context = False
 
     def assert_within_context(self):
@@ -237,12 +240,14 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         self._sandbox = SandboxFolder(self._sandbox_in_repo)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._sandbox.erase()
-        self._sandbox: Optional[SandboxFolder] = None
+    def __exit__(
+        self, exctype: Optional[Type[BaseException]], excinst: Optional[BaseException], exctb: Optional[TracebackType]
+    ):
+        self._sandbox.erase()  # type: ignore
+        self._sandbox = None
         self._metadata = None
         self._data = None
-        super().__exit__(exc_type, exc_val, exc_tb)
+        super().__exit__(exctype, excinst, exctb)
 
     def _get_metadata(self):
         """Retrieve the metadata JSON."""

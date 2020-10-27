@@ -11,6 +11,7 @@
 """Package for node ORM classes."""
 import importlib
 import warnings
+import traceback
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -47,9 +48,18 @@ class WarnWhenNotEntered:
     def _warn_if_not_entered(self, method):
         """Fire a warning if the object wrapper has not yet been entered."""
         if not self._was_entered:
-            msg = '`{}` used without context manager for {}. This will raise starting from `aiida-core==2.0.0`'.format(
-                method, self._name
-            )
+            msg = f'\nThe method `{method}` was called on the return value of `{self._name}.open()`' + \
+                    ' outside of a context manager.\n' + \
+                  'Please wrap this call inside `with <node instance>.open(): ...` to silence this warning. ' + \
+                  'This will raise an exception, starting from `aiida-core==2.0.0`.\n'
+
+            try:
+                caller = traceback.format_stack()[-3]
+            except Exception:  # pylint: disable=broad-except
+                msg += 'Could not determine the line of code responsible for triggering this warning.'
+            else:
+                msg += f'The offending call comes from:\n{caller}'
+
             warnings.warn(msg, AiidaDeprecationWarning)  # pylint: disable=no-member
 
     def __enter__(self):

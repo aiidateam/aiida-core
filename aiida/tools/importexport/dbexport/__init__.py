@@ -474,9 +474,6 @@ def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[st
                 ).queryhelp
             )
 
-            # Delete this import once the dbexport.zip module has been renamed
-            from builtins import zip  # pylint: disable=redefined-builtin
-
             node_results = (
                 orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups').all()
             )

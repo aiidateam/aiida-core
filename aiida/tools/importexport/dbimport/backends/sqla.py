@@ -389,7 +389,7 @@ def _generate_entity_data(
 
             if fields[unique_identifier] in relevant_db_entries:
                 # Already in DB
-                existing_entries[entity_name][pk] = fields
+                existing_entries[entity_name][str(pk)] = fields
             else:
                 # To be added
                 if entity_name == NODE_ENTITY_NAME:
@@ -397,7 +397,7 @@ def _generate_entity_data(
                     fields = _sanitize_extras(fields)
                     if extras_mode_new != 'import':
                         fields.pop('extras', None)
-                new_entries[entity_name][pk] = fields
+                new_entries[entity_name][str(pk)] = fields
 
 
 def _store_entity_data(

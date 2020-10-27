@@ -8,16 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for archive reader."""
-from aiida.tools.importexport.archive.readers import ReaderJsonZip
+# from aiida.tools.importexport.archive.readers import ReaderJsonZip
 
 # from tests.utils.archives import get_archive_file
 
-PATH = '/Users/chrisjsewell/Documents/GitHub/aiida_core_develop/out2.aiida'
+# PATH = '/Users/chrisjsewell/Documents/GitHub/aiida_core_develop/out2.aiida'
 
 
 def test_json_zip():
     """Test the JSON zip reader."""
-    pass
     # with ReaderJsonZip(PATH) as reader:
     #     assert reader.metadata.export_version == '0.9'
     #     assert reader.metadata.aiida_version == '1.4.2'

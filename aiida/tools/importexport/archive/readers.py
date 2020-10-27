@@ -30,6 +30,7 @@ from aiida.tools.importexport.common.utils import export_shard_uuid
 __all__ = (
     'ArchiveReaderAbstract',
     'ARCHIVE_READER_LOGGER',
+    'ReaderJsonBase',
     'ReaderJsonFolder',
     'ReaderJsonTar',
     'ReaderJsonZip',

@@ -191,7 +191,10 @@ def get_all_fields_info():
         },
         'type_string': {},
         'uuid': {},
-        'label': {}
+        'label': {},
+        'extras': {
+            'convert_type': 'jsonb'
+        }
     }
     all_fields_info[LOG_ENTITY_NAME] = {
         'uuid': {},

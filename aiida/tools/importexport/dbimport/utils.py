@@ -189,6 +189,10 @@ def deserialize_attributes(attributes_data, conversion_data):
     import datetime
     import pytz
 
+    if conversion_data == 'jsonb':
+        # we do not make any changes
+        return attributes_data
+
     if isinstance(attributes_data, dict):
         ret_data = {}
         for key, value in attributes_data.items():
@@ -218,8 +222,6 @@ def deserialize_attributes(attributes_data, conversion_data):
 
 def deserialize_field(key, value, fields_info, import_unique_ids_mappings, foreign_ids_reverse_mappings):
     """Deserialize field using deserialize attributes"""
-    if key in ('attributes', 'extras'):
-        return (key, value)
     try:
         field_info = fields_info[key]
     except KeyError:

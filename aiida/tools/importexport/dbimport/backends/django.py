@@ -377,6 +377,12 @@ def _store_entity_data(
     fields_info = reader.metadata.all_fields_info.get(entity_name, {})
     unique_identifier = reader.metadata.unique_identifiers.get(entity_name, None)
 
+    if entity_name == NODE_ENTITY_NAME:
+        # in the current export process these fields are not present,
+        # because they are retrieved by a separate query
+        fields_info.setdefault('attributes', {'convert_type': 'jsonb'})
+        fields_info.setdefault('extras', {'convert_type': 'jsonb'})
+
     pbar_base_str = f'{entity_name}s - '
 
     # EXISTING ENTRIES

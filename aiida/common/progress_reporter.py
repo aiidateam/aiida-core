@@ -56,6 +56,7 @@ class ProgressReporterAbstract:
 
     @property
     def total(self) -> int:
+        """Return the total iterations expected."""
         return self._total
 
     def __enter__(self) -> 'ProgressReporterAbstract':

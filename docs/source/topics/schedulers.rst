@@ -221,7 +221,7 @@ Developing a plugin
 
 A scheduler plugin allows AiiDA to communicate with a specific type of scheduler.
 The plugin should subclass the :class:`~aiida.schedulers.scheduler.Scheduler` class and implement a number of methods, that will instruct how certain key commands are to be executed, such as submitting a new job or requesting the current active jobs.
-To get you started, you can download :download:`this template <scheduler_template.py>` and implement the following methods:
+To get you started, you can download :download:`this template <include/scheduler_template.py>` and implement the following methods:
 
     1) ``_get_joblist_command``: returns the command to report a full information on existing jobs.
     2) ``_get_detailed_job_info_command``: returns the command to get the detailed information on  a job, even after the job has finished.

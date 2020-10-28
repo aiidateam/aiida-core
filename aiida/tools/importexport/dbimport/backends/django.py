@@ -13,13 +13,11 @@ from itertools import chain
 from typing import Any, Dict, Iterable, Optional, Set, Tuple
 import warnings
 
-from aiida.common.folders import RepositoryFolder
 from aiida.common.links import LinkType, validate_link_label
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.utils import get_object_from_string, validate_uuid
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config_option
-from aiida.orm.utils._repository import Repository
 from aiida.orm import Group
 
 from aiida.tools.importexport.common import exceptions
@@ -36,7 +34,7 @@ from aiida.tools.importexport.archive.common import detect_archive_type
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract, get_reader
 
 from aiida.tools.importexport.dbimport.backends.common import (
-    _make_import_group, _sanitize_extras, MAX_COMPUTERS, MAX_GROUPS
+    _copy_node_repositories, _make_import_group, _sanitize_extras, MAX_COMPUTERS, MAX_GROUPS
 )
 
 
@@ -447,17 +445,8 @@ def _store_entity_data(
 
         # Before storing entries in the DB, I store the files (if these are nodes).
         # Note: only for new entries!
-        if objects_to_create:
-            IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
         uuids_to_create = [obj.uuid for obj in objects_to_create]
-        for import_entry_uuid, subfolder in zip(
-            uuids_to_create,
-            reader.iter_node_repos(uuids_to_create, progress=True, description='Copying Repository Folders')
-        ):
-            destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)
-            # Replace the folder, possibly destroying existing previous folders, and move the files
-            # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
-            destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
+        _copy_node_repositories(uuids_to_create=uuids_to_create, reader=reader)
 
         # For the existing nodes that are also in the imported list we also update their extras if necessary
         if existing_entries[entity_name]:

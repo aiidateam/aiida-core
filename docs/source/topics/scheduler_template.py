@@ -47,27 +47,9 @@ class TemplateScheduler(Scheduler):
     }
 
     # The class to be used for the job resource.
-    _job_resource_class =   # This needs to be set to a subclass of :class:`~aiida.schedulers.datastructures.JobResource` 
+    _job_resource_class =   # This needs to be set to a subclass of :class:`~aiida.schedulers.datastructures.JobResource`
 
     _map_status = _MAP_SCHEDULER_AIIDA_STATUS
-
-    def _get_resource_lines(
-        self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
-    ):
-        """
-        Return a list of lines (possibly empty) with the header
-        lines relative to:
-
-        * num_machines
-        * num_mpiprocs_per_machine
-        * num_cores_per_machine
-        * max_memory_kb
-        * max_wallclock_seconds
-
-        This is done in an external function because it may change in
-        different subclasses.
-        """
-        return []
 
     def _get_joblist_command(self, jobs=None, user=None):
         """The command to report full information on existing jobs."""
@@ -109,21 +91,6 @@ class TemplateScheduler(Scheduler):
         :return: list of `JobInfo` objects, one of each job each with at least its default params implemented.
         """
         return []
-
-    @staticmethod
-    def _convert_time(string):
-        """Convert a time string to a number of seconds."""
-        hours = 0
-        mins = 0
-        secs = 20
-
-        return hours * 3600 + mins * 60 + secs
-
-    @staticmethod
-    def _parse_time_string(string, fmt='%a %b %d %H:%M:%S %Y'):
-        """Parses a time string returned by scheduler and returns a datetime object."""
-
-        return datetime.datetime.now()
 
     def _parse_submit_output(self, retval, stdout, stderr):
         """Parse the output of the submit command returned by calling the `_get_submit_command` command.

@@ -37,6 +37,7 @@ def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReader
     IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
     with get_progress_reporter()(total=1) as progress:
 
+        # the callback will handle manipulation of the progress reporter
         def _callback(action, value):
             if action == 'init':
                 progress.reset(value['total'])

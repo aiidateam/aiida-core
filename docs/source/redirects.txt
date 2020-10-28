@@ -18,9 +18,15 @@ working_with_aiida/python_api.rst reference/api/public.rst
 working_with_aiida/resultmanager.rst howto/exploring.rst
 working_with_aiida/scripting.rst howto/interact.rst
 
-# fix https://www.materialscloud.org/dmp 
+# fix https://www.materialscloud.org/dmp
 apidoc/aiida.orm.rst reference/apidoc/aiida.orm.rst
-import_export/main.rst
-querying/querybuilder/usage.rst 
-restapi/index.rst
-datatypes/index.rst
+querying/querybuilder/usage.rst howto/data.rst
+# datatypes/index.rst TO BE ADDED IN #4469
+
+# in most viewed but no longer part of the documentation
+developer_guide/git_cheatsheet.rst external_redirects.rst
+developer_guide/sphinx_cheatsheet.rst external_redirects.rst
+examples/cp_tutorial.rst external_redirects.rst
+examples/ph_tutorial.rst external_redirects.rst
+examples/pw_tutorial.rst external_redirects.rst
+examples/wannier90_tutorial.rst external_redirects.rst

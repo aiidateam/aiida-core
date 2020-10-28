@@ -409,10 +409,9 @@ class ProcessNode(Node):
         :return: http response
         """
 
-        ## Decode url parts
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+
         path = unquote(request.path)
-        url = unquote(request.url)
-        url_root = unquote(request.url_root)
 
         ## Parse request
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
@@ -428,14 +427,11 @@ class ProcessNode(Node):
             projectable_properties, ordering = self.trans.get_projectable_properties()
             results = dict(fields=projectable_properties, ordering=ordering)
 
-        ## Build response and return it
-        headers = self.utils.build_headers(url=request.url, total_count=1)
-
         ## Build response
         data = dict(
             method=request.method,
-            url=url,
-            url_root=url_root,
+            url=unquote(request.url),
+            url_root=unquote(request.url_root),
             path=path,
             id=node_id,
             query_string=request.query_string.decode('utf-8'),

@@ -13,7 +13,7 @@ import copy
 import pytest
 
 from aiida import get_version
-from aiida.tools.importexport.common import Archive
+from aiida.tools.importexport import detect_archive_type, get_reader
 from aiida.tools.importexport.migration.v01_to_v02 import migrate_v1_to_v2
 from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
 from aiida.tools.importexport.migration.v03_to_v04 import migrate_v3_to_v4
@@ -36,11 +36,12 @@ def migration_data(request):
 
     filepath_archive = get_archive_file(f'export_v{version_old}_simple.aiida', filepath='export/migrate')
 
-    with Archive(filepath_archive) as archive:
-        metadata_old = copy.deepcopy(archive.meta_data)
-        data_old = copy.deepcopy(archive.data)
+    reader_cls = get_reader(detect_archive_type(filepath_archive))
+    with reader_cls(filepath_archive) as archive:
+        metadata_old = copy.deepcopy(archive._get_metadata())  # pylint: disable=protected-access
+        data_old = copy.deepcopy(archive._get_data())  # pylint: disable=protected-access
 
-        migration_method(metadata_old, data_old, archive.folder)
+        migration_method(metadata_old, data_old, archive._sandbox)  # pylint: disable=protected-access
         verify_metadata_version(metadata_old, version=version_new)
 
     yield version_old, version_new, metadata_old, metadata_new, data_old, data_new

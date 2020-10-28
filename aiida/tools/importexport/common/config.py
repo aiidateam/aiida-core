@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """ Configuration file for AiiDA Import/Export module """
+from enum import Enum
 from aiida.orm import Computer, Group, Node, User, Log, Comment
 
 __all__ = ('EXPORT_VERSION',)
@@ -16,13 +17,17 @@ __all__ = ('EXPORT_VERSION',)
 # Current export version
 EXPORT_VERSION = '0.9'
 
+
+class ExportFileFormat(str, Enum):
+    """Archive file formats"""
+    ZIP = 'zip'
+    TAR_GZIPPED = 'tar.gz'
+
+
 DUPL_SUFFIX = ' (Imported #{})'
 
 # The name of the subfolder in which the node files are stored
 NODES_EXPORT_SUBFOLDER = 'nodes'
-
-# Progress bar
-BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -186,7 +191,10 @@ def get_all_fields_info():
         },
         'type_string': {},
         'uuid': {},
-        'label': {}
+        'label': {},
+        'extras': {
+            'convert_type': 'jsonb'
+        }
     }
     all_fields_info[LOG_ENTITY_NAME] = {
         'uuid': {},

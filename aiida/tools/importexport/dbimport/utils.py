@@ -189,6 +189,10 @@ def deserialize_attributes(attributes_data, conversion_data):
     import datetime
     import pytz
 
+    if conversion_data == 'jsonb':
+        # we do not make any changes
+        return attributes_data
+
     if isinstance(attributes_data, dict):
         ret_data = {}
         for key, value in attributes_data.items():

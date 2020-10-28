@@ -133,6 +133,7 @@ snowballstemmer==2.0.0
 spglib==1.14.1.post0
 Sphinx==3.2.1
 sphinx-copybutton==0.3.0
+sphinx-notfound-page==0.5
 sphinx-panels==0.5.2
 sphinxcontrib-applehelp==1.0.2
 sphinxcontrib-contentui==0.2.4

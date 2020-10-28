@@ -43,7 +43,7 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton', 'sphinxext.rediraffe'
+    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension'
 ]
 ipython_mplbackend = ''
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
@@ -100,8 +100,6 @@ exclude_patterns = [
     'internals/engine.rst',
     'internals/global_design.rst',
     'internals/orm.rst',
-    'internals/rest_api.rst',
-    'restapi/**',
     'scheduler/index.rst',
     'topics/daemon.rst',
     'topics/repository.rst',
@@ -166,6 +164,7 @@ html_context = {
     'doc_path': 'docs/source',
 }
 panels_add_bootstrap_css = False  # pydata-sphinx-theme already loads this
+notfound_urls_prefix = '/projects/aiida-core/en/latest/'
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []

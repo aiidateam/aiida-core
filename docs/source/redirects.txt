@@ -1,4 +1,5 @@
 developer_guide/core/transport.rst topics/transport.rst
+developer_guide/core/extend_restapi.rst internals/rest_api.rst
 get_started/index.rst intro/get_started.rst
 get_started/computers.rst howto/run_codes.rst
 get_started/codes.rst howto/run_codes.rst
@@ -10,9 +11,11 @@ install/installation.rst intro/get_started.rst
 install/configuration.rst howto/installation.rst
 install/updating_installation.rst howto/installation.rst
 install/troubleshooting.rst intro/troubleshooting.rst
+restapi/index.rst reference/rest_api.rst
 verdi/verdi_user_guide.rst topics/cli.rst
 working_with_aiida/index.rst howto/index.rst
 working_with_aiida/python_api.rst reference/api/public.rst
+working_with_aiida/resultmanager.rst howto/exploring.rst
 working_with_aiida/scripting.rst howto/interact.rst
 
 # fix https://www.materialscloud.org/dmp 

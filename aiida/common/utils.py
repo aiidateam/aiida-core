@@ -14,6 +14,7 @@ import io
 import os
 import re
 import sys
+from uuid import UUID
 
 from .lang import classproperty
 
@@ -26,6 +27,19 @@ def get_new_uuid():
     """
     import uuid
     return str(uuid.uuid4())
+
+
+def validate_uuid(given_uuid: str) -> bool:
+    """A simple check for the UUID validity."""
+    try:
+        parsed_uuid = UUID(given_uuid, version=4)
+    except ValueError:
+        # If not a valid UUID
+        return False
+
+    # Check if there was any kind of conversion of the hex during
+    # the validation
+    return str(parsed_uuid) == given_uuid
 
 
 def validate_list_of_string_tuples(val, tuple_length):

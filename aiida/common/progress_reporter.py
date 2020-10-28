@@ -52,12 +52,23 @@ class ProgressReporterAbstract:
         """
         self._total = total
         self._desc = desc
-        self._increment = 0
+        self._increment: int = 0
 
     @property
     def total(self) -> int:
         """Return the total iterations expected."""
         return self._total
+
+    @property
+    def desc(self) -> Optional[str]:
+        """Return the description of the process."""
+        return self._desc
+
+    @property
+    def n(self) -> int:  # pylint: disable=invalid-name
+        """Return the current iteration."""
+        # note using `n` as the attribute name is necessary for compatibility with tqdm
+        return self._increment
 
     def __enter__(self) -> 'ProgressReporterAbstract':
         """Enter the contextmanager."""

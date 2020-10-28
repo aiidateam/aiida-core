@@ -57,6 +57,10 @@ def get_reader(file_format: str) -> Type['ArchiveReaderAbstract']:
     return cast(Type[ArchiveReaderAbstract], readers[file_format])
 
 
+def null_callback(action: str, value: Any):  # pylint: disable=unused-argument
+    """A null callback function."""
+
+
 class ArchiveReaderAbstract(ABC):
     """An abstract interface for AiiDA archive readers.
 
@@ -186,7 +190,7 @@ class ArchiveReaderAbstract(ABC):
     def iter_node_repos(
         self,
         uuids: Iterable[str],
-        callback: Optional[Callable[[str, Any], None]] = None,
+        callback: Callable[[str, Any], None] = null_callback,
     ) -> Iterator[Folder]:
         """Yield temporary folders containing the contents of the repository for each node.
 
@@ -264,7 +268,7 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         """Retrieve the data JSON."""
         raise NotImplementedError()
 
-    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
+    def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None]):
         """Extract repository data to a temporary folder.
 
         :param path_prefix: Only extract paths starting with this prefix.
@@ -357,7 +361,7 @@ class ReaderJsonBase(ArchiveReaderAbstract):
     def iter_node_repos(
         self,
         uuids: Iterable[str],
-        callback: Optional[Callable[[str, Any], None]] = None,
+        callback: Callable[[str, Any], None] = null_callback,
     ) -> Iterator[Folder]:
         path_prefixes = [os.path.join(self.REPO_FOLDER, export_shard_uuid(uuid)) for uuid in uuids]
 
@@ -371,11 +375,9 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         if not self._sandbox.get_subfolder(common_prefix).exists():
             self._extract(path_prefix=common_prefix, callback=callback)
 
-        if callback is not None:
-            callback('init', {'total': len(path_prefixes), 'description': 'Iterating node repositories'})
+        callback('init', {'total': len(path_prefixes), 'description': 'Iterating node repositories'})
         for uuid, path_prefix in zip(uuids, path_prefixes):
-            if callback is not None:
-                callback('update', 1)
+            callback('update', 1)
             subfolder = self._sandbox.get_subfolder(path_prefix)
             if not subfolder.exists():
                 raise CorruptArchive(
@@ -415,20 +417,16 @@ class ReaderJsonZip(ReaderJsonBase):
                 raise CorruptArchive(f'required file {self.FILENAME_DATA} is not included')
         return self._data
 
-    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
+    def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
         try:
             with zipfile.ZipFile(self.filename, 'r', allowZip64=True) as handle:
                 members = [m for m in handle.namelist() if m.startswith(path_prefix)]
-                if callback is not None:
-                    callback('init', {'total': len(members), 'description': 'Extracting repository files'})
-                    for membername in members:
-                        callback('update', 1)
-                        handle.extract(path=self._sandbox.abspath, member=membername)
-                else:
-                    for membername in members:
-                        handle.extract(path=self._sandbox.abspath, member=membername)
+                callback('init', {'total': len(members), 'description': 'Extracting repository files'})
+                for membername in members:
+                    callback('update', 1)
+                    handle.extract(path=self._sandbox.abspath, member=membername)
         except zipfile.BadZipfile as error:
             raise CorruptArchive(f'The input file cannot be read: {error}')
 
@@ -462,17 +460,15 @@ class ReaderJsonTar(ReaderJsonBase):
                 raise CorruptArchive(f'required file `{self.FILENAME_DATA}` is not included')
         return self._data
 
-    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
+    def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
         try:
             with tarfile.open(self.filename, 'r:*', format=tarfile.PAX_FORMAT) as handle:
                 members = [m for m in handle.getmembers() if m.name.startswith(path_prefix)]
-                if callback is not None:
-                    callback('init', {'total': len(members), 'description': 'Extracting repository files'})
+                callback('init', {'total': len(members), 'description': 'Extracting repository files'})
                 for member in members:
-                    if callback is not None:
-                        callback('update', 1)
+                    callback('update', 1)
                     if member.isdev():
                         # safety: skip if character device, block device or FIFO
                         msg = f'WARNING, device found inside the import file: {member.name}'
@@ -511,7 +507,7 @@ class ReaderJsonFolder(ReaderJsonBase):
             self._data = json.loads(path.read_text(encoding='utf8'))
         return self._data
 
-    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
+    def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         # pylint: disable=unused-argument
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy

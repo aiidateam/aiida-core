@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Template for a scheduler plugins."""
+"""Template for a scheduler plugin."""
 import datetime
 import logging
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource, ParEnvJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, JobResource
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,24 +20,22 @@ _MAP_SCHEDULER_AIIDA_STATUS = {
 }
 
 
-class TemplateJobResource(NodeNumberJobResource):  # or TemplateJobResource(ParEnvJobResource)
+class TemplateJobResource(JobResource):
     """Template class for job resources."""
 
-    @classmethod
     def validate_resources(cls, **kwargs):
         """Validate the resources against the job resource class of this scheduler.
 
-        This extends the base class validator.
-
         :param kwargs: dictionary of values to define the job resources
-        :return: attribute dictionary with the parsed parameters populated
         :raises ValueError: if the resources are invalid or incomplete
+        :return: optional tuple of parsed resource settings
         """
-        resources = super().validate_resources(**kwargs)
 
-        # Put some validation code here.
+    def accepts_default_mpiprocs_per_machine(cls):
+        """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
-        return resources
+    def get_tot_num_mpiprocs(self):
+        """Return the total number of cpus of this job resource."""
 
 
 class TemplateScheduler(Scheduler):
@@ -49,7 +47,7 @@ class TemplateScheduler(Scheduler):
     }
 
     # The class to be used for the job resource.
-    _job_resource_class = TemplateJobResource
+    _job_resource_class =   # This needs to be set to a subclass of :class:`~aiida.schedulers.datastructures.JobResource` 
 
     _map_status = _MAP_SCHEDULER_AIIDA_STATUS
 
@@ -82,24 +80,22 @@ class TemplateScheduler(Scheduler):
 
         The output text is just retrieved, and returned for logging purposes.
         """
-        return '' # for instance f'tracejob -v {escape_for_bash(job_id)}'
+        raise exceptions.FeatureNotAvailable('Retrieving detailed job info is not implemented') # for instance f'tracejob -v {escape_for_bash(job_id)}'
 
     def _get_submit_script_header(self, job_tmpl):
-        """Return the submit script header, using the parameters from the job_tmpl.
+        """Return the submit script final part, using the parameters from the job template.
 
-        Args:
-           job_tmpl: an JobTemplate instance with relevant parameters set.
-
+        :param job_tmpl: a ``JobTemplate`` instance with relevant parameters set.
         """
         return ''
 
     def _get_submit_command(self, submit_script):
-        """Return the string to submit a given script.
+        """Return the string to execute to submit a given script.
 
-        Args:
-            submit_script: the path of the submit script relative to the working
-                directory.
-                IMPORTANT: submit_script should be already escaped.
+        .. warning:: the `submit_script` should already have been bash-escaped
+
+        :param submit_script: the path of the submit script relative to the working directory.
+        :return: the string to execute to submit a given script.
         """
         submit_command = '' # for instance f'qsub {submit_script}'
 
@@ -108,16 +104,9 @@ class TemplateScheduler(Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        """Parse the queue output string, as returned by executing the command returned by
-        `_get_joblist_command command`.
+        """Parse the joblist output as returned by executing the command returned by `_get_joblist_command` method.
 
-        Return a list of JobInfo objects, one of each job, each relevant parameters implemented.
-
-        Note: depending on the scheduler configuration, finished jobs may
-            either appear here, or not.
-            This function will only return one element for each job find
-            in the qstat output; missing jobs (for whatever reason) simply
-            will not appear here.
+        :return: list of `JobInfo` objects, one of each job each with at least its default params implemented.
         """
         return []
 
@@ -137,12 +126,9 @@ class TemplateScheduler(Scheduler):
         return datetime.datetime.now()
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        """Parses the output of the submit command, as returned by executing the
-        command returned by _get_submit_command command.
+        """Parse the output of the submit command returned by calling the `_get_submit_command` command.
 
-        To be implemented by the plugin.
-
-        Return a string with the JobID.
+        :return: a string with the job ID.
         """
         if retval != 0:
             _LOGGER.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
@@ -168,7 +154,7 @@ class TemplateScheduler(Scheduler):
 
         return True
 
-    def parse_output(self, detailed_job_info, stdout, stderr):  # pylint: disable=inconsistent-return-statements
+    def parse_output(self, detailed_job_info, stdout, stderr):
         """Parse the output of the scheduler.
 
         :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
@@ -179,4 +165,4 @@ class TemplateScheduler(Scheduler):
         :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
         :raises TypeError or ValueError: if the passed arguments have incorrect type or value
         """
-        return None
+        raise exceptions.FeatureNotAvailable(f'output parsing is not available for `{self.__class__.__name__}`')

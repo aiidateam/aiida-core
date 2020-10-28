@@ -219,10 +219,9 @@ And setting the fields using the ``metadata.options`` input dictionary of the |C
 Developing a plugin
 -------------------
 
-The scheduler class is not supposed to be used by the user.
-Instead, the AiiDA engine will employ it to create a submission script for submitting a job to a scheduler.
-
-When creating a job scheduler a user has to create two classes: one for validation of the resources and one for the actual scheduler. When creating the latter the user implement the following functions:
+A scheduler plugin allows AiiDA to communicate with a specific type of scheduler.
+The plugin should subclass the :class:`~aiida.schedulers.scheduler.Scheduler` class and implement a number of methods, that will instruct how certain key commands are to be executed, such as submitting a new job or requesting the current active jobs.
+To get you started, you can download :download:`this template <scheduler_template.py>` and implement the following methods:
 
     1) ``_get_joblist_command``: returns the command to report a full information on existing jobs.
     2) ``_get_detailed_job_info_command``: returns the command to get the detailed information on  a job, even after the job has finished.
@@ -234,14 +233,17 @@ When creating a job scheduler a user has to create two classes: one for validati
     8) ``_parse_kill_output``: parse the output of the kill command.
     9) ``parse_output``: parse the output of the scheduler.
 
+All these methods *have* to be implemented, except for ``_get_detailed_job_info_command`` and ``parse_output``, which are optional.
+In addition to these methods, the ``_job_resource_class`` class attribute needs to be set to a subclass :class:`~aiida.schedulers.datastructures.JobResource`.
+For schedulers that work like SLURM, Torque and PBS, one can most likely simply reuse the :class:`~aiida.schedulers.datastructures.NodeNumberJobResource` class, that ships with ``aiida-core``.
+Schedulers that work like LSF and SGE, may be able to reuse :class:`~aiida.schedulers.datastructures.ParEnvJobResource` instead.
+If neither of these work, one can implement a custom subclass, a template for which, the class called ``TemplateJobResource``, is already included in the template file.
 
-Download :download:`this template <scheduler_template.py>` as a starting point to implementing a new scheduler plugin.
-It contains the interface with all the methods that need to be implemented, including docstrings that will work with Sphinx documentation.
 
 .. note::
 
     To inform AiiDA about your new scheduler plugin you must register an entry point in the ``aiida.schedulers`` entry point group.
-    Please visit the `AiiDA registry <https://aiidateam.github.io/aiida-registry/>`_ to see an example of how this can be done.
+    Refer to :ref:`the section on how to register plugins <how-to:plugins-develop:entrypoints>` for instructions.
 
 
 .. |NodeNumberJobResource| replace:: :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`

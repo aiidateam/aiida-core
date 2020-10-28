@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 from types import TracebackType
-from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
+from typing import Any, Callable, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
 import zipfile
 import tarfile
 
@@ -22,7 +22,6 @@ from distutils.version import StrictVersion
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder, SandboxFolder
-from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
 from aiida.tools.importexport.archive.common import ArchiveMetadata
@@ -184,15 +183,21 @@ class ArchiveReaderAbstract(ABC):
         """Iterate over links: {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}"""
 
     @abstractmethod
-    def iter_node_repos(self,
-                        uuids: Iterable[str],
-                        progress: bool = True,
-                        description='Iterating node repos') -> Iterator[Folder]:
+    def iter_node_repos(
+        self,
+        uuids: Iterable[str],
+        callback: Optional[Callable[[str, Any], None]] = None,
+    ) -> Iterator[Folder]:
         """Yield temporary folders containing the contents of the repository for each node.
 
         :param uuids: UUIDs of the nodes over whose repository folders to iterate
-        :param progress: report progress
-        :param description: description for progress report
+        :param callback: a callback to report on the process, ``callback(action, value)``,
+            with the following callback signatures:
+
+            - ``callback('init', {'total': <int>, 'description': <str>})``,
+               to signal the start of a process, its total iterations and description
+            - ``callback('update', <int>)``,
+               to signal an update to the process and the number of iterations to progress
 
         :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
         """
@@ -204,7 +209,7 @@ class ArchiveReaderAbstract(ABC):
 
         :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: If the repository does not exist.
         """
-        return next(self.iter_node_repos([uuid], progress=False))
+        return next(self.iter_node_repos([uuid]))
 
 
 class ReaderJsonBase(ArchiveReaderAbstract):
@@ -259,11 +264,17 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         """Retrieve the data JSON."""
         raise NotImplementedError()
 
-    def _extract(self, *, path_prefix: str, progress: bool):
+    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
         """Extract repository data to a temporary folder.
 
         :param path_prefix: Only extract paths starting with this prefix.
-        :param progress: Whether to report progress of the extraction
+        :param callback: a callback to report on the process, ``callback(action, value)``,
+            with the following callback signatures:
+
+            - ``callback('init', {'total': <int>, 'description': <str>})``,
+               to signal the start of a process, its total iterations and description
+            - ``callback('update', <int>)``,
+               to signal an update to the process and the number of iterations to progress
 
         :raises TypeError: if parameter types are not respected
         """
@@ -343,10 +354,11 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         for value in self._get_data()['links_uuid']:
             yield value
 
-    def iter_node_repos(self,
-                        uuids: Iterable[str],
-                        progress: bool = True,
-                        description='Iterating node repositories') -> Iterator[Folder]:
+    def iter_node_repos(
+        self,
+        uuids: Iterable[str],
+        callback: Optional[Callable[[str, Any], None]] = None,
+    ) -> Iterator[Folder]:
         path_prefixes = [os.path.join(self.REPO_FOLDER, export_shard_uuid(uuid)) for uuid in uuids]
 
         if not path_prefixes:
@@ -357,26 +369,19 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         # unarchive the common folder if it does not exist
         common_prefix = os.path.commonprefix(path_prefixes)
         if not self._sandbox.get_subfolder(common_prefix).exists():
-            self._extract(path_prefix=common_prefix, progress=progress)
+            self._extract(path_prefix=common_prefix, callback=callback)
 
-        if progress:
-            with get_progress_reporter()(total=len(path_prefixes), desc=description) as report:
-                for uuid, path_prefix in zip(uuids, path_prefixes):
-                    report.update()
-                    subfolder = self._sandbox.get_subfolder(path_prefix)
-                    if not subfolder.exists():
-                        raise CorruptArchive(
-                            f'Unable to find the repository folder for Node with UUID={uuid} in the archive'
-                        )
-                    yield subfolder
-        else:
-            for uuid, path_prefix in zip(uuids, path_prefixes):
-                subfolder = self._sandbox.get_subfolder(path_prefix)
-                if not subfolder.exists():
-                    raise CorruptArchive(
-                        f'Unable to find the repository folder for Node with UUID={uuid} in the exported file'
-                    )
-                yield subfolder
+        if callback is not None:
+            callback('init', {'total': len(path_prefixes), 'description': 'Iterating node repositories'})
+        for uuid, path_prefix in zip(uuids, path_prefixes):
+            if callback is not None:
+                callback('update', 1)
+            subfolder = self._sandbox.get_subfolder(path_prefix)
+            if not subfolder.exists():
+                raise CorruptArchive(
+                    f'Unable to find the repository folder for Node with UUID={uuid} in the exported file'
+                )
+            yield subfolder
 
 
 class ReaderJsonZip(ReaderJsonBase):
@@ -410,17 +415,17 @@ class ReaderJsonZip(ReaderJsonBase):
                 raise CorruptArchive(f'required file {self.FILENAME_DATA} is not included')
         return self._data
 
-    def _extract(self, *, path_prefix: str, progress: bool):
+    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
         try:
             with zipfile.ZipFile(self.filename, 'r', allowZip64=True) as handle:
                 members = [m for m in handle.namelist() if m.startswith(path_prefix)]
-                if progress:
-                    with get_progress_reporter()(total=len(members), desc='Extracting repository files') as report:
-                        for membername in members:
-                            report.update()
-                            handle.extract(path=self._sandbox.abspath, member=membername)
+                if callback is not None:
+                    callback('init', {'total': len(members), 'description': 'Extracting repository files'})
+                    for membername in members:
+                        callback('update', 1)
+                        handle.extract(path=self._sandbox.abspath, member=membername)
                 else:
                     for membername in members:
                         handle.extract(path=self._sandbox.abspath, member=membername)
@@ -457,29 +462,28 @@ class ReaderJsonTar(ReaderJsonBase):
                 raise CorruptArchive(f'required file `{self.FILENAME_DATA}` is not included')
         return self._data
 
-    def _extract(self, *, path_prefix: str, progress: bool):
+    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
         try:
             with tarfile.open(self.filename, 'r:*', format=tarfile.PAX_FORMAT) as handle:
                 members = [m for m in handle.getmembers() if m.name.startswith(path_prefix)]
-                if progress:
-                    with get_progress_reporter()(total=len(members), desc='Extracting repository files') as report:
-                        for member in members:
-                            report.update()
-                            if member.isdev():
-                                # safety: skip if character device, block device or FIFO
-                                msg = f'WARNING, device found inside the import file: {member.name}'
-                                ARCHIVE_READER_LOGGER.warning(msg)
-                            if member.issym() or member.islnk():
-                                # safety: although dereference=True set in export, so this should not occur
-                                msg = f'WARNING, symlink found inside the import file: {member.name}'
-                                ARCHIVE_READER_LOGGER.warning(msg)
-                                continue
-                            handle.extract(path=self._sandbox.abspath, member=member.name)
-                else:
-                    for membername in members:
-                        handle.extract(path=self._sandbox.abspath, member=membername)
+                if callback is not None:
+                    callback('init', {'total': len(members), 'description': 'Extracting repository files'})
+                for member in members:
+                    if callback is not None:
+                        callback('update', 1)
+                    if member.isdev():
+                        # safety: skip if character device, block device or FIFO
+                        msg = f'WARNING, device found inside the import file: {member.name}'
+                        ARCHIVE_READER_LOGGER.warning(msg)
+                        continue
+                    if member.issym() or member.islnk():
+                        # safety: although dereference=True set in export, so this should not occur
+                        msg = f'WARNING, symlink found inside the import file: {member.name}'
+                        ARCHIVE_READER_LOGGER.warning(msg)
+                        continue
+                    handle.extract(path=self._sandbox.abspath, member=member.name)
         except zipfile.BadZipfile:
             raise TypeError('The input file format is not valid (not a zip file)')
 
@@ -507,7 +511,7 @@ class ReaderJsonFolder(ReaderJsonBase):
             self._data = json.loads(path.read_text(encoding='utf8'))
         return self._data
 
-    def _extract(self, *, path_prefix: str, progress: bool):
+    def _extract(self, *, path_prefix: str, callback: Optional[Callable[[str, Any], None]] = None):
         # pylint: disable=unused-argument
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy

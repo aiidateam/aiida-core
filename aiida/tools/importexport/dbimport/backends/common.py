@@ -9,17 +9,48 @@
 ###########################################################################
 """Common import functions for both database backend"""
 import copy
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from aiida.common import timezone
+from aiida.common.folders import RepositoryFolder
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.orm import Group, ImportGroup, Node, QueryBuilder
+from aiida.orm.utils._repository import Repository
+from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import NODE_ENTITY_NAME
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
 MAX_COMPUTERS = 100
 MAX_GROUPS = 100
+
+
+def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReaderAbstract):
+    """Copy repositories of new nodes from the archive to the AiiDa profile.
+
+    :param uuids_to_create: the node UUIDs to copy
+    :param reader: the archive reader
+
+    """
+    if not uuids_to_create:
+        return
+    IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
+    with get_progress_reporter()(total=1) as progress:
+
+        def _callback(action, value):
+            if action == 'init':
+                progress.reset(value['total'])
+                progress.set_description_str(value['description'])
+            elif action == 'update':
+                progress.update(value)
+
+        for import_entry_uuid, subfolder in zip(
+            uuids_to_create, reader.iter_node_repos(uuids_to_create, callback=_callback)
+        ):
+            destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)  # pylint: disable=protected-access
+            # Replace the folder, possibly destroying existing previous folders, and move the files
+            # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
+            destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
 
 def _make_import_group(

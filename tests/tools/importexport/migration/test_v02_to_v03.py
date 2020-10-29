@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-branches
 """Test archive file migration from export version 0.2 to 0.3"""
-from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
+from aiida.tools.importexport.archive.migrations.v02_to_v03 import migrate_v2_to_v3
 
 from tests.utils.archives import get_json_files
 from . import ArchiveMigrationTest

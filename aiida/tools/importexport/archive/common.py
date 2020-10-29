@@ -10,7 +10,11 @@
 """Shared resources for the archive."""
 import dataclasses
 import os
+import tarfile
 from typing import Dict, List, Optional, Set
+import zipfile
+
+from aiida.tools.importexport.common.exceptions import CorruptArchive
 
 __all__ = ('ArchiveMetadata', 'detect_archive_type')
 
@@ -46,8 +50,6 @@ def detect_archive_type(in_path: str) -> str:
     :returns: the archive type identifier (currently one of 'zip', 'tar.gz', 'folder')
 
     """
-    import tarfile
-    import zipfile
     from aiida.tools.importexport.common.config import ExportFileFormat
     from aiida.tools.importexport.common.exceptions import ImportValidationError
 
@@ -61,3 +63,39 @@ def detect_archive_type(in_path: str) -> str:
         'Unable to detect the input file format, it is neither a '
         'folder, tar file, nor a (possibly compressed) zip file.'
     )
+
+
+def read_file_in_zip(filepath: str, path: str) -> str:
+    """Read a path from inside a zip file.
+
+    :param filepath: the path to the zip file
+    :param path: the relative path within the zip file
+
+    """
+    try:
+        return zipfile.ZipFile(filepath, 'r', allowZip64=True).read(path).decode('utf8')
+    except zipfile.BadZipfile as error:
+        raise CorruptArchive(f'The input file cannot be read: {error}')
+    except KeyError:
+        raise CorruptArchive(f'required file {path} is not included')
+
+
+def read_file_in_tar(filepath: str, path: str) -> str:
+    """Read a path from inside a tar file.
+
+    :param filepath: the path to the tar file
+    :param path: the relative path within the tar file
+
+    """
+    try:
+        with tarfile.open(filepath, 'r:*', format=tarfile.PAX_FORMAT) as handle:
+            result = handle.extractfile(path)
+            if result is None:
+                raise CorruptArchive(f'required file `{path}` is not included')
+            output = result.read()
+            if isinstance(output, bytes):
+                return output.decode('utf8')
+    except tarfile.ReadError:
+        raise ValueError('The input file format is not valid (not a tar file)')
+    except (KeyError, AttributeError):
+        raise CorruptArchive(f'required file `{path}` is not included')

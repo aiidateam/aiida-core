@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from v0.7 to v0.8, used by `verdi export migrate` command.
+"""Migration from v0.8 to v0.9, used by `verdi export migrate` command.
 
 The migration steps are named similarly to the database migrations for Django and SQLAlchemy.
 In the description of each migration, a revision number is given, which refers to the Django migrations.
@@ -24,27 +24,46 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
+import json
+from pathlib import Path
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from .utils import verify_metadata_version, update_metadata
 
 
-def migration_default_link_label(data):
-    """Apply migration 0043 - REV. 1.0.43
+def migration_dbgroup_type_string(data):
+    """Apply migration 0044 - REV. 1.0.44
 
-    Rename all link labels `_return` to `result`.
+    Rename the `type_string` columns of all `Group` instances.
     """
-    for link in data.get('links_uuid', []):
-        if link['label'] == '_return':
-            link['label'] = 'result'
+    mapping = {
+        'user': 'core',
+        'data.upf': 'core.upf',
+        'auto.import': 'core.import',
+        'auto.run': 'core.auto',
+    }
+
+    for attributes in data.get('export_data', {}).get('Group', {}).values():
+        for old, new in mapping.items():
+            if attributes['type_string'] == old:
+                attributes['type_string'] = new
 
 
-def migrate_v7_to_v8(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of archive files from v0.7 to v0.8."""
-    old_version = '0.7'
-    new_version = '0.8'
+def migrate_v8_to_v9(folder: Path, cache: dict) -> dict:
+    """Migration of archive files from v0.8 to v0.9."""
+    old_version = '0.8'
+    new_version = '0.9'
+
+    metadata = cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
+    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
+
     # Apply migrations
-    migration_default_link_label(data)
+    migration_dbgroup_type_string(data)
+
+    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
+    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
+
+    return {'metadata.json': metadata, 'data.json': data}

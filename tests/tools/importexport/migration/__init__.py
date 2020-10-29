@@ -9,7 +9,7 @@
 ###########################################################################
 """Module with tests for export archive migrations."""
 from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from tests.utils.archives import get_json_files
 
 

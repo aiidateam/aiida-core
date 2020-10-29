@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.8 to 0.9"""
-from aiida.tools.importexport.migration.v08_to_v09 import migrate_v8_to_v9, migration_dbgroup_type_string
+from aiida.tools.importexport.archive.migrations.v08_to_v09 import migrate_v8_to_v9, migration_dbgroup_type_string
 
 from . import ArchiveMigrationTest
 

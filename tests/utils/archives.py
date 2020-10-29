@@ -120,7 +120,7 @@ def migrate_archive(input_file, output_file, silent=True):
     :param input_file: filename with full path for archive to be migrated
     :param output_file: filename with full path for archive to be created after migration
     """
-    from aiida.tools.importexport.migration import migrate_recursively
+    from aiida.tools.importexport.archive.migrations import migrate_recursively
 
     # Unpack archive, migrate, and re-pack archive
     with SandboxFolder(sandbox_in_repo=False) as folder:

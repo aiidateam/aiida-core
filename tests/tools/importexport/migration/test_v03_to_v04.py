@@ -16,8 +16,8 @@ from aiida.common.exceptions import NotExistent
 from aiida.common.folders import SandboxFolder
 from aiida.common.json import load as jsonload
 from aiida.tools.importexport.common.archive import extract_tar, extract_zip
-from aiida.tools.importexport.migration.utils import verify_metadata_version
-from aiida.tools.importexport.migration.v03_to_v04 import migrate_v3_to_v4
+from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
+from aiida.tools.importexport.archive.migrations.v03_to_v04 import migrate_v3_to_v4
 
 from tests.utils.archives import get_archive_file, get_json_files
 from . import ArchiveMigrationTest

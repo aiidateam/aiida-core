@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.4 to 0.5"""
-from aiida.tools.importexport.migration.v04_to_v05 import migrate_v4_to_v5
+from aiida.tools.importexport.archive.migrations.v04_to_v05 import migrate_v4_to_v5
 
 from . import ArchiveMigrationTest
 

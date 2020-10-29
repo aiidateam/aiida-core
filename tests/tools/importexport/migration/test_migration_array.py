@@ -14,14 +14,14 @@ import pytest
 
 from aiida import get_version
 from aiida.tools.importexport import detect_archive_type, get_reader
-from aiida.tools.importexport.migration.v01_to_v02 import migrate_v1_to_v2
-from aiida.tools.importexport.migration.v02_to_v03 import migrate_v2_to_v3
-from aiida.tools.importexport.migration.v03_to_v04 import migrate_v3_to_v4
-from aiida.tools.importexport.migration.v04_to_v05 import migrate_v4_to_v5
-from aiida.tools.importexport.migration.v05_to_v06 import migrate_v5_to_v6
-from aiida.tools.importexport.migration.v06_to_v07 import migrate_v6_to_v7
-from aiida.tools.importexport.migration.v07_to_v08 import migrate_v7_to_v8
-from aiida.tools.importexport.migration.utils import verify_metadata_version
+from aiida.tools.importexport.archive.migrations.v01_to_v02 import migrate_v1_to_v2
+from aiida.tools.importexport.archive.migrations.v02_to_v03 import migrate_v2_to_v3
+from aiida.tools.importexport.archive.migrations.v03_to_v04 import migrate_v3_to_v4
+from aiida.tools.importexport.archive.migrations.v04_to_v05 import migrate_v4_to_v5
+from aiida.tools.importexport.archive.migrations.v05_to_v06 import migrate_v5_to_v6
+from aiida.tools.importexport.archive.migrations.v06_to_v07 import migrate_v6_to_v7
+from aiida.tools.importexport.archive.migrations.v07_to_v08 import migrate_v7_to_v8
+from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from tests.utils.archives import get_json_files, get_archive_file
 
 
@@ -55,7 +55,7 @@ def migration_data(request):
     indirect=True
 )
 def test_migrations(migration_data):
-    """Test each migration method from the `aiida.tools.importexport.migration` module."""
+    """Test each migration method from the `aiida.tools.importexport.archive.migrations` module."""
     version_old, version_new, metadata_old, metadata_new, data_old, data_new = migration_data
 
     # Remove AiiDA version, since this may change regardless of the migration function

@@ -8,12 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
-# pylint: disable=unused-argument
+import json
+from pathlib import Path
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from .utils import verify_metadata_version, update_metadata
 
 
-def migrate_v1_to_v2(metadata, data, *args):
+def migrate_v1_to_v2(folder: Path, cache: dict) -> dict:
     """
     Migration of archive files from v0.1 to v0.2, which means generalizing the
     field names with respect to the database backend
@@ -27,41 +28,54 @@ def migrate_v1_to_v2(metadata, data, *args):
     old_start = 'aiida.djsite'
     new_start = 'aiida.backends.djsite'
 
+    metadata = cache.get(
+        'metadata.json', cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
+    )
+
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    def get_new_string(old_string):
-        """Replace the old module prefix with the new."""
-        if old_string.startswith(old_start):
-            return f'{new_start}{old_string[len(old_start):]}'
-
-        return old_string
-
-    def replace_requires(data):
-        """Replace the requires keys with new module path."""
-        if isinstance(data, dict):
-            new_data = {}
-            for key, value in data.items():
-                if key == 'requires' and value.startswith(old_start):
-                    new_data[key] = get_new_string(value)
-                else:
-                    new_data[key] = replace_requires(value)
-            return new_data
-
-        return data
+    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
 
     for field in ['export_data']:
         for key in list(data[field]):
             if key.startswith(old_start):
-                new_key = get_new_string(key)
+                new_key = get_new_string(key, old_start, new_start)
                 data[field][new_key] = data[field][key]
                 del data[field][key]
 
     for field in ['unique_identifiers', 'all_fields_info']:
         for key in list(metadata[field].keys()):
             if key.startswith(old_start):
-                new_key = get_new_string(key)
+                new_key = get_new_string(key, old_start, new_start)
                 metadata[field][new_key] = metadata[field][key]
                 del metadata[field][key]
 
-    metadata['all_fields_info'] = replace_requires(metadata['all_fields_info'])
+    metadata['all_fields_info'] = replace_requires(metadata['all_fields_info'], old_start, new_start)
+
+    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
+    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
+
+    return {'metadata.json': metadata, 'data.json': data}
+
+
+def get_new_string(old_string, old_start, new_start):
+    """Replace the old module prefix with the new."""
+    if old_string.startswith(old_start):
+        return f'{new_start}{old_string[len(old_start):]}'
+
+    return old_string
+
+
+def replace_requires(data, old_start, new_start):
+    """Replace the requires keys with new module path."""
+    if isinstance(data, dict):
+        new_data = {}
+        for key, value in data.items():
+            if key == 'requires' and value.startswith(old_start):
+                new_data[key] = get_new_string(value, old_start, new_start)
+            else:
+                new_data[key] = replace_requires(value, old_start, new_start)
+        return new_data
+
+    return data

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.6 to 0.7"""
-from aiida.tools.importexport.migration.v06_to_v07 import migrate_v6_to_v7
+from aiida.tools.importexport.archive.migrations.v06_to_v07 import migrate_v6_to_v7
 
 from . import ArchiveMigrationTest
 
@@ -57,7 +57,7 @@ class TestMigrate(ArchiveMigrationTest):
     def test_migration_0040_corrupt_archive(self):
         """Check CorruptArchive is raised for different cases during migration 0040"""
         from aiida.tools.importexport.common.exceptions import CorruptArchive
-        from aiida.tools.importexport.migration.v06_to_v07 import migration_data_migration_legacy_process_attributes
+        from aiida.tools.importexport.archive.migrations.v06_to_v07 import migration_data_migration_legacy_process_attributes
 
         # data has one "valid" entry, in the form of Node <PK=42>.
         # At least it has the needed key `node_type`.
@@ -119,7 +119,7 @@ class TestMigrate(ArchiveMigrationTest):
 
     def test_migration_0040_no_process_state(self):
         """Check old ProcessNodes without a `process_state` can be migrated"""
-        from aiida.tools.importexport.migration.v06_to_v07 import migration_data_migration_legacy_process_attributes
+        from aiida.tools.importexport.archive.migrations.v06_to_v07 import migration_data_migration_legacy_process_attributes
         # data has one "new" entry, in the form of Node <PK=52>.
         # data also has one "old" entry, in form of Node <PK=42>.
         # It doesn't have a `process_state` attribute (nor a `sealed` or `_sealed`)

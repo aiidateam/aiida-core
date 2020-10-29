@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from v0.4 to v0.5, used by `verdi export migrate` command.
+"""Migration from v0.7 to v0.8, used by `verdi export migrate` command.
 
 The migration steps are named similarly to the database migrations for Django and SQLAlchemy.
 In the description of each migration, a revision number is given, which refers to the Django migrations.
@@ -24,42 +24,38 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
+import json
+from pathlib import Path
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata, remove_fields
+from .utils import verify_metadata_version, update_metadata
 
 
-def migration_drop_node_columns_nodeversion_public(metadata, data):
-    """Apply migration 0034 - REV. 1.0.34
-    Drop the columns `nodeversion` and `public` from the `Node` model
+def migration_default_link_label(data: dict):
+    """Apply migration 0043 - REV. 1.0.43
+
+    Rename all link labels `_return` to `result`.
     """
-    entity = 'Node'
-    fields = ['nodeversion', 'public']
-
-    remove_fields(metadata, data, [entity], fields)
-
-
-def migration_drop_computer_transport_params(metadata, data):
-    """Apply migration 0036 - REV. 1.0.36
-    Drop the column `transport_params` from the `Computer` model
-    """
-    entity = 'Computer'
-    field = 'transport_params'
-
-    remove_fields(metadata, data, [entity], [field])
+    for link in data.get('links_uuid', []):
+        if link['label'] == '_return':
+            link['label'] = 'result'
 
 
-def migrate_v4_to_v5(metadata, data, *args):  # pylint: disable=unused-argument
-    """
-    Migration of archive files from v0.4 to v0.5
+def migrate_v7_to_v8(folder: Path, cache: dict) -> dict:
+    """Migration of archive files from v0.7 to v0.8."""
+    old_version = '0.7'
+    new_version = '0.8'
 
-    This is from migration 0034 (drop_node_columns_nodeversion_public) and onwards
-    """
-    old_version = '0.4'
-    new_version = '0.5'
+    metadata = cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
+    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
+
     # Apply migrations
-    migration_drop_node_columns_nodeversion_public(metadata, data)
-    migration_drop_computer_transport_params(metadata, data)
+    migration_default_link_label(data)
+
+    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
+    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
+
+    return {'metadata.json': metadata, 'data.json': data}

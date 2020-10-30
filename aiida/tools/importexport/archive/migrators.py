@@ -74,7 +74,7 @@ class ArchiveMigratorAbstract(ABC):
         """Migrate the archive to another version
 
         :param version: the version to migrate to
-        :param filename: the file path to migrate to or, if None, migrate in-place
+        :param filename: the file path to migrate to or, if None, migrate in-place (requires force=True)
         :param force: overwrite output file if it already exists
         :param kwargs: key-word arguments specific to the concrete migrator implementation
 

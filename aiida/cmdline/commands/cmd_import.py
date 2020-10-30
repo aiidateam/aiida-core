@@ -106,12 +106,14 @@ def cmd_import(
     """
     # pylint: disable=too-many-statements
     from aiida.common.folders import SandboxFolder
-    from aiida.common.progress_reporter import set_progress_bar_tqdm
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
     from aiida.tools.importexport.archive.migrators import MIGRATE_LOGGER
 
     if verbosity in ['DEBUG', 'INFO']:
         set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    else:
+        set_progress_reporter(None)
     IMPORT_LOGGER.setLevel(verbosity)
     MIGRATE_LOGGER.setLevel(verbosity)
 

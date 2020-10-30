@@ -116,7 +116,7 @@ def create(
     You can modify some of those rules using options of this command.
     """
     from aiida.common.log import override_log_formatter_context
-    from aiida.common.progress_reporter import set_progress_bar_tqdm
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
@@ -157,6 +157,8 @@ def create(
 
     if verbosity in ['DEBUG', 'INFO']:
         set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    else:
+        set_progress_reporter(None)
     EXPORT_LOGGER.setLevel(verbosity)
 
     try:
@@ -200,7 +202,7 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
 
     """
     from aiida.common.log import override_log_formatter_context
-    from aiida.common.progress_reporter import set_progress_bar_tqdm
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import detect_archive_type, EXPORT_VERSION
     from aiida.tools.importexport.archive.migrators import get_migrator, MIGRATE_LOGGER
 
@@ -217,6 +219,8 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
 
     if verbosity in ['DEBUG', 'INFO']:
         set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    else:
+        set_progress_reporter(None)
     MIGRATE_LOGGER.setLevel(verbosity)
 
     if version is None:
@@ -227,7 +231,7 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
 
     try:
         with override_log_formatter_context('%(message)s'):
-            migrator.migrate(version, output_file, force=force, out_compression=archive_format)
+            migrator.migrate(version, output_file, force=force or in_place, out_compression=archive_format)
     except Exception as error:  # pylint: disable=broad-except
         if verbosity == 'DEBUG':
             raise

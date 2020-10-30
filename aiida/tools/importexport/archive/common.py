@@ -77,7 +77,7 @@ def detect_archive_type(in_path: str) -> str:
 
 
 def read_file_in_zip(filepath: str, path: str) -> str:
-    """Read a path from inside a zip file.
+    """Read a text based file from inside a zip file and return its content.
 
     :param filepath: the path to the zip file
     :param path: the relative path within the zip file
@@ -92,7 +92,7 @@ def read_file_in_zip(filepath: str, path: str) -> str:
 
 
 def read_file_in_tar(filepath: str, path: str) -> str:
-    """Read a path from inside a tar file.
+    """Read a text based file from inside a tar file and return its content.
 
     :param filepath: the path to the tar file
     :param path: the relative path within the tar file
@@ -113,7 +113,12 @@ def read_file_in_tar(filepath: str, path: str) -> str:
 
 
 def _get_filter(only_prefix: Iterable[str], ignore_prefix: Iterable[str]) -> Callable[[str], bool]:
-    """Create name filter."""
+    """Create filter for members to extract.
+
+    :param only_prefix: Extract only internal paths starting with these prefixes
+    :param ignore_prefix: Ignore internal paths starting with these prefixes
+
+    """
     if only_prefix:
 
         def _filter(name):

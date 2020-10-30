@@ -8,14 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
-from pathlib import Path
-
-from aiida.common import json  # handles byte dumps
+from aiida.tools.importexport.archive.common import CacheFolder
 
 from .utils import verify_metadata_version, update_metadata
 
 
-def migrate_v1_to_v2(folder: Path, cache: dict) -> dict:
+def migrate_v1_to_v2(folder: CacheFolder):
     """
     Migration of archive files from v0.1 to v0.2, which means generalizing the
     field names with respect to the database backend
@@ -29,14 +27,12 @@ def migrate_v1_to_v2(folder: Path, cache: dict) -> dict:
     old_start = 'aiida.djsite'
     new_start = 'aiida.backends.djsite'
 
-    metadata = cache.get(
-        'metadata.json', cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
-    )
+    metadata = folder.read_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
+    data = folder.read_json('data.json')
 
     for field in ['export_data']:
         for key in list(data[field]):
@@ -54,10 +50,8 @@ def migrate_v1_to_v2(folder: Path, cache: dict) -> dict:
 
     metadata['all_fields_info'] = replace_requires(metadata['all_fields_info'], old_start, new_start)
 
-    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
-    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
-
-    return {'metadata.json': metadata, 'data.json': data}
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)
 
 
 def get_new_string(old_string, old_start, new_start):

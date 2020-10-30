@@ -8,19 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Shared resources for the archive."""
+from collections import OrderedDict
 import dataclasses
 import os
 from pathlib import Path
 import tarfile
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union
+from types import TracebackType
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Type, Union
 import zipfile
 
+from aiida.common import json  # handles byte dumps
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
 
 __all__ = (
     'ArchiveMetadata', 'detect_archive_type', 'null_callback', 'read_file_in_zip', 'read_file_in_tar',
-    'safe_extract_zip', 'safe_extract_tar'
+    'safe_extract_zip', 'safe_extract_tar', 'CacheFolder'
 )
 
 ARCHIVE_LOGGER = AIIDA_LOGGER.getChild('archive')
@@ -220,3 +223,107 @@ def safe_extract_tar(
                 handle.extract(path=os.path.abspath(out_path), member=member.name)
     except tarfile.ReadError as error:
         raise CorruptArchive(f'The input file cannot be read: {error}')
+
+
+class CacheFolder:
+    """A class to encapsulate a folder path with cached read/writes.
+
+    The class can be used as a context manager, and will flush the cache on exit::
+
+        with CacheFolder(path) as folder:
+            # this stored in memory (no file system write)
+            folder.write_text('path/to/file.txt', 'content')
+            # this will be read from memory
+            text = folder.read_text('path/to/file.txt')
+
+        # all path/to/file.txt will now have been written to the file system
+
+    """
+
+    def __init__(self, path: Union[Path, str], *, limit: int = 100, encoding: str = 'utf8'):
+        """Initialise cached folder.
+
+        :param path: folder path to cache
+        :param limit: maximum number of files to cache ()
+        :param encoding: encoding of text to read/write
+
+        """
+        self._path = Path(path)
+        self._cache = OrderedDict()  # type: ignore
+        self._max_items = limit
+        self._encoding = encoding
+
+    def flush(self):
+        """Flush the cache."""
+        for path, content in self._cache.items():
+            (self._path / path).write_text(content, encoding=self._encoding)
+
+    def get_path(self, flush=True) -> Path:
+        """Return the path.
+
+        :param flush: flush the cache before returning
+
+        """
+        if flush:
+            self.flush()
+        return self._path
+
+    def write_text(self, path: str, content: str):
+        """write text to the cache.
+
+        :param path: path relative to base folder
+
+        """
+        self._cache[path] = content
+        if len(self._cache) > self._max_items:
+            path, content = self._cache.popitem(last=False)
+            (self._path / path).write_text(content, encoding=self._encoding)
+
+    def read_text(self, path) -> str:
+        """write text from the cache or base folder.
+
+        :param path: path relative to base folder
+
+        """
+        if path in self._cache:
+            return self._cache[path]
+        return (self._path / path).read_text(self._encoding)
+
+    def write_json(self, path: str, data: dict):
+        """write dict to the cache as json.
+
+        :param path: path relative to base folder
+
+        """
+        content = json.dumps(data)
+        self.write_text(path, content)
+
+    def read_json(self, path) -> dict:
+        """write text from the cache or base folder.
+
+        :param path: path relative to base folder
+
+        """
+        content = self.read_text(path)
+        return json.loads(content)
+
+    def remove_file(self, path):
+        """Remove a file from both the cache and base folder (if present).
+
+        :param path: path relative to base folder
+
+        """
+        self._cache.pop(path, None)
+        if (self._path / path).exists():
+            (self._path / path).unlink()
+
+    def __enter__(self):
+        """Enter the contextmanager."""
+        return self
+
+    def __exit__(
+        self, exctype: Optional[Type[BaseException]], excinst: Optional[BaseException], exctb: Optional[TracebackType]
+    ):
+        """Exit the contextmanager."""
+        self.flush()
+        return False

@@ -14,7 +14,7 @@ import zipfile
 
 from aiida.common.exceptions import NotExistent
 from aiida.common import json
-from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip
+from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip, CacheFolder
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from aiida.tools.importexport.archive.migrations.v03_to_v04 import migrate_v3_to_v4
 
@@ -58,9 +58,10 @@ def test_migrate_external(external_archive, tmp_path):
             illegal_links.append(link)
 
     # Migrate to v0.4
-    cache = migrate_v3_to_v4(out_path, {})
-    metadata = cache['metadata.json']
-    data = cache['data.json']
+    folder = CacheFolder(out_path)
+    migrate_v3_to_v4(folder)
+    metadata = folder.read_json('metadata.json')
+    data = folder.read_json('data.json')
     verify_metadata_version(metadata, version='0.4')
 
     ## Following checks are based on the archive-file
@@ -348,9 +349,10 @@ def test_illegal_create_links(external_archive, tmp_path):
     )
 
     # Migrate to v0.4
-    cache = migrate_v3_to_v4(out_path, {})
+    folder = CacheFolder(out_path)
+    migrate_v3_to_v4(folder)
 
-    data = cache['data.json']
+    data = folder.read_json('data.json')
 
     # Check illegal create links were removed
     assert len(data['links_uuid']) == links_count_migrated, (

@@ -26,11 +26,11 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 # pylint: disable=invalid-name
 import copy
 import os
-from pathlib import Path
 
 import numpy as np
 
-from aiida.common import json  # handles byte dumps
+from aiida.common import json
+from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.common.exceptions import ArchiveMigrationError
 from .utils import verify_metadata_version, update_metadata, remove_fields
 
@@ -338,18 +338,18 @@ def migration_move_data_within_node_module(data):
             value['type'] = value['type'].replace('data.', 'node.data.', 1)
 
 
-def migration_trajectory_symbols_to_attribute(data: dict, folder: Path):
+def migration_trajectory_symbols_to_attribute(data: dict, folder: CacheFolder):
     """Apply migrations: 0026 - REV. 1.0.26 and 0027 - REV. 1.0.27
     Create the symbols attribute from the repository array for all `TrajectoryData` nodes.
     """
     from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 
+    path = folder.get_path(flush=False)
+
     for node_id, content in data['export_data'].get('Node', {}).items():
         if content.get('type', '') == 'node.data.array.trajectory.TrajectoryData.':
             uuid = content['uuid']
-            symbols_path = folder.joinpath(
-                NODES_EXPORT_SUBFOLDER, uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy'
-            )
+            symbols_path = path.joinpath(NODES_EXPORT_SUBFOLDER, uuid[0:2], uuid[2:4], uuid[4:], 'path', 'symbols.npy')
             symbols = np.load(os.path.abspath(symbols_path)).tolist()
             symbols_path.unlink()
             # Update 'node_attributes'
@@ -430,7 +430,7 @@ def add_extras(data):
     data.update({'node_extras': node_extras, 'node_extras_conversion': node_extras_conversion})
 
 
-def migrate_v3_to_v4(folder: Path, cache: dict) -> dict:
+def migrate_v3_to_v4(folder: CacheFolder):
     """
     Migration of archive files from v0.3 to v0.4
 
@@ -441,12 +441,12 @@ def migrate_v3_to_v4(folder: Path, cache: dict) -> dict:
     old_version = '0.3'
     new_version = '0.4'
 
-    metadata = cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
+    metadata = folder.read_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
+    data = folder.read_json('data.json')
 
     # Apply migrations in correct sequential order
     migration_base_data_plugin_type_string(data)
@@ -507,8 +507,5 @@ def migrate_v3_to_v4(folder: Path, cache: dict) -> dict:
     metadata['all_fields_info'].update(new_entities)
     metadata['unique_identifiers'].update({'Log': 'uuid', 'Comment': 'uuid'})
 
-    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
-    print(data)
-    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
-
-    return {'metadata.json': metadata, 'data.json': data}
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

@@ -24,9 +24,7 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-from pathlib import Path
-
-from aiida.common import json  # handles byte dumps
+from aiida.tools.importexport.archive.common import CacheFolder
 
 from .utils import verify_metadata_version, update_metadata, remove_fields
 
@@ -51,7 +49,7 @@ def migration_drop_computer_transport_params(metadata, data):
     remove_fields(metadata, data, [entity], [field])
 
 
-def migrate_v4_to_v5(folder: Path, cache: dict) -> dict:
+def migrate_v4_to_v5(folder: CacheFolder):
     """
     Migration of archive files from v0.4 to v0.5
 
@@ -60,18 +58,15 @@ def migrate_v4_to_v5(folder: Path, cache: dict) -> dict:
     old_version = '0.4'
     new_version = '0.5'
 
-    metadata = cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
+    metadata = folder.read_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
-
+    data = folder.read_json('data.json')
     # Apply migrations
     migration_drop_node_columns_nodeversion_public(metadata, data)
     migration_drop_computer_transport_params(metadata, data)
 
-    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
-    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
-
-    return {'metadata.json': metadata, 'data.json': data}
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

@@ -24,9 +24,7 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-from pathlib import Path
-
-from aiida.common import json  # handles byte dumps
+from aiida.tools.importexport.archive.common import CacheFolder
 
 from .utils import verify_metadata_version, update_metadata
 
@@ -41,22 +39,20 @@ def migration_default_link_label(data: dict):
             link['label'] = 'result'
 
 
-def migrate_v7_to_v8(folder: Path, cache: dict) -> dict:
+def migrate_v7_to_v8(folder: CacheFolder):
     """Migration of archive files from v0.7 to v0.8."""
     old_version = '0.7'
     new_version = '0.8'
 
-    metadata = cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
+    metadata = folder.read_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
+    data = folder.read_json('data.json')
 
     # Apply migrations
     migration_default_link_label(data)
 
-    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
-    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
-
-    return {'metadata.json': metadata, 'data.json': data}
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

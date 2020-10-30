@@ -15,7 +15,7 @@ from pathlib import Path
 import shutil
 import tarfile
 import tempfile
-from typing import Any, Callable, cast, Dict, List, Optional, Type, Union
+from typing import Any, Callable, cast, List, Optional, Type, Union
 import zipfile
 
 from aiida.common.log import AIIDA_LOGGER
@@ -23,7 +23,7 @@ from aiida.common.progress_reporter import get_progress_reporter, create_callbac
 from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
 from aiida.tools.importexport.common.config import ExportFileFormat
 from aiida.tools.importexport.archive.common import (
-    read_file_in_tar, read_file_in_zip, safe_extract_tar, safe_extract_zip
+    read_file_in_tar, read_file_in_zip, safe_extract_tar, safe_extract_zip, CacheFolder
 )
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 
@@ -146,20 +146,19 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
             with get_progress_reporter()(total=1) as progress:
                 callback = create_callback(progress)
                 self._extract_archive(extracted, callback)
-            # cache of read data to parse between migration steps (to minimize re-reading data)
-            cache: Dict[str, Any] = {}
 
-            with get_progress_reporter()(total=len(pathway), desc='Performing migrations: ') as progress:
-                for from_version in pathway:
-                    to_version = MIGRATE_FUNCTIONS[from_version][0]
-                    progress.set_description_str(
-                        f'Performing migrations: {from_version} -> {to_version}', refresh=False
-                    )
-                    progress.update()
-                    try:
-                        cache = MIGRATE_FUNCTIONS[from_version][1](extracted, cache)
-                    except DanglingLinkError:
-                        raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
+            with CacheFolder(extracted) as folder:
+                with get_progress_reporter()(total=len(pathway), desc='Performing migrations: ') as progress:
+                    for from_version in pathway:
+                        to_version = MIGRATE_FUNCTIONS[from_version][0]
+                        progress.set_description_str(
+                            f'Performing migrations: {from_version} -> {to_version}', refresh=False
+                        )
+                        progress.update()
+                        try:
+                            MIGRATE_FUNCTIONS[from_version][1](folder)
+                        except DanglingLinkError:
+                            raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
 
             # re-compress archive
             MIGRATE_LOGGER.info(f"Re-compressing archive as '{out_compression}'")

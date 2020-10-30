@@ -14,9 +14,9 @@ import zipfile
 import pytest
 
 from aiida import get_version
-from aiida.common import json
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
+from aiida.tools.importexport.archive.common import CacheFolder
 from tests.utils.archives import get_archive_file, read_json_files
 
 
@@ -41,10 +41,11 @@ def test_migrations(migration_data, tmp_path):
     with zipfile.ZipFile(filepath_archive_old, 'r', allowZip64=True) as handle:
         handle.extractall(out_path)
 
-    migration_method(out_path, {})
+    folder = CacheFolder(out_path)
+    migration_method(folder)
 
-    metadata_old = json.loads((out_path / 'metadata.json').read_text('utf8'))
-    data_old = json.loads((out_path / 'data.json').read_text('utf8'))
+    metadata_old = folder.read_json('metadata.json')
+    data_old = folder.read_json('data.json')
 
     verify_metadata_version(metadata_old, version=version_new)
 

@@ -13,8 +13,7 @@ import zipfile
 
 import pytest
 
-from aiida.common import json
-from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip
+from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip, CacheFolder
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from tests.utils.archives import get_archive_file
 
@@ -61,15 +60,16 @@ def migrate_from_func(tmp_path):
         else:
             raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
-        old_metadata = json.loads((out_path / 'metadata.json').read_text('utf8'))
+        folder = CacheFolder(out_path)
+        old_metadata = folder.read_json('metadata.json')
         verify_metadata_version(old_metadata, version=version_old)
 
-        migration_method(out_path, {'metadata.json': old_metadata})
+        migration_method(folder)
 
-        metadata = json.loads((out_path / 'metadata.json').read_text('utf8'))
+        metadata = folder.read_json('metadata.json')
         verify_metadata_version(metadata, version=version_new)
 
-        data = json.loads((out_path / 'data.json').read_text('utf8'))
+        data = folder.read_json('data.json')
 
         return metadata, data
 

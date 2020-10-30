@@ -10,14 +10,13 @@
 """Migration from v0.2 to v0.3, used by `verdi export migrate` command."""
 # pylint: disable=too-many-locals,too-many-statements,too-many-branches,unused-argument
 import enum
-from pathlib import Path
 
-from aiida.common import json  # handles byte dumps
+from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.common.exceptions import DanglingLinkError
 from .utils import verify_metadata_version, update_metadata
 
 
-def migrate_v2_to_v3(folder: Path, cache: dict) -> dict:
+def migrate_v2_to_v3(folder: CacheFolder):
     """
     Migration of archive files from v0.2 to v0.3, which means adding the link
     types to the link entries and making the entity key names backend agnostic
@@ -57,12 +56,12 @@ def migrate_v2_to_v3(folder: Path, cache: dict) -> dict:
         'aiida.backends.djsite.db.models.DbAttribute': 'Attribute'
     }
 
-    metadata = cache.get('metadata.json', json.loads((folder / 'metadata.json').read_text('utf8')))
+    metadata = folder.read_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
+    data = folder.read_json('data.json')
 
     # Create a mapping from node uuid to node type
     mapping = {}
@@ -136,7 +135,5 @@ def migrate_v2_to_v3(folder: Path, cache: dict) -> dict:
                 data[field][new_key] = data[field][old_key]
                 del data[field][old_key]
 
-    (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
-    (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
-
-    return {'metadata.json': metadata, 'data.json': data}
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

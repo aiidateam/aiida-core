@@ -11,7 +11,7 @@
 from pathlib import Path
 from typing import Any, Callable, Dict, Tuple, Union
 
-from aiida.common.folders import Folder
+from aiida.tools.importexport.archive.common import CacheFolder
 
 from .v01_to_v02 import migrate_v1_to_v2
 from .v02_to_v03 import migrate_v2_to_v3
@@ -22,8 +22,8 @@ from .v06_to_v07 import migrate_v6_to_v7
 from .v07_to_v08 import migrate_v7_to_v8
 from .v08_to_v09 import migrate_v8_to_v9
 
-# version from -> version to, func(path to uncompressed json, dict of cached data) -> dict of migrated data
-_vtype = Dict[str, Tuple[str, Callable[[Path, Dict[str, Any]], Dict[str, Any]]]]
+# version from -> version to, function which acts on the cache folder
+_vtype = Dict[str, Tuple[str, Callable[[CacheFolder], None]]]
 MIGRATE_FUNCTIONS: _vtype = {
     '0.1': ('0.2', migrate_v1_to_v2),
     '0.2': ('0.3', migrate_v2_to_v3),

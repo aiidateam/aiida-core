@@ -272,7 +272,6 @@ def check_process_nodes_sealed(nodes):
         )
 
 
-@override_log_formatter('%(message)s')
 def summary(*, file_format, export_version, outfile, include_comments, include_logs, traversal_rules):
     """Print summary for export"""
     from tabulate import tabulate

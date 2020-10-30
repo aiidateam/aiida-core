@@ -9,20 +9,28 @@
 ###########################################################################
 """Archive writer classes."""
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
-import json
+import os
+from pathlib import Path
+import shutil
 import time
 import tarfile
-from typing import Any, Callable, cast, Dict, Iterable, List, Set, Tuple, Type, Union
+import tempfile
+from types import TracebackType
+from typing import Any, Callable, cast, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
+import zipfile
 
+from aiida.common import json
+from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.importexport.archive.common import ArchiveMetadata
-from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER, ExportFileFormat
+from aiida.tools.importexport.common.config import EXPORT_VERSION, NODE_ENTITY_NAME, NODES_EXPORT_SUBFOLDER, ExportFileFormat
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.common.zip_folder import ZipFolder
 
-__all__ = ('ArchiveData', 'ArchiveWriterAbstract', 'get_writer', 'WriterJsonFolder', 'WriterJsonTar', 'WriterJsonZip')
+__all__ = ('ArchiveWriterAbstract', 'get_writer', 'WriterJsonFolder', 'WriterJsonTar', 'WriterJsonZip')
 
 
 def get_writer(file_format: str) -> Type['ArchiveWriterAbstract']:
@@ -41,32 +49,10 @@ def get_writer(file_format: str) -> Type['ArchiveWriterAbstract']:
     return cast(Type[ArchiveWriterAbstract], writers[file_format])
 
 
-@dataclass
-class ArchiveData:
-    """Class for storing data, to export to an AiiDA archive."""
-    metadata: ArchiveMetadata
-    node_uuids: Set[str]
-    # UUID of the group -> UUIDs of the entities it contains
-    group_uuids: Dict[str, Set[str]]
-    # list of {'input': <UUID>, 'output': <UUID>, 'label': <LABEL>, 'type': <TYPE>}
-    link_uuids: List[dict]
-    # all entity data from the database, except Node extras and attributes
-    # {'ENTITY_NAME': {<Pk>: {'db_key': 'value', ...}, ...}, ...}
-    entity_data: Dict[str, Dict[int, dict]]
-    # Iterable of Node (pk, attributes, extras)
-    node_data: Iterable[Tuple[str, dict, dict]]
-
-    def __repr__(self) -> str:
-        """Return string representation."""
-        return f'ArchiveData(metadata={self.metadata},' + ','.join(
-            f'#{k}={len(v)}' for k, v in self.entity_data.items()
-        ) + ')'
-
-
 class ArchiveWriterAbstract(ABC):
     """An abstract interface for AiiDA archive writers."""
 
-    def __init__(self, filename: str, **kwargs: Any):
+    def __init__(self, filepath: Union[str, Path], **kwargs: Any):
         """An archive writer
 
         :param filename: the filename (possibly including the absolute path)
@@ -74,12 +60,17 @@ class ArchiveWriterAbstract(ABC):
 
         """
         # pylint: disable=unused-argument
-        self._filename = filename
+        self._filepath = Path(filepath)
+        self._info: Dict[str, Any] = {}
 
     @property
-    def filename(self) -> str:
-        """Return the filename to write to."""
-        return self._filename
+    def filepath(self) -> Path:
+        """Return the filepath to write to."""
+        return self._filepath
+
+    @property
+    def get_export_info(self):
+        return deepcopy(self._info)
 
     @property
     @abstractmethod
@@ -91,81 +82,140 @@ class ArchiveWriterAbstract(ABC):
     def export_version(self) -> str:
         """The export version."""
 
-    @abstractmethod
-    def write(self, export_data: ArchiveData, get_node_repo: Callable[[str], Folder]) -> dict:
-        """write the archive.
+    def __enter__(self) -> 'ArchiveWriterAbstract':
+        """Open the contextmanager """
+        self._in_context = True
+        # reset the export information
+        self._info = {}
+        self.open()
+        return self
 
-        :param export_data: The data to export
-        :param get_node_repo: A callable: UUID -> to a folder of the node's repository
-        :returns: A dictionary of data about the write process
+    def __exit__(
+        self, exctype: Optional[Type[BaseException]], excinst: Optional[BaseException], exctb: Optional[TracebackType]
+    ):
+        """Open the contextmanager """
+        self.close(exctype is not None)
+        self._in_context = False
+        return False
 
+    def assert_within_context(self):
+        """Assert that the method is called within a context.
+
+        :raises: `~aiida.common.exceptions.InvalidOperation`: if not called within a context
         """
+        if not self._in_context:
+            raise InvalidOperation('the ArchiveReader method should be used within a context')
+
+    def add_info(self, key: str, value: Any):
+        """Add info about the export process."""
+        self._info[key] = value
+
+    def open(self):
+        """Setup the export."""
+        self.assert_within_context()
+
+    def close(self, excepted: bool):
+        """Finalise the export."""
+        self.assert_within_context()
+
+    @abstractmethod
+    def export(self):
+        self.assert_within_context()
+
+    @abstractmethod
+    def write_metadata(self, data: ArchiveMetadata):
+        """ """
+
+    @abstractmethod
+    def write_link(self, data: Dict[str, str]):
+        """ """
+
+    @abstractmethod
+    def write_group_uuids(self, uuid: str, node_uuids: List[str]):
+        """ """
+
+    @abstractmethod
+    def write_entity_data(self, name: str, pk: str, fields: Dict[str, Any]):
+        """ """
+
+    @abstractmethod
+    def copy_node_repository(self, uuid: str, repo: Folder):
+        """ """
 
 
-def _write_to_json_archive(
-    folder: Union[Folder, ZipFolder], export_data: ArchiveData, export_version: str, get_node_repo: Callable[[str],
-                                                                                                             Folder]
-) -> None:
-    """Write data to the archive."""
-    # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
+class WriterJsonBase(ArchiveWriterAbstract):
 
-    data: Dict[str, Any] = {
-        'node_attributes': {},
-        'node_extras': {},
-        'export_data': export_data.entity_data,
-        'links_uuid': export_data.link_uuids,
-        'groups_uuid': {key: list(vals) for key, vals in export_data.group_uuids.items()},
-    }
+    def open(self):
+        self.assert_within_context()
+        self._metadata: dict = {}
+        self._entity_data: Dict[str, Dict[str, Dict[str, Any]]] = {}
+        self._link_uuids: List[Dict[str, str]] = []
+        self._group_uuids: Dict[str, List[str]] = {}
+        self._temp_path: Path = Path(tempfile.mkdtemp())
+        self._repo_path: Path = (self._temp_path / NODES_EXPORT_SUBFOLDER)
+        self._repo_path.mkdir()
 
-    for uuid, attributes, extras in export_data.node_data:
-        data['node_attributes'][uuid] = attributes
-        data['node_extras'][uuid] = extras
+    def close(self, excepted: bool):
+        self.assert_within_context()
+        shutil.rmtree(self._temp_path)
 
-    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
-    with folder.open('data.json', mode='w') as fhandle:
-        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
-        fhandle.write(json.dumps(data))
+    def export(self):
+        self.assert_within_context()
 
-    metadata = {
-        'export_version': export_version,
-        'aiida_version': export_data.metadata.aiida_version,
-        'all_fields_info': export_data.metadata.all_fields_info,
-        'unique_identifiers': export_data.metadata.unique_identifiers,
-        'export_parameters': {
-            'graph_traversal_rules': export_data.metadata.graph_traversal_rules,
-            'entities_starting_set': export_data.metadata.entities_starting_set,
-            'include_comments': export_data.metadata.include_comments,
-            'include_logs': export_data.metadata.include_logs,
-        },
-        'conversion_info': export_data.metadata.conversion_info
-    }
+        (self._temp_path / 'metadata.json').write_text(json.dumps(self._metadata), encoding='utf8')
 
-    with folder.open('metadata.json', 'w') as fhandle:
-        fhandle.write(json.dumps(metadata))
+        node_attributes: Dict[str, dict] = {}
+        node_extras: Dict[str, dict] = {}
+        for pk, fields in self._entity_data.get(NODE_ENTITY_NAME, {}).items():
+            node_attributes[pk] = fields.pop('attributes')
+            node_extras[pk] = fields.pop('extras')
 
-    # If there are no nodes, there are no repository files to store
-    if not export_data.node_uuids:
-        return
+        data: Dict[str, Any] = {
+            'node_attributes': node_attributes,
+            'node_extras': node_extras,
+            'export_data': self._entity_data,
+            'links_uuid': self._link_uuids,
+            'groups_uuid': self._group_uuids,
+        }
+        (self._temp_path / 'data.json').write_text(json.dumps(data), encoding='utf8')
 
-    pbar_base_str = 'Exporting repository - '
-    with get_progress_reporter()(total=len(export_data.node_uuids)) as progress:
+        self._write_to_output(self._temp_path)
 
-        for uuid in export_data.node_uuids:
-            sharded_uuid = export_shard_uuid(uuid)
+    def _write_to_output(self, path: Path):
+        raise NotImplementedError('must be subclassed')
 
-            progress.set_description_str(f"{pbar_base_str}UUID={uuid.split('-')[0]}", refresh=False)
-            progress.update()
+    def write_metadata(self, metadata: ArchiveMetadata):
+        self._metadata = {
+            'export_version': self.export_version,
+            'aiida_version': metadata.aiida_version,
+            'all_fields_info': metadata.all_fields_info,
+            'unique_identifiers': metadata.unique_identifiers,
+            'export_parameters': {
+                'graph_traversal_rules': metadata.graph_traversal_rules,
+                'entities_starting_set': metadata.entities_starting_set,
+                'include_comments': metadata.include_comments,
+                'include_logs': metadata.include_logs,
+            },
+            'conversion_info': metadata.conversion_info
+        }
 
-            # Important to set create=False, otherwise creates twice a subfolder.
-            # Maybe this is a bug of insert_path?
-            thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
-            src_folder = get_node_repo(uuid)
-            # In this way, I copy the content of the folder, and not the folder itself
-            thisnodefolder.insert_path(src=src_folder.abspath, dest_name='.')
+    def write_link(self, data: Dict[str, str]):
+        # input: str, output: str, label: str, type: str
+        self._link_uuids.append(data)
+
+    def write_group_uuids(self, uuid: str, node_uuids: List[str]):
+        self._group_uuids[uuid] = node_uuids
+
+    def write_entity_data(self, name: str, pk: str, fields: Dict[str, Any]):
+        self._entity_data.setdefault(name, {})[pk] = fields
+
+    def copy_node_repository(self, uuid: str, path: Path):
+        self.assert_within_context()
+        repo_path = self._repo_path / export_shard_uuid(uuid)
+        shutil.copytree(path, repo_path)
 
 
-class WriterJsonZip(ArchiveWriterAbstract):
+class WriterJsonZip(WriterJsonBase):
     """An archive writer,
     which writes database data as a single JSON and repository data in a zipped folder system.
     """
@@ -189,41 +239,67 @@ class WriterJsonZip(ArchiveWriterAbstract):
     def export_version(self) -> str:
         return EXPORT_VERSION
 
-    def write(self, export_data: ArchiveData, get_node_repo: Callable[[str], Folder]) -> dict:
-        """write the archive
+    def open(self):
+        self.assert_within_context()
+        self._metadata: dict = {}
+        self._entity_data: Dict[str, Dict[str, Dict[str, Any]]] = {}
+        self._link_uuids: List[Dict[str, str]] = []
+        self._group_uuids: Dict[str, List[str]] = {}
+        self._temp_path: Path = Path(tempfile.mkdtemp())
+        self._temp_file: Path = self._temp_path / 'out.aiida'
+        self._zip_path: ZipFolder = ZipFolder(self._temp_file, mode='w', use_compression=self._use_compression)
+        self._repo_path: ZipFolder = self._zip_path / NODES_EXPORT_SUBFOLDER
 
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
+    def export(self):
+        self.assert_within_context()
 
-        """
-        with ZipFolder(self.filename, mode='w', use_compression=self._use_compression) as folder:
-            _write_to_json_archive(
-                folder=folder,
-                export_data=export_data,
-                export_version=self.export_version,
-                get_node_repo=get_node_repo,
-            )
+        (self._zip_path / 'metadata.json').write_text(json.dumps(self._metadata))
 
-        return {}
+        node_attributes: Dict[str, dict] = {}
+        node_extras: Dict[str, dict] = {}
+        for pk, fields in self._entity_data.get(NODE_ENTITY_NAME, {}).items():
+            node_attributes[pk] = fields.pop('attributes')
+            node_extras[pk] = fields.pop('extras')
+
+        data: Dict[str, Any] = {
+            'node_attributes': node_attributes,
+            'node_extras': node_extras,
+            'export_data': self._entity_data,
+            'links_uuid': self._link_uuids,
+            'groups_uuid': self._group_uuids,
+        }
+        (self._zip_path / 'data.json').write_text(json.dumps(data))
+
+        shutil.move(self._temp_file, self.filepath)
+
+    def copy_node_repository(self, uuid: str, path: Path):
+        self.assert_within_context()
+        folder = self._repo_path.get_subfolder(export_shard_uuid(uuid), create=False, reset_limit=True)
+        folder.insert_path(src=os.path.abspath(path), dest_name='.')
+
+    # def _write_to_output(self, path: Path):
+    #     if self._use_compression:
+    #         compression = zipfile.ZIP_DEFLATED
+    #     else:
+    #         compression = zipfile.ZIP_STORED
+
+    #     self.add_info('compression_time_start', time.time())
+    #     with zipfile.ZipFile(self.filepath, mode='w', compression=compression, allowZip64=True) as archive:
+    #         for dirpath, dirnames, filenames in os.walk(path):
+    #             relpath = os.path.relpath(dirpath, path)
+    #             for filename in dirnames + filenames:
+    #                 real_src = os.path.join(dirpath, filename)
+    #                 real_dest = os.path.join(relpath, filename)
+    #                 archive.write(real_src, real_dest)
+    #     self.add_info('compression_time_stop', time.time())
 
 
-class WriterJsonTar(ArchiveWriterAbstract):
+class WriterJsonTar(WriterJsonBase):
     """An archive writer,
     which writes database data as a single JSON and repository data in a folder system.
 
     The entire containing folder is then compressed as a tar file.
     """
-
-    def __init__(self, filename: str, sandbox_in_repo: bool = True, **kwargs: Any):
-        """A writer for zipped archives.
-
-        :param filename: the filename (possibly including the absolute path)
-            of the file on which to export.
-        :param sandbox_in_repo: Create the temporary uncompressed folder within the aiida repository
-
-        """
-        super().__init__(filename, **kwargs)
-        self.sandbox_in_repo = sandbox_in_repo
 
     @property
     def file_format_verbose(self) -> str:
@@ -233,27 +309,11 @@ class WriterJsonTar(ArchiveWriterAbstract):
     def export_version(self) -> str:
         return EXPORT_VERSION
 
-    def write(self, export_data: ArchiveData, get_node_repo: Callable[[str], Folder]) -> dict:
-        """write the archive
-
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
-
-        """
-        with SandboxFolder(sandbox_in_repo=self.sandbox_in_repo) as folder:
-            _write_to_json_archive(
-                folder=folder,
-                export_data=export_data,
-                export_version=self.export_version,
-                get_node_repo=get_node_repo,
-            )
-
-            with tarfile.open(self.filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-                time_compress_start = time.time()
-                tar.add(folder.abspath, arcname='')
-                time_compress_stop = time.time()
-
-        return {'compression_time_start': time_compress_start, 'compression_time_stop': time_compress_stop}
+    def _write_to_output(self, path: Path):
+        self.add_info('compression_time_start', time.time())
+        with tarfile.open(self.filepath, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
+            archive.add(os.path.abspath(path), arcname='')
+        self.add_info('compression_time_stop', time.time())
 
 
 class WriterJsonFolder(ArchiveWriterAbstract):
@@ -284,18 +344,10 @@ class WriterJsonFolder(ArchiveWriterAbstract):
     def export_version(self) -> str:
         return EXPORT_VERSION
 
-    def write(self, export_data: ArchiveData, get_node_repo: Callable[[str], Folder]) -> dict:
-        """write the archive
-
-        :param export_data: The data to export
-        :returns: A dictionary of data about the write process
-
-        """
-        _write_to_json_archive(
-            folder=self._folder,
-            export_data=export_data,
-            export_version=self.export_version,
-            get_node_repo=get_node_repo,
-        )
-
-        return {}
+    def _write_to_output(self, path: Path):
+        if self.filepath.exists():
+            if self.filepath.is_file():
+                self.filepath.unlink()
+            else:
+                shutil.rmtree(self.filepath)
+        shutil.move(path, self.filepath)

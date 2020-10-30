@@ -60,7 +60,7 @@ from aiida.tools.importexport.common.config import (
     model_fields_to_file_fields,
 )
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
-from aiida.tools.importexport.archive.writers import ArchiveData, ArchiveMetadata, get_writer
+from aiida.tools.importexport.archive.writers import ArchiveMetadata, ArchiveWriterAbstract, get_writer
 from aiida.tools.importexport.common.config import ExportFileFormat
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
@@ -98,7 +98,7 @@ class ExportReport:
 def export(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,
-    file_format: str = ExportFileFormat.ZIP,
+    file_format: Union[str, ArchiveWriterAbstract] = ExportFileFormat.ZIP,
     overwrite: bool = False,
     silent: Optional[bool] = None,
     use_compression: bool = True,
@@ -107,6 +107,7 @@ def export(
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     writer_init: Optional[Dict[str, Any]] = None,
+    batch_size: int = 100,
     **traversal_rules: bool,
 ) -> ExportReport:
     """Export AiiDA data to an archive file.
@@ -133,7 +134,7 @@ def export(
     :param filename: the filename (possibly including the absolute path)
         of the file on which to export.
 
-    :param file_format: See `ExportFileFormat` for complete list of valid values (default: 'zip').
+    :param file_format: 'zip', 'tar.gz' or 'folder' or a specific writer class.
 
     :param overwrite: if True, overwrite the output file without asking, if it exists.
         If False, raise an
@@ -160,6 +161,8 @@ def export(
         Default: True, *include* logs in export.
 
     :param writer_init: Additional key-word arguments to pass to the writer class init
+
+    :param batch_size: batch database query results in sub-collections to reduce memory usage
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
@@ -222,7 +225,14 @@ def export(
         name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
     }
 
-    writer = get_writer(file_format)(filename=filename, use_compression=use_compression, **(writer_init or {}))
+    writer_init = writer_init or {}
+    writer_init['use_compression'] = use_compression
+    if isinstance(file_format, str):
+        writer = get_writer(file_format)(filename=filename, **writer_init)
+    elif issubclass(file_format, ArchiveWriterAbstract):
+        writer = file_format(filename=filename, **writer_init)
+    else:
+        raise TypeError('file_format must be a string or ArchiveWriterAbstract class')
 
     summary(
         file_format=writer.file_format_verbose,
@@ -233,193 +243,129 @@ def export(
         traversal_rules=full_traversal_rules
     )
 
-    report_data: Dict[str, Any] = {'time_write_start': None, 'time_write_stop': None, 'writer_data': None}
-
-    report_data['time_collect_start'] = time.time()
-    export_data = _collect_archive_data(
-        entities=entities,
-        allowed_licenses=allowed_licenses,
-        forbidden_licenses=forbidden_licenses,
-        include_comments=include_comments,
-        include_logs=include_logs,
-        **traversal_rules
-    )
-    report_data['time_collect_stop'] = time.time()
-
-    extract_time = report_data['time_collect_stop'] - report_data['time_collect_start']
-    EXPORT_LOGGER.debug(f'Data extracted in {extract_time:6.2g} s.')
-
-    if export_data is not None:
-
-        EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
-
-        def _get_node_repo(uuid):
-            # Make sure the node's repository folder was not deleted
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
-            if not src.exists():
-                raise exceptions.ArchiveExportError(
-                    f'Unable to find the repository folder for Node with UUID={uuid} '
-                    'in the local repository'
-                )
-            return src
-
-        try:
-            report_data['time_write_start'] = time.time()
-            report_data['writer_data'] = writer.write(
-                export_data=export_data, get_node_repo=_get_node_repo
-            )  # type: ignore
-            report_data['time_write_stop'] = time.time()
-        except (exceptions.ArchiveExportError, LicensingException) as exc:
-            if os.path.exists(filename):
-                os.remove(filename)
-            raise exc
-
-        write_time = report_data['time_write_stop'] - report_data['time_write_start']
-        EXPORT_LOGGER.debug(f'Data written in {write_time:6.2g} s.')
-
-    else:
-        EXPORT_LOGGER.debug('No data to write.')
-
-    return ExportReport(**report_data)
-
-
-def _collect_archive_data(
-    entities: Optional[Iterable[Any]] = None,
-    allowed_licenses: Optional[Union[list, Callable]] = None,
-    forbidden_licenses: Optional[Union[list, Callable]] = None,
-    include_comments: bool = True,
-    include_logs: bool = True,
-    **traversal_rules: bool,
-) -> Optional[ArchiveData]:
-    """Collect data to be exported
-
-    .. deprecated:: 1.2.1
-        Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param allowed_licenses: List or function.
-        If a list, then checks whether all licenses of Data nodes are in the list.
-        If a function, then calls function for licenses of Data nodes,
-        expecting True if license is allowed, False otherwise.
-
-    :param forbidden_licenses: List or function.
-        If a list, then checks whether all licenses of Data nodes are in the list.
-        If a function, then calls function for licenses of Data nodes,
-        expecting True if license is allowed, False otherwise.
-
-    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
-        Default: True, *include* comments in export (as well as relevant users).
-
-    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
-        Default: True, *include* logs in export.
-
-    :param traversal_rules: graph traversal rules.
-        See :const:`aiida.common.links.GraphTraversalRules`
-        what rule names are toggleable and what the defaults are.
-
-    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`:
-        if there are any internal errors when exporting.
-    :raises `~aiida.common.exceptions.LicensingException`:
-        if any node is licensed under forbidden license.
-    """
-    # pylint: disable=too-many-locals
     EXPORT_LOGGER.debug('STARTING EXPORT...')
 
-    # Backwards-compatibility
-    entities = cast(
-        Iterable[Any],
-        deprecated_parameters(
-            old={
-                'name': 'what',
-                'value': traversal_rules.pop('what', None)
-            },
-            new={
-                'name': 'entities',
-                'value': entities
-            },
-        ),
-    )
-
-    type_check(
-        entities,
-        (list, tuple, set),
-        msg='`entities` must be specified and given as a list of AiiDA entities',
-    )
-    entities = list(entities)
-
     all_fields_info, unique_identifiers = get_all_fields_info()
-
     entities_starting_set, given_node_entry_ids = _get_starting_node_ids(entities)
 
-    (
-        node_ids_to_be_exported,
-        node_pk_2_uuid_mapping,
-        links_uuid,
-        traversal_rules,
-    ) = _collect_node_ids(given_node_entry_ids, **traversal_rules)
+    # Iteratively explore the AiiDA graph to find further nodes that should also be exported
+    with get_progress_reporter()(desc='Traversing provenance via links ...', total=1) as progress:
+        traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **traversal_rules)
+        progress.update()
+    node_ids_to_be_exported = traverse_output['nodes']
 
-    _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
+    with writer as writer_context:
 
-    entries_queries = _collect_entity_queries(
-        node_ids_to_be_exported,
-        entities_starting_set,
-        node_pk_2_uuid_mapping,
-        include_comments,
-        include_logs,
-    )
+        EXPORT_LOGGER.debug('WRITING METADATA...')
 
-    entity_data = _perform_export_queries(entries_queries)
+        writer_context.write_metadata(
+            ArchiveMetadata(
+                export_version=EXPORT_VERSION,
+                aiida_version=get_version(),
+                unique_identifiers=unique_identifiers,
+                all_fields_info=all_fields_info,
+                graph_traversal_rules=traverse_output['rules'],
+                # Turn sets into lists to be able to export them as JSON metadata.
+                entities_starting_set={
+                    entity: list(entity_set) for entity, entity_set in entities_starting_set.items()
+                },
+                include_comments=include_comments,
+                include_logs=include_logs,
+            )
+        )
 
-    # note this was originally below the attributes and group_uuid gather
-    check_process_nodes_sealed({
-        node_pk for node_pk, content in entity_data.get(NODE_ENTITY_NAME, {}).items()
-        if content['node_type'].startswith('process.')
-    })
+        # A utility dictionary for mapping PK to UUID.
+        if node_ids_to_be_exported:
+            qbuilder = orm.QueryBuilder().append(
+                orm.Node,
+                project=('id', 'uuid'),
+                filters={'id': {
+                    'in': node_ids_to_be_exported
+                }},
+            )
+            node_pk_2_uuid_mapping: Dict[int, str] = dict(qbuilder.all(batch_size=batch_size))
+        else:
+            node_pk_2_uuid_mapping: Dict[int, str] = {}
 
-    number_of_entities = sum(len(entities) for entities in entity_data.values())
-    if not number_of_entities:
-        EXPORT_LOGGER.log(msg='Nothing to store, exiting...', level=LOG_LEVEL_REPORT)
-        return None
-    EXPORT_LOGGER.log(
-        msg=(
-            f'Exporting a total of {number_of_entities} database entries, '
-            f'of which {len(node_ids_to_be_exported)} are Nodes.'
-        ),
-        level=LOG_LEVEL_REPORT,
-    )
+        _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
 
-    groups_uuid = _get_groups_uuid(entity_data)
+        if traverse_output['links']:
+            with get_progress_reporter()(total=len(traverse_output['links']), desc='Writing links') as progress:
+                for link in traverse_output['links']:
+                    progress.update()
+                    writer_context.write_link({
+                        'input': node_pk_2_uuid_mapping[link.source_id],
+                        'output': node_pk_2_uuid_mapping[link.target_id],
+                        'label': link.link_label,
+                        'type': link.link_type,
+                    })
 
-    # Turn sets into lists to be able to export them as JSON metadata.
-    for entity, entity_set in entities_starting_set.items():
-        entities_starting_set[entity] = list(entity_set)  # type: ignore
+        entity_queries = _collect_entity_queries(
+            node_ids_to_be_exported,
+            entities_starting_set,
+            node_pk_2_uuid_mapping,
+            include_comments,
+            include_logs,
+        )
 
-    metadata = ArchiveMetadata(
-        export_version=EXPORT_VERSION,
-        aiida_version=get_version(),
-        unique_identifiers=unique_identifiers,
-        all_fields_info=all_fields_info,
-        graph_traversal_rules=traversal_rules,
-        entities_starting_set=entities_starting_set,
-        include_comments=include_comments,
-        include_logs=include_logs,
-    )
+        total_entities = sum(query.count() for query in entity_queries.values())
 
-    all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported}
+        if total_entities:
+            exported_entity_pks = _write_entity_data(total_entities, entity_queries, writer_context, batch_size)
+        else:
+            EXPORT_LOGGER.info('No entities were found to export')
+            return
 
-    # we get the node data last, because it is generally the largest data source
-    # and later we may look to stream this data in chunks
-    node_data = _collect_node_data(node_ids_to_be_exported)
+        if exported_entity_pks[GROUP_ENTITY_NAME]:
 
-    return ArchiveData(
-        metadata=metadata,
-        node_uuids=all_node_uuids,
-        group_uuids=groups_uuid,
-        link_uuids=links_uuid,
-        entity_data=entity_data,
-        node_data=node_data,
-    )
+            EXPORT_LOGGER.debug('Writing group UUID -> [nodes UUIDs]')
+
+            group_uuid_query = orm.QueryBuilder().append(
+                orm.Group,
+                filters={
+                    'id': {
+                        'in': exported_entity_pks[GROUP_ENTITY_NAME]
+                    }
+                },
+                project='uuid',
+                tag='groups',
+            ).append(orm.Node, project='uuid', with_group='groups')
+
+            groups_uuid_to_node_uuids = defaultdict(set)
+            for group_uuid, node_uuid in group_uuid_query.iterall(batch_size=batch_size):
+                groups_uuid_to_node_uuids[group_uuid].add(node_uuid)
+
+            for group_uuid, node_uuids in groups_uuid_to_node_uuids.items():
+                writer_context.write_group_uuids(group_uuid, list(node_uuids))
+
+        if exported_entity_pks[NODE_ENTITY_NAME]:
+
+            with get_progress_reporter()(
+                total=len(exported_entity_pks[NODE_ENTITY_NAME]), desc='Exporting node repositories: '
+            ) as progress:
+
+                for pk in exported_entity_pks[NODE_ENTITY_NAME]:
+
+                    uuid = node_pk_2_uuid_mapping[pk]
+
+                    progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
+                    progress.update()
+
+                    src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
+                    if not src.exists():
+                        raise exceptions.ArchiveExportError(
+                            f'Unable to find the repository folder for Node with UUID={uuid} '
+                            'in the local repository'
+                        )
+                    writer_context.copy_node_repository(uuid, src._abspath)  # pylint: disable=protected-access
+
+        EXPORT_LOGGER.debug('FINALIZING EXPORT...')
+        writer_context.export()
+
+    export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())
+
+    if exported_entity_pks:
+        EXPORT_LOGGER.info('Exported Entities:\n  - ' + export_summary)
 
 
 def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[str]], Set[int]]:
@@ -438,95 +384,52 @@ def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[st
     if not total:
         return entities_starting_set, given_node_entry_ids
 
-    with get_progress_reporter()(desc='Collecting chosen entities', total=total) as progress:
-        for entry in entities:
+    for entry in entities:
 
-            if issubclass(entry.__class__, orm.Group):
-                entities_starting_set[GROUP_ENTITY_NAME].add(entry.uuid)
-            elif issubclass(entry.__class__, orm.Node):
-                entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
-                given_node_entry_ids.add(entry.pk)
-            elif issubclass(entry.__class__, orm.Computer):
-                entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
-            else:
-                raise exceptions.ArchiveExportError(
-                    f'I was given {entry} ({type(entry)}),'
-                    ' which is not a Node, Computer, or Group instance'
-                )
-
-            progress.update()
-
-        # Add all the nodes contained within the specified groups
-        if GROUP_ENTITY_NAME in entities_starting_set:
-
-            progress.set_description_str('Retrieving Nodes from Groups ...', refresh=False)
-
-            # Use single query instead of given_group.nodes iterator for performance.
-            qh_groups = (
-                orm.QueryBuilder().append(
-                    orm.Group,
-                    filters={
-                        'uuid': {
-                            'in': entities_starting_set[GROUP_ENTITY_NAME]
-                        }
-                    },
-                    tag='groups',
-                ).queryhelp
+        if issubclass(entry.__class__, orm.Group):
+            entities_starting_set[GROUP_ENTITY_NAME].add(entry.uuid)
+        elif issubclass(entry.__class__, orm.Node):
+            entities_starting_set[NODE_ENTITY_NAME].add(entry.uuid)
+            given_node_entry_ids.add(entry.pk)
+        elif issubclass(entry.__class__, orm.Computer):
+            entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
+        else:
+            raise exceptions.ArchiveExportError(
+                f'I was given {entry} ({type(entry)}),'
+                ' which is not a Node, Computer, or Group instance'
             )
 
-            node_results = (
-                orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups').all()
-            )
-            if node_results:
-                pks, uuids = map(list, zip(*node_results))
-                entities_starting_set[NODE_ENTITY_NAME].update(uuids)  # type: ignore
-                given_node_entry_ids.update(pks)  # type: ignore
-                del node_results, pks, uuids
+    # Add all the nodes contained within the specified groups
+    if GROUP_ENTITY_NAME in entities_starting_set:
+
+        # Use single query instead of given_group.nodes iterator for performance.
+        qh_groups = (
+            orm.QueryBuilder().append(
+                orm.Group,
+                filters={
+                    'uuid': {
+                        'in': entities_starting_set[GROUP_ENTITY_NAME]
+                    }
+                },
+                tag='groups',
+            ).queryhelp
+        )
+        node_query = orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups')
+        node_count = node_query.count()
+
+        if node_count:
+            with get_progress_reporter()(desc='Collecting nodes in groups', total=node_count) as progress:
+
+                pks, uuids = [], []
+                for pk, uuid in node_query.all():
+                    progress.update()
+                    pks.append(pk)
+                    uuids.append(uuid)
+
+            entities_starting_set[NODE_ENTITY_NAME].update(uuids)  # type: ignore
+            given_node_entry_ids.update(pks)  # type: ignore
 
     return entities_starting_set, given_node_entry_ids
-
-
-def _collect_node_ids(given_node_entry_ids: Set[int],
-                      **traversal_rules: bool) -> Tuple[Set[int], Dict[int, str], List[dict], Dict[str, bool]]:
-    """Iteratively explore the AiiDA graph to find further nodes that should also be exported
-
-    At the same time, we will create the links_uuid list of dicts to be exported
-
-    """
-    with get_progress_reporter()(desc='Traversing provenance via links ...', total=1) as progress:
-        traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **traversal_rules)
-        progress.update()
-
-    node_ids_to_be_exported = traverse_output['nodes']
-    graph_traversal_rules = traverse_output['rules']
-
-    # A utility dictionary for mapping PK to UUID.
-    if node_ids_to_be_exported:
-        qbuilder = orm.QueryBuilder().append(
-            orm.Node,
-            project=('id', 'uuid'),
-            filters={'id': {
-                'in': node_ids_to_be_exported
-            }},
-        )
-        node_pk_2_uuid_mapping = dict(qbuilder.all())
-    else:
-        node_pk_2_uuid_mapping = {}
-
-    # The set of tuples now has to be transformed to a list of dicts
-    links_uuid = [{
-        'input': node_pk_2_uuid_mapping[link.source_id],
-        'output': node_pk_2_uuid_mapping[link.target_id],
-        'label': link.link_label,
-        'type': link.link_type,
-    } for link in traverse_output['links']]
-
-    return (
-        node_ids_to_be_exported,
-        node_pk_2_uuid_mapping,
-        links_uuid,
-        graph_traversal_rules,
-    )
 
 
 def _check_node_licenses(
@@ -551,6 +454,25 @@ def _check_node_licenses(
         check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
 
 
+def _get_model_fields(entity_name: str) -> List[str]:
+    """Return a list of fields to retrieve for a particular entity
+
+    :param entity_name: name of database entity, such as Node
+
+    """
+    all_fields_info, _ = get_all_fields_info()
+    project_cols = ['id']
+    entity_prop = all_fields_info[entity_name].keys()
+    # Here we do the necessary renaming of properties
+    for prop in entity_prop:
+        # nprop contains the list of projections
+        nprop = (
+            file_fields_to_model_fields[entity_name][prop] if prop in file_fields_to_model_fields[entity_name] else prop
+        )
+        project_cols.append(nprop)
+    return project_cols
+
+
 def _collect_entity_queries(
     node_ids_to_be_exported: Set[int],
     entities_starting_set: DefaultDict[str, Set[str]],
@@ -562,12 +484,10 @@ def _collect_entity_queries(
     # pylint: disable=too-many-locals
     given_log_entry_ids = set()
     given_comment_entry_ids = set()
-    all_fields_info, _ = get_all_fields_info()
 
-    total = 1 + (((1 if include_logs else 0) + (1 if include_comments else 0)) if node_ids_to_be_exported else 0)
-    with get_progress_reporter()(desc='Initializing export of all entities', total=total) as progress:
+    total = 2 + (((1 if include_logs else 0) + (1 if include_comments else 0)) if node_ids_to_be_exported else 0)
+    with get_progress_reporter()(desc='Building entity database queries', total=total) as progress:
 
-        # Universal "entities" attributed to all types of nodes
         # Logs
         if include_logs and node_ids_to_be_exported:
             # Get related log(s) - universal for all nodes
@@ -611,31 +531,14 @@ def _collect_entity_queries(
 
         progress.update()
 
-    entities_to_add: Dict[str, orm.QueryBuilder] = {}
-    if not given_entities:
-        return entities_to_add
-
-    with get_progress_reporter()(total=len(given_entities)) as progress:
-
-        pbar_base_str = 'Preparing entities'
+        entities_to_add: Dict[str, orm.QueryBuilder] = {}
+        if not given_entities:
+            progress.update()
+            return entities_to_add
 
         for given_entity in given_entities:
-            progress.set_description_str(f'{pbar_base_str} - {given_entity}s', refresh=False)
-            progress.update()
 
-            project_cols = ['id']
-            # The following gets a list of fields that we need,
-            # e.g. user, mtime, uuid, computer
-            entity_prop = all_fields_info[given_entity].keys()
-
-            # Here we do the necessary renaming of properties
-            for prop in entity_prop:
-                # nprop contains the list of projections
-                nprop = (
-                    file_fields_to_model_fields[given_entity][prop]
-                    if prop in file_fields_to_model_fields[given_entity] else prop
-                )
-                project_cols.append(nprop)
+            project_cols = _get_model_fields(given_entity)
 
             # Getting the ids that correspond to the right entity
             entry_uuids_to_add = entities_starting_set.get(given_entity, set())
@@ -659,140 +562,78 @@ def _collect_entity_queries(
             )
             entities_to_add[given_entity] = builder
 
+        progress.update()
+
     return entities_to_add
 
 
-def _perform_export_queries(entries_queries: Dict[str, orm.QueryBuilder]) -> Dict[str, Dict[int, dict]]:
-    """Start automatic recursive export data generation
-
-    :param entries_queries: partial queries for all entities to export
-
-    :return: export data mappings by entity type -> pk -> db_columns, e.g.
-        {'ENTITY_NAME': {<pk>: {'uuid': 'abc', ...}, ...}, ...}
-        Note: this data does not yet contain attributes and extras
-
-    """
-    EXPORT_LOGGER.debug('GATHERING DATABASE ENTRIES...')
+def _write_entity_data(
+    total_entities: int, entity_queries: Dict[str, orm.QueryBuilder], writer_context: ArchiveWriterAbstract,
+    batch_size: int
+) -> Dict[str, Set[int]]:
 
     all_fields_info, _ = get_all_fields_info()
-
-    export_data = defaultdict(dict)  # type: dict
-    if not entries_queries:
-        return export_data
-
     entity_separator = '_'
-    counts = [p_query.count() for p_query in entries_queries.values()]
-    with get_progress_reporter()(total=sum(counts)) as progress:
 
-        for entity_name, partial_query in entries_queries.items():
+    exported_entity_pks: Dict[str, Set[int]] = defaultdict(set)
+    unsealed_node_pks: Set[int] = set()
 
-            progress.set_description_str(f'Exporting {entity_name} fields', refresh=False)
+    with get_progress_reporter()(total=total_entities, desc='Writing entity data') as progress:
+
+        for entity_name, entity_query in entity_queries.items():
 
             foreign_fields = {k: v for k, v in all_fields_info[entity_name].items() if 'requires' in v}
-
             for value in foreign_fields.values():
                 ref_model_name = value['requires']
                 fill_in_query(
-                    partial_query,
+                    entity_query,
                     entity_name,
                     ref_model_name,
                     [entity_name],
                     entity_separator,
                 )
 
-            for temp_d in partial_query.iterdict():
+            for query_results in entity_query.iterdict(batch_size=batch_size):
 
                 progress.update()
 
-                for key in temp_d:
+                for key, value in query_results.items():
+
+                    pk = value['id']
+
+                    # This is an empty result of an outer join.
+                    # It should not be taken into account.
+                    if pk is None:
+                        continue
+
                     # Get current entity
                     current_entity = key.split(entity_separator)[-1]
 
-                    # This is a empty result of an outer join.
-                    # It should not be taken into account.
-                    if temp_d[key]['id'] is None:
+                    # don't allow duplication
+                    if pk in exported_entity_pks[current_entity]:
                         continue
 
-                    export_data[current_entity].update({
-                        temp_d[key]['id']:
-                        serialize_dict(
-                            temp_d[key],
-                            remove_fields=['id'],
-                            rename_fields=model_fields_to_file_fields[current_entity],
-                        )
-                    })
+                    exported_entity_pks[current_entity].add(pk)
 
-    return export_data
+                    fields = serialize_dict(
+                        value,
+                        remove_fields=['id'],
+                        rename_fields=model_fields_to_file_fields[current_entity],
+                    )
 
+                    if current_entity == NODE_ENTITY_NAME and fields['node_type'].startswith('process.'):
+                        if fields['attributes'].get('sealed', False) is not True:
+                            unsealed_node_pks.add(pk)
 
-def _collect_node_data(all_node_pks: Set[int]) -> Iterable[Tuple[str, dict, dict]]:
-    """Gather attributes and extras for nodes
+                    writer_context.write_entity_data(current_entity, pk, fields)
 
-    :param export_data:  mappings by entity type -> pk -> db_columns
-    :param all_node_pks: set of pks
-
-    :return: iterable of (uuid, attributes, extras)
-
-    """
-    # ATTRIBUTES and EXTRAS
-    EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')
-    node_data = []
-
-    # Another QueryBuilder query to get the attributes and extras.
-    if all_node_pks:
-        all_nodes_query = orm.QueryBuilder().append(
-            orm.Node,
-            filters={'id': {
-                'in': all_node_pks
-            }},
-            project=['id', 'attributes', 'extras'],
+    if unsealed_node_pks:
+        raise exceptions.ExportValidationError(
+            'All ProcessNodes must be sealed before they can be exported. '
+            f"Node(s) with PK(s): {', '.join(str(pk) for pk in unsealed_node_pks)} is/are not sealed."
         )
 
-        with get_progress_reporter()(total=all_nodes_query.count()) as progress:
-            progress.set_description_str('Exporting Attributes and Extras', refresh=False)
-
-            for node_pk, attributes, extras in all_nodes_query.iterall():
-                progress.update()
-
-                node_data.append((str(node_pk), attributes, extras))
-
-    return node_data
-
-
-def _get_groups_uuid(entity_data: Dict[str, Dict[int, dict]]) -> Dict[str, Set[str]]:
-    """Get node UUIDs per group."""
-    EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
-    groups_uuid: Dict[str, Set[str]] = defaultdict(set)
-    # If a group is in the exported data, we export the group/node correlation
-    if GROUP_ENTITY_NAME not in entity_data:
-        return groups_uuid
-
-    group_uuids_with_node_uuids = (
-        orm.QueryBuilder().append(
-            orm.Group,
-            filters={
-                'id': {
-                    'in': entity_data[GROUP_ENTITY_NAME]
-                }
-            },
-            project='uuid',
-            tag='groups',
-        ).append(orm.Node, project='uuid', with_group='groups')
-    )
-
-    total_node_uuids_for_groups = group_uuids_with_node_uuids.count()
-
-    if not total_node_uuids_for_groups:
-        return groups_uuid
-
-    with get_progress_reporter()(desc='Exporting Groups ...', total=total_node_uuids_for_groups) as progress:
-
-        for group_uuid, node_uuid in group_uuids_with_node_uuids.iterall():
-            progress.update()
-
-            groups_uuid[group_uuid].add(node_uuid)
-
-    return groups_uuid
+    return exported_entity_pks
 
 
 # THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY

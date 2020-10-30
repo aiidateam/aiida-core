@@ -62,7 +62,7 @@ class ZipFolder:
 
     def __init__(
         self,
-        zipfolder_or_fname: Union[str, 'ZipFolder'],
+        zipfolder_or_fname: Union[str, Path, 'ZipFolder'],
         mode: Optional[str] = None,
         subfolder: str = '.',
         use_compression: bool = True,
@@ -85,7 +85,7 @@ class ZipFolder:
           It is ignored if zipfolder_or_fname is a ZipFolder instance.
 
         """
-        if isinstance(zipfolder_or_fname, str):
+        if isinstance(zipfolder_or_fname, (str, Path)):
             the_mode = mode
             if the_mode is None:
                 the_mode = 'r'
@@ -97,11 +97,17 @@ class ZipFolder:
                 zipfolder_or_fname, mode=the_mode, compression=compression, allowZip64=allowZip64
             )
             self._pwd = subfolder
+            self._filepath = Path(zipfolder_or_fname)
         else:
             if mode is not None:
                 raise ValueError("Cannot specify 'mode' when passing a ZipFolder")
             self._zipfile = zipfolder_or_fname._zipfile  # pylint: disable=protected-access
             self._pwd = os.path.join(zipfolder_or_fname.pwd, subfolder)
+            self._filepath = zipfolder_or_fname.filepath
+
+    @property
+    def filepath(self):
+        return self._filepath
 
     def __enter__(self):
         """Enter the zipfile for reading/writing."""
@@ -134,6 +140,10 @@ class ZipFolder:
             return _ZipFileWriter(zip_file=self._zipfile, fname=self._get_internal_path(fname))
         return self._zipfile.open(self._get_internal_path(fname), mode=mode)
 
+    def write_text(self, content: str):
+        with self.open('', 'w') as handle:
+            handle.write(content)
+
     def _get_internal_path(self, filename: str):
         """Return a path to the filename from the root of zip file."""
         return os.path.normpath(os.path.join(self.pwd, filename))
@@ -141,6 +151,9 @@ class ZipFolder:
     # pylint: disable=unused-argument
     def get_subfolder(self, subfolder: str, create: bool = False, reset_limit: bool = False) -> 'ZipFolder':
         """Return a subfolder in the zipfile as a new zip folder."""
+        return ZipFolder(self, subfolder=subfolder)
+
+    def __truediv__(self, subfolder: str) -> 'ZipFolder':
         return ZipFolder(self, subfolder=subfolder)
 
     def exists(self, path):

@@ -113,7 +113,7 @@ def read_file_in_tar(filepath: str, path: str) -> str:
 
 
 def _get_filter(only_prefix: Iterable[str], ignore_prefix: Iterable[str]) -> Callable[[str], bool]:
-    """Create filter for members to extract."""
+    """Create name filter."""
     if only_prefix:
 
         def _filter(name):

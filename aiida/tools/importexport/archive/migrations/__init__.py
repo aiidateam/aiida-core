@@ -22,7 +22,7 @@ from .v06_to_v07 import migrate_v6_to_v7
 from .v07_to_v08 import migrate_v7_to_v8
 from .v08_to_v09 import migrate_v8_to_v9
 
-# version from -> version to, func(path to (uncompressed), dict of cached data) -> dict of cached data
+# version from -> version to, func(path to uncompressed json, dict of cached data) -> dict of migrated data
 _vtype = Dict[str, Tuple[str, Callable[[Path, Dict[str, Any]], Dict[str, Any]]]]
 MIGRATE_FUNCTIONS: _vtype = {
     '0.1': ('0.2', migrate_v1_to_v2),

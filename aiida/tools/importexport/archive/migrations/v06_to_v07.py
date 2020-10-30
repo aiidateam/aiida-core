@@ -24,13 +24,14 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-import json
 from pathlib import Path
+
+from aiida.common import json  # handles byte dumps
 
 from .utils import verify_metadata_version, update_metadata
 
 
-def migration_data_migration_legacy_process_attributes(data):
+def data_migration_legacy_process_attributes(data):
     """Apply migration 0040 - REV. 1.0.40
     Data migration for some legacy process attributes.
 
@@ -127,7 +128,7 @@ def migrate_v6_to_v7(folder: Path, cache: dict) -> dict:
     data = cache.get('data.json', json.loads((folder / 'data.json').read_text('utf8')))
 
     # Apply migrations
-    migration_data_migration_legacy_process_attributes(data)
+    data_migration_legacy_process_attributes(data)
     remove_attribute_link_metadata(metadata)
 
     (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')

@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
-import json
 from pathlib import Path
+
+from aiida.common import json  # handles byte dumps
 
 from .utils import verify_metadata_version, update_metadata
 

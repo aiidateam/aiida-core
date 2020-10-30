@@ -9,11 +9,10 @@
 ###########################################################################
 """Migration from v0.2 to v0.3, used by `verdi export migrate` command."""
 # pylint: disable=too-many-locals,too-many-statements,too-many-branches,unused-argument
-
 import enum
-import json
 from pathlib import Path
 
+from aiida.common import json  # handles byte dumps
 from aiida.tools.importexport.common.exceptions import DanglingLinkError
 from .utils import verify_metadata_version, update_metadata
 

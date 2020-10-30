@@ -140,7 +140,7 @@ def _try_import(migration_performed, file_to_import, archive, group, migration, 
     return migrate_archive
 
 
-def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, more_archives, silent, **kwargs):  # pylint: disable=unused-argument
+def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive, more_archives, **kwargs):  # pylint: disable=unused-argument
     """Utility function for `verdi import` to migrate archive
     Invoke click command `verdi export migrate`, passing in the archive,
     outputting the migrated archive in a temporary SandboxFolder.
@@ -165,9 +165,7 @@ def _migrate_archive(ctx, temp_folder, file_to_import, archive, non_interactive,
 
     # Migration
     try:
-        ctx.invoke(
-            migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file), silent=silent
-        )
+        ctx.invoke(migrate, input_file=file_to_import, output_file=temp_folder.get_abs_path(temp_out_file))
     except Exception as exception:
         _echo_error(
             'an exception occurred while migrating the archive {}.\n'
@@ -321,7 +319,7 @@ def cmd_import(
         # Migrate archive if needed and desired
         if migrate_archive:
             with SandboxFolder() as temp_folder:
-                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, silent=False, **import_opts)
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
                 _try_import(migration_performed=True, **import_opts)
 
     # Import web-archives
@@ -351,5 +349,5 @@ def cmd_import(
 
             # Migrate archive if needed and desired
             if migrate_archive:
-                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, silent=False, **import_opts)
+                import_opts['file_to_import'] = _migrate_archive(ctx, temp_folder, **import_opts)
                 _try_import(migration_performed=True, **import_opts)

@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 from aiida.common import timezone
 from aiida.common.folders import RepositoryFolder
-from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.progress_reporter import get_progress_reporter, create_callback
 from aiida.orm import Group, ImportGroup, Node, QueryBuilder
 from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
@@ -37,13 +37,7 @@ def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReader
     IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
     with get_progress_reporter()(total=1) as progress:
 
-        # the callback will handle manipulation of the progress reporter
-        def _callback(action, value):
-            if action == 'init':
-                progress.reset(value['total'])
-                progress.set_description_str(value['description'])
-            elif action == 'update':
-                progress.update(value)
+        _callback = create_callback(progress)
 
         for import_entry_uuid, subfolder in zip(
             uuids_to_create, reader.iter_node_repos(uuids_to_create, callback=_callback)

@@ -1,0 +1,76 @@
+# -*- coding: utf-8 -*-
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""Module with tests for export archive migrations."""
+import tarfile
+import zipfile
+
+import pytest
+
+from aiida.common import json
+from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip
+from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
+from tests.utils.archives import get_archive_file
+
+
+@pytest.fixture()
+def core_archive():
+    """Return parameters for the core archive."""
+    return {'filepath': 'export/migrate'}
+
+
+@pytest.fixture()
+def external_archive() -> dict:
+    """Return parameters for the external archive."""
+    return {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
+
+
+@pytest.fixture()
+def migrate_from_func(tmp_path):
+    """Create migrate function."""
+
+    def _migrate(filename_archive, version_old, version_new, migration_method, archive_kwargs=None):
+        """Migrate one of the archives from `aiida-export-migration-tests`.
+
+        :param filename_archive: the relative file name of the archive
+        :param version_old: version of the archive
+        :param version_new: version to migrate to
+        :param migration_method: the migration method that should convert between version_old and version_new
+        :return: the migrated metadata and data as a tuple
+
+        """
+        archive_path = get_archive_file(
+            filename_archive,
+            **(archive_kwargs or {
+                'filepath': 'archives',
+                'external_module': 'aiida-export-migration-tests'
+            })
+        )
+        out_path = tmp_path / 'out.aiida'
+
+        if zipfile.is_zipfile(archive_path):
+            safe_extract_zip(archive_path, out_path)
+        elif tarfile.is_tarfile(archive_path):
+            safe_extract_tar(archive_path, out_path)
+        else:
+            raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
+
+        old_metadata = json.loads((out_path / 'metadata.json').read_text('utf8'))
+        verify_metadata_version(old_metadata, version=version_old)
+
+        migration_method(out_path, {'metadata.json': old_metadata})
+
+        metadata = json.loads((out_path / 'metadata.json').read_text('utf8'))
+        verify_metadata_version(metadata, version=version_new)
+
+        data = json.loads((out_path / 'data.json').read_text('utf8'))
+
+        return metadata, data
+
+    return _migrate

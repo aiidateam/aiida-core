@@ -14,8 +14,6 @@ import os
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Callable, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
-import zipfile
-import tarfile
 
 from distutils.version import StrictVersion
 
@@ -24,7 +22,9 @@ from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
-from aiida.tools.importexport.archive.common import ArchiveMetadata, read_file_in_tar, read_file_in_zip
+from aiida.tools.importexport.archive.common import (
+    ArchiveMetadata, null_callback, read_file_in_tar, read_file_in_zip, safe_extract_zip, safe_extract_tar
+)
 from aiida.tools.importexport.common.config import NODE_ENTITY_NAME, GROUP_ENTITY_NAME
 from aiida.tools.importexport.common.utils import export_shard_uuid
 
@@ -56,10 +56,6 @@ def get_reader(file_format: str) -> Type['ArchiveReaderAbstract']:
         )
 
     return cast(Type[ArchiveReaderAbstract], readers[file_format])
-
-
-def null_callback(action: str, value: Any):  # pylint: disable=unused-argument
-    """A null callback function."""
 
 
 class ArchiveReaderAbstract(ABC):
@@ -407,15 +403,13 @@ class ReaderJsonZip(ReaderJsonBase):
     def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
-        try:
-            with zipfile.ZipFile(self.filename, 'r', allowZip64=True) as handle:
-                members = [m for m in handle.namelist() if m.startswith(path_prefix)]
-                callback('init', {'total': len(members), 'description': 'Extracting repository files'})
-                for membername in members:
-                    callback('update', 1)
-                    handle.extract(path=self._sandbox.abspath, member=membername)
-        except zipfile.BadZipfile as error:
-            raise CorruptArchive(f'The input file cannot be read: {error}')
+        safe_extract_zip(
+            self.filename,
+            self._sandbox.abspath,
+            only_prefix=[path_prefix],
+            callback=callback,
+            callback_description='Extracting repository files'
+        )
 
 
 class ReaderJsonTar(ReaderJsonBase):
@@ -438,25 +432,13 @@ class ReaderJsonTar(ReaderJsonBase):
     def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
-        try:
-            with tarfile.open(self.filename, 'r:*', format=tarfile.PAX_FORMAT) as handle:
-                members = [m for m in handle.getmembers() if m.name.startswith(path_prefix)]
-                callback('init', {'total': len(members), 'description': 'Extracting repository files'})
-                for member in members:
-                    callback('update', 1)
-                    if member.isdev():
-                        # safety: skip if character device, block device or FIFO
-                        msg = f'WARNING, device found inside the import file: {member.name}'
-                        ARCHIVE_READER_LOGGER.warning(msg)
-                        continue
-                    if member.issym() or member.islnk():
-                        # safety: although dereference=True set in export, so this should not occur
-                        msg = f'WARNING, symlink found inside the import file: {member.name}'
-                        ARCHIVE_READER_LOGGER.warning(msg)
-                        continue
-                    handle.extract(path=self._sandbox.abspath, member=member.name)
-        except zipfile.BadZipfile:
-            raise TypeError('The input file format is not valid (not a zip file)')
+        safe_extract_tar(
+            self.filename,
+            self._sandbox.abspath,
+            only_prefix=[path_prefix],
+            callback=callback,
+            callback_description='Extracting repository files'
+        )
 
 
 class ReaderJsonFolder(ReaderJsonBase):

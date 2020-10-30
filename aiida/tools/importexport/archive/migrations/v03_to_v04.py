@@ -25,12 +25,12 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 """
 # pylint: disable=invalid-name
 import copy
-import json
 import os
 from pathlib import Path
 
 import numpy as np
 
+from aiida.common import json  # handles byte dumps
 from aiida.tools.importexport.common.exceptions import ArchiveMigrationError
 from .utils import verify_metadata_version, update_metadata, remove_fields
 
@@ -508,6 +508,7 @@ def migrate_v3_to_v4(folder: Path, cache: dict) -> dict:
     metadata['unique_identifiers'].update({'Log': 'uuid', 'Comment': 'uuid'})
 
     (folder / 'metadata.json').write_text(json.dumps(metadata), encoding='utf8')
+    print(data)
     (folder / 'data.json').write_text(json.dumps(data), encoding='utf8')
 
     return {'metadata.json': metadata, 'data.json': data}

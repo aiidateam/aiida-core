@@ -15,16 +15,16 @@ from pathlib import Path
 import shutil
 import tarfile
 import tempfile
-from typing import Any, cast, Dict, List, Optional, Type
+from typing import Any, Callable, cast, Dict, List, Optional, Type, Union
 import zipfile
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.progress_reporter import get_progress_reporter
-from aiida.tools.importexport.common.exceptions import (
-    ArchiveMigrationError, CorruptArchive, DanglingLinkError, IncompatibleArchiveVersionError
-)
+from aiida.common.progress_reporter import get_progress_reporter, create_callback
+from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
 from aiida.tools.importexport.common.config import ExportFileFormat
-from aiida.tools.importexport.archive.common import read_file_in_tar, read_file_in_zip
+from aiida.tools.importexport.archive.common import (
+    read_file_in_tar, read_file_in_zip, safe_extract_tar, safe_extract_zip
+)
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 
 __all__ = (
@@ -68,7 +68,9 @@ class ArchiveMigratorAbstract(ABC):
         return self._filepath
 
     @abstractmethod
-    def migrate(self, version: str, filename: Optional[str], *, force: bool = False, **kwargs: Any):
+    def migrate(
+        self, version: str, filename: Optional[Union[str, Path]], *, force: bool = False, **kwargs: Any
+    ) -> Path:
         """Migrate the archive to another version
 
         :param version: the version to migrate to
@@ -76,12 +78,13 @@ class ArchiveMigratorAbstract(ABC):
         :param force: overwrite output file if it already exists
         :param kwargs: key-word arguments specific to the concrete migrator implementation
 
+        :returns: path to migrated archive
+            (filename or the original path, if filename is None or no migration performed)
+
         :raises: :class:`~aiida.tools.importexport.common.exceptions.CorruptArchive`:
             if the archive cannot be read
-        :raises: :class:`~aiida.tools.importexport.common.exceptions.IncompatibleArchiveVersionError`:
-            if the archive cannot migrated to the requested version
         :raises: :class:`~aiida.tools.importexport.common.exceptions.ArchiveMigrationError`:
-            for other known errors occurring during the migration
+            if the archive cannot migrated to the requested version
 
         """
 
@@ -89,19 +92,25 @@ class ArchiveMigratorAbstract(ABC):
 class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
     """A migrator base for the JSON compressed formats."""
 
+    # pylint: disable=arguments-differ
     def migrate(
         self,
         version: str,
-        filename: Optional[str],
+        filename: Optional[Union[str, Path]],
         *,
         force: bool = False,
         out_compression: str = 'zip',
         **kwargs
-    ):  # pylint: disable=arguments-differ
+    ) -> Path:
         # pylint: disable=too-many-branches
 
-        if filename and Path(filename).exists() and not force:
-            raise IOError('the output file already exists')
+        if not isinstance(version, str):
+            raise TypeError('version must be a string')
+
+        out_path: Path = Path(filename or self.filepath)
+
+        if out_path.exists() and not force:
+            raise IOError(f'the output file already exists: {out_path}')
 
         allowed_compressions = ['zip', 'zip-uncompressed', 'tar.gz']
         if out_compression not in allowed_compressions:
@@ -114,9 +123,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         pathway: List[str] = []
         while prev_version != version:
             if prev_version not in MIGRATE_FUNCTIONS:
-                raise IncompatibleArchiveVersionError(
-                    f"No migration pathway available for '{current_version}' to '{version}'"
-                )
+                raise ArchiveMigrationError(f"No migration pathway available for '{current_version}' to '{version}'")
             if prev_version in pathway:
                 raise ArchiveMigrationError(
                     f'cyclic migration pathway encountered: {" -> ".join(pathway + [prev_version])}'
@@ -126,7 +133,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
 
         if not pathway:
             MIGRATE_LOGGER.info('No migration required')
-            return
+            return Path(self.filepath)
 
         MIGRATE_LOGGER.info('Migration pathway: %s', ' -> '.join(pathway + [version]))
 
@@ -136,7 +143,9 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
             MIGRATE_LOGGER.info('Extracting archive to temporary folder')
             extracted = Path(tmpdirname) / 'extracted'
             extracted.mkdir()
-            self._extract_archive(extracted)
+            with get_progress_reporter()(total=1) as progress:
+                callback = create_callback(progress)
+                self._extract_archive(extracted, callback)
             # cache of read data to parse between migration steps (to minimize re-reading data)
             cache: Dict[str, Any] = {}
 
@@ -163,20 +172,28 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
                 self._compress_archive_tar(extracted, compressed)
 
             # move to final location
-            MIGRATE_LOGGER.info('Moving archive to: %s', filename or self.filepath)
-            out_path = Path(filename or self.filepath)
-            if out_path.exists():
-                if out_path.is_file():
-                    out_path.unlink()
-                else:
-                    shutil.rmtree(out_path)
-            shutil.move(compressed, out_path)  # type: ignore
+            MIGRATE_LOGGER.info('Moving archive to: %s', out_path)
+            self._move_file(compressed, out_path)
+
+            return out_path
+
+    @staticmethod
+    def _move_file(in_path: Path, out_path: Path):
+        """Move a file to a another path, deleting the target path first if it exists."""
+        if in_path == out_path:
+            return
+        if out_path.exists():
+            if out_path.is_file():
+                out_path.unlink()
+            else:
+                shutil.rmtree(out_path)
+        shutil.move(in_path, out_path)  # type: ignore
 
     def _retrieve_version(self) -> str:
         """Retrieve the version of the input archive."""
         raise NotImplementedError()
 
-    def _extract_archive(self, filepath: Path):
+    def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
         """Extract the archive to a filepath."""
         raise NotImplementedError()
 
@@ -207,9 +224,8 @@ class ArchiveMigratorJsonZip(ArchiveMigratorJsonBase):
             raise CorruptArchive("metadata.json doest not contain an 'export_version' key")
         return metadata['export_version']
 
-    def _extract_archive(self, filepath: Path):
-        with zipfile.ZipFile(self.filepath, 'r', allowZip64=True) as handle:
-            handle.extractall(filepath)
+    def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
+        safe_extract_zip(self.filepath, filepath, callback=callback)
 
 
 class ArchiveMigratorJsonTar(ArchiveMigratorJsonBase):
@@ -220,3 +236,6 @@ class ArchiveMigratorJsonTar(ArchiveMigratorJsonBase):
         if 'export_version' not in metadata:
             raise CorruptArchive("metadata.json doest not contain an 'export_version' key")
         return metadata['export_version']
+
+    def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
+        safe_extract_tar(self.filepath, filepath, callback=callback)

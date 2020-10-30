@@ -24,8 +24,9 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-import json
 from pathlib import Path
+
+from aiida.common import json  # handles byte dumps
 
 from .utils import verify_metadata_version, update_metadata
 

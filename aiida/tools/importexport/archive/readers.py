@@ -36,7 +36,6 @@ __all__ = (
     'ReaderJsonTar',
     'ReaderJsonZip',
     'get_reader',
-    'null_callback',
 )
 
 ARCHIVE_READER_LOGGER = AIIDA_LOGGER.getChild('archive.reader')

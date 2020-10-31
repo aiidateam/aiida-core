@@ -220,16 +220,15 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
             import_data(archive_path, **import_kwargs)
         except IncompatibleArchiveVersionError as exception:
             if try_migration:
-                _echo_exception(f'initial import of {archive} failed', exception, warn_only=True)
-                # try migration
-                echo.echo_info('trying migration')
+
+                echo.echo_info(f'incompatible version detected for {archive}, trying migration')
                 try:
                     migrator = get_migrator(detect_archive_type(archive_path))(archive_path)
                     archive_path = temp_folder.get_abs_path('migrated_archive.zip')
                     migrator.migrate(EXPORT_VERSION, archive_path, out_compression='zip')
                 except Exception as exception:
                     _echo_exception(f'an exception occurred while migrating the archive {archive}', exception)
-                # re-try import
+
                 echo.echo_info('proceeding with import of migrated archive')
                 try:
                     import_data(archive_path, **import_kwargs)

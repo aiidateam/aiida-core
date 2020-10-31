@@ -232,12 +232,14 @@ class CacheFolder:
     The class can be used as a context manager, and will flush the cache on exit::
 
         with CacheFolder(path) as folder:
-            # this stored in memory (no disk write)
+            # these are stored in memory (no disk write)
             folder.write_text('path/to/file.txt', 'content')
-            # this will be read from memory
+            folder.write_json('path/to/data.json', {'a': 1})
+            # these will be read from memory
             text = folder.read_text('path/to/file.txt')
+            text = folder.load_json('path/to/data.json')
 
-        # all path/to/file.txt will now have been written to disk
+        # all files will now have been written to disk
 
     """
 
@@ -324,6 +326,9 @@ class CacheFolder:
 
     def write_json(self, path: str, data: dict):
         """Write dict to the folder, to be serialized as json.
+
+        The dictionary is stored in memory, until the cache is flushed,
+        at which point the dictionary is serialized to json and written to disk.
 
         :param path: path relative to base folder
 

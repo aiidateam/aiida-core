@@ -58,12 +58,12 @@ def migrate_v4_to_v5(folder: CacheFolder):
     old_version = '0.4'
     new_version = '0.5'
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
     # Apply migrations
     migration_drop_node_columns_nodeversion_public(metadata, data)
     migration_drop_computer_transport_params(metadata, data)

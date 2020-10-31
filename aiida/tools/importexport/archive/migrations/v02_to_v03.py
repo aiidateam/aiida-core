@@ -56,12 +56,12 @@ def migrate_v2_to_v3(folder: CacheFolder):
         'aiida.backends.djsite.db.models.DbAttribute': 'Attribute'
     }
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     # Create a mapping from node uuid to node type
     mapping = {}

@@ -60,8 +60,8 @@ def test_migrate_external(external_archive, tmp_path):
     # Migrate to v0.4
     folder = CacheFolder(out_path)
     migrate_v3_to_v4(folder)
-    metadata = folder.read_json('metadata.json')
-    data = folder.read_json('data.json')
+    _, metadata = folder.load_json('metadata.json')
+    _, data = folder.load_json('data.json')
     verify_metadata_version(metadata, version='0.4')
 
     ## Following checks are based on the archive-file
@@ -352,7 +352,7 @@ def test_illegal_create_links(external_archive, tmp_path):
     folder = CacheFolder(out_path)
     migrate_v3_to_v4(folder)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     # Check illegal create links were removed
     assert len(data['links_uuid']) == links_count_migrated, (

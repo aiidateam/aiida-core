@@ -137,12 +137,12 @@ def migrate_v5_to_v6(folder: CacheFolder):
     old_version = '0.5'
     new_version = '0.6'
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     # Apply migrations
     migration_serialize_datetime_objects(data)

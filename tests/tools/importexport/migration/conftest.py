@@ -61,15 +61,15 @@ def migrate_from_func(tmp_path):
             raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
         folder = CacheFolder(out_path)
-        old_metadata = folder.read_json('metadata.json')
+        _, old_metadata = folder.load_json('metadata.json')
         verify_metadata_version(old_metadata, version=version_old)
 
         migration_method(folder)
 
-        metadata = folder.read_json('metadata.json')
+        _, metadata = folder.load_json('metadata.json')
         verify_metadata_version(metadata, version=version_new)
 
-        data = folder.read_json('data.json')
+        _, data = folder.load_json('data.json')
 
         return metadata, data
 

@@ -441,12 +441,12 @@ def migrate_v3_to_v4(folder: CacheFolder):
     old_version = '0.3'
     new_version = '0.4'
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     # Apply migrations in correct sequential order
     migration_base_data_plugin_type_string(data)

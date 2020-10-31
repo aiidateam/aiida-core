@@ -9,12 +9,13 @@
 ###########################################################################
 """Shared resources for the archive."""
 from collections import OrderedDict
+import copy
 import dataclasses
 import os
 from pathlib import Path
 import tarfile
 from types import TracebackType
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 import zipfile
 
 from aiida.common import json  # handles byte dumps
@@ -231,32 +232,59 @@ class CacheFolder:
     The class can be used as a context manager, and will flush the cache on exit::
 
         with CacheFolder(path) as folder:
-            # this stored in memory (no file system write)
+            # this stored in memory (no disk write)
             folder.write_text('path/to/file.txt', 'content')
             # this will be read from memory
             text = folder.read_text('path/to/file.txt')
 
-        # all path/to/file.txt will now have been written to the file system
+        # all path/to/file.txt will now have been written to disk
 
     """
 
-    def __init__(self, path: Union[Path, str], *, limit: int = 100, encoding: str = 'utf8'):
+    def __init__(self, path: Union[Path, str], *, encoding: str = 'utf8'):
         """Initialise cached folder.
 
         :param path: folder path to cache
-        :param limit: maximum number of files to cache ()
         :param encoding: encoding of text to read/write
 
         """
         self._path = Path(path)
+        # dict mapping path -> (type, content)
         self._cache = OrderedDict()  # type: ignore
-        self._max_items = limit
         self._encoding = encoding
+        self._max_items = 100  # maximum limit of files to store in memory
+
+    def _write_object(self, path: str, ctype: str, content: Any):
+        """Write an object from the cache to disk.
+
+        :param path: relative path of file
+        :param ctype: the type of the content
+        :param content: the content to write
+
+        """
+        if ctype == 'text':
+            text = content
+        elif ctype == 'json':
+            text = json.dumps(content)
+        else:
+            raise TypeError(f'Unknown content type: {ctype}')
+
+        (self._path / path).write_text(text, encoding=self._encoding)
 
     def flush(self):
         """Flush the cache."""
-        for path, content in self._cache.items():
-            (self._path / path).write_text(content, encoding=self._encoding)
+        for path, (ctype, content) in self._cache.items():
+            self._write_object(path, ctype, content)
+
+    def _limit_cache(self):
+        """Ensure the cache does not exceed a set limit.
+
+        Content is uncached on a First-In-First-Out basis.
+
+        """
+        while len(self._cache) > self._max_items:
+            path, (ctype, content) = self._cache.popitem(last=False)
+            self._write_object(path, ctype, content)
 
     def get_path(self, flush=True) -> Path:
         """Return the path.
@@ -274,10 +302,9 @@ class CacheFolder:
         :param path: path relative to base folder
 
         """
-        self._cache[path] = content
-        if len(self._cache) > self._max_items:
-            path, content = self._cache.popitem(last=False)
-            (self._path / path).write_text(content, encoding=self._encoding)
+        assert isinstance(content, str)
+        self._cache[path] = ('text', content)
+        self._limit_cache()
 
     def read_text(self, path) -> str:
         """write text from the cache or base folder.
@@ -285,9 +312,15 @@ class CacheFolder:
         :param path: path relative to base folder
 
         """
-        if path in self._cache:
-            return self._cache[path]
-        return (self._path / path).read_text(self._encoding)
+        if path not in self._cache:
+            return (self._path / path).read_text(self._encoding)
+        ctype, content = self._cache[path]
+        if ctype == 'text':
+            return content
+        if ctype == 'json':
+            return json.dumps(content)
+
+        raise TypeError(f"content of type '{ctype}' could not be converted to text")
 
     def write_json(self, path: str, data: dict):
         """write dict to the cache as json.
@@ -295,17 +328,34 @@ class CacheFolder:
         :param path: path relative to base folder
 
         """
-        content = json.dumps(data)
-        self.write_text(path, content)
+        json.dumps(data)  # make sure that the data can be converted to json
+        self._cache[path] = ('json', data)
+        self._limit_cache()
 
-    def read_json(self, path) -> dict:
-        """write text from the cache or base folder.
+    def load_json(self, path: str, ensure_copy: bool = False) -> Tuple[bool, dict]:
+        """Load a json file from the cache or base folder.
+
+        Important: if the dict is returned directly from the cache, any mutations will affect the cached dict.
 
         :param path: path relative to base folder
+        :param ensure_copy: ensure the dict is a copy of that from the cache
+
+        :returns: (from cache, the content)
+            If from cache, mutations will directly affect the cache
 
         """
-        content = self.read_text(path)
-        return json.loads(content)
+        if path not in self._cache:
+            return False, json.loads((self._path / path).read_text(self._encoding))
+
+        ctype, content = self._cache[path]
+        if ctype == 'text':
+            return False, json.loads(content)
+        if ctype == 'json':
+            if ensure_copy:
+                return False, copy.deepcopy(content)
+            return True, content
+
+        raise TypeError(f"content of type '{ctype}' could not be converted to a dict")
 
     def remove_file(self, path):
         """Remove a file from both the cache and base folder (if present).

@@ -44,8 +44,8 @@ def test_migrations(migration_data, tmp_path):
     folder = CacheFolder(out_path)
     migration_method(folder)
 
-    metadata_old = folder.read_json('metadata.json')
-    data_old = folder.read_json('data.json')
+    _, metadata_old = folder.load_json('metadata.json')
+    _, data_old = folder.load_json('data.json')
 
     verify_metadata_version(metadata_old, version=version_new)
 

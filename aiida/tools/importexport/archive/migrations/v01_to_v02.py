@@ -27,12 +27,12 @@ def migrate_v1_to_v2(folder: CacheFolder):
     old_start = 'aiida.djsite'
     new_start = 'aiida.backends.djsite'
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     for field in ['export_data']:
         for key in list(data[field]):

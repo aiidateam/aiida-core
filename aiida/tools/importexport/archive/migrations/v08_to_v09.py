@@ -52,12 +52,12 @@ def migrate_v8_to_v9(folder: CacheFolder):
     old_version = '0.8'
     new_version = '0.9'
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     # Apply migrations
     migration_dbgroup_type_string(data)

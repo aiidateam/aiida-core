@@ -44,12 +44,12 @@ def migrate_v7_to_v8(folder: CacheFolder):
     old_version = '0.7'
     new_version = '0.8'
 
-    metadata = folder.read_json('metadata.json')
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
-    data = folder.read_json('data.json')
+    _, data = folder.load_json('data.json')
 
     # Apply migrations
     migration_default_link_label(data)

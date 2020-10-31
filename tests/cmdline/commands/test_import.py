@@ -238,7 +238,6 @@ class TestVerdiImport(AiidaTestCase):
         `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         """
         archive = get_archive_file('export_v0.1_simple.aiida', filepath=self.archive_path)
-        confirm_message = f'Do you want to try and migrate {archive} to the newest archive file version?'
         success_message = f'Success: imported archive {archive}'
 
         # Import "normally", but explicitly specifying `--migration`, make sure confirm message is present
@@ -249,7 +248,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
-        self.assertIn(confirm_message, result.output, msg=result.exception)
+        self.assertIn('trying migration', result.output, msg=result.exception)
         self.assertIn(success_message, result.output, msg=result.exception)
 
         # Import using non-interactive, make sure confirm message has gone
@@ -260,7 +259,6 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
-        self.assertNotIn(confirm_message, result.output, msg=result.exception)
         self.assertIn(success_message, result.output, msg=result.exception)
 
         # Import using `--no-migration`, make sure confirm message has gone
@@ -271,7 +269,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNotNone(result.exception, msg=result.output)
         self.assertNotEqual(result.exit_code, 0, msg=result.output)
 
-        self.assertNotIn(confirm_message, result.output, msg=result.exception)
+        self.assertNotIn('trying migration', result.output, msg=result.exception)
         self.assertNotIn(success_message, result.output, msg=result.exception)
 
         # Import using `--no-migration` and `--non-interactive`, make sure confirm message has gone
@@ -282,5 +280,5 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNotNone(result.exception, msg=result.output)
         self.assertNotEqual(result.exit_code, 0, msg=result.output)
 
-        self.assertNotIn(confirm_message, result.output, msg=result.exception)
+        self.assertNotIn('trying migration', result.output, msg=result.exception)
         self.assertNotIn(success_message, result.output, msg=result.exception)

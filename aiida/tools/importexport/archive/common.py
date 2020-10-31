@@ -323,7 +323,7 @@ class CacheFolder:
         raise TypeError(f"content of type '{ctype}' could not be converted to text")
 
     def write_json(self, path: str, data: dict):
-        """write dict to the cache as json.
+        """Write dict to the folder, to be serialized as json.
 
         :param path: path relative to base folder
 
@@ -333,7 +333,7 @@ class CacheFolder:
         self._limit_cache()
 
     def load_json(self, path: str, ensure_copy: bool = False) -> Tuple[bool, dict]:
-        """Load a json file from the cache or base folder.
+        """Load a json file from the cache folder.
 
         Important: if the dict is returned directly from the cache, any mutations will affect the cached dict.
 

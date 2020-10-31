@@ -192,7 +192,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
 
     :param archive: the path or URL to the archive
     :param web_based: If the archive needs to be downloaded first
-    :param import_kwargs: key-word arguments to parse to the import function
+    :param import_kwargs: keyword arguments to pass to the import function
     :param try_migration: whether to try a migration if the import raises IncompatibleArchiveVersionError
 
     """
@@ -230,16 +230,16 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
                 except Exception as exception:
                     _echo_exception(f'an exception occurred while migrating the archive {archive}', exception)
                 # re-try import
-                echo.echo_info('proceeding with import')
+                echo.echo_info('proceeding with import of migrated archive')
                 try:
                     import_data(archive_path, **import_kwargs)
                 except Exception as exception:
                     _echo_exception(
-                        f'an exception occurred while re-trying import of the migrated archive {archive}', exception
+                        f'an exception occurred while trying to import the migrated archive {archive}', exception
                     )
             else:
-                _echo_exception(f'an exception occurred while importing the archive {archive}', exception)
+                _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)
         except Exception as exception:
-            _echo_exception(f'an exception occurred while importing the archive {archive}', exception)
+            _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)
 
         echo.echo_success(f'imported archive {archive}')

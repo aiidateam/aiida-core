@@ -154,7 +154,7 @@ def _echo_exception(msg: str, exception, warn_only: bool = False):
 
 
 def _gather_imports(archives, webpages) -> List[Tuple[str, bool]]:
-    """Gather archives to import and sort into local and web-base.
+    """Gather archives to import and sort into local files and URLs.
 
     :returns: list of (archive path, whether it is web based)
 

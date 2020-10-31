@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi import` command."""
-# pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
+# pylint: disable=broad-except
 from enum import Enum
 from typing import List, Tuple
 import traceback

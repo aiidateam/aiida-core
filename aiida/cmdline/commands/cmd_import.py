@@ -10,7 +10,6 @@
 """`verdi import` command."""
 # pylint: disable=broad-except,too-many-arguments,too-many-locals,too-many-branches
 from enum import Enum
-import os
 from typing import List, Tuple
 import traceback
 import urllib.request
@@ -105,6 +104,7 @@ def cmd_import(
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
+    # pylint: disable=unused-argument
     from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
@@ -136,9 +136,9 @@ def cmd_import(
             _import_archive(archive, web_based, import_kwargs, migration)
 
 
-def _echo_exception(msg: str, exception, warn_only: bool=False):
+def _echo_exception(msg: str, exception, warn_only: bool = False):
     """Correctly report and exception.
-    
+
     :param msg: The message prefix
     :param exception: the exception raised
     :param warn_only: If True only print a warning, otherwise calls sys.exit with a non-zero exit status
@@ -193,7 +193,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
     :param archive: the path or URL to the archive
     :param web_based: If the archive needs to be downloaded first
     :param import_kwargs: key-word arguments to parse to the import function
-    :param try_migration: whether to try a migration if the import raises IncompatibleArchiveVersionError 
+    :param try_migration: whether to try a migration if the import raises IncompatibleArchiveVersionError
 
     """
     from aiida.common.folders import SandboxFolder
@@ -212,21 +212,19 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
                 response = urllib.request.urlopen(archive)
             except Exception as exception:
                 _echo_exception(f'downloading archive {archive} failed', exception)
-            temp_folder.create_file_from_filelike(response, f'downloaded_archive.zip')
-            archive_path = temp_folder.get_abs_path(f'downloaded_archive.zip')
+            temp_folder.create_file_from_filelike(response, 'downloaded_archive.zip')
+            archive_path = temp_folder.get_abs_path('downloaded_archive.zip')
             echo.echo_success('archive downloaded, proceeding with import')
 
         try:
             import_data(archive_path, **import_kwargs)
         except IncompatibleArchiveVersionError as exception:
             if try_migration:
-                _echo_exception(
-                    f'initial import of {archive} failed, trying migration', exception, warn_only=True
-                )
+                _echo_exception(f'initial import of {archive} failed, trying migration', exception, warn_only=True)
                 # try migration
                 try:
                     migrator = get_migrator(detect_archive_type(archive_path))(archive_path)
-                    archive_path = temp_folder.get_abs_path(f'migrated_archive.zip')
+                    archive_path = temp_folder.get_abs_path('migrated_archive.zip')
                     migrator.migrate(EXPORT_VERSION, archive_path, out_compression='zip')
                 except Exception as exception:
                     _echo_exception(f'an exception occurred while migrating the archive {archive}', exception)
@@ -236,8 +234,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
                     import_data(archive_path, **import_kwargs)
                 except Exception as exception:
                     _echo_exception(
-                        f'an exception occurred while re-trying import of the migrated archive {archive}',
-                        exception
+                        f'an exception occurred while re-trying import of the migrated archive {archive}', exception
                     )
             else:
                 _echo_exception(f'an exception occurred while importing the archive {archive}', exception)

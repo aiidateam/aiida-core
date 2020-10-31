@@ -320,8 +320,8 @@ Below is a list with all available subcommands.
     Options:
       -w, --webpages TEXT...          Discover all URL targets pointing to files with the
                                       .aiida extension for these HTTP addresses. Automatically
-                                      discovered archive URLs will be downloadeded and added
-                                      to ARCHIVES for importing
+                                      discovered archive URLs will be downloaded and added to
+                                      ARCHIVES for importing
 
       -G, --group GROUP               Specify group to which all the import nodes will be
                                       added. If such a group does not exist, it will be

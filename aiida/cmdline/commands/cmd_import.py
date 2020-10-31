@@ -43,7 +43,7 @@ class ExtrasImportCode(Enum):
     type=click.STRING,
     cls=options.MultipleValueOption,
     help='Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. '
-    'Automatically discovered archive URLs will be downloadeded and added to ARCHIVES for importing'
+    'Automatically discovered archive URLs will be downloaded and added to ARCHIVES for importing'
 )
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),

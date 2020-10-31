@@ -37,18 +37,10 @@ ARCHIVE_DATA = {
 class TestExportFileMigration:
     """Test archive file migrations"""
 
-    def setup_method(self, method):  # pylint: disable=unused-argument
-        """Add variables (once) to be used by all tests"""
-        # pylint: disable=attribute-defined-outside-init
-
-        # Utility helpers
-        self.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
-        self.core_archive = {'filepath': 'export/migrate'}
-
-    def test_full_migration(self, tmp_path):
+    def test_full_migration(self, tmp_path, core_archive):
         """Test a migration from the first to newest archive version."""
 
-        filepath_archive = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
+        filepath_archive = get_archive_file('export_v0.1_simple.aiida', **core_archive)
 
         metadata = read_json_files(filepath_archive, names=['metadata.json'])[0]
         verify_metadata_version(metadata, version='0.1')
@@ -60,9 +52,9 @@ class TestExportFileMigration:
         metadata = read_json_files(tmp_path / 'out.aiida', names=['metadata.json'])[0]
         verify_metadata_version(metadata, version=newest_version)
 
-    def test_partial_migrations(self, tmp_path):
+    def test_partial_migrations(self, core_archive, tmp_path):
         """Test migrations from a specific version (0.3) to other versions."""
-        filepath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
+        filepath_archive = get_archive_file('export_v0.3_simple.aiida', **core_archive)
 
         metadata = read_json_files(filepath_archive, names=['metadata.json'])[0]
         verify_metadata_version(metadata, version='0.3')
@@ -88,9 +80,9 @@ class TestExportFileMigration:
         metadata = read_json_files(tmp_path / 'v05.aiida', names=['metadata.json'])[0]
         verify_metadata_version(metadata, version='0.5')
 
-    def test_no_node_migration(self, tmp_path):
+    def test_no_node_migration(self, tmp_path, external_archive):
         """Test migration of archive file that has no Node entities."""
-        input_file = get_archive_file('export_v0.3_no_Nodes.aiida', **self.external_archive)
+        input_file = get_archive_file('export_v0.3_no_Nodes.aiida', **external_archive)
         output_file = tmp_path / 'output_file.aiida'
 
         migrator_cls = get_migrator(detect_archive_type(input_file))
@@ -110,9 +102,9 @@ class TestExportFileMigration:
         assert set(user_query.all(flat=True)) == {orm.User.objects.get_default().email, 'aiida@localhost'}
 
     @pytest.mark.parametrize('version', ['0.0', '0.1.0', '0.99'])
-    def test_wrong_versions(self, version, tmp_path):
+    def test_wrong_versions(self, core_archive, tmp_path, version):
         """Test correct errors are raised if archive files have wrong version numbers"""
-        filepath_archive = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
+        filepath_archive = get_archive_file('export_v0.1_simple.aiida', **core_archive)
         migrator_cls = get_migrator(detect_archive_type(filepath_archive))
         migrator = migrator_cls(filepath_archive)
 
@@ -121,9 +113,9 @@ class TestExportFileMigration:
         assert not (tmp_path / 'out.aiida').exists()
 
     @pytest.mark.parametrize('filename,nodes', ARCHIVE_DATA.values(), ids=ARCHIVE_DATA.keys())
-    def test_migrate_to_newest(self, tmp_path, filename, nodes):
+    def test_migrate_to_newest(self, external_archive, tmp_path, filename, nodes):
         """Test migrations from old archives to newest version."""
-        filepath_archive = get_archive_file(filename, **self.external_archive)
+        filepath_archive = get_archive_file(filename, **external_archive)
 
         out_path = tmp_path / 'out.aiida'
 

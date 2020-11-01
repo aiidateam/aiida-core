@@ -167,6 +167,7 @@ def safe_extract_zip(
     _filter = _get_filter(only_prefix, ignore_prefix)
     try:
         with zipfile.ZipFile(in_path, 'r', allowZip64=True) as handle:
+            callback('init', {'total': 1, 'description': "Computing zip files to extract"})
             members = [name for name in handle.namelist() if _filter(name)]
             callback('init', {'total': len(members), 'description': callback_description})
             for membername in members:
@@ -207,6 +208,7 @@ def safe_extract_tar(
     _filter = _get_filter(only_prefix, ignore_prefix)
     try:
         with tarfile.open(in_path, 'r:*', format=tarfile.PAX_FORMAT) as handle:
+            callback('init', {'total': 1, 'description': "Computing tar files to extract"})
             members = [m for m in handle.getmembers() if _filter(m.name)]
             callback('init', {'total': len(members), 'description': callback_description})
             for member in members:

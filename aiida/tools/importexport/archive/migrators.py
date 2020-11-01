@@ -116,7 +116,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         if out_compression not in allowed_compressions:
             raise ValueError(f'Output compression must be in: {allowed_compressions}')
 
-        MIGRATE_LOGGER.debug('Computing migration pathway')
+        MIGRATE_LOGGER.info('Reading archive version')
         current_version = self._retrieve_version()
 
         # compute the migration pathway
@@ -160,6 +160,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
                             MIGRATE_FUNCTIONS[from_version][1](folder)
                         except DanglingLinkError:
                             raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
+                MIGRATE_LOGGER.debug('Flushing cache')
 
             # re-compress archive
             MIGRATE_LOGGER.info(f"Re-compressing archive as '{out_compression}'")

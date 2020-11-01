@@ -221,7 +221,7 @@ def safe_extract_tar(
                     msg = f'WARNING, symlink found inside the tar file: {member.name}'
                     ARCHIVE_LOGGER.warning(msg)
                     continue
-                handle.extract(path=os.path.abspath(out_path), member=member.name)
+                handle.extract(path=os.path.abspath(out_path), member=member)
     except tarfile.ReadError as error:
         raise CorruptArchive(f'The input file cannot be read: {error}')
 

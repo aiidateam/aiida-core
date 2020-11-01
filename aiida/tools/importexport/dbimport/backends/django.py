@@ -125,6 +125,8 @@ def import_data_dj(
 
     with reader_cls(in_path) as reader:
 
+        IMPORT_LOGGER.debug('Checking archive version compatibility')
+
         reader.check_version()
 
         start_summary(in_path, comment_mode, extras_mode_new, extras_mode_existing)

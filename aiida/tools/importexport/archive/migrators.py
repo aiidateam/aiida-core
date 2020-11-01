@@ -116,6 +116,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         if out_compression not in allowed_compressions:
             raise ValueError(f'Output compression must be in: {allowed_compressions}')
 
+        MIGRATE_LOGGER.debug('Computing migration pathway')
         current_version = self._retrieve_version()
 
         # compute the migration pathway

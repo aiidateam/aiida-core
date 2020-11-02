@@ -233,9 +233,7 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
 
     try:
         with override_log_formatter_context('%(message)s'):
-            migrator.migrate(
-                version, output_file, force=force, out_compression=archive_format
-            )
+            migrator.migrate(version, output_file, force=force, out_compression=archive_format)
     except Exception as error:  # pylint: disable=broad-except
         if verbosity == 'DEBUG':
             raise

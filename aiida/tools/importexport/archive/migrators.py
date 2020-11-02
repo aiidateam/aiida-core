@@ -10,10 +10,8 @@
 """Archive migration classes, for migrating an archive to different versions."""
 from abc import ABC, abstractmethod
 import json
-import os
 from pathlib import Path
 import shutil
-import tarfile
 import tempfile
 from typing import Any, Callable, cast, List, Optional, Type, Union
 import zipfile
@@ -23,7 +21,8 @@ from aiida.common.progress_reporter import get_progress_reporter, create_callbac
 from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
 from aiida.tools.importexport.common.config import ExportFileFormat
 from aiida.tools.importexport.archive.common import (
-    read_file_in_tar, read_file_in_zip, safe_extract_tar, safe_extract_zip, CacheFolder
+    read_file_in_tar, read_file_in_zip, safe_extract_tar, safe_extract_zip, compress_folder_tar, compress_folder_zip,
+    CacheFolder
 )
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 
@@ -110,7 +109,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         out_path: Path = Path(filename or self.filepath)
 
         if out_path.exists() and not force:
-            raise IOError(f'the output file already exists: {out_path}')
+            raise IOError(f'the output path already exists: {out_path}')
 
         allowed_compressions = ['zip', 'zip-uncompressed', 'tar.gz']
         if out_compression not in allowed_compressions:
@@ -176,7 +175,9 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
             MIGRATE_LOGGER.info('Moving archive to: %s', out_path)
             self._move_file(compressed, out_path)
 
-            return out_path
+            MIGRATE_LOGGER.debug('Cleaning temporary folder')
+
+        return out_path
 
     @staticmethod
     def _move_file(in_path: Path, out_path: Path):
@@ -201,19 +202,16 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
     @staticmethod
     def _compress_archive_zip(in_path: Path, out_path: Path, compression: int):
         """Create a new zip compressed zip from a folder."""
-        with zipfile.ZipFile(out_path, mode='w', compression=compression, allowZip64=True) as archive:
-            for dirpath, dirnames, filenames in os.walk(in_path):
-                relpath = os.path.relpath(dirpath, in_path)
-                for filename in dirnames + filenames:
-                    real_src = os.path.join(dirpath, filename)
-                    real_dest = os.path.join(relpath, filename)
-                    archive.write(real_src, real_dest)
+        with get_progress_reporter()(total=1) as progress:
+            _callback = create_callback(progress)
+            compress_folder_zip(in_path, out_path, compression=compression, callback=_callback)
 
     @staticmethod
     def _compress_archive_tar(in_path: Path, out_path: Path):
         """Create a new zip compressed tar from a folder."""
-        with tarfile.open(os.path.abspath(out_path), 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
-            archive.add(os.path.abspath(in_path), arcname='')
+        with get_progress_reporter()(total=1) as progress:
+            _callback = create_callback(progress)
+            compress_folder_tar(in_path, out_path, callback=_callback)
 
 
 class ArchiveMigratorJsonZip(ArchiveMigratorJsonBase):

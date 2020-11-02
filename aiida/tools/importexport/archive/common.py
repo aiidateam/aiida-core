@@ -167,7 +167,7 @@ def safe_extract_zip(
     _filter = _get_filter(only_prefix, ignore_prefix)
     try:
         with zipfile.ZipFile(in_path, 'r', allowZip64=True) as handle:
-            callback('init', {'total': 1, 'description': "Computing zip files to extract"})
+            callback('init', {'total': 1, 'description': 'Computing zip objects to extract'})
             members = [name for name in handle.namelist() if _filter(name)]
             callback('init', {'total': len(members), 'description': callback_description})
             for membername in members:
@@ -208,7 +208,7 @@ def safe_extract_tar(
     _filter = _get_filter(only_prefix, ignore_prefix)
     try:
         with tarfile.open(in_path, 'r:*', format=tarfile.PAX_FORMAT) as handle:
-            callback('init', {'total': 1, 'description': "Computing tar files to extract"})
+            callback('init', {'total': 1, 'description': 'Computing tar objects to extract'})
             members = [m for m in handle.getmembers() if _filter(m.name)]
             callback('init', {'total': len(members), 'description': callback_description})
             for member in members:
@@ -226,6 +226,81 @@ def safe_extract_tar(
                 handle.extract(path=os.path.abspath(out_path), member=member)
     except tarfile.ReadError as error:
         raise CorruptArchive(f'The input file cannot be read: {error}')
+
+
+def compress_folder_zip(
+    in_path: Union[str, Path],
+    out_path: Union[str, Path],
+    *,
+    compression: int = zipfile.ZIP_DEFLATED,
+    callback: Callable[[str, Any], None] = null_callback,
+    callback_description: str = 'Compressing objects as zip'
+):
+    """Compress a folder as a zip file
+
+    :param in_path: Path to compress
+    :param out_path: Path to compress to
+    :param compression: the compression type (see zipfile module)
+    :param callback: a callback to report on the process, ``callback(action, value)``,
+        with the following callback signatures:
+
+        - ``callback('init', {'total': <int>, 'description': <str>})``,
+            to signal the start of a process, its total iterations and description
+        - ``callback('update', <int>)``,
+            to signal an update to the process and the number of iterations to progress
+
+    :param callback_description: the description to return in the callback
+
+    """
+    callback('init', {'total': 1, 'description': 'Computing objects to compress'})
+    count = 0
+    for _, dirnames, filenames in os.walk(in_path):
+        count += len(dirnames) + len(filenames)
+    callback('init', {'total': count, 'description': callback_description})
+    with zipfile.ZipFile(out_path, mode='w', compression=compression, allowZip64=True) as archive:
+        for dirpath, dirnames, filenames in os.walk(in_path):
+            relpath = os.path.relpath(dirpath, in_path)
+            for filename in dirnames + filenames:
+                callback('update', 1)
+                real_src = os.path.join(dirpath, filename)
+                real_dest = os.path.join(relpath, filename)
+                archive.write(real_src, real_dest)
+
+
+def compress_folder_tar(
+    in_path: Union[str, Path],
+    out_path: Union[str, Path],
+    *,
+    callback: Callable[[str, Any], None] = null_callback,
+    callback_description: str = 'Compressing objects as tar'
+):
+    """Compress a folder as a zip file
+
+    :param in_path: Path to compress
+    :param out_path: Path to compress to
+    :param callback: a callback to report on the process, ``callback(action, value)``,
+        with the following callback signatures:
+
+        - ``callback('init', {'total': <int>, 'description': <str>})``,
+            to signal the start of a process, its total iterations and description
+        - ``callback('update', <int>)``,
+            to signal an update to the process and the number of iterations to progress
+
+    :param callback_description: the description to return in the callback
+
+    """
+    callback('init', {'total': 1, 'description': 'Computing objects to compress'})
+    count = 0
+    for _, dirnames, filenames in os.walk(in_path):
+        count += len(dirnames) + len(filenames)
+    callback('init', {'total': count, 'description': callback_description})
+
+    def _filter(tarinfo):
+        callback('update', 1)
+        return tarinfo
+
+    with tarfile.open(os.path.abspath(out_path), 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
+        archive.add(os.path.abspath(in_path), arcname='', filter=_filter)
 
 
 class CacheFolder:

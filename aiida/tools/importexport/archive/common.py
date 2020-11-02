@@ -293,7 +293,7 @@ def compress_folder_tar(
     count = 0
     for _, dirnames, filenames in os.walk(in_path):
         count += len(dirnames) + len(filenames)
-    callback('init', {'total': count, 'description': callback_description})
+    callback('init', {'total': count + 1, 'description': callback_description})
 
     def _filter(tarinfo):
         callback('update', 1)

@@ -71,8 +71,8 @@ class TestExportFileMigration:
 
         # same version migration
         out_path = migrator.migrate('0.3', tmp_path / 'v03.aiida')
-        # if no migration performed the output path is also the original file
-        assert out_path == Path(filepath_archive)
+        # if no migration performed the output path is None
+        assert out_path is None
 
         # newer version migration
         migrator.migrate('0.5', tmp_path / 'v05.aiida')
@@ -122,7 +122,7 @@ class TestExportFileMigration:
 
         migrator_cls = get_migrator(detect_archive_type(filepath_archive))
         migrator = migrator_cls(filepath_archive)
-        out_path = migrator.migrate(newest_version, out_path)
+        out_path = migrator.migrate(newest_version, out_path) or filepath_archive
 
         metadata = read_json_files(out_path, names=['metadata.json'])[0]
         verify_metadata_version(metadata, version=newest_version)

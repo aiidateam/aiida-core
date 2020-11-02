@@ -212,6 +212,8 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
     if in_place:
         if output_file:
             echo.echo_critical('output file specified together with --in-place flag')
+        output_file = input_file
+        force = True
     elif not output_file:
         echo.echo_critical(
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
@@ -231,7 +233,9 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
 
     try:
         with override_log_formatter_context('%(message)s'):
-            migrator.migrate(version, output_file, force=force or in_place, out_compression=archive_format)
+            migrator.migrate(
+                version, output_file, force=force, out_compression=archive_format
+            )
     except Exception as error:  # pylint: disable=broad-except
         if verbosity == 'DEBUG':
             raise

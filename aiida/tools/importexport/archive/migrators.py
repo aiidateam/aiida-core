@@ -10,6 +10,7 @@
 """Archive migration classes, for migrating an archive to different versions."""
 from abc import ABC, abstractmethod
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -68,17 +69,26 @@ class ArchiveMigratorAbstract(ABC):
 
     @abstractmethod
     def migrate(
-        self, version: str, filename: Optional[Union[str, Path]], *, force: bool = False, **kwargs: Any
-    ) -> Path:
+        self,
+        version: str,
+        filename: Optional[Union[str, Path]],
+        *,
+        force: bool = False,
+        work_dir: Optional[Path] = None,
+        **kwargs: Any
+    ) -> Optional[Path]:
         """Migrate the archive to another version
 
         :param version: the version to migrate to
-        :param filename: the file path to migrate to or, if None, migrate in-place (requires force=True)
+        :param filename: the file path to migrate to.
+            If None, the migrated archive will not be copied from the work_dir.
         :param force: overwrite output file if it already exists
+        :param work_dir: The directory in which to perform the migration.
+            If None, a temporary folder will be created and destroyed at the end of the process.
         :param kwargs: key-word arguments specific to the concrete migrator implementation
 
-        :returns: path to migrated archive
-            (filename or the original path, if filename is None or no migration performed)
+        :returns: path to the migrated archive or None if no migration performed
+            (if filename is None, this will point to a path in the work_dir)
 
         :raises: :class:`~aiida.tools.importexport.common.exceptions.CorruptArchive`:
             if the archive cannot be read
@@ -98,20 +108,19 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         filename: Optional[Union[str, Path]],
         *,
         force: bool = False,
+        work_dir: Optional[Path] = None,
         out_compression: str = 'zip',
         **kwargs
-    ) -> Path:
+    ) -> Optional[Path]:
         # pylint: disable=too-many-branches
 
         if not isinstance(version, str):
             raise TypeError('version must be a string')
 
-        out_path: Path = Path(filename or self.filepath)
+        if filename and Path(filename).exists() and not force:
+            raise IOError(f'the output path already exists and force=False: {filename}')
 
-        if out_path.exists() and not force:
-            raise IOError(f'the output path already exists: {out_path}')
-
-        allowed_compressions = ['zip', 'zip-uncompressed', 'tar.gz']
+        allowed_compressions = ['zip', 'zip-uncompressed', 'tar.gz', 'none']
         if out_compression not in allowed_compressions:
             raise ValueError(f'Output compression must be in: {allowed_compressions}')
 
@@ -133,58 +142,76 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
 
         if not pathway:
             MIGRATE_LOGGER.info('No migration required')
-            return Path(self.filepath)
+            return None
 
         MIGRATE_LOGGER.info('Migration pathway: %s', ' -> '.join(pathway + [version]))
 
         # perform migrations
-        with tempfile.TemporaryDirectory() as tmpdirname:
+        if work_dir is not None:
+            migrated_path = self._perform_migration(Path(work_dir), pathway, out_compression, filename)
+        else:
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                migrated_path = self._perform_migration(Path(tmpdirname), pathway, out_compression, filename)
+                MIGRATE_LOGGER.debug('Cleaning temporary folder')
 
-            MIGRATE_LOGGER.info('Extracting archive to temporary folder')
-            extracted = Path(tmpdirname) / 'extracted'
-            extracted.mkdir()
-            with get_progress_reporter()(total=1) as progress:
-                callback = create_callback(progress)
-                self._extract_archive(extracted, callback)
+        return migrated_path
 
-            with CacheFolder(extracted) as folder:
-                with get_progress_reporter()(total=len(pathway), desc='Performing migrations: ') as progress:
-                    for from_version in pathway:
-                        to_version = MIGRATE_FUNCTIONS[from_version][0]
-                        progress.set_description_str(
-                            f'Performing migrations: {from_version} -> {to_version}', refresh=False
-                        )
-                        progress.update()
-                        try:
-                            MIGRATE_FUNCTIONS[from_version][1](folder)
-                        except DanglingLinkError:
-                            raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
-                MIGRATE_LOGGER.debug('Flushing cache')
+    def _perform_migration(
+        self, work_dir: Path, pathway: List[str], out_compression: str, out_path: Optional[Union[str, Path]]
+    ) -> Path:
+        """Perform the migration(s) in the work directory, compress (if necessary),
+        then move to the out_path (if not None).
+        """
+        MIGRATE_LOGGER.info('Extracting archive to work directory')
 
-            # re-compress archive
+        extracted = Path(work_dir) / 'extracted'
+        extracted.mkdir(parents=True)
+
+        with get_progress_reporter()(total=1) as progress:
+            callback = create_callback(progress)
+            self._extract_archive(extracted, callback)
+
+        with CacheFolder(extracted) as folder:
+            with get_progress_reporter()(total=len(pathway), desc='Performing migrations: ') as progress:
+                for from_version in pathway:
+                    to_version = MIGRATE_FUNCTIONS[from_version][0]
+                    progress.set_description_str(
+                        f'Performing migrations: {from_version} -> {to_version}', refresh=False
+                    )
+                    progress.update()
+                    try:
+                        MIGRATE_FUNCTIONS[from_version][1](folder)
+                    except DanglingLinkError:
+                        raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
+            MIGRATE_LOGGER.debug('Flushing cache')
+
+        # re-compress archive
+        if out_compression != 'none':
             MIGRATE_LOGGER.info(f"Re-compressing archive as '{out_compression}'")
-            compressed = Path(tmpdirname) / 'compressed'
-            if out_compression == 'zip':
-                self._compress_archive_zip(extracted, compressed, zipfile.ZIP_DEFLATED)
-            elif out_compression == 'zip-uncompressed':
-                self._compress_archive_zip(extracted, compressed, zipfile.ZIP_STORED)
-            else:
-                self._compress_archive_tar(extracted, compressed)
+            migrated = work_dir / 'compressed'
+        else:
+            migrated = extracted
 
+        if out_compression == 'zip':
+            self._compress_archive_zip(extracted, migrated, zipfile.ZIP_DEFLATED)
+        elif out_compression == 'zip-uncompressed':
+            self._compress_archive_zip(extracted, migrated, zipfile.ZIP_STORED)
+        elif out_compression == 'tar.gz':
+            self._compress_archive_tar(extracted, migrated)
+
+        if out_path is not None:
             # move to final location
             MIGRATE_LOGGER.info('Moving archive to: %s', out_path)
-            self._move_file(compressed, out_path)
+            self._move_file(migrated, Path(out_path))
 
-            MIGRATE_LOGGER.debug('Cleaning temporary folder')
-
-        return out_path
+        return Path(out_path) if out_path else migrated
 
     @staticmethod
     def _move_file(in_path: Path, out_path: Path):
         """Move a file to a another path, deleting the target path first if it exists."""
-        if in_path == out_path:
-            return
         if out_path.exists():
+            if os.path.samefile(str(in_path), str(out_path)):
+                return
             if out_path.is_file():
                 out_path.unlink()
             else:

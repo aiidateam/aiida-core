@@ -20,6 +20,7 @@ from aiida.engine.persistence import ObjectLoader
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
 from aiida.plugins import CalculationFactory, WorkflowFactory
+from aiida.workflows.arithmetic.add_multiply import add_multiply, add
 from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
@@ -70,6 +71,30 @@ def print_report(pk):
         ))
     except subprocess.CalledProcessError as exception:
         print(f'Note: the command failed, message: {exception}')
+
+
+def validate_process_functions(expected_results):
+    """Validate the calcfunction and workfunction."""
+    valid = True
+    for pk, expected_result in expected_results.items():
+        calc = load_node(pk)
+        if not calc.is_finished_ok:
+            print(f'Calc<{pk}> not finished ok: process_state<{calc.process_state}> exit_status<{calc.exit_status}>')
+            print_report(pk)
+            valid = False
+
+        try:
+            actual_result = calc.outputs.result
+        except exceptions.NotExistent:
+            print(f'Could not retrieve `result` output for process<{pk}>')
+            print_report(pk)
+            valid = False
+
+        if actual_result != expected_result:
+            print(f'* UNEXPECTED VALUE {actual_result} for calc pk={pk}: I expected {expected_result}')
+            valid = False
+
+    return valid
 
 
 def validate_calculations(expected_results):
@@ -192,6 +217,33 @@ def validate_cached(cached_calcs):
                 valid = False
 
     return valid
+
+
+def launch_calcfunction(inputval):
+    """Launch workfunction to the daemon"""
+    inputs = {
+        'x': Int(inputval),
+        'y': Int(inputval),
+    }
+    res = inputval + inputval
+    expected_result = Int(res)
+    process = submit(add, **inputs)
+    print(f'launched calcfunction {process.uuid}, pk={process.pk}')
+    return process, expected_result
+
+
+def launch_workfunction(inputval):
+    """Launch workfunction to the daemon"""
+    inputs = {
+        'x': Int(inputval),
+        'y': Int(inputval),
+        'z': Int(inputval),
+    }
+    res = (inputval + inputval) * inputval
+    expected_result = Int(res)
+    process = submit(add_multiply, **inputs)
+    print(f'launched workfunction {process.uuid}, pk={process.pk}')
+    return process, expected_result
 
 
 def launch_calculation(code, counter, inputval):
@@ -339,7 +391,8 @@ def run_multiply_add_workchain():
 
 def main():
     """Launch a bunch of calculation jobs and workchains."""
-    # pylint: disable=too-many-locals,too-many-statements
+    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+    expected_results_process_functions = {}
     expected_results_calculations = {}
     expected_results_workchains = {}
     code_doubler = load_code(CODENAME_DOUBLER)
@@ -355,6 +408,16 @@ def main():
     # Run the `MultiplyAddWorkChain`
     print('Running the `MultiplyAddWorkChain`')
     run_multiply_add_workchain()
+
+    # Submitting the calcfunction through the launchers
+    print('Submitting calcfunction to the daemon')
+    proc, expected_result = launch_calcfunction(inputval=1)
+    expected_results_process_functions[proc.pk] = expected_result
+
+    # Submitting the workfunction through the launchers
+    print('Submitting workfunction to the daemon')
+    proc, expected_result = launch_workfunction(inputval=1)
+    expected_results_process_functions[proc.pk] = expected_result
 
     # Submitting the Calculations the new way directly through the launchers
     print(f'Submitting {NUMBER_CALCULATIONS} calculations to the daemon')
@@ -419,7 +482,8 @@ def main():
 
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())
-    pks = calculation_pks + workchains_pks
+    process_functions_pks = sorted(expected_results_process_functions.keys())
+    pks = calculation_pks + workchains_pks + process_functions_pks
 
     print('Wating for end of execution...')
     start_time = time.time()
@@ -473,7 +537,8 @@ def main():
 
         if (
             validate_calculations(expected_results_calculations) and
-            validate_workchains(expected_results_workchains) and validate_cached(cached_calcs)
+            validate_workchains(expected_results_workchains) and validate_cached(cached_calcs) and
+            validate_process_functions(expected_results_process_functions)
         ):
             print_daemon_log()
             print('')

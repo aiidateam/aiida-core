@@ -330,7 +330,7 @@ For example, when we want to run an instance of the :py:class:`~aiida.calculatio
 The function will submit the calculation to the daemon and immediately return control to the interpreter, returning the node that is used to represent the process in the provenance graph.
 
 .. warning::
-    Process functions, i.e. python functions decorated with the ``calcfunction`` or ``workfunction`` decorators, **cannot be submitted** but can only be run.
+    For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
 The ``run`` function is called identically:
 
@@ -356,8 +356,8 @@ The examples used above would look like the following:
 .. include:: include/snippets/launch/launch_submit_dictionary.py
     :code: python
 
-Process functions, i.e. :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` and :ref:`work functions<topics:workflows:concepts:workfunctions>`, can be launched like any other process as explained above, with the only exception that they **cannot be submitted**.
-In addition to this limitation, process functions have two additional methods of being launched:
+Process functions, i.e. :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` and :ref:`work functions<topics:workflows:concepts:workfunctions>`, can be launched like any other process as explained above.
+Process functions have two additional methods of being launched:
 
  * Simply *calling* the function
  * Using the internal run method attributes

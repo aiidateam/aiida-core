@@ -503,14 +503,11 @@ def get_formula(symbol_list, mode='hill', separator=''):
     if mode in ['hill', 'hill_compact']:
         symbol_set = set(symbol_list)
         first_symbols = []
-        if 'C' in symbol_set:
-            # remove C (and H if present) from list and put them at the
-            # beginning
-            symbol_set.remove('C')
-            first_symbols.append('C')
-            if 'H' in symbol_set:
-                symbol_set.remove('H')
-                first_symbols.append('H')
+        for special_symbol in ['C', 'H']:
+            # remove C and H if present from list and put them at the beginning
+            if special_symbol in symbol_set:
+                symbol_set.remove(special_symbol)
+                first_symbols.append(special_symbol)
         ordered_symbol_set = first_symbols + list(sorted(symbol_set))
         the_symbol_list = [[symbol_list.count(elem), elem] for elem in ordered_symbol_set]
 

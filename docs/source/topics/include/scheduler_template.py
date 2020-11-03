@@ -52,9 +52,12 @@ class TemplateScheduler(Scheduler):
     _map_status = _MAP_SCHEDULER_AIIDA_STATUS
 
     def _get_joblist_command(self, jobs=None, user=None):
-        """The command to report full information on existing jobs."""
+        """The command to report full information on existing jobs.
 
-        return []  # for instance ['qstat', '-f']
+        :return: a string of the command to be executed to determine the active jobs.
+        """
+
+        return ''
 
     def _get_detailed_job_info_command(self, job_id):
         """Return the command to run to get the detailed information on a job,

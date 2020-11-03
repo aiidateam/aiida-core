@@ -501,17 +501,10 @@ def get_formula(symbol_list, mode='hill', separator=''):
     # for hill and count cases, simply count the occurences of each
     # chemical symbol (with some re-ordering in hill)
     if mode in ['hill', 'hill_compact']:
-        symbol_set = set(symbol_list)
-        first_symbols = []
-        if 'C' in symbol_set:
-            # remove C (and H if present) from list and put them at the
-            # beginning
-            symbol_set.remove('C')
-            first_symbols.append('C')
-            if 'H' in symbol_set:
-                symbol_set.remove('H')
-                first_symbols.append('H')
-        ordered_symbol_set = first_symbols + list(sorted(symbol_set))
+        if 'C' in symbol_list:
+            ordered_symbol_set = sorted(set(symbol_list), key=lambda elem: {'C': '0', 'H': '1'}.get(elem, elem))
+        else:
+            ordered_symbol_set = sorted(set(symbol_list))
         the_symbol_list = [[symbol_list.count(elem), elem] for elem in ordered_symbol_set]
 
     elif mode in ['count', 'count_compact']:

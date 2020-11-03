@@ -48,6 +48,23 @@ class TestExportFileMigration:
         migrator = migrator_cls(filepath_archive)
 
         migrator.migrate(newest_version, tmp_path / 'out.aiida')
+        assert detect_archive_type(tmp_path / 'out.aiida') == 'zip'
+        metadata = read_json_files(tmp_path / 'out.aiida', names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version=newest_version)
+
+    def test_tar_migration(self, tmp_path, core_archive):
+        """Test a migration using a tar compressed in/out file."""
+
+        filepath_archive = get_archive_file('export_v0.2_simple.tar.gz', **core_archive)
+
+        metadata = read_json_files(filepath_archive, names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version='0.2')
+
+        migrator_cls = get_migrator(detect_archive_type(filepath_archive))
+        migrator = migrator_cls(filepath_archive)
+
+        migrator.migrate(newest_version, tmp_path / 'out.aiida', out_compression='tar.gz')
+        assert detect_archive_type(tmp_path / 'out.aiida') == 'tar.gz'
         metadata = read_json_files(tmp_path / 'out.aiida', names=['metadata.json'])[0]
         verify_metadata_version(metadata, version=newest_version)
 

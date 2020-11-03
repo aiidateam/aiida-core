@@ -342,13 +342,12 @@ class CacheFolder:
 
         """
         if ctype == 'text':
-            text = content
+            (self._path / path).write_text(content, encoding=self._encoding)
         elif ctype == 'json':
-            text = json.dumps(content)
+            with (self._path / path).open(mode='wb') as handle:
+                json.dump(content, handle)
         else:
             raise TypeError(f'Unknown content type: {ctype}')
-
-        (self._path / path).write_text(text, encoding=self._encoding)
 
     def flush(self):
         """Flush the cache."""
@@ -410,7 +409,8 @@ class CacheFolder:
         :param path: path relative to base folder
 
         """
-        json.dumps(data)  # make sure that the data can be converted to json
+        assert isinstance(data, dict)
+        # json.dumps(data)  # make sure that the data can be converted to json (increases memory usage)
         self._cache[path] = ('json', data)
         self._limit_cache()
 

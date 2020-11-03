@@ -175,9 +175,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
             with get_progress_reporter()(total=len(pathway), desc='Performing migrations: ') as progress:
                 for from_version in pathway:
                     to_version = MIGRATE_FUNCTIONS[from_version][0]
-                    progress.set_description_str(
-                        f'Performing migrations: {from_version} -> {to_version}', refresh=True
-                    )
+                    progress.set_description_str(f'Performing migrations: {from_version} -> {to_version}', refresh=True)
                     try:
                         MIGRATE_FUNCTIONS[from_version][1](folder)
                     except DanglingLinkError:

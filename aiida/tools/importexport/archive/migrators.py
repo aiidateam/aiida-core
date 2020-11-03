@@ -176,13 +176,13 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
                 for from_version in pathway:
                     to_version = MIGRATE_FUNCTIONS[from_version][0]
                     progress.set_description_str(
-                        f'Performing migrations: {from_version} -> {to_version}', refresh=False
+                        f'Performing migrations: {from_version} -> {to_version}', refresh=True
                     )
-                    progress.update()
                     try:
                         MIGRATE_FUNCTIONS[from_version][1](folder)
                     except DanglingLinkError:
                         raise ArchiveMigrationError('Archive file is invalid because it contains dangling links')
+                    progress.update()
             MIGRATE_LOGGER.debug('Flushing cache')
 
         # re-compress archive

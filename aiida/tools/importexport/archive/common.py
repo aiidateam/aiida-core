@@ -167,7 +167,7 @@ def safe_extract_zip(
     _filter = _get_filter(only_prefix, ignore_prefix)
     try:
         with zipfile.ZipFile(in_path, 'r', allowZip64=True) as handle:
-            callback('init', {'total': 1, 'description': 'Computing zip objects to extract'})
+            callback('init', {'total': 1, 'description': 'Gathering list of files to extract from zip'})
             members = [name for name in handle.namelist() if _filter(name)]
             callback('init', {'total': len(members), 'description': callback_description})
             for membername in members:

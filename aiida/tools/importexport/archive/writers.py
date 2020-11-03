@@ -217,6 +217,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
         # TODO this doubles memory
         self._zippath.joinpath('data.json').write_text(json.dumps(self._data))
         self._zippath.close() 
+        shutil.move(self._zippath.filepath, self.filepath)
         shutil.rmtree(self._temp_path)
 
     def write_metadata(self, data: ArchiveMetadata):

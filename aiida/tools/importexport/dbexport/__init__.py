@@ -72,7 +72,6 @@ from aiida.tools.importexport.dbexport.utils import (
     serialize_dict,
     summary,
 )
-from aiida.tools.importexport.common.zip_folder import ZipFolder
 
 __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
@@ -225,12 +224,13 @@ def export(
         name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
     }
 
+    # setup the archive writer
     writer_init = writer_init or {}
     writer_init['use_compression'] = use_compression
     if isinstance(file_format, str):
-        writer = get_writer(file_format)(filename=filename, **writer_init)
+        writer = get_writer(file_format)(filepath=filename, **writer_init)
     elif issubclass(file_format, ArchiveWriterAbstract):
-        writer = file_format(filename=filename, **writer_init)
+        writer = file_format(filepath=filename, **writer_init)
     else:
         raise TypeError('file_format must be a string or ArchiveWriterAbstract class')
 
@@ -345,7 +345,6 @@ def export(
             )
 
         EXPORT_LOGGER.debug('FINALIZING EXPORT...')
-        writer_context.export()
 
     # summarize export
     export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())
@@ -556,7 +555,7 @@ def _write_entity_data(
     total_entities: int, entity_queries: Dict[str, orm.QueryBuilder], writer: ArchiveWriterAbstract, batch_size: int
 ) -> Dict[str, Set[int]]:
     """Iterate through data returned from entity queries, serialize the DB fields, then write to the export."""
-    all_fields_info, _ = get_all_fields_info()
+    all_fields_info, unique_identifiers = get_all_fields_info()
     entity_separator = '_'
 
     exported_entity_pks: Dict[str, Set[int]] = defaultdict(set)
@@ -609,7 +608,7 @@ def _write_entity_data(
                         if fields['attributes'].get('sealed', False) is not True:
                             unsealed_node_pks.add(pk)
 
-                    writer.write_entity_data(current_entity, pk, fields)
+                    writer.write_entity_data(current_entity, pk, unique_identifiers[current_entity], fields)
 
     if unsealed_node_pks:
         raise exceptions.ExportValidationError(
@@ -638,7 +637,7 @@ def _write_group_mappings(*, group_pks: List[int], batch_size: int, writer: Arch
         groups_uuid_to_node_uuids[group_uuid].add(node_uuid)
 
     for group_uuid, node_uuids in groups_uuid_to_node_uuids.items():
-        writer.write_group_mapping(group_uuid, list(node_uuids))
+        writer.write_group_nodes(group_uuid, list(node_uuids))
 
 
 def _write_node_repositories(
@@ -668,7 +667,7 @@ def _write_node_repositories(
 
 def export_tree(
     entities: Optional[Iterable[Any]] = None,
-    folder: Optional[Union[Folder, ZipFolder]] = None,
+    folder: Optional[Folder] = None,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
     silent: bool = False,
@@ -681,7 +680,7 @@ def export_tree(
         Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
     :param entities: a list of entity instances; they can belong to different models/entities.
 
-    :param folder: a temporary folder to build the archive before compression.
+    :param folder: a temporary folder to build the archive in.
 
     :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
         list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False

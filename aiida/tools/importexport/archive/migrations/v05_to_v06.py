@@ -24,8 +24,9 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
+from aiida.tools.importexport.archive.common import CacheFolder
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from .utils import verify_metadata_version, update_metadata
 
 
 def migrate_deserialized_datetime(data, conversion):
@@ -131,14 +132,21 @@ def migration_migrate_legacy_job_calculation_data(data):
             values['process_label'] = 'Legacy JobCalculation'
 
 
-def migrate_v5_to_v6(metadata, data, *args):  # pylint: disable=unused-argument
+def migrate_v5_to_v6(folder: CacheFolder):
     """Migration of archive files from v0.5 to v0.6"""
     old_version = '0.5'
     new_version = '0.6'
 
+    _, metadata = folder.load_json('metadata.json')
+
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
+
+    _, data = folder.load_json('data.json')
 
     # Apply migrations
     migration_serialize_datetime_objects(data)
     migration_migrate_legacy_job_calculation_data(data)
+
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

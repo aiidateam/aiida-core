@@ -8,33 +8,161 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from old export versions to the newest"""
-from copy import deepcopy
-import os
+# pylint: disable=no-self-use
+import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport import detect_archive_type, get_reader
+from aiida.tools.importexport import detect_archive_type, get_migrator
 from aiida.tools.importexport import import_data, ArchiveMigrationError, EXPORT_VERSION as newest_version
-from aiida.tools.importexport.migration import migrate_recursively, verify_metadata_version
+from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 
-from tests.utils.archives import get_archive_file, get_json_files, migrate_archive
-from tests.utils.configuration import with_temp_dir
+from tests.utils.archives import get_archive_file, read_json_files
+
+# archives to test migration against
+# name, node count
+ARCHIVE_DATA = {
+    '0.2': ('export_v0.2.aiida', 25),
+    '0.3': ('export_v0.3.aiida', 25),
+    '0.4': ('export_v0.4.aiida', 27),
+    '0.5': ('export_v0.5_manual.aiida', 27),
+    '0.6': ('export_v0.6_manual.aiida', 27),
+    '0.7': ('export_v0.7_manual.aiida', 27),
+    '0.8': ('export_v0.8_manual.aiida', 27),
+    '0.9': ('export_v0.9_manual.aiida', 27),
+}
 
 
-class TestExportFileMigration(AiidaTestCase):
+@pytest.mark.usefixtures('clear_database_before_test')
+class TestExportFileMigration:
     """Test archive file migrations"""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """Add variables (once) to be used by all tests"""
-        super().setUpClass(*args, **kwargs)
+    def test_full_migration(self, tmp_path, core_archive):
+        """Test a migration from the first to newest archive version."""
 
-        # Known archive file content used for checks
-        cls.node_count = 25
-        cls.struct_count = 2
-        cls.known_struct_label = ''
-        cls.known_cell = [[4, 0, 0], [0, 4, 0], [0, 0, 4]]
-        cls.known_kinds = [
+        filepath_archive = get_archive_file('export_v0.1_simple.aiida', **core_archive)
+
+        metadata = read_json_files(filepath_archive, names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version='0.1')
+
+        migrator_cls = get_migrator(detect_archive_type(filepath_archive))
+        migrator = migrator_cls(filepath_archive)
+
+        migrator.migrate(newest_version, tmp_path / 'out.aiida')
+        assert detect_archive_type(tmp_path / 'out.aiida') == 'zip'
+        metadata = read_json_files(tmp_path / 'out.aiida', names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version=newest_version)
+
+    def test_tar_migration(self, tmp_path, core_archive):
+        """Test a migration using a tar compressed in/out file."""
+
+        filepath_archive = get_archive_file('export_v0.2_simple.tar.gz', **core_archive)
+
+        metadata = read_json_files(filepath_archive, names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version='0.2')
+
+        migrator_cls = get_migrator(detect_archive_type(filepath_archive))
+        migrator = migrator_cls(filepath_archive)
+
+        migrator.migrate(newest_version, tmp_path / 'out.aiida', out_compression='tar.gz')
+        assert detect_archive_type(tmp_path / 'out.aiida') == 'tar.gz'
+        metadata = read_json_files(tmp_path / 'out.aiida', names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version=newest_version)
+
+    def test_partial_migrations(self, core_archive, tmp_path):
+        """Test migrations from a specific version (0.3) to other versions."""
+        filepath_archive = get_archive_file('export_v0.3_simple.aiida', **core_archive)
+
+        metadata = read_json_files(filepath_archive, names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version='0.3')
+
+        migrator_cls = get_migrator(detect_archive_type(filepath_archive))
+        migrator = migrator_cls(filepath_archive)
+
+        with pytest.raises(TypeError, match='version must be a string'):
+            migrator.migrate(0.2, tmp_path / 'v02.aiida')
+
+        with pytest.raises(ArchiveMigrationError, match='No migration pathway available'):
+            migrator.migrate('0.2', tmp_path / 'v02.aiida')
+
+        # same version migration
+        out_path = migrator.migrate('0.3', tmp_path / 'v03.aiida')
+        # if no migration performed the output path is None
+        assert out_path is None
+
+        # newer version migration
+        migrator.migrate('0.5', tmp_path / 'v05.aiida')
+        assert (tmp_path / 'v05.aiida').exists()
+
+        metadata = read_json_files(tmp_path / 'v05.aiida', names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version='0.5')
+
+    def test_no_node_migration(self, tmp_path, external_archive):
+        """Test migration of archive file that has no Node entities."""
+        input_file = get_archive_file('export_v0.3_no_Nodes.aiida', **external_archive)
+        output_file = tmp_path / 'output_file.aiida'
+
+        migrator_cls = get_migrator(detect_archive_type(input_file))
+        migrator = migrator_cls(input_file)
+
+        # Perform the migration
+        migrator.migrate(newest_version, output_file)
+
+        # Load the migrated file
+        import_data(output_file)
+
+        # Check known entities
+        assert orm.QueryBuilder().append(orm.Node).count() == 0
+        computer_query = orm.QueryBuilder().append(orm.Computer, project=['uuid'])
+        assert computer_query.all(flat=True) == ['4f33c6fd-b624-47df-9ffb-a58f05d323af']
+        user_query = orm.QueryBuilder().append(orm.User, project=['email'])
+        assert set(user_query.all(flat=True)) == {orm.User.objects.get_default().email, 'aiida@localhost'}
+
+    @pytest.mark.parametrize('version', ['0.0', '0.1.0', '0.99'])
+    def test_wrong_versions(self, core_archive, tmp_path, version):
+        """Test correct errors are raised if archive files have wrong version numbers"""
+        filepath_archive = get_archive_file('export_v0.1_simple.aiida', **core_archive)
+        migrator_cls = get_migrator(detect_archive_type(filepath_archive))
+        migrator = migrator_cls(filepath_archive)
+
+        with pytest.raises(ArchiveMigrationError, match='No migration pathway available'):
+            migrator.migrate(version, tmp_path / 'out.aiida')
+        assert not (tmp_path / 'out.aiida').exists()
+
+    @pytest.mark.parametrize('filename,nodes', ARCHIVE_DATA.values(), ids=ARCHIVE_DATA.keys())
+    def test_migrate_to_newest(self, external_archive, tmp_path, filename, nodes):
+        """Test migrations from old archives to newest version."""
+        filepath_archive = get_archive_file(filename, **external_archive)
+
+        out_path = tmp_path / 'out.aiida'
+
+        migrator_cls = get_migrator(detect_archive_type(filepath_archive))
+        migrator = migrator_cls(filepath_archive)
+        out_path = migrator.migrate(newest_version, out_path) or filepath_archive
+
+        metadata = read_json_files(out_path, names=['metadata.json'])[0]
+        verify_metadata_version(metadata, version=newest_version)
+
+        # Load the migrated file
+        import_data(out_path)
+
+        # count nodes
+        archive_node_count = orm.QueryBuilder().append(orm.Node).count()
+        assert archive_node_count == nodes
+
+        # Verify that CalculationNodes have non-empty attribute dictionaries
+        calc_query = orm.QueryBuilder().append(orm.CalculationNode)
+        for [calculation] in calc_query.iterall():
+            assert isinstance(calculation.attributes, dict)
+            assert len(calculation.attributes) > 0
+
+        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
+        struct_query = orm.QueryBuilder().append(orm.StructureData)
+        assert struct_query.count() == 2
+        for structure in struct_query.all(flat=True):
+            assert structure.label == ''
+            assert structure.cell == [[4, 0, 0], [0, 4, 0], [0, 0, 4]]
+
+        known_kinds = [
             {
                 'name': 'Ba',
                 'mass': 137.327,
@@ -54,463 +182,20 @@ class TestExportFileMigration(AiidaTestCase):
                 'symbols': ['O']
             },
         ]
-
-        # Utility helpers
-        cls.external_archive = {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}
-        cls.core_archive = {'filepath': 'export/migrate'}
-
-    def setUp(self):
-        """Reset database before each test"""
-        super().setUp()
-        self.reset_database()
-
-    def test_migrate_recursively(self):
-        """Test function 'migrate_recursively'"""
-        import tarfile
-        import zipfile
-
-        from aiida.common.exceptions import NotExistent
-        from aiida.common.folders import SandboxFolder
-        from aiida.common.json import load as jsonload
-        from aiida.tools.importexport.common.archive import extract_tar, extract_zip
-
-        # Get metadata.json and data.json as dicts from v0.1 file archive
-        # Cannot use 'get_json_files' for 'export_v0.1_simple.aiida',
-        # because we need to pass the SandboxFolder to 'migrate_recursively'
-        dirpath_archive = get_archive_file('export_v0.1_simple.aiida', **self.core_archive)
-
-        with SandboxFolder(sandbox_in_repo=False) as folder:
-            if zipfile.is_zipfile(dirpath_archive):
-                extract_zip(dirpath_archive, folder, silent=True)
-            elif tarfile.is_tarfile(dirpath_archive):
-                extract_tar(dirpath_archive, folder, silent=True)
-            else:
-                raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
-
-            try:
-                with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                    data = jsonload(fhandle)
-                with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                    metadata = jsonload(fhandle)
-            except IOError:
-                raise NotExistent(f'export archive does not contain the required file {fhandle.filename}')
-
-            verify_metadata_version(metadata, version='0.1')
-
-            # Migrate to newest version
-            new_version = migrate_recursively(metadata, data, folder)
-            verify_metadata_version(metadata, version=newest_version)
-            self.assertEqual(new_version, newest_version)
-
-    def test_migrate_recursively_specific_version(self):
-        """Test the `version` argument of the `migrate_recursively` function."""
-        filepath_archive = get_archive_file('export_v0.3_simple.aiida', **self.core_archive)
-
-        reader_cls = get_reader(detect_archive_type(filepath_archive))
-        with reader_cls(filepath_archive) as archive:
-
-            metadata = deepcopy(archive._get_metadata())  # pylint: disable=protected-access
-            data = deepcopy(archive._get_data())  # pylint: disable=protected-access
-
-            # Incorrect type
-            with self.assertRaises(TypeError):
-                migrate_recursively(metadata, data, None, version=0.2)
-
-            # Backward migrations are not supported
-            with self.assertRaises(ArchiveMigrationError):
-                migrate_recursively(metadata, data, None, version='0.2')
-
-            migrate_recursively(metadata, data, None, version='0.3')
-
-            migrated_version = '0.5'
-            version = migrate_recursively(metadata, data, None, version=migrated_version)
-            self.assertEqual(version, migrated_version)
-
-    @with_temp_dir
-    def test_no_node_export(self, temp_dir):
-        """Test migration of archive file that has no Nodes"""
-        input_file = get_archive_file('export_v0.3_no_Nodes.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Known entities
-        computer_uuids = [self.computer.uuid]  # pylint: disable=no-member
-        user_emails = [orm.User.objects.get_default().email]
-
-        # Known archive file content used for checks
-        node_count = 0
-        computer_count = 1 + 1  # localhost is always present
-        computer_uuids.append('4f33c6fd-b624-47df-9ffb-a58f05d323af')
-        user_emails.append('aiida@localhost')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Check known number of entities is present
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), node_count)
-        self.assertEqual(orm.QueryBuilder().append(orm.Computer).count(), computer_count)
-
-        # Check unique identifiers
-        computers = orm.QueryBuilder().append(orm.Computer, project=['uuid']).all()[0][0]
-        users = orm.QueryBuilder().append(orm.User, project=['email']).all()[0][0]
-        self.assertIn(computers, computer_uuids)
-        self.assertIn(users, user_emails)
-
-    def test_wrong_versions(self):
-        """Test correct errors are raised if archive files have wrong version numbers"""
-        from aiida.tools.importexport.migration import MIGRATE_FUNCTIONS
-
-        wrong_versions = ['0.0', '0.1.0', '0.99']
-        old_versions = list(MIGRATE_FUNCTIONS.keys())
-        legal_versions = old_versions + [newest_version]
-        wrong_version_metadatas = []
-        for version in wrong_versions:
-            metadata = {'export_version': version}
-            wrong_version_metadatas.append(metadata)
-
-        # Make sure the "wrong_versions" are wrong
-        for version in wrong_versions:
-            self.assertNotIn(
-                version,
-                legal_versions,
-                msg=f"'{version}' was not expected to be a legal version, legal version: {legal_versions}"
-            )
-
-        # Make sure migrate_recursively throws an ArchiveMigrationError
-        for metadata in wrong_version_metadatas:
-            with self.assertRaises(ArchiveMigrationError):
-                new_version = migrate_recursively(metadata, {}, None)
-
-                self.assertIsNone(
-                    new_version,
-                    msg='migrate_recursively should not return anything, '
-                    "hence the 'return' should be None, but instead it is {}".format(new_version)
-                )
-
-    def test_migrate_newest_version(self):
-        """Test that  migrating the latest version runs without complaints."""
-        metadata = {'export_version': newest_version}
-
-        new_version = migrate_recursively(metadata, {}, None)
-        self.assertEqual(new_version, newest_version)
-
-    @with_temp_dir
-    def test_v02_to_newest(self, temp_dir):
-        """Test migration of exported files from v0.2 to newest export version"""
-        # Get archive file with export version 0.2
-        input_file = get_archive_file('export_v0.2.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Do the necessary checks
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count)
-
-        # Verify that CalculationNodes have non-empty attribute dictionaries
-        builder = orm.QueryBuilder().append(orm.CalculationNode)
-        for [calculation] in builder.iterall():
-            self.assertIsInstance(calculation.attributes, dict)
-            self.assertNotEqual(len(calculation.attributes), 0)
-
-        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
-        builder = orm.QueryBuilder().append(orm.StructureData)
-        self.assertEqual(
-            builder.count(),
-            self.struct_count,
-            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
-        )
-        for structures in builder.all():
-            structure = structures[0]
-            self.assertEqual(structure.label, self.known_struct_label)
-            self.assertEqual(structure.cell, self.known_cell)
-
-        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
-        for [kinds] in builder.iterall():
-            self.assertEqual(len(kinds), len(self.known_kinds))
+        kind_query = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
+        for kinds in kind_query.all(flat=True):
+            assert len(kinds) == len(known_kinds)
             for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
+                assert kind in known_kinds
 
         # Check that there is a StructureData that is an input of a CalculationNode
         builder = orm.QueryBuilder()
         builder.append(orm.StructureData, tag='structure')
         builder.append(orm.CalculationNode, with_incoming='structure')
-        self.assertGreater(len(builder.all()), 0)
+        assert len(builder.all()) > 0
 
         # Check that there is a RemoteData that is the output of a CalculationNode
         builder = orm.QueryBuilder()
         builder.append(orm.CalculationNode, tag='parent')
         builder.append(orm.RemoteData, with_incoming='parent')
-        self.assertGreater(len(builder.all()), 0)
-
-    @with_temp_dir
-    def test_v03_to_newest(self, temp_dir):
-        """Test migration of exported files from v0.3 to newest export version"""
-        input_file = get_archive_file('export_v0.3.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Do the necessary checks
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count)
-
-        # Verify that CalculationNodes have non-empty attribute dictionaries
-        builder = orm.QueryBuilder().append(orm.CalculationNode)
-        for [calculation] in builder.iterall():
-            self.assertIsInstance(calculation.attributes, dict)
-            self.assertNotEqual(len(calculation.attributes), 0)
-
-        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
-        builder = orm.QueryBuilder().append(orm.StructureData)
-        self.assertEqual(
-            builder.count(),
-            self.struct_count,
-            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
-        )
-        for structures in builder.all():
-            structure = structures[0]
-            self.assertEqual(structure.label, self.known_struct_label)
-            self.assertEqual(structure.cell, self.known_cell)
-
-        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
-        for [kinds] in builder.iterall():
-            self.assertEqual(len(kinds), len(self.known_kinds))
-            for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
-
-        # Check that there is a StructureData that is an input of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.StructureData, tag='structure')
-        builder.append(orm.CalculationNode, with_incoming='structure')
-        self.assertGreater(len(builder.all()), 0)
-
-        # Check that there is a RemoteData that is the output of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.CalculationNode, tag='parent')
-        builder.append(orm.RemoteData, with_incoming='parent')
-        self.assertGreater(len(builder.all()), 0)
-
-    @with_temp_dir
-    def test_v04_to_newest(self, temp_dir):
-        """Test migration of exported files from v0.4 to newest export version"""
-        input_file = get_archive_file('export_v0.4.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Do the necessary checks
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count + 2)
-
-        # Verify that CalculationNodes have non-empty attribute dictionaries
-        builder = orm.QueryBuilder().append(orm.CalculationNode)
-        for [calculation] in builder.iterall():
-            self.assertIsInstance(calculation.attributes, dict)
-            self.assertNotEqual(len(calculation.attributes), 0)
-
-        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
-        builder = orm.QueryBuilder().append(orm.StructureData)
-        self.assertEqual(
-            builder.count(),
-            self.struct_count,
-            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
-        )
-        for structures in builder.all():
-            structure = structures[0]
-            self.assertEqual(structure.label, self.known_struct_label)
-            self.assertEqual(structure.cell, self.known_cell)
-
-        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
-        for [kinds] in builder.iterall():
-            self.assertEqual(len(kinds), len(self.known_kinds))
-            for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
-
-        # Check that there is a StructureData that is an input of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.StructureData, tag='structure')
-        builder.append(orm.CalculationNode, with_incoming='structure')
-        self.assertGreater(len(builder.all()), 0)
-
-        # Check that there is a RemoteData that is the output of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.CalculationNode, tag='parent')
-        builder.append(orm.RemoteData, with_incoming='parent')
-        self.assertGreater(len(builder.all()), 0)
-
-    @with_temp_dir
-    def test_v05_to_newest(self, temp_dir):
-        """Test migration of exported files from v0.5 to newest export version"""
-        input_file = get_archive_file('export_v0.5_manual.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Do the necessary checks
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count + 2)
-
-        # Verify that CalculationNodes have non-empty attribute dictionaries
-        builder = orm.QueryBuilder().append(orm.CalculationNode)
-        for [calculation] in builder.iterall():
-            self.assertIsInstance(calculation.attributes, dict)
-            self.assertNotEqual(len(calculation.attributes), 0)
-
-        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
-        builder = orm.QueryBuilder().append(orm.StructureData)
-        self.assertEqual(
-            builder.count(),
-            self.struct_count,
-            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
-        )
-        for structures in builder.all():
-            structure = structures[0]
-            self.assertEqual(structure.label, self.known_struct_label)
-            self.assertEqual(structure.cell, self.known_cell)
-
-        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
-        for [kinds] in builder.iterall():
-            self.assertEqual(len(kinds), len(self.known_kinds))
-            for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
-
-        # Check that there is a StructureData that is an input of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.StructureData, tag='structure')
-        builder.append(orm.CalculationNode, with_incoming='structure')
-        self.assertGreater(len(builder.all()), 0)
-
-        # Check that there is a RemoteData that is the output of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.CalculationNode, tag='parent')
-        builder.append(orm.RemoteData, with_incoming='parent')
-        self.assertGreater(len(builder.all()), 0)
-
-    @with_temp_dir
-    def test_v06_to_newest(self, temp_dir):
-        """Test migration of exported files from v0.6 to newest export version"""
-        input_file = get_archive_file('export_v0.6_manual.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Do the necessary checks
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count + 2)
-
-        # Verify that CalculationNodes have non-empty attribute dictionaries
-        builder = orm.QueryBuilder().append(orm.CalculationNode)
-        for [calculation] in builder.iterall():
-            self.assertIsInstance(calculation.attributes, dict)
-            self.assertNotEqual(len(calculation.attributes), 0)
-
-        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
-        builder = orm.QueryBuilder().append(orm.StructureData)
-        self.assertEqual(
-            builder.count(),
-            self.struct_count,
-            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
-        )
-        for structures in builder.all():
-            structure = structures[0]
-            self.assertEqual(structure.label, self.known_struct_label)
-            self.assertEqual(structure.cell, self.known_cell)
-
-        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
-        for [kinds] in builder.iterall():
-            self.assertEqual(len(kinds), len(self.known_kinds))
-            for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
-
-        # Check that there is a StructureData that is an input of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.StructureData, tag='structure')
-        builder.append(orm.CalculationNode, with_incoming='structure')
-        self.assertGreater(len(builder.all()), 0)
-
-        # Check that there is a RemoteData that is the output of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.CalculationNode, tag='parent')
-        builder.append(orm.RemoteData, with_incoming='parent')
-        self.assertGreater(len(builder.all()), 0)
-
-    @with_temp_dir
-    def test_v07_to_newest(self, temp_dir):
-        """Test migration of exported files from v0.7 to newest export version"""
-        input_file = get_archive_file('export_v0.7_manual.aiida', **self.external_archive)
-        output_file = os.path.join(temp_dir, 'output_file.aiida')
-
-        # Perform the migration
-        migrate_archive(input_file, output_file)
-        metadata, _ = get_json_files(output_file)
-        verify_metadata_version(metadata, version=newest_version)
-
-        # Load the migrated file
-        import_data(output_file, silent=True)
-
-        # Do the necessary checks
-        self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), self.node_count + 2)
-
-        # Verify that CalculationNodes have non-empty attribute dictionaries
-        builder = orm.QueryBuilder().append(orm.CalculationNode)
-        for [calculation] in builder.iterall():
-            self.assertIsInstance(calculation.attributes, dict)
-            self.assertNotEqual(len(calculation.attributes), 0)
-
-        # Verify that the StructureData nodes maintained their (same) label, cell, and kinds
-        builder = orm.QueryBuilder().append(orm.StructureData)
-        self.assertEqual(
-            builder.count(),
-            self.struct_count,
-            msg=f'There should be {self.struct_count} StructureData, instead {builder.count()} were/was found'
-        )
-        for structures in builder.all():
-            structure = structures[0]
-            self.assertEqual(structure.label, self.known_struct_label)
-            self.assertEqual(structure.cell, self.known_cell)
-
-        builder = orm.QueryBuilder().append(orm.StructureData, project=['attributes.kinds'])
-        for [kinds] in builder.iterall():
-            self.assertEqual(len(kinds), len(self.known_kinds))
-            for kind in kinds:
-                self.assertIn(kind, self.known_kinds, msg=f"Kind '{kind}' not found in: {self.known_kinds}")
-
-        # Check that there is a StructureData that is an input of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.StructureData, tag='structure')
-        builder.append(orm.CalculationNode, with_incoming='structure')
-        self.assertGreater(len(builder.all()), 0)
-
-        # Check that there is a RemoteData that is the output of a CalculationNode
-        builder = orm.QueryBuilder()
-        builder.append(orm.CalculationNode, tag='parent')
-        builder.append(orm.RemoteData, with_incoming='parent')
-        self.assertGreater(len(builder.all()), 0)
+        assert len(builder.all()) > 0

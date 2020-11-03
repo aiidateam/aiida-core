@@ -19,11 +19,11 @@ and indeed a valid implementation is::
 """
 from functools import partial
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 __all__ = (
     'get_progress_reporter', 'set_progress_reporter', 'set_progress_bar_tqdm', 'ProgressReporterAbstract',
-    'TQDM_BAR_FORMAT'
+    'TQDM_BAR_FORMAT', 'create_callback'
 )
 
 TQDM_BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
@@ -174,3 +174,26 @@ def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Op
     """
     from tqdm import tqdm
     set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
+
+
+def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[str, Any], None]:
+    """Create a callback function to update the progress reporter.
+
+    :returns: a callback to report on the process, ``callback(action, value)``,
+        with the following callback signatures:
+
+        - ``callback('init', {'total': <int>, 'description': <str>})``,
+            to reset the progress with a new total iterations and description
+        - ``callback('update', <int>)``,
+            to update the progress by a certain number of iterations
+
+    """
+
+    def _callback(action: str, value: Any):
+        if action == 'init':
+            progress_reporter.reset(value['total'])
+            progress_reporter.set_description_str(value['description'])
+        elif action == 'update':
+            progress_reporter.update(value)
+
+    return _callback

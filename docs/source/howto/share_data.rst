@@ -81,7 +81,7 @@ By default, existing entities will be updated with the most recent changes.
 Node extras and comments have special modes for determining how to import them - for more details, see ``verdi import --help``.
 
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
-    If an outdated archive version is detected during import, you will be prompted to confirm automatic migration of the archive file.
+    If an outdated archive version is detected during import, the archive file will be automatically migrated to the newest version (within a temporary folder) and the import retried.
 
     You can also use ``verdi export migrate`` to create updated archive files from existing archive files (or update them in place).
 

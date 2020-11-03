@@ -12,7 +12,8 @@
 """Readers and writers for archive formats, that work independently of a connection to an AiiDA profile."""
 
 from .common import *
+from .migrators import *
 from .readers import *
 from .writers import *
 
-__all__ = (readers.__all__ + writers.__all__ + common.__all__)
+__all__ = (migrators.__all__ + readers.__all__ + writers.__all__ + common.__all__)

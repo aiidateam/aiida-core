@@ -116,7 +116,7 @@ def create(
     You can modify some of those rules using options of this command.
     """
     from aiida.common.log import override_log_formatter_context
-    from aiida.common.progress_reporter import set_progress_bar_tqdm
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
@@ -157,6 +157,8 @@ def create(
 
     if verbosity in ['DEBUG', 'INFO']:
         set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    else:
+        set_progress_reporter(None)
     EXPORT_LOGGER.setLevel(verbosity)
 
     try:
@@ -186,86 +188,56 @@ def create(
     # version inside the function when needed.
     help='Archive format version to migrate to (defaults to latest version).',
 )
-def migrate(input_file, output_file, force, silent, in_place, archive_format, version):
-    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-    """Migrate an export archive to a more recent format version."""
-    from distutils.version import StrictVersion
-    import os
-    import shutil
-    import tarfile
-    import tempfile
-    import zipfile
+@click.option(
+    '--verbosity',
+    default='INFO',
+    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
+    help='Control the verbosity of console logging'
+)
+def migrate(input_file, output_file, force, silent, in_place, archive_format, version, verbosity):
+    """Migrate an export archive to a more recent format version.
 
-    from aiida.common import json
-    from aiida.common.folders import SandboxFolder
-    from aiida.tools.importexport import migration, extract_zip, extract_tar, ArchiveMigrationError, EXPORT_VERSION
+    .. deprecated:: 1.5.0
+        Support for the --silent flag, replaced by --verbosity
 
-    if version is None:
-        version = EXPORT_VERSION
+    """
+    from aiida.common.log import override_log_formatter_context
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
+    from aiida.tools.importexport import detect_archive_type, EXPORT_VERSION
+    from aiida.tools.importexport.archive.migrators import get_migrator, MIGRATE_LOGGER
+
+    if silent is True:
+        echo.echo_deprecated('the --silent option is deprecated, use --verbosity')
 
     if in_place:
         if output_file:
             echo.echo_critical('output file specified together with --in-place flag')
-        tempdir = tempfile.TemporaryDirectory()
-        output_file = os.path.join(tempdir.name, 'archive.aiida')
+        output_file = input_file
+        force = True
     elif not output_file:
         echo.echo_critical(
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
         )
 
-    if os.path.exists(output_file) and not force:
-        echo.echo_critical('the output file already exists')
+    if verbosity in ['DEBUG', 'INFO']:
+        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    else:
+        set_progress_reporter(None)
+    MIGRATE_LOGGER.setLevel(verbosity)
 
-    with SandboxFolder(sandbox_in_repo=False) as folder:
+    if version is None:
+        version = EXPORT_VERSION
 
-        if zipfile.is_zipfile(input_file):
-            extract_zip(input_file, folder, silent=silent)
-        elif tarfile.is_tarfile(input_file):
-            extract_tar(input_file, folder, silent=silent)
-        else:
-            echo.echo_critical('invalid file format, expected either a zip archive or gzipped tarball')
+    migrator_cls = get_migrator(detect_archive_type(input_file))
+    migrator = migrator_cls(input_file)
 
-        try:
-            with open(folder.get_abs_path('data.json'), 'r', encoding='utf8') as fhandle:
-                data = json.load(fhandle)
-            with open(folder.get_abs_path('metadata.json'), 'r', encoding='utf8') as fhandle:
-                metadata = json.load(fhandle)
-        except IOError:
-            echo.echo_critical(f'export archive does not contain the required file {fhandle.filename}')
+    try:
+        with override_log_formatter_context('%(message)s'):
+            migrator.migrate(version, output_file, force=force, out_compression=archive_format)
+    except Exception as error:  # pylint: disable=broad-except
+        if verbosity == 'DEBUG':
+            raise
+        echo.echo_critical(f'failed to migrate the archive file (use `--verbosity DEBUG` to see traceback): {error}')
 
-        old_version = migration.verify_metadata_version(metadata)
-        if StrictVersion(version) <= StrictVersion(old_version):
-            echo.echo_success(f'nothing to be done - archive already at version {old_version} >= {version}')
-            return
-
-        try:
-            new_version = migration.migrate_recursively(metadata, data, folder, version)
-        except ArchiveMigrationError as exception:
-            echo.echo_critical(str(exception))
-
-        with open(folder.get_abs_path('data.json'), 'wb') as fhandle:
-            json.dump(data, fhandle, indent=4)
-
-        with open(folder.get_abs_path('metadata.json'), 'wb') as fhandle:
-            json.dump(metadata, fhandle)
-
-        if archive_format in ['zip', 'zip-uncompressed']:
-            compression = zipfile.ZIP_DEFLATED if archive_format == 'zip' else zipfile.ZIP_STORED
-            with zipfile.ZipFile(output_file, mode='w', compression=compression, allowZip64=True) as archive:
-                src = folder.abspath
-                for dirpath, dirnames, filenames in os.walk(src):
-                    relpath = os.path.relpath(dirpath, src)
-                    for filename in dirnames + filenames:
-                        real_src = os.path.join(dirpath, filename)
-                        real_dest = os.path.join(relpath, filename)
-                        archive.write(real_src, real_dest)
-        elif archive_format == 'tar.gz':
-            with tarfile.open(output_file, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
-                archive.add(folder.abspath, arcname='')
-
-        if in_place:
-            shutil.move(output_file, input_file)
-            tempdir.cleanup()
-
-        if not silent:
-            echo.echo_success(f'migrated the archive from version {old_version} to {new_version}')
+    if verbosity in ['DEBUG', 'INFO']:
+        echo.echo_success(f'migrated the archive to version {version}')

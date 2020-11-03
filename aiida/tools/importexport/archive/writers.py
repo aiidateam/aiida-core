@@ -106,10 +106,6 @@ class ArchiveWriterAbstract(ABC):
         if not self._in_context:
             raise InvalidOperation('the ArchiveReader method should be used within a context')
 
-    def add_info(self, key: str, value: Any):
-        """Add info about the export process."""
-        self._info[key] = value
-
     def open(self):
         """Setup the export."""
         self.assert_within_context()
@@ -122,6 +118,12 @@ class ArchiveWriterAbstract(ABC):
     def export(self):
         self.assert_within_context()
 
+    def add_info(self, key: str, value: Any):
+        """Add info about the export process, which is reset on entrance of the context manager."""
+        self._info[key] = value
+
+    # write methods
+
     @abstractmethod
     def write_metadata(self, data: ArchiveMetadata):
         """ """
@@ -131,7 +133,7 @@ class ArchiveWriterAbstract(ABC):
         """ """
 
     @abstractmethod
-    def write_group_uuids(self, uuid: str, node_uuids: List[str]):
+    def write_group_mapping(self, uuid: str, node_uuids: List[str]):
         """ """
 
     @abstractmethod
@@ -139,7 +141,7 @@ class ArchiveWriterAbstract(ABC):
         """ """
 
     @abstractmethod
-    def copy_node_repository(self, uuid: str, repo: Folder):
+    def write_node_repo_folder(self, uuid: str, path: Union[str, Path]):
         """ """
 
 

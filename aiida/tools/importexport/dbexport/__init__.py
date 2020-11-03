@@ -254,6 +254,7 @@ def export(
         progress.update()
     node_ids_to_be_exported = traverse_output['nodes']
 
+    # Initialize the writer
     with writer as writer_context:
 
         EXPORT_LOGGER.debug('WRITING METADATA...')
@@ -274,7 +275,7 @@ def export(
             )
         )
 
-        # A utility dictionary for mapping PK to UUID.
+        # Create a mapping of node PK to UUID.
         if node_ids_to_be_exported:
             qbuilder = orm.QueryBuilder().append(
                 orm.Node,
@@ -287,8 +288,10 @@ def export(
         else:
             node_pk_2_uuid_mapping: Dict[int, str] = {}
 
+        # check that no nodes are being exported with incorrect licensing
         _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
 
+        # write the link data
         if traverse_output['links']:
             with get_progress_reporter()(total=len(traverse_output['links']), desc='Writing links') as progress:
                 for link in traverse_output['links']:
@@ -300,6 +303,7 @@ def export(
                         'type': link.link_type,
                     })
 
+        # generate a list of queries to encapsulate all required entities
         entity_queries = _collect_entity_queries(
             node_ids_to_be_exported,
             entities_starting_set,
@@ -310,60 +314,41 @@ def export(
 
         total_entities = sum(query.count() for query in entity_queries.values())
 
+        # write all entity data fields
         if total_entities:
-            exported_entity_pks = _write_entity_data(total_entities, entity_queries, writer_context, batch_size)
+            exported_entity_pks = _write_entity_data(
+                total_entities=total_entities,
+                entity_queries=entity_queries,
+                writer=writer_context,
+                batch_size=batch_size
+            )
         else:
             EXPORT_LOGGER.info('No entities were found to export')
             return
 
+        # write mappings of groups to the nodes they contain
         if exported_entity_pks[GROUP_ENTITY_NAME]:
 
             EXPORT_LOGGER.debug('Writing group UUID -> [nodes UUIDs]')
 
-            group_uuid_query = orm.QueryBuilder().append(
-                orm.Group,
-                filters={
-                    'id': {
-                        'in': exported_entity_pks[GROUP_ENTITY_NAME]
-                    }
-                },
-                project='uuid',
-                tag='groups',
-            ).append(orm.Node, project='uuid', with_group='groups')
+            _write_group_mappings(
+                group_pks=exported_entity_pks[GROUP_ENTITY_NAME], batch_size=batch_size, writer=writer_context
+            )
 
-            groups_uuid_to_node_uuids = defaultdict(set)
-            for group_uuid, node_uuid in group_uuid_query.iterall(batch_size=batch_size):
-                groups_uuid_to_node_uuids[group_uuid].add(node_uuid)
-
-            for group_uuid, node_uuids in groups_uuid_to_node_uuids.items():
-                writer_context.write_group_uuids(group_uuid, list(node_uuids))
-
+        # copy all required node repositories
         if exported_entity_pks[NODE_ENTITY_NAME]:
 
-            with get_progress_reporter()(
-                total=len(exported_entity_pks[NODE_ENTITY_NAME]), desc='Exporting node repositories: '
-            ) as progress:
-
-                for pk in exported_entity_pks[NODE_ENTITY_NAME]:
-
-                    uuid = node_pk_2_uuid_mapping[pk]
-
-                    progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
-                    progress.update()
-
-                    src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
-                    if not src.exists():
-                        raise exceptions.ArchiveExportError(
-                            f'Unable to find the repository folder for Node with UUID={uuid} '
-                            'in the local repository'
-                        )
-                    writer_context.copy_node_repository(uuid, src._abspath)  # pylint: disable=protected-access
+            _write_node_repositories(
+                node_pks=exported_entity_pks[NODE_ENTITY_NAME],
+                node_pk_2_uuid_mapping=node_pk_2_uuid_mapping,
+                writer=writer_context
+            )
 
         EXPORT_LOGGER.debug('FINALIZING EXPORT...')
         writer_context.export()
 
+    # summarize export
     export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())
-
     if exported_entity_pks:
         EXPORT_LOGGER.info('Exported Entities:\n  - ' + export_summary)
 
@@ -568,10 +553,9 @@ def _collect_entity_queries(
 
 
 def _write_entity_data(
-    total_entities: int, entity_queries: Dict[str, orm.QueryBuilder], writer_context: ArchiveWriterAbstract,
-    batch_size: int
+    total_entities: int, entity_queries: Dict[str, orm.QueryBuilder], writer: ArchiveWriterAbstract, batch_size: int
 ) -> Dict[str, Set[int]]:
-
+    """Iterate through data returned from entity queries, serialize the DB fields, then write to the export."""
     all_fields_info, _ = get_all_fields_info()
     entity_separator = '_'
 
@@ -625,7 +609,7 @@ def _write_entity_data(
                         if fields['attributes'].get('sealed', False) is not True:
                             unsealed_node_pks.add(pk)
 
-                    writer_context.write_entity_data(current_entity, pk, fields)
+                    writer.write_entity_data(current_entity, pk, fields)
 
     if unsealed_node_pks:
         raise exceptions.ExportValidationError(
@@ -634,6 +618,49 @@ def _write_entity_data(
         )
 
     return exported_entity_pks
+
+
+def _write_group_mappings(*, group_pks: List[int], batch_size: int, writer: ArchiveWriterAbstract):
+    """Query for node UUIDs in exported groups, and write these these mappings to the archive file."""
+    group_uuid_query = orm.QueryBuilder().append(
+        orm.Group,
+        filters={
+            'id': {
+                'in': group_pks
+            }
+        },
+        project='uuid',
+        tag='groups',
+    ).append(orm.Node, project='uuid', with_group='groups')
+
+    groups_uuid_to_node_uuids = defaultdict(set)
+    for group_uuid, node_uuid in group_uuid_query.iterall(batch_size=batch_size):
+        groups_uuid_to_node_uuids[group_uuid].add(node_uuid)
+
+    for group_uuid, node_uuids in groups_uuid_to_node_uuids.items():
+        writer.write_group_mapping(group_uuid, list(node_uuids))
+
+
+def _write_node_repositories(
+    *, node_pks: List[str], node_pk_2_uuid_mapping: Dict[int, str], writer: ArchiveWriterAbstract
+):
+    """Write all exported node repositories to the archive file."""
+    with get_progress_reporter()(total=len(node_pks), desc='Exporting node repositories: ') as progress:
+
+        for pk in node_pks:
+
+            uuid = node_pk_2_uuid_mapping[pk]
+
+            progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
+            progress.update()
+
+            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
+            if not src.exists():
+                raise exceptions.ArchiveExportError(
+                    f'Unable to find the repository folder for Node with UUID={uuid} '
+                    'in the local repository'
+                )
+            writer.write_node_repo_folder(uuid, src._abspath)  # pylint: disable=protected-access
 
 
 # THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY

@@ -198,7 +198,7 @@ class TestSpecificImport(AiidaTestCase):
         # Try to export, check it raises and check the raise message
         filename = os.path.join(temp_dir, 'export.aiida')
         with self.assertRaises(exceptions.ArchiveExportError) as exc:
-            export([node], filename=filename, silent=True)
+            export([node], filename=filename)
 
         self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
         self.assertFalse(os.path.exists(filename), msg='The archive file should not exist')
@@ -292,16 +292,16 @@ class TestSpecificImport(AiidaTestCase):
             'zip archive': os.path.join(temp_dir, 'export.zip')
         }
 
-        export_tree([node], folder=Folder(archive_variants['archive folder']), silent=True)
-        export([node], filename=archive_variants['tar archive'], file_format='tar.gz', silent=True)
-        export([node], filename=archive_variants['zip archive'], file_format='zip', silent=True)
+        export_tree([node], folder=Folder(archive_variants['archive folder']))
+        export([node], filename=archive_variants['tar archive'], file_format='tar.gz')
+        export([node], filename=archive_variants['zip archive'], file_format='zip')
 
         for variant, filename in archive_variants.items():
             self.reset_database()
             node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
             self.assertEqual(node_count, 0, msg=f'After DB reset {node_count} Dict Nodes was (wrongly) found')
 
-            import_data(filename, silent=True)
+            import_data(filename)
             builder = orm.QueryBuilder().append(orm.Dict, project='uuid')
             imported_node_count = builder.count()
             self.assertEqual(

@@ -11,7 +11,6 @@
 """Provides export functionalities."""
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
 import logging
 import os
 import tarfile
@@ -76,28 +75,10 @@ from aiida.tools.importexport.dbexport.utils import (
 __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
 
-@dataclass
-class ExportReport:
-    """Class for storing data about the export process."""
-    # time in seconds
-    time_collect_start: float
-    time_collect_stop: float
-    # skipped if no data to write
-    time_write_start: Optional[float] = None
-    time_write_stop: Optional[float] = None
-    # additional data returned  by the writer
-    writer_data: Optional[Dict[str, Any]] = None
-
-    @property
-    def total_time(self) -> float:
-        """Return total time taken in seconds."""
-        return (self.time_write_stop or self.time_collect_stop) - self.time_collect_start
-
-
 def export(
     entities: Optional[Iterable[Any]] = None,
     filename: Optional[str] = None,
-    file_format: Union[str, ArchiveWriterAbstract] = ExportFileFormat.ZIP,
+    file_format: Union[str, Type[ArchiveWriterAbstract]] = ExportFileFormat.ZIP,
     overwrite: bool = False,
     silent: Optional[bool] = None,
     use_compression: bool = True,
@@ -108,7 +89,7 @@ def export(
     writer_init: Optional[Dict[str, Any]] = None,
     batch_size: int = 100,
     **traversal_rules: bool,
-) -> ExportReport:
+) -> ArchiveWriterAbstract:
     """Export AiiDA data to an archive file.
 
     Note, the logging level and progress reporter should be set externally, for example::
@@ -173,6 +154,8 @@ def export(
     :raises `~aiida.common.exceptions.LicensingException`:
         if any node is licensed under forbidden license.
     """
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+
     # Backwards-compatibility
     entities = cast(
         Iterable[Any],
@@ -248,14 +231,14 @@ def export(
     all_fields_info, unique_identifiers = get_all_fields_info()
     entities_starting_set, given_node_entry_ids = _get_starting_node_ids(entities)
 
-    # Iteratively explore the AiiDA graph to find further nodes that should also be exported
-    with get_progress_reporter()(desc='Traversing provenance via links ...', total=1) as progress:
-        traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **traversal_rules)
-        progress.update()
-    node_ids_to_be_exported = traverse_output['nodes']
-
     # Initialize the writer
     with writer as writer_context:
+
+        # Iteratively explore the AiiDA graph to find further nodes that should also be exported
+        with get_progress_reporter()(desc='Traversing provenance via links ...', total=1) as progress:
+            traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **traversal_rules)
+            progress.update()
+        node_ids_to_be_exported = traverse_output['nodes']
 
         EXPORT_LOGGER.debug('WRITING METADATA...')
 
@@ -276,6 +259,7 @@ def export(
         )
 
         # Create a mapping of node PK to UUID.
+        node_pk_2_uuid_mapping: Dict[int, str] = {}
         if node_ids_to_be_exported:
             qbuilder = orm.QueryBuilder().append(
                 orm.Node,
@@ -284,9 +268,7 @@ def export(
                     'in': node_ids_to_be_exported
                 }},
             )
-            node_pk_2_uuid_mapping: Dict[int, str] = dict(qbuilder.all(batch_size=batch_size))
-        else:
-            node_pk_2_uuid_mapping: Dict[int, str] = {}
+            node_pk_2_uuid_mapping = dict(qbuilder.all(batch_size=batch_size))
 
         # check that no nodes are being exported with incorrect licensing
         _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
@@ -323,8 +305,8 @@ def export(
                 batch_size=batch_size
             )
         else:
+            exported_entity_pks = defaultdict(set)
             EXPORT_LOGGER.info('No entities were found to export')
-            return
 
         # write mappings of groups to the nodes they contain
         if exported_entity_pks[GROUP_ENTITY_NAME]:
@@ -349,7 +331,11 @@ def export(
     # summarize export
     export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())
     if exported_entity_pks:
-        EXPORT_LOGGER.info('Exported Entities:\n  - ' + export_summary)
+        EXPORT_LOGGER.info('Exported Entities:\n  - ' + export_summary + '\n')
+    # TODO
+    # EXPORT_LOGGER.info('Writer Information:\n %s', writer.export_info)
+
+    return writer
 
 
 def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[str]], Set[int]]:
@@ -619,13 +605,13 @@ def _write_entity_data(
     return exported_entity_pks
 
 
-def _write_group_mappings(*, group_pks: List[int], batch_size: int, writer: ArchiveWriterAbstract):
+def _write_group_mappings(*, group_pks: Set[int], batch_size: int, writer: ArchiveWriterAbstract):
     """Query for node UUIDs in exported groups, and write these these mappings to the archive file."""
     group_uuid_query = orm.QueryBuilder().append(
         orm.Group,
         filters={
             'id': {
-                'in': group_pks
+                'in': list(group_pks)
             }
         },
         project='uuid',
@@ -641,7 +627,7 @@ def _write_group_mappings(*, group_pks: List[int], batch_size: int, writer: Arch
 
 
 def _write_node_repositories(
-    *, node_pks: List[str], node_pk_2_uuid_mapping: Dict[int, str], writer: ArchiveWriterAbstract
+    *, node_pks: Set[int], node_pk_2_uuid_mapping: Dict[int, str], writer: ArchiveWriterAbstract
 ):
     """Write all exported node repositories to the archive file."""
     with get_progress_reporter()(total=len(node_pks), desc='Exporting node repositories: ') as progress:
@@ -748,18 +734,14 @@ def export_zip(
         'export_zip function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
         AiidaDeprecationWarning
     )  # pylint: disable=no-member
-    report = export(
+    writer = export(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.ZIP,
         use_compression=use_compression,
         **kwargs,
     )
-    if report.time_write_stop is not None:
-        return (report.time_collect_start, report.time_write_stop)
-
-    # there was no data to write
-    return (report.time_collect_start, report.time_collect_stop)
+    return writer.export_info['writer_entered'], writer.export_info['writer_exited']
 
 
 def export_tar(
@@ -782,18 +764,14 @@ def export_tar(
         'export_tar function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
         AiidaDeprecationWarning
     )  # pylint: disable=no-member
-    report = export(
+    writer = export(
         entities=entities,
         filename=filename,
         file_format=ExportFileFormat.TAR_GZIPPED,
         **kwargs,
     )
 
-    if report.writer_data is not None:
-        return (
-            report.time_collect_start, report.time_write_stop, report.writer_data['compression_time_start'],
-            report.writer_data['compression_time_stop']
-        )  # type: ignore
-
-    # there was no data to write
-    return (report.time_collect_start, report.time_collect_stop, report.time_collect_stop, report.time_collect_stop)
+    return (
+        writer.export_info['writer_entered'], writer.export_info['writer_exited'],
+        writer.export_info['compression_time_start'], writer.export_info['compression_time_stop']
+    )

@@ -261,7 +261,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
             'unique_identifiers': data.unique_identifiers,
             'export_parameters': {
                 'graph_traversal_rules': data.graph_traversal_rules,
-                'entities_starting_set': list(data.entities_starting_set),
+                'entities_starting_set': data.entities_starting_set,
                 'include_comments': data.include_comments,
                 'include_logs': data.include_logs,
             },
@@ -347,7 +347,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
             'unique_identifiers': data.unique_identifiers,
             'export_parameters': {
                 'graph_traversal_rules': data.graph_traversal_rules,
-                'entities_starting_set': list(data.entities_starting_set),
+                'entities_starting_set': data.entities_starting_set,
                 'include_comments': data.include_comments,
                 'include_logs': data.include_logs,
             },
@@ -429,7 +429,7 @@ class WriterJsonFolder(ArchiveWriterAbstract):
             'unique_identifiers': data.unique_identifiers,
             'export_parameters': {
                 'graph_traversal_rules': data.graph_traversal_rules,
-                'entities_starting_set': list(data.entities_starting_set),
+                'entities_starting_set': data.entities_starting_set,
                 'include_comments': data.include_comments,
                 'include_logs': data.include_logs,
             },

@@ -47,7 +47,7 @@ class ArchiveMetadata:
     # optional data
     graph_traversal_rules: Optional[Dict[str, bool]] = dataclasses.field(default=None)
     # Entity type -> UUID list
-    entities_starting_set: Optional[Dict[str, Set[str]]] = dataclasses.field(default=None)
+    entities_starting_set: Optional[Dict[str, List[str]]] = dataclasses.field(default=None)
     include_comments: Optional[bool] = dataclasses.field(default=None)
     include_logs: Optional[bool] = dataclasses.field(default=None)
     # list of migration event notifications

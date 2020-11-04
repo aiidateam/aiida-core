@@ -12,7 +12,7 @@
 import warnings
 
 from aiida.orm import QueryBuilder, ProcessNode
-from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT, override_log_formatter
+from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
 from aiida.common.warnings import AiidaDeprecationWarning
 
 from aiida.tools.importexport.common import exceptions

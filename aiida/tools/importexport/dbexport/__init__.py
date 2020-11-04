@@ -250,9 +250,7 @@ def export(
                 all_fields_info=all_fields_info,
                 graph_traversal_rules=traverse_output['rules'],
                 # Turn sets into lists to be able to export them as JSON metadata.
-                entities_starting_set={
-                    entity: list(entity_set) for entity, entity_set in entities_starting_set.items()
-                },
+                entities_starting_set=entities_starting_set,
                 include_comments=include_comments,
                 include_logs=include_logs,
             )

@@ -102,7 +102,9 @@ AiiDA has also implemented data classes for two basic Python iterables: :py:clas
 
   In [1]: l = List(list=[1, 'a', False])
 
-Note the use of the keyword argument ``list``, this is required for the constructor of the :py:class:`~aiida.orm.nodes.data.list.List` class. You can also store lists or dictionaries within the iterable, at any depth level. For example, you can create a dictionary where a value is a list of dictionaries:
+Note the use of the keyword argument ``list``, this is required for the constructor of the :py:class:`~aiida.orm.nodes.data.list.List` class.
+You can also store lists or dictionaries within the iterable, at any depth level.
+For example, you can create a dictionary where a value is a list of dictionaries:
 
 .. code-block:: ipython
 
@@ -154,7 +156,7 @@ Each array is assigned to a name specified by the user using the :py:meth:`~aiid
 
 .. code-block:: ipython
 
-  In [1]: SinglefileData = DataFactory('singlefile'); import numpy as np
+  In [1]: ArrayData = DataFactory('array'); import numpy as np
 
   In [2]: array = ArrayData()
 
@@ -291,7 +293,7 @@ The content can once again be shown using the :py:meth:`~aiida.orm.nodes.node.No
  In [8]: folder.get_object_content('subdir/file3.txt')
  Out[8]: 'File 3 content\n'
 
-Since the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node is simply a collection of files, it simply stores these files in the repository
+Since the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node is simply a collection of files, it simply stores these files in the repository.
 
 .. _topics:data_types:core:remote:
 
@@ -323,6 +325,11 @@ To see the contents of a subdirectory, pass the relative path to the :py:meth:`~
 
   In [5]: remote.listdir('subdir')
   Out[5]: ['file3.txt', 'module.py']
+
+.. warning::
+
+  Using the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method, or any method that retrieves information from the remote computer, opens a connection to the remote computer using its transport type.
+  Their use is strongly discouraged when writing scripts and/or workflows.
 
 .. todo::
 
@@ -423,12 +430,9 @@ Exporting
 
 The following export formats are available for :py:class:`~aiida.orm.nodes.data.structure.StructureData`:
 
-* ``xsf`` (format supported by e.g. XCrySDen and other visualization software;
-  supports periodic cells)
-* ``xyz`` (classical xyz format, does not typically support periodic cells (even if
-  the cell is indicated in the comment line)
-* ``cif`` (export to CIF format, without symmetry reduction, i.e. always storing the
-  structure as P1 symmetry)
+* ``xsf`` (format supported by e.g. XCrySDen and other visualization software; supports periodic cells)
+* ``xyz`` (classical xyz format, does not typically support periodic cells (even if the cell is indicated in the comment line)
+* ``cif`` (export to CIF format, without symmetry reduction, i.e. always storing the structure as P1 symmetry)
 
 The node can be exported using the verdi CLI, for example:
 
@@ -454,6 +458,8 @@ If you have a list of :py:class:`~aiida.orm.nodes.data.structure.StructureData` 
 
   In [2]: trajectory = TrajectoryData(structure_list)
 
+Note that contrary with the :py:class:`~aiida.orm.nodes.data.structure.StructureData` data type, the cell and atomic positions are stored a ``numpy`` array in the repository and not in the database.
+
 Exporting
 ^^^^^^^^^
 
@@ -468,7 +474,9 @@ The following export formats are available:
 
 .. todo::
 
-  Think of more example use cases.
+  Think of more example use cases, see `#4529`_.
+
+.. _#4529: https://github.com/aiidateam/aiida-core/issues/4529
 
 .. _topics:data_types:materials:upf:
 
@@ -705,7 +713,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
 
   .. code-block:: python
 
-      bands_spins = [bands, bands-0.3] # to distinguish the bands of different spins we substitute 0.3 from the second band structure
+      bands_spins = [bands, bands-0.3] # to distinguish the bands of different spins we subtract 0.3 from the second band structure
       bands_data.set_bands(bands_spins, units='eV')
       bands_data.show_mpl()
 

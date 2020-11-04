@@ -30,11 +30,7 @@ from aiida.tools.importexport.common.config import (
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.archive.zip_path import ZipPath
 
-__all__ = (
-    'ArchiveWriterAbstract',
-    'get_writer',
-    'WriterJsonZip',
-)  #'WriterJsonTar', 'WriterJsonFolder')
+__all__ = ('ArchiveWriterAbstract', 'get_writer', 'WriterJsonZip', 'WriterJsonTar', 'WriterJsonFolder')
 
 
 def get_writer(file_format: str) -> Type['ArchiveWriterAbstract']:

@@ -15,5 +15,6 @@ from .common import *
 from .migrators import *
 from .readers import *
 from .writers import *
+from .zip_path import *
 
-__all__ = (migrators.__all__ + readers.__all__ + writers.__all__ + common.__all__)
+__all__ = (migrators.__all__ + readers.__all__ + writers.__all__ + common.__all__ + zip_path.__all__)

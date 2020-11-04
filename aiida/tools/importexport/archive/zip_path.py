@@ -15,6 +15,8 @@ from types import TracebackType
 from typing import cast, Iterable, Optional, Set, Type, Union
 import zipfile
 
+__all__ = ('ZipPath',)
+
 
 class ZipPath:
     """A wrapper around ``zipfile.ZipFile``, to provide an interface equivalent to ``pathlib.Path``

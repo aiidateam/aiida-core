@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 import tarfile
 from types import TracebackType
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
 import zipfile
 
 from aiida.common import json  # handles byte dumps

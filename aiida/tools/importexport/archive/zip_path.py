@@ -43,7 +43,7 @@ class ZipPath:
             (path / 'other_file.txt').copyfile('path/to/external_file.txt')
             (path / 'other_folder').copytree('path/to/external_folder', pattern='*')
 
-    Note with zipfile is not possible to overwrite existing files (it will raise a ``FileExistsError``).
+    Note that ``zipfile`` does not allow to overwrite existing files (it will raise a ``FileExistsError``).
 
     """
 

@@ -656,7 +656,7 @@ def export_tree(
     folder: Optional[Folder] = None,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
-    silent: bool = False,
+    silent: Optional[bool] = None,
     include_comments: bool = True,
     include_logs: bool = True,
     **traversal_rules: bool,

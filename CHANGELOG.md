@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.3
+
+### Bug fixes
+- RabbitMQ: update `topika` requirement to fix SSL connections and remove validation of `broker_parameters` from profile [[#4542]](https://github.com/aiidateam/aiida-core/pull/4542)
+- Fix `UnboundLocalError` in `aiida.cmdline.utils.edit_multiline_template`, which affected `verdi code/computer setup` [[#4436]](https://github.com/aiidateam/aiida-core/pull/4436)
+
 ## v1.4.2
 
 ### Critical bug fixes

@@ -63,7 +63,7 @@ This is the recommended method for users on shared systems and systems where the
 
         The verdi daemon(s) must be restarted after a system reboot.
 
-   .. hint::
+   .. tip::
 
        Do not start more daemons then there are physical processors on your system.
 

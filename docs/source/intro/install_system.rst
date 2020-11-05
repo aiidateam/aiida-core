@@ -132,7 +132,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
       #. Install RabbitMQ following the `instructions applicable to your system <https://www.rabbitmq.com/download.html>`__.
       #. Install PostgreSQL following the `instructions applicable to your system <https://www.postgresql.org/download/>`__.
 
-      .. hint::
+      .. tip::
 
           Alternatively use the :ref:`pure conda installation method <intro:get_started:conda-install>`.
 
@@ -153,7 +153,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
           (aiida) $ pip install aiida-core
           (aiida) $ reentry scan
 
-      .. hint::
+      .. tip::
 
           See the `venv documentation <https://docs.python.org/3/library/venv.html>`__ if the activation command fails.
           The exact command for activating a virtual environment differs slightly based on the used shell.
@@ -228,7 +228,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
         The verdi daemon(s) must be restarted after a system reboot.
 
-   .. hint::
+   .. tip::
 
        Do not start more daemons then there are physical processors on your system.
 

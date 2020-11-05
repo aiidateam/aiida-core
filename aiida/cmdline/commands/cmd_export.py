@@ -103,18 +103,18 @@ def inspect(archive, version, data, meta_data):
     show_default=True,
     help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).'
 )
-@click.option(
-    '-b',
-    '--batch-size',
-    default=1000,
-    type=int,
-    help='Batch database query results in sub-collections to reduce memory usage.'
-)
+# will only be useful when moving to a new archive format, that does not store all data in memory
+# @click.option(
+#     '-b',
+#     '--batch-size',
+#     default=1000,
+#     type=int,
+#     help='Batch database query results in sub-collections to reduce memory usage.'
+# )
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbosity,
-    batch_size
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbosity
 ):
     """
     Export subsets of the provenance graph to file for sharing.
@@ -154,7 +154,6 @@ def create(
         'include_comments': include_comments,
         'include_logs': include_logs,
         'overwrite': force,
-        'batch_size': batch_size,
     }
 
     if archive_format == 'zip':

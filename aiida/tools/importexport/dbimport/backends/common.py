@@ -35,7 +35,7 @@ def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReader
     if not uuids_to_create:
         return
     IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
-    with get_progress_reporter()(total=1, desc="Creating new node repos") as progress:
+    with get_progress_reporter()(total=1, desc='Creating new node repos') as progress:
 
         _callback = create_callback(progress)
 

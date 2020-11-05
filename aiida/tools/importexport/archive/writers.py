@@ -182,11 +182,12 @@ class ArchiveWriterAbstract(ABC):
         """
 
     @abstractmethod
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path]):
+    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
         """Write a node repository to the archive.
 
         :param uuid: The UUID of the node
         :param path: The path to the repository folder on disk
+        :param overwrite: Allow to overwrite existing path in archive
 
         """
 
@@ -236,11 +237,9 @@ class WriterJsonZip(ArchiveWriterAbstract):
             self._zippath.close()
             shutil.rmtree(self._temp_path)
             return
-        # write to file before copying into the zip file,
-        # so that we don't have to store the text in memory
-        with self._temp_path.joinpath('_data.json').open('wb') as handle:
+        # write data.json
+        with self._zippath.joinpath('data.json').open('wb') as handle:
             json.dump(self._data, handle)
-        self._zippath.joinpath('data.json').copyfile(self._temp_path / '_data.json')
         # close the zipfile to finalise write
         self._zippath.close()
         # move the compressed file to the final path
@@ -263,7 +262,8 @@ class WriterJsonZip(ArchiveWriterAbstract):
             },
             'conversion_info': data.conversion_info
         }
-        self._zippath.joinpath('metadata.json').write_text(json.dumps(metadata))
+        with self._zippath.joinpath('metadata.json').open('wb') as handle:
+            json.dump(metadata, handle)
 
     def write_link(self, data: Dict[str, str]):
         self._data['links_uuid'].append(data)
@@ -278,9 +278,9 @@ class WriterJsonZip(ArchiveWriterAbstract):
             self._data['node_extras'][pk] = fields.pop('extras')
         self._data['export_data'].setdefault(name, {})[pk] = fields
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path]):
+    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
         self.assert_within_context()
-        (self._zippath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).copytree(path)
+        (self._zippath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).copytree(path, check_exists=not overwrite)
 
 
 class WriterJsonTar(ArchiveWriterAbstract):
@@ -364,9 +364,12 @@ class WriterJsonTar(ArchiveWriterAbstract):
             self._data['node_extras'][pk] = fields.pop('extras')
         self._data['export_data'].setdefault(name, {})[pk] = fields
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path]):
+    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
         self.assert_within_context()
-        shutil.copytree(path, (self._folderpath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)))
+        dest_path = self._folderpath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)
+        if not overwrite and dest_path.exists():
+            raise FileExistsError(f'The path already exists: {dest_path}')
+        shutil.copytree(path, dest_path)
 
 
 class WriterJsonFolder(ArchiveWriterAbstract):
@@ -447,7 +450,7 @@ class WriterJsonFolder(ArchiveWriterAbstract):
             self._data['node_extras'][pk] = fields.pop('extras')
         self._data['export_data'].setdefault(name, {})[pk] = fields
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path]):
+    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
         self.assert_within_context()
         repo_folder = self._folder.get_subfolder(NODES_EXPORT_SUBFOLDER).get_subfolder(export_shard_uuid(uuid))
-        repo_folder.insert_path(src=os.path.abspath(path), dest_name='.')
+        repo_folder.insert_path(src=os.path.abspath(path), dest_name='.', overwrite=overwrite)

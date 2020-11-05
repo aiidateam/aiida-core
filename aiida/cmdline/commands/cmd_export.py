@@ -79,7 +79,9 @@ def inspect(archive, version, data, meta_data):
 @options.COMPUTERS()
 @options.GROUPS()
 @options.NODES()
-@options.ARCHIVE_FORMAT()
+@options.ARCHIVE_FORMAT(
+    type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz', 'null']),
+)
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
     '-v',
@@ -163,6 +165,8 @@ def create(
         kwargs.update({'use_compression': False})
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
+    elif archive_format == 'null':
+        export_format = 'null'
 
     if verbosity in ['DEBUG', 'INFO']:
         set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))

@@ -39,6 +39,7 @@ def get_writer(file_format: str) -> Type['ArchiveWriterAbstract']:
         ExportFileFormat.ZIP: WriterJsonZip,
         ExportFileFormat.TAR_GZIPPED: WriterJsonTar,
         'folder': WriterJsonFolder,
+        'null': WriterNull,
     }
 
     if file_format not in writers:
@@ -190,6 +191,39 @@ class ArchiveWriterAbstract(ABC):
         :param overwrite: Allow to overwrite existing path in archive
 
         """
+
+
+class WriterNull(ArchiveWriterAbstract):
+    """A null archive writer, which does not do anything."""
+
+    @property
+    def file_format_verbose(self) -> str:
+        return 'Null'
+
+    @property
+    def export_version(self) -> str:
+        return EXPORT_VERSION
+
+    def open(self):
+        pass
+
+    def close(self, excepted: bool):
+        pass
+
+    def write_metadata(self, data: ArchiveMetadata):
+        pass
+
+    def write_link(self, data: Dict[str, str]):
+        pass
+
+    def write_group_nodes(self, uuid: str, node_uuids: List[str]):
+        pass
+
+    def write_entity_data(self, name: str, pk: int, id_key: str, fields: Dict[str, Any]):
+        pass
+
+    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
+        pass
 
 
 class WriterJsonZip(ArchiveWriterAbstract):

@@ -20,7 +20,7 @@ click-config-file==0.6.0
 click-spinner==0.1.8
 configobj==5.0.6
 coverage==4.5.4
-cryptography==2.8
+cryptography==3.2
 cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.6.0

@@ -7,23 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Test the AiiDA iPython magics."""
+from IPython.testing.globalipapp import get_ipython
+from aiida.tools.ipython.ipython_magics import register_ipython_extension
+
+
+def test_ipython_magics():
+    """Test that the %aiida magic can be loaded and adds the QueryBuilder and Node variables."""
+    ipy = get_ipython()
+    register_ipython_extension(ipy)
+
+    cell = """
+%aiida
+qb=QueryBuilder()
+qb.append(Node)
 """
-File to be executed by IPython in order to register the line magic %aiida
+    result = ipy.run_cell(cell)
 
-This file can be put into the startup folder in order to have the line
-magic available at startup.
-The start up folder is usually at ``.ipython/profile_default/startup/``
-"""
-
-# DOCUMENTATION MARKER
-if __name__ == '__main__':
-
-    try:
-        import aiida
-        del aiida
-    except ImportError:
-        # AiiDA is not installed in this Python environment
-        pass
-    else:
-        from aiida.tools.ipython.ipython_magics import register_ipython_extension
-        register_ipython_extension()
+    assert result.success

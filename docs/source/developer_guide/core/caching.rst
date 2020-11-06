@@ -4,20 +4,6 @@ Caching: implementation details
 This section covers some details of the caching mechanism which are not discussed in the :ref:`user guide <topics:provenance:caching>`.
 If you are developing plugins and want to modify the caching behavior of your classes, we recommend you read :ref:`this section <topics:provenance:caching:hashing>` first.
 
-.. _devel_controlling_hashing:
-
-Controlling hashing
--------------------
-
-Below are some methods you can use to control how the hashes of calculation and data classes are computed:
-
-* To ignore specific attributes, a :py:class:`~aiida.orm.nodes.Node` subclass can have a ``_hash_ignored_attributes`` attribute.
-  This is a list of attribute names, which are ignored when creating the hash.
-* For calculations, the ``_hash_ignored_inputs`` attribute lists inputs that should be ignored when creating the hash.
-* To add things which should be considered in the hash, you can override the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method. Note that doing so overrides the behavior described above, so you should make sure to use the ``super()`` method.
-* Pass a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`.
-  These are passed on to :meth:`~aiida.common.hashing.make_hash`.
-
 .. _devel_controlling_caching:
 
 Controlling caching
@@ -46,13 +32,3 @@ This is enforced on two levels:
   This means that a :class:`~aiida.orm.nodes.process.workflow.workflow.WorkflowNode` will not be cached.
 * The ``_store_from_cache`` method, which is used to "clone" an existing node, will raise an error if the existing node has any ``RETURN`` links.
   This extra safe-guard prevents cases where a user might incorrectly override the ``_cachable`` property on a ``WorkflowNode`` subclass.
-
-Design guidelines
------------------
-
-When modifying the hashing/caching behaviour of your classes, keep in mind that cache matches can go wrong in two ways:
-
-* False negatives, where two nodes *should* have the same hash but do not
-* False positives, where two different nodes get the same hash by mistake
-
-False negatives are **highly preferrable** because they only increase the runtime of your calculations, while false positives can lead to wrong results.

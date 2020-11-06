@@ -40,16 +40,6 @@ BROKER_DEFAULTS = AttributeDict({
     'heartbeat': 600,
 })
 
-BROKER_VALID_PARAMETERS = [
-    'heartbeat',  # heartbeat timeout in seconds
-    'cafile',  # string containing path to ca certificate file
-    'capath',  # string containing path to ca certificates
-    'cadata',  # base64 encoded ca certificate data
-    'keyfile',  # string containing path to key file
-    'certfile',  # string containing path to certificate file
-    'no_verify_ssl',  # boolean disables certificates validation
-]
-
 
 def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, virtual_host=None, **kwargs):
     """Return the URL to connect to RabbitMQ.
@@ -66,13 +56,10 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
     :param host: the hostname of the RabbitMQ server.
     :param port: the port of the RabbitMQ server.
     :param virtual_host: the virtual host to connect to.
+    :param kwargs: remaining keyword arguments that will be encoded as query parameters.
     :returns: the connection URL string.
     """
     from urllib.parse import urlencode, urlunparse
-
-    invalid = set(kwargs.keys()).difference(BROKER_VALID_PARAMETERS)
-    if invalid:
-        raise ValueError('invalid URL parameters specified in the keyword arguments: {}'.format(', '.join(invalid)))
 
     if 'heartbeat' not in kwargs:
         kwargs['heartbeat'] = BROKER_DEFAULTS.heartbeat
@@ -186,14 +173,14 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         try:
             node = load_node(pk=pid)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
             # In this case, the process node corresponding to the process id, cannot be resolved uniquely or does not
             # exist. The latter being the most common case, where someone deleted the node, before the process was
             # properly terminated. Since the node is never coming back and so the process will never be able to continue
             # we raise `Return` instead of `TaskRejected` because the latter would cause the task to be resent and start
             # to ping-pong between RabbitMQ and the daemon workers.
             LOGGER.exception('Cannot continue process<%d>', pid)
-            raise gen.Return(False)
+            raise gen.Return(False) from exception
 
         if node.is_terminated:
 

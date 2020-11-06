@@ -168,6 +168,13 @@ The following parameters can be configured:
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
 | Virtual host | ``--broker-virtual-host`` | ``''``        | Optional virtual host. Should not contain the leading forward slash, this will be added automatically by AiiDA.         |
 +--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+| Parameters   | not available             |  n.a.         | These are additional broker parameters that are typically encoded as URL parameters, for example, to specify SSL        |
+|              |                           |               | parameters such as the filepath to the certificate that is to be used. The parameters are currently not definable       |
+|              |                           |               | through the CLI but have to be added manually in the ``config.json``. A key ``broker_parameters`` should be added that  |
+|              |                           |               | is a dictionary, which can contain fields: ``cafile``, ``capath``, ``cadata``, ``certfile``, ``keyfile`` and            |
+|              |                           |               | ``no_verify_ssl``.                                                                                                      |
++--------------+---------------------------+---------------+-------------------------------------------------------------------------------------------------------------------------+
+
 
 
 verdi setup

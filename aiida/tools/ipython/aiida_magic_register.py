@@ -15,6 +15,7 @@ magic available at startup.
 The start up folder is usually at ``.ipython/profile_default/startup/``
 """
 
+# DOCUMENTATION MARKER
 if __name__ == '__main__':
 
     try:

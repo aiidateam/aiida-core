@@ -11,7 +11,7 @@
 
 The implementation is partially based on back-porting ``zipfile.Path`` (new in python 3.8)
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 import itertools
 from pathlib import Path
 import posixpath
@@ -72,6 +72,9 @@ class ZipPath:
         if posixpath.isabs(at):
             raise ValueError(f"'at' cannot be an absolute path: {at}")
         assert not any(p == '..' for p in at.split(posixpath.sep)), ("'at' should not contain any '..'")
+
+        # Note ``zipfile.ZipInfo.filename`` of directories always end `/`
+        # but we store without, to e.g. correctly compute parent/file names
         self._at = at.rstrip('/')
 
         if isinstance(path, (str, Path)):
@@ -114,10 +117,20 @@ class ZipPath:
         """Iterate through all file and directory paths in the zip file.
 
         Note: this is necessary, since the zipfile does not strictly store all directories in the namelist.
+
+        It is cached on the zipfile instance if it is in read mode ('r'), since then the name list cannot change.
+
         """
+        read_mode = (self._zipfile.mode == 'r')  # type: ignore
+        if read_mode:
+            with suppress(AttributeError):
+                return self._zipfile.__all_at  # type: ignore # pylint: disable=protected-access
         names = self._zipfile.namelist()
         parents = itertools.chain.from_iterable(map(_parents, names))
-        return set(p.rstrip('/') for p in itertools.chain([''], names, parents))
+        all_set = set(p.rstrip('/') for p in itertools.chain([''], names, parents))
+        if read_mode:
+            self._zipfile.__all_at = all_set  # type: ignore # pylint: disable=protected-access
+        return all_set
 
     def close(self):
         """Close the zipfile."""
@@ -162,17 +175,13 @@ class ZipPath:
         """Whether this path exists."""
         if self.at == '':
             return True
-        try:
+        with suppress(KeyError):
             self._zipfile.getinfo(self.at)
             return True
-        except KeyError:
-            pass
-        try:
+        with suppress(KeyError):
             self._zipfile.getinfo(self.at + '/')
             return True
-        except KeyError:
-            pass
-        # note, we could just check this, but it takes time/memory to construct
+        # note, we could just check this, but it can takes time/memory to construct
         return self.at in self._all_at_set()
 
     def joinpath(self, *paths) -> 'ZipPath':

@@ -288,8 +288,8 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
         remote_abs_path: "/path/to/code/pw.x"
         computer: "localhost"
         prepend_text: |
-        module load module1
-        module load module2
+           module load module1
+           module load module2
         append_text: " "
 
     The list of the keys for the ``yaml`` file is given by the available options of the ``code setup`` command:

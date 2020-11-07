@@ -11,15 +11,19 @@
 
 The implementation is partially based on back-porting ``zipfile.Path`` (new in python 3.8)
 """
+from collections.abc import Sequence, MutableMapping
 from contextlib import contextmanager, suppress
+import io
 import itertools
+import os
 from pathlib import Path
 import posixpath
+import threading
 from types import TracebackType
-from typing import cast, Iterable, Optional, Set, Type, Union
+from typing import Any, cast, Dict, IO, Iterable, List, Optional, Set, Type, Union
 import zipfile
 
-__all__ = ('ZipPath',)
+__all__ = ('ZipPath', 'ZipFileExtra', 'FilteredZipInfo', 'StopZipIndexRead')
 
 
 class ZipPath:
@@ -56,7 +60,8 @@ class ZipPath:
         mode: str = 'r',
         at: str = '',  # pylint: disable=invalid-name
         allow_zip64: bool = True,
-        compression: int = zipfile.ZIP_DEFLATED
+        compression: int = zipfile.ZIP_DEFLATED,
+        name_to_info: Optional[Dict[str, zipfile.ZipInfo]] = None
     ):
         """Initialise a zip path item.
 
@@ -79,7 +84,9 @@ class ZipPath:
 
         if isinstance(path, (str, Path)):
             self._filepath = Path(path)
-            self._zipfile = zipfile.ZipFile(path, mode=mode, compression=compression, allowZip64=allow_zip64)
+            self._zipfile = ZipFileExtra(
+                path, mode=mode, compression=compression, allowZip64=allow_zip64, name_to_info=name_to_info
+            )
         else:
             self._filepath = path._filepath
             self._zipfile = path._zipfile
@@ -129,7 +136,7 @@ class ZipPath:
         parents = itertools.chain.from_iterable(map(_parents, names))
         all_set = set(p.rstrip('/') for p in itertools.chain([''], names, parents))
         if read_mode:
-            self._zipfile.__all_at = all_set  # type: ignore # pylint: disable=protected-access
+            self._zipfile.__all_at = all_set  # type: ignore # pylint: disable=protected-access,attribute-defined-outside-init
         return all_set
 
     def close(self):
@@ -332,3 +339,215 @@ def _ancestry(path: str) -> Iterable[str]:
     while path and path != posixpath.sep:
         yield path
         path, _ = posixpath.split(path)
+
+
+class FileList(Sequence):
+    """A list of ``zipfile.ZipInfo`` which mirrors the ``zipfile.ZipFile.NameToInfo`` mapping.
+
+    For indexing, assumes that ``NameToInfo`` is an ordered dict.
+    """
+
+    def __init__(self, name_to_info: Dict[str, zipfile.ZipInfo]):
+        self._name_to_info = name_to_info
+
+    def __getitem__(self, item):
+        key = list(self._name_to_info)[item]
+        return self._name_to_info[key]
+
+    def __len__(self):
+        return self._name_to_info.__len__()
+
+    def __contains__(self, item: Any):
+        if not isinstance(item, zipfile.ZipInfo):
+            return False
+        key = item.filename
+        return key in self._name_to_info
+
+    def __iter__(self):
+        for value in self._name_to_info.values():
+            yield value
+
+    def __reversed__(self):
+        return reversed(list(self._name_to_info.values()))
+
+    def append(self, item: zipfile.ZipInfo):
+        """Add a ``ZipInfo`` object."""
+        assert isinstance(item, zipfile.ZipInfo)
+        assert item.filename not in self._name_to_info, 'cannot append an existing ZipInfo'
+        self._name_to_info[item.filename] = item
+
+
+class StopZipIndexRead(Exception):
+    """An exception to signal that the reading of the index should be stopped."""
+
+
+class FilteredZipInfo(MutableMapping):
+    """A mapping which only stores pre-defined ``ZipInfo``s.
+
+    Once all required filenames are set, ``__setitem__`` will raise ``StopZipIndexRead``.
+
+    """
+
+    def __init__(self, filenames: Set[str]):
+        self._dict: Dict[str, zipfile.ZipInfo] = {}
+        self._filenames = set(filenames)
+
+    def __getitem__(self, name):
+        return self._dict.__getitem__(name)
+
+    def __setitem__(self, name, item):
+        if name in self._filenames:
+            self._dict.__setitem__(name, item)
+        if set(self._dict) == self._filenames:
+            raise StopZipIndexRead
+
+    def __delitem__(self, name):
+        self._dict.__delitem__(name)
+
+    def __iter__(self):
+        return self._dict.__iter__()
+
+    def __len__(self):
+        return self._dict.__len__()
+
+
+class ZipFileExtra(zipfile.ZipFile):
+    """A subclass of ``zipfile.ZipFile``, which allows for specifying the name_to_info mapping.
+
+    This mapping holds the zip file object index, which is fully generated on initiation.
+    An example of its use, is when reading zip files with large amounts of objects in a memory light manner::
+
+        import shelve
+        with shelve.open('name_to_info') as db:
+            zipfile = ZipFileExtra('path/to/file.zip', name_to_info=db)
+
+    Additionally, in read mode, the name_to_info object can raise a ``StopZipIndexRead`` on ``__setitem__``.
+    This will break the index generation and can be useful,
+    for example to efficiently find/read a single object in the zip file::
+
+        zipfile = ZipFileExtra('path/to/file.zip', name_to_info=FilteredZipInfo({'file.txt'}))
+        zipfile.read('file.txt')
+
+    """
+
+    def __init__(
+        self,
+        file: Union[str, Path, IO],
+        mode: str = 'r',
+        compression: int = zipfile.ZIP_STORED,
+        allowZip64: bool = True,
+        compresslevel: Optional[int] = None,
+        *,
+        strict_timestamps: bool = True,
+        name_to_info: Optional[MutableMapping] = None
+    ):
+        """Open the ZIP file with mode read 'r', write 'w', exclusive create 'x', or append 'a'.
+
+        :param file: The zip file to use
+        :param mode: The mode in which to open the zip file
+        :param compression: the ZIP compression method to use when writing the archive
+        :param allowZip64: If True, zipfile will create ZIP files that use the ZIP64 extensions,
+            when the zipfile is larger than 4 GiB
+        :param compresslevel: controls the compression level to use when writing files to the archive
+        :param strict_timestamps: when set to False, allows to zip files older than 1980-01-01
+
+        :param name_to_info: The dictionary for storing mappings of filename -> ``ZipInfo``,
+            if ``None``, defaults to ``{}``
+
+        """
+        # pylint: disable=super-init-not-called,invalid-name,too-many-branches,too-many-statements
+        if mode not in ('r', 'w', 'x', 'a'):
+            raise ValueError("ZipFile requires mode 'r', 'w', 'x', or 'a'")
+
+        zipfile._check_compression(compression)  # type: ignore
+
+        self._allowZip64: bool = allowZip64
+        self._didModify: bool = False
+        self.debug: int = 0  # Level of printing: 0 through 3
+        # Find file info given name
+        self.NameToInfo: Dict[str, zipfile.ZipInfo] = name_to_info if name_to_info is not None else {}  # type: ignore
+        # List of ZipInfo instances for archive
+        self.filelist: List[zipfile.ZipInfo] = FileList(self.NameToInfo)  # type: ignore
+        self.compression: int = compression  # Method of compression
+        self.compresslevel: Optional[int] = compresslevel
+        self.mode: str = mode
+        self.pwd: Optional[str] = None
+        self._comment: bytes = b''
+        self._strict_timestamps: bool = strict_timestamps
+
+        self.filename: str
+        self._filePassed: int
+        self.fp: IO
+
+        # Check if we were passed a file-like object
+        if isinstance(file, os.PathLike):
+            file = os.fspath(file)
+        if isinstance(file, str):
+            # No, it's a filename
+            self._filePassed = 0
+            self.filename = file
+            modeDict = {'r': 'rb', 'w': 'w+b', 'x': 'x+b', 'a': 'r+b', 'r+b': 'w+b', 'w+b': 'wb', 'x+b': 'xb'}
+            filemode = modeDict[mode]
+            while True:
+                try:
+                    self.fp = io.open(file, filemode)
+                except OSError:
+                    if filemode in modeDict:
+                        filemode = modeDict[filemode]
+                        continue
+                    raise
+                break
+        else:
+            self._filePassed = 1
+            self.fp = cast(IO, file)
+            self.filename = getattr(file, 'name', None)
+        self._fileRefCnt = 1
+        self._lock = threading.RLock()
+        self._seekable = True
+        self._writing = False
+
+        try:
+            if mode == 'r':
+                with suppress(StopZipIndexRead):
+                    self._RealGetContents()  # type: ignore
+            elif mode in ('w', 'x'):
+                # set the modified flag so central directory gets written
+                # even if no files are added to the archive
+                self._didModify = True
+                try:
+                    self.start_dir = self.fp.tell()
+                except (AttributeError, OSError):
+                    self.fp = zipfile._Tellable(self.fp)  # type: ignore
+                    self.start_dir = 0
+                    self._seekable = False
+                else:
+                    # Some file-like objects can provide tell() but not seek()
+                    try:
+                        self.fp.seek(self.start_dir)
+                    except (AttributeError, OSError):
+                        self._seekable = False
+            elif mode == 'a':
+                try:
+                    # See if file is a zip file
+                    self._RealGetContents()  # type: ignore
+                    # seek to start of directory and overwrite
+                    self.fp.seek(self.start_dir)
+                except zipfile.BadZipFile:
+                    # file is not a zip file, just append
+                    self.fp.seek(0, 2)
+
+                    # set the modified flag so central directory gets written
+                    # even if no files are added to the archive
+                    self._didModify = True
+                    self.start_dir = self.fp.tell()
+            else:
+                raise ValueError("Mode must be 'r', 'w', 'x', or 'a'")
+        except:
+            fp = self.fp
+            self.fp = None  # type: ignore
+            self._fpclose(fp)  # type: ignore
+            raise
+
+    def namelist(self):
+        """Return a list of file names in the archive."""
+        return list(self.NameToInfo)

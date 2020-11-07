@@ -12,6 +12,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 import os
 from pathlib import Path
+import shelve
 import shutil
 import time
 import tarfile
@@ -231,15 +232,20 @@ class WriterJsonZip(ArchiveWriterAbstract):
     which writes database data as a single JSON and repository data in a zipped folder system.
     """
 
-    def __init__(self, filepath: Union[str, Path], *, use_compression: bool = True, **kwargs):
+    def __init__(
+        self, filepath: Union[str, Path], *, use_compression: bool = True, cache_zipinfo: bool = True, **kwargs
+    ):
         """Initiate the writer.
 
         :param filepath: the path to the file to export to.
         :param use_compression: Whether or not to deflate the objects inside the zip file.
+        :param cache_zipinfo: Cache the zip file index on disk during the write.
+            This reduces the RAM usage of the process, but will make the process slower.
 
         """
         super().__init__(filepath)
         self._compression = zipfile.ZIP_DEFLATED if use_compression else zipfile.ZIP_STORED
+        self._cache_zipinfo = cache_zipinfo
 
     @property
     def file_format_verbose(self) -> str:
@@ -255,7 +261,13 @@ class WriterJsonZip(ArchiveWriterAbstract):
         # create a temporary folder in which to perform the write
         self._temp_path: Path = Path(tempfile.mkdtemp())
         # open a zipfile in in write mode to export to
-        self._zippath: ZipPath = ZipPath(self._temp_path / 'export', mode='w', compression=self._compression)
+        if self._cache_zipinfo:
+            self._zipinfo_cache = shelve.open(str(self._temp_path / 'zipinfo_cache'))
+        else:
+            self._zipinfo_cache = {}
+        self._zippath: ZipPath = ZipPath(
+            self._temp_path / 'export', mode='w', compression=self._compression, name_to_info=self._zipinfo_cache
+        )
         # setup data to store
         self._data: Dict[str, Any] = {
             'node_attributes': {},
@@ -276,6 +288,9 @@ class WriterJsonZip(ArchiveWriterAbstract):
             json.dump(self._data, handle)
         # close the zipfile to finalise write
         self._zippath.close()
+        if self._cache_zipinfo:
+            self._zipinfo_cache.close()
+        delattr(self, '_zipinfo_cache')
         # move the compressed file to the final path
         self._remove_filepath()
         shutil.move(str(self._zippath.filepath), str(self.filepath))

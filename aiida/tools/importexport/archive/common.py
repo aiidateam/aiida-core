@@ -21,6 +21,7 @@ import zipfile
 from aiida.common import json  # handles byte dumps
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
+from aiida.tools.importexport.archive.zip_path import ZipFileExtra, FilteredZipInfo
 
 __all__ = (
     'ArchiveMetadata', 'detect_archive_type', 'null_callback', 'read_file_in_zip', 'read_file_in_tar',
@@ -88,7 +89,8 @@ def read_file_in_zip(filepath: str, path: str) -> str:
 
     """
     try:
-        return zipfile.ZipFile(filepath, 'r', allowZip64=True).read(path).decode('utf8')
+        return ZipFileExtra(filepath, 'r', allowZip64=True,
+                            name_to_info=FilteredZipInfo({path})).read(path).decode('utf8')
     except zipfile.BadZipfile as error:
         raise CorruptArchive(f'The input file cannot be read: {error}')
     except KeyError:
@@ -104,14 +106,19 @@ def read_file_in_tar(filepath: str, path: str) -> str:
     """
     try:
         with tarfile.open(filepath, 'r:*', format=tarfile.PAX_FORMAT) as handle:
-            result = handle.extractfile(path)
-            if result is None:
+            tarinfo = None
+            while True:
+                tarinfo = handle.next()
+                if tarinfo is None or tarinfo.name == path:
+                    break
+            if tarinfo is None:
                 raise CorruptArchive(f'required file `{path}` is not included')
-            output = result.read()
+            output = handle.extractfile(tarinfo).read()  # type: ignore
             if isinstance(output, bytes):
                 return output.decode('utf8')
+            return output
     except tarfile.ReadError:
-        raise ValueError('The input file format is not valid (not a tar file)')
+        raise CorruptArchive('The input file format is not valid (not a tar file)')
     except (KeyError, AttributeError):
         raise CorruptArchive(f'required file `{path}` is not included')
 

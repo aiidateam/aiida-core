@@ -25,10 +25,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install dm-script dependencies
       run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
@@ -52,6 +52,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+      # Set to Python version 3.8, as the installation with 3.9 still takes
+      # significantly longer to install.
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
@@ -89,8 +91,9 @@ jobs:
     - name: Setup Conda
       uses: s-weigand/setup-conda@v1
       with:
-        update-conda: true
-        python-version: 3.8
+        python-version: 3.9
+        update-conda: false
+        conda-channels: conda-forge
     - run: conda --version
     - run: python --version
     - run: which python
@@ -110,12 +113,12 @@ jobs:
 
     needs: [install-with-pip, install-with-conda]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -198,10 +201,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install dm-script dependencies
       run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit

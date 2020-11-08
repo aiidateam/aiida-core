@@ -76,17 +76,18 @@ envlist = py37-django
 [testenv]
 usedevelop=True
 
-[testenv:py{36,37,38}-{django,sqla}]
+[testenv:py{36,37,38,39}-{django,sqla}]
 deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
+    py39: -rrequirements/requirements-py-3.9.txt
 setenv =
     django: AIIDA_TEST_BACKEND = django
     sqla: AIIDA_TEST_BACKEND = sqlalchemy
 commands = pytest {posargs}
 
-[testenv:py{36,37,38}-docs-{clean,update}]
+[testenv:py{36,37,38,39}-docs-{clean,update}]
 description =
     clean: Build the documentation (remove any existing build)
     update: Build the documentation (modify any existing build)
@@ -94,6 +95,7 @@ deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
+    py38: -rrequirements/requirements-py-3.9.txt
 passenv = RUN_APIDOC
 setenv =
     update: RUN_APIDOC = False
@@ -103,13 +105,14 @@ commands =
     clean: make clean
     make debug
 
-[testenv:py{36,37,38}-docs-live]
+[testenv:py{36,37,38,39}-docs-live]
 # tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
+    py39: -rrequirements/requirements-py-3.9.txt
     sphinx-autobuild
 setenv =
     RUN_APIDOC = False
@@ -119,7 +122,7 @@ commands =
         --port 0 --open-browser \
         -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
 
-[testenv:py{36,37,38}-pre-commit]
+[testenv:py{36,37,38,39}-pre-commit]
 description = Run the pre-commit checks
 extras = all
 commands = pre-commit run {posargs}

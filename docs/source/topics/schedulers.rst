@@ -7,7 +7,7 @@ Batch Job Schedulers
 Batch job schedulers manage the job queues and execution on a compute resource.
 AiiDA ships with plugins for a range of schedulers, and this section describes the interface of these plugins.
 
-See :ref:`this how-to <how-to:plugin-codes:scheduler>` for adding support for custom schedulers.
+Follow :ref:`these instructions <topics:schedulers:develop_plugin>` to add support for a custom scheduler.
 
 PBSPro
 ------
@@ -213,6 +213,37 @@ And setting the fields using the ``metadata.options`` input dictionary of the |C
             }
         }
     }
+
+.. _topics:schedulers:develop_plugin:
+
+Developing a plugin
+-------------------
+
+A scheduler plugin allows AiiDA to communicate with a specific type of scheduler.
+The plugin should subclass the :class:`~aiida.schedulers.scheduler.Scheduler` class and implement a number of methods, that will instruct how certain key commands are to be executed, such as submitting a new job or requesting the current active jobs.
+To get you started, you can download :download:`this template <include/scheduler_template.py>` and implement the following methods:
+
+    1) ``_get_joblist_command``: returns the command to report a full information on existing jobs.
+    2) ``_get_detailed_job_info_command``: returns the command to get the detailed information on  a job, even after the job has finished.
+    3) ``_get_submit_script_header``: return the submit script header.
+    4) ``_get_submit_command``: return the string to submit a given script.
+    5) ``_parse_joblist_output``: parse the queue output string, as returned by executing the command returned by `_get_joblist_command`.
+    6) ``_parse_submit_output``: parse the output of the submit command, as returned by executing the command returned by `_get_submit_command`.
+    7) ``_get_kill_command``: return the command to kill the job with specified jobid.
+    8) ``_parse_kill_output``: parse the output of the kill command.
+    9) ``parse_output``: parse the output of the scheduler.
+
+All these methods *have* to be implemented, except for ``_get_detailed_job_info_command`` and ``parse_output``, which are optional.
+In addition to these methods, the ``_job_resource_class`` class attribute needs to be set to a subclass :class:`~aiida.schedulers.datastructures.JobResource`.
+For schedulers that work like SLURM, Torque and PBS, one can most likely simply reuse the :class:`~aiida.schedulers.datastructures.NodeNumberJobResource` class, that ships with ``aiida-core``.
+Schedulers that work like LSF and SGE, may be able to reuse :class:`~aiida.schedulers.datastructures.ParEnvJobResource` instead.
+If neither of these work, one can implement a custom subclass, a template for which, the class called ``TemplateJobResource``, is already included in the template file.
+
+
+.. note::
+
+    To inform AiiDA about your new scheduler plugin you must register an entry point in the ``aiida.schedulers`` entry point group.
+    Refer to :ref:`the section on how to register plugins <how-to:plugins-develop:entrypoints>` for instructions.
 
 
 .. |NodeNumberJobResource| replace:: :py:class:`~aiida.schedulers.datastructures.NodeNumberJobResource`

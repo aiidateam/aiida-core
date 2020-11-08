@@ -9,14 +9,14 @@
 ###########################################################################
 # pylint: disable=too-many-branches
 """Utility functions and classes to interact with AiiDA export archives."""
-
 import os
 import sys
 import tarfile
 import zipfile
+import warnings
 
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
-
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
 
@@ -60,7 +60,10 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, check_files=('data.
     :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
         incorrect formats
     """
-    # pylint: disable=fixme
+    warnings.warn(
+        'extract_zip function is deprecated and will be removed in AiiDA v2.0.0, use `safe_extract_zip` instead',
+        AiidaDeprecationWarning
+    )  # pylint: disable=no-member
 
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
@@ -90,7 +93,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, check_files=('data.
                     progress.update()
 
                     # Check that we are only exporting nodes within the subfolder!
-                    # TODO: better check such that there are no .. in the
+                    # better check such that there are no .. in the
                     # path; use probably the folder limit checks
                     if membername in check_files:
                         data_files.add(membername)
@@ -131,7 +134,10 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, check_files=('data.
     :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the archive misses files or files have
         incorrect formats
     """
-    # pylint: disable=fixme
+    warnings.warn(
+        'extract_tar function is deprecated and will be removed in AiiDA v2.0.0, use `safe_extract_tar` instead',
+        AiidaDeprecationWarning
+    )  # pylint: disable=no-member
 
     if nodes_export_subfolder:
         if not isinstance(nodes_export_subfolder, str):
@@ -170,7 +176,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, check_files=('data.
                         print(f'WARNING, symlink found inside the import file: {member.name}', file=sys.stderr)
                         continue
                     # Check that we are only exporting nodes within the subfolder!
-                    # TODO: better check such that there are no .. in the
+                    # better check such that there are no .. in the
                     # path; use probably the folder limit checks
                     if member.name in check_files:
                         data_files.add(member.name)

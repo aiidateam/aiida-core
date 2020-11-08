@@ -24,11 +24,12 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
+from aiida.tools.importexport.archive.common import CacheFolder
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from .utils import verify_metadata_version, update_metadata
 
 
-def migration_default_link_label(data):
+def migration_default_link_label(data: dict):
     """Apply migration 0043 - REV. 1.0.43
 
     Rename all link labels `_return` to `result`.
@@ -38,13 +39,20 @@ def migration_default_link_label(data):
             link['label'] = 'result'
 
 
-def migrate_v7_to_v8(metadata, data, *args):  # pylint: disable=unused-argument
+def migrate_v7_to_v8(folder: CacheFolder):
     """Migration of archive files from v0.7 to v0.8."""
     old_version = '0.7'
     new_version = '0.8'
 
+    _, metadata = folder.load_json('metadata.json')
+
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
+    _, data = folder.load_json('data.json')
+
     # Apply migrations
     migration_default_link_label(data)
+
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

@@ -234,14 +234,16 @@ class TestVerdiExport(AiidaTestCase):
         finally:
             os.remove(filename_tmp)
 
-    def test_migrate_silent(self):
-        """Test that the captured output is an empty string when the -s/--silent option is passed."""
+    def test_migrate_low_verbosity(self):
+        """Test that the captured output is an empty string when the ``--verbosity WARNING`` option is passed."""
         filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
         filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
-        for option in ['-s', '--silent']:
+        delete_temporary_file(filename_output)
+
+        for option in ['--verbosity']:
             try:
-                options = [option, filename_input, filename_output]
+                options = [option, 'WARNING', filename_input, filename_output]
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertEqual(result.output, '')
                 self.assertIsNone(result.exception, result.output)

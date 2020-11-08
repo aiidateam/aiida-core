@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from v0.8 to v0.9, used by `verdi export migrate` command.
+"""Migration from v0.4 to v0.5, used by `verdi export migrate` command.
 
 The migration steps are named similarly to the database migrations for Django and SQLAlchemy.
 In the description of each migration, a revision number is given, which refers to the Django migrations.
@@ -24,35 +24,49 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
+from aiida.tools.importexport.archive.common import CacheFolder
 
-from aiida.tools.importexport.migration.utils import verify_metadata_version, update_metadata
+from .utils import verify_metadata_version, update_metadata, remove_fields
 
 
-def migration_dbgroup_type_string(data):
-    """Apply migration 0044 - REV. 1.0.44
-
-    Rename the `type_string` columns of all `Group` instances.
+def migration_drop_node_columns_nodeversion_public(metadata, data):
+    """Apply migration 0034 - REV. 1.0.34
+    Drop the columns `nodeversion` and `public` from the `Node` model
     """
-    mapping = {
-        'user': 'core',
-        'data.upf': 'core.upf',
-        'auto.import': 'core.import',
-        'auto.run': 'core.auto',
-    }
+    entity = 'Node'
+    fields = ['nodeversion', 'public']
 
-    for attributes in data.get('export_data', {}).get('Group', {}).values():
-        for old, new in mapping.items():
-            if attributes['type_string'] == old:
-                attributes['type_string'] = new
+    remove_fields(metadata, data, [entity], fields)
 
 
-def migrate_v8_to_v9(metadata, data, *args):  # pylint: disable=unused-argument
-    """Migration of archive files from v0.8 to v0.9."""
-    old_version = '0.8'
-    new_version = '0.9'
+def migration_drop_computer_transport_params(metadata, data):
+    """Apply migration 0036 - REV. 1.0.36
+    Drop the column `transport_params` from the `Computer` model
+    """
+    entity = 'Computer'
+    field = 'transport_params'
+
+    remove_fields(metadata, data, [entity], [field])
+
+
+def migrate_v4_to_v5(folder: CacheFolder):
+    """
+    Migration of archive files from v0.4 to v0.5
+
+    This is from migration 0034 (drop_node_columns_nodeversion_public) and onwards
+    """
+    old_version = '0.4'
+    new_version = '0.5'
+
+    _, metadata = folder.load_json('metadata.json')
 
     verify_metadata_version(metadata, old_version)
     update_metadata(metadata, new_version)
 
+    _, data = folder.load_json('data.json')
     # Apply migrations
-    migration_dbgroup_type_string(data)
+    migration_drop_node_columns_nodeversion_public(metadata, data)
+    migration_drop_computer_transport_params(metadata, data)
+
+    folder.write_json('metadata.json', metadata)
+    folder.write_json('data.json', data)

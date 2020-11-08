@@ -157,7 +157,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro:install:aiida-core>` after activation.
+To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv, as described :ref:`here <intro:get_started:setup>`.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.

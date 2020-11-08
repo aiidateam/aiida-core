@@ -49,6 +49,8 @@ def instantiate_process(runner, process, *args, **inputs):
         builder = process
         process_class = builder.process_class
         inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
+    elif is_process_function(process):
+        process_class = process.process_class
     elif issubclass(process, Process):
         process_class = process
     else:

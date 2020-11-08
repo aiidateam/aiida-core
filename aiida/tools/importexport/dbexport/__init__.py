@@ -771,7 +771,8 @@ def export_tar(
         **kwargs,
     )
 
+    # the tar is now directly written to, so no compression start/stop time!
     return (
-        writer.export_info['writer_entered'], writer.export_info['writer_exited'],
-        writer.export_info['compression_time_start'], writer.export_info['compression_time_stop']
+        writer.export_info['writer_entered'], writer.export_info['writer_exited'], writer.export_info['writer_exited'],
+        writer.export_info['writer_exited']
     )

@@ -21,11 +21,9 @@ import zipfile
 from aiida.common import json  # handles byte dumps
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.importexport.common.exceptions import CorruptArchive
-from aiida.tools.importexport.archive.zip_path import ZipFileExtra, FilteredZipInfo
 
 __all__ = (
-    'ArchiveMetadata', 'detect_archive_type', 'null_callback', 'read_file_in_zip', 'read_file_in_tar',
-    'safe_extract_zip', 'safe_extract_tar', 'CacheFolder'
+    'ArchiveMetadata', 'detect_archive_type', 'null_callback', 'safe_extract_zip', 'safe_extract_tar', 'CacheFolder'
 )
 
 ARCHIVE_LOGGER = AIIDA_LOGGER.getChild('archive')
@@ -79,48 +77,6 @@ def detect_archive_type(in_path: str) -> str:
         'Unable to detect the input file format, it is neither a '
         'folder, tar file, nor a (possibly compressed) zip file.'
     )
-
-
-def read_file_in_zip(filepath: str, path: str) -> str:
-    """Read a text based file from inside a zip file and return its content.
-
-    :param filepath: the path to the zip file
-    :param path: the relative path within the zip file
-
-    """
-    try:
-        return ZipFileExtra(filepath, 'r', allowZip64=True,
-                            name_to_info=FilteredZipInfo({path})).read(path).decode('utf8')
-    except zipfile.BadZipfile as error:
-        raise CorruptArchive(f'The input file cannot be read: {error}')
-    except KeyError:
-        raise CorruptArchive(f'required file {path} is not included')
-
-
-def read_file_in_tar(filepath: str, path: str) -> str:
-    """Read a text based file from inside a tar file and return its content.
-
-    :param filepath: the path to the tar file
-    :param path: the relative path within the tar file
-
-    """
-    try:
-        with tarfile.open(filepath, 'r:*', format=tarfile.PAX_FORMAT) as handle:
-            tarinfo = None
-            while True:
-                tarinfo = handle.next()
-                if tarinfo is None or tarinfo.name == path:
-                    break
-            if tarinfo is None:
-                raise CorruptArchive(f'required file `{path}` is not included')
-            output = handle.extractfile(tarinfo).read()  # type: ignore
-            if isinstance(output, bytes):
-                return output.decode('utf8')
-            return output
-    except tarfile.ReadError:
-        raise CorruptArchive('The input file format is not valid (not a tar file)')
-    except (KeyError, AttributeError):
-        raise CorruptArchive(f'required file `{path}` is not included')
 
 
 def _get_filter(only_prefix: Iterable[str], ignore_prefix: Iterable[str]) -> Callable[[str], bool]:
@@ -233,81 +189,6 @@ def safe_extract_tar(
                 handle.extract(path=os.path.abspath(out_path), member=member)
     except tarfile.ReadError as error:
         raise CorruptArchive(f'The input file cannot be read: {error}')
-
-
-def compress_folder_zip(
-    in_path: Union[str, Path],
-    out_path: Union[str, Path],
-    *,
-    compression: int = zipfile.ZIP_DEFLATED,
-    callback: Callable[[str, Any], None] = null_callback,
-    callback_description: str = 'Compressing objects as zip'
-):
-    """Compress a folder as a zip file
-
-    :param in_path: Path to compress
-    :param out_path: Path to compress to
-    :param compression: the compression type (see zipfile module)
-    :param callback: a callback to report on the process, ``callback(action, value)``,
-        with the following callback signatures:
-
-        - ``callback('init', {'total': <int>, 'description': <str>})``,
-            to signal the start of a process, its total iterations and description
-        - ``callback('update', <int>)``,
-            to signal an update to the process and the number of iterations to progress
-
-    :param callback_description: the description to return in the callback
-
-    """
-    callback('init', {'total': 1, 'description': 'Computing objects to compress'})
-    count = 0
-    for _, dirnames, filenames in os.walk(in_path):
-        count += len(dirnames) + len(filenames)
-    callback('init', {'total': count, 'description': callback_description})
-    with zipfile.ZipFile(out_path, mode='w', compression=compression, allowZip64=True) as archive:
-        for dirpath, dirnames, filenames in os.walk(in_path):
-            relpath = os.path.relpath(dirpath, in_path)
-            for filename in dirnames + filenames:
-                callback('update', 1)
-                real_src = os.path.join(dirpath, filename)
-                real_dest = os.path.join(relpath, filename)
-                archive.write(real_src, real_dest)
-
-
-def compress_folder_tar(
-    in_path: Union[str, Path],
-    out_path: Union[str, Path],
-    *,
-    callback: Callable[[str, Any], None] = null_callback,
-    callback_description: str = 'Compressing objects as tar'
-):
-    """Compress a folder as a zip file
-
-    :param in_path: Path to compress
-    :param out_path: Path to compress to
-    :param callback: a callback to report on the process, ``callback(action, value)``,
-        with the following callback signatures:
-
-        - ``callback('init', {'total': <int>, 'description': <str>})``,
-            to signal the start of a process, its total iterations and description
-        - ``callback('update', <int>)``,
-            to signal an update to the process and the number of iterations to progress
-
-    :param callback_description: the description to return in the callback
-
-    """
-    callback('init', {'total': 1, 'description': 'Computing objects to compress'})
-    count = 0
-    for _, dirnames, filenames in os.walk(in_path):
-        count += len(dirnames) + len(filenames)
-    callback('init', {'total': count + 1, 'description': callback_description})
-
-    def _filter(tarinfo):
-        callback('update', 1)
-        return tarinfo
-
-    with tarfile.open(os.path.abspath(out_path), 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as archive:
-        archive.add(os.path.abspath(in_path), arcname='', filter=_filter)
 
 
 class CacheFolder:

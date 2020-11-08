@@ -15,11 +15,12 @@ from pathlib import Path
 import shelve
 import shutil
 import time
-import tarfile
 import tempfile
 from types import TracebackType
 from typing import Any, cast, Dict, List, Optional, Type, Union
 import zipfile
+
+from archive_path import TarPath, ZipPath
 
 from aiida.common import json
 from aiida.common.exceptions import InvalidOperation
@@ -29,7 +30,6 @@ from aiida.tools.importexport.common.config import (
     EXPORT_VERSION, NODE_ENTITY_NAME, NODES_EXPORT_SUBFOLDER, ExportFileFormat
 )
 from aiida.tools.importexport.common.utils import export_shard_uuid
-from aiida.tools.importexport.archive.zip_path import ZipPath
 
 __all__ = ('ArchiveWriterAbstract', 'get_writer', 'WriterJsonZip', 'WriterJsonTar', 'WriterJsonFolder')
 
@@ -265,7 +265,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
             self._zipinfo_cache = shelve.open(str(self._temp_path / 'zipinfo_cache'))
         else:
             self._zipinfo_cache = {}
-        self._zippath: ZipPath = ZipPath(
+        self._archivepath: ZipPath = ZipPath(
             self._temp_path / 'export', mode='w', compression=self._compression, name_to_info=self._zipinfo_cache
         )
         # setup data to store
@@ -280,20 +280,20 @@ class WriterJsonZip(ArchiveWriterAbstract):
     def close(self, excepted: bool):
         self.assert_within_context()
         if excepted:
-            self._zippath.close()
+            self._archivepath.close()
             shutil.rmtree(self._temp_path)
             return
         # write data.json
-        with self._zippath.joinpath('data.json').open('wb') as handle:
+        with self._archivepath.joinpath('data.json').open('wb') as handle:
             json.dump(self._data, handle)
         # close the zipfile to finalise write
-        self._zippath.close()
+        self._archivepath.close()
         if self._cache_zipinfo:
             self._zipinfo_cache.close()
         delattr(self, '_zipinfo_cache')
         # move the compressed file to the final path
         self._remove_filepath()
-        shutil.move(str(self._zippath.filepath), str(self.filepath))
+        shutil.move(str(self._archivepath.filepath), str(self.filepath))
         # remove the temporary folder
         shutil.rmtree(self._temp_path)
 
@@ -311,7 +311,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
             },
             'conversion_info': data.conversion_info
         }
-        with self._zippath.joinpath('metadata.json').open('wb') as handle:
+        with self._archivepath.joinpath('metadata.json').open('wb') as handle:
             json.dump(metadata, handle)
 
     def write_link(self, data: Dict[str, str]):
@@ -329,7 +329,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
 
     def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
         self.assert_within_context()
-        (self._zippath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).copytree(path, check_exists=not overwrite)
+        (self._archivepath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).puttree(path, check_exists=not overwrite)
 
 
 class WriterJsonTar(ArchiveWriterAbstract):
@@ -353,8 +353,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
         # create a temporary folder in which to perform the write
         self._temp_path: Path = Path(tempfile.mkdtemp())
         # open a zipfile in in write mode to export to
-        self._folderpath: Path = self._temp_path / 'export'
-        self._folderpath.mkdir()
+        self._archivepath: TarPath = TarPath(self._temp_path / 'export', mode='w:gz', dereference=True)
         # setup data to store
         self._data: Dict[str, Any] = {
             'node_attributes': {},
@@ -367,20 +366,18 @@ class WriterJsonTar(ArchiveWriterAbstract):
     def close(self, excepted: bool):
         self.assert_within_context()
         if excepted:
+            self._archivepath.close()
             shutil.rmtree(self._temp_path)
             return
-        with self._folderpath.joinpath('data.json').open('wb') as handle:
+        # write data.json
+        with self._archivepath.joinpath('data.json').open('wb') as handle:
             json.dump(self._data, handle)
         # compress
-        self.add_export_info('compression_time_start', time.time())
-        with tarfile.open(
-            self._temp_path / 'exported.tar', 'w:gz', format=tarfile.PAX_FORMAT, dereference=True
-        ) as archive:
-            archive.add(os.path.abspath(self._folderpath), arcname='')
-        self.add_export_info('compression_time_stop', time.time())
-        # move the folder to the final path
+        # close the zipfile to finalise write
+        self._archivepath.close()
+        # move the compressed file to the final path
         self._remove_filepath()
-        shutil.move(str(self._temp_path / 'exported.tar'), str(self.filepath))
+        shutil.move(str(self._archivepath.filepath), str(self.filepath))
         # remove the temporary folder
         shutil.rmtree(self._temp_path)
 
@@ -398,7 +395,8 @@ class WriterJsonTar(ArchiveWriterAbstract):
             },
             'conversion_info': data.conversion_info
         }
-        self._folderpath.joinpath('metadata.json').write_text(json.dumps(metadata))
+        with self._archivepath.joinpath('metadata.json').open('wb') as handle:
+            json.dump(metadata, handle)
 
     def write_link(self, data: Dict[str, str]):
         self._data['links_uuid'].append(data)
@@ -415,10 +413,7 @@ class WriterJsonTar(ArchiveWriterAbstract):
 
     def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
         self.assert_within_context()
-        dest_path = self._folderpath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)
-        if not overwrite and dest_path.exists():
-            raise FileExistsError(f'The path already exists: {dest_path}')
-        shutil.copytree(path, dest_path)
+        (self._archivepath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).puttree(path, check_exists=not overwrite)
 
 
 class WriterJsonFolder(ArchiveWriterAbstract):

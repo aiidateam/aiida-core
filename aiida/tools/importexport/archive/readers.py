@@ -16,15 +16,14 @@ from types import TracebackType
 from typing import Any, Callable, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
 
 from distutils.version import StrictVersion
+from archive_path import read_file_in_tar, read_file_in_zip
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
-from aiida.tools.importexport.archive.common import (
-    ArchiveMetadata, null_callback, read_file_in_tar, read_file_in_zip, safe_extract_zip, safe_extract_tar
-)
+from aiida.tools.importexport.archive.common import (ArchiveMetadata, null_callback, safe_extract_zip, safe_extract_tar)
 from aiida.tools.importexport.common.config import NODE_ENTITY_NAME, GROUP_ENTITY_NAME
 from aiida.tools.importexport.common.utils import export_shard_uuid
 
@@ -391,12 +390,18 @@ class ReaderJsonZip(ReaderJsonBase):
 
     def _get_metadata(self):
         if self._metadata is None:
-            self._metadata = json.loads(read_file_in_zip(self.filename, self.FILENAME_METADATA))
+            try:
+                self._metadata = json.loads(read_file_in_zip(self.filename, self.FILENAME_METADATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._metadata
 
     def _get_data(self):
         if self._data is None:
-            self._data = json.loads(read_file_in_zip(self.filename, self.FILENAME_DATA))
+            try:
+                self._data = json.loads(read_file_in_zip(self.filename, self.FILENAME_DATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._data
 
     def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
@@ -420,12 +425,18 @@ class ReaderJsonTar(ReaderJsonBase):
 
     def _get_metadata(self):
         if self._metadata is None:
-            self._metadata = json.loads(read_file_in_tar(self.filename, self.FILENAME_METADATA))
+            try:
+                self._metadata = json.loads(read_file_in_tar(self.filename, self.FILENAME_METADATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._metadata
 
     def _get_data(self):
         if self._data is None:
-            self._data = json.loads(read_file_in_tar(self.filename, self.FILENAME_DATA))
+            try:
+                self._data = json.loads(read_file_in_tar(self.filename, self.FILENAME_DATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._data
 
     def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):

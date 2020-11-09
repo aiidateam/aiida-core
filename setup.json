@@ -23,7 +23,7 @@
     "install_requires": [
         "aldjemy~=0.9.1",
         "alembic~=1.2",
-        "archive-path~=0.2.0",
+        "archive-path~=0.2.1",
         "circus~=0.16.1",
         "click-completion~=0.5.1",
         "click-config-file~=0.6.0",

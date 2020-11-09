@@ -5,7 +5,7 @@ alembic==1.4.1
 aniso8601==8.0.0
 appdirs==1.4.4
 appnope==0.1.0
-archive-path==0.2.0
+archive-path==0.2.1
 ase==3.19.0
 attrs==19.3.0
 Babel==2.8.0

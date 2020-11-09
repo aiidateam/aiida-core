@@ -258,9 +258,9 @@ class TestSpecificImport(AiidaTestCase):
 
         # Try to import, check it raises and check the raise message
         with self.assertRaises(exceptions.CorruptArchive) as exc:
-            import_data(filename_corrupt, silent=True)
+            import_data(filename_corrupt)
 
-        self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
+        self.assertIn('Unable to find required folder in archive', str(exc.exception))
 
     @with_temp_dir
     def test_empty_repo_folder_export(self, temp_dir):

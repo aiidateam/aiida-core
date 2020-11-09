@@ -61,7 +61,7 @@ def extract_zip(infile, folder, nodes_export_subfolder=None, check_files=('data.
         incorrect formats
     """
     warnings.warn(
-        'extract_zip function is deprecated and will be removed in AiiDA v2.0.0, use `safe_extract_zip` instead',
+        'extract_zip function is deprecated and will be removed in AiiDA v2.0.0, use the archive-path package instead',
         AiidaDeprecationWarning
     )  # pylint: disable=no-member
 
@@ -135,7 +135,7 @@ def extract_tar(infile, folder, nodes_export_subfolder=None, check_files=('data.
         incorrect formats
     """
     warnings.warn(
-        'extract_tar function is deprecated and will be removed in AiiDA v2.0.0, use `safe_extract_tar` instead',
+        'extract_tar function is deprecated and will be removed in AiiDA v2.0.0, use the archive-path package instead',
         AiidaDeprecationWarning
     )  # pylint: disable=no-member
 

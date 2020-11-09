@@ -15,16 +15,13 @@ import os
 from pathlib import Path
 import tarfile
 from types import TracebackType
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import zipfile
 
 from aiida.common import json  # handles byte dumps
 from aiida.common.log import AIIDA_LOGGER
-from aiida.tools.importexport.common.exceptions import CorruptArchive
 
-__all__ = (
-    'ArchiveMetadata', 'detect_archive_type', 'null_callback', 'safe_extract_zip', 'safe_extract_tar', 'CacheFolder'
-)
+__all__ = ('ArchiveMetadata', 'detect_archive_type', 'null_callback', 'CacheFolder')
 
 ARCHIVE_LOGGER = AIIDA_LOGGER.getChild('archive')
 
@@ -77,118 +74,6 @@ def detect_archive_type(in_path: str) -> str:
         'Unable to detect the input file format, it is neither a '
         'folder, tar file, nor a (possibly compressed) zip file.'
     )
-
-
-def _get_filter(only_prefix: Iterable[str], ignore_prefix: Iterable[str]) -> Callable[[str], bool]:
-    """Create filter for members to extract.
-
-    :param only_prefix: Extract only internal paths starting with these prefixes
-    :param ignore_prefix: Ignore internal paths starting with these prefixes
-
-    """
-    if only_prefix:
-
-        def _filter(name):
-            return any(name.startswith(prefix) for prefix in only_prefix
-                       ) and all(not name.startswith(prefix) for prefix in ignore_prefix)
-    else:
-
-        def _filter(name):
-            return all(not name.startswith(prefix) for prefix in ignore_prefix)
-
-    return _filter
-
-
-def safe_extract_zip(
-    in_path: Union[str, Path],
-    out_path: Union[str, Path],
-    *,
-    only_prefix: Iterable[str] = (),
-    ignore_prefix: Iterable[str] = ('..', '/'),
-    callback: Callable[[str, Any], None] = null_callback,
-    callback_description: str = 'Extracting zip files'
-):
-    """Safely extract a zip file
-
-    :param in_path: Path to extract from
-    :param out_path: Path to extract to
-    :param only_prefix: Extract only internal paths starting with these prefixes
-    :param ignore_prefix: Ignore internal paths starting with these prefixes
-    :param callback: a callback to report on the process, ``callback(action, value)``,
-        with the following callback signatures:
-
-        - ``callback('init', {'total': <int>, 'description': <str>})``,
-            to signal the start of a process, its total iterations and description
-        - ``callback('update', <int>)``,
-            to signal an update to the process and the number of iterations to progress
-
-    :param callback_description: the description to return in the callback
-
-    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the file cannot be read
-
-    """
-    _filter = _get_filter(only_prefix, ignore_prefix)
-    try:
-        with zipfile.ZipFile(in_path, 'r', allowZip64=True) as handle:
-            callback('init', {'total': 1, 'description': 'Gathering list of files to extract from zip'})
-            members = [name for name in handle.namelist() if _filter(name)]
-            callback('init', {'total': len(members), 'description': callback_description})
-            for membername in members:
-                callback('update', 1)
-                handle.extract(path=os.path.abspath(out_path), member=membername)
-    except zipfile.BadZipfile as error:
-        raise CorruptArchive(f'The input file cannot be read: {error}')
-
-
-def safe_extract_tar(
-    in_path: Union[str, Path],
-    out_path: Union[str, Path],
-    *,
-    only_prefix: Iterable[str] = (),
-    ignore_prefix: Iterable[str] = ('..', '/'),
-    callback: Callable[[str, Any], None] = null_callback,
-    callback_description: str = 'Extracting tar files'
-):
-    """Safely extract a tar file
-
-    :param in_path: Path to extract from
-    :param out_path: Path to extract to
-    :param only_prefix: Extract only internal paths starting with these prefixes
-    :param ignore_prefix: Ignore internal paths starting with these prefixes
-    :param callback: a callback to report on the process, ``callback(action, value)``,
-        with the following callback signatures:
-
-        - ``callback('init', {'total': <int>, 'description': <str>})``,
-            to signal the start of a process, its total iterations and description
-        - ``callback('update', <int>)``,
-            to signal an update to the process and the number of iterations to progress
-
-    :param callback_description: the description to return in the callback
-
-    :raises `~aiida.tools.importexport.common.exceptions.CorruptArchive`: if the file cannot be read
-
-    """
-    _filter = _get_filter(only_prefix, ignore_prefix)
-    try:
-        with tarfile.open(in_path, 'r:*', format=tarfile.PAX_FORMAT) as handle:
-            callback('init', {'total': 1, 'description': 'Computing tar objects to extract'})
-            members = [m for m in handle.getmembers() if _filter(m.name)]
-            callback('init', {'total': len(members), 'description': callback_description})
-            for member in members:
-                callback('update', 1)
-                if member.isdev():
-                    # safety: skip if character device, block device or FIFO
-                    msg = f'WARNING, device found inside the tar file: {member.name}'
-                    ARCHIVE_LOGGER.warning(msg)
-                    continue
-                if member.issym() or member.islnk():
-                    # safety: skip symlinks
-                    msg = f'WARNING, symlink found inside the tar file: {member.name}'
-                    ARCHIVE_LOGGER.warning(msg)
-                    continue
-                handle.extract(path=os.path.abspath(out_path), member=member)
-    except tarfile.ReadError as error:
-        raise CorruptArchive(f'The input file cannot be read: {error}')
 
 
 class CacheFolder:

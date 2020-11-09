@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import tarfile
 import tempfile
 from typing import Any, Callable, cast, List, Optional, Type, Union
 import zipfile
@@ -23,7 +24,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter, create_callback
 from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
 from aiida.tools.importexport.common.config import ExportFileFormat
-from aiida.tools.importexport.archive.common import (safe_extract_tar, safe_extract_zip, CacheFolder)
+from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 
 __all__ = (
@@ -253,7 +254,10 @@ class ArchiveMigratorJsonZip(ArchiveMigratorJsonBase):
         return metadata['export_version']
 
     def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
-        safe_extract_zip(self.filepath, filepath, callback=callback)
+        try:
+            ZipPath(self.filepath, mode='r', allow_zip64=True).extract_tree(filepath, callback=callback)
+        except zipfile.BadZipfile as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')
 
 
 class ArchiveMigratorJsonTar(ArchiveMigratorJsonBase):
@@ -269,4 +273,8 @@ class ArchiveMigratorJsonTar(ArchiveMigratorJsonBase):
         return metadata['export_version']
 
     def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
-        safe_extract_tar(self.filepath, filepath, callback=callback)
+        try:
+            TarPath(self.filepath, mode='r:*', pax_format=tarfile.PAX_FORMAT
+                    ).extract_tree(filepath, allow_dev=False, allow_symlink=False, callback=callback)
+        except tarfile.ReadError as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')

@@ -81,7 +81,7 @@ def export(
     file_format: Union[str, Type[ArchiveWriterAbstract]] = ExportFileFormat.ZIP,
     overwrite: bool = False,
     silent: Optional[bool] = None,
-    use_compression: bool = True,
+    use_compression: Optional[bool] = None,
     include_comments: bool = True,
     include_logs: bool = True,
     allowed_licenses: Optional[Union[list, Callable]] = None,
@@ -103,6 +103,10 @@ def export(
     .. deprecated:: 1.5.0
         Support for the parameter `silent` will be removed in `v2.0.0`.
         Please set the log level and progress bar implementation independently.
+
+    .. deprecated:: 1.5.0
+        Support for the parameter `use_compression` will be removed in `v2.0.0`.
+        Please use `writer_init={'use_compression': True}`.
 
     .. deprecated:: 1.2.1
         Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
@@ -209,7 +213,12 @@ def export(
 
     # setup the archive writer
     writer_init = writer_init or {}
-    writer_init['use_compression'] = use_compression
+    if use_compression is not None:
+        warnings.warn(
+            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0, '
+            "use `writer_init={'use_compression': True}` instead", AiidaDeprecationWarning
+        )  # pylint: disable=no-member
+        writer_init['use_compression'] = use_compression
     if isinstance(file_format, str):
         writer = get_writer(file_format)(filepath=filename, **writer_init)
     elif issubclass(file_format, ArchiveWriterAbstract):

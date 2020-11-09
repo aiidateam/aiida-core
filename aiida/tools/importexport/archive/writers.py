@@ -233,7 +233,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
     """
 
     def __init__(
-        self, filepath: Union[str, Path], *, use_compression: bool = True, cache_zipinfo: bool = True, **kwargs
+        self, filepath: Union[str, Path], *, use_compression: bool = True, cache_zipinfo: bool = False, **kwargs
     ):
         """Initiate the writer.
 

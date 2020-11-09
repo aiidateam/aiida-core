@@ -80,7 +80,7 @@ def inspect(archive, version, data, meta_data):
 @options.GROUPS()
 @options.NODES()
 @options.ARCHIVE_FORMAT(
-    type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz', 'null']),
+    type=click.Choice(['zip', 'zip-uncompressed', 'zip-lowmemory', 'tar.gz', 'null']),
 )
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
@@ -125,6 +125,7 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    # pylint: disable=too-many-branches
     from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
@@ -158,10 +159,13 @@ def create(
 
     if archive_format == 'zip':
         export_format = ExportFileFormat.ZIP
-        kwargs.update({'use_compression': True})
+        kwargs.update({'writer_init': {'use_compression': True}})
     elif archive_format == 'zip-uncompressed':
         export_format = ExportFileFormat.ZIP
-        kwargs.update({'use_compression': False})
+        kwargs.update({'writer_init': {'use_compression': False}})
+    elif archive_format == 'zip-lowmemory':
+        export_format = ExportFileFormat.ZIP
+        kwargs.update({'writer_init': {'cache_zipinfo': True}})
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
     elif archive_format == 'null':

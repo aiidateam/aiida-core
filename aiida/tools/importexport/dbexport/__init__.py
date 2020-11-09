@@ -326,7 +326,7 @@ def export(
                 writer=writer_context
             )
 
-        EXPORT_LOGGER.debug('FINALIZING EXPORT...')
+        EXPORT_LOGGER.info('Finalizing Export...')
 
     # summarize export
     export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())

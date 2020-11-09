@@ -249,7 +249,10 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
     except Exception as error:  # pylint: disable=broad-except
         if verbosity == 'DEBUG':
             raise
-        echo.echo_critical(f'failed to migrate the archive file (use `--verbosity DEBUG` to see traceback): {error}')
+        echo.echo_critical(
+            'failed to migrate the archive file (use `--verbosity DEBUG` to see traceback): '
+            f'{error.__class__.__name__}:{error}'
+        )
 
     if verbosity in ['DEBUG', 'INFO']:
         echo.echo_success(f'migrated the archive to version {version}')

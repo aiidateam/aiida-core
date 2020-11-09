@@ -3,7 +3,7 @@ alabaster==0.7.12
 aldjemy==0.9.1
 alembic==1.4.3
 aniso8601==8.0.0
-archive-path==0.1.1
+archive-path==0.2.0
 ase==3.20.1
 attrs==20.2.0
 Babel==2.8.0

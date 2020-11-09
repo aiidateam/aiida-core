@@ -226,7 +226,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
     @staticmethod
     def _compress_archive_zip(in_path: Path, out_path: Path, compression: int):
         """Create a new zip compressed zip from a folder."""
-        with get_progress_reporter()(total=1, description='Compressing to zip') as progress:
+        with get_progress_reporter()(total=1, desc='Compressing to zip') as progress:
             _callback = create_callback(progress)
             with ZipPath(out_path, mode='w', compression=compression, allow_zip64=True) as path:
                 path.puttree(in_path, check_exists=False, callback=_callback, cb_descript='Compressing to zip')
@@ -234,7 +234,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
     @staticmethod
     def _compress_archive_tar(in_path: Path, out_path: Path):
         """Create a new zip compressed tar from a folder."""
-        with get_progress_reporter()(total=1, description='Compressing to tar') as progress:
+        with get_progress_reporter()(total=1, desc='Compressing to tar') as progress:
             _callback = create_callback(progress)
             with TarPath(out_path, mode='w:gz', dereference=True) as path:
                 path.puttree(in_path, check_exists=False, callback=_callback, cb_descript='Compressing to tar')

@@ -13,7 +13,7 @@ from aiida.common import InvalidOperation
 from aiida.manage import manager
 from .processes.functions import FunctionProcess
 from .processes.process import Process
-from .utils import is_process_function, is_process_scoped, instantiate_process
+from .utils import is_process_scoped, instantiate_process
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
 
@@ -96,8 +96,6 @@ def submit(process, **inputs):
     :return: the calculation node of the process
     :rtype: :class:`aiida.orm.ProcessNode`
     """
-    assert not is_process_function(process), 'Cannot submit a process function'
-
     # Submitting from within another process requires `self.submit` unless it is a work function, in which case the
     # current process in the scope should be an instance of `FunctionProcess`
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):

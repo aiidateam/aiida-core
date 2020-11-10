@@ -16,7 +16,6 @@ from aiida.manage.external import rmq
 @pytest.mark.parametrize(('args', 'kwargs', 'expected'), (
     ((), {}, 'amqp://guest:guest@127.0.0.1:5672?'),
     ((), {'heartbeat': 1}, 'amqp://guest:guest@127.0.0.1:5672?'),
-    ((), {'invalid_parameters': 1}, ValueError),
     ((), {'cafile': 'file', 'cadata': 'ab'}, 'amqp://guest:guest@127.0.0.1:5672?'),
     (('amqps', 'jojo', 'rabbit', '192.168.0.1', 6783), {}, 'amqps://jojo:rabbit@192.168.0.1:6783?'),
 ))  # yapf: disable

@@ -264,7 +264,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
         if self._cache_zipinfo:
             self._zipinfo_cache = shelve.open(str(self._temp_path / 'zipinfo_cache'))
         else:
-            self._zipinfo_cache = {}
+            self._zipinfo_cache = None
         self._archivepath: ZipPath = ZipPath(
             self._temp_path / 'export', mode='w', compression=self._compression, name_to_info=self._zipinfo_cache
         )
@@ -288,9 +288,9 @@ class WriterJsonZip(ArchiveWriterAbstract):
             json.dump(self._data, handle)
         # close the zipfile to finalise write
         self._archivepath.close()
-        if self._cache_zipinfo:
+        if getattr(self, '_zipinfo_cache', None) is not None:
             self._zipinfo_cache.close()
-        delattr(self, '_zipinfo_cache')
+            delattr(self, '_zipinfo_cache')
         # move the compressed file to the final path
         self._remove_filepath()
         shutil.move(str(self._archivepath.filepath), str(self.filepath))

@@ -264,14 +264,22 @@ class Node(BaseResource):
         elif query_type == 'statistics':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
-                usr = filters['user']['==']
+                user_pk = filters['user']['==']
             else:
-                usr = None
-            results = self.trans.get_statistics(usr)
+                user_pk = None
+            results = self.trans.get_statistics(user_pk)
 
         elif query_type == 'full_types':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_namespace()
+
+        elif query_type == 'full_types_count':
+            headers = self.utils.build_headers(url=request.url, total_count=0)
+            if filters:
+                user_pk = filters['user']['==']
+            else:
+                user_pk = None
+            results = self.trans.get_namespace(user_pk=user_pk, count_nodes=True)
 
         # TODO improve the performance of tree endpoint by getting the data from database faster
         # TODO add pagination for this endpoint (add default max limit)

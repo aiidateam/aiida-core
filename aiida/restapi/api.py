@@ -131,6 +131,7 @@ class AiidaApi(Api):
             '/nodes/projectable_properties/',
             '/nodes/statistics/',
             '/nodes/full_types/',
+            '/nodes/full_types_count/',
             '/nodes/download_formats/',
             '/nodes/page/',
             '/nodes/page/<int:page>/',

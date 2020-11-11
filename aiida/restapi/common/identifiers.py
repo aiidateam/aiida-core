@@ -209,14 +209,15 @@ class Namespace(MutableMapping):
         import json
         return json.dumps(self.get_description(), sort_keys=True, indent=4)
 
-    def __init__(self, namespace, path=None, label=None, full_type=None, is_leaf=True):
+    def __init__(self, namespace, path=None, label=None, full_type=None, counter=None, is_leaf=True):
         """Construct a new node class namespace."""
-        # pylint: disable=super-init-not-called
+        # pylint: disable=super-init-not-called, too-many-arguments
         self._namespace = namespace
         self._path = path if path else namespace
         self._full_type = self._infer_full_type(full_type)
         self._subspaces = {}
         self._is_leaf = is_leaf
+        self._counter = counter
 
         try:
             self._label = label if label is not None else self.mapping_path_to_label[path]
@@ -293,7 +294,15 @@ class Namespace(MutableMapping):
         }
 
         for _, port in self._subspaces.items():
-            result['subspaces'].append(port.get_description())
+            subspace_result = port.get_description()
+            result['subspaces'].append(subspace_result)
+            if 'counter' in subspace_result:
+                if self._counter is None:
+                    self._counter = 0
+                self._counter = self._counter + subspace_result['counter']
+
+        if self._counter is not None:
+            result['counter'] = self._counter
 
         return result
 
@@ -352,15 +361,20 @@ class Namespace(MutableMapping):
         return self[port_name]
 
 
-def get_node_namespace():
+def get_node_namespace(user_pk=None, count_nodes=False):
     """Return the full namespace of all available nodes in the current database.
 
     :return: complete node `Namespace`
     """
+    # pylint: disable=too-many-branches
     from aiida import orm
     from aiida.plugins.entry_point import is_valid_entry_point_string, parse_entry_point_string
 
-    builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type']).distinct()
+    filters = {}
+    if user_pk is not None:
+        filters['user_id'] = user_pk
+
+    builder = orm.QueryBuilder().append(orm.Node, filters=filters, project=['node_type', 'process_type']).distinct()
 
     # All None instances of process_type are turned into ''
     unique_types = {(node_type, process_type if process_type else '') for node_type, process_type in builder.all()}
@@ -371,6 +385,7 @@ def get_node_namespace():
     for node_type, process_type in unique_types:
 
         label = None
+        counter = None
         namespace = None
 
         if process_type:
@@ -393,12 +408,32 @@ def get_node_namespace():
             except IndexError:
                 continue
 
+        if count_nodes:
+            builder = orm.QueryBuilder()
+            concat_filters = [{'node_type': {'==': node_type}}]
+
+            if node_type.startswith('process.'):
+                if process_type:
+                    concat_filters.append({'process_type': {'==': process_type}})
+                else:
+                    concat_filters.append({'process_type': {'or': [{'==': ''}, {'==': None}]}})
+
+            if user_pk:
+                concat_filters.append({'user_id': {'==': user_pk}})
+
+            if len(concat_filters) == 1:
+                builder.append(orm.Node, filters=concat_filters[0])
+            else:
+                builder.append(orm.Node, filters={'and': concat_filters})
+
+            counter = builder.count()
+
         full_type = construct_full_type(node_type, process_type)
-        namespaces.append((namespace, label, full_type))
+        namespaces.append((namespace, label, full_type, counter))
 
     node_namespace = Namespace('node')
 
-    for namespace, label, full_type in sorted(namespaces, key=lambda x: x[0], reverse=False):
-        node_namespace.create_namespace(namespace, label=label, full_type=full_type)
+    for namespace, label, full_type, counter in sorted(namespaces, key=lambda x: x[0], reverse=False):
+        node_namespace.create_namespace(namespace, label=label, full_type=full_type, counter=counter)
 
     return node_namespace

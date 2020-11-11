@@ -125,9 +125,6 @@ def export(
         :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError`
         if the output file already exists.
 
-    :param use_compression: Whether or not to compress the archive file
-        (only valid for the zip file format).
-
     :param allowed_licenses: List or function.
         If a list, then checks whether all licenses of Data nodes are in the list. If a function,
         then calls function for licenses of Data nodes expecting True if license is allowed, False
@@ -215,8 +212,7 @@ def export(
     writer_init = writer_init or {}
     if use_compression is not None:
         warnings.warn(
-            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0, '
-            "use `writer_init={'use_compression': True}` instead", AiidaDeprecationWarning
+            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0', AiidaDeprecationWarning
         )  # pylint: disable=no-member
         writer_init['use_compression'] = use_compression
     if isinstance(file_format, str):

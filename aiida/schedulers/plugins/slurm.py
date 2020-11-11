@@ -137,6 +137,7 @@ class SlurmJobResource(NodeNumberJobResource):
                     '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
                     ' particular it should be a multiple of `num_cores_per_mpiproc` and/or `num_mpiprocs_per_machine`'
                 )
+            resources.num_cores_per_mpiproc = int(resources.num_cores_per_mpiproc)
 
         return resources
 

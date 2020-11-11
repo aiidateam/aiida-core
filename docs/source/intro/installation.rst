@@ -283,4 +283,3 @@ Otherwise, you can load the profile manually as you would in a Python script:
    load_profile()
    qb = orm.QueryBuilder()
    # ...
-

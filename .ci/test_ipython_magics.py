@@ -21,6 +21,8 @@ def test_ipython_magics():
 %aiida
 qb=QueryBuilder()
 qb.append(Node)
+qb.all()
+Dict().store()
 """
     result = ipy.run_cell(cell)
 

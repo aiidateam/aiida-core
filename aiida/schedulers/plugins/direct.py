@@ -96,10 +96,10 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         if jobs:
             if isinstance(jobs, str):
-                command += ' {}'.format(escape_for_bash(jobs))
+                command += f' {escape_for_bash(jobs)}'
             else:
                 try:
-                    command += ' {}'.format(' '.join(escape_for_bash(job) for job in jobs if job))
+                    command += f" {' '.join(escape_for_bash(job) for job in jobs if job)}"
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
 
@@ -123,7 +123,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         # Redirecting script output on the correct files
         # Should be one of the first commands
         if job_tmpl.sched_output_path:
-            lines.append('exec > {}'.format(job_tmpl.sched_output_path))
+            lines.append(f'exec > {job_tmpl.sched_output_path}')
 
         if job_tmpl.sched_join_files:
             # TODO: manual says:  # pylint: disable=fixme
@@ -136,7 +136,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 self.logger.info('sched_join_files is True, but sched_error_path is set; ignoring sched_error_path')
         else:
             if job_tmpl.sched_error_path:
-                lines.append('exec 2> {}'.format(job_tmpl.sched_error_path))
+                lines.append(f'exec 2> {job_tmpl.sched_error_path}')
             else:
                 # To avoid automatic join of files
                 lines.append('exec 2>&1')
@@ -152,7 +152,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                     "a positive integer (in kB)! It is instead '{}'"
                     ''.format((job_tmpl.max_memory_kb))
                 )
-            lines.append('ulimit -v {}'.format(virtual_memory_kb))
+            lines.append(f'ulimit -v {virtual_memory_kb}')
         if not job_tmpl.import_sys_environment:
             lines.append('env --ignore-environment \\')
 
@@ -171,7 +171,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError('If you provide job_environment, it must be a dictionary')
             for key, value in job_tmpl.job_environment.items():
-                lines.append('export {}={}'.format(key.strip(), escape_for_bash(value)))
+                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
             lines.append('# ENVIRONMENT VARIABLES  END  ###')
             lines.append(empty_line)
 
@@ -204,9 +204,9 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             directory.
             IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = 'bash -e {} > /dev/null 2>&1 & echo $!'.format(submit_script)
+        submit_command = f'bash -e {submit_script} > /dev/null 2>&1 & echo $!'
 
-        self.logger.info('submitting with: ' + submit_command)
+        self.logger.info(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -255,7 +255,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             try:
                 job_state_string = job[1][0]  # I just check the first character
             except IndexError:
-                self.logger.debug("No 'job_state' field for job id {}".format(this_job.job_id))
+                self.logger.debug(f"No 'job_state' field for job id {this_job.job_id}")
                 this_job.job_state = JobState.UNDETERMINED
             else:
                 try:
@@ -272,7 +272,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 # I strip the part after the @: is this always ok?
                 this_job.job_owner = job[2]
             except KeyError:
-                self.logger.debug("No 'job_owner' field for job id {}".format(this_job.job_id))
+                self.logger.debug(f"No 'job_owner' field for job id {this_job.job_id}")
 
             try:
                 this_job.wallclock_time_seconds = self._convert_time(job[3])
@@ -280,7 +280,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 # May not have started yet
                 pass
             except ValueError:
-                self.logger.warning("Error parsing 'resources_used.walltime' for job id {}".format(this_job.job_id))
+                self.logger.warning(f"Error parsing 'resources_used.walltime' for job id {this_job.job_id}")
 
             # I append to the list of jobs to return
             job_list.append(this_job)
@@ -323,7 +323,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         pieces = re.split('[:.]', string)
         if len(pieces) != 3:
-            self.logger.warning('Wrong number of pieces (expected 3) for time string {}'.format(string))
+            self.logger.warning(f'Wrong number of pieces (expected 3) for time string {string}')
             raise ValueError('Wrong number of pieces for time string.')
 
         days = 0
@@ -338,7 +338,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             if hours < 0:
                 raise ValueError
         except ValueError:
-            self.logger.warning('Not a valid number of hours: {}'.format(pieces[0]))
+            self.logger.warning(f'Not a valid number of hours: {pieces[0]}')
             raise ValueError('Not a valid number of hours.')
 
         try:
@@ -346,7 +346,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             if mins < 0:
                 raise ValueError
         except ValueError:
-            self.logger.warning('Not a valid number of minutes: {}'.format(pieces[1]))
+            self.logger.warning(f'Not a valid number of minutes: {pieces[1]}')
             raise ValueError('Not a valid number of minutes.')
 
         try:
@@ -354,7 +354,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             if secs < 0:
                 raise ValueError
         except ValueError:
-            self.logger.warning('Not a valid number of seconds: {}'.format(pieces[2]))
+            self.logger.warning(f'Not a valid number of seconds: {pieces[2]}')
             raise ValueError('Not a valid number of seconds.')
 
         return days * 86400 + hours * 3600 + mins * 60 + secs
@@ -369,30 +369,17 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            self.logger.error(
-                'Error in _parse_submit_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
-            raise SchedulerError(
-                'Error during submission, retval={}\n'
-                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
         if stderr.strip():
             self.logger.warning(
-                'in _parse_submit_output for {}: '
-                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+                f'in _parse_submit_output for {str(self.transport)}: there was some text in stderr: {stderr}'
             )
 
         if not stdout.strip():
-            self.logger.debug(
-                'Unable to get the PID: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
-            raise SchedulerError(
-                'Unable to get the PID: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.debug(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Unable to get the PID: retval={retval}; stdout={stdout}; stderr={stderr}')
 
         return stdout.strip()
 
@@ -400,9 +387,9 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         """
         Return the command to kill the job with specified jobid.
         """
-        submit_command = 'kill {}'.format(jobid)
+        submit_command = f'kill {jobid}'
 
-        self.logger.info('killing job {}'.format(jobid))
+        self.logger.info(f'killing job {jobid}')
 
         return submit_command
 
@@ -415,22 +402,17 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            self.logger.error(
-                'Error in _parse_kill_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             return False
 
         if stderr.strip():
             self.logger.warning(
-                'in _parse_kill_output for {}: '
-                'there was some text in stderr: {}'.format(str(self.transport), stderr)
+                f'in _parse_kill_output for {str(self.transport)}: there was some text in stderr: {stderr}'
             )
 
         if stdout.strip():
             self.logger.warning(
-                'in _parse_kill_output for {}: '
-                'there was some text in stdout: {}'.format(str(self.transport), stdout)
+                f'in _parse_kill_output for {str(self.transport)}: there was some text in stdout: {stdout}'
             )
 
         return True

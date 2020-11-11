@@ -37,7 +37,7 @@ class SinglefileData(Data):
         # 'filename' argument was added to 'set_file' after 1.0.0.
         if 'filename' not in inspect.getfullargspec(self.set_file)[0]:
             warnings.warn(  # pylint: disable=no-member
-                "Method '{}.set_file' does not support the 'filename' argument. ".format(type(self).__name__) +
+                f"Method '{type(self).__name__}.set_file' does not support the 'filename' argument. " +
                 'This will raise an exception in AiiDA 2.0.', AiidaDeprecationWarning
             )
 
@@ -56,17 +56,34 @@ class SinglefileData(Data):
         """
         return self.get_attribute('filename')
 
-    def open(self, key=None, mode='r'):
+    def open(self, path=None, mode='r', key=None):
         """Return an open file handle to the content of this data node.
 
+        .. deprecated:: 1.4.0
+            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
+
+        .. deprecated:: 1.4.0
+            Starting from `v2.0.0` this will raise if not used in a context manager.
+
+        :param path: the relative path of the object within the repository.
         :param key: optional key within the repository, by default is the `filename` set in the attributes
         :param mode: the mode with which to open the file handle (default: read mode)
         :return: a file handle
         """
-        if key is None:
-            key = self.filename
+        from ..node import WarnWhenNotEntered
+        if key is not None:
+            if path is not None:
+                raise ValueError('cannot specify both `path` and `key`.')
+            warnings.warn(
+                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
+                AiidaDeprecationWarning
+            )  # pylint: disable=no-member
+            path = key
 
-        return self._repository.open(key, mode=mode)
+        if path is None:
+            path = self.filename
+
+        return WarnWhenNotEntered(self._repository.open(path, mode=mode), repr(self))
 
     def get_content(self):
         """Return the content of the single file stored for this data node.
@@ -90,10 +107,10 @@ class SinglefileData(Data):
 
             key = os.path.basename(file)
             if not os.path.isabs(file):
-                raise ValueError('path `{}` is not absolute'.format(file))
+                raise ValueError(f'path `{file}` is not absolute')
 
             if not os.path.isfile(file):
-                raise ValueError('path `{}` does not correspond to an existing file'.format(file))
+                raise ValueError(f'path `{file}` does not correspond to an existing file')
         else:
             is_filelike = True
             try:
@@ -135,5 +152,5 @@ class SinglefileData(Data):
 
         if [filename] != objects:
             raise exceptions.ValidationError(
-                'respository files {} do not match the `filename` attribute {}.'.format(objects, filename)
+                f'respository files {objects} do not match the `filename` attribute {filename}.'
             )

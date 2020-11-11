@@ -31,7 +31,9 @@ class FileCalcJob(CalcJob):
     def prepare_for_submission(self, folder):
         from aiida.common.datastructures import CalcInfo, CodeInfo
 
-        local_copy_list = [(self.inputs.single_file.uuid, self.inputs.single_file.filename, 'single_file')]
+        # Use nested path for the target filename, where the directory does not exist, to check that the engine will
+        # create intermediate directories as needed. Regression test for #4350
+        local_copy_list = [(self.inputs.single_file.uuid, self.inputs.single_file.filename, 'path/single_file')]
 
         for name, node in self.inputs.files.items():
             local_copy_list.append((node.uuid, node.filename, name))
@@ -286,5 +288,5 @@ class TestLaunchersDryRun(AiidaTestCase):
 
         _, node = launch.run_get_node(FileCalcJob, **inputs)
         self.assertIn('folder', node.dry_run_info)
-        for filename in ['single_file', 'file_one', 'file_two']:
+        for filename in ['path', 'file_one', 'file_two']:
             self.assertIn(filename, os.listdir(node.dry_run_info['folder']))

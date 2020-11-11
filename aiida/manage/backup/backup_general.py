@@ -15,7 +15,7 @@ import os
 from aiida.orm import Node
 from aiida.manage.backup.backup_base import AbstractBackup, BackupError
 from aiida.common.folders import RepositoryFolder
-from aiida.orm.utils.repository import Repository
+from aiida.orm.utils._repository import Repository
 
 
 class Backup(AbstractBackup):

@@ -87,7 +87,7 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     handler_args = getfullargspec(wrapped)[0]
 
     if len(handler_args) != 2:
-        raise TypeError('process handler `{}` has invalid signature: should be (self, node)'.format(wrapped.__name__))
+        raise TypeError(f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)')
 
     wrapped.decorator = process_handler
     wrapped.priority = priority
@@ -99,7 +99,7 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
         # When the handler will be called by the `BaseRestartWorkChain` it will pass the node as the only argument
         node = args[0]
 
-        if exit_codes and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
+        if exit_codes is not None and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
             result = None
         else:
             result = wrapped(*args, **kwargs)

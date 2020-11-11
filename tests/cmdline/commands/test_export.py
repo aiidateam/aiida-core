@@ -20,7 +20,7 @@ from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_export
-from aiida.tools.importexport import EXPORT_VERSION, Archive
+from aiida.tools.importexport import EXPORT_VERSION, ReaderJsonZip
 
 from tests.utils.archives import get_archive_file
 
@@ -64,7 +64,7 @@ class TestVerdiExport(AiidaTestCase):
 
         # Utility helper
         cls.fixture_archive = 'export/migrate'
-        cls.newest_archive = 'export_v{}_simple.aiida'.format(EXPORT_VERSION)
+        cls.newest_archive = f'export_v{EXPORT_VERSION}_simple.aiida'
         cls.penultimate_archive = 'export_v0.6_simple.aiida'
 
     @classmethod
@@ -145,7 +145,7 @@ class TestVerdiExport(AiidaTestCase):
         """Migrating archives with a version older than the current should work."""
         archives = []
         for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
-            archives.append('export_v0.{}_simple.aiida'.format(version))
+            archives.append(f'export_v0.{version}_simple.aiida')
 
         for archive in archives:
 
@@ -176,20 +176,8 @@ class TestVerdiExport(AiidaTestCase):
             self.assertTrue(os.path.isfile(filename_output))
             self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
 
-            with Archive(filename_output) as archive_object:
-                self.assertEqual(archive_object.version_format, target_version)
-        finally:
-            delete_temporary_file(filename_output)
-
-    def test_migrate_versions_recent(self):
-        """Migrating an archive with the current version should exit with non-zero status."""
-        filename_input = get_archive_file(self.newest_archive, filepath=self.fixture_archive)
-        filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
-
-        try:
-            options = [filename_input, filename_output]
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
-            self.assertIsNotNone(result.exception)
+            with ReaderJsonZip(filename_output) as archive_object:
+                self.assertEqual(archive_object.metadata.export_version, target_version)
         finally:
             delete_temporary_file(filename_output)
 
@@ -213,14 +201,49 @@ class TestVerdiExport(AiidaTestCase):
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
 
-    def test_migrate_silent(self):
-        """Test that the captured output is an empty string when the -s/--silent option is passed."""
+    def test_migrate_in_place(self):
+        """Test that passing the -i/--in-place option will overwrite the passed file."""
+        archive = 'export_v0.1_simple.aiida'
+        target_version = '0.2'
+        filename_input = get_archive_file(archive, filepath=self.fixture_archive)
+        filename_tmp = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
+
+        try:
+            # copy file (don't want to overwrite test data)
+            shutil.copy(filename_input, filename_tmp)
+
+            # specifying both output and in-place should except
+            options = [filename_tmp, '--in-place', '--output-file', 'test.aiida']
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNotNone(result.exception, result.output)
+
+            # specifying neither output nor in-place should except
+            options = [filename_tmp]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNotNone(result.exception, result.output)
+
+            # check that in-place migration produces a valid archive in place of the old file
+            options = [filename_tmp, '--in-place', '--version', target_version]
+            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            self.assertIsNone(result.exception, result.output)
+            self.assertTrue(os.path.isfile(filename_tmp))
+            # check that files in zip file are ok
+            self.assertEqual(zipfile.ZipFile(filename_tmp).testzip(), None)
+            with ReaderJsonZip(filename_tmp) as archive_object:
+                self.assertEqual(archive_object.metadata.export_version, target_version)
+        finally:
+            os.remove(filename_tmp)
+
+    def test_migrate_low_verbosity(self):
+        """Test that the captured output is an empty string when the ``--verbosity WARNING`` option is passed."""
         filename_input = get_archive_file(self.penultimate_archive, filepath=self.fixture_archive)
         filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
-        for option in ['-s', '--silent']:
+        delete_temporary_file(filename_output)
+
+        for option in ['--verbosity']:
             try:
-                options = [option, filename_input, filename_output]
+                options = [option, 'WARNING', filename_input, filename_output]
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertEqual(result.output, '')
                 self.assertIsNone(result.exception, result.output)
@@ -248,7 +271,7 @@ class TestVerdiExport(AiidaTestCase):
         """Test the functionality of `verdi export inspect`."""
         archives = []
         for version in range(1, int(EXPORT_VERSION.split('.')[-1])):
-            archives.append(('export_v0.{}_simple.aiida'.format(version), '0.{}'.format(version)))
+            archives.append((f'export_v0.{version}_simple.aiida', f'0.{version}'))
 
         for archive, version_number in archives:
 

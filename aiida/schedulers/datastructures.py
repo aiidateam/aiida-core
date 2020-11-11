@@ -108,7 +108,7 @@ class NodeNumberJobResource(JobResource):
         def is_greater_equal_one(parameter):
             value = getattr(resources, parameter, None)
             if value is not None and value < 1:
-                raise ValueError('`{}` must be greater than or equal to one.'.format(parameter))
+                raise ValueError(f'`{parameter}` must be greater than or equal to one.')
 
         # Validate that all fields are valid integers if they are specified, otherwise initialize them to `None`
         for parameter in list(cls._default_fields) + ['tot_num_mpiprocs']:
@@ -119,10 +119,10 @@ class NodeNumberJobResource(JobResource):
                 try:
                     setattr(resources, parameter, int(value))
                 except ValueError:
-                    raise ValueError('`{}` must be an integer when specified'.format(parameter))
+                    raise ValueError(f'`{parameter}` must be an integer when specified')
 
         if kwargs:
-            raise ValueError('these parameters were not recognized: {}'.format(', '.join(list(kwargs.keys()))))
+            raise ValueError(f"these parameters were not recognized: {', '.join(list(kwargs.keys()))}")
 
         # At least two of the following parameters need to be defined as non-zero
         if [resources.num_machines, resources.num_mpiprocs_per_machine, resources.tot_num_mpiprocs].count(None) > 1:
@@ -207,7 +207,7 @@ class ParEnvJobResource(JobResource):
             raise ValueError('`tot_num_mpiprocs` must be greater than or equal to one.')
 
         if kwargs:
-            raise ValueError('these parameters were not recognized: {}'.format(', '.join(list(kwargs.keys()))))
+            raise ValueError(f"these parameters were not recognized: {', '.join(list(kwargs.keys()))}")
 
         return resources
 
@@ -440,7 +440,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
     def _serialize_job_state(job_state):
         """Return the serialized value of the JobState instance."""
         if not isinstance(job_state, JobState):
-            raise TypeError('invalid type for value {}, should be an instance of `JobState`'.format(job_state))
+            raise TypeError(f'invalid type for value {job_state}, should be an instance of `JobState`')
 
         return job_state.value
 
@@ -510,7 +510,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         if field_type is None:
             return value
 
-        serializer_method = getattr(cls, '_serialize_{}'.format(field_type))
+        serializer_method = getattr(cls, f'_serialize_{field_type}')
 
         return serializer_method(value)
 
@@ -525,7 +525,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         if field_type is None:
             return value
 
-        deserializer_method = getattr(cls, '_deserialize_{}'.format(field_type))
+        deserializer_method = getattr(cls, f'_deserialize_{field_type}')
 
         return deserializer_method(value)
 

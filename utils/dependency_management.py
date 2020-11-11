@@ -21,7 +21,7 @@ from packaging.utils import canonicalize_name
 
 import click
 import yaml
-import toml
+import tomlkit as toml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -30,7 +30,7 @@ SETUPTOOLS_CONDA_MAPPINGS = {
     'graphviz': 'python-graphviz',
 }
 
-CONDA_IGNORE = ['pyblake2', r'.*python_version == \"3\.5\"']
+CONDA_IGNORE = []
 
 GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS') == 'true'
 
@@ -45,7 +45,7 @@ def _load_setup_cfg():
         with open(ROOT / 'setup.json') as setup_json_file:
             return json.load(setup_json_file)
     except json.decoder.JSONDecodeError as error:  # pylint: disable=no-member
-        raise DependencySpecificationError("Error while parsing 'setup.json' file: {}".format(error))
+        raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")
     except FileNotFoundError:
         raise DependencySpecificationError("The 'setup.json' file is missing!")
 
@@ -56,7 +56,7 @@ def _load_environment_yml():
         with open(ROOT / 'environment.yml') as file:
             return yaml.load(file, Loader=yaml.SafeLoader)
     except yaml.error.YAMLError as error:
-        raise DependencySpecificationError("Error while parsing 'environment.yml':\n{}".format(error))
+        raise DependencySpecificationError(f"Error while parsing 'environment.yml':\n{error}")
     except FileNotFoundError as error:
         raise DependencySpecificationError(str(error))
 
@@ -161,13 +161,23 @@ def generate_environment_yml():
 
 
 @cli.command()
-def generate_pyproject_toml():
-    """Generate 'pyproject.toml' file."""
+def update_pyproject_toml():
+    """Generate a 'pyproject.toml' file, or update an existing one.
+
+    This function generates/updates the ``build-system`` section,
+    to be consistent with the 'setup.json' file.
+    """
+
+    # read the current file
+    toml_path = ROOT / 'pyproject.toml'
+    if toml_path.exists():
+        pyproject = toml.loads(toml_path.read_text(encoding='utf8'))
+    else:
+        pyproject = {}
 
     # Read the requirements from 'setup.json'
     setup_cfg = _load_setup_cfg()
     install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-
     for requirement in install_requirements:
         if requirement.name == 'reentry':
             reentry_requirement = requirement
@@ -175,15 +185,17 @@ def generate_pyproject_toml():
     else:
         raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
 
-    pyproject = {
-        'build-system': {
-            'requires': ['setuptools>=40.8.0,<50', 'wheel',
-                         str(reentry_requirement), 'fastentrypoints~=0.12'],
-            'build-backend': 'setuptools.build_meta:__legacy__',
-        }
-    }
-    with open(ROOT / 'pyproject.toml', 'w') as file:
-        toml.dump(pyproject, file)
+    # update the build-system key
+    pyproject.setdefault('build-system', {})
+    pyproject['build-system'].update({
+        'requires': ['setuptools>=40.8.0,<50', 'wheel',
+                     str(reentry_requirement), 'fastentrypoints~=0.12'],
+        'build-backend':
+        'setuptools.build_meta:__legacy__',
+    })
+
+    # write the new file
+    toml_path.write_text(toml.dumps(pyproject), encoding='utf8')
 
 
 @cli.command()
@@ -191,7 +203,7 @@ def generate_pyproject_toml():
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(generate_pyproject_toml)
+    ctx.invoke(update_pyproject_toml)
 
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
@@ -210,12 +222,12 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
             'conda-forge', 'defaults'
         ], "channels should be 'conda-forge', 'defaults'."
     except AssertionError as error:
-        raise DependencySpecificationError("Error in 'environment.yml': {}".format(error))
+        raise DependencySpecificationError(f"Error in 'environment.yml': {error}")
 
     try:
         conda_dependencies = {Requirement.parse(d) for d in environment_yml['dependencies']}
     except TypeError as error:
-        raise DependencySpecificationError("Error while parsing requirements from 'environment_yml': {}".format(error))
+        raise DependencySpecificationError(f"Error while parsing requirements from 'environment_yml': {error}")
 
     # Attempt to find the specification of Python among the 'environment.yml' dependencies.
     for dependency in conda_dependencies:
@@ -230,9 +242,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
         if expected_classifier not in setup_cfg['classifiers']:
-            raise DependencySpecificationError(
-                "Trove classifier '{}' missing from 'setup.json'.".format(expected_classifier)
-            )
+            raise DependencySpecificationError(f"Trove classifier '{expected_classifier}' missing from 'setup.json'.")
 
         # The Python version should be specified as supported in 'setup.json'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
@@ -242,7 +252,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
 
         break
     else:
-        raise DependencySpecificationError("Missing specifier: '{}'.".format(conda_python_dependency))
+        raise DependencySpecificationError(f"Missing specifier: '{conda_python_dependency}'.")
 
     # Check that all requirements specified in the setup.json file are found in the
     # conda environment specification.
@@ -253,7 +263,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
         try:
             conda_dependencies.remove(_setuptools_to_conda(req))
         except KeyError:
-            raise DependencySpecificationError("Requirement '{}' not specified in 'environment.yml'.".format(req))
+            raise DependencySpecificationError(f"Requirement '{req}' not specified in 'environment.yml'.")
 
     # The only dependency left should be the one for Python itself, which is not part of
     # the install_requirements for setuptools.
@@ -281,18 +291,15 @@ def validate_pyproject_toml():
     else:
         raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
 
-    try:
-        with open(ROOT / 'pyproject.toml') as file:
-            pyproject = toml.load(file)
-            pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
-
-        if reentry_requirement not in pyproject_requires:
-            raise DependencySpecificationError(
-                "Missing requirement '{}' in 'pyproject.toml'.".format(reentry_requirement)
-            )
-
-    except FileNotFoundError:
+    pyproject_file = ROOT / 'pyproject.toml'
+    if not pyproject_file.exists():
         raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
+
+    pyproject = toml.loads(pyproject_file.read_text(encoding='utf8'))
+    pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
+
+    if reentry_requirement not in pyproject_requires:
+        raise DependencySpecificationError(f"Missing requirement '{reentry_requirement}' in 'pyproject.toml'.")
 
     click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
 

@@ -1,0 +1,169 @@
+name: continuous-integration
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths-ignore: ['docs/**']
+
+jobs:
+
+  check-requirements:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install dm-script dependencies
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+
+    - name: Check requirements files
+      id: check_reqs
+      run: python ./utils/dependency_management.py check-requirements DEFAULT
+
+    - name: Create commit comment
+      if: failure() && steps.check_reqs.outputs.error
+      uses: peter-evans/commit-comment@v1
+      with:
+        path: setup.json
+        body: |
+          ${{ steps.check_reqs.outputs.error }}
+
+          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information on dependency management.
+
+  tests:
+
+    needs: [check-requirements]
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: ['django', 'sqlalchemy']
+        python-version: [3.6, 3.8]
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt update
+        sudo apt install postgresql-10 graphviz
+
+    - name: Upgrade pip
+      run: |
+        pip install --upgrade pip
+        pip --version
+
+    - name: Install aiida-core
+      run: |
+        pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --use-feature=2020-resolver --no-deps -e .
+        reentry scan
+        pip freeze
+
+    - name: Setup environment
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/setup.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run:
+        .github/workflows/tests.sh
+
+    - name: Upload coverage report
+      if: matrix.python-version == 3.6 && github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v1
+      with:
+        name: aiida-pytests-py3.6-${{ matrix.backend }}
+        flags: ${{ matrix.backend }}
+        file: ./coverage.xml
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails
+
+  verdi:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install python dependencies
+      run: pip install -e .
+
+    - name: Run verdi
+      run: |
+        verdi devel check-load-time
+        .github/workflows/verdi.sh
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable"
+        sudo apt-get update
+        sudo apt-get install docker-ce
+
+    - name: Build the aiida-core image
+      run:
+        docker build -t aiida-core .
+
+    - name: Run aiida-core image and test the default aiida profile and localhost computer.
+      run: |
+        export DOCKERID=`docker run -d aiida-core`
+        docker exec --tty $DOCKERID wait-for-services
+        docker logs $DOCKERID
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
+        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

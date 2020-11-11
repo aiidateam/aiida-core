@@ -22,8 +22,8 @@ class OqmdDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str) and not isinstance(values, int):
-            raise ValueError("incorrect value for keyword '" + alias + "' -- only strings and integers are accepted")
-        return '{}={}'.format(key, values)
+            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
+        return f'{key}={values}'
 
     _keywords = {'element': ['element', None]}
 
@@ -43,7 +43,7 @@ class OqmdDbImporter(DbImporter):
         if not isinstance(elements, list):
             elements = [elements]
 
-        return '{}/materials/composition/{}'.format(self._query_url, ''.join(elements))
+        return f"{self._query_url}/materials/composition/{''.join(elements)}"
 
     def query(self, **kwargs):
         """
@@ -62,7 +62,7 @@ class OqmdDbImporter(DbImporter):
 
         results = []
         for entry in entries:
-            response = urlopen('{}{}'.format(self._query_url, entry)).read()
+            response = urlopen(f'{self._query_url}{entry}').read()
             structures = re.findall(r'/materials/export/conventional/cif/(\d+)', response)
             for struct in structures:
                 results.append({'id': struct})
@@ -77,7 +77,7 @@ class OqmdDbImporter(DbImporter):
             self._query_url = query_url
 
         if kwargs:
-            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
     def get_supported_keywords(self):
         """

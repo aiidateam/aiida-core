@@ -53,9 +53,9 @@ class Config:  # pylint: disable=too-many-public-methods
         else:
             # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
             if config_needs_migrating(config):
-                echo.echo_warning('current configuration file `{}` is outdated and will be migrated'.format(filepath))
+                echo.echo_warning(f'current configuration file `{filepath}` is outdated and will be migrated')
                 filepath_backup = cls._backup(filepath)
-                echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
+                echo.echo_warning(f'original backed up to `{filepath_backup}`')
 
             config = Config(filepath, check_and_migrate_config(config))
             config.store()
@@ -75,7 +75,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = '{}.{}'.format(filepath, timezone.now().strftime('%Y%m%d-%H%M%S.%f'))
+            filepath_backup = f"{filepath}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
 
         shutil.copy(filepath, filepath_backup)
 
@@ -105,7 +105,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if unknown_keys:
             keys = ', '.join(unknown_keys)
-            self.handle_invalid('encountered unknown keys [{}] in `{}` which have been removed'.format(keys, filepath))
+            self.handle_invalid(f'encountered unknown keys [{keys}] in `{filepath}` which have been removed')
 
         try:
             self._options = config[self.KEY_OPTIONS]
@@ -119,7 +119,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         for name, config_profile in config.get(self.KEY_PROFILES, {}).items():
             if Profile.contains_unknown_keys(config_profile):
-                self.handle_invalid('encountered unknown keys in profile `{}` which have been removed'.format(name))
+                self.handle_invalid(f'encountered unknown keys in profile `{name}` which have been removed')
             self._profiles[name] = Profile(name, config_profile, from_config=True)
 
     def __eq__(self, other):
@@ -140,7 +140,7 @@ class Config:  # pylint: disable=too-many-public-methods
         from aiida.cmdline.utils import echo
         filepath_backup = self._backup(self.filepath)
         echo.echo_warning(message)
-        echo.echo_warning('backup of the original config file written to: `{}`'.format(filepath_backup))
+        echo.echo_warning(f'backup of the original config file written to: `{filepath_backup}`')
 
     @property
     def dictionary(self):
@@ -235,7 +235,7 @@ class Config:  # pylint: disable=too-many-public-methods
         from aiida.common import exceptions
 
         if name not in self.profile_names:
-            raise exceptions.ProfileConfigurationError('profile `{}` does not exist'.format(name))
+            raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
 
     def get_profile(self, name=None):
         """Return the profile for the given name or the default one if not specified.
@@ -247,7 +247,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if not name and not self.default_profile_name:
             raise exceptions.ProfileConfigurationError(
-                'no default profile defined: {}\n{}'.format(self._default_profile, self.dictionary)
+                f'no default profile defined: {self._default_profile}\n{self.dictionary}'
             )
 
         if not name:

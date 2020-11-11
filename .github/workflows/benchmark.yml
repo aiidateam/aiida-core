@@ -1,22 +1,47 @@
-# Note: this workflow is currently being tested,
-# and so is only activated for the benchmark-test-cjs branch
-
 name: Performance benchmarks
 
 on:
   push:
-    branches:
-      - benchmark-test-cjs
+    branches: [develop]
+    paths-ignore: ['docs/**']
+  pull_request:
+    branches: [develop]
 
 jobs:
 
-  benchmarks:
-    runs-on: ${{ matrix.os }}
+  run-and-upload:
+
+    if: ${{ github.event_name == 'push' }}
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-18.04]
+        postgres: [12.3]
+        rabbitmq: [3.8.3]
+        backend: ['django', 'sqlalchemy']
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: "postgres:${{ matrix.postgres }}"
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: "rabbitmq:${{ matrix.rabbitmq }}"
+        ports:
+          - 5672:5672
 
     steps:
     - uses: actions/checkout@v2
@@ -28,21 +53,104 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements/requirements-py-3.8.txt
+        pip install --no-deps -e .
+        reentry scan
+        pip freeze
+
     - name: Run benchmarks
-      run: pytest --benchmark-only --benchmark-json output.json
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run: pytest --benchmark-only --benchmark-json benchmark.json
+
     - name: Store benchmark result
-      ## Run only on push on develop! Otherwise people (or other branches) might access to the github-actions branch
-      ## This is currently disabled because we are in a workflow that has the correct 'on' settings (only push,
-      ## and only 'develop'). Otherwise, enable this
-      #if: "github.event_name == 'push' && github.ref == 'refs/heads/develop'"
-      uses: rhysd/github-action-benchmark@v1
+      uses: aiidateam/github-action-benchmark@v3
       with:
-        name: "Benchmark on ${{ matrix.os }}"
-        tool: "pytest"
-        output-file-path: output.json
+        benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
+        name: "pytest-benchmarks:${{ matrix.os }},${{ matrix.backend }}"
+        metadata: "postgres:${{ matrix.postgres }}, rabbitmq:${{ matrix.rabbitmq }}"
+        output-file-path: benchmark.json
+        render-json-path: .github/workflows/benchmark-config.json
+        commit-msg-append: "[ci skip]"
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
         # Show alert with commit comment on detecting possible performance regression
-        alert-threshold: '110%'
-        comment-on-alert: false
+        alert-threshold: '200%'
+        comment-on-alert: true
         fail-on-alert: false
+        alert-comment-cc-users: '@chrisjsewell,@giovannipizzi'
+
+  run-on-comment:
+
+    if: ${{ github.event_name == 'pull_request' }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+        postgres: [12.3]
+        rabbitmq: [3.8.3]
+        backend: ['django']
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: "postgres:${{ matrix.postgres }}"
+        env:
+          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: "rabbitmq:${{ matrix.rabbitmq }}"
+        ports:
+          - 5672:5672
+
+    steps:
+    # v2 was checking out the wrong commit! https://github.com/actions/checkout/issues/299
+    - uses: actions/checkout@v1
+
+    - name: get commit message
+      run: echo ::set-env name=commitmsg::$(git log --format=%B -n 1 "${{ github.event.after }}")
+
+    - if: contains( env.commitmsg , '[run bench]' )
+      name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - if: contains( env.commitmsg , '[run bench]' )
+      name: Install python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/requirements-py-3.8.txt
+        pip install --no-deps -e .
+        reentry scan
+        pip freeze
+
+    - if: contains( env.commitmsg , '[run bench]' )
+      name: Run benchmarks
+      env:
+        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+      run: pytest --benchmark-only --benchmark-json benchmark.json
+
+    - if: contains( env.commitmsg , '[run bench]' )
+      name: Compare benchmark results
+      uses: aiidateam/github-action-benchmark@v3
+      with:
+        output-file-path: benchmark.json
+        name: "pytest-benchmarks:${{ matrix.os }},${{ matrix.backend }}"
+        benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
+        metadata: "postgres:${{ matrix.postgres }}, rabbitmq:${{ matrix.rabbitmq }}"
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        auto-push: false
+        # Show alert with commit comment on detecting possible performance regression
+        alert-threshold: '200%'
+        comment-always: true
+        fail-on-alert: true

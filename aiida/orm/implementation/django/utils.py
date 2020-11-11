@@ -114,9 +114,9 @@ class ModelWrapper:
     def _flush(self, fields=None):
         """Flush the fields of the model to the database.
 
-        .. note:: If the wrapped model is not actually save in the database yet, this method is a no-op.
+        .. note:: If the wrapped model is not actually saved in the database yet, this method is a no-op.
 
-        :param fields: the model fields whose currently value to flush to the database
+        :param fields: the model fields whose current value to flush to the database
         """
         if self.is_saved():
             try:

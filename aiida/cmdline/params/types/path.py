@@ -23,7 +23,7 @@ def _check_timeout_seconds(timeout_seconds):
     try:
         timeout_seconds = int(timeout_seconds)
     except ValueError:
-        raise TypeError('timeout_seconds should be an integer but got: {}'.format(type(timeout_seconds)))
+        raise TypeError(f'timeout_seconds should be an integer but got: {type(timeout_seconds)}')
 
     if timeout_seconds < 0 or timeout_seconds > 60:
         raise ValueError('timeout_seconds needs to be in the range [0;60].')

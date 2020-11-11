@@ -39,35 +39,23 @@ class TestIdentifiers(AiidaTestCase):
             )
 
         with self.assertRaises(ValueError):
-            get_full_type_filters(
-                'not_at_{like}_the_end{concat}process_type'.format(
-                    like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR
-                )
-            )
+            get_full_type_filters(f'not_at_{LIKE_OPERATOR_CHARACTER}_the_end{FULL_TYPE_CONCATENATOR}process_type')
 
         with self.assertRaises(ValueError):
-            get_full_type_filters(
-                'node_type{concat}not_at_{like}_the_end'.format(
-                    like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR
-                )
-            )
+            get_full_type_filters(f'node_type{FULL_TYPE_CONCATENATOR}not_at_{LIKE_OPERATOR_CHARACTER}_the_end')
 
         # Equals on both
-        filters = get_full_type_filters('node_type{concat}process_type'.format(concat=FULL_TYPE_CONCATENATOR))
+        filters = get_full_type_filters(f'node_type{FULL_TYPE_CONCATENATOR}process_type')
         self.assertEqual(filters['node_type'], 'node\\_type')
         self.assertEqual(filters['process_type'], 'process\\_type')
 
         # Like on `node_type`
-        filters = get_full_type_filters(
-            'node_type{like}{concat}process_type'.format(like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR)
-        )
+        filters = get_full_type_filters(f'node_type{LIKE_OPERATOR_CHARACTER}{FULL_TYPE_CONCATENATOR}process_type')
         self.assertEqual(filters['node_type'], {'like': 'node\\_type%'})
         self.assertEqual(filters['process_type'], 'process\\_type')
 
         # Like on `process_type`
-        filters = get_full_type_filters(
-            'node_type{concat}process_type{like}'.format(like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR)
-        )
+        filters = get_full_type_filters(f'node_type{FULL_TYPE_CONCATENATOR}process_type{LIKE_OPERATOR_CHARACTER}')
         self.assertEqual(filters['node_type'], 'node\\_type')
         self.assertEqual(filters['process_type'], {'like': 'process\\_type%'})
 

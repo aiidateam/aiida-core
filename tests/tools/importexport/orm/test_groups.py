@@ -81,8 +81,8 @@ class TestGroups(AiidaTestCase):
 
     @with_temp_dir
     def test_group_export(self, temp_dir):
-        """Test that when exporting just a group, its nodes are also exported"""
-        # Create another user
+        """Exporting a group includes its extras and nodes."""
+        # Create a new user
         new_email = 'newuser@new.n'
         user = orm.User(email=new_email)
         user.store()
@@ -93,13 +93,14 @@ class TestGroups(AiidaTestCase):
         sd1.label = 'sd1'
         sd1.store()
 
-        # Create a group and add the data inside
+        # Create a group and add the node
         group = orm.Group(label='node_group')
+        group.set_extra('test', 1)
         group.store()
         group.add_nodes([sd1])
         group_uuid = group.uuid
 
-        # At this point we export the generated data
+        # Export the generated data, clean the database and import it again
         filename = os.path.join(temp_dir, 'export.aiida')
         export([group], filename=filename, silent=True)
         n_uuids = [sd1.uuid]
@@ -116,6 +117,8 @@ class TestGroups(AiidaTestCase):
         builder = orm.QueryBuilder()
         builder.append(orm.Group, filters={'uuid': {'==': group_uuid}})
         self.assertEqual(builder.count(), 1, 'The group was not found.')
+        imported_group = builder.all()[0][0]
+        self.assertEqual(imported_group.get_extra('test'), 1, 'Extra missing on imported group')
 
     @with_temp_dir
     def test_group_import_existing(self, temp_dir):
@@ -153,11 +156,11 @@ class TestGroups(AiidaTestCase):
         import_data(filename, silent=True)
         # The import should have created a new group with a suffix
         # I check for this:
-        builder = orm.QueryBuilder().append(orm.Group, filters={'label': {'like': grouplabel + '%'}})
+        builder = orm.QueryBuilder().append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}})
         self.assertEqual(builder.count(), 2)
         # Now I check for the group having one member, and whether the name is different:
         builder = orm.QueryBuilder()
-        builder.append(orm.Group, filters={'label': {'like': grouplabel + '%'}}, tag='g', project='label')
+        builder.append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}}, tag='g', project='label')
         builder.append(orm.StructureData, with_group='g')
         self.assertEqual(builder.count(), 1)
         # I check that the group name was changed:
@@ -165,7 +168,7 @@ class TestGroups(AiidaTestCase):
         # I import another name, the group should not be imported again
         import_data(filename, silent=True)
         builder = orm.QueryBuilder()
-        builder.append(orm.Group, filters={'label': {'like': grouplabel + '%'}})
+        builder.append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}})
         self.assertEqual(builder.count(), 2)
 
     @with_temp_dir
@@ -205,8 +208,7 @@ class TestGroups(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             1,
-            msg='There should be exactly one Group with label {}. '
-            'Instead {} was found.'.format(group_label, builder.count())
+            msg=f'There should be exactly one Group with label {group_label}. Instead {builder.count()} was found.'
         )
         imported_group = load_group(builder.all()[0][0])
         self.assertEqual(imported_group.uuid, group_uuid)

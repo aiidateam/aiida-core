@@ -49,7 +49,7 @@ class LabelStringType(NonEmptyStringParamType):
     def convert(self, value, param, ctx):
         newval = super().convert(value, param, ctx)
 
-        if not re.match('^[{}]*$'.format(self.ALPHABET), newval):
+        if not re.match(f'^[{self.ALPHABET}]*$', newval):
             self.fail('Please use only alphanumeric characters, dashes, underscores or dots')
 
         return newval

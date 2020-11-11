@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Invalidating node hash - User should rehash nodes for caching."""
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
@@ -31,8 +31,8 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunSQL(
-            """ DELETE FROM db_dbextra WHERE key='""" + _HASH_EXTRA_KEY + """';""",
-            reverse_sql=""" DELETE FROM db_dbextra WHERE key='""" + _HASH_EXTRA_KEY + """';"""
+            f" DELETE FROM db_dbextra WHERE key='{_HASH_EXTRA_KEY}';",
+            reverse_sql=f" DELETE FROM db_dbextra WHERE key='{_HASH_EXTRA_KEY}';"
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

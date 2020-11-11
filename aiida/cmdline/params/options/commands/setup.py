@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for the setup commands."""
-
 import functools
 import getpass
 import hashlib
@@ -19,6 +18,7 @@ from aiida.backends import BACKEND_DJANGO
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import get_config, get_config_option, Profile
 from aiida.manage.external.postgres import DEFAULT_DBINFO
+from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 PASSWORD_UNCHANGED = '***'  # noqa
 
@@ -31,7 +31,7 @@ def validate_profile_parameter(ctx):
     """
     option = 'profile'
     if option not in ctx.params or ctx.params[option] is None or not isinstance(ctx.params[option], Profile):
-        raise click.BadParameter('specifying the name of the profile is required', param_hint='"--{}"'.format(option))
+        raise click.BadParameter('specifying the name of the profile is required', param_hint=f'"--{option}"')
 
 
 def get_profile_attribute_default(attribute_tuple, ctx):
@@ -96,7 +96,7 @@ def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-a
     config = get_config()
     profile = ctx.params['profile'].name
     config_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
-    database_name = '{profile}_{user}_{hash}'.format(profile=profile, user=getpass.getuser(), hash=config_hash)
+    database_name = f'{profile}_{getpass.getuser()}_{config_hash}'
 
     return database_name
 
@@ -115,7 +115,7 @@ def get_quicksetup_username(ctx, param, value):  # pylint: disable=unused-argume
 
     config = get_config()
     config_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
-    username = 'aiida_qs_{user}_{hash}'.format(user=getpass.getuser(), hash=config_hash)
+    username = f'aiida_qs_{getpass.getuser()}_{config_hash}'
 
     return username
 
@@ -229,6 +229,18 @@ QUICKSETUP_SUPERUSER_DATABASE_PASSWORD = options.OverridableOption(
     default=DEFAULT_DBINFO['password'],
 )
 
+QUICKSETUP_BROKER_PROTOCOL = options.BROKER_PROTOCOL
+
+QUICKSETUP_BROKER_USERNAME = options.BROKER_USERNAME
+
+QUICKSETUP_BROKER_PASSWORD = options.BROKER_PASSWORD
+
+QUICKSETUP_BROKER_HOST = options.BROKER_HOST
+
+QUICKSETUP_BROKER_PORT = options.BROKER_PORT
+
+QUICKSETUP_BROKER_VIRTUAL_HOST = options.BROKER_VIRTUAL_HOST
+
 QUICKSETUP_REPOSITORY_URI = options.REPOSITORY_PATH.clone(
     callback=get_quicksetup_repository_uri  # Cannot use `default` because `ctx` is needed to determine the default
 )
@@ -275,6 +287,50 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     prompt='Database password',
     required=True,
     contextual_default=functools.partial(get_profile_attribute_default, ('database_password', None)),
+    cls=options.interactive.InteractiveOption
+)
+
+SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
+    prompt='Broker protocol',
+    required=True,
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_protocol', BROKER_DEFAULTS.protocol)),
+    cls=options.interactive.InteractiveOption
+)
+
+SETUP_BROKER_USERNAME = QUICKSETUP_BROKER_USERNAME.clone(
+    prompt='Broker username',
+    required=True,
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_username', BROKER_DEFAULTS.username)),
+    cls=options.interactive.InteractiveOption
+)
+
+SETUP_BROKER_PASSWORD = QUICKSETUP_BROKER_PASSWORD.clone(
+    prompt='Broker password',
+    required=True,
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_password', BROKER_DEFAULTS.password)),
+    cls=options.interactive.InteractiveOption
+)
+
+SETUP_BROKER_HOST = QUICKSETUP_BROKER_HOST.clone(
+    prompt='Broker host',
+    required=True,
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_host', BROKER_DEFAULTS.host)),
+    cls=options.interactive.InteractiveOption
+)
+
+SETUP_BROKER_PORT = QUICKSETUP_BROKER_PORT.clone(
+    prompt='Broker port',
+    required=True,
+    contextual_default=functools.partial(get_profile_attribute_default, ('broker_port', BROKER_DEFAULTS.port)),
+    cls=options.interactive.InteractiveOption
+)
+
+SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
+    prompt='Broker virtual host name',
+    required=True,
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('broker_virtual_host', BROKER_DEFAULTS.virtual_host)
+    ),
     cls=options.interactive.InteractiveOption
 )
 

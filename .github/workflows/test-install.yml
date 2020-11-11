@@ -9,6 +9,7 @@ on:
       - 'pyproject.toml'
       - 'util/dependency_management.py'
       - '.github/workflows/test-install.yml'
+    branches-ignore: [gh-pages]
   schedule:
     - cron: '30 02 * * *'  # nightly build
 
@@ -24,13 +25,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
 
     - name: Validate
       run: python ./utils/dependency_management.py validate-all
@@ -41,7 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
     strategy:
+      fail-fast: false
       matrix:
         pip-feature-flag: [ '', '--use-feature=2020-resolver' ]
         extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
@@ -49,20 +52,30 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+      # Set to Python version 3.8, as the installation with 3.9 still takes
+      # significantly longer to install.
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
         python-version: 3.8
 
     - name: Pip install
+      id: pip_install
+      continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
       run: |
         python -m pip --version
         python -m pip install -e .${{ matrix.extras }} ${{ matrix.pip-feature-flag }}
         python -m pip freeze
 
     - name: Test importing aiida
+      if: steps.pip_install.outcome == 'success'
       run:
         python -c "import aiida"
+
+    - name: Warn about pip 2020 resolver issues.
+      if: steps.pip_install.outcome == 'failure' && contains(matrix.pip-feature-flag, '2020-resolver')
+      run: |
+        echo "::warning ::Encountered issues with the pip 2020-resolver."
 
   install-with-conda:
 
@@ -78,8 +91,9 @@ jobs:
     - name: Setup Conda
       uses: s-weigand/setup-conda@v1
       with:
-        update-conda: true
-        python-version: 3.8
+        python-version: 3.9
+        update-conda: false
+        conda-channels: conda-forge
     - run: conda --version
     - run: python --version
     - run: which python
@@ -99,12 +113,12 @@ jobs:
 
     needs: [install-with-pip, install-with-conda]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -141,10 +155,6 @@ jobs:
         sudo apt install postgresql-10 graphviz
 
     - run: pip install --upgrade pip
-
-    - name: upgrade setuptools [py35]
-      if: matrix.python-version == 3.5
-      run: pip install -I setuptools==42.0.0
 
     - name: Install aiida-core
       run: |
@@ -191,13 +201,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 toml
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
 
     - name: Check consistency of requirements/ files
       id: check_reqs

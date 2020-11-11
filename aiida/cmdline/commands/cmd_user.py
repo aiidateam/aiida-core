@@ -127,7 +127,7 @@ def user_configure(ctx, user, first_name, last_name, institution, set_default):
 
     user.store()
 
-    echo.echo_success('{} successfully {}'.format(user.email, action))
+    echo.echo_success(f'{user.email} successfully {action}')
 
     if set_default:
         ctx.invoke(user_set_default, user=user)
@@ -140,4 +140,4 @@ def user_configure(ctx, user, first_name, last_name, institution, set_default):
 def user_set_default(ctx, user):
     """Set a user as the default user for the profile."""
     set_default_user(ctx.obj.profile, user)
-    echo.echo_success('set `{}` as the new default user for profile `{}`'.format(user.email, ctx.obj.profile.name))
+    echo.echo_success(f'set `{user.email}` as the new default user for profile `{ctx.obj.profile.name}`')

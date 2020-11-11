@@ -53,11 +53,14 @@ class EntryPointFormat(enum.Enum):
 ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
     'aiida.cmdline.data': 'aiida.cmdline.data',
+    'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
+    'aiida.tools.calculations': 'aiida.tools.calculations',
+    'aiida.tools.data.orbitals': 'aiida.tools.data.orbitals',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
     'aiida.transports': 'aiida.transports.plugins',
@@ -108,11 +111,11 @@ def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
         raise TypeError('fmt should be an instance of EntryPointFormat')
 
     if fmt == EntryPointFormat.FULL:
-        return '{}{}{}'.format(group, ENTRY_POINT_STRING_SEPARATOR, name)
+        return f'{group}{ENTRY_POINT_STRING_SEPARATOR}{name}'
     if fmt == EntryPointFormat.PARTIAL:
-        return '{}{}{}'.format(group[len(ENTRY_POINT_GROUP_PREFIX):], ENTRY_POINT_STRING_SEPARATOR, name)
+        return f'{group[len(ENTRY_POINT_GROUP_PREFIX):]}{ENTRY_POINT_STRING_SEPARATOR}{name}'
     if fmt == EntryPointFormat.MINIMAL:
-        return '{}'.format(name)
+        return f'{name}'
     raise ValueError('invalid EntryPointFormat')
 
 
@@ -204,7 +207,7 @@ def load_entry_point(group, name):
     try:
         loaded_entry_point = entry_point.load()
     except ImportError:
-        raise LoadingEntryPointError("Failed to load entry point '{}':\n{}".format(name, traceback.format_exc()))
+        raise LoadingEntryPointError(f"Failed to load entry point '{name}':\n{traceback.format_exc()}")
 
     return loaded_entry_point
 

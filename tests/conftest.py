@@ -15,7 +15,7 @@ import pytest
 
 from aiida.manage.configuration import Config, Profile, get_config
 
-pytest_plugins = ['aiida.manage.tests.pytest_fixtures']  # pylint: disable=invalid-name
+pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
 
 @pytest.fixture()
@@ -47,15 +47,15 @@ def non_interactive_editor(request):
             environ = None
         try:
             process = subprocess.Popen(
-                '{} {}'.format(editor, filename),  # This is the line that we change removing `shlex_quote`
+                f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
             )
             exit_code = process.wait()
             if exit_code != 0:
-                raise click.ClickException('{}: Editing failed!'.format(editor))
+                raise click.ClickException(f'{editor}: Editing failed!')
         except OSError as exception:
-            raise click.ClickException('{}: Editing failed: {}'.format(editor, exception))
+            raise click.ClickException(f'{editor}: Editing failed: {exception}')
 
     with patch.object(Editor, 'edit_file', edit_file):
         yield
@@ -212,7 +212,7 @@ def create_profile() -> Profile:
             'database_name': kwargs.pop('database_name', name),
             'database_username': kwargs.pop('database_username', 'user'),
             'database_password': kwargs.pop('database_password', 'pass'),
-            'repository_uri': 'file:///' + os.path.join(repository_dirpath, 'repository_' + name),
+            'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
         }
 
         return Profile(name, profile_dictionary)
@@ -241,3 +241,21 @@ def skip_if_not_sqlalchemy(backend):
     from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
     if not isinstance(backend, SqlaBackend):
         pytest.skip('this test should only be run for the SqlAlchemy backend.')
+
+
+@pytest.fixture(scope='function')
+def override_logging():
+    """Return a `SandboxFolder`."""
+    from aiida.common.log import configure_logging
+
+    config = get_config()
+
+    try:
+        config.set_option('logging.aiida_loglevel', 'DEBUG')
+        config.set_option('logging.db_loglevel', 'DEBUG')
+        configure_logging(with_orm=True)
+        yield
+    finally:
+        config.unset_option('logging.aiida_loglevel')
+        config.unset_option('logging.db_loglevel')
+        configure_logging(with_orm=True)

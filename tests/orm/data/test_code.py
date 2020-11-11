@@ -18,7 +18,7 @@ from aiida.orm import Code
 def create_codes(tmpdir, aiida_localhost):
     """Create a local and remote `Code` instance."""
     filename = 'add.sh'
-    filepath = str(tmpdir / filename)  # Cast the filepath to str as Python 3.5 does not support Path objects for `open`
+    filepath = tmpdir / filename
 
     with open(filepath, 'w'):
         pass

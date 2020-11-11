@@ -224,10 +224,10 @@ class SqlStringMatchTest(unittest.TestCase):
             for sample in match_true:
                 self.assertTrue(
                     escaping.sql_string_match(string=sample, pattern=pattern),
-                    "String '{}' should have matched pattern '{}'".format(sample, pattern)
+                    f"String '{sample}' should have matched pattern '{pattern}'"
                 )
             for sample in match_false:
                 self.assertFalse(
                     escaping.sql_string_match(string=sample, pattern=pattern),
-                    "String '{}' should not have matched pattern '{}'".format(sample, pattern)
+                    f"String '{sample}' should not have matched pattern '{pattern}'"
                 )

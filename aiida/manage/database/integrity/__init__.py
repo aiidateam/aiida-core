@@ -45,8 +45,8 @@ def write_database_integrity_violation(results, headers, reason_message, action_
             )
         )
 
-        handle.write('# {}\n'.format(datetime.utcnow().isoformat()))
-        handle.write('# Violation reason: {}\n'.format(reason_message))
-        handle.write('# Performed action: {}\n'.format(action_message))
+        handle.write(f'# {datetime.utcnow().isoformat()}\n')
+        handle.write(f'# Violation reason: {reason_message}\n')
+        handle.write(f'# Performed action: {action_message}\n')
         handle.write('\n')
         handle.write(tabulate(results, headers))

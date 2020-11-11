@@ -272,7 +272,13 @@ class TemporaryProfileManager(ProfileManager):
             'database_name': self.profile_info.get('database_name'),
             'database_username': self.profile_info.get('database_username'),
             'database_password': self.profile_info.get('database_password'),
-            'repository_uri': 'file://' + self.repo,
+            'broker_protocol': self.profile_info.get('broker_protocol'),
+            'broker_username': self.profile_info.get('broker_username'),
+            'broker_password': self.profile_info.get('broker_password'),
+            'broker_host': self.profile_info.get('broker_host'),
+            'broker_port': self.profile_info.get('broker_port'),
+            'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
+            'repository_uri': f'file://{self.repo}',
         }
         return dictionary
 
@@ -284,7 +290,7 @@ class TemporaryProfileManager(ProfileManager):
 
         if self.pg_cluster is not None:
             raise TestManagerError(
-                'Running temporary postgresql cluster detected.' + 'Use destroy_all() before creating a new cluster.'
+                'Running temporary postgresql cluster detected.Use destroy_all() before creating a new cluster.'
             )
         self.pg_cluster = PGTest(**self._pgtest)
         self.dbinfo.update(self.pg_cluster.dsn)
@@ -361,7 +367,7 @@ class TemporaryProfileManager(ProfileManager):
 
         valid_backends = [BACKEND_DJANGO, BACKEND_SQLA]
         if backend not in valid_backends:
-            raise ValueError('invalid backend {}, must be one of {}'.format(backend, valid_backends))
+            raise ValueError(f'invalid backend {backend}, must be one of {valid_backends}')
         self.profile_info['backend'] = backend
 
     @property
@@ -479,7 +485,7 @@ def get_test_backend_name():
 
     if backend_res in (BACKEND_DJANGO, BACKEND_SQLA):
         return backend_res
-    raise ValueError("Unknown backend '{}' read from AIIDA_TEST_BACKEND environment variable".format(backend_res))
+    raise ValueError(f"Unknown backend '{backend_res}' read from AIIDA_TEST_BACKEND environment variable")
 
 
 def get_test_profile_name():

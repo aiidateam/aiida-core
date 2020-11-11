@@ -52,7 +52,7 @@ class TestMigrationsModelModifierV0025(TestMigrations):
         :param array: The numpy array to store.
         """
         utils.store_numpy_array_in_repository(node.uuid, name, array)
-        self.set_attribute(node, 'array|{}'.format(name), list(array.shape))
+        self.set_attribute(node, f'array|{name}', list(array.shape))
 
 
 class TestNoMigrations(AiidaTestCase):

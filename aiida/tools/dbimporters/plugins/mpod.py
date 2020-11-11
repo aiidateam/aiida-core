@@ -22,8 +22,8 @@ class MpodDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str) and not isinstance(values, int):
-            raise ValueError("incorrect value for keyword '" + alias + "' -- only strings and integers are accepted")
-        return '{}={}'.format(key, values)
+            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
+        return f'{key}={values}'
 
     _keywords = {
         'phase_name': ['phase_name', _str_clause],
@@ -60,14 +60,14 @@ class MpodDbImporter(DbImporter):
                 get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
 
         if kwargs:
-            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
         queries = []
         for element in elements:
             clauses = [self._str_clause('formula', 'element', element)]
-            queries.append(self._query_url + '?' + '&'.join(get_parts + clauses))
+            queries.append(f"{self._query_url}?{'&'.join(get_parts + clauses)}")
         if not queries:
-            queries.append(self._query_url + '?' + '&'.join(get_parts))
+            queries.append(f"{self._query_url}?{'&'.join(get_parts)}")
 
         return queries
 
@@ -102,7 +102,7 @@ class MpodDbImporter(DbImporter):
             self._query_url = query_url
 
         if kwargs:
-            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
     def get_supported_keywords(self):
         """
@@ -141,7 +141,7 @@ class MpodSearchResults(DbSearchResults):  # pylint: disable=abstract-method
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return self._base_url + result_dict['id'] + '.mpod'
+        return f"{self._base_url + result_dict['id']}.mpod"
 
 
 class MpodEntry(CifEntry):  # pylint: disable=abstract-method

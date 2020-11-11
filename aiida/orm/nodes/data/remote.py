@@ -34,7 +34,7 @@ class RemoteData(Data):
         .. deprecated:: 1.4.0
             Will be removed in `v2.0.0`, use the `self.computer.label` property instead.
         """
-        return self.computer.label
+        return self.computer.label  # pylint: disable=no-member
 
     def get_remote_path(self):
         return self.get_attribute('remote_path')
@@ -76,7 +76,8 @@ class RemoteData(Data):
                 if exception.errno == 2:  # file does not exist
                     raise IOError(
                         'The required remote file {} on {} does not exist or has been deleted.'.format(
-                            full_path, self.computer.label
+                            full_path,
+                            self.computer.label  # pylint: disable=no-member
                         )
                     )
                 raise
@@ -98,7 +99,7 @@ class RemoteData(Data):
                 if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
                     raise exc
@@ -111,7 +112,7 @@ class RemoteData(Data):
                 if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
                     raise exc
@@ -135,7 +136,7 @@ class RemoteData(Data):
                 if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
                     raise exc
@@ -148,7 +149,7 @@ class RemoteData(Data):
                 if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)
+                        format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
                     raise exc

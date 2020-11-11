@@ -73,7 +73,7 @@ class TestVerdiConfig(AiidaTestCase):
         options = ['config', option_name, '--unset']
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
         self.assertClickSuccess(result)
-        self.assertIn('{} unset'.format(option_name), result.output.strip())
+        self.assertIn(f'{option_name} unset', result.output.strip())
 
         options = ['config', option_name]
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)

@@ -110,7 +110,7 @@ class Orbital:
         self.set_orbital_dict(kwargs)
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
     def _validate_keys(self, input_dict):
         """
@@ -141,12 +141,12 @@ class Orbital:
             try:
                 value = input_dict.pop(name)
             except KeyError:
-                raise ValidationError("Missing required parameter '{}'".format(name))
+                raise ValidationError(f"Missing required parameter '{name}'")
             # This might raise ValidationError
             try:
                 value = validator(value)
             except ValidationError as exc:
-                raise exc.__class__("Error validating '{}': {}".format(name, str(exc)))
+                raise exc.__class__(f"Error validating '{name}': {str(exc)}")
             validated_dict[name] = value
 
         for name, validator, default_value in self._base_fields_optional:
@@ -158,11 +158,11 @@ class Orbital:
             try:
                 value = validator(value)
             except ValidationError as exc:
-                raise exc.__class__("Error validating '{}': {}".format(name, str(exc)))
+                raise exc.__class__(f"Error validating '{name}': {str(exc)}")
             validated_dict[name] = value
 
         if input_dict:
-            raise ValidationError('Unknown keys: {}'.format(list(input_dict.keys())))
+            raise ValidationError(f'Unknown keys: {list(input_dict.keys())}')
         return validated_dict
 
     def set_orbital_dict(self, init_dict):

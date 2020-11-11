@@ -43,11 +43,11 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton'
+    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension'
 ]
 ipython_mplbackend = ''
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
-copybutton_prompt_text = '>>> |\\\\$ |In \\\\[\\\\d\\\\]: |\\\\s+\\.\\.\\.: '
+copybutton_prompt_text = r'>>> |\.\.\. |(?:\(.*\) )?\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
 copybutton_prompt_is_regexp = True
 
 todo_include_todos = False
@@ -97,12 +97,9 @@ exclude_patterns = [
     'get_started/**',
     'howto/installation_more/index.rst',
     'import_export/**',
-    'internals/data_storage.rst',
     'internals/engine.rst',
     'internals/global_design.rst',
     'internals/orm.rst',
-    'internals/rest_api.rst',
-    'restapi/**',
     'scheduler/index.rst',
     'topics/daemon.rst',
     'topics/repository.rst',
@@ -166,7 +163,8 @@ html_context = {
     'github_version': 'master',
     'doc_path': 'docs/source',
 }
-panels_add_boostrap_css = False  # pydata-sphinx-theme already loads this
+panels_add_bootstrap_css = False  # pydata-sphinx-theme already loads this
+notfound_urls_prefix = '/projects/aiida-core/en/latest/'
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -192,6 +190,7 @@ html_logo = 'images/logo_aiida_docs.png'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 html_css_files = ['aiida-custom.css']
+rediraffe_redirects = 'redirects.txt'
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -277,6 +276,14 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_domain_indices = True
+
+# this is to avoid the error
+# aiida/orm/implementation/django/querybuilder.py:docstring of
+# aiida.orm.implementation.django.querybuilder.array_length._compiler_dispatch:1: WARNING: Unknown target name: "visit".
+autodoc_default_options = {
+    'exclude-members': '_compiler_dispatch'
+}
+
 
 def run_apidoc(_):
     """Runs sphinx-apidoc when building the documentation.

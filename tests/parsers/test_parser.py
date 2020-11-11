@@ -103,7 +103,7 @@ class TestParser(AiidaTestCase):
         node.store()
 
         retrieved = orm.FolderData()
-        retrieved.put_object_from_filelike(io.StringIO('{}'.format(summed)), output_filename)
+        retrieved.put_object_from_filelike(io.StringIO(f'{summed}'), output_filename)
         retrieved.store()
         retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 

@@ -38,7 +38,7 @@ def merge_comment(incoming_comment, comment_mode):
         # Get existing Comment's 'mtime' and 'content'
         builder = QueryBuilder().append(Comment, filters={'uuid': incoming_uuid}, project=['mtime', 'content'])
         if builder.count() != 1:
-            raise exceptions.ImportValidationError('Multiple Comments with the same UUID: {}'.format(incoming_uuid))
+            raise exceptions.ImportValidationError(f'Multiple Comments with the same UUID: {incoming_uuid}')
         builder = builder.all()
 
         existing_mtime = builder[0][0]
@@ -94,12 +94,10 @@ def merge_extras(old_extras, new_extras, mode):
     """
     if not isinstance(mode, str):
         raise exceptions.ImportValidationError(
-            "Parameter 'mode' should be of string type, you provided '{}' type".format(type(mode))
+            f"Parameter 'mode' should be of string type, you provided '{type(mode)}' type"
         )
     elif not len(mode) == 3:
-        raise exceptions.ImportValidationError(
-            "Parameter 'mode' should be a 3-letter string, you provided: '{}'".format(mode)
-        )
+        raise exceptions.ImportValidationError(f"Parameter 'mode' should be a 3-letter string, you provided: '{mode}'")
 
     old_keys = set(old_extras.keys())
     new_keys = set(new_extras.keys())
@@ -149,7 +147,7 @@ def merge_extras(old_extras, new_extras, mode):
                 final_extras[key] = old_extras[key]
         elif mode[0] != 'n':
             raise exceptions.ImportValidationError(
-                "Unknown first letter of the update extras mode: '{}'. Should be either 'k' or 'n'".format(mode)
+                f"Unknown first letter of the update extras mode: '{mode}'. Should be either 'k' or 'n'"
             )
 
         if mode[1] == 'c':
@@ -157,7 +155,7 @@ def merge_extras(old_extras, new_extras, mode):
                 final_extras[key] = new_extras[key]
         elif mode[1] != 'n':
             raise exceptions.ImportValidationError(
-                "Unknown second letter of the update extras mode: '{}'. Should be either 'c' or 'n'".format(mode)
+                f"Unknown second letter of the update extras mode: '{mode}'. Should be either 'c' or 'n'"
             )
 
         if mode[2] == 'u':
@@ -180,7 +178,7 @@ def merge_extras(old_extras, new_extras, mode):
                         final_extras[key] = old_extras[key]
         elif mode[2] != 'd':
             raise exceptions.ImportValidationError(
-                "Unknown third letter of the update extras mode: '{}'. Should be one of 'u'/'l'/'a'/'d'".format(mode)
+                f"Unknown third letter of the update extras mode: '{mode}'. Should be one of 'u'/'l'/'a'/'d'"
             )
 
     return final_extras
@@ -190,6 +188,10 @@ def deserialize_attributes(attributes_data, conversion_data):
     """Deserialize attributes"""
     import datetime
     import pytz
+
+    if conversion_data == 'jsonb':
+        # we do not make any changes
+        return attributes_data
 
     if isinstance(attributes_data, dict):
         ret_data = {}
@@ -213,7 +215,7 @@ def deserialize_attributes(attributes_data, conversion_data):
             if conversion_data == 'date':
                 ret_data = datetime.datetime.strptime(attributes_data, '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
             else:
-                raise exceptions.ArchiveImportError("Unknown convert_type '{}'".format(conversion_data))
+                raise exceptions.ArchiveImportError(f"Unknown convert_type '{conversion_data}'")
 
     return ret_data
 
@@ -223,7 +225,7 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
     try:
         field_info = fields_info[key]
     except KeyError:
-        raise exceptions.ArchiveImportError("Unknown field '{}'".format(key))
+        raise exceptions.ArchiveImportError(f"Unknown field '{key}'")
 
     if key in ('id', 'pk'):
         raise exceptions.ImportValidationError('ID or PK explicitly passed!')
@@ -244,23 +246,23 @@ def deserialize_field(key, value, fields_info, import_unique_ids_mappings, forei
         # I store it in the FIELDNAME_id variable, that directly stores the
         # PK in the remote table, rather than requiring to create Model
         # instances for the foreign relations
-        return ('{}_id'.format(key), foreign_ids_reverse_mappings[requires][unique_id])
+        return (f'{key}_id', foreign_ids_reverse_mappings[requires][unique_id])
 
     # else
-    return ('{}_id'.format(key), None)
+    return (f'{key}_id', None)
 
 
 def start_summary(archive, comment_mode, extras_mode_new, extras_mode_existing):
     """Print starting summary for import"""
     archive = os.path.basename(archive)
-    result = '\n{}'.format(tabulate([['Archive', archive]], headers=['IMPORT', '']))
+    result = f"\n{tabulate([['Archive', archive]], headers=['IMPORT', ''])}"
 
     parameters = [
         ['Comment rules', comment_mode],
         ['New Node Extras rules', extras_mode_new],
         ['Existing Node Extras rules', extras_mode_existing],
     ]
-    result += '\n\n{}'.format(tabulate(parameters, headers=['Parameters', '']))
+    result += f"\n\n{tabulate(parameters, headers=['Parameters', ''])}"
 
     IMPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)
 
@@ -279,11 +281,11 @@ def result_summary(results, import_group_label):
     for model in results:
         value = []
         if results[model].get('new', None):
-            value.append('{} new'.format(len(results[model]['new'])))
+            value.append(f"{len(results[model]['new'])} new")
         if results[model].get('existing', None):
-            value.append('{} existing'.format(len(results[model]['existing'])))
+            value.append(f"{len(results[model]['existing'])} existing")
 
-        parameters.extend([[param, val] for param, val in zip(['{}(s)'.format(model)], value)])
+        parameters.extend([[param, val] for param, val in zip([f'{model}(s)'], value)])
 
     if title:
-        IMPORT_LOGGER.log(msg='\n{}\n'.format(tabulate(parameters, headers=[title, ''])), level=LOG_LEVEL_REPORT)
+        IMPORT_LOGGER.log(msg=f"\n{tabulate(parameters, headers=[title, ''])}\n", level=LOG_LEVEL_REPORT)

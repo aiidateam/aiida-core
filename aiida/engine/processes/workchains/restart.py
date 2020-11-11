@@ -40,13 +40,13 @@ def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint
 
     for handler, override in handler_overrides.get_dict().items():
         if not isinstance(handler, str):
-            return 'The key `{}` is not a string.'.format(handler)
+            return f'The key `{handler}` is not a string.'
 
         if not process_class.is_process_handler(handler):
-            return 'The key `{}` is not a process handler of {}'.format(handler, process_class)
+            return f'The key `{handler}` is not a process handler of {process_class}'
 
         if not isinstance(override, bool):
-            return 'The value of key `{}` is not a boolean.'.format(handler)
+            return f'The value of key `{handler}` is not a boolean.'
 
 
 class BaseRestartWorkChain(WorkChain):
@@ -154,7 +154,7 @@ class BaseRestartWorkChain(WorkChain):
             raise AttributeError('no process input dictionary was defined in `self.ctx.inputs`')
 
         # Set the `CALL` link label
-        unwrapped_inputs.setdefault('metadata', {})['call_link_label'] = 'iteration_{:02d}'.format(self.ctx.iteration)
+        unwrapped_inputs.setdefault('metadata', {})['call_link_label'] = f'iteration_{self.ctx.iteration:02d}'
 
         inputs = self._wrap_bare_dict_inputs(self._process_class.spec().inputs, unwrapped_inputs)
         node = self.submit(self._process_class, **inputs)
@@ -166,7 +166,7 @@ class BaseRestartWorkChain(WorkChain):
         considered_handlers.append([])
         self.node.set_extra(self._considered_handlers_extra, considered_handlers)
 
-        self.report('launching {}<{}> iteration #{}'.format(self.ctx.process_name, node.pk, self.ctx.iteration))
+        self.report(f'launching {self.ctx.process_name}<{node.pk}> iteration #{self.ctx.iteration}')
 
         return ToContext(children=append_(node))
 
@@ -215,7 +215,7 @@ class BaseRestartWorkChain(WorkChain):
 
             if report is not None and not isinstance(report, ProcessHandlerReport):
                 name = handler.__name__
-                raise RuntimeError('handler `{}` returned a value that is not a ProcessHandlerReport'.format(name))
+                raise RuntimeError(f'handler `{name}` returned a value that is not a ProcessHandlerReport')
 
             # If an actual report was returned, save it so it is not overridden by next handler returning `None`
             if report:
@@ -272,7 +272,7 @@ class BaseRestartWorkChain(WorkChain):
                 self.inputs.max_iterations.value, self.ctx.process_name, node.pk))
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED  # pylint: disable=no-member
 
-        self.report('work chain completed after {} iterations'.format(self.ctx.iteration))
+        self.report(f'work chain completed after {self.ctx.iteration} iterations')
 
         for name, port in self.spec().outputs.items():
 
@@ -280,8 +280,7 @@ class BaseRestartWorkChain(WorkChain):
                 output = node.get_outgoing(link_label_filter=name).one().node
             except ValueError:
                 if port.required:
-                    self.report("required output '{}' was not an output of {}<{}>".format(
-                        name, self.ctx.process_name, node.pk))
+                    self.report(f"required output '{name}' was not an output of {self.ctx.process_name}<{node.pk}>")
             else:
                 self.out(name, output)
 
@@ -332,7 +331,7 @@ class BaseRestartWorkChain(WorkChain):
                     pass
 
         if cleaned_calcs:
-            self.report('cleaned remote folders of calculations: {}'.format(' '.join(cleaned_calcs)))
+            self.report(f"cleaned remote folders of calculations: {' '.join(cleaned_calcs)}")
 
     def _wrap_bare_dict_inputs(self, port_namespace, inputs):
         """Wrap bare dictionaries in `inputs` in a `Dict` node if dictated by the corresponding inputs portnamespace.

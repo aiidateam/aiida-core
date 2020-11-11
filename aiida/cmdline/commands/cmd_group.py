@@ -32,7 +32,7 @@ def verdi_group():
 def group_add_nodes(group, force, nodes):
     """Add nodes to the a group."""
     if not force:
-        click.confirm('Do you really want to add {} nodes to Group<{}>?'.format(len(nodes), group.label), abort=True)
+        click.confirm(f'Do you really want to add {len(nodes)} nodes to Group<{group.label}>?', abort=True)
 
     group.add_nodes(nodes)
 
@@ -46,9 +46,9 @@ def group_add_nodes(group, force, nodes):
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
     if clear:
-        message = 'Do you really want to remove ALL the nodes from Group<{}>?'.format(group.label)
+        message = f'Do you really want to remove ALL the nodes from Group<{group.label}>?'
     else:
-        message = 'Do you really want to remove {} nodes from Group<{}>?'.format(len(nodes), group.label)
+        message = f'Do you really want to remove {len(nodes)} nodes from Group<{group.label}>?'
 
     if not force:
         click.confirm(message, abort=True)
@@ -80,10 +80,10 @@ def group_delete(group, clear, force):
         warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     if not force:
-        click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
+        click.confirm(f'Are you sure to delete Group<{label}>?', abort=True)
 
     orm.Group.objects.delete(group.pk)
-    echo.echo_success('Group<{}> deleted.'.format(label))
+    echo.echo_success(f'Group<{label}> deleted.')
 
 
 @verdi_group.command('relabel')
@@ -95,9 +95,9 @@ def group_relabel(group, label):
     try:
         group.label = label
     except UniquenessError as exception:
-        echo.echo_critical('Error: {}.'.format(exception))
+        echo.echo_critical(f'Error: {exception}.')
     else:
-        echo.echo_success('Label changed to {}'.format(label))
+        echo.echo_success(f'Label changed to {label}')
 
 
 @verdi_group.command('description')
@@ -111,7 +111,7 @@ def group_description(group, description):
     """
     if description:
         group.description = description
-        echo.echo_success('Changed the description of Group<{}>'.format(group.label))
+        echo.echo_success(f'Changed the description of Group<{group.label}>')
     else:
         echo.echo(group.description)
 
@@ -263,11 +263,11 @@ def group_list(
     # Query for specific group names
     filters['or'] = []
     if startswith:
-        filters['or'].append({'label': {'like': '{}%'.format(escape_for_sql_like(startswith))}})
+        filters['or'].append({'label': {'like': f'{escape_for_sql_like(startswith)}%'}})
     if endswith:
-        filters['or'].append({'label': {'like': '%{}'.format(escape_for_sql_like(endswith))}})
+        filters['or'].append({'label': {'like': f'%{escape_for_sql_like(endswith)}'}})
     if contains:
-        filters['or'].append({'label': {'like': '%{}%'.format(escape_for_sql_like(contains))}})
+        filters['or'].append({'label': {'like': f'%{escape_for_sql_like(contains)}%'}})
 
     builder.append(orm.Group, filters=filters, tag='group', project='*')
 
@@ -332,9 +332,9 @@ def group_create(group_label):
     group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
-        echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
+        echo.echo_success(f"Group created with PK = {group.id} and name '{group.label}'")
     else:
-        echo.echo_info("Group '{}' already exists, PK = {}".format(group.label, group.id))
+        echo.echo_info(f"Group '{group.label}' already exists, PK = {group.id}")
 
 
 @verdi_group.command('copy')
@@ -352,12 +352,12 @@ def group_copy(source_group, destination_group):
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
-        echo.echo_warning('Destination group<{}> already exists and is not empty.'.format(dest_group.label))
+        echo.echo_warning(f'Destination group<{dest_group.label}> already exists and is not empty.')
         click.confirm('Do you wish to continue anyway?', abort=True)
 
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
-    echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))
+    echo.echo_success(f'Nodes copied from group<{source_group.label}> to group<{dest_group.label}>')
 
 
 @verdi_group.group('path')

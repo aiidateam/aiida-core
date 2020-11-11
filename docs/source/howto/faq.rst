@@ -62,11 +62,12 @@ However, be careful, if you make these intervals too short, the daemon workers m
 An additional note of importance is that each interval is guaranteed to be respected per daemon worker individually, but not as a collective.
 That is to say, if the safe interval is set to 60 seconds, any single worker is guaranteed to open a connection to that machine at most once every minute, however, if you have multiple active daemon workers, the machine may be accessed more than once per minute.
 
+.. _how-to:faq:process-not-importable-daemon:
 
 Why would a process that runs fine locally raise an exception when submitted to the daemon?
 ===========================================================================================
 This is almost always caused by an import issue.
-To determine exactly what might be going wrong, first `set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
+To determine exactly what might be going wrong, first :ref:`set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
 
 .. code-block:: console
 

@@ -15,7 +15,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import Column, Table, UniqueConstraint, Index
 from sqlalchemy.types import Integer, String, DateTime, Text
 
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
@@ -47,6 +47,8 @@ class DbGroup(Base):
     time = Column(DateTime(timezone=True), default=timezone.now)
     description = Column(Text, nullable=True)
 
+    extras = Column(JSONB, default=dict, nullable=False)
+
     user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
@@ -62,4 +64,4 @@ class DbGroup(Base):
         return self.id
 
     def __str__(self):
-        return '<DbGroup [type: {}] "{}">'.format(self.type_string, self.label)
+        return f'<DbGroup [type: {self.type_string}] "{self.label}">'

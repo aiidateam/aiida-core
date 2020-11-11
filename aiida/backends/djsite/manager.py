@@ -169,7 +169,7 @@ class DjangoSettingsManager(SettingsManager):
         setting = DbSetting.objects.filter(key=key).first()
 
         if setting is None:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent(f'setting `{key}` does not exist')
 
         return Setting(setting.key, setting.val, setting.description, setting.time)
 
@@ -181,7 +181,7 @@ class DjangoSettingsManager(SettingsManager):
         :param description: optional setting description
         """
         from aiida.backends.djsite.db.models import DbSetting
-        from aiida.orm.utils.node import validate_attribute_extra_key
+        from aiida.orm.implementation.utils import validate_attribute_extra_key
 
         self.validate_table_existence()
         validate_attribute_extra_key(key)
@@ -205,4 +205,4 @@ class DjangoSettingsManager(SettingsManager):
         try:
             DbSetting.del_value(key=key)
         except KeyError:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent(f'setting `{key}` does not exist') from KeyError

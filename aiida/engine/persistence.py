@@ -41,12 +41,12 @@ class ObjectLoader(plumpy.DefaultObjectLoader):
         try:
             module = importlib.import_module(module)
         except ImportError:
-            raise ImportError("module '{}' from identifier '{}' could not be loaded".format(module, identifier))
+            raise ImportError(f"module '{module}' from identifier '{identifier}' could not be loaded")
 
         try:
             return getattr(module, name)
         except AttributeError:
-            raise ImportError("object '{}' from identifier '{}' could not be loaded".format(name, identifier))
+            raise ImportError(f"object '{name}' from identifier '{identifier}' could not be loaded")
 
 
 def get_object_loader():
@@ -80,16 +80,12 @@ class AiiDAPersister(plumpy.Persister):
             bundle = plumpy.Bundle(process, plumpy.LoadSaveContext(loader=get_object_loader()))
         except ImportError:
             # Couldn't create the bundle
-            raise plumpy.PersistenceError(
-                "Failed to create a bundle for '{}': {}".format(process, traceback.format_exc())
-            )
+            raise plumpy.PersistenceError(f"Failed to create a bundle for '{process}': {traceback.format_exc()}")
 
         try:
             process.node.set_checkpoint(serialize.serialize(bundle))
         except Exception:
-            raise plumpy.PersistenceError(
-                "Failed to store a checkpoint for '{}': {}".format(process, traceback.format_exc())
-            )
+            raise plumpy.PersistenceError(f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}")
 
         return bundle
 
@@ -111,21 +107,17 @@ class AiiDAPersister(plumpy.Persister):
         try:
             calculation = load_node(pid)
         except (MultipleObjectsError, NotExistent):
-            raise plumpy.PersistenceError(
-                'Failed to load the node for process<{}>: {}'.format(pid, traceback.format_exc())
-            )
+            raise plumpy.PersistenceError(f'Failed to load the node for process<{pid}>: {traceback.format_exc()}')
 
         checkpoint = calculation.checkpoint
 
         if checkpoint is None:
-            raise plumpy.PersistenceError('Calculation<{}> does not have a saved checkpoint'.format(calculation.pk))
+            raise plumpy.PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
 
         try:
             bundle = serialize.deserialize(checkpoint)
         except Exception:
-            raise plumpy.PersistenceError(
-                'Failed to load the checkpoint for process<{}>: {}'.format(pid, traceback.format_exc())
-            )
+            raise plumpy.PersistenceError(f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}')
 
         return bundle
 

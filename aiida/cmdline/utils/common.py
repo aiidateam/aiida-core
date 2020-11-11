@@ -24,7 +24,7 @@ def get_env_with_venv_bin():
     config = get_config()
 
     currenv = os.environ.copy()
-    currenv['PATH'] = os.path.dirname(sys.executable) + ':' + currenv['PATH']
+    currenv['PATH'] = f"{os.path.dirname(sys.executable)}:{currenv['PATH']}"
     currenv['AIIDA_PATH'] = config.dirpath
     currenv['PYTHONUNBUFFERED'] = 'True'
 
@@ -70,7 +70,7 @@ def print_last_process_state_change(process_type=None):
         timedelta = timezone.delta(timestamp, timezone.now())
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
-        echo_info('last time an entry changed state: {} ({})'.format(relative, formatted))
+        echo_info(f'last time an entry changed state: {relative} ({formatted})')
 
     if not client.is_daemon_running:
         echo_warning('the daemon is not running', bold=True)
@@ -99,11 +99,11 @@ def get_node_summary(node):
             process_state_string = process_state.value.capitalize()
 
             if process_state == ProcessState.FINISHED and node.exit_message:
-                table.append(['state', '{} [{}] {}'.format(process_state_string, node.exit_status, node.exit_message)])
+                table.append(['state', f'{process_state_string} [{node.exit_status}] {node.exit_message}'])
             elif process_state == ProcessState.FINISHED:
-                table.append(['state', '{} [{}]'.format(process_state_string, node.exit_status)])
+                table.append(['state', f'{process_state_string} [{node.exit_status}]'])
             elif process_state == ProcessState.EXCEPTED:
-                table.append(['state', '{} <{}>'.format(process_state_string, node.exception)])
+                table.append(['state', f'{process_state_string} <{node.exception}>'])
             else:
                 table.append(['state', process_state_string])
 
@@ -123,7 +123,7 @@ def get_node_summary(node):
         pass
     else:
         if computer is not None:
-            table.append(['computer', '[{}] {}'.format(node.computer.pk, node.computer.label)])
+            table.append(['computer', f'[{node.computer.pk}] {node.computer.label}'])
 
     return tabulate(table, headers=table_headers)
 
@@ -147,26 +147,28 @@ def get_node_info(node, include_summary=True):
     nodes_input = node.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
     nodes_output = node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN))
 
-    if nodes_caller:
-        result += '\n' + format_nested_links(nodes_caller.nested(), headers=['Called by', 'PK', 'Type'])
-
     if nodes_input:
-        result += '\n' + format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])
+        result += f"\n{format_nested_links(nodes_input.nested(), headers=['Inputs', 'PK', 'Type'])}"
 
     if nodes_output:
-        result += '\n' + format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])
+        result += f"\n{format_nested_links(nodes_output.nested(), headers=['Outputs', 'PK', 'Type'])}"
+
+    if nodes_caller:
+        links = sorted(nodes_caller.all(), key=lambda x: x.node.ctime)
+        result += f"\n{format_flat_links(links, headers=['Caller', 'PK', 'Type'])}"
 
     if nodes_called:
-        result += '\n' + format_flat_links(nodes_called.all(), headers=['Called', 'PK', 'Type'])
+        links = sorted(nodes_called.all(), key=lambda x: x.node.ctime)
+        result += f"\n{format_flat_links(links, headers=['Called', 'PK', 'Type'])}"
 
     log_messages = orm.Log.objects.get_logs_for(node)
 
     if log_messages:
         table = []
         table_headers = ['Log messages']
-        table.append(['There are {} log messages for this calculation'.format(len(log_messages))])
-        table.append(["Run 'verdi process report {}' to see them".format(node.pk)])
-        result += '\n\n{}'.format(tabulate(table, headers=table_headers))
+        table.append([f'There are {len(log_messages)} log messages for this calculation'])
+        table.append([f"Run 'verdi process report {node.pk}' to see them"])
+        result += f'\n\n{tabulate(table, headers=table_headers)}'
 
     return result
 
@@ -181,9 +183,9 @@ def format_flat_links(links, headers):
     table = []
 
     for link_triple in links:
-        table.append([link_triple.link_label, link_triple.node.pk, link_triple.node.__class__.__name__])
+        table.append([link_triple.link_label, link_triple.node.pk, link_triple.node.get_attribute('process_label', '')])
 
-    result = '\n{}'.format(tabulate(table, headers=headers))
+    result = f'\n{tabulate(table, headers=headers)}'
 
     return result
 
@@ -216,9 +218,9 @@ def format_nested_links(links, headers):
     table = []
 
     for depth, label, pk, class_name in format_recursive(links):
-        table.append(['{indent}{label}'.format(indent=' ' * (depth * indent_size), label=label), pk, class_name])
+        table.append([f"{' ' * (depth * indent_size)}{label}", pk, class_name])
 
-    result = '\n{}'.format(tabulate(table, headers=headers))
+    result = f'\n{tabulate(table, headers=headers)}'
     tb.PRESERVE_WHITESPACE = False
 
     return result
@@ -243,39 +245,37 @@ def get_calcjob_report(calcjob):
     report = []
 
     if calcjob_state == CalcJobState.WITHSCHEDULER:
-        state_string = '{}, scheduler state: {}'.format(
-            calcjob_state, scheduler_state if scheduler_state else '(unknown)'
-        )
+        state_string = f"{calcjob_state}, scheduler state: {scheduler_state if scheduler_state else '(unknown)'}"
     else:
-        state_string = '{}'.format(calcjob_state)
+        state_string = f'{calcjob_state}'
 
-    label_string = ' [{}]'.format(calcjob.label) if calcjob.label else ''
+    label_string = f' [{calcjob.label}]' if calcjob.label else ''
 
-    report.append('*** {}{}: {}'.format(calcjob.pk, label_string, state_string))
+    report.append(f'*** {calcjob.pk}{label_string}: {state_string}')
 
     if scheduler_out is None:
         report.append('*** Scheduler output: N/A')
     elif scheduler_out:
-        report.append('*** Scheduler output:\n{}'.format(scheduler_out))
+        report.append(f'*** Scheduler output:\n{scheduler_out}')
     else:
         report.append('*** (empty scheduler output file)')
 
     if scheduler_err is None:
         report.append('*** Scheduler errors: N/A')
     elif scheduler_err:
-        report.append('*** Scheduler errors:\n{}'.format(scheduler_err))
+        report.append(f'*** Scheduler errors:\n{scheduler_err}')
     else:
         report.append('*** (empty scheduler errors file)')
 
     if log_messages:
-        report.append('*** {} LOG MESSAGES:'.format(len(log_messages)))
+        report.append(f'*** {len(log_messages)} LOG MESSAGES:')
     else:
         report.append('*** 0 LOG MESSAGES')
 
     for log in log_messages:
-        report.append('+-> {} at {}'.format(log.levelname, log.time))
+        report.append(f'+-> {log.levelname} at {log.time}')
         for message in log.message.splitlines():
-            report.append(' | {}'.format(message))
+            report.append(f' | {message}')
 
     return '\n'.join(report)
 
@@ -292,7 +292,7 @@ def get_process_function_report(node):
     report = []
 
     for log in orm.Log.objects.get_logs_for(node):
-        report.append('{time:%Y-%m-%d %H:%M:%S} [{id}]: {msg}'.format(id=log.id, msg=log.message, time=log.time))
+        report.append(f'{log.time:%Y-%m-%d %H:%M:%S} [{log.id}]: {log.message}')
 
     return '\n'.join(report)
 
@@ -392,7 +392,7 @@ def print_process_info(process):
 
     click.secho('Description:\n', fg='red', bold=True)
     for line in docstring:
-        click.echo('\t' + line.lstrip())
+        click.echo(f'	{line.lstrip()}')
     click.echo()
 
     print_process_spec(process.spec())
@@ -421,7 +421,7 @@ def print_process_spec(process_spec):
             valid_types = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
             required = 'required' if port.required else 'optional'
             info = port.help if port.help is not None else ''
-            info = info[:75] + ' ...' if len(info) > 75 else info
+            info = f'{info[:75]} ...' if len(info) > 75 else info
             result.append([name, required, valid_types, info])
 
         return result
@@ -506,8 +506,8 @@ def check_worker_load(active_slots):
 
     if active_workers is not None:
         available_slots = active_workers * slots_per_worker
-        percent_load = (active_slots / available_slots)
+        percent_load = 1.0 if not available_slots else (active_slots / available_slots)
         if percent_load > warning_threshold:
             echo.echo('')  # New line
-            echo.echo_warning('{:.0f}% of the available daemon worker slots have been used!'.format(percent_load * 100))
+            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
             echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")

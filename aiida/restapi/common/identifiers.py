@@ -103,16 +103,26 @@ def get_full_type_filters(full_type):
         node_type = escape_for_sql_like(node_type) + LIKE_OPERATOR_CHARACTER
         filters['node_type'] = {'like': node_type}
     else:
-        filters['node_type'] = escape_for_sql_like(node_type)
+        filters['node_type'] = {'==': node_type}
 
     if LIKE_OPERATOR_CHARACTER in process_type:
-        # Remove the trailing `LIKE_OPERATOR_CHARACTER`, escape the string and reattach the character
+        # Remove the trailing `LIKE_OPERATOR_CHARACTER` ()
+        # If that was the only specification, just ignore this filter (looking for any process_type)
+        # If there was more: escape the string and reattach the character
         process_type = process_type[:-1]
-        process_type = escape_for_sql_like(process_type) + LIKE_OPERATOR_CHARACTER
-        filters['process_type'] = {'like': process_type}
+        if process_type:
+            process_type = escape_for_sql_like(process_type) + LIKE_OPERATOR_CHARACTER
+            filters['process_type'] = {'like': process_type}
     else:
         if process_type:
-            filters['process_type'] = escape_for_sql_like(process_type)
+            filters['process_type'] = {'==': process_type}
+        else:
+            # A `process_type=''` is used to represents both `process_type='' and `process_type=None`.
+            # This is because there is no simple way to single out null `process_types`, and therefore
+            # we consider them together with empty-string process_types.
+            # Moreover, the existence of both is most likely a bug of migrations and thus both share
+            # this same "erroneous" origin.
+            filters['process_type'] = {'or': [{'==': ''}, {'==': None}]}
 
     return filters
 
@@ -188,6 +198,13 @@ class Namespace(MutableMapping):
         'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
     }
 
+    process_full_type_mapping_unplugged = {
+        'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|{plugin_name}.%',
+        'process.calculation.calcfunction.': 'process.calculation.calcfunction.CalcFunctionNode.|{plugin_name}.%',
+        'process.workflow.workfunction.': 'process.workflow.workfunction.WorkFunctionNode.|{plugin_name}.%',
+        'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|{plugin_name}.%',
+    }
+
     def __str__(self):
         import json
         return json.dumps(self.get_description(), sort_keys=True, indent=4)
@@ -226,7 +243,12 @@ class Namespace(MutableMapping):
             for basepath, full_type_template in self.process_full_type_mapping.items():
                 if full_type.startswith(basepath):
                     plugin_name = strip_prefix(full_type, basepath)
-                    full_type = full_type_template.format(plugin_name=plugin_name)
+                    if plugin_name.startswith(DEFAULT_NAMESPACE_LABEL):
+                        temp_type_template = self.process_full_type_mapping_unplugged[basepath]
+                        plugin_name = strip_prefix(plugin_name, DEFAULT_NAMESPACE_LABEL + '.')
+                        full_type = temp_type_template.format(plugin_name=plugin_name)
+                    else:
+                        full_type = full_type_template.format(plugin_name=plugin_name)
                     return full_type
 
         full_type += f'.{LIKE_OPERATOR_CHARACTER}{FULL_TYPE_CONCATENATOR}'
@@ -267,8 +289,9 @@ class Namespace(MutableMapping):
             'full_type': self._full_type,
             'label': self._label,
             'path': self._path,
-            'subspaces': []
+            'subspaces': [],
         }
+
         for _, port in self._subspaces.items():
             result['subspaces'].append(port.get_description())
 
@@ -338,6 +361,8 @@ def get_node_namespace():
     from aiida.plugins.entry_point import is_valid_entry_point_string, parse_entry_point_string
 
     builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type']).distinct()
+
+    # All None instances of process_type are turned into ''
     unique_types = {(node_type, process_type if process_type else '') for node_type, process_type in builder.all()}
 
     # First we create a flat list of all "leaf" node types.
@@ -349,7 +374,7 @@ def get_node_namespace():
         namespace = None
 
         if process_type:
-            # Process nodes
+            # Only process nodes
             parts = node_type.rsplit('.', 2)
             if is_valid_entry_point_string(process_type):
                 _, entry_point_name = parse_entry_point_string(process_type)
@@ -357,10 +382,10 @@ def get_node_namespace():
                 namespace = '.'.join(parts[:-2] + [entry_point_name])
             else:
                 label = process_type.rsplit('.', 1)[-1]
-                namespace = '.'.join(parts[:-2] + [DEFAULT_NAMESPACE_LABEL, label])
+                namespace = '.'.join(parts[:-2] + [DEFAULT_NAMESPACE_LABEL, process_type])
 
         else:
-            # Data nodes
+            # Data nodes and process nodes without process type (='' or =None)
             parts = node_type.rsplit('.', 2)
             try:
                 label = parts[-2]

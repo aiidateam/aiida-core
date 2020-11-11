@@ -1067,15 +1067,20 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         Test the rest api call to get list of available node namespace
         """
-        url = f'{self.get_url_prefix()}/nodes/full_types'
-        with self.app.test_client() as client:
-            rv_obj = client.get(url)
-            response = json.loads(rv_obj.data)
-            expected_data_keys = ['path', 'namespace', 'subspaces', 'label', 'full_type']
-            response_keys = response['data'].keys()
-            for dkay in expected_data_keys:
-                self.assertIn(dkay, response_keys)
-            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response)
+        endpoint_datakeys = {
+            '/nodes/full_types': ['path', 'namespace', 'subspaces', 'label', 'full_type'],
+            '/nodes/full_types_count': ['path', 'namespace', 'subspaces', 'label', 'full_type', 'counter'],
+        }
+
+        for endpoint_suffix, expected_data_keys in endpoint_datakeys.items():
+            url = f'{self.get_url_prefix()}{endpoint_suffix}'
+            with self.app.test_client() as client:
+                rv_obj = client.get(url)
+                response = json.loads(rv_obj.data)
+                response_keys = response['data'].keys()
+                for dkay in expected_data_keys:
+                    self.assertIn(dkay, response_keys)
+                RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response)
 
     def test_comments(self):
         """

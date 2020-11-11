@@ -10,8 +10,8 @@
 """Tests for the `aiida.restapi.common.identifiers` module."""
 from threading import Thread
 
-import pytest
 import requests
+import pytest
 
 from aiida import orm
 from aiida.restapi.common.identifiers import get_full_type_filters, FULL_TYPE_CONCATENATOR, LIKE_OPERATOR_CHARACTER

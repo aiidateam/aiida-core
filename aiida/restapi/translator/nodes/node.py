@@ -577,12 +577,12 @@ class NodeTranslator(BaseTranslator):
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
     @staticmethod
-    def get_namespace():
+    def get_namespace(user_pk=None, count_nodes=False):
         """
         return full_types of the nodes
         """
 
-        return get_node_namespace().get_description()
+        return get_node_namespace(user_pk=user_pk, count_nodes=count_nodes).get_description()
 
     def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         # pylint: disable=too-many-statements,too-many-locals

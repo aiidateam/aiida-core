@@ -402,8 +402,8 @@ def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[st
                     pks.append(pk)
                     uuids.append(uuid)
 
-            entities_starting_set[NODE_ENTITY_NAME].update(uuids)  # type: ignore
-            given_node_entry_ids.update(pks)  # type: ignore
+            entities_starting_set[NODE_ENTITY_NAME].update(uuids)
+            given_node_entry_ids.update(pks)
 
     return entities_starting_set, given_node_entry_ids
 

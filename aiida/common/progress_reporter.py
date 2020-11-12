@@ -130,7 +130,7 @@ def get_progress_reporter() -> Type[ProgressReporterAbstract]:
 
     """
     global PROGRESS_REPORTER
-    return PROGRESS_REPORTER  # type: ignore
+    return PROGRESS_REPORTER
 
 
 def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = None, **kwargs: Any):
@@ -154,11 +154,11 @@ def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = N
     """
     global PROGRESS_REPORTER
     if reporter is None:
-        PROGRESS_REPORTER = ProgressReporterNull  # type: ignore
+        PROGRESS_REPORTER = ProgressReporterNull
     elif kwargs:
         PROGRESS_REPORTER = partial(reporter, **kwargs)  # type: ignore
     else:
-        PROGRESS_REPORTER = reporter  # type: ignore
+        PROGRESS_REPORTER = reporter
 
 
 def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Optional[bool] = False, **kwargs: Any):

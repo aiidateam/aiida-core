@@ -261,8 +261,9 @@ class WriterJsonZip(ArchiveWriterAbstract):
         # create a temporary folder in which to perform the write
         self._temp_path: Path = Path(tempfile.mkdtemp())
         # open a zipfile in in write mode to export to
+        self._zipinfo_cache: Optional[dict]
         if self._cache_zipinfo:
-            self._zipinfo_cache = shelve.open(str(self._temp_path / 'zipinfo_cache'))
+            self._zipinfo_cache = shelve.open(str(self._temp_path / 'zipinfo_cache'))  # type: ignore
         else:
             self._zipinfo_cache = None
         self._archivepath: ZipPath = ZipPath(
@@ -289,7 +290,7 @@ class WriterJsonZip(ArchiveWriterAbstract):
         # close the zipfile to finalise write
         self._archivepath.close()
         if getattr(self, '_zipinfo_cache', None) is not None:
-            self._zipinfo_cache.close()
+            self._zipinfo_cache.close()  # type: ignore
             delattr(self, '_zipinfo_cache')
         # move the compressed file to the final path
         self._remove_filepath()

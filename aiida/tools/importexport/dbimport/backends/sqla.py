@@ -11,7 +11,7 @@
 """ SQLAlchemy-specific import of AiiDA entities """
 from contextlib import contextmanager
 from itertools import chain
-from typing import Any, Dict, Iterable, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import warnings
 
 from sqlalchemy.orm import Session
@@ -242,6 +242,17 @@ def import_data_sqla(
                     session=session
                 )
 
+            # store all pks to add to import group
+            pks_for_group: List[int] = [
+                foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
+                for entries in [existing_entries, new_entries]
+                for v in entries.get(NODE_ENTITY_NAME, {}).values()
+            ]
+
+            # now delete the entry data because we no longer need it
+            del existing_entries
+            del new_entries
+
             IMPORT_LOGGER.debug('STORING NODE LINKS...')
             _store_node_links(
                 reader=reader,
@@ -263,12 +274,7 @@ def import_data_sqla(
         # Put everything in a specific group #
         ######################################
         # Note this is done in a separate transaction
-        group = _make_import_group(
-            group=group,
-            existing_entries=existing_entries,
-            new_entries=new_entries,
-            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
-        )
+        group = _make_import_group(group=group, node_pks=pks_for_group)
 
     # Summarize import
     result_summary(ret_dict, getattr(group, 'label', None))

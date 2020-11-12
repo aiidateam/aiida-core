@@ -10,7 +10,7 @@
 # pylint: disable=protected-access,fixme,too-many-arguments,too-many-locals,too-many-statements,too-many-branches,too-many-nested-blocks
 """ Django-specific import of AiiDA entities """
 from itertools import chain
-from typing import Any, Dict, Iterable, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import warnings
 
 from aiida.common.links import LinkType, validate_link_label
@@ -238,6 +238,17 @@ def import_data_dj(
                     # session=session
                 )
 
+            # store all pks to add to import group
+            pks_for_group: List[int] = [
+                foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
+                for entries in [existing_entries, new_entries]
+                for v in entries.get(NODE_ENTITY_NAME, {}).values()
+            ]
+
+            # now delete the entry data because we no longer need it
+            del existing_entries
+            del new_entries
+
             IMPORT_LOGGER.debug('STORING NODE LINKS...')
             _store_node_links(
                 reader=reader,
@@ -259,12 +270,7 @@ def import_data_dj(
         # Put everything in a specific group #
         ######################################
         # Note this is done in a separate transaction
-        group = _make_import_group(
-            group=group,
-            existing_entries=existing_entries,
-            new_entries=new_entries,
-            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
-        )
+        group = _make_import_group(group=group, node_pks=pks_for_group)
 
     # Summarize import
     result_summary(ret_dict, getattr(group, 'label', None))
@@ -528,12 +534,13 @@ def _store_node_links(
     links_to_store = []
 
     # Needed, since QueryBuilder does not yet work for recently saved Nodes
-    existing_links_raw = models.DbLink.objects.all().values_list('input', 'output', 'label', 'type')
-    existing_links = {(l[0], l[1], l[2], l[3]) for l in existing_links_raw}
-    existing_outgoing_unique = {(l[0], l[3]) for l in existing_links_raw}
-    existing_outgoing_unique_pair = {(l[0], l[2], l[3]) for l in existing_links_raw}
-    existing_incoming_unique = {(l[1], l[3]) for l in existing_links_raw}
-    existing_incoming_unique_pair = {(l[1], l[2], l[3]) for l in existing_links_raw}
+    existing_links = {
+        (l[0], l[1], l[2], l[3]) for l in models.DbLink.objects.all().values_list('input', 'output', 'label', 'type')
+    }
+    existing_outgoing_unique = {(l[0], l[3]) for l in existing_links}
+    existing_outgoing_unique_pair = {(l[0], l[2], l[3]) for l in existing_links}
+    existing_incoming_unique = {(l[1], l[3]) for l in existing_links}
+    existing_incoming_unique_pair = {(l[1], l[2], l[3]) for l in existing_links}
 
     calculation_node_types = 'process.calculation.'
     workflow_node_types = 'process.workflow.'

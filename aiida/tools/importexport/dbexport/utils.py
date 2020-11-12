@@ -12,7 +12,7 @@
 import warnings
 
 from aiida.orm import QueryBuilder, ProcessNode
-from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT, override_log_formatter
+from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
 from aiida.common.warnings import AiidaDeprecationWarning
 
 from aiida.tools.importexport.common import exceptions
@@ -272,7 +272,6 @@ def check_process_nodes_sealed(nodes):
         )
 
 
-@override_log_formatter('%(message)s')
 def summary(*, file_format, export_version, outfile, include_comments, include_logs, traversal_rules):
     """Print summary for export"""
     from tabulate import tabulate

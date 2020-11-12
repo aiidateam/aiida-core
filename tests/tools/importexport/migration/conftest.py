@@ -11,9 +11,10 @@
 import tarfile
 import zipfile
 
+from archive_path import TarPath, ZipPath
 import pytest
 
-from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip, CacheFolder
+from aiida.tools.importexport.archive import CacheFolder
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from tests.utils.archives import get_archive_file
 
@@ -54,9 +55,9 @@ def migrate_from_func(tmp_path):
         out_path = tmp_path / 'out.aiida'
 
         if zipfile.is_zipfile(archive_path):
-            safe_extract_zip(archive_path, out_path)
+            ZipPath(archive_path).extract_tree(out_path)
         elif tarfile.is_tarfile(archive_path):
-            safe_extract_tar(archive_path, out_path)
+            TarPath(archive_path).extract_tree(out_path)
         else:
             raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 

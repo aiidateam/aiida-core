@@ -13,18 +13,18 @@ import json
 import os
 from pathlib import Path
 import shutil
+import tarfile
 import tempfile
 from typing import Any, Callable, cast, List, Optional, Type, Union
 import zipfile
+
+from archive_path import TarPath, ZipPath, read_file_in_tar, read_file_in_zip
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter, create_callback
 from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
 from aiida.tools.importexport.common.config import ExportFileFormat
-from aiida.tools.importexport.archive.common import (
-    read_file_in_tar, read_file_in_zip, safe_extract_tar, safe_extract_zip, compress_folder_tar, compress_folder_zip,
-    CacheFolder
-)
+from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 
 __all__ = (
@@ -227,39 +227,54 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
     @staticmethod
     def _compress_archive_zip(in_path: Path, out_path: Path, compression: int):
         """Create a new zip compressed zip from a folder."""
-        with get_progress_reporter()(total=1) as progress:
+        with get_progress_reporter()(total=1, desc='Compressing to zip') as progress:
             _callback = create_callback(progress)
-            compress_folder_zip(in_path, out_path, compression=compression, callback=_callback)
+            with ZipPath(out_path, mode='w', compression=compression, allow_zip64=True) as path:
+                path.puttree(in_path, check_exists=False, callback=_callback, cb_descript='Compressing to zip')
 
     @staticmethod
     def _compress_archive_tar(in_path: Path, out_path: Path):
         """Create a new zip compressed tar from a folder."""
-        with get_progress_reporter()(total=1) as progress:
+        with get_progress_reporter()(total=1, desc='Compressing to tar') as progress:
             _callback = create_callback(progress)
-            compress_folder_tar(in_path, out_path, callback=_callback)
+            with TarPath(out_path, mode='w:gz', dereference=True) as path:
+                path.puttree(in_path, check_exists=False, callback=_callback, cb_descript='Compressing to tar')
 
 
 class ArchiveMigratorJsonZip(ArchiveMigratorJsonBase):
     """A migrator for a JSON zip compressed format."""
 
     def _retrieve_version(self) -> str:
-        metadata = json.loads(read_file_in_zip(self.filepath, 'metadata.json'))
+        try:
+            metadata = json.loads(read_file_in_zip(self.filepath, 'metadata.json'))
+        except (IOError, FileNotFoundError) as error:
+            raise CorruptArchive(str(error))
         if 'export_version' not in metadata:
             raise CorruptArchive("metadata.json doest not contain an 'export_version' key")
         return metadata['export_version']
 
     def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
-        safe_extract_zip(self.filepath, filepath, callback=callback)
+        try:
+            ZipPath(self.filepath, mode='r', allow_zip64=True).extract_tree(filepath, callback=callback)
+        except zipfile.BadZipfile as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')
 
 
 class ArchiveMigratorJsonTar(ArchiveMigratorJsonBase):
     """A migrator for a JSON tar compressed format."""
 
     def _retrieve_version(self) -> str:
-        metadata = json.loads(read_file_in_tar(self.filepath, 'metadata.json'))
+        try:
+            metadata = json.loads(read_file_in_tar(self.filepath, 'metadata.json'))
+        except (IOError, FileNotFoundError) as error:
+            raise CorruptArchive(str(error))
         if 'export_version' not in metadata:
             raise CorruptArchive("metadata.json doest not contain an 'export_version' key")
         return metadata['export_version']
 
     def _extract_archive(self, filepath: Path, callback: Callable[[str, Any], None]):
-        safe_extract_tar(self.filepath, filepath, callback=callback)
+        try:
+            TarPath(self.filepath, mode='r:*', pax_format=tarfile.PAX_FORMAT
+                    ).extract_tree(filepath, allow_dev=False, allow_symlink=False, callback=callback)
+        except tarfile.ReadError as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')

@@ -12,9 +12,11 @@
 import tarfile
 import zipfile
 
+from archive_path import TarPath, ZipPath
+
 from aiida.common.exceptions import NotExistent
 from aiida.common import json
-from aiida.tools.importexport.archive import safe_extract_tar, safe_extract_zip, CacheFolder
+from aiida.tools.importexport.archive import CacheFolder
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from aiida.tools.importexport.archive.migrations.v03_to_v04 import migrate_v3_to_v4
 
@@ -31,9 +33,9 @@ def test_migrate_external(external_archive, tmp_path):
 
     # Migrate
     if zipfile.is_zipfile(dirpath_archive):
-        safe_extract_zip(dirpath_archive, out_path)
+        ZipPath(dirpath_archive).extract_tree(out_path)
     elif tarfile.is_tarfile(dirpath_archive):
-        safe_extract_tar(dirpath_archive, out_path)
+        TarPath(dirpath_archive).extract_tree(out_path)
     else:
         raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 
@@ -320,9 +322,9 @@ def test_illegal_create_links(external_archive, tmp_path):
 
     # Migrate
     if zipfile.is_zipfile(dirpath_archive):
-        safe_extract_zip(dirpath_archive, out_path)
+        ZipPath(dirpath_archive).extract_tree(out_path)
     elif tarfile.is_tarfile(dirpath_archive):
-        safe_extract_tar(dirpath_archive, out_path)
+        TarPath(dirpath_archive).extract_tree(out_path)
     else:
         raise ValueError('invalid file format, expected either a zip archive or gzipped tarball')
 

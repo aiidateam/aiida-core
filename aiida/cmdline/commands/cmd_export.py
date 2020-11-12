@@ -79,7 +79,9 @@ def inspect(archive, version, data, meta_data):
 @options.COMPUTERS()
 @options.GROUPS()
 @options.NODES()
-@options.ARCHIVE_FORMAT()
+@options.ARCHIVE_FORMAT(
+    type=click.Choice(['zip', 'zip-uncompressed', 'zip-lowmemory', 'tar.gz', 'null']),
+)
 @options.FORCE(help='overwrite output file if it already exists')
 @click.option(
     '-v',
@@ -101,6 +103,14 @@ def inspect(archive, version, data, meta_data):
     show_default=True,
     help='Include or exclude comments for node(s) in export. (Will also export extra users who commented).'
 )
+# will only be useful when moving to a new archive format, that does not store all data in memory
+# @click.option(
+#     '-b',
+#     '--batch-size',
+#     default=1000,
+#     type=int,
+#     help='Batch database query results in sub-collections to reduce memory usage.'
+# )
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
@@ -115,6 +125,7 @@ def create(
     their provenance, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    # pylint: disable=too-many-branches
     from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
@@ -143,17 +154,22 @@ def create(
         'call_work_backward': call_work_backward,
         'include_comments': include_comments,
         'include_logs': include_logs,
-        'overwrite': force
+        'overwrite': force,
     }
 
     if archive_format == 'zip':
         export_format = ExportFileFormat.ZIP
-        kwargs.update({'use_compression': True})
+        kwargs.update({'writer_init': {'use_compression': True}})
     elif archive_format == 'zip-uncompressed':
         export_format = ExportFileFormat.ZIP
-        kwargs.update({'use_compression': False})
+        kwargs.update({'writer_init': {'use_compression': False}})
+    elif archive_format == 'zip-lowmemory':
+        export_format = ExportFileFormat.ZIP
+        kwargs.update({'writer_init': {'cache_zipinfo': True}})
     elif archive_format == 'tar.gz':
         export_format = ExportFileFormat.TAR_GZIPPED
+    elif archive_format == 'null':
+        export_format = 'null'
 
     if verbosity in ['DEBUG', 'INFO']:
         set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
@@ -237,7 +253,10 @@ def migrate(input_file, output_file, force, silent, in_place, archive_format, ve
     except Exception as error:  # pylint: disable=broad-except
         if verbosity == 'DEBUG':
             raise
-        echo.echo_critical(f'failed to migrate the archive file (use `--verbosity DEBUG` to see traceback): {error}')
+        echo.echo_critical(
+            'failed to migrate the archive file (use `--verbosity DEBUG` to see traceback): '
+            f'{error.__class__.__name__}:{error}'
+        )
 
     if verbosity in ['DEBUG', 'INFO']:
         echo.echo_success(f'migrated the archive to version {version}')

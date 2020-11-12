@@ -212,7 +212,7 @@ def export(
     writer_init = writer_init or {}
     if use_compression is not None:
         warnings.warn(
-            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0', AiidaDeprecationWarning
+            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0 (which will always compress)', AiidaDeprecationWarning
         )  # pylint: disable=no-member
         writer_init['use_compression'] = use_compression
     if isinstance(file_format, str):

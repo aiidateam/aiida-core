@@ -249,7 +249,7 @@ def import_data_sqla(
                 for v in entries.get(NODE_ENTITY_NAME, {}).values()
             ]
 
-            # now delete the entry data because we no longer need it
+            # now delete the entity data because we no longer need it
             del existing_entries
             del new_entries
 

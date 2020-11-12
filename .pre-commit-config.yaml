@@ -29,10 +29,16 @@ repos:
             )$
         args: ['-i']
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.780
+-   repo: local
+
     hooks:
+
     -   id: mypy
+        name: mypy
+        entry: mypy
+        language: python
+        types: [python]
+        require_serial: true
         pass_filenames: true
         files: >-
             (?x)^(
@@ -40,14 +46,10 @@ repos:
                 aiida/engine/processes/calcjobs/calcjob.py|
                 aiida/tools/groups/paths.py|
                 aiida/tools/importexport/archive/.*py|
-                aiida/tools/importexport/common/zip_folder.py|
                 aiida/tools/importexport/dbexport/__init__.py|
                 aiida/tools/importexport/dbimport/backends/.*.py|
             )$
 
--   repo: local
-
-    hooks:
     -   id: pylint
         name: pylint
         entry: pylint

@@ -12,19 +12,20 @@ from abc import ABC, abstractmethod
 import json
 import os
 from pathlib import Path
+import tarfile
 from types import TracebackType
 from typing import Any, Callable, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Type
+import zipfile
 
 from distutils.version import StrictVersion
+from archive_path import TarPath, ZipPath, read_file_in_tar, read_file_in_zip
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat, NODES_EXPORT_SUBFOLDER
 from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
-from aiida.tools.importexport.archive.common import (
-    ArchiveMetadata, null_callback, read_file_in_tar, read_file_in_zip, safe_extract_zip, safe_extract_tar
-)
+from aiida.tools.importexport.archive.common import (ArchiveMetadata, null_callback)
 from aiida.tools.importexport.common.config import NODE_ENTITY_NAME, GROUP_ENTITY_NAME
 from aiida.tools.importexport.common.utils import export_shard_uuid
 
@@ -367,7 +368,7 @@ class ReaderJsonBase(ArchiveReaderAbstract):
         assert self._sandbox is not None  # required by mypy
 
         # unarchive the common folder if it does not exist
-        common_prefix = os.path.commonprefix(path_prefixes)
+        common_prefix = os.path.commonpath(path_prefixes)
         if not self._sandbox.get_subfolder(common_prefix).exists():
             self._extract(path_prefix=common_prefix, callback=callback)
 
@@ -391,24 +392,31 @@ class ReaderJsonZip(ReaderJsonBase):
 
     def _get_metadata(self):
         if self._metadata is None:
-            self._metadata = json.loads(read_file_in_zip(self.filename, self.FILENAME_METADATA))
+            try:
+                self._metadata = json.loads(read_file_in_zip(self.filename, self.FILENAME_METADATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._metadata
 
     def _get_data(self):
         if self._data is None:
-            self._data = json.loads(read_file_in_zip(self.filename, self.FILENAME_DATA))
+            try:
+                self._data = json.loads(read_file_in_zip(self.filename, self.FILENAME_DATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._data
 
     def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
-        safe_extract_zip(
-            self.filename,
-            self._sandbox.abspath,
-            only_prefix=[path_prefix],
-            callback=callback,
-            callback_description='Extracting repository files'
-        )
+        try:
+            ZipPath(self.filename, mode='r', allow_zip64=True).joinpath(path_prefix).extract_tree(
+                self._sandbox.abspath, callback=callback, cb_descript='Extracting repository files'
+            )
+        except zipfile.BadZipfile as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')
+        except NotADirectoryError as error:
+            raise CorruptArchive(f'Unable to find required folder in archive: {error}')
 
 
 class ReaderJsonTar(ReaderJsonBase):
@@ -420,24 +428,35 @@ class ReaderJsonTar(ReaderJsonBase):
 
     def _get_metadata(self):
         if self._metadata is None:
-            self._metadata = json.loads(read_file_in_tar(self.filename, self.FILENAME_METADATA))
+            try:
+                self._metadata = json.loads(read_file_in_tar(self.filename, self.FILENAME_METADATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._metadata
 
     def _get_data(self):
         if self._data is None:
-            self._data = json.loads(read_file_in_tar(self.filename, self.FILENAME_DATA))
+            try:
+                self._data = json.loads(read_file_in_tar(self.filename, self.FILENAME_DATA))
+            except (IOError, FileNotFoundError) as error:
+                raise CorruptArchive(str(error))
         return self._data
 
     def _extract(self, *, path_prefix: str, callback: Callable[[str, Any], None] = null_callback):
         self.assert_within_context()
         assert self._sandbox is not None  # required by mypy
-        safe_extract_tar(
-            self.filename,
-            self._sandbox.abspath,
-            only_prefix=[path_prefix],
-            callback=callback,
-            callback_description='Extracting repository files'
-        )
+        try:
+            TarPath(self.filename, mode='r:*').joinpath(path_prefix).extract_tree(
+                self._sandbox.abspath,
+                allow_dev=False,
+                allow_symlink=False,
+                callback=callback,
+                cb_descript='Extracting repository files'
+            )
+        except tarfile.ReadError as error:
+            raise CorruptArchive(f'The input file cannot be read: {error}')
+        except NotADirectoryError as error:
+            raise CorruptArchive(f'Unable to find required folder in archive: {error}')
 
 
 class ReaderJsonFolder(ReaderJsonBase):

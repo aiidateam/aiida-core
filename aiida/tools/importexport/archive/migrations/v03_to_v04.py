@@ -421,8 +421,8 @@ def add_extras(data):
     Since Extras were not available previously and usually only include hashes,
     the Node ids will be added, but included as empty dicts
     """
-    node_extras = {}
-    node_extras_conversion = {}
+    node_extras: dict = {}
+    node_extras_conversion: dict = {}
 
     for node_id in data['export_data'].get('Node', {}):
         node_extras[node_id] = {}

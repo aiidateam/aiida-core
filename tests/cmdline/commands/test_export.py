@@ -153,7 +153,7 @@ class TestVerdiExport(AiidaTestCase):
             filename_output = next(tempfile._get_candidate_names())  # pylint: disable=protected-access
 
             try:
-                options = [filename_input, filename_output]
+                options = ['--verbosity', 'DEBUG', filename_input, filename_output]
                 result = self.cli_runner.invoke(cmd_export.migrate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))

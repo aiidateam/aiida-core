@@ -14,8 +14,9 @@ import tarfile
 import zipfile
 from typing import List
 
+from archive_path import read_file_in_tar, read_file_in_zip
+
 from aiida.common import json
-from aiida.tools.importexport.archive.common import read_file_in_tar, read_file_in_zip
 from tests.static import STATIC_DIR
 
 

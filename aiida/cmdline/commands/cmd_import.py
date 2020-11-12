@@ -207,7 +207,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
         archive_path = archive
 
         if web_based:
-            echo.echo_info(f'downloading archive {archive}')
+            echo.echo_info(f'downloading archive: {archive}')
             try:
                 response = urllib.request.urlopen(archive)
             except Exception as exception:
@@ -216,6 +216,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
             archive_path = temp_folder.get_abs_path('downloaded_archive.zip')
             echo.echo_success('archive downloaded, proceeding with import')
 
+        echo.echo_info(f'starting import: {archive}')
         try:
             import_data(archive_path, **import_kwargs)
         except IncompatibleArchiveVersionError as exception:

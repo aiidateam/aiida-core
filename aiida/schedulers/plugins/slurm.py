@@ -119,6 +119,7 @@ class SlurmJobResource(NodeNumberJobResource):
         """
         resources = super().validate_resources(**kwargs)
 
+        # In this plugin we never used num_cores_per_machine so if it is not defined it is OK.
         if resources.num_cores_per_machine is not None and resources.num_cores_per_mpiproc is not None:
             if resources.num_cores_per_machine != resources.num_cores_per_mpiproc * resources.num_mpiprocs_per_machine:
                 raise ValueError(
@@ -130,13 +131,13 @@ class SlurmJobResource(NodeNumberJobResource):
             if resources.num_cores_per_machine < 1:
                 raise ValueError('num_cores_per_machine must be greater than or equal to one.')
 
-            # In this plugin we never used num_cores_per_machine so if it is not defined it is OK.
             resources.num_cores_per_mpiproc = (resources.num_cores_per_machine / resources.num_mpiprocs_per_machine)
-            if isinstance(resources.num_cores_per_mpiproc, int):
+            if int(resources.num_cores_per_mpiproc) != resources.num_cores_per_mpiproc:
                 raise ValueError(
                     '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
                     ' particular it should be a multiple of `num_cores_per_mpiproc` and/or `num_mpiprocs_per_machine`'
                 )
+            resources.num_cores_per_mpiproc = int(resources.num_cores_per_mpiproc)
 
         return resources
 

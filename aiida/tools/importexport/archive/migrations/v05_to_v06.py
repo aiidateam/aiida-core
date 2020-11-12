@@ -24,6 +24,8 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
+from typing import Union
+
 from aiida.tools.importexport.archive.common import CacheFolder
 
 from .utils import verify_metadata_version, update_metadata
@@ -32,6 +34,8 @@ from .utils import verify_metadata_version, update_metadata
 def migrate_deserialized_datetime(data, conversion):
     """Deserialize datetime strings from export archives, meaning to reattach the UTC timezone information."""
     from aiida.tools.importexport.common.exceptions import ArchiveMigrationError
+
+    ret_data: Union[str, dict, list]
 
     if isinstance(data, dict):
         ret_data = {}

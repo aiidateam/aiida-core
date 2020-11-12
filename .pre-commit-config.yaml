@@ -38,7 +38,6 @@ repos:
         entry: mypy
         language: python
         types: [python]
-        args: [--scripts-are-modules, --warn-unused-ignores]
         require_serial: true
         pass_filenames: true
         files: >-

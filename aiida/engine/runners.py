@@ -305,7 +305,7 @@ class Runner:  # pylint: disable=too-many-public-methods
 
         broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
-            broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
+            broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 
         LOGGER.info('adding subscriber for broadcasts of %d', pk)
         self._communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)

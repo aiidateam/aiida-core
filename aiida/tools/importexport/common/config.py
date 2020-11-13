@@ -9,20 +9,25 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """ Configuration file for AiiDA Import/Export module """
+from enum import Enum
 from aiida.orm import Computer, Group, Node, User, Log, Comment
 
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
-EXPORT_VERSION = '0.9'
+EXPORT_VERSION = '0.10'
+
+
+class ExportFileFormat(str, Enum):
+    """Archive file formats"""
+    ZIP = 'zip'
+    TAR_GZIPPED = 'tar.gz'
+
 
 DUPL_SUFFIX = ' (Imported #{})'
 
 # The name of the subfolder in which the node files are stored
 NODES_EXPORT_SUBFOLDER = 'nodes'
-
-# Progress bar
-BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -34,7 +39,7 @@ USER_ENTITY_NAME = 'User'
 LOG_ENTITY_NAME = 'Log'
 COMMENT_ENTITY_NAME = 'Comment'
 
-# The signatures used to reference the entities in the import/export file
+# The signatures used to reference the entities in the archive file
 NODE_SIGNATURE = 'aiida.backends.djsite.db.models.DbNode'
 GROUP_SIGNATURE = 'aiida.backends.djsite.db.models.DbGroup'
 COMPUTER_SIGNATURE = 'aiida.backends.djsite.db.models.DbComputer'
@@ -82,7 +87,7 @@ entity_names_to_sqla_schema = {
     COMMENT_ENTITY_NAME: 'aiida.backends.sqlalchemy.models.comment.DbComment'
 }
 
-# Mapping of the export file fields (that coincide with the Django fields) to
+# Mapping of the archive file fields (that coincide with the Django fields) to
 # model fields that can be used for the query of the database in both backends.
 # These are the names of the fields of the models that belong to the
 # corresponding entities.
@@ -173,7 +178,13 @@ def get_all_fields_info():
             'related_name': 'dbnodes'
         },
         'description': {},
-        'process_type': {}
+        'process_type': {},
+        'extras': {
+            'convert_type': 'jsonb'
+        },
+        'attributes': {
+            'convert_type': 'jsonb'
+        }
     }
     all_fields_info[GROUP_ENTITY_NAME] = {
         'description': {},
@@ -186,7 +197,10 @@ def get_all_fields_info():
         },
         'type_string': {},
         'uuid': {},
-        'label': {}
+        'label': {},
+        'extras': {
+            'convert_type': 'jsonb'
+        }
     }
     all_fields_info[LOG_ENTITY_NAME] = {
         'uuid': {},

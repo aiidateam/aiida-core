@@ -178,7 +178,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo('Exported legacy workflow logs to {}'.format(filename))
+                click.echo(f'Exported legacy workflow logs to {filename}')
 
         # Now delete the records
         connection.execute(
@@ -203,7 +203,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo('Exported unexpected entity logs to {}'.format(filename))
+                click.echo(f'Exported unexpected entity logs to {filename}')
 
         # Now delete the records
         connection.execute(

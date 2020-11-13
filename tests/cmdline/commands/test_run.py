@@ -437,5 +437,5 @@ class TestAutoGroups(AiidaTestCase):
             )
             self.assertEqual(
                 all_auto_groups[0][0].label, group_label,
-                'The auto group label is "{}" instead of "{}"'.format(all_auto_groups[0][0].label, group_label)
+                f'The auto group label is "{all_auto_groups[0][0].label}" instead of "{group_label}"'
             )

@@ -51,9 +51,9 @@ class ProcessNode(Sealable, Node):
     def __str__(self):
         base = super().__str__()
         if self.process_type:
-            return '{} ({})'.format(base, self.process_type)
+            return f'{base} ({self.process_type})'
 
-        return '{}'.format(base)
+        return f'{base}'
 
     @classproperty
     def _updatable_attributes(cls):
@@ -105,7 +105,7 @@ class ProcessNode(Sealable, Node):
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
-            raise ValueError('no process type for CalcJobNode<{}>: cannot recreate process class'.format(self.pk))
+            raise ValueError(f'no process type for CalcJobNode<{self.pk}>: cannot recreate process class')
 
         try:
             process_class = load_entry_point_from_string(self.process_type)
@@ -123,9 +123,7 @@ class ProcessNode(Sealable, Node):
                 process_class = getattr(module, class_name)
             except (ValueError, ImportError):
                 raise ValueError(
-                    'could not load process class CalcJobNode<{}> given its `process_type`: {}'.format(
-                        self.pk, self.process_type
-                    )
+                    f'could not load process class CalcJobNode<{self.pk}> given its `process_type`: {self.process_type}'
                 )
 
         return process_class
@@ -306,7 +304,7 @@ class ProcessNode(Sealable, Node):
             status = status.value
 
         if not isinstance(status, int):
-            raise ValueError('exit status has to be an integer, got {}'.format(status))
+            raise ValueError(f'exit status has to be an integer, got {status}')
 
         return self.set_attribute(self.EXIT_STATUS_KEY, status)
 
@@ -329,7 +327,7 @@ class ProcessNode(Sealable, Node):
             return None
 
         if not isinstance(message, str):
-            raise ValueError('exit message has to be a string type, got {}'.format(type(message)))
+            raise ValueError(f'exit message has to be a string type, got {type(message)}')
 
         return self.set_attribute(self.EXIT_MESSAGE_KEY, message)
 
@@ -354,7 +352,7 @@ class ProcessNode(Sealable, Node):
         :param exception: the exception message
         """
         if not isinstance(exception, str):
-            raise ValueError('exception message has to be a string type, got {}'.format(type(exception)))
+            raise ValueError(f'exception message has to be a string type, got {type(exception)}')
 
         return self.set_attribute(self.EXCEPTION_KEY, exception)
 
@@ -481,9 +479,7 @@ class ProcessNode(Sealable, Node):
         try:
             process_class = self.process_class
         except ValueError as exc:
-            self.logger.warning(
-                "Not considering {} for caching, '{!r}' when accessing its process class.".format(self, exc)
-            )
+            self.logger.warning(f"Not considering {self} for caching, '{exc!r}' when accessing its process class.")
             return False
         # For process functions, the `process_class` does not have an
         # is_valid_cache attribute

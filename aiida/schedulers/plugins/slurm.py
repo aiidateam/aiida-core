@@ -119,6 +119,7 @@ class SlurmJobResource(NodeNumberJobResource):
         """
         resources = super().validate_resources(**kwargs)
 
+        # In this plugin we never used num_cores_per_machine so if it is not defined it is OK.
         if resources.num_cores_per_machine is not None and resources.num_cores_per_mpiproc is not None:
             if resources.num_cores_per_machine != resources.num_cores_per_mpiproc * resources.num_mpiprocs_per_machine:
                 raise ValueError(
@@ -130,13 +131,13 @@ class SlurmJobResource(NodeNumberJobResource):
             if resources.num_cores_per_machine < 1:
                 raise ValueError('num_cores_per_machine must be greater than or equal to one.')
 
-            # In this plugin we never used num_cores_per_machine so if it is not defined it is OK.
             resources.num_cores_per_mpiproc = (resources.num_cores_per_machine / resources.num_mpiprocs_per_machine)
-            if isinstance(resources.num_cores_per_mpiproc, int):
+            if int(resources.num_cores_per_mpiproc) != resources.num_cores_per_mpiproc:
                 raise ValueError(
                     '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
                     ' particular it should be a multiple of `num_cores_per_mpiproc` and/or `num_mpiprocs_per_machine`'
                 )
+            resources.num_cores_per_mpiproc = int(resources.num_cores_per_mpiproc)
 
         return resources
 
@@ -198,14 +199,14 @@ class SlurmScheduler(Scheduler):
         # sure to get the times in 'standard' format
         command = [
             "SLURM_TIME_FORMAT='standard'", 'squeue', '--noheader',
-            "-o '{}'".format(_FIELD_SEPARATOR.join(_[0] for _ in self.fields))
+            f"-o '{_FIELD_SEPARATOR.join(_[0] for _ in self.fields)}'"
         ]
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in SLURM')
 
         if user:
-            command.append('-u{}'.format(user))
+            command.append(f'-u{user}')
 
         if jobs:
             joblist = []
@@ -231,10 +232,10 @@ class SlurmScheduler(Scheduler):
             if len(joblist) == 1:
                 joblist += [joblist[0]]
 
-            command.append('--jobs={}'.format(','.join(joblist)))
+            command.append(f"--jobs={','.join(joblist)}")
 
         comm = ' '.join(command)
-        self.logger.debug('squeue command: {}'.format(comm))
+        self.logger.debug(f'squeue command: {comm}')
         return comm
 
     def _get_detailed_job_info_command(self, job_id):
@@ -247,7 +248,7 @@ class SlurmScheduler(Scheduler):
         the end.
         """
         fields = ','.join(self._detailed_job_info_fields)
-        return 'sacct --format={} --parsable --jobs={}'.format(fields, job_id)
+        return f'sacct --format={fields} --parsable --jobs={job_id}'
 
     def _get_submit_script_header(self, job_tmpl):
         """
@@ -276,7 +277,7 @@ class SlurmScheduler(Scheduler):
         if job_tmpl.email:
             # If not specified, but email events are set, SLURM
             # sends the mail to the job owner by default
-            lines.append('#SBATCH --mail-user={}'.format(job_tmpl.email))
+            lines.append(f'#SBATCH --mail-user={job_tmpl.email}')
 
         if job_tmpl.email_on_started:
             lines.append('#SBATCH --mail-type=BEGIN')
@@ -297,19 +298,19 @@ class SlurmScheduler(Scheduler):
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
             if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
-                job_title = 'j' + job_title
+                job_title = f'j{job_title}'
 
             # Truncate to the first 128 characters
             # Nothing is done if the string is shorter.
             job_title = job_title[:128]
 
-            lines.append('#SBATCH --job-name="{}"'.format(job_title))
+            lines.append(f'#SBATCH --job-name="{job_title}"')
 
         if job_tmpl.import_sys_environment:
             lines.append('#SBATCH --get-user-env')
 
         if job_tmpl.sched_output_path:
-            lines.append('#SBATCH --output={}'.format(job_tmpl.sched_output_path))
+            lines.append(f'#SBATCH --output={job_tmpl.sched_output_path}')
 
         if job_tmpl.sched_join_files:
             # TODO: manual says:  # pylint: disable=fixme
@@ -325,36 +326,36 @@ class SlurmScheduler(Scheduler):
                 )
         else:
             if job_tmpl.sched_error_path:
-                lines.append('#SBATCH --error={}'.format(job_tmpl.sched_error_path))
+                lines.append(f'#SBATCH --error={job_tmpl.sched_error_path}')
             else:
                 # To avoid automatic join of files
                 lines.append('#SBATCH --error=slurm-%j.err')
 
         if job_tmpl.queue_name:
-            lines.append('#SBATCH --partition={}'.format(job_tmpl.queue_name))
+            lines.append(f'#SBATCH --partition={job_tmpl.queue_name}')
 
         if job_tmpl.account:
-            lines.append('#SBATCH --account={}'.format(job_tmpl.account))
+            lines.append(f'#SBATCH --account={job_tmpl.account}')
 
         if job_tmpl.qos:
-            lines.append('#SBATCH --qos={}'.format(job_tmpl.qos))
+            lines.append(f'#SBATCH --qos={job_tmpl.qos}')
 
         if job_tmpl.priority:
             #  Run the job with an adjusted scheduling priority  within  SLURM.
             #  With no adjustment value the scheduling priority is decreased by
             #  100. The adjustment range is from -10000 (highest  priority)  to
             #  10000  (lowest  priority).
-            lines.append('#SBATCH --nice={}'.format(job_tmpl.priority))
+            lines.append(f'#SBATCH --nice={job_tmpl.priority}')
 
         if not job_tmpl.job_resource:
             raise ValueError('Job resources (as the num_machines) are required for the SLURM scheduler plugin')
 
-        lines.append('#SBATCH --nodes={}'.format(job_tmpl.job_resource.num_machines))
+        lines.append(f'#SBATCH --nodes={job_tmpl.job_resource.num_machines}')
         if job_tmpl.job_resource.num_mpiprocs_per_machine:
-            lines.append('#SBATCH --ntasks-per-node={}'.format(job_tmpl.job_resource.num_mpiprocs_per_machine))
+            lines.append(f'#SBATCH --ntasks-per-node={job_tmpl.job_resource.num_mpiprocs_per_machine}')
 
         if job_tmpl.job_resource.num_cores_per_mpiproc:
-            lines.append('#SBATCH --cpus-per-task={}'.format(job_tmpl.job_resource.num_cores_per_mpiproc))
+            lines.append(f'#SBATCH --cpus-per-task={job_tmpl.job_resource.num_cores_per_mpiproc}')
 
         if job_tmpl.max_wallclock_seconds is not None:
             try:
@@ -374,9 +375,9 @@ class SlurmScheduler(Scheduler):
             minutes = tot_minutes // 60
             seconds = tot_minutes % 60
             if days == 0:
-                lines.append('#SBATCH --time={:02d}:{:02d}:{:02d}'.format(hours, minutes, seconds))
+                lines.append(f'#SBATCH --time={hours:02d}:{minutes:02d}:{seconds:02d}')
             else:
-                lines.append('#SBATCH --time={:d}-{:02d}:{:02d}:{:02d}'.format(days, hours, minutes, seconds))
+                lines.append(f'#SBATCH --time={days:d}-{hours:02d}:{minutes:02d}:{seconds:02d}')
 
         # It is the memory per node, not per cpu!
         if job_tmpl.max_memory_kb:
@@ -392,7 +393,7 @@ class SlurmScheduler(Scheduler):
                 )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
-            lines.append('#SBATCH --mem={}'.format(virtual_memory_kb // 1024))
+            lines.append(f'#SBATCH --mem={virtual_memory_kb // 1024}')
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
@@ -409,7 +410,7 @@ class SlurmScheduler(Scheduler):
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError('If you provide job_environment, it must be a dictionary')
             for key, value in job_tmpl.job_environment.items():
-                lines.append('export {}={}'.format(key.strip(), escape_for_bash(value)))
+                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
             lines.append('# ENVIRONMENT VARIABLES  END  ###')
             lines.append(empty_line)
 
@@ -426,9 +427,9 @@ class SlurmScheduler(Scheduler):
                 directory.
                 IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = 'sbatch {}'.format(submit_script)
+        submit_command = f'sbatch {submit_script}'
 
-        self.logger.info('submitting with: ' + submit_command)
+        self.logger.info(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -442,25 +443,16 @@ class SlurmScheduler(Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            self.logger.error(
-                'Error in _parse_submit_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
-            raise SchedulerError(
-                'Error during submission, retval={}\n'
-                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
         try:
-            transport_string = ' for {}'.format(self.transport)
+            transport_string = f' for {self.transport}'
         except SchedulerError:
             transport_string = ''
 
         if stderr.strip():
-            self.logger.warning(
-                'in _parse_submit_output{}: '
-                'there was some text in stderr: {}'.format(transport_string, stderr)
-            )
+            self.logger.warning(f'in _parse_submit_output{transport_string}: there was some text in stderr: {stderr}')
 
         # I check for a valid string in the output.
         # See comments near the regexp above.
@@ -470,10 +462,7 @@ class SlurmScheduler(Scheduler):
             if match:
                 return match.group('jobid')
         # If I am here, no valid line could be found.
-        self.logger.error(
-            'in _parse_submit_output{}: '
-            'unable to find the job id: {}'.format(transport_string, stdout)
-        )
+        self.logger.error(f'in _parse_submit_output{transport_string}: unable to find the job id: {stdout}')
         raise SchedulerError(
             'Error during submission, could not retrieve the jobID from '
             'sbatch output; see log for more info.'
@@ -502,15 +491,13 @@ class SlurmScheduler(Scheduler):
         # See discussion in _get_joblist_command on how we ensure that AiiDA can expect exit code 0 here.
         if retval != 0:
             raise SchedulerError(
-                """squeue returned exit code {} (_parse_joblist_output function)
-stdout='{}'
-stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
+                f"""squeue returned exit code {retval} (_parse_joblist_output function)
+stdout='{stdout.strip()}'
+stderr='{stderr.strip()}'"""
             )
         if stderr.strip():
             self.logger.warning(
-                "squeue returned exit code 0 (_parse_joblist_output function) but non-empty stderr='{}'".format(
-                    stderr.strip()
-                )
+                f"squeue returned exit code 0 (_parse_joblist_output function) but non-empty stderr='{stderr.strip()}'"
             )
 
         # will contain raw data parsed from output: only lines with the
@@ -537,7 +524,7 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
             except KeyError:
                 # I skip this calculation if I couldn't find this basic info
                 # (I don't append anything to job_list before continuing)
-                self.logger.error("Wrong line length in squeue output! '{}'".format(job))
+                self.logger.error(f"Wrong line length in squeue output! '{job}'")
                 continue
 
             try:
@@ -623,7 +610,7 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
                 walltime = (self._convert_time(thisjob_dict['time_limit']))
                 this_job.requested_wallclock_time_seconds = walltime  # pylint: disable=invalid-name
             except ValueError:
-                self.logger.warning('Error parsing the time limit for job id {}'.format(this_job.job_id))
+                self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
@@ -631,17 +618,17 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
                 try:
                     this_job.wallclock_time_seconds = (self._convert_time(thisjob_dict['time_used']))
                 except ValueError:
-                    self.logger.warning('Error parsing time_used for job id {}'.format(this_job.job_id))
+                    self.logger.warning(f'Error parsing time_used for job id {this_job.job_id}')
 
                 try:
                     this_job.dispatch_time = self._parse_time_string(thisjob_dict['dispatch_time'])
                 except ValueError:
-                    self.logger.warning('Error parsing dispatch_time for job id {}'.format(this_job.job_id))
+                    self.logger.warning(f'Error parsing dispatch_time for job id {this_job.job_id}')
 
             try:
                 this_job.submission_time = self._parse_time_string(thisjob_dict['submission_time'])
             except ValueError:
-                self.logger.warning('Error parsing submission_time for job id {}'.format(this_job.job_id))
+                self.logger.warning(f'Error parsing submission_time for job id {this_job.job_id}')
 
             this_job.title = thisjob_dict['job_name']
 
@@ -679,7 +666,7 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
 
         groups = _TIME_REGEXP.match(string)
         if groups is None:
-            self.logger.warning("Unrecognized format for time string '{}'".format(string))
+            self.logger.warning(f"Unrecognized format for time string '{string}'")
             raise ValueError('Unrecognized format for time string.')
 
         groupdict = groups.groupdict()
@@ -702,7 +689,7 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            self.logger.debug('Unable to parse time string {}, the message was {}'.format(string, exc))
+            self.logger.debug(f'Unable to parse time string {string}, the message was {exc}')
             raise ValueError('Problem parsing the time string.')
 
         # I convert from a time_struct to a datetime object going through
@@ -714,9 +701,9 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
         """
         Return the command to kill the job with specified jobid.
         """
-        submit_command = 'scancel {}'.format(jobid)
+        submit_command = f'scancel {jobid}'
 
-        self.logger.info('killing job {}'.format(jobid))
+        self.logger.info(f'killing job {jobid}')
 
         return submit_command
 
@@ -729,28 +716,19 @@ stderr='{}'""".format(retval, stdout.strip(), stderr.strip())
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            self.logger.error(
-                'Error in _parse_kill_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             return False
 
         try:
-            transport_string = ' for {}'.format(self.transport)
+            transport_string = f' for {self.transport}'
         except SchedulerError:
             transport_string = ''
 
         if stderr.strip():
-            self.logger.warning(
-                'in _parse_kill_output{}: '
-                'there was some text in stderr: {}'.format(transport_string, stderr)
-            )
+            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stderr: {stderr}')
 
         if stdout.strip():
-            self.logger.warning(
-                'in _parse_kill_output{}: '
-                'there was some text in stdout: {}'.format(transport_string, stdout)
-            )
+            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stdout: {stdout}')
 
         return True
 

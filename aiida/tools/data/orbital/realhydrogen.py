@@ -329,7 +329,7 @@ class RealhydrogenOrbital(Orbital):
             accepted_range = [0, -angular_momentum]
         if magnetic_number < min(accepted_range) or magnetic_number > max(accepted_range):
             raise ValidationError(
-                'the magnetic number must be in the range [{}, {}]'.format(min(accepted_range), max(accepted_range))
+                f'the magnetic number must be in the range [{min(accepted_range)}, {max(accepted_range)}]'
             )
 
         # Check if it is a known combination
@@ -355,8 +355,7 @@ class RealhydrogenOrbital(Orbital):
         ]
         if not orbital_name:
             raise InputValidationError(
-                'No orbital name corresponding to the '
-                'angular_momentum {} could be found'.format(angular_momentum)
+                f'No orbital name corresponding to the angular_momentum {angular_momentum} could be found'
             )
         if magnetic_number is not None:
             # finds angular momentum
@@ -368,9 +367,7 @@ class RealhydrogenOrbital(Orbital):
 
             if not orbital_name:
                 raise InputValidationError(
-                    'No orbital name corresponding to '
-                    'the magnetic_number {} could be '
-                    'found'.format(magnetic_number)
+                    f'No orbital name corresponding to the magnetic_number {magnetic_number} could be found'
                 )
         return orbital_name[0]
 

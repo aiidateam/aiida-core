@@ -60,7 +60,7 @@ class SqlaModelEntity(typing.Generic[ModelType]):
         if hasattr(cls.MODEL_CLASS, attr_name):
             return attr_name
 
-        raise ValueError("Unknown attribute '{}'".format(attr_name))
+        raise ValueError(f"Unknown attribute '{attr_name}'")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

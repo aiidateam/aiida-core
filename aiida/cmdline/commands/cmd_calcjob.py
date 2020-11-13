@@ -68,7 +68,7 @@ def calcjob_res(calcjob, fmt, keys):
         try:
             result = {k: results[k] for k in keys}
         except KeyError as exc:
-            echo.echo_critical("key '{}' was not found in the results dictionary".format(exc.args[0]))
+            echo.echo_critical(f"key '{exc.args[0]}' was not found in the results dictionary")
     else:
         result = results
 
@@ -118,7 +118,7 @@ def calcjob_inputcat(calcjob, path):
         # It can happen if the output is redirected, for example, to `head`.
         if exception.errno != errno.EPIPE:
             # Incorrect path or file not readable
-            echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
+            echo.echo_critical(f'Could not open output path "{path}". Exception: {exception}')
 
 
 @verdi_calcjob.command('outputcat')
@@ -170,7 +170,7 @@ def calcjob_outputcat(calcjob, path):
         # It can happen if the output is redirected, for example, to `head`.
         if exception.errno != errno.EPIPE:
             # Incorrect path or file not readable
-            echo.echo_critical('Could not open output path "{}". Exception: {}'.format(path, exception))
+            echo.echo_critical(f'Could not open output path "{path}". Exception: {exception}')
 
 
 @verdi_calcjob.command('inputls')
@@ -191,7 +191,7 @@ def calcjob_inputls(calcjob, path, color):
     try:
         list_repository_contents(calcjob, path, color)
     except FileNotFoundError:
-        echo.echo_critical('the path `{}` does not exist for the given node'.format(path))
+        echo.echo_critical(f'the path `{path}` does not exist for the given node')
 
 
 @verdi_calcjob.command('outputls')
@@ -218,7 +218,7 @@ def calcjob_outputls(calcjob, path, color):
     try:
         list_repository_contents(retrieved, path, color)
     except FileNotFoundError:
-        echo.echo_critical('the path `{}` does not exist for the given node'.format(path))
+        echo.echo_critical(f'the path `{path}` does not exist for the given node')
 
 
 @verdi_calcjob.command('cleanworkdir')
@@ -255,7 +255,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
 
     if not force:
         path_count = sum([len(paths) for computer, paths in path_mapping.items()])
-        warning = 'Are you sure you want to clean the work directory of {} calcjobs?'.format(path_count)
+        warning = f'Are you sure you want to clean the work directory of {path_count} calcjobs?'
         click.confirm(warning, abort=True)
 
     user = orm.User.objects.get_default()
@@ -271,4 +271,4 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
                 clean_remote(transport, path)
                 counter += 1
 
-        echo.echo_success('{} remote folders cleaned on {}'.format(counter, computer.label))
+        echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')

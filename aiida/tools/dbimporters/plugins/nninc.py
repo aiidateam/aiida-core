@@ -26,7 +26,7 @@ class NnincDbImporter(DbImporter):
                 "incorrect value for keyword '{}' -- only "
                 'strings and integers are accepted'.format(alias)
             )
-        return '{}={}'.format(key, values)
+        return f'{key}={values}'
 
     _keywords = {
         'xc_approximation': ['frmxcprox', _str_clause],
@@ -54,9 +54,9 @@ class NnincDbImporter(DbImporter):
                     get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
 
         if kwargs:
-            raise NotImplementedError('following keyword(s) are not implemented: {}'.format(', '.join(kwargs.keys())))
+            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
-        return self._query_url + '?' + '&'.join(get_parts)
+        return f"{self._query_url}?{'&'.join(get_parts)}"
 
     def query(self, **kwargs):
         """
@@ -81,7 +81,7 @@ class NnincDbImporter(DbImporter):
             results_now = set()
             for psp in results:
                 for element in elements:
-                    if psp.startswith('{}.'.format(element)):
+                    if psp.startswith(f'{element}.'):
                         results_now = results_now | set([psp])
             results = list(results_now)
 
@@ -138,7 +138,7 @@ class NnincSearchResults(DbSearchResults):  # pylint: disable=abstract-method
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return self._base_url + result_dict['id'] + '.UPF'
+        return f"{self._base_url + result_dict['id']}.UPF"
 
 
 class NnincEntry(UpfEntry):

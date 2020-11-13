@@ -10,19 +10,28 @@
 """
 Defines an rst directive to auto-document AiiDA processes.
 """
+from collections.abc import Mapping, Iterable
+import inspect
+
 from docutils import nodes
 from docutils.core import publish_doctree
-from docutils.parsers.rst import Directive, directives
+from docutils.parsers.rst import directives
 from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
+from sphinx.util.docutils import SphinxDirective
+from sphinxcontrib.details.directive import details, summary
 
 from plumpy.ports import OutputPort
+
 from aiida.common.utils import get_object_from_string
+from aiida.engine import Process
+from aiida.engine.processes.ports import InputPort, PortNamespace
+from aiida.manage.configuration import load_profile
 
 
 def setup_extension(app):
     app.add_directive_to_domain('py', AiidaProcessDocumenter.directivetype, AiidaProcessDirective)
-    app.add_autodocumenter(AiidaProcessDocumenter)
+    # app.add_autodocumenter(AiidaProcessDocumenter)
 
 
 class AiidaProcessDocumenter(ClassDocumenter):
@@ -33,11 +42,10 @@ class AiidaProcessDocumenter(ClassDocumenter):
 
     @classmethod
     def can_document_member(cls, member, membername, isattr, parent):
-        from aiida.engine import Process
-        return issubclass(cls, Process)
+        return inspect.isclass(member) and issubclass(member, Process)
 
 
-class AiidaProcessDirective(Directive):
+class AiidaProcessDirective(SphinxDirective):
     """
     Directive to auto-document AiiDA processes.
     """
@@ -48,7 +56,7 @@ class AiidaProcessDirective(Directive):
     HIDE_UNSTORED_INPUTS_FLAG = 'hide-nondb-inputs'
     EXPAND_NAMESPACES_FLAG = 'expand-namespaces'
     option_spec = {
-        'module': directives.unchanged,
+        'module': directives.unchanged_required,
         HIDE_UNSTORED_INPUTS_FLAG: directives.flag,
         EXPAND_NAMESPACES_FLAG: directives.flag
     }
@@ -67,20 +75,17 @@ class AiidaProcessDirective(Directive):
         Includes importing the process class.
         """
         # pylint: disable=attribute-defined-outside-init
-        from aiida.manage.configuration import load_profile
         load_profile()
 
         self.class_name = self.arguments[0].split('(')[0]
         self.module_name = self.options['module']
-        self.process_name = self.module_name + '.' + self.class_name
+        self.process_name = f'{self.module_name}.{self.class_name}'
         self.process = get_object_from_string(self.process_name)
 
         try:
             self.process_spec = self.process.spec()
         except Exception as exc:
-            raise RuntimeError(
-                "Error while building the spec for process '{}': '{!r}.'".format(self.process_name, exc)
-            ) from exc
+            raise RuntimeError(f"Error while building the spec for process '{self.process_name}': '{exc!r}.'") from exc
 
     def build_node_tree(self):
         """Returns the docutils node tree."""
@@ -93,7 +98,7 @@ class AiidaProcessDirective(Directive):
         """Returns the signature of the process."""
         signature = addnodes.desc_signature(first=False, fullname=self.signature)
         signature += addnodes.desc_annotation(text=self.annotation)
-        signature += addnodes.desc_addname(text=self.module_name + '.')
+        signature += addnodes.desc_addname(text=f'{self.module_name}.')
         signature += addnodes.desc_name(text=self.class_name)
         return signature
 
@@ -132,11 +137,7 @@ class AiidaProcessDirective(Directive):
         return paragraph
 
     def build_portnamespace_doctree(self, port_namespace):
-        """
-        Builds the doctree for a port namespace.
-        """
-        from aiida.engine.processes.ports import InputPort, PortNamespace
-
+        """Builds the doctree for a port namespace."""
         if not port_namespace:
             return None
         result = nodes.bullet_list(bullet='*')
@@ -155,7 +156,6 @@ class AiidaProcessDirective(Directive):
                     item.extend(publish_doctree(port.help)[0].children)
                 sub_doctree = self.build_portnamespace_doctree(port)
                 if sub_doctree:
-                    from sphinxcontrib.details.directive import details, summary
                     sub_item = details(opened=self.EXPAND_NAMESPACES_FLAG in self.options)
                     sub_item += summary(text='Namespace Ports')
                     sub_item += sub_doctree
@@ -192,7 +192,7 @@ class AiidaProcessDirective(Directive):
             return valid_type.__name__
         except AttributeError:
             try:
-                return '(' + ', '.join(v.__name__ for v in valid_type) + ')'
+                return f"({', '.join(v.__name__ for v in valid_type)})"
             except (AttributeError, TypeError):
                 return str(valid_type)
 
@@ -206,8 +206,6 @@ class AiidaProcessDirective(Directive):
 
     def build_outline_lines(self, outline, indent):
         """Return a list of lines which describe the process outline."""
-        from collections.abc import Mapping, Iterable
-
         indent_str = ' ' * indent
         res = []
         if isinstance(outline, str):

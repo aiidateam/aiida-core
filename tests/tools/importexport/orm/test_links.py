@@ -46,7 +46,7 @@ class TestLinks(AiidaTestCase):
         struct_uuid = struct.uuid
 
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([struct], filename=filename, file_format='tar.gz', silent=True)
+        export([struct], filename=filename, file_format='tar.gz')
 
         unpack = SandboxFolder()
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
@@ -71,9 +71,9 @@ class TestLinks(AiidaTestCase):
         self.reset_database()
 
         with self.assertRaises(DanglingLinkError):
-            import_data(filename, silent=True)
+            import_data(filename)
 
-        import_data(filename, ignore_unknown_nodes=True, silent=True)
+        import_data(filename, ignore_unknown_nodes=True)
         self.assertEqual(orm.load_node(struct_uuid).label, node_label)
 
     @with_temp_dir
@@ -94,11 +94,11 @@ class TestLinks(AiidaTestCase):
 
         export_links = get_all_node_links()
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([node_output], filename=export_file, silent=True)
+        export([node_output], filename=export_file)
 
         self.reset_database()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
         import_links = get_all_node_links()
 
         export_set = [tuple(_) for _ in export_links]
@@ -265,11 +265,11 @@ class TestLinks(AiidaTestCase):
         export_links = builder.all()
 
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export(graph_nodes, filename=export_file, silent=True)
+        export(graph_nodes, filename=export_file)
 
         self.reset_database()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
         import_links = get_all_node_links()
 
         export_set = [tuple(_) for _ in export_links]
@@ -286,12 +286,12 @@ class TestLinks(AiidaTestCase):
             export_target_uuids = set(_.uuid for _ in export_target)
 
             export_file = os.path.join(temp_dir, 'export.aiida')
-            export([export_node], filename=export_file, silent=True, overwrite=True)
+            export([export_node], filename=export_file, overwrite=True)
             export_node_str = str(export_node)
 
             self.reset_database()
 
-            import_data(export_file, silent=True)
+            import_data(export_file)
 
             # Get all the nodes of the database
             builder = orm.QueryBuilder()
@@ -343,19 +343,17 @@ class TestLinks(AiidaTestCase):
                 )
 
                 self.assertEqual(
-                    builder.count(),
-                    13,
-                    msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
+                    builder.count(), 13, msg=f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
                 )
 
                 export_links = builder.all()
 
                 export_file = os.path.join(temp_dir, 'export.aiida')
-                export(graph_nodes, filename=export_file, silent=True, overwrite=True)
+                export(graph_nodes, filename=export_file, overwrite=True)
 
                 self.reset_database()
 
-                import_data(export_file, silent=True)
+                import_data(export_file)
                 import_links = get_all_node_links()
 
                 export_set = [tuple(_) for _ in export_links]
@@ -364,7 +362,7 @@ class TestLinks(AiidaTestCase):
                 self.assertSetEqual(
                     set(export_set),
                     set(import_set),
-                    msg='Failed with c1={}, c2={}, w1={}, w2={}'.format(calcs[0], calcs[1], works[0], works[1])
+                    msg=f'Failed with c1={calcs[0]}, c2={calcs[1]}, w1={works[0]}, w2={works[1]}'
                 )
 
     @staticmethod
@@ -377,7 +375,7 @@ class TestLinks(AiidaTestCase):
 
         for export_file, rule_changes, expected_nodes in test_data.values():
             traversal_rules.update(rule_changes)
-            export(nodes_to_export[0], filename=export_file, silent=True, **traversal_rules)
+            export(nodes_to_export[0], filename=export_file, **traversal_rules)
 
             for node_type in nodes_to_export[1]:
                 if node_type in expected_nodes:
@@ -390,7 +388,7 @@ class TestLinks(AiidaTestCase):
         for test, (export_file, _, expected_nodes) in test_data.items():
             self.reset_database()
 
-            import_data(export_file, silent=True)
+            import_data(export_file)
 
             nodes_util = {'work': orm.WorkflowNode, 'calc': orm.CalculationNode, 'data': orm.Data}
             for node_type, node_cls in nodes_util.items():
@@ -404,7 +402,7 @@ class TestLinks(AiidaTestCase):
                         )
                     )
                     for node_uuid in builder.iterall():
-                        self.assertIn(node_uuid[0], expected_nodes[node_type], msg='Failed for test: "{}"'.format(test))
+                        self.assertIn(node_uuid[0], expected_nodes[node_type], msg=f'Failed for test: "{test}"')
 
     def link_flags_export_helper(self, name, all_nodes, temp_dir, nodes_to_export, flags, expected_nodes):  # pylint: disable=too-many-arguments
         """Helper function"""
@@ -429,30 +427,26 @@ class TestLinks(AiidaTestCase):
             expected_nodes.append(expected_nodes_uuid)
 
         ret = {
-            '{}_follow_none'.format(name): (
-                os.path.join(temp_dir, '{}_none.aiida'.format(name)), {
-                    calc_flag: False,
-                    work_flag: False
-                }, expected_nodes[0]
-            ),
-            '{}_follow_only_calc'.format(name): (
-                os.path.join(temp_dir, '{}_calc.aiida'.format(name)), {
-                    calc_flag: True,
-                    work_flag: False
-                }, expected_nodes[1]
-            ),
-            '{}_follow_only_work'.format(name): (
-                os.path.join(temp_dir, '{}_work.aiida'.format(name)), {
-                    calc_flag: False,
-                    work_flag: True
-                }, expected_nodes[2]
-            ),
-            '{}_follow_only_all'.format(name): (
-                os.path.join(temp_dir, '{}_all.aiida'.format(name)), {
-                    calc_flag: True,
-                    work_flag: True
-                }, expected_nodes[3]
-            )
+            f'{name}_follow_none':
+            (os.path.join(temp_dir, f'{name}_none.aiida'), {
+                calc_flag: False,
+                work_flag: False
+            }, expected_nodes[0]),
+            f'{name}_follow_only_calc':
+            (os.path.join(temp_dir, f'{name}_calc.aiida'), {
+                calc_flag: True,
+                work_flag: False
+            }, expected_nodes[1]),
+            f'{name}_follow_only_work':
+            (os.path.join(temp_dir, f'{name}_work.aiida'), {
+                calc_flag: False,
+                work_flag: True
+            }, expected_nodes[2]),
+            f'{name}_follow_only_all':
+            (os.path.join(temp_dir, f'{name}_all.aiida'), {
+                calc_flag: True,
+                work_flag: True
+            }, expected_nodes[3])
         }
 
         self.prepare_link_flags_export(nodes_to_export, ret)
@@ -598,11 +592,11 @@ class TestLinks(AiidaTestCase):
         links_wanted = get_all_node_links()
 
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([data_out, work1, work2, data_in], filename=export_file, silent=True)
+        export([data_out, work1, work2, data_in], filename=export_file)
 
         self.reset_database()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
 
         uuids_in_db = [str(uuid) for [uuid] in orm.QueryBuilder().append(orm.Node, project='uuid').all()]
         self.assertListEqual(sorted(uuids_wanted), sorted(uuids_in_db))
@@ -628,7 +622,7 @@ class TestLinks(AiidaTestCase):
         calc_uuid = calc.uuid
 
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([struct], filename=filename, file_format='tar.gz', silent=True)
+        export([struct], filename=filename, file_format='tar.gz')
 
         unpack = SandboxFolder()
         with tarfile.open(filename, 'r:gz', format=tarfile.PAX_FORMAT) as tar:
@@ -654,20 +648,18 @@ class TestLinks(AiidaTestCase):
         self.assertEqual(
             builder.count(),
             1,
-            msg='There should be a single CalculationNode, instead {} has been found'.format(builder.count())
+            msg=f'There should be a single CalculationNode, instead {builder.count()} has been found'
         )
         self.assertEqual(builder.all()[0][0], calc_uuid)
 
         with self.assertRaises(DanglingLinkError):
-            import_data(filename, silent=True)
+            import_data(filename)
 
         # Using the flag `ignore_unknown_nodes` should import it without problems
-        import_data(filename, ignore_unknown_nodes=True, silent=True)
+        import_data(filename, ignore_unknown_nodes=True)
         builder = orm.QueryBuilder().append(orm.StructureData, project='uuid')
         self.assertEqual(
-            builder.count(),
-            1,
-            msg='There should be a single StructureData, instead {} has been found'.format(builder.count())
+            builder.count(), 1, msg=f'There should be a single StructureData, instead {builder.count()} has been found'
         )
         self.assertEqual(builder.all()[0][0], struct_uuid)
 
@@ -693,24 +685,22 @@ class TestLinks(AiidaTestCase):
         data_provenance = os.path.join(temp_dir, 'data.aiida')
         all_provenance = os.path.join(temp_dir, 'all.aiida')
 
-        export([data], filename=data_provenance, silent=True, return_backward=False)
-        export([data], filename=all_provenance, silent=True, return_backward=True)
+        export([data], filename=data_provenance, return_backward=False)
+        export([data], filename=all_provenance, return_backward=True)
 
         self.reset_database()
 
         # import data provenance
-        import_data(data_provenance, silent=True)
+        import_data(data_provenance)
 
         no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
         self.assertEqual(
-            no_of_work, 0, msg='{} WorkflowNode(s) was/were found, however, none should be present'.format(no_of_work)
+            no_of_work, 0, msg=f'{no_of_work} WorkflowNode(s) was/were found, however, none should be present'
         )
 
         nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
         self.assertEqual(
-            nodes.count(),
-            2,
-            msg='{} Node(s) was/were found, however, exactly two should be present'.format(no_of_work)
+            nodes.count(), 2, msg=f'{no_of_work} Node(s) was/were found, however, exactly two should be present'
         )
         for node in nodes.iterall():
             self.assertIn(node[0], [data_uuid, calc_uuid])
@@ -729,20 +719,16 @@ class TestLinks(AiidaTestCase):
             self.assertEqual(found_type, LinkType.CREATE.value)
 
         # import data+logic provenance
-        import_data(all_provenance, silent=True)
+        import_data(all_provenance)
 
         no_of_work = orm.QueryBuilder().append(orm.WorkflowNode).count()
         self.assertEqual(
-            no_of_work,
-            1,
-            msg='{} WorkflowNode(s) was/were found, however, exactly one should be present'.format(no_of_work)
+            no_of_work, 1, msg=f'{no_of_work} WorkflowNode(s) was/were found, however, exactly one should be present'
         )
 
         nodes = orm.QueryBuilder().append(orm.Node, project='uuid')
         self.assertEqual(
-            nodes.count(),
-            3,
-            msg='{} Node(s) was/were found, however, exactly three should be present'.format(no_of_work)
+            nodes.count(), 3, msg=f'{no_of_work} Node(s) was/were found, however, exactly three should be present'
         )
         for node in nodes.iterall():
             self.assertIn(node[0], [data_uuid, calc_uuid, work_uuid])
@@ -751,7 +737,6 @@ class TestLinks(AiidaTestCase):
         self.assertEqual(
             len(links),
             2,
-            msg='Exactly two Links are expected, instead {} were found '
-            '(in, out, label, type): {}'.format(len(links), links)
+            msg=f'Exactly two Links are expected, instead {len(links)} were found (in, out, label, type): {links}'
         )
         self.assertListEqual(sorted(links), sorted(before_links))

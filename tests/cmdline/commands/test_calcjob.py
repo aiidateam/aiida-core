@@ -270,11 +270,10 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Make sure add_job does not specify options 'input_filename' and 'output_filename'
         self.assertIsNone(
-            add_job.get_option('input_filename'), msg="'input_filename' should not be an option for {}".format(add_job)
+            add_job.get_option('input_filename'), msg=f"'input_filename' should not be an option for {add_job}"
         )
         self.assertIsNone(
-            add_job.get_option('output_filename'),
-            msg="'output_filename' should not be an option for {}".format(add_job)
+            add_job.get_option('output_filename'), msg=f"'output_filename' should not be an option for {add_job}"
         )
 
         # Run `verdi calcjob inputcat add_job`

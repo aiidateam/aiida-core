@@ -74,8 +74,8 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
 
         result = self.cli_runner.invoke(cmd_profile.profile_list)
         self.assertClickSuccess(result)
-        self.assertIn('Info: configuration folder: ' + self.config.dirpath, result.output)
-        self.assertIn('* {}'.format(self.profile_list[0]), result.output)
+        self.assertIn(f'Info: configuration folder: {self.config.dirpath}', result.output)
+        self.assertIn(f'* {self.profile_list[0]}', result.output)
         self.assertIn(self.profile_list[1], result.output)
 
     @with_temporary_config_instance
@@ -89,8 +89,8 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         result = self.cli_runner.invoke(cmd_profile.profile_list)
 
         self.assertClickSuccess(result)
-        self.assertIn('Info: configuration folder: ' + self.config.dirpath, result.output)
-        self.assertIn('* {}'.format(self.profile_list[1]), result.output)
+        self.assertIn(f'Info: configuration folder: {self.config.dirpath}', result.output)
+        self.assertIn(f'* {self.profile_list[1]}', result.output)
         self.assertClickSuccess(result)
 
     @with_temporary_config_instance

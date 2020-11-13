@@ -23,7 +23,6 @@ from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     name = 'jsonb_array_len'
 
 
@@ -32,11 +31,10 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined, re
     """
     Get length of array defined in a JSONB column
     """
-    return 'jsonb_array_length(%s)' % compiler.process(element.clauses)
+    return f'jsonb_array_length({compiler.process(element.clauses)})'
 
 
 class array_length(FunctionElement):  # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     name = 'array_len'
 
 
@@ -45,11 +43,10 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return 'array_length(%s)' % compiler.process(element.clauses)
+    return f'array_length({compiler.process(element.clauses)})'
 
 
 class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
-    # pylint: disable=too-few-public-methods
     name = 'jsonb_typeof'
 
 
@@ -58,7 +55,7 @@ def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return 'jsonb_typeof(%s)' % compiler.process(element.clauses)
+    return f'jsonb_typeof({compiler.process(element.clauses)})'
 
 
 class DjangoQueryBuilder(BackendQueryBuilder):
@@ -197,10 +194,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
                 raise InputValidationError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
             if not isinstance(value, str):
-                raise InputValidationError(
-                    'Value for operator {} has to be a string (you gave {})'
-                    ''.format(operator, value)
-                )
+                raise InputValidationError(f'Value for operator {operator} has to be a string (you gave {value})')
         elif operator == 'in':
             try:
                 value_type_set = set(type(i) for i in value)
@@ -209,7 +203,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             if not value_type_set:
                 raise InputValidationError('Value for operator `in` is an empty list')
             if len(value_type_set) > 1:
-                raise InputValidationError('Value for operator `in` contains more than one type: {}'.format(value))
+                raise InputValidationError(f'Value for operator `in` contains more than one type: {value}')
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
@@ -277,7 +271,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
                 type_filter = jsonb_typeof(path_in_json) == 'null'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             else:
-                raise TypeError('Unknown type {}'.format(type(value)))
+                raise TypeError(f'Unknown type {type(value)}')
             return type_filter, casted_entity
 
         if column is None:
@@ -304,10 +298,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             #  Possible types are object, array, string, number, boolean, and null.
             valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
             if value not in valid_types:
-                raise InputValidationError(
-                    'value {} for of_type is not among valid types\n'
-                    '{}'.format(value, valid_types)
-                )
+                raise InputValidationError(f'value {value} for of_type is not among valid types\n{valid_types}')
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
@@ -339,7 +330,7 @@ class DjangoQueryBuilder(BackendQueryBuilder):
             ],
                         else_=False)
         else:
-            raise InputValidationError('Unknown operator {} for filters in JSON field'.format(operator))
+            raise InputValidationError(f'Unknown operator {operator} for filters in JSON field')
         return expr
 
     @staticmethod
@@ -353,6 +344,6 @@ class DjangoQueryBuilder(BackendQueryBuilder):
         """
         # pylint: disable=protected-access
         return [
-            str(c).replace(alias._aliased_insp.class_.table.name + '.', '')
+            str(c).replace(f'{alias._aliased_insp.class_.table.name}.', '')
             for c in alias._aliased_insp.class_.table._columns._all_columns
         ]

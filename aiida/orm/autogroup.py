@@ -47,7 +47,7 @@ class Autogroup:
         self._include = None
 
         now = timezone.now()
-        default_label_prefix = 'Verdi autogroup on ' + now.strftime('%Y-%m-%d %H:%M:%S')
+        default_label_prefix = f"Verdi autogroup on {now.strftime('%Y-%m-%d %H:%M:%S')}"
         self._group_label_prefix = default_label_prefix
         self._group_label = None  # Actual group label, set by `get_or_create_group`
 
@@ -61,12 +61,11 @@ class Autogroup:
             pieces = string.split(':')
             if len(pieces) != 2:
                 raise exceptions.ValidationError(
-                    "'{}' is not a valid include/exclude filter, must contain two parts split by a colon".
-                    format(string)
+                    f"'{string}' is not a valid include/exclude filter, must contain two parts split by a colon"
                 )
             if pieces[0] not in valid_prefixes:
                 raise exceptions.ValidationError(
-                    "'{}' has an invalid prefix, must be among: {}".format(string, sorted(valid_prefixes))
+                    f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
                 )
 
     def get_exclude(self):
@@ -238,7 +237,7 @@ class Autogroup:
                     }
                 }, {
                     'label': {
-                        'like': escape_for_sql_like(label_prefix + '_') + '%'
+                        'like': f"{escape_for_sql_like(f'{label_prefix}_')}%"
                     }
                 }]
             },
@@ -264,7 +263,7 @@ class Autogroup:
 
         while True:
             try:
-                label = label_prefix if counter == 0 else '{}_{}'.format(label_prefix, counter)
+                label = label_prefix if counter == 0 else f'{label_prefix}_{counter}'
                 group = AutoGroup(label=label).store()
                 self._group_label = group.label
             except exceptions.IntegrityError:

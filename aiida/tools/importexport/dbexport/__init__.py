@@ -7,381 +7,361 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=fixme,too-many-branches,too-many-locals,too-many-statements,too-many-arguments
+# pylint: disable=fixme,too-many-lines
 """Provides export functionalities."""
+from abc import ABC, abstractmethod
+from collections import defaultdict
 import logging
 import os
 import tarfile
 import time
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    DefaultDict,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
+import warnings
 
 from aiida import get_version, orm
 from aiida.common import json
 from aiida.common.exceptions import LicensingException
-from aiida.common.folders import RepositoryFolder, SandboxFolder, Folder
+from aiida.common.folders import Folder, RepositoryFolder, SandboxFolder
+from aiida.common.links import GraphTraversalRules
 from aiida.common.lang import type_check
-from aiida.common.log import override_log_formatter, LOG_LEVEL_REPORT
+from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.utils._repository import Repository
-
-from aiida.tools.importexport.common import exceptions, get_progress_bar, close_progress_bar
-from aiida.tools.importexport.common.config import EXPORT_VERSION, NODES_EXPORT_SUBFOLDER
-from aiida.tools.importexport.common.config import (
-    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
+from aiida.tools.importexport.common import (
+    exceptions,
 )
 from aiida.tools.importexport.common.config import (
-    get_all_fields_info, file_fields_to_model_fields, entity_names_to_entities, model_fields_to_file_fields
+    COMMENT_ENTITY_NAME,
+    COMPUTER_ENTITY_NAME,
+    EXPORT_VERSION,
+    GROUP_ENTITY_NAME,
+    LOG_ENTITY_NAME,
+    NODE_ENTITY_NAME,
+    NODES_EXPORT_SUBFOLDER,
+    entity_names_to_entities,
+    file_fields_to_model_fields,
+    get_all_fields_info,
+    model_fields_to_file_fields,
 )
+from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
+from aiida.tools.importexport.archive.writers import ArchiveMetadata, ArchiveWriterAbstract, get_writer
+from aiida.tools.importexport.common.config import ExportFileFormat
 from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
-    check_licenses, fill_in_query, serialize_dict, check_process_nodes_sealed, summary, EXPORT_LOGGER, ExportFileFormat,
-    deprecated_parameters
+    EXPORT_LOGGER,
+    check_licenses,
+    check_process_nodes_sealed,
+    deprecated_parameters,
+    fill_in_query,
+    serialize_dict,
+    summary,
 )
-
-from .zip import ZipFolder
 
 __all__ = ('export', 'EXPORT_LOGGER', 'ExportFileFormat')
 
 
 def export(
-    entities=None,
-    filename=None,
-    file_format=ExportFileFormat.ZIP,
-    overwrite=False,
-    silent=False,
-    use_compression=True,
-    **kwargs
-):
-    """Export AiiDA data
+    entities: Optional[Iterable[Any]] = None,
+    filename: Optional[str] = None,
+    file_format: Union[str, Type[ArchiveWriterAbstract]] = ExportFileFormat.ZIP,
+    overwrite: bool = False,
+    silent: Optional[bool] = None,
+    use_compression: Optional[bool] = None,
+    include_comments: bool = True,
+    include_logs: bool = True,
+    allowed_licenses: Optional[Union[list, Callable]] = None,
+    forbidden_licenses: Optional[Union[list, Callable]] = None,
+    writer_init: Optional[Dict[str, Any]] = None,
+    batch_size: int = 100,
+    **traversal_rules: bool,
+) -> ArchiveWriterAbstract:
+    """Export AiiDA data to an archive file.
+
+    Note, the logging level and progress reporter should be set externally, for example::
+
+        from aiida.common.progress_reporter import set_progress_bar_tqdm
+
+        EXPORT_LOGGER.setLevel('DEBUG')
+        set_progress_bar_tqdm(leave=True)
+        export(...)
+
+    .. deprecated:: 1.5.0
+        Support for the parameter `silent` will be removed in `v2.0.0`.
+        Please set the log level and progress bar implementation independently.
+
+    .. deprecated:: 1.5.0
+        Support for the parameter `use_compression` will be removed in `v2.0.0`.
+        Please use `writer_init={'use_compression': True}`.
 
     .. deprecated:: 1.2.1
         Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
         Please use `entities` and `filename` instead, respectively.
 
-    :param entities: a list of entity instances; they can belong to different models/entities.
-    :type entities: list
+    :param entities: a list of entity instances;
+        they can belong to different models/entities.
 
-    :param filename: the filename (possibly including the absolute path) of the file on which to export.
-    :type filename: str
+    :param filename: the filename (possibly including the absolute path)
+        of the file on which to export.
 
-    :param file_format: See `ExportFileFormat` for complete list of valid values (default: 'zip').
-    :type file_format: str, `ExportFileFormat`
+    :param file_format: 'zip', 'tar.gz' or 'folder' or a specific writer class.
 
-    :param overwrite: if True, overwrite the output file without asking, if it exists. If False, raise an
-        :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError` if the output file already exists.
-    :type overwrite: bool
+    :param overwrite: if True, overwrite the output file without asking, if it exists.
+        If False, raise an
+        :py:class:`~aiida.tools.importexport.common.exceptions.ArchiveExportError`
+        if the output file already exists.
 
-    :param silent: suppress console prints and progress bar.
-    :type silent: bool
-
-    :param use_compression: Whether or not to compress the archive file (only valid for the zip file format).
-    :type use_compression: bool
-
-    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+    :param allowed_licenses: List or function.
+        If a list, then checks whether all licenses of Data nodes are in the list. If a function,
+        then calls function for licenses of Data nodes expecting True if license is allowed, False
         otherwise.
-    :type allowed_licenses: list
 
-    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+    :param forbidden_licenses: List or function. If a list,
+        then checks whether all licenses of Data nodes are in the list. If a function,
+        then calls function for licenses of Data nodes expecting True if license is allowed, False
         otherwise.
-    :type forbidden_licenses: list
 
     :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
         Default: True, *include* comments in export (as well as relevant users).
-    :type include_comments: bool
 
     :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
         Default: True, *include* logs in export.
-    :type include_logs: bool
 
-    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
-        are toggleable and what the defaults are.
+    :param writer_init: Additional key-word arguments to pass to the writer class init
 
-    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
-        exporting.
-    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
+    :param batch_size: batch database query results in sub-collections to reduce memory usage
+
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
+        what rule names are toggleable and what the defaults are.
+
+    :returns: a dictionary of data regarding the export process (timings, etc)
+
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`:
+        if there are any internal errors when exporting.
+    :raises `~aiida.common.exceptions.LicensingException`:
+        if any node is licensed under forbidden license.
     """
-    if file_format not in list(ExportFileFormat):
-        raise exceptions.ArchiveExportError(
-            'Can only export in the formats: {}, please specify one for "file_format".'.format(
-                tuple(_.value for _ in ExportFileFormat)
-            )
-        )
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     # Backwards-compatibility
-    entities = deprecated_parameters(
-        old={
-            'name': 'what',
-            'value': kwargs.pop('what', None)
-        },
-        new={
-            'name': 'entities',
-            'value': entities
-        },
+    entities = cast(
+        Iterable[Any],
+        deprecated_parameters(
+            old={
+                'name': 'what',
+                'value': traversal_rules.pop('what', None)
+            },
+            new={
+                'name': 'entities',
+                'value': entities
+            },
+        ),
     )
-    filename = deprecated_parameters(
-        old={
-            'name': 'outfile',
-            'value': kwargs.pop('outfile', None)
-        },
-        new={
-            'name': 'filename',
-            'value': filename
-        },
+    filename = cast(
+        str,
+        deprecated_parameters(
+            old={
+                'name': 'outfile',
+                'value': traversal_rules.pop('outfile', None)
+            },
+            new={
+                'name': 'filename',
+                'value': filename
+            },
+        ),
     )
+    if silent is not None:
+        warnings.warn(
+            'silent keyword is deprecated and will be removed in AiiDA v2.0.0, set the logger level explicitly instead',
+            AiidaDeprecationWarning
+        )  # pylint: disable=no-member
 
-    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
+    type_check(
+        entities,
+        (list, tuple, set),
+        msg='`entities` must be specified and given as a list of AiiDA entities',
+    )
     entities = list(entities)
     if type_check(filename, str, allow_none=True) is None:
         filename = 'export_data.aiida'
 
     if not overwrite and os.path.exists(filename):
-        raise exceptions.ArchiveExportError("The output file '{}' already exists".format(filename))
+        raise exceptions.ArchiveExportError(f"The output file '{filename}' already exists")
 
-    if silent:
-        logging.disable(level=logging.CRITICAL)
+    # validate the traversal rules and generate a full set for reporting
+    validate_traversal_rules(GraphTraversalRules.EXPORT, **traversal_rules)
+    full_traversal_rules = {
+        name: traversal_rules.get(name, rule.default) for name, rule in GraphTraversalRules.EXPORT.value.items()
+    }
 
-    if file_format == ExportFileFormat.TAR_GZIPPED:
-        file_format_verbose = 'Gzipped tarball (compressed)'
-    # Must be a zip then
-    elif use_compression:
-        file_format_verbose = 'Zip (compressed)'
+    # setup the archive writer
+    writer_init = writer_init or {}
+    if use_compression is not None:
+        warnings.warn(
+            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0 (which will always compress)',
+            AiidaDeprecationWarning
+        )  # pylint: disable=no-member
+        writer_init['use_compression'] = use_compression
+    if isinstance(file_format, str):
+        writer = get_writer(file_format)(filepath=filename, **writer_init)
+    elif issubclass(file_format, ArchiveWriterAbstract):
+        writer = file_format(filepath=filename, **writer_init)
     else:
-        file_format_verbose = 'Zip (uncompressed)'
-    summary(file_format_verbose, filename, **kwargs)
+        raise TypeError('file_format must be a string or ArchiveWriterAbstract class')
 
-    try:
-        if file_format == ExportFileFormat.TAR_GZIPPED:
-            times = export_tar(entities=entities, filename=filename, silent=silent, **kwargs)
-        else:  # zip
-            times = export_zip(
-                entities=entities, filename=filename, use_compression=use_compression, silent=silent, **kwargs
-            )
-    except (exceptions.ArchiveExportError, LicensingException) as exc:
-        if os.path.exists(filename):
-            os.remove(filename)
-        raise exc
-
-    if len(times) == 2:
-        export_start, export_end = times  # pylint: disable=unbalanced-tuple-unpacking
-        EXPORT_LOGGER.debug('Exported in %6.2g s.', export_end - export_start)
-    elif len(times) == 4:
-        export_start, export_end, compress_start, compress_end = times
-        EXPORT_LOGGER.debug(
-            'Exported in %6.2g s, compressed in %6.2g s, total: %6.2g s.', export_end - export_start,
-            compress_end - compress_start, compress_end - export_start
-        )
-    else:
-        EXPORT_LOGGER.debug('No information about the timing of the export.')
-
-    # Reset logging level
-    if silent:
-        logging.disable(level=logging.NOTSET)
-
-
-def export_zip(entities=None, filename=None, use_compression=True, **kwargs):
-    """Export in a zipped folder
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-    :type entities: list
-
-    :param filename: the filename (possibly including the absolute path) of the file on which to export.
-    :type filename: str
-
-    :param use_compression: Whether or not to compress the zip file.
-    :type use_compression: bool
-    """
-    # Backwards-compatibility
-    entities = deprecated_parameters(
-        old={
-            'name': 'what',
-            'value': kwargs.pop('what', None)
-        },
-        new={
-            'name': 'entities',
-            'value': entities
-        },
+    summary(
+        file_format=writer.file_format_verbose,
+        export_version=writer.export_version,
+        outfile=filename,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        traversal_rules=full_traversal_rules
     )
-    filename = deprecated_parameters(
-        old={
-            'name': 'outfile',
-            'value': kwargs.pop('outfile', None)
-        },
-        new={
-            'name': 'filename',
-            'value': filename
-        },
-    )
-
-    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
-    entities = list(entities)
-
-    if type_check(filename, str, allow_none=True) is None:
-        filename = 'export_data.aiida'
-
-    with ZipFolder(filename, mode='w', use_compression=use_compression) as folder:
-        time_start = time.time()
-        export_tree(entities=entities, folder=folder, **kwargs)
-        time_end = time.time()
-
-    return (time_start, time_end)
-
-
-def export_tar(entities=None, filename=None, **kwargs):
-    """Export the entries passed in the 'entities' list to a gzipped tar file.
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-    :type entities: list
-
-    :param filename: the filename (possibly including the absolute path) of the file on which to export.
-    :type filename: str
-    """
-    # Backwards-compatibility
-    entities = deprecated_parameters(
-        old={
-            'name': 'what',
-            'value': kwargs.pop('what', None)
-        },
-        new={
-            'name': 'entities',
-            'value': entities
-        },
-    )
-    filename = deprecated_parameters(
-        old={
-            'name': 'outfile',
-            'value': kwargs.pop('outfile', None)
-        },
-        new={
-            'name': 'filename',
-            'value': filename
-        },
-    )
-
-    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
-    entities = list(entities)
-
-    if type_check(filename, str, allow_none=True) is None:
-        filename = 'export_data.aiida'
-
-    with SandboxFolder() as folder:
-        time_export_start = time.time()
-        export_tree(entities=entities, folder=folder, **kwargs)
-        time_export_end = time.time()
-
-        with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-            time_compress_start = time.time()
-            tar.add(folder.abspath, arcname='')
-            time_compress_end = time.time()
-
-    return (time_export_start, time_export_end, time_compress_start, time_compress_end)
-
-
-@override_log_formatter('%(message)s')
-def export_tree(
-    entities=None,
-    folder=None,
-    allowed_licenses=None,
-    forbidden_licenses=None,
-    silent=False,
-    include_comments=True,
-    include_logs=True,
-    **kwargs
-):
-    """Export the entries passed in the 'entities' list to a file tree.
-
-    .. deprecated:: 1.2.1
-        Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-    :type entities: list
-
-    :param folder: a temporary folder to build the archive before compression.
-    :type folder: :py:class:`~aiida.common.folders.Folder`
-
-    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
-        otherwise.
-    :type allowed_licenses: list
-
-    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
-        otherwise.
-    :type forbidden_licenses: list
-
-    :param silent: suppress console prints and progress bar.
-    :type silent: bool
-
-    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
-        Default: True, *include* comments in export (as well as relevant users).
-    :type include_comments: bool
-
-    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
-        Default: True, *include* logs in export.
-    :type include_logs: bool
-
-    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
-        are toggleable and what the defaults are.
-
-    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
-        exporting.
-    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
-    """
-    from collections import defaultdict
-    from aiida.tools.graph.graph_traversers import get_nodes_export
-
-    if silent:
-        logging.disable(level=logging.CRITICAL)
 
     EXPORT_LOGGER.debug('STARTING EXPORT...')
 
-    # Backwards-compatibility
-    entities = deprecated_parameters(
-        old={
-            'name': 'what',
-            'value': kwargs.pop('what', None)
-        },
-        new={
-            'name': 'entities',
-            'value': entities
-        },
-    )
-
-    type_check(entities, (list, tuple, set), msg='`entities` must be specified and given as a list of AiiDA entities')
-    entities = list(entities)
-
-    type_check(folder, (Folder, ZipFolder), msg='`folder` must be specified and given as an AiiDA Folder entity')
-
     all_fields_info, unique_identifiers = get_all_fields_info()
+    entities_starting_set, given_node_entry_ids = _get_starting_node_ids(entities)
 
-    entities_starting_set = defaultdict(set)
+    # Initialize the writer
+    with writer as writer_context:
 
-    # The set that contains the nodes ids of the nodes that should be exported
-    given_node_entry_ids = set()
-    given_log_entry_ids = set()
-    given_comment_entry_ids = set()
+        # Iteratively explore the AiiDA graph to find further nodes that should also be exported
+        with get_progress_reporter()(desc='Traversing provenance via links ...', total=1) as progress:
+            traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **traversal_rules)
+            progress.update()
+        node_ids_to_be_exported = traverse_output['nodes']
 
-    # Instantiate progress bar - go through list of `entities`
-    pbar_total = len(entities) + 1 if entities else 1
-    progress_bar = get_progress_bar(total=pbar_total, leave=False, disable=silent)
-    progress_bar.set_description_str('Collecting chosen entities', refresh=False)
+        EXPORT_LOGGER.debug('WRITING METADATA...')
 
-    # I store a list of the actual dbnodes
+        writer_context.write_metadata(
+            ArchiveMetadata(
+                export_version=EXPORT_VERSION,
+                aiida_version=get_version(),
+                unique_identifiers=unique_identifiers,
+                all_fields_info=all_fields_info,
+                graph_traversal_rules=traverse_output['rules'],
+                # Turn sets into lists to be able to export them as JSON metadata.
+                entities_starting_set={
+                    entity: list(entity_set) for entity, entity_set in entities_starting_set.items()
+                },
+                include_comments=include_comments,
+                include_logs=include_logs,
+            )
+        )
+
+        # Create a mapping of node PK to UUID.
+        node_pk_2_uuid_mapping: Dict[int, str] = {}
+        if node_ids_to_be_exported:
+            qbuilder = orm.QueryBuilder().append(
+                orm.Node,
+                project=('id', 'uuid'),
+                filters={'id': {
+                    'in': node_ids_to_be_exported
+                }},
+            )
+            node_pk_2_uuid_mapping = dict(qbuilder.all(batch_size=batch_size))
+
+        # check that no nodes are being exported with incorrect licensing
+        _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
+
+        # write the link data
+        if traverse_output['links']:
+            with get_progress_reporter()(total=len(traverse_output['links']), desc='Writing links') as progress:
+                for link in traverse_output['links']:
+                    progress.update()
+                    writer_context.write_link({
+                        'input': node_pk_2_uuid_mapping[link.source_id],
+                        'output': node_pk_2_uuid_mapping[link.target_id],
+                        'label': link.link_label,
+                        'type': link.link_type,
+                    })
+
+        # generate a list of queries to encapsulate all required entities
+        entity_queries = _collect_entity_queries(
+            node_ids_to_be_exported,
+            entities_starting_set,
+            node_pk_2_uuid_mapping,
+            include_comments,
+            include_logs,
+        )
+
+        total_entities = sum(query.count() for query in entity_queries.values())
+
+        # write all entity data fields
+        if total_entities:
+            exported_entity_pks = _write_entity_data(
+                total_entities=total_entities,
+                entity_queries=entity_queries,
+                writer=writer_context,
+                batch_size=batch_size
+            )
+        else:
+            exported_entity_pks = defaultdict(set)
+            EXPORT_LOGGER.info('No entities were found to export')
+
+        # write mappings of groups to the nodes they contain
+        if exported_entity_pks[GROUP_ENTITY_NAME]:
+
+            EXPORT_LOGGER.debug('Writing group UUID -> [nodes UUIDs]')
+
+            _write_group_mappings(
+                group_pks=exported_entity_pks[GROUP_ENTITY_NAME], batch_size=batch_size, writer=writer_context
+            )
+
+        # copy all required node repositories
+        if exported_entity_pks[NODE_ENTITY_NAME]:
+
+            _write_node_repositories(
+                node_pks=exported_entity_pks[NODE_ENTITY_NAME],
+                node_pk_2_uuid_mapping=node_pk_2_uuid_mapping,
+                writer=writer_context
+            )
+
+        EXPORT_LOGGER.info('Finalizing Export...')
+
+    # summarize export
+    export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())
+    if exported_entity_pks:
+        EXPORT_LOGGER.info('Exported Entities:\n  - ' + export_summary + '\n')
+    # TODO
+    # EXPORT_LOGGER.info('Writer Information:\n %s', writer.export_info)
+
+    return writer
+
+
+def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[str]], Set[int]]:
+    """Get the starting node UUIDs and PKs
+
+    :param entities: a list of entity instances
+
+    :raises exceptions.ArchiveExportError:
+    :return: entities_starting_set, given_node_entry_ids
+    """
+    entities_starting_set: DefaultDict[str, Set[str]] = defaultdict(set)
+    given_node_entry_ids: Set[int] = set()
+
+    # store a list of the actual dbnodes
+    total = len(entities) + (1 if GROUP_ENTITY_NAME in entities_starting_set else 0)
+    if not total:
+        return entities_starting_set, given_node_entry_ids
+
     for entry in entities:
-        progress_bar.update()
 
-        # This returns the class name (as in imports). E.g. for a model node:
-        # aiida.backends.djsite.db.models.DbNode
-        # entry_class_string = get_class_string(entry)
-        # Now a load the backend-independent name into entry_entity_name, e.g. Node!
-        # entry_entity_name = schema_to_entity_names(entry_class_string)
         if issubclass(entry.__class__, orm.Group):
             entities_starting_set[GROUP_ENTITY_NAME].add(entry.uuid)
         elif issubclass(entry.__class__, orm.Node):
@@ -391,343 +371,414 @@ def export_tree(
             entities_starting_set[COMPUTER_ENTITY_NAME].add(entry.uuid)
         else:
             raise exceptions.ArchiveExportError(
-                'I was given {} ({}), which is not a Node, Computer, or Group instance'.format(entry, type(entry))
+                f'I was given {entry} ({type(entry)}),'
+                ' which is not a Node, Computer, or Group instance'
             )
 
     # Add all the nodes contained within the specified groups
     if GROUP_ENTITY_NAME in entities_starting_set:
 
-        progress_bar.set_description_str('Retrieving Nodes from Groups ...', refresh=True)
-
         # Use single query instead of given_group.nodes iterator for performance.
-        qh_groups = orm.QueryBuilder().append(
-            orm.Group, filters={
-                'uuid': {
-                    'in': entities_starting_set[GROUP_ENTITY_NAME]
-                }
-            }, tag='groups'
-        ).queryhelp
+        qh_groups = (
+            orm.QueryBuilder().append(
+                orm.Group,
+                filters={
+                    'uuid': {
+                        'in': entities_starting_set[GROUP_ENTITY_NAME]
+                    }
+                },
+                tag='groups',
+            ).queryhelp
+        )
+        node_query = orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups')
+        node_count = node_query.count()
 
-        # Delete this import once the dbexport.zip module has been renamed
-        from builtins import zip  # pylint: disable=redefined-builtin
+        if node_count:
+            with get_progress_reporter()(desc='Collecting nodes in groups', total=node_count) as progress:
 
-        node_results = orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups').all()
-        if node_results:
-            pks, uuids = map(list, zip(*node_results))
+                pks, uuids = [], []
+                for pk, uuid in node_query.all():
+                    progress.update()
+                    pks.append(pk)
+                    uuids.append(uuid)
+
             entities_starting_set[NODE_ENTITY_NAME].update(uuids)
             given_node_entry_ids.update(pks)
-            del node_results, pks, uuids
 
-        progress_bar.update()
+    return entities_starting_set, given_node_entry_ids
 
-    # We will iteratively explore the AiiDA graph to find further nodes that should also be exported.
-    # At the same time, we will create the links_uuid list of dicts to be exported
 
-    progress_bar = get_progress_bar(total=1, disable=silent)
-    progress_bar.set_description_str('Getting provenance and storing links ...', refresh=True)
-
-    traverse_output = get_nodes_export(starting_pks=given_node_entry_ids, get_links=True, **kwargs)
-    node_ids_to_be_exported = traverse_output['nodes']
-    graph_traversal_rules = traverse_output['rules']
-
-    # A utility dictionary for mapping PK to UUID.
-    if node_ids_to_be_exported:
-        qbuilder = orm.QueryBuilder().append(
-            orm.Node,
-            project=('id', 'uuid'),
-            filters={'id': {
-                'in': node_ids_to_be_exported
-            }},
-        )
-        node_pk_2_uuid_mapping = dict(qbuilder.all())
-    else:
-        node_pk_2_uuid_mapping = {}
-
-    # The set of tuples now has to be transformed to a list of dicts
-    links_uuid = [{
-        'input': node_pk_2_uuid_mapping[link.source_id],
-        'output': node_pk_2_uuid_mapping[link.target_id],
-        'label': link.link_label,
-        'type': link.link_type
-    } for link in traverse_output['links']]
-
-    progress_bar.update()
-
-    # Progress bar initialization - Entities
-    progress_bar = get_progress_bar(total=1, disable=silent)
-    progress_bar.set_description_str('Initializing export of all entities', refresh=True)
-
-    ## Universal "entities" attributed to all types of nodes
-    # Logs
-    if include_logs and node_ids_to_be_exported:
-        # Get related log(s) - universal for all nodes
-        builder = orm.QueryBuilder()
-        builder.append(orm.Log, filters={'dbnode_id': {'in': node_ids_to_be_exported}}, project='uuid')
-        res = set(builder.all(flat=True))
-        given_log_entry_ids.update(res)
-
-    # Comments
-    if include_comments and node_ids_to_be_exported:
-        # Get related log(s) - universal for all nodes
-        builder = orm.QueryBuilder()
-        builder.append(orm.Comment, filters={'dbnode_id': {'in': node_ids_to_be_exported}}, project='uuid')
-        res = set(builder.all(flat=True))
-        given_comment_entry_ids.update(res)
-
-    # Here we get all the columns that we plan to project per entity that we would like to extract
-    given_entities = set(entities_starting_set.keys())
-    if node_ids_to_be_exported:
-        given_entities.add(NODE_ENTITY_NAME)
-    if given_log_entry_ids:
-        given_entities.add(LOG_ENTITY_NAME)
-    if given_comment_entry_ids:
-        given_entities.add(COMMENT_ENTITY_NAME)
-
-    progress_bar.update()
-
-    if given_entities:
-        progress_bar = get_progress_bar(total=len(given_entities), disable=silent)
-        pbar_base_str = 'Preparing entities'
-
-    entries_to_add = dict()
-    for given_entity in given_entities:
-        progress_bar.set_description_str(pbar_base_str + ' - {}s'.format(given_entity), refresh=False)
-        progress_bar.update()
-
-        project_cols = ['id']
-        # The following gets a list of fields that we need,
-        # e.g. user, mtime, uuid, computer
-        entity_prop = all_fields_info[given_entity].keys()
-
-        # Here we do the necessary renaming of properties
-        for prop in entity_prop:
-            # nprop contains the list of projections
-            nprop = (
-                file_fields_to_model_fields[given_entity][prop]
-                if prop in file_fields_to_model_fields[given_entity] else prop
-            )
-            project_cols.append(nprop)
-
-        # Getting the ids that correspond to the right entity
-        entry_uuids_to_add = entities_starting_set.get(given_entity, set())
-        if not entry_uuids_to_add:
-            if given_entity == LOG_ENTITY_NAME:
-                entry_uuids_to_add = given_log_entry_ids
-            elif given_entity == COMMENT_ENTITY_NAME:
-                entry_uuids_to_add = given_comment_entry_ids
-        elif given_entity == NODE_ENTITY_NAME:
-            entry_uuids_to_add.update({node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported})
-
-        builder = orm.QueryBuilder()
-        builder.append(
-            entity_names_to_entities[given_entity],
-            filters={'uuid': {
-                'in': entry_uuids_to_add
-            }},
-            project=project_cols,
-            tag=given_entity,
-            outerjoin=True
-        )
-        entries_to_add[given_entity] = builder
-
+def _check_node_licenses(
+    node_ids_to_be_exported: Set[int],
+    allowed_licenses: Optional[Union[list, Callable]],
+    forbidden_licenses: Optional[Union[list, Callable]],
+) -> None:
+    """Check the nodes to be archived for disallowed licences."""
     # TODO (Spyros) To see better! Especially for functional licenses
     # Check the licenses of exported data.
     if allowed_licenses is not None or forbidden_licenses is not None:
         builder = orm.QueryBuilder()
         builder.append(
-            orm.Node, project=['id', 'attributes.source.license'], filters={'id': {
+            orm.Node,
+            project=['id', 'attributes.source.license'],
+            filters={'id': {
                 'in': node_ids_to_be_exported
-            }}
+            }},
         )
         # Skip those nodes where the license is not set (this is the standard behavior with Django)
-        node_licenses = list((a, b) for [a, b] in builder.all() if b is not None)
+        node_licenses = [(a, b) for [a, b] in builder.all() if b is not None]
         check_licenses(node_licenses, allowed_licenses, forbidden_licenses)
 
-    ############################################################
-    ##### Start automatic recursive export data generation #####
-    ############################################################
-    EXPORT_LOGGER.debug('GATHERING DATABASE ENTRIES...')
 
-    if entries_to_add:
-        progress_bar = get_progress_bar(total=len(entries_to_add), disable=silent)
+def _get_model_fields(entity_name: str) -> List[str]:
+    """Return a list of fields to retrieve for a particular entity
 
-    export_data = defaultdict(dict)
+    :param entity_name: name of database entity, such as Node
+
+    """
+    all_fields_info, _ = get_all_fields_info()
+    project_cols = ['id']
+    entity_prop = all_fields_info[entity_name].keys()
+    # Here we do the necessary renaming of properties
+    for prop in entity_prop:
+        # nprop contains the list of projections
+        nprop = (
+            file_fields_to_model_fields[entity_name][prop] if prop in file_fields_to_model_fields[entity_name] else prop
+        )
+        project_cols.append(nprop)
+    return project_cols
+
+
+def _collect_entity_queries(
+    node_ids_to_be_exported: Set[int],
+    entities_starting_set: DefaultDict[str, Set[str]],
+    node_pk_2_uuid_mapping: Dict[int, str],
+    include_comments: bool = True,
+    include_logs: bool = True,
+) -> Dict[str, orm.QueryBuilder]:
+    """Gather partial queries for all entities to export."""
+    # pylint: disable=too-many-locals
+    given_log_entry_ids = set()
+    given_comment_entry_ids = set()
+
+    total = 2 + (((1 if include_logs else 0) + (1 if include_comments else 0)) if node_ids_to_be_exported else 0)
+    with get_progress_reporter()(desc='Building entity database queries', total=total) as progress:
+
+        # Logs
+        if include_logs and node_ids_to_be_exported:
+            # Get related log(s) - universal for all nodes
+            builder = orm.QueryBuilder()
+            builder.append(
+                orm.Log,
+                filters={'dbnode_id': {
+                    'in': node_ids_to_be_exported
+                }},
+                project='uuid',
+            )
+            res = set(builder.all(flat=True))
+            given_log_entry_ids.update(res)
+
+            progress.update()
+
+        # Comments
+        if include_comments and node_ids_to_be_exported:
+            # Get related log(s) - universal for all nodes
+            builder = orm.QueryBuilder()
+            builder.append(
+                orm.Comment,
+                filters={'dbnode_id': {
+                    'in': node_ids_to_be_exported
+                }},
+                project='uuid',
+            )
+            res = set(builder.all(flat=True))
+            given_comment_entry_ids.update(res)
+
+            progress.update()
+
+        # Here we get all the columns that we plan to project per entity that we would like to extract
+        given_entities = set(entities_starting_set.keys())
+        if node_ids_to_be_exported:
+            given_entities.add(NODE_ENTITY_NAME)
+        if given_log_entry_ids:
+            given_entities.add(LOG_ENTITY_NAME)
+        if given_comment_entry_ids:
+            given_entities.add(COMMENT_ENTITY_NAME)
+
+        progress.update()
+
+        entities_to_add: Dict[str, orm.QueryBuilder] = {}
+        if not given_entities:
+            progress.update()
+            return entities_to_add
+
+        for given_entity in given_entities:
+
+            project_cols = _get_model_fields(given_entity)
+
+            # Getting the ids that correspond to the right entity
+            entry_uuids_to_add = entities_starting_set.get(given_entity, set())
+            if not entry_uuids_to_add:
+                if given_entity == LOG_ENTITY_NAME:
+                    entry_uuids_to_add = given_log_entry_ids
+                elif given_entity == COMMENT_ENTITY_NAME:
+                    entry_uuids_to_add = given_comment_entry_ids
+            elif given_entity == NODE_ENTITY_NAME:
+                entry_uuids_to_add.update({node_pk_2_uuid_mapping[_] for _ in node_ids_to_be_exported})
+
+            builder = orm.QueryBuilder()
+            builder.append(
+                entity_names_to_entities[given_entity],
+                filters={'uuid': {
+                    'in': entry_uuids_to_add
+                }},
+                project=project_cols,
+                tag=given_entity,
+                outerjoin=True,
+            )
+            entities_to_add[given_entity] = builder
+
+        progress.update()
+
+    return entities_to_add
+
+
+def _write_entity_data(
+    total_entities: int, entity_queries: Dict[str, orm.QueryBuilder], writer: ArchiveWriterAbstract, batch_size: int
+) -> Dict[str, Set[int]]:
+    """Iterate through data returned from entity queries, serialize the DB fields, then write to the export."""
+    all_fields_info, unique_identifiers = get_all_fields_info()
     entity_separator = '_'
-    for entity_name, partial_query in entries_to_add.items():
 
-        progress_bar.set_description_str('Exporting {}s'.format(entity_name), refresh=False)
-        progress_bar.update()
+    exported_entity_pks: Dict[str, Set[int]] = defaultdict(set)
+    unsealed_node_pks: Set[int] = set()
 
-        foreign_fields = {k: v for k, v in all_fields_info[entity_name].items() if 'requires' in v}
+    with get_progress_reporter()(total=total_entities, desc='Writing entity data') as progress:
 
-        for value in foreign_fields.values():
-            ref_model_name = value['requires']
-            fill_in_query(partial_query, entity_name, ref_model_name, [entity_name], entity_separator)
+        for entity_name, entity_query in entity_queries.items():
 
-        for temp_d in partial_query.iterdict():
-            for key in temp_d:
-                # Get current entity
-                current_entity = key.split(entity_separator)[-1]
+            foreign_fields = {k: v for k, v in all_fields_info[entity_name].items() if 'requires' in v}
+            for value in foreign_fields.values():
+                ref_model_name = value['requires']
+                fill_in_query(
+                    entity_query,
+                    entity_name,
+                    ref_model_name,
+                    [entity_name],
+                    entity_separator,
+                )
 
-                # This is a empty result of an outer join.
-                # It should not be taken into account.
-                if temp_d[key]['id'] is None:
-                    continue
+            for query_results in entity_query.iterdict(batch_size=batch_size):
 
-                export_data[current_entity].update({
-                    temp_d[key]['id']:
-                    serialize_dict(
-                        temp_d[key], remove_fields=['id'], rename_fields=model_fields_to_file_fields[current_entity]
+                progress.update()
+
+                for key, value in query_results.items():
+
+                    pk = value['id']
+
+                    # This is an empty result of an outer join.
+                    # It should not be taken into account.
+                    if pk is None:
+                        continue
+
+                    # Get current entity
+                    current_entity = key.split(entity_separator)[-1]
+
+                    # don't allow duplication
+                    if pk in exported_entity_pks[current_entity]:
+                        continue
+
+                    exported_entity_pks[current_entity].add(pk)
+
+                    fields = serialize_dict(
+                        value,
+                        remove_fields=['id'],
+                        rename_fields=model_fields_to_file_fields[current_entity],
                     )
-                })
 
-    # Close progress up until this point in order to print properly
-    close_progress_bar(leave=False)
+                    if current_entity == NODE_ENTITY_NAME and fields['node_type'].startswith('process.'):
+                        if fields['attributes'].get('sealed', False) is not True:
+                            unsealed_node_pks.add(pk)
 
-    #######################################
-    # Manually manage attributes and extras
-    #######################################
-    # Pointer. Renaming, since Nodes have now technically been retrieved and "stored"
-    all_node_pks = node_ids_to_be_exported
+                    writer.write_entity_data(current_entity, pk, unique_identifiers[current_entity], fields)
 
-    model_data = sum(len(model_data) for model_data in export_data.values())
-    if not model_data:
-        EXPORT_LOGGER.log(msg='Nothing to store, exiting...', level=LOG_LEVEL_REPORT)
-        return
-    EXPORT_LOGGER.log(
-        msg='Exporting a total of {} database entries, of which {} are Nodes.'.format(model_data, len(all_node_pks)),
-        level=LOG_LEVEL_REPORT
-    )
-
-    # Instantiate new progress bar
-    progress_bar = get_progress_bar(total=1, leave=False, disable=silent)
-
-    # ATTRIBUTES and EXTRAS
-    EXPORT_LOGGER.debug('GATHERING NODE ATTRIBUTES AND EXTRAS...')
-    node_attributes = {}
-    node_extras = {}
-
-    # Another QueryBuilder query to get the attributes and extras. TODO: See if this can be optimized
-    if all_node_pks:
-        all_nodes_query = orm.QueryBuilder().append(
-            orm.Node, filters={'id': {
-                'in': all_node_pks
-            }}, project=['id', 'attributes', 'extras']
+    if unsealed_node_pks:
+        raise exceptions.ExportValidationError(
+            'All ProcessNodes must be sealed before they can be exported. '
+            f"Node(s) with PK(s): {', '.join(str(pk) for pk in unsealed_node_pks)} is/are not sealed."
         )
 
-        progress_bar = get_progress_bar(total=all_nodes_query.count(), disable=silent)
-        progress_bar.set_description_str('Exporting Attributes and Extras', refresh=False)
+    return exported_entity_pks
 
-        for node_pk, attributes, extras in all_nodes_query.iterall():
-            progress_bar.update()
 
-            node_attributes[str(node_pk)] = attributes
-            node_extras[str(node_pk)] = extras
+def _write_group_mappings(*, group_pks: Set[int], batch_size: int, writer: ArchiveWriterAbstract):
+    """Query for node UUIDs in exported groups, and write these these mappings to the archive file."""
+    group_uuid_query = orm.QueryBuilder().append(
+        orm.Group,
+        filters={
+            'id': {
+                'in': list(group_pks)
+            }
+        },
+        project='uuid',
+        tag='groups',
+    ).append(orm.Node, project='uuid', with_group='groups')
 
-    EXPORT_LOGGER.debug('GATHERING GROUP ELEMENTS...')
-    groups_uuid = defaultdict(list)
-    # If a group is in the exported data, we export the group/node correlation
-    if GROUP_ENTITY_NAME in export_data:
-        group_uuids_with_node_uuids = orm.QueryBuilder().append(
-            orm.Group, filters={
-                'id': {
-                    'in': export_data[GROUP_ENTITY_NAME]
-                }
-            }, project='uuid', tag='groups'
-        ).append(orm.Node, project='uuid', with_group='groups')
+    groups_uuid_to_node_uuids = defaultdict(set)
+    for group_uuid, node_uuid in group_uuid_query.iterall(batch_size=batch_size):
+        groups_uuid_to_node_uuids[group_uuid].add(node_uuid)
 
-        # This part is _only_ for the progress bar
-        total_node_uuids_for_groups = group_uuids_with_node_uuids.count()
-        if total_node_uuids_for_groups:
-            progress_bar = get_progress_bar(total=total_node_uuids_for_groups, disable=silent)
-            progress_bar.set_description_str('Exporting Groups ...', refresh=False)
+    for group_uuid, node_uuids in groups_uuid_to_node_uuids.items():
+        writer.write_group_nodes(group_uuid, list(node_uuids))
 
-        for group_uuid, node_uuid in group_uuids_with_node_uuids.iterall():
-            progress_bar.update()
 
-            groups_uuid[group_uuid].append(node_uuid)
+def _write_node_repositories(
+    *, node_pks: Set[int], node_pk_2_uuid_mapping: Dict[int, str], writer: ArchiveWriterAbstract
+):
+    """Write all exported node repositories to the archive file."""
+    with get_progress_reporter()(total=len(node_pks), desc='Exporting node repositories: ') as progress:
 
-    #######################################
-    # Final check for unsealed ProcessNodes
-    #######################################
-    process_nodes = set()
-    for node_pk, content in export_data.get(NODE_ENTITY_NAME, {}).items():
-        if content['node_type'].startswith('process.'):
-            process_nodes.add(node_pk)
+        for pk in node_pks:
 
-    check_process_nodes_sealed(process_nodes)
+            uuid = node_pk_2_uuid_mapping[pk]
 
-    ######################################
-    # Now collecting and storing
-    ######################################
-    # subfolder inside the export package
-    nodesubfolder = folder.get_subfolder(NODES_EXPORT_SUBFOLDER, create=True, reset_limit=True)
+            progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
+            progress.update()
 
-    EXPORT_LOGGER.debug('ADDING DATA TO EXPORT ARCHIVE...')
-
-    data = {
-        'node_attributes': node_attributes,
-        'node_extras': node_extras,
-        'export_data': export_data,
-        'links_uuid': links_uuid,
-        'groups_uuid': groups_uuid
-    }
-
-    # N.B. We're really calling zipfolder.open (if exporting a zipfile)
-    with folder.open('data.json', mode='w') as fhandle:
-        # fhandle.write(json.dumps(data, cls=UUIDEncoder))
-        fhandle.write(json.dumps(data))
-
-    # Turn sets into lists to be able to export them as JSON metadata.
-    for entity, entity_set in entities_starting_set.items():
-        entities_starting_set[entity] = list(entity_set)
-
-    metadata = {
-        'aiida_version': get_version(),
-        'export_version': EXPORT_VERSION,
-        'all_fields_info': all_fields_info,
-        'unique_identifiers': unique_identifiers,
-        'export_parameters': {
-            'graph_traversal_rules': graph_traversal_rules,
-            'entities_starting_set': entities_starting_set,
-            'include_comments': include_comments,
-            'include_logs': include_logs
-        }
-    }
-
-    with folder.open('metadata.json', 'w') as fhandle:
-        fhandle.write(json.dumps(metadata))
-
-    EXPORT_LOGGER.debug('ADDING REPOSITORY FILES TO EXPORT ARCHIVE...')
-
-    # If there are no nodes, there are no repository files to store
-    if all_node_pks:
-        all_node_uuids = {node_pk_2_uuid_mapping[_] for _ in all_node_pks}
-
-        progress_bar = get_progress_bar(total=len(all_node_uuids), disable=silent)
-        pbar_base_str = 'Exporting repository - '
-
-        for uuid in all_node_uuids:
-            sharded_uuid = export_shard_uuid(uuid)
-
-            progress_bar.set_description_str(pbar_base_str + 'UUID={}'.format(uuid.split('-')[0]), refresh=False)
-            progress_bar.update()
-
-            # Important to set create=False, otherwise creates twice a subfolder. Maybe this is a bug of insert_path?
-            thisnodefolder = nodesubfolder.get_subfolder(sharded_uuid, create=False, reset_limit=True)
-
-            # Make sure the node's repository folder was not deleted
             src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
             if not src.exists():
                 raise exceptions.ArchiveExportError(
-                    'Unable to find the repository folder for Node with UUID={} in the local repository'.format(uuid)
+                    f'Unable to find the repository folder for Node with UUID={uuid} '
+                    'in the local repository'
                 )
+            writer.write_node_repo_folder(uuid, src._abspath)  # pylint: disable=protected-access
 
-            # In this way, I copy the content of the folder, and not the folder itself
-            thisnodefolder.insert_path(src=src.abspath, dest_name='.')
 
-    close_progress_bar(leave=False)
+# THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY
 
-    # Reset logging level
-    if silent:
-        logging.disable(level=logging.NOTSET)
+
+def export_tree(
+    entities: Optional[Iterable[Any]] = None,
+    folder: Optional[Folder] = None,
+    allowed_licenses: Optional[Union[list, Callable]] = None,
+    forbidden_licenses: Optional[Union[list, Callable]] = None,
+    silent: Optional[bool] = None,
+    include_comments: bool = True,
+    include_logs: bool = True,
+    **traversal_rules: bool,
+) -> None:
+    """Export the entries passed in the 'entities' list to a file tree.
+    .. deprecated:: 1.2.1
+        Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
+    :param entities: a list of entity instances; they can belong to different models/entities.
+
+    :param folder: a temporary folder to build the archive in.
+
+    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+
+    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
+        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
+        otherwise.
+
+    :param silent: suppress console prints and progress bar.
+
+    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
+        Default: True, *include* comments in export (as well as relevant users).
+
+    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
+        Default: True, *include* logs in export.
+
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+        are toggleable and what the defaults are.
+
+    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
+        exporting.
+    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
+    """
+    warnings.warn(
+        'export_tree function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
+        AiidaDeprecationWarning
+    )  # pylint: disable=no-member
+    export(
+        entities=entities,
+        filename='none',
+        overwrite=True,
+        file_format='folder',
+        allowed_licenses=allowed_licenses,
+        forbidden_licenses=forbidden_licenses,
+        silent=silent,
+        include_comments=include_comments,
+        include_logs=include_logs,
+        writer_init={'folder': folder},
+        **traversal_rules,
+    )
+
+
+def export_zip(
+    entities: Optional[Iterable[Any]] = None,
+    filename: Optional[str] = None,
+    use_compression: bool = True,
+    **kwargs: Any,
+) -> Tuple[float, float]:
+    """Export in a zipped folder
+
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
+
+    :param entities: a list of entity instances; they can belong to different models/entities.
+
+    :param filename: the filename
+        (possibly including the absolute path) of the file on which to export.
+
+    :param use_compression: Whether or not to compress the zip file.
+
+    """
+    warnings.warn(
+        'export_zip function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
+        AiidaDeprecationWarning
+    )  # pylint: disable=no-member
+    writer = export(
+        entities=entities,
+        filename=filename,
+        file_format=ExportFileFormat.ZIP,
+        use_compression=use_compression,
+        **kwargs,
+    )
+    return writer.export_info['writer_entered'], writer.export_info['writer_exited']
+
+
+def export_tar(
+    entities: Optional[Iterable[Any]] = None,
+    filename: Optional[str] = None,
+    **kwargs: Any,
+) -> Tuple[float, float, float, float]:
+    """Export the entries passed in the 'entities' list to a gzipped tar file.
+
+    .. deprecated:: 1.2.1
+        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
+        Please use `entities` and `filename` instead, respectively.
+
+    :param entities: a list of entity instances; they can belong to different models/entities.
+
+    :param filename: the filename (possibly including the absolute path)
+        of the file on which to export.
+    """
+    warnings.warn(
+        'export_tar function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
+        AiidaDeprecationWarning
+    )  # pylint: disable=no-member
+    writer = export(
+        entities=entities,
+        filename=filename,
+        file_format=ExportFileFormat.TAR_GZIPPED,
+        **kwargs,
+    )
+
+    # the tar is now directly written to, so no compression start/stop time!
+    return (
+        writer.export_info['writer_entered'], writer.export_info['writer_exited'], writer.export_info['writer_exited'],
+        writer.export_info['writer_exited']
+    )

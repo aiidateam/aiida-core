@@ -37,7 +37,7 @@ class TestProvenanceRedesign(AiidaTestCase):
         test_content = ('Hello', 6, -1.2399834e12, False)
         test_types = ()
         for node_type in ['str', 'int', 'float', 'bool']:
-            add_type = ('data.{}.{}.'.format(node_type, node_type.capitalize()),)
+            add_type = (f'data.{node_type}.{node_type.capitalize()}.',)
             test_types = test_types.__add__(add_type)
 
         # List of nodes to be exported
@@ -75,7 +75,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             # Check value/content
             self.assertEqual(base.value, refval)
             # Check type
-            msg = "type of node ('{}') is not updated according to db schema v0.4".format(base.node_type)
+            msg = f"type of node ('{base.node_type}') is not updated according to db schema v0.4"
             self.assertEqual(base.node_type, reftype, msg=msg)
 
             # List
@@ -83,7 +83,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             self.assertEqual(list_value, refval)
 
         # Check List type
-        msg = "type of node ('{}') is not updated according to db schema v0.4".format(nlist.node_type)
+        msg = f"type of node ('{nlist.node_type}') is not updated according to db schema v0.4"
         self.assertEqual(nlist.node_type, 'data.list.List.', msg=msg)
 
     @with_temp_dir

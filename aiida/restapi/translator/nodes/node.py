@@ -8,10 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
+import pkgutil
+import imp
+import inspect
+import os
+
 from aiida import orm
-from aiida.common.exceptions import InputValidationError, ValidationError, InvalidOperation
+from aiida.orm import Node, Data
+from aiida.common.exceptions import (
+    InputValidationError, ValidationError, InvalidOperation, LoadingEntryPointError, EntryPointError
+)
 from aiida.manage.manager import get_manager
+from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
 from aiida.restapi.translator.base import BaseTranslator
+from aiida.restapi.common.identifiers import get_full_type_filters
+from aiida.restapi.common.exceptions import RestFeatureNotAvailable, RestInputValidationError, RestValidationError
+from aiida.restapi.common.identifiers import get_node_namespace, load_entry_point_from_full_type, construct_full_type
 
 
 class NodeTranslator(BaseTranslator):
@@ -115,11 +127,11 @@ class NodeTranslator(BaseTranslator):
             self._content_type = 'repo_contents'
             self._filename = filename
         else:
-            raise InputValidationError('invalid result/content value: {}'.format(query_type))
+            raise InputValidationError(f'invalid result/content value: {query_type}')
 
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
-            edge_tag = self.__label__ + '--' + self._result_type
+            edge_tag = f'{self.__label__}--{self._result_type}'
             self._query_help['path'].append({
                 'cls': self._aiida_class,
                 'tag': self._result_type,
@@ -197,7 +209,6 @@ class NodeTranslator(BaseTranslator):
         if full_type:
             # If full_type is not none, convert it into node_type
             # and process_type filters to pass it to query help
-            from aiida.restapi.common.identifiers import get_full_type_filters
             full_type_filter = get_full_type_filters(full_type)
             filters.update(full_type_filter)
 
@@ -301,11 +312,6 @@ class NodeTranslator(BaseTranslator):
         :param recursive: True/False (go recursively into submodules)
         """
 
-        import pkgutil
-        import imp
-        import inspect
-        import os
-
         # If no parent class is specified set it to self.__class
         parent = self.__class__ if parent is None else parent
 
@@ -331,7 +337,7 @@ class NodeTranslator(BaseTranslator):
             if parent_class is None:
                 raise TypeError('argument parent_class cannot be None')
 
-                # Recursively check the subpackages
+        # Recursively check the subpackages
         results = {}
 
         for _, name, is_pkg in pkgutil.walk_packages([package_path]):
@@ -342,10 +348,10 @@ class NodeTranslator(BaseTranslator):
             if is_pkg:
                 app_module = imp.load_package(full_path_base, full_path_base)
             else:
-                full_path = full_path_base + '.py'
+                full_path = f'{full_path_base}.py'
                 # I could use load_module but it takes lots of arguments,
                 # then I use load_source
-                app_module = imp.load_source('rst' + name, full_path)
+                app_module = imp.load_source(f'rst{name}', full_path)
 
             # Go through the content of the module
             if not is_pkg:
@@ -355,6 +361,7 @@ class NodeTranslator(BaseTranslator):
             # Look in submodules
             elif is_pkg and recursive:
                 results.update(self._get_subclasses(parent=app_module, parent_class=parent_class))
+
         return results
 
     def get_derived_properties(self, node):
@@ -389,11 +396,6 @@ class NodeTranslator(BaseTranslator):
         """
         returns dict of possible node formats for all available node types
         """
-        from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
-        from aiida.restapi.common.identifiers import load_entry_point_from_full_type, construct_full_type
-        from aiida.common import EntryPointError
-        from aiida.common.exceptions import LoadingEntryPointError
-        from aiida.restapi.common.exceptions import RestFeatureNotAvailable, RestInputValidationError
 
         all_formats = {}
 
@@ -401,7 +403,7 @@ class NodeTranslator(BaseTranslator):
             try:
                 node_cls = load_entry_point_from_full_type(full_type)
             except (TypeError, ValueError):
-                raise RestInputValidationError('The full type {} is invalid.'.format(full_type))
+                raise RestInputValidationError(f'The full type {full_type} is invalid.')
             except EntryPointError:
                 raise RestFeatureNotAvailable('The download formats for this node type are not available.')
 
@@ -442,14 +444,12 @@ class NodeTranslator(BaseTranslator):
         invoke the get_downloadable_data method in the Data transaltor.
         Otherwise it raises RestFeatureNotAvailable exception
         """
-        from aiida.orm import Data
-        from aiida.restapi.translator.nodes.data import DataTranslator  # pylint: disable=cyclic-import
-        from aiida.restapi.common.exceptions import RestFeatureNotAvailable
 
         # This needs to be here because currently, for all nodes the `NodeTranslator` will be instantiated. Once that
         # logic is cleaned where the correct translator sub class is instantiated based on the node type that is
         # referenced, this hack can be removed.
         if isinstance(node, Data):
+            from .data import DataTranslator  # pylint: disable=cyclic-import
             downloadable_data = DataTranslator.get_downloadable_data(node, download_format=download_format)
             return downloadable_data
 
@@ -464,12 +464,10 @@ class NodeTranslator(BaseTranslator):
         :param filename: folder name (optional)
         :return: folder list
         """
-        from aiida.restapi.common.exceptions import RestInputValidationError
-
         try:
             flist = node.list_objects(filename)
         except IOError:
-            raise RestInputValidationError('{} is not a directory in this repository'.format(filename))
+            raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
         for fobj in flist:
             response.append({'name': fobj.name, 'type': fobj.file_type.name})
@@ -484,7 +482,6 @@ class NodeTranslator(BaseTranslator):
         :param filename: folder or file name (optional)
         :return: file content in bytes to download
         """
-        from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
 
         if filename:
             try:
@@ -506,7 +503,7 @@ class NodeTranslator(BaseTranslator):
             response.append({
                 'created_time': cobj.ctime,
                 'modified_time': cobj.mtime,
-                'user': cobj.user.first_name + ' ' + cobj.user.last_name,
+                'user': f'{cobj.user.first_name} {cobj.user.last_name}',
                 'message': cobj.content
             })
         return response
@@ -523,7 +520,6 @@ class NodeTranslator(BaseTranslator):
         :param file_name: name of the file to return its contents
         :return:
         """
-        import os
         file_parts = file_name.split(os.sep)
 
         if len(file_parts) > 1:
@@ -565,8 +561,6 @@ class NodeTranslator(BaseTranslator):
         else:
             result_name = self.__label__
 
-        from aiida.restapi.common.identifiers import construct_full_type
-
         for node_entry in results[result_name]:
             # construct full_type and add it to every node
             try:
@@ -583,14 +577,12 @@ class NodeTranslator(BaseTranslator):
         return qmanager.get_creation_statistics(user_pk=user_pk)
 
     @staticmethod
-    def get_namespace():
+    def get_namespace(user_pk=None, count_nodes=False):
         """
         return full_types of the nodes
         """
 
-        from aiida.restapi.common.identifiers import get_node_namespace
-
-        return get_node_namespace().get_description()
+        return get_node_namespace(user_pk=user_pk, count_nodes=count_nodes).get_description()
 
     def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         # pylint: disable=too-many-statements,too-many-locals
@@ -599,8 +591,6 @@ class NodeTranslator(BaseTranslator):
         :param uuid_pattern: main node uuid
         :return: json data to display node tree
         """
-        from aiida.orm.querybuilder import QueryBuilder
-        from aiida.orm import Node
 
         def get_node_description(node):
             """
@@ -619,7 +609,7 @@ class NodeTranslator(BaseTranslator):
         # Check whether uuid_pattern identifies a unique node
         self._check_id_validity(uuid_pattern)
 
-        qb_obj = QueryBuilder()
+        qb_obj = orm.QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
 
         nodes = []
@@ -647,7 +637,7 @@ class NodeTranslator(BaseTranslator):
             })
 
         # get all incoming
-        qb_obj = QueryBuilder()
+        qb_obj = orm.QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
         qb_obj.append(Node, tag='in', project=['*'], edge_project=['label', 'type'],
                       with_outgoing='main').order_by({'in': [{
@@ -686,7 +676,7 @@ class NodeTranslator(BaseTranslator):
                 })
 
         # get all outgoing
-        qb_obj = QueryBuilder()
+        qb_obj = orm.QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
         qb_obj.append(Node, tag='out', project=['*'], edge_project=['label', 'type'],
                       with_incoming='main').order_by({'out': [{
@@ -725,12 +715,12 @@ class NodeTranslator(BaseTranslator):
                 })
 
         # count total no of nodes
-        builder = QueryBuilder()
+        builder = orm.QueryBuilder()
         builder.append(Node, tag='main', project=['id'], filters=self._id_filter)
         builder.append(Node, tag='in', project=['id'], with_outgoing='main')
         total_no_of_incomings = builder.count()
 
-        builder = QueryBuilder()
+        builder = orm.QueryBuilder()
         builder.append(Node, tag='main', project=['id'], filters=self._id_filter)
         builder.append(Node, tag='out', project=['id'], with_incoming='main')
         total_no_of_outgoings = builder.count()

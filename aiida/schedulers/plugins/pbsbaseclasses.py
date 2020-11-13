@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # This maps PbsPro status letters to our own status list
 
-## List of states from the man page of qstat
+# List of states from the man page of qstat
 # B  Array job has at least one subjob running.
 # E  Job is exiting after having run.
 # F  Job is finished.
@@ -34,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 # W  Job is waiting for its submitter-assigned start time to be reached.
 # X  Subjob has completed execution or has been deleted.
 
-## These are instead the states from PBS/Torque v.2.4.16 (from Ubuntu)
+# These are instead the states from PBS/Torque v.2.4.16 (from Ubuntu)
 # C -  Job is completed after having run [different from above, but not clashing]
 # E -  Job is exiting after having run. [same as above]
 # H -  Job is held. [same as above]
@@ -150,19 +150,19 @@ class PbsBaseClass(Scheduler):
             raise FeatureNotAvailable('Cannot query by user and job(s) in PBS')
 
         if user:
-            command.append('-u{}'.format(user))
+            command.append(f'-u{user}')
 
         if jobs:
             if isinstance(jobs, str):
-                command.append('{}'.format(escape_for_bash(jobs)))
+                command.append(f'{escape_for_bash(jobs)}')
             else:
                 try:
-                    command.append('{}'.format(' '.join(escape_for_bash(j) for j in jobs)))
+                    command.append(f"{' '.join(escape_for_bash(j) for j in jobs)}")
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or an iterable of strings")
 
         comm = ' '.join(command)
-        _LOGGER.debug('qstat command: {}'.format(comm))
+        _LOGGER.debug(f'qstat command: {comm}')
         return comm
 
     def _get_detailed_job_info_command(self, job_id):
@@ -172,7 +172,7 @@ class PbsBaseClass(Scheduler):
 
         The output text is just retrieved, and returned for logging purposes.
         """
-        return 'tracejob -v {}'.format(escape_for_bash(job_id))
+        return f'tracejob -v {escape_for_bash(job_id)}'
 
     def _get_submit_script_header(self, job_tmpl):
         """
@@ -202,7 +202,7 @@ class PbsBaseClass(Scheduler):
         if job_tmpl.email:
             # If not specified, but email events are set, PBSPro
             # sends the mail to the job owner by default
-            lines.append('#PBS -M {}'.format(job_tmpl.email))
+            lines.append(f'#PBS -M {job_tmpl.email}')
 
         email_events = ''
         if job_tmpl.email_on_started:
@@ -210,7 +210,7 @@ class PbsBaseClass(Scheduler):
         if job_tmpl.email_on_terminated:
             email_events += 'ea'
         if email_events:
-            lines.append('#PBS -m {}'.format(email_events))
+            lines.append(f'#PBS -m {email_events}')
             if not job_tmpl.email:
                 _LOGGER.info(
                     'Email triggers provided to PBSPro script for job,'
@@ -236,19 +236,19 @@ class PbsBaseClass(Scheduler):
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
             if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
-                job_title = 'j' + job_title
+                job_title = f'j{job_title}'
 
             # Truncate to the first 15 characters
             # Nothing is done if the string is shorter.
             job_title = job_title[:15]
 
-            lines.append('#PBS -N {}'.format(job_title))
+            lines.append(f'#PBS -N {job_title}')
 
         if job_tmpl.import_sys_environment:
             lines.append('#PBS -V')
 
         if job_tmpl.sched_output_path:
-            lines.append('#PBS -o {}'.format(job_tmpl.sched_output_path))
+            lines.append(f'#PBS -o {job_tmpl.sched_output_path}')
 
         if job_tmpl.sched_join_files:
             # from qsub man page:
@@ -265,13 +265,13 @@ class PbsBaseClass(Scheduler):
                 )
         else:
             if job_tmpl.sched_error_path:
-                lines.append('#PBS -e {}'.format(job_tmpl.sched_error_path))
+                lines.append(f'#PBS -e {job_tmpl.sched_error_path}')
 
         if job_tmpl.queue_name:
-            lines.append('#PBS -q {}'.format(job_tmpl.queue_name))
+            lines.append(f'#PBS -q {job_tmpl.queue_name}')
 
         if job_tmpl.account:
-            lines.append('#PBS -A {}'.format(job_tmpl.account))
+            lines.append(f'#PBS -A {job_tmpl.account}')
 
         if job_tmpl.priority:
             # Priority of the job.  Format: host-dependent integer.  Default:
@@ -279,7 +279,7 @@ class PbsBaseClass(Scheduler):
             # attribute to priority.
             # TODO: Here I expect that priority is passed in the correct PBSPro  # pylint: disable=fixme
             # format. To fix.
-            lines.append('#PBS -p {}'.format(job_tmpl.priority))
+            lines.append(f'#PBS -p {job_tmpl.priority}')
 
         if not job_tmpl.job_resource:
             raise ValueError('Job resources (as the num_machines) are required for the PBSPro scheduler plugin')
@@ -309,7 +309,7 @@ class PbsBaseClass(Scheduler):
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError('If you provide job_environment, it must be a dictionary')
             for key, value in job_tmpl.job_environment.items():
-                lines.append('export {}={}'.format(key.strip(), escape_for_bash(value)))
+                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
             lines.append('# ENVIRONMENT VARIABLES  END  ###')
             lines.append(empty_line)
 
@@ -329,9 +329,9 @@ class PbsBaseClass(Scheduler):
                 directory.
                 IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = 'qsub {}'.format(submit_script)
+        submit_command = f'qsub {submit_script}'
 
-        _LOGGER.info('submitting with: {}'.format(submit_command))
+        _LOGGER.info(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -369,15 +369,9 @@ class PbsBaseClass(Scheduler):
             l for l in stderr.split('\n') if 'Unknown Job Id' not in l and 'Job has finished' not in l
         )
         if filtered_stderr.strip():
-            _LOGGER.warning(
-                'Warning in _parse_joblist_output, non-empty '
-                "(filtered) stderr='{}'".format(filtered_stderr)
-            )
+            _LOGGER.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
-                raise SchedulerError(
-                    'Error during qstat parsing, retval={}\n'
-                    'stdout={}\nstderr={}'.format(retval, stdout, stderr)
-                )
+                raise SchedulerError(f'Error during qstat parsing, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
         jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
@@ -410,8 +404,7 @@ class PbsBaseClass(Scheduler):
                             # stripping the TAB
                             if not jobdata_raw[-1]['lines']:
                                 raise SchedulerParsingError(
-                                    'Line {} is the first line of the job, but it '
-                                    'starts with a TAB! ({})'.format(line_num, line)
+                                    f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
                                 )
                             jobdata_raw[-1]['lines'][-1] += line[1:]
                         else:
@@ -422,7 +415,7 @@ class PbsBaseClass(Scheduler):
                             ## 'Variable_List', for instance, can have
                             ## newlines if they are included... # I do a
                             ## workaround
-                            jobdata_raw[-1]['lines'][-1] += '\n{}'.format(line)
+                            jobdata_raw[-1]['lines'][-1] += f'\n{line}'
                             jobdata_raw[-1]['warning_lines_idx'].append(len(jobdata_raw[-1]['lines']) - 1)
 
         # Create dictionary and parse specific fields
@@ -436,7 +429,7 @@ class PbsBaseClass(Scheduler):
             # There are lines without equals sign: this is bad
             if lines_without_equals_sign:
                 # Should I only warn?
-                _LOGGER.error('There are lines without equals sign! {}'.format(lines_without_equals_sign))
+                _LOGGER.error(f'There are lines without equals sign! {lines_without_equals_sign}')
                 raise SchedulerParsingError('There are lines without equals sign.')
 
             raw_data = {
@@ -470,7 +463,7 @@ class PbsBaseClass(Scheduler):
             try:
                 this_job.title = raw_data['job_name']
             except KeyError:
-                _LOGGER.debug("No 'job_name' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'job_name' field for job id {this_job.job_id}")
 
             try:
                 this_job.annotation = raw_data['comment']
@@ -485,19 +478,16 @@ class PbsBaseClass(Scheduler):
                 try:
                     this_job.job_state = self._map_status[job_state_string]
                 except KeyError:
-                    _LOGGER.warning(
-                        "Unrecognized job_state '{}' for job "
-                        'id {}'.format(job_state_string, this_job.job_id)
-                    )
+                    _LOGGER.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
             except KeyError:
-                _LOGGER.debug("No 'job_state' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'job_state' field for job id {this_job.job_id}")
                 this_job.job_state = JobState.UNDETERMINED
 
             try:
                 this_job.job_substate = raw_data['substate']
             except KeyError:
-                _LOGGER.debug("No 'substate' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'substate' field for job id {this_job.job_id}")
 
             try:
                 exec_hosts = raw_data['exec_host'].split('+')
@@ -527,79 +517,73 @@ class PbsBaseClass(Scheduler):
                             node.num_cpus = int(data[1])
                         else:
                             raise ValueError(
-                                'Wrong number of pieces: {} '
-                                'instead of 1 or 2 in exec_hosts: '
-                                '{}'.format(len(data), exec_hosts)
+                                f'Wrong number of pieces: {len(data)} instead of 1 or 2 in exec_hosts: {exec_hosts}'
                             )
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list
                 except Exception as exc:  # pylint: disable=broad-except
                     _LOGGER.debug(
-                        'Problem parsing the node names, I '
-                        'got Exception {} with message {}; '
-                        'exec_hosts was {}'.format(str(type(exc)), exc, exec_hosts)
+                        f'Problem parsing the node names, I got Exception {str(type(exc))} with message {exc}; '
+                        f'exec_hosts was {exec_hosts}'
                     )
 
             try:
                 # I strip the part after the @: is this always ok?
                 this_job.job_owner = raw_data['job_owner'].split('@')[0]
             except KeyError:
-                _LOGGER.debug("No 'job_owner' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'job_owner' field for job id {this_job.job_id}")
 
             try:
                 this_job.num_cpus = int(raw_data['resource_list.ncpus'])
                 # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.  # pylint: disable=fixme
             except KeyError:
-                _LOGGER.debug("No 'resource_list.ncpus' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'resource_list.ncpus' field for job id {this_job.job_id}")
             except ValueError:
                 _LOGGER.warning(
-                    "'resource_list.ncpus' is not an integer "
-                    '({}) for job id {}!'.format(raw_data['resource_list.ncpus'], this_job.job_id)
+                    f"'resource_list.ncpus' is not an integer "
+                    f"({raw_data['resource_list.ncpus']}) for job id {this_job.job_id}!"
                 )
 
             try:
                 this_job.num_mpiprocs = int(raw_data['resource_list.mpiprocs'])
                 # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.  # pylint: disable=fixme
             except KeyError:
-                _LOGGER.debug("No 'resource_list.mpiprocs' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'resource_list.mpiprocs' field for job id {this_job.job_id}")
             except ValueError:
                 _LOGGER.warning(
-                    "'resource_list.mpiprocs' is not an integer "
-                    '({}) for job id {}!'.format(raw_data['resource_list.mpiprocs'], this_job.job_id)
+                    f"'resource_list.mpiprocs' is not an integer "
+                    f"({raw_data['resource_list.mpiprocs']}) for job id {this_job.job_id}!"
                 )
 
             try:
                 this_job.num_machines = int(raw_data['resource_list.nodect'])
             except KeyError:
-                _LOGGER.debug("No 'resource_list.nodect' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'resource_list.nodect' field for job id {this_job.job_id}")
             except ValueError:
                 _LOGGER.warning(
-                    "'resource_list.nodect' is not an integer "
-                    '({}) for job id {}!'.format(raw_data['resource_list.nodect'], this_job.job_id)
+                    f"'resource_list.nodect' is not an integer "
+                    f"{raw_data['resource_list.nodect']}) for job id {this_job.job_id}!"
                 )
 
             # Double check of redundant info
             if (this_job.allocated_machines is not None and this_job.num_machines is not None):
                 if len(set(machine.name for machine in this_job.allocated_machines)) != this_job.num_machines:
                     _LOGGER.error(
-                        'The length of the list of allocated '
-                        'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(
-                            len(this_job.allocated_machines), this_job.num_machines
-                        )
+                        f'The length of the list of allocated nodes ({len(this_job.allocated_machines)}) is different '
+                        f'from the expected number of nodes ({this_job.num_machines})!'
                     )
 
             try:
                 this_job.queue_name = raw_data['queue']
             except KeyError:
-                _LOGGER.debug("No 'queue' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'queue' field for job id {this_job.job_id}")
 
             try:
                 this_job.requested_wallclock_time = (self._convert_time(raw_data['resource_list.walltime']))  # pylint: disable=invalid-name
             except KeyError:
-                _LOGGER.debug("No 'resource_list.walltime' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'resource_list.walltime' field for job id {this_job.job_id}")
             except ValueError:
-                _LOGGER.warning("Error parsing 'resource_list.walltime' for job id {}".format(this_job.job_id))
+                _LOGGER.warning(f"Error parsing 'resource_list.walltime' for job id {this_job.job_id}")
 
             try:
                 this_job.wallclock_time_seconds = (self._convert_time(raw_data['resources_used.walltime']))
@@ -607,7 +591,7 @@ class PbsBaseClass(Scheduler):
                 # May not have started yet
                 pass
             except ValueError:
-                _LOGGER.warning("Error parsing 'resources_used.walltime' for job id {}".format(this_job.job_id))
+                _LOGGER.warning(f"Error parsing 'resources_used.walltime' for job id {this_job.job_id}")
 
             try:
                 this_job.cpu_time = (self._convert_time(raw_data['resources_used.cput']))
@@ -615,7 +599,7 @@ class PbsBaseClass(Scheduler):
                 # May not have started yet
                 pass
             except ValueError:
-                _LOGGER.warning("Error parsing 'resources_used.cput' for job id {}".format(this_job.job_id))
+                _LOGGER.warning(f"Error parsing 'resources_used.cput' for job id {this_job.job_id}")
 
             #
             # ctime: The time that the job was created
@@ -629,9 +613,9 @@ class PbsBaseClass(Scheduler):
             try:
                 this_job.submission_time = self._parse_time_string(raw_data['ctime'])
             except KeyError:
-                _LOGGER.debug("No 'ctime' field for job id {}".format(this_job.job_id))
+                _LOGGER.debug(f"No 'ctime' field for job id {this_job.job_id}")
             except ValueError:
-                _LOGGER.warning("Error parsing 'ctime' for job id {}".format(this_job.job_id))
+                _LOGGER.warning(f"Error parsing 'ctime' for job id {this_job.job_id}")
 
             try:
                 this_job.dispatch_time = self._parse_time_string(raw_data['stime'])
@@ -639,7 +623,7 @@ class PbsBaseClass(Scheduler):
                 # The job may not have been started yet
                 pass
             except ValueError:
-                _LOGGER.warning("Error parsing 'stime' for job id {}".format(this_job.job_id))
+                _LOGGER.warning(f"Error parsing 'stime' for job id {this_job.job_id}")
 
             # TODO: see if we want to set also finish_time for finished jobs, if there are any  # pylint: disable=fixme
 
@@ -658,7 +642,7 @@ class PbsBaseClass(Scheduler):
         """
         pieces = string.split(':')
         if len(pieces) != 3:
-            _LOGGER.warning('Wrong number of pieces (expected 3) for time string {}'.format(string))
+            _LOGGER.warning(f'Wrong number of pieces (expected 3) for time string {string}')
             raise ValueError('Wrong number of pieces for time string.')
 
         try:
@@ -666,7 +650,7 @@ class PbsBaseClass(Scheduler):
             if hours < 0:
                 raise ValueError
         except ValueError:
-            _LOGGER.warning('Not a valid number of hours: {}'.format(pieces[0]))
+            _LOGGER.warning(f'Not a valid number of hours: {pieces[0]}')
             raise ValueError('Not a valid number of hours.')
 
         try:
@@ -674,7 +658,7 @@ class PbsBaseClass(Scheduler):
             if mins < 0:
                 raise ValueError
         except ValueError:
-            _LOGGER.warning('Not a valid number of minutes: {}'.format(pieces[1]))
+            _LOGGER.warning(f'Not a valid number of minutes: {pieces[1]}')
             raise ValueError('Not a valid number of minutes.')
 
         try:
@@ -682,7 +666,7 @@ class PbsBaseClass(Scheduler):
             if secs < 0:
                 raise ValueError
         except ValueError:
-            _LOGGER.warning('Not a valid number of seconds: {}'.format(pieces[2]))
+            _LOGGER.warning(f'Not a valid number of seconds: {pieces[2]}')
             raise ValueError('Not a valid number of seconds.')
 
         return hours * 3600 + mins * 60 + secs
@@ -699,7 +683,7 @@ class PbsBaseClass(Scheduler):
         try:
             time_struct = time.strptime(string, fmt)
         except Exception as exc:
-            _LOGGER.debug('Unable to parse time string {}, the message was {}'.format(string, exc))
+            _LOGGER.debug(f'Unable to parse time string {string}, the message was {exc}')
             raise ValueError('Problem parsing the time string.')
 
         # I convert from a time_struct to a datetime object going through
@@ -717,17 +701,11 @@ class PbsBaseClass(Scheduler):
         Return a string with the JobID.
         """
         if retval != 0:
-            _LOGGER.error(
-                'Error in _parse_submit_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
-            raise SchedulerError(
-                'Error during submission, retval={}\n'
-                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
-            )
+            _LOGGER.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Error during submission, retval={retval}; stdout={stdout}; stderr={stderr}')
 
         if stderr.strip():
-            _LOGGER.warning('in _parse_submit_output there was some text in stderr: {}'.format(stderr))
+            _LOGGER.warning(f'in _parse_submit_output there was some text in stderr: {stderr}')
 
         return stdout.strip()
 
@@ -735,9 +713,9 @@ class PbsBaseClass(Scheduler):
         """
         Return the command to kill the job with specified jobid.
         """
-        submit_command = 'qdel {}'.format(jobid)
+        submit_command = f'qdel {jobid}'
 
-        _LOGGER.info('killing job {}'.format(jobid))
+        _LOGGER.info(f'killing job {jobid}')
 
         return submit_command
 
@@ -750,16 +728,13 @@ class PbsBaseClass(Scheduler):
         :return: True if everything seems ok, False otherwise.
         """
         if retval != 0:
-            _LOGGER.error(
-                'Error in _parse_kill_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
+            _LOGGER.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             return False
 
         if stderr.strip():
-            _LOGGER.warning('in _parse_kill_output there was some text in stderr: {}'.format(stderr))
+            _LOGGER.warning(f'in _parse_kill_output there was some text in stderr: {stderr}')
 
         if stdout.strip():
-            _LOGGER.warning('in _parse_kill_output there was some text in stdout: {}'.format(stdout))
+            _LOGGER.warning(f'in _parse_kill_output there was some text in stdout: {stdout}')
 
         return True

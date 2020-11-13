@@ -70,7 +70,7 @@ class HTMLGetLinksParser(HTMLParser):
         if tag == 'a':
             for key, value in attrs:
                 if key == 'href':
-                    if (self.filter_extension is None or value.endswith('.{}'.format(self.filter_extension))):
+                    if (self.filter_extension is None or value.endswith(f'.{self.filter_extension}')):
                         self.links.append(value)
 
     def get_links(self):

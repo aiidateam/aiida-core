@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods,no-member
+# pylint: disable=invalid-name
 """Invalidating node hash - User should rehash nodes for caching
 
 Revision ID: e797afa09270
@@ -41,15 +41,15 @@ def drop_hashes(conn):  # pylint: disable=unused-argument
     if n_nodes > 0:
         echo.echo_warning('Invalidating the hashes of all nodes. Please run "verdi rehash".', bold=True)
 
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
     conn.execute(statement)
 
 
 def upgrade():
     """drop the hashes when upgrading"""
-    drop_hashes(op.get_bind())
+    drop_hashes(op.get_bind())  # pylint: disable=no-member
 
 
 def downgrade():
     """drop the hashes also when downgrading"""
-    drop_hashes(op.get_bind())
+    drop_hashes(op.get_bind())  # pylint: disable=no-member

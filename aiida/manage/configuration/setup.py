@@ -29,18 +29,18 @@ def delete_repository(profile, non_interactive=True):
     repo_path = os.path.expanduser(repo_path)
 
     if not os.path.isabs(repo_path):
-        echo.echo_info("Associated file repository '{}' does not exist.".format(repo_path))
+        echo.echo_info(f"Associated file repository '{repo_path}' does not exist.")
         return
 
     if not os.path.isdir(repo_path):
-        echo.echo_info("Associated file repository '{}' is not a directory.".format(repo_path))
+        echo.echo_info(f"Associated file repository '{repo_path}' is not a directory.")
         return
 
     if non_interactive or click.confirm(
         "Delete associated file repository '{}'?\n"
         'WARNING: All data will be lost.'.format(repo_path)
     ):
-        echo.echo_info("Deleting directory '{}'.".format(repo_path))
+        echo.echo_info(f"Deleting directory '{repo_path}'.")
         import shutil
         shutil.rmtree(repo_path)
 
@@ -68,12 +68,12 @@ def delete_db(profile, non_interactive=True, verbose=False):
 
     database_name = profile.database_name
     if not postgres.db_exists(database_name):
-        echo.echo_info("Associated database '{}' does not exist.".format(database_name))
+        echo.echo_info(f"Associated database '{database_name}' does not exist.")
     elif non_interactive or click.confirm(
         "Delete associated database '{}'?\n"
         'WARNING: All data will be lost.'.format(database_name)
     ):
-        echo.echo_info("Deleting database '{}'.".format(database_name))
+        echo.echo_info(f"Deleting database '{database_name}'.")
         postgres.drop_db(database_name)
 
     user = profile.database_username
@@ -81,14 +81,14 @@ def delete_db(profile, non_interactive=True, verbose=False):
     users = [available_profile.database_username for available_profile in config.profiles]
 
     if not postgres.dbuser_exists(user):
-        echo.echo_info("Associated database user '{}' does not exist.".format(user))
+        echo.echo_info(f"Associated database user '{user}' does not exist.")
     elif users.count(user) > 1:
         echo.echo_info(
             "Associated database user '{}' is used by other profiles "
             'and will not be deleted.'.format(user)
         )
-    elif non_interactive or click.confirm("Delete database user '{}'?".format(user)):
-        echo.echo_info("Deleting user '{}'.".format(user))
+    elif non_interactive or click.confirm(f"Delete database user '{user}'?"):
+        echo.echo_info(f"Deleting user '{user}'.")
         postgres.drop_dbuser(user)
 
 
@@ -107,7 +107,7 @@ def delete_from_config(profile, non_interactive=True):
         "Delete configuration for profile '{}'?\n"
         'WARNING: Permanently removes profile from the list of AiiDA profiles.'.format(profile.name)
     ):
-        echo.echo_info("Deleting configuration for profile '{}'.".format(profile.name))
+        echo.echo_info(f"Deleting configuration for profile '{profile.name}'.")
         config = get_config()
         config.remove_profile(profile.name)
         config.store()

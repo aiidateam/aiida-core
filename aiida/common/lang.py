@@ -38,7 +38,7 @@ def type_check(what, of_type, msg=None, allow_none=False):
 
     if not isinstance(what, of_type):
         if msg is None:
-            msg = "Got object of type '{}', expecting '{}'".format(type(what), of_type)
+            msg = f"Got object of type '{type(what)}', expecting '{of_type}'"
         raise TypeError(msg)
 
     return what
@@ -62,7 +62,7 @@ def override_decorator(check=False):
                 try:
                     getattr(super(), func.__name__)
                 except AttributeError:
-                    raise RuntimeError('Function {} does not override a superclass method'.format(func))
+                    raise RuntimeError(f'Function {func} does not override a superclass method')
 
                 return func(self, *args, **kwargs)
         else:
@@ -76,7 +76,7 @@ def override_decorator(check=False):
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
 
-class classproperty:  # pylint: disable=too-few-public-methods,invalid-name
+class classproperty:  # pylint: disable=invalid-name
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together

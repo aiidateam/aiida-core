@@ -131,7 +131,7 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
             session.query(DbAuthInfo).filter_by(id=pk).one().delete()
             session.commit()
         except NoResultFound:
-            raise exceptions.NotExistent('AuthInfo<{}> does not exist'.format(pk))
+            raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
 
     def get(self, computer, user):
         """Return an entry from the collection that is configured for the given computer and user
@@ -150,12 +150,10 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         try:
             authinfo = session.query(DbAuthInfo).filter_by(dbcomputer_id=computer.id, aiidauser_id=user.id).one()
         except NoResultFound:
-            raise exceptions.NotExistent(
-                'User<{}> has no configuration for Computer<{}>'.format(user.email, computer.name)
-            )
+            raise exceptions.NotExistent(f'User<{user.email}> has no configuration for Computer<{computer.name}>')
         except MultipleResultsFound:
             raise exceptions.MultipleObjectsError(
-                'User<{}> has multiple configurations for Computer<{}>'.format(user.email, computer.name)
+                f'User<{user.email}> has multiple configurations for Computer<{computer.name}>'
             )
         else:
             return self.from_dbmodel(authinfo)

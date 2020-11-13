@@ -37,9 +37,12 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
+        subpath = self.utils.strip_api_prefix(path).strip('/')
+        pathlist = self.utils.split_path(subpath)
 
-        if len(pathlist) > 1:
+        if subpath == '':
+            resource_type = 'endpoints'
+        elif len(pathlist) > 1:
             resource_type = pathlist.pop(1)
         else:
             resource_type = 'info'
@@ -122,7 +125,7 @@ class BaseResource(Resource):
 
         if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access,isinstance-second-argument-not-valid-type
             raise RestInputValidationError(
-                'node {} is not of the required type {}'.format(node_id, self.trans._aiida_class)  # pylint: disable=protected-access
+                f'node {node_id} is not of the required type {self.trans._aiida_class}'  # pylint: disable=protected-access
             )
 
         return node
@@ -261,14 +264,22 @@ class Node(BaseResource):
         elif query_type == 'statistics':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
-                usr = filters['user']['==']
+                user_pk = filters['user']['==']
             else:
-                usr = None
-            results = self.trans.get_statistics(usr)
+                user_pk = None
+            results = self.trans.get_statistics(user_pk)
 
         elif query_type == 'full_types':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_namespace()
+
+        elif query_type == 'full_types_count':
+            headers = self.utils.build_headers(url=request.url, total_count=0)
+            if filters:
+                user_pk = filters['user']['==']
+            else:
+                user_pk = None
+            results = self.trans.get_namespace(user_pk=user_pk, count_nodes=True)
 
         # TODO improve the performance of tree endpoint by getting the data from database faster
         # TODO add pagination for this endpoint (add default max limit)
@@ -318,7 +329,7 @@ class Node(BaseResource):
                 if query_type == 'repo_contents' and results:
                     response = make_response(results)
                     response.headers['content-type'] = 'application/octet-stream'
-                    response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
                     return response
 
                 if query_type == 'download' and download not in ['false', 'False', False] and results:
@@ -341,8 +352,8 @@ class Node(BaseResource):
                     if not isinstance(attributes_filter, list):
                         attributes_filter = [attributes_filter]
                     for attr in attributes_filter:
-                        node['attributes'][str(attr)] = node['attributes.' + str(attr)]
-                        del node['attributes.' + str(attr)]
+                        node['attributes'][str(attr)] = node[f'attributes.{str(attr)}']
+                        del node[f'attributes.{str(attr)}']
 
             if extras_filter is not None and extras:
                 for node in results['nodes']:
@@ -350,8 +361,8 @@ class Node(BaseResource):
                     if not isinstance(extras_filter, list):
                         extras_filter = [extras_filter]
                     for extra in extras_filter:
-                        node['extras'][str(extra)] = node['extras.' + str(extra)]
-                        del node['extras.' + str(extra)]
+                        node['extras'][str(extra)] = node[f'extras.{str(extra)}']
+                        del node[f'extras.{str(extra)}']
 
         ## Build response
         data = dict(
@@ -406,10 +417,9 @@ class ProcessNode(Node):
         :return: http response
         """
 
-        ## Decode url parts
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+
         path = unquote(request.path)
-        url = unquote(request.url)
-        url_root = unquote(request.url_root)
 
         ## Parse request
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
@@ -425,14 +435,11 @@ class ProcessNode(Node):
             projectable_properties, ordering = self.trans.get_projectable_properties()
             results = dict(fields=projectable_properties, ordering=ordering)
 
-        ## Build response and return it
-        headers = self.utils.build_headers(url=request.url, total_count=1)
-
         ## Build response
         data = dict(
             method=request.method,
-            url=url,
-            url_root=url_root,
+            url=unquote(request.url),
+            url_root=unquote(request.url_root),
             path=path,
             id=node_id,
             query_string=request.query_string.decode('utf-8'),

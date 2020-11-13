@@ -11,6 +11,7 @@
 """Package for node ORM classes."""
 import importlib
 import warnings
+import traceback
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -47,9 +48,18 @@ class WarnWhenNotEntered:
     def _warn_if_not_entered(self, method):
         """Fire a warning if the object wrapper has not yet been entered."""
         if not self._was_entered:
-            msg = '`{}` used without context manager for {}. This will raise starting from `aiida-core==2.0.0`'.format(
-                method, self._name
-            )
+            msg = f'\nThe method `{method}` was called on the return value of `{self._name}.open()`' + \
+                    ' outside of a context manager.\n' + \
+                  'Please wrap this call inside `with <node instance>.open(): ...` to silence this warning. ' + \
+                  'This will raise an exception, starting from `aiida-core==2.0.0`.\n'
+
+            try:
+                caller = traceback.format_stack()[-3]
+            except Exception:  # pylint: disable=broad-except
+                msg += 'Could not determine the line of code responsible for triggering this warning.'
+            else:
+                msg += f'The offending call comes from:\n{caller}'
+
             warnings.warn(msg, AiidaDeprecationWarning)  # pylint: disable=no-member
 
     def __enter__(self):
@@ -114,14 +124,10 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
                 return
 
             if node.get_incoming().all():
-                raise exceptions.InvalidOperation(
-                    'cannot delete Node<{}> because it has incoming links'.format(node.pk)
-                )
+                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
 
             if node.get_outgoing().all():
-                raise exceptions.InvalidOperation(
-                    'cannot delete Node<{}> because it has outgoing links'.format(node.pk)
-                )
+                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
 
             repository = node._repository  # pylint: disable=protected-access
             self._backend.nodes.delete(node_id)
@@ -174,13 +180,13 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         super().__init__(backend_entity)
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, str(self))
+        return f'<{self.__class__.__name__}: {str(self)}>'
 
     def __str__(self):
         if not self.is_stored:
-            return 'uuid: {} (unstored)'.format(self.uuid)
+            return f'uuid: {self.uuid} (unstored)'
 
-        return 'uuid: {} (pk: {})'.format(self.uuid, self.pk)
+        return f'uuid: {self.uuid} (pk: {self.pk})'
 
     def __copy__(self):
         """Copying a Node is not supported in general, but only for the Data sub class."""
@@ -227,7 +233,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
-            msg = 'class `{}:{}` does not have registered entry point'.format(self.__module__, self.__class__.__name__)
+            msg = f'class `{self.__module__}:{self.__class__.__name__}` does not have registered entry point'
             raise exceptions.StoringNotAllowed(msg)
 
     @classproperty
@@ -767,8 +773,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        type_check(link_type, LinkType, 'link_type should be a LinkType enum but got: {}'.format(type(link_type)))
-        type_check(target, Node, 'target should be a `Node` instance but got: {}'.format(type(target)))
+        type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
+        type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
 
     def _add_incoming_cache(self, source, link_type, link_label):
         """Add an incoming link to the cache.
@@ -784,7 +790,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         link_triple = LinkTriple(source, link_type, link_label)
 
         if link_triple in self._incoming_cache:
-            raise exceptions.UniquenessError('the link triple {} is already present in the cache'.format(link_triple))
+            raise exceptions.UniquenessError(f'the link triple {link_triple} is already present in the cache')
 
         self._incoming_cache.append(link_triple)
 
@@ -806,7 +812,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             link_type = (link_type,)
 
         if link_type and not all([isinstance(t, LinkType) for t in link_type]):
-            raise TypeError('link_type should be a LinkType or tuple of LinkType: got {}'.format(link_type))
+            raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node
         node_filters = {'id': {'==': self.id}}
@@ -870,7 +876,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
             if link_triple in link_triples:
                 raise exceptions.InternalError(
-                    'Node<{}> has both a stored and cached link triple {}'.format(self.pk, link_triple)
+                    f'Node<{self.pk}> has both a stored and cached link triple {link_triple}'
                 )
 
             if not link_type or link_triple.link_type in link_type:
@@ -916,7 +922,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             )
 
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed('Node<{}> is already stored'.format(self.id))
+            raise exceptions.ModificationNotAllowed(f'Node<{self.id}> is already stored')
 
         # For each node of a cached incoming link, check that all its incoming links are stored
         for link_triple in self._incoming_cache:
@@ -1009,7 +1015,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         for link_triple in self._incoming_cache:
             if not link_triple.node.is_stored:
                 raise exceptions.ModificationNotAllowed(
-                    'Cannot store because source node of link triple {} is not stored'.format(link_triple)
+                    f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
     def _store_from_cache(self, cache_node, with_transaction):

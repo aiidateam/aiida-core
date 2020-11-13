@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods,no-member
+# pylint: disable=invalid-name
 """Invalidating node hash - User should rehash nodes for caching
 
 Revision ID: 5d4d844852b6
@@ -33,17 +33,17 @@ _HASH_EXTRA_KEY = '_aiida_hash'
 
 def upgrade():
     """drop the hashes when upgrading"""
-    conn = op.get_bind()
+    conn = op.get_bind()  # pylint: disable=no-member
 
     # Invalidate all the hashes
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
     conn.execute(statement)
 
 
 def downgrade():
     """drop the hashes also when downgrading"""
-    conn = op.get_bind()
+    conn = op.get_bind()  # pylint: disable=no-member
 
     # Invalidate all the hashes
-    statement = text("""UPDATE db_dbnode SET extras = extras #- '{""" + _HASH_EXTRA_KEY + """}'::text[];""")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
     conn.execute(statement)

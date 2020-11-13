@@ -212,6 +212,25 @@ def override_log_level(level=logging.CRITICAL):
         logging.disable(level=logging.NOTSET)
 
 
+@contextmanager
+def override_log_formatter_context(fmt: str):
+    """Temporarily use a different formatter for all handlers.
+
+    NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
+    Be aware! This may fail if the number of handlers is changed within the decorated function/method.
+    """
+    temp_formatter = logging.Formatter(fmt=fmt)
+    cached_formatters = [handler.formatter for handler in AIIDA_LOGGER.handlers]
+
+    for handler in AIIDA_LOGGER.handlers:
+        handler.setFormatter(temp_formatter)
+
+    yield
+
+    for index, handler in enumerate(AIIDA_LOGGER.handlers):
+        handler.setFormatter(cached_formatters[index])
+
+
 def override_log_formatter(fmt: str):
     """Temporarily use a different formatter for all handlers.
 
@@ -221,18 +240,7 @@ def override_log_formatter(fmt: str):
 
     @decorator
     def wrapper(wrapped, instance, args, kwargs):  # pylint: disable=unused-argument
-        temp_formatter = logging.Formatter(fmt=fmt)
-
-        cached_formatters = []
-        for handler in AIIDA_LOGGER.handlers:
-            cached_formatters.append(handler.formatter)
-
-        try:
-            for handler in AIIDA_LOGGER.handlers:
-                handler.setFormatter(temp_formatter)
+        with override_log_formatter_context(fmt=fmt):
             return wrapped(*args, **kwargs)
-        finally:
-            for index, handler in enumerate(AIIDA_LOGGER.handlers):
-                handler.setFormatter(cached_formatters[index])
 
     return wrapper

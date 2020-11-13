@@ -147,7 +147,7 @@ def get_querybuilder_classifiers_from_cls(cls, query):  # pylint: disable=invali
         ormclass = query.Node
 
     else:
-        raise InputValidationError('I do not know what to do with {}'.format(cls))
+        raise InputValidationError(f'I do not know what to do with {cls}')
 
     if ormclass == query.Node:
         is_valid_node_type_string(classifiers['ormclass_type_string'], raise_on_false=True)
@@ -212,7 +212,7 @@ def get_node_type_filter(classifiers, subclassing):
     else:
         # Note: the query_type_string always ends with a dot. This ensures that "like {str}%" matches *only*
         # the query type string
-        filters = {'like': '{}%'.format(escape_for_sql_like(get_query_type_from_type_string(value)))}
+        filters = {'like': f'{escape_for_sql_like(get_query_type_from_type_string(value))}%'}
 
     return filters
 
@@ -307,7 +307,7 @@ def get_group_type_filter(classifiers, subclassing):
         # possible so we perform the switch here in code.
         if value == 'core':
             value = ''
-        filters = {'like': '{}%'.format(escape_for_sql_like(value))}
+        filters = {'like': f'{escape_for_sql_like(value)}%'}
 
     return filters
 
@@ -486,7 +486,7 @@ class QueryBuilder:
         elif engine.startswith('postgre'):
             from sqlalchemy.dialects import postgresql as mydialect
         else:
-            raise ConfigurationError('Unknown DB engine: {}'.format(engine))
+            raise ConfigurationError(f'Unknown DB engine: {engine}')
 
         que = self.get_query()
         return str(que.statement.compile(compile_kwargs={'literal_binds': True}, dialect=mydialect.dialect()))
@@ -574,7 +574,7 @@ class QueryBuilder:
         basetag = get_tag_from_type(classifiers)
         tags_used = self.tag_to_alias_map.keys()
         for i in range(1, 100):
-            tag = '{}_{}'.format(basetag, i)
+            tag = f'{basetag}_{i}'
             if tag not in tags_used:
                 return tag
 
@@ -660,9 +660,7 @@ class QueryBuilder:
         # the class or the type (not both)
 
         if cls is not None and entity_type is not None:
-            raise InputValidationError(
-                'You cannot specify both a class ({}) and a entity_type ({})'.format(cls, entity_type)
-            )
+            raise InputValidationError(f'You cannot specify both a class ({cls}) and a entity_type ({entity_type})')
 
         if cls is None and entity_type is None:
             raise InputValidationError('You need to specify at least a class or a entity_type')
@@ -672,18 +670,18 @@ class QueryBuilder:
             if isinstance(cls, (tuple, list, set)):
                 for sub_cls in cls:
                     if not inspect_isclass(sub_cls):
-                        raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(sub_cls))
+                        raise InputValidationError(f"{sub_cls} was passed with kw 'cls', but is not a class")
             else:
                 if not inspect_isclass(cls):
-                    raise InputValidationError("{} was passed with kw 'cls', but is not a class".format(cls))
+                    raise InputValidationError(f"{cls} was passed with kw 'cls', but is not a class")
         elif entity_type is not None:
             if isinstance(entity_type, (tuple, list, set)):
                 for sub_type in entity_type:
                     if not isinstance(sub_type, str):
-                        raise InputValidationError('{} was passed as entity_type, but is not a string'.format(sub_type))
+                        raise InputValidationError(f'{sub_type} was passed as entity_type, but is not a string')
             else:
                 if not isinstance(entity_type, str):
-                    raise InputValidationError('{} was passed as entity_type, but is not a string'.format(entity_type))
+                    raise InputValidationError(f'{entity_type} was passed as entity_type, but is not a string')
 
         ormclass, classifiers = self._get_ormclass(cls, entity_type)
 
@@ -692,12 +690,10 @@ class QueryBuilder:
         if tag:
             if self._EDGE_TAG_DELIM in tag:
                 raise InputValidationError(
-                    'tag cannot contain {}\n'
-                    'since this is used as a delimiter for links'
-                    ''.format(self._EDGE_TAG_DELIM)
+                    f'tag cannot contain {self._EDGE_TAG_DELIM}\nsince this is used as a delimiter for links'
                 )
             if tag in self.tag_to_alias_map.keys():
-                raise InputValidationError('This tag ({}) is already in use'.format(tag))
+                raise InputValidationError(f'This tag ({tag}) is already in use')
         else:
             tag = self._get_unique_tag(classifiers)
 
@@ -828,9 +824,7 @@ class QueryBuilder:
                             joining_value = self._path[-abs(val)]['tag']
                         except IndexError as exc:
                             raise InputValidationError(
-                                'You have specified a non-existent entity with\n'
-                                'direction={}\n'
-                                '{}\n'.format(joining_value, exc)
+                                f'You have specified a non-existent entity with\ndirection={joining_value}\n{exc}\n'
                             )
                     else:
                         joining_value = self._get_tag_from_specification(val)
@@ -861,7 +855,7 @@ class QueryBuilder:
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
                 else:
                     if edge_tag in self.tag_to_alias_map.keys():
-                        raise InputValidationError('The tag {} is already in use'.format(edge_tag))
+                        raise InputValidationError(f'The tag {edge_tag} is already in use')
                 if self._debug:
                     print('I have chosen', edge_tag)
 
@@ -982,9 +976,7 @@ class QueryBuilder:
                         pass
                     else:
                         raise InputValidationError(
-                            'Cannot deal with input to order_by {}\n'
-                            'of type{}'
-                            '\n'.format(item_to_order_by, type(item_to_order_by))
+                            f'Cannot deal with input to order_by {item_to_order_by}\nof type{type(item_to_order_by)}\n'
                         )
                     for entityname, orderspec in item_to_order_by.items():
                         # if somebody specifies eg {'node':{'id':'asc'}}
@@ -1057,7 +1049,7 @@ class QueryBuilder:
             if isinstance(value, entities.Entity):
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
-                processed_filters['{}_id'.format(key)] = value.id
+                processed_filters[f'{key}_id'] = value.id
             else:
                 processed_filters[key] = value
 
@@ -1184,21 +1176,18 @@ class QueryBuilder:
             elif isinstance(projection, str):
                 _thisprojection = {projection: {}}
             else:
-                raise InputValidationError('Cannot deal with projection specification {}\n'.format(projection))
+                raise InputValidationError(f'Cannot deal with projection specification {projection}\n')
             for spec in _thisprojection.values():
                 if not isinstance(spec, dict):
                     raise InputValidationError(
-                        '\nThe value of a key-value pair in a projection\n'
-                        'has to be a dictionary\n'
-                        'You gave: {}\n'
-                        ''.format(spec)
+                        f'\nThe value of a key-value pair in a projection\nhas to be a dictionary\nYou gave: {spec}\n'
                     )
 
                 for key, val in spec.items():
                     if key not in self._VALID_PROJECTION_KEYS:
-                        raise InputValidationError('{} is not a valid key {}'.format(key, self._VALID_PROJECTION_KEYS))
+                        raise InputValidationError(f'{key} is not a valid key {self._VALID_PROJECTION_KEYS}')
                     if not isinstance(val, str):
-                        raise InputValidationError('{} has to be a string'.format(val))
+                        raise InputValidationError(f'{val} has to be a string')
             _projections.append(_thisprojection)
         if self._debug:
             print('   projections have become:', _projections)
@@ -1245,7 +1234,7 @@ class QueryBuilder:
             elif func == 'count':
                 entity_to_project = sa_func.count(entity_to_project)
             else:
-                raise InputValidationError('\nInvalid function specification {}'.format(func))
+                raise InputValidationError(f'\nInvalid function specification {func}')
             self._query = self._query.add_columns(entity_to_project)
 
     def _build_projections(self, tag, items_to_project=None):
@@ -1289,8 +1278,7 @@ class QueryBuilder:
                 tag = specification
             else:
                 raise InputValidationError(
-                    'tag {} is not among my known tags\n'
-                    'My tags are: {}'.format(specification, self.tag_to_alias_map.keys())
+                    f'tag {specification} is not among my known tags\nMy tags are: {self.tag_to_alias_map.keys()}'
                 )
         else:
             if specification in self._cls_to_tag_map.keys():
@@ -1809,9 +1797,7 @@ class QueryBuilder:
                 func = self._get_function_map()[calling_entity][joining_keyword]
             except KeyError:
                 raise InputValidationError(
-                    "'{}' is not a valid joining keyword for a '{}' type entity".format(
-                        joining_keyword, calling_entity
-                    )
+                    f"'{joining_keyword}' is not a valid joining keyword for a '{calling_entity}' type entity"
                 )
 
             if isinstance(joining_value, int):
@@ -2132,7 +2118,7 @@ class QueryBuilder:
         """
         from sqlalchemy.orm import Query
         if not isinstance(query, Query):
-            raise InputValidationError('{} must be a subclass of {}'.format(query, Query))
+            raise InputValidationError(f'{query} must be a subclass of {Query}')
         self._query = query
         self._injected = True
 

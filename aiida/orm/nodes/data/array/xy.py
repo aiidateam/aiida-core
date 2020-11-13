@@ -99,12 +99,8 @@ class XyData(ArrayData):
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise InputValidationError(
-                    'y_array {} did not have the '
-                    'same shape has the x_array!'
-                    ''.format(y_name)
-                )
-            self.set_array('y_array_{}'.format(num), y_array)
+                raise InputValidationError(f'y_array {y_name} did not have the same shape has the x_array!')
+            self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each
         self.set_attribute('y_names', y_names)
@@ -146,7 +142,7 @@ class XyData(ArrayData):
         y_arrays = []
         try:
             for i in range(len(y_names)):
-                y_arrays += [self.get_array('y_array_{}'.format(i))]
+                y_arrays += [self.get_array(f'y_array_{i}')]
         except (KeyError, AttributeError):
-            raise NotExistent('Could not retrieve array associated with y array {}'.format(y_names[i]))
+            raise NotExistent(f'Could not retrieve array associated with y array {y_names[i]}')
         return list(zip(y_names, y_arrays, y_units))

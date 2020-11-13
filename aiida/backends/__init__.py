@@ -27,4 +27,4 @@ def get_backend_manager(backend):
         from aiida.backends.sqlalchemy.manager import SqlaBackendManager
         return SqlaBackendManager()
 
-    raise Exception('unknown backend type `{}`'.format(backend))
+    raise Exception(f'unknown backend type `{backend}`')

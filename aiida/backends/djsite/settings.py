@@ -19,21 +19,21 @@ from aiida.manage.configuration import get_profile, settings
 try:
     PROFILE = get_profile()
 except exceptions.MissingConfigurationError as exception:
-    raise exceptions.MissingConfigurationError('the configuration could not be loaded: {}'.format(exception))
+    raise exceptions.MissingConfigurationError(f'the configuration could not be loaded: {exception}')
 
 if PROFILE is None:
     raise exceptions.ProfileConfigurationError('no profile has been loaded')
 
 if PROFILE.database_backend != 'django':
     raise exceptions.ProfileConfigurationError(
-        'incommensurate database backend `{}` for profile `{}`'.format(PROFILE.database_backend, PROFILE.name)
+        f'incommensurate database backend `{PROFILE.database_backend}` for profile `{PROFILE.name}`'
     )
 
 PROFILE_CONF = PROFILE.dictionary
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.' + PROFILE.database_engine,
+        'ENGINE': f'django.db.backends.{PROFILE.database_engine}',
         'NAME': PROFILE.database_name,
         'PORT': PROFILE.database_port,
         'HOST': PROFILE.database_hostname,

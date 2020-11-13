@@ -30,7 +30,7 @@ def test_get_rmq_url(args, kwargs, expected):
         url = rmq.get_rmq_url(*args, **kwargs)
         assert url.startswith(expected)
         for key, value in kwargs.items():
-            assert '{}={}'.format(key, value) in url
+            assert f'{key}={value}' in url
     else:
         with pytest.raises(expected):
             rmq.get_rmq_url(*args, **kwargs)

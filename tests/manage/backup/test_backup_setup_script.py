@@ -111,8 +111,7 @@ class TestBackupSetupScriptIntegration(AiidaTestCase):
                 backup_conf_records is not None and len(backup_conf_records) == 4 and
                 'backup_dest' in backup_conf_records and 'backup_info.json.tmpl' in backup_conf_records and
                 'start_backup.py' in backup_conf_records and 'backup_info.json' in backup_conf_records,
-                'The created backup folder does not have the expected files. It contains: {}.'
-                ''.format(backup_conf_records)
+                f'The created backup folder does not have the expected files. It contains: {backup_conf_records}.'
             )
 
             # Check the content of the main backup configuration file

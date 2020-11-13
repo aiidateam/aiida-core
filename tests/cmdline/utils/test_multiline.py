@@ -27,7 +27,7 @@ def test_new_comment(non_interactive_editor):
 def test_edit_comment(non_interactive_editor):
     old_comment = 'OldComment'
     new_comment = edit_comment(old_cmt=old_comment)
-    assert new_comment == old_comment + 'Test'
+    assert new_comment == f'{old_comment}Test'
 
 
 @pytest.mark.parametrize('non_interactive_editor', (COMMAND,), indirect=True)

@@ -60,13 +60,13 @@ class PluginVersionProvider:
             parent_module_name = plugin.__module__.split('.')[0]
             parent_module = import_module(parent_module_name)
         except (AttributeError, IndexError, ImportError):
-            self.logger.debug('could not determine the top level module for plugin: {}'.format(plugin))
+            self.logger.debug(f'could not determine the top level module for plugin: {plugin}')
             return self._cache[plugin]
 
         try:
             version_plugin = parent_module.__version__
         except AttributeError:
-            self.logger.debug('parent module does not define `__version__` attribute for plugin: {}'.format(plugin))
+            self.logger.debug(f'parent module does not define `__version__` attribute for plugin: {plugin}')
             return self._cache[plugin]
 
         self._cache[plugin][KEY_VERSION_ROOT][KEY_VERSION_PLUGIN] = version_plugin

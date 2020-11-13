@@ -64,7 +64,7 @@ class PluginParamType(EntryPointType):
                     grp = ENTRY_POINT_GROUP_PREFIX + grp
 
                 if grp not in valid_entry_point_groups:
-                    raise ValueError('entry point group {} is not recognized'.format(grp))
+                    raise ValueError(f'entry point group {grp} is not recognized')
 
                 groups.append(grp)
 
@@ -189,7 +189,7 @@ class PluginParamType(EntryPointType):
                 group = matching_groups[0]
 
         else:
-            ValueError('invalid entry point string format: {}'.format(entry_point_string))
+            ValueError(f'invalid entry point string format: {entry_point_string}')
 
         try:
             entry_point = get_entry_point(group, name)

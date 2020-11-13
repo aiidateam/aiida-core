@@ -89,7 +89,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             elif queryhelp['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise Exception('not understood entity from ( {} )'.format(queryhelp['path'][idx]['entity_type']))
+                raise Exception(f"not understood entity from ( {queryhelp['path'][idx]['entity_type']} )")
             return result
 
         queryhelp = querybuilder.queryhelp
@@ -200,7 +200,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
                     # For now I can only specify edge_identifiers as 'edge', ie. project on the edge
                     # itself, or by the entity_from, entity_to keyword, ie. groups or nodes.
                     # One could think of other keywords...
-                    raise ValueError('This tag ({}) is not known'.format(tag))
+                    raise ValueError(f'This tag ({tag}) is not known')
                 self._edge_keys.append((actual_tag, projection))
                 projections[actual_tag].append(projection)
 

@@ -75,9 +75,7 @@ def current_schema_version():
     """Migrate the current schema version."""
     # Have to use this ugly way of importing because the django migration
     # files start with numbers which are not a valid package name
-    latest_migration = __import__(
-        'aiida.backends.djsite.db.migrations.{}'.format(LATEST_MIGRATION), fromlist=['REVISION']
-    )
+    latest_migration = __import__(f'aiida.backends.djsite.db.migrations.{LATEST_MIGRATION}', fromlist=['REVISION'])
     return latest_migration.REVISION
 
 
@@ -103,9 +101,7 @@ def _deserialize_basic_type(mainitem):
     if mainitem['datatype'] == 'txt':
         return mainitem['tval']
     raise TypeError(
-        "Expected one of the following types: 'none', 'bool', 'int', 'float', 'txt', got {}".format(
-            mainitem['datatype']
-        )
+        f"Expected one of the following types: 'none', 'bool', 'int', 'float', 'txt', got {mainitem['datatype']}"
     )
 
 
@@ -121,14 +117,14 @@ def deserialize_list(mainitem, subitems, sep, original_class, original_pk, lesse
     firstlevelsubdict = {k: v for k, v in subitems.items() if sep not in k}
 
     # For checking, I verify the expected values
-    expected_set = {'{:d}'.format(i) for i in range(mainitem['ival'])}
+    expected_set = {f'{i:d}' for i in range(mainitem['ival'])}
     received_set = set(firstlevelsubdict.keys())
     # If there are more entries than expected, but all expected
     # ones are there, I just issue an error but I do not stop.
 
     if not expected_set.issubset(received_set):
         if (original_class is not None and original_class._subspecifier_field_name is not None):
-            subspecifier_string = '{}={} and '.format(original_class._subspecifier_field_name, original_pk)
+            subspecifier_string = f'{original_class._subspecifier_field_name}={original_pk} and '
         else:
             subspecifier_string = ''
         if original_class is None:
@@ -142,7 +138,7 @@ def deserialize_list(mainitem, subitems, sep, original_class, original_pk, lesse
         )
     if expected_set != received_set:
         if (original_class is not None and original_class._subspecifier_field_name is not None):
-            subspecifier_string = '{}={} and '.format(original_class._subspecifier_field_name, original_pk)
+            subspecifier_string = f'{original_class._subspecifier_field_name}={original_pk} and '
         else:
             subspecifier_string = ''
 
@@ -167,7 +163,7 @@ def deserialize_list(mainitem, subitems, sep, original_class, original_pk, lesse
         )
 
     # And then I put them in a list
-    retlist = [tempdict['{:d}'.format(i)] for i in range(mainitem['ival'])]
+    retlist = [tempdict[f'{i:d}'] for i in range(mainitem['ival'])]
     return retlist
 
 
@@ -183,7 +179,7 @@ def deserialize_dict(mainitem, subitems, sep, original_class, original_pk, lesse
 
     if len(firstlevelsubdict) != mainitem['ival']:
         if (original_class is not None and original_class._subspecifier_field_name is not None):
-            subspecifier_string = '{}={} and '.format(original_class._subspecifier_field_name, original_pk)
+            subspecifier_string = f'{original_class._subspecifier_field_name}={original_pk} and '
         else:
             subspecifier_string = ''
         if original_class is None:
@@ -275,7 +271,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None, origina
         except ValueError:
             raise DeserializationException('Error in the content of the json field') from ValueError
     else:
-        raise DeserializationException("The type field '{}' is not recognized".format(mainitem['datatype']))
+        raise DeserializationException(f"The type field '{mainitem['datatype']}' is not recognized")
 
 
 def deserialize_attributes(data, sep, original_class=None, original_pk=None):
@@ -326,10 +322,7 @@ def deserialize_attributes(data, sep, original_class=None, original_pk=None):
     # without mainitmes.
     lone_subitems = set(found_subitems.keys()) - set(found_mainitems.keys())
     if lone_subitems:
-        raise DeserializationException(
-            'Missing base keys for the following '
-            'items: {}'.format(','.join(lone_subitems))
-        )
+        raise DeserializationException(f"Missing base keys for the following items: {','.join(lone_subitems)}")
 
     # For each zero-level entity, I call the _deserialize_attribute function
     retval = {}
@@ -426,7 +419,7 @@ class ModelModifierV0025:
         try:
             attr = cls.objects.get(dbnode=dbnode_node, key=key)
         except ObjectDoesNotExist:
-            raise AttributeError('{} with key {} for node {} not found in db'.format(cls.__name__, key, dbnode.pk)) \
+            raise AttributeError(f'{cls.__name__} with key {key} for node {dbnode.pk} not found in db') \
                 from ObjectDoesNotExist
 
         return self.getvalue(attr)
@@ -435,7 +428,7 @@ class ModelModifierV0025:
         """This can be called on a given row and will get the corresponding value, casting it correctly. """
         try:
             if attr.datatype == 'list' or attr.datatype == 'dict':
-                prefix = '{}{}'.format(attr.key, self._sep)
+                prefix = f'{attr.key}{self._sep}'
                 prefix_len = len(prefix)
                 dballsubvalues = self._model_class.objects.filter(
                     key__startswith=prefix, **self.subspecifiers_dict(attr)
@@ -443,7 +436,7 @@ class ModelModifierV0025:
                 # Strip the FULL prefix and replace it with the simple
                 # "attr" prefix
                 data = {
-                    'attr.{}'.format(_[0][prefix_len:]): {
+                    f'attr.{_[0][prefix_len:]}': {
                         'datatype': _[1],
                         'tval': _[2],
                         'fval': _[3],
@@ -570,9 +563,7 @@ class ModelModifierV0025:
         if self._subspecifier_field_name is None:
             if subspecifier_value is not None:
                 raise ValueError(
-                    'You cannot specify a subspecifier value for '
-                    'class {} because it has no subspecifiers'
-                    ''.format(cls.__name__)
+                    f'You cannot specify a subspecifier value for class {cls.__name__} because it has no subspecifiers'
                 )
             subspecifiers_dict = {}
         else:
@@ -583,7 +574,7 @@ class ModelModifierV0025:
                 )
             subspecifiers_dict = {self._subspecifier_field_name: subspecifier_value}
 
-        query = Q(key__startswith='{parentkey}{sep}'.format(parentkey=key, sep=self._sep), **subspecifiers_dict)
+        query = Q(key__startswith=f'{key}{self._sep}', **subspecifiers_dict)
 
         if not only_children:
             query.add(Q(key=key, **subspecifiers_dict), Q.OR)
@@ -733,9 +724,7 @@ class ModelModifierV0025:
         if self._subspecifier_field_name is None:
             if subspecifier_value is not None:
                 raise ValueError(
-                    'You cannot specify a subspecifier value for '
-                    'class {} because it has no subspecifiers'
-                    ''.format(cls.__name__)
+                    f'You cannot specify a subspecifier value for class {cls.__name__} because it has no subspecifiers'
                 )
             new_entry = cls(key=key, **other_attribs)
         else:
@@ -778,9 +767,7 @@ class ModelModifierV0025:
                 # expect no concurrency)
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
-                    self.create_value(
-                        key=('{}{}{:d}'.format(key, self._sep, i)), value=subv, subspecifier_value=subspecifier_value
-                    )
+                    self.create_value(key=f'{key}{self._sep}{i:d}', value=subv, subspecifier_value=subspecifier_value)
                 )
 
         elif isinstance(value, dict):
@@ -796,17 +783,14 @@ class ModelModifierV0025:
                 # expect no concurrency)
                 # NOTE: I do not pass other_attribs
                 list_to_return.extend(
-                    self.create_value(
-                        key='{}{}{}'.format(key, self._sep, subk), value=subv, subspecifier_value=subspecifier_value
-                    )
+                    self.create_value(key=f'{key}{self._sep}{subk}', value=subv, subspecifier_value=subspecifier_value)
                 )
         else:
             try:
                 jsondata = json.dumps(value)
             except TypeError:
                 raise ValueError(
-                    'Unable to store the value: it must be either a basic datatype, or json-serializable: {}'.
-                    format(value)
+                    f'Unable to store the value: it must be either a basic datatype, or json-serializable: {value}'
                 ) from TypeError
 
             new_entry.datatype = 'json'

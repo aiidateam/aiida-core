@@ -2,10 +2,10 @@
 # if you wish to control the rabbitmq used.
 
 # Simply install docker, then run:
-# $ docker-compose -f .ci/docker-rabbitmq.yml up -d
+# $ docker-compose -f .docker/docker-rabbitmq.yml up -d
 
 # and to power down, after testing:
-# $ docker-compose -f .ci/docker-rabbitmq.yml down
+# $ docker-compose -f .docker/docker-rabbitmq.yml down
 
 # you can monitor rabbitmq use at: http://localhost:15672
 
@@ -27,3 +27,8 @@ services:
       interval: 30s
       timeout: 30s
       retries: 5
+    networks:
+      - aiida-rmq
+
+networks:
+  aiida-rmq:

@@ -352,7 +352,7 @@ class TestProcessFunction(AiidaTestCase):
         self.assertTrue(isinstance(node, orm.CalcFunctionNode))
 
         # Process function can be submitted and will be run by a daemon worker as long as the function is importable
-        # Note that the actual running is not tested here but is done so in `.ci/test_daemon.py`.
+        # Note that the actual running is not tested here but is done so in `.github/local_tests/test_daemon.py`.
         node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
         assert isinstance(node, orm.WorkFunctionNode)
 

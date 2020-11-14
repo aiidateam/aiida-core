@@ -1,0 +1,55 @@
+- name: Run workchain tests
+  hosts: all
+  gather_facts: false
+
+  # run as aiida user
+  become: true
+  become_method: su
+  become_user: aiida
+
+  vars:
+    aiida_add_code: "add"
+
+  tasks:
+
+  - name: "Check if add code is already present"
+    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} code show {{ aiida_add_code }}@localhost"
+    ignore_errors: true
+    changed_when: false
+    no_log: true
+    register: aiida_check_code
+
+  - name: verdi add code setup
+    when: aiida_check_code.rc != 0
+    shell: >
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} code setup
+      -D "simple script that adds two numbers"
+      -n -L {{ aiida_add_code }} -P arithmetic.add
+      -Y localhost --remote-abs-path=/bin/bash
+
+  - name: Copy workchain files
+    copy:
+      src: polish
+      dest: "${HOME}"
+
+  - name: Add workchains to pythonpath and daemons
+    # note verdi daemon restart did not seem to update the environmanetal variables?
+    shell: |
+      export PYTHONPATH="${PYTHONPATH}:${HOME}/polish"
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon stop
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}
+
+  - name: iterate polish notations
+    include_tasks: run_polish_workchain.yml
+    vars:
+      polish_script: "${HOME}/polish/cli.py"
+      polish_timeout: 600
+    loop:
+      - "1 -2 -1 4 -5 -5 * * * * +"
+      - "2 1 3 3 -1 + ^ ^ +"
+      - "3 -5 -1 -4 + * ^"
+      - "2 4 2 -4 * * +"
+      - "3 1 1 5 ^ ^ ^"
+      - "3 1 3 4 -4 2 * + + ^ ^"
+    loop_control:
+      loop_var: polish_expr

@@ -2,7 +2,9 @@
 set -ev
 
 # Make sure the folder containing the workchains is in the python path before the daemon is started
-export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/.ci"
+LOCAL_TESTS="${GITHUB_WORKSPACE}/.github/local_tests"
+
+export PYTHONPATH="${PYTHONPATH}:${LOCAL_TESTS}"
 
 # pytest options:
 # - report timings of tests
@@ -19,18 +21,18 @@ export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov=aiida"
 
 # daemon tests
 verdi daemon start 4
-verdi -p test_${AIIDA_TEST_BACKEND} run .ci/test_daemon.py
+verdi -p test_${AIIDA_TEST_BACKEND} run ${LOCAL_TESTS}/test_daemon.py
 verdi daemon stop
 
 # tests for the testing infrastructure
-pytest --noconftest .ci/test_test_manager.py
-pytest --noconftest .ci/test_ipython_magics.py
-pytest --noconftest .ci/test_profile_manager.py
-python .ci/test_plugin_testcase.py  # uses custom unittest test runner
+pytest --noconftest ${LOCAL_TESTS}/test_test_manager.py
+pytest --noconftest ${LOCAL_TESTS}/test_ipython_magics.py
+pytest --noconftest ${LOCAL_TESTS}/test_profile_manager.py
+python ${LOCAL_TESTS}/test_plugin_testcase.py  # uses custom unittest test runner
 
-# Until the `.ci/pytest` tests are moved within `tests` we have to run them separately and pass in the path to the
+# Until the `${LOCAL_TESTS}/pytest` tests are moved within `tests` we have to run them separately and pass in the path to the
 # `conftest.py` explicitly, because otherwise it won't be able to find the fixtures it provides
-AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests/conftest.py .ci/pytest
+AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests/conftest.py ${LOCAL_TESTS}/pytest
 
 # main aiida-core tests
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests

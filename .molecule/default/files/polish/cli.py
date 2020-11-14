@@ -99,7 +99,6 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     import importlib
     import sys
     import time
-    import uuid
     from aiida.orm import Code, Int, Str
     from aiida.engine import run_get_node, submit
 
@@ -118,11 +117,10 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
         click.echo(f"the expression '{expression}' is invalid: {error}")
         sys.exit(1)
 
-    filename = f'polish_{str(uuid.uuid4().hex)}.py'
     evaluated = lib_expression.evaluate(expression, modulo)
     outlines, stack = lib_workchain.generate_outlines(expression)
     outlines_string = lib_workchain.format_outlines(outlines, use_calculations, use_calcfunctions)
-    lib_workchain.write_workchain(outlines_string, filename=filename)
+    filename = lib_workchain.write_workchain(outlines_string)
 
     click.echo(f'Expression: {expression}')
 

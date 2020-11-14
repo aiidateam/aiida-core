@@ -1,0 +1,34 @@
+# A small configuration for use in local CI testing,
+# to create a container with the current code installed.
+
+# Simply install docker, then run:
+# $ docker-compose -f .docker/docker-aiida-core.yml up -d --build
+# $ docker exec aiida-core wait-for-services
+# use local aiida-core code
+# $ docker exec -i aiida-core /bin/bash -c 'pip install --no-deps -e tmp/mount_folder/'
+# $ docker exec -it --user aiida aiida-core /bin/bash
+
+# and to power down, after testing:
+# $ docker-compose -f .docker/docker-aiida-core.yml down
+
+
+version: '3.4'
+services:
+  aiida:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    image: "aiidateam/aiida-core:latest"
+    container_name: aiida-core
+    networks:
+      - aiida-core
+    volumes:
+      - "../:/tmp/mount_folder"
+    healthcheck:
+      test: wait-for-services
+      interval: 30s
+      timeout: 30s
+      retries: 5
+
+networks:
+  aiida-core:

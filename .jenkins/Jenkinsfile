@@ -1,0 +1,115 @@
+// Note: this part might happen on a different node than
+// the one that will run the pipeline below, see
+// https://stackoverflow.com/questions/44805076
+// but it should be ok for us as we only have one node
+def user_id
+def group_id
+node {
+  user_id = sh(returnStdout: true, script: 'id -u').trim()
+  group_id = sh(returnStdout: true, script: 'id -g').trim()
+}
+
+pipeline {
+    agent {
+        dockerfile {
+            filename 'Dockerfile'
+            dir '.jenkins'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+            additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
+        }
+    }
+    environment {
+        MOLECULE_GLOB = ".molecule/*/molecule.yml"
+        AIIDA_TEST_WORKERS=4
+        RUN_ALSO_DJANGO="true"
+        RUN_ALSO_SQLALCHEMY="true"
+    }
+    stages {
+
+        stage ('Display versions') {
+        steps {
+                sh '''
+                ansible --version
+                molecule --version
+                '''
+            }
+        }
+        stage('Test') {
+            failFast false // It is the default, but I still put it for future reference
+                           // failFast would stop as soon as there is a failing test
+            parallel {
+                stage('Test-Django') {
+                    environment {
+                        AIIDA_TEST_BACKEND="django"
+                    }
+                    when {
+                        environment name: 'RUN_ALSO_DJANGO', value: 'true'
+                    }
+                    steps {
+                        sh 'sudo -E molecule test --all --parallel'
+                    }
+                }
+                stage('Test-SQLAlchemy') {
+                    environment {
+                        AIIDA_TEST_BACKEND="sqlalchemy"
+                    }
+                    when {
+                        environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
+                    }
+                    steps {
+                        sh 'sudo -E molecule test --all --parallel'
+                    }
+                }
+            }
+        }
+    }
+    post {
+        always {
+            // Some debug stuff
+            sh 'whoami; pwd; echo $AIIDA_TEST_BACKEND'
+            sh 'ls -a'
+	    cleanWs()
+        }
+        success {
+            echo 'The run finished successfully!'
+        }
+        unstable {
+            echo 'This run is unstable...'
+        }
+        failure {
+            echo "This run failed..."
+        }
+        //  You can trigger actions when the status change (e.g. it starts failing,
+        // or it starts working again - e.g. sending emails or similar)
+        // possible variables: see e.g. https://qa.nuxeo.org/jenkins/pipeline-syntax/globals
+        // Other valid names: fixed, regression (opposite of fixed), aborted (by user, typically)
+        // Note that I had problems with email, I don't know if it is a configuration problem
+        // or a missing plugin.
+        changed {
+            script {
+                if (currentBuild.getPreviousBuild()) {
+                    echo "The state changed from ${currentBuild.getPreviousBuild().result} to ${currentBuild.currentResult}."
+                }
+                else {
+                    echo "This is the first build, and its status is: ${currentBuild.currentResult}."
+                }
+            }
+        }
+    }
+    options {
+        // we do not want the whole run to hang forever -
+ 	// we set a total timeout of 1 hour
+        timeout(time: 60, unit: 'MINUTES')
+    }
+}
+
+
+// Other things to add possibly:
+// global options (or per-stage options) with timeout: https://jenkins.io/doc/book/pipeline/syntax/#options-example
+// retry-on-failure for some specific tasks: https://jenkins.io/doc/book/pipeline/syntax/#available-stage-options
+// parameters: https://jenkins.io/doc/book/pipeline/syntax/#parameters
+// input: interesting for user input before continuing: https://jenkins.io/doc/book/pipeline/syntax/#input
+// when conditions, e.g. to depending on details on the commit (e.g. only when specific
+//     files are changed, where there is a string in the commit log, for a specific branch,
+//     for a Pull Request,for a specific environment variable, ...):
+//     https://jenkins.io/doc/book/pipeline/syntax/#when

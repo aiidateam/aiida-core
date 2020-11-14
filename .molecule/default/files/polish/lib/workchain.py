@@ -10,8 +10,9 @@
 """Functions to dynamically generate a WorkChain from a reversed polish notation expression."""
 
 import collections
-import errno
+import hashlib
 import os
+from pathlib import Path
 
 from string import Template
 from .expression import OPERATORS  # pylint: disable=relative-beyond-top-level
@@ -185,7 +186,7 @@ def format_indent(level=0, width=INDENTATION_WIDTH):
     return ' ' * level * width
 
 
-def write_workchain(outlines, directory=None, filename=None):
+def write_workchain(outlines, directory=None):
     """
     Given a list of string formatted outlines, write the corresponding workchains to file
     """
@@ -197,22 +198,10 @@ def write_workchain(outlines, directory=None, filename=None):
     if directory is None:
         directory = os.path.join(dirpath, os.path.pardir, 'polish_workchains')
 
-    if filename is None:
-        filename = os.path.join(directory, 'polish.py')
-    else:
-        filename = os.path.join(directory, filename)
+    directory = Path(directory)
 
-    try:
-        os.makedirs(directory)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
-
-    try:
-        init_file = os.path.join(directory, '__init__.py')
-        os.utime(init_file, None)
-    except OSError:
-        open(init_file, 'a').close()
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / '__init__.py').touch()
 
     with open(template_file_base, 'r') as handle:
         template_base = handle.readlines()
@@ -220,32 +209,39 @@ def write_workchain(outlines, directory=None, filename=None):
     with open(template_file_workchain, 'r') as handle:
         template_workchain = Template(handle.read())
 
-    with open(filename, 'w') as handle:
+    code_strings = []
 
-        for line in template_base:
-            handle.write(line)
-        handle.write('\n')
+    for line in template_base:
+        code_strings.append(line)
+    code_strings.append('\n')
 
-        counter = len(outlines) - 1
-        for outline in outlines:
+    counter = len(outlines) - 1
+    for outline in outlines:
 
-            outline_string = ''
-            for subline in outline.split('\n'):
-                outline_string += f'\t\t\t{subline}\n'
+        outline_string = ''
+        for subline in outline.split('\n'):
+            outline_string += f'\t\t\t{subline}\n'
 
-            if counter == len(outlines) - 1:
-                child_class = None
-            else:
-                child_class = f'Polish{counter + 1:02d}WorkChain'
+        if counter == len(outlines) - 1:
+            child_class = None
+        else:
+            child_class = f'Polish{counter + 1:02d}WorkChain'
 
-            subs = {
-                'class_name': f'Polish{counter:02d}WorkChain',
-                'child_class': child_class,
-                'outline': outline_string,
-            }
-            handle.write(template_workchain.substitute(**subs))
-            handle.write('\n\n')
+        subs = {
+            'class_name': f'Polish{counter:02d}WorkChain',
+            'child_class': child_class,
+            'outline': outline_string,
+        }
+        code_strings.append(template_workchain.substitute(**subs))
+        code_strings.append('\n\n')
 
-            counter -= 1
+        counter -= 1
 
-    return filename
+    code_string = '\n'.join(code_strings)
+    hashed = hashlib.md5(code_string.encode('utf8')).hexdigest()
+
+    filepath = directory / f'polish_{hashed}.py'
+
+    filepath.write_text(code_string)
+
+    return filepath.name

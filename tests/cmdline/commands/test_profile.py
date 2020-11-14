@@ -131,7 +131,7 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         """Test the `verdi profile delete` command.
 
         .. note:: we skip deleting the database as this might require sudo rights and this is tested in the CI tests
-            defined in the file `.ci/test_profile.py`
+            defined in the file `.github/local_tests/test_profile.py`
         """
         self.mock_profiles()
 

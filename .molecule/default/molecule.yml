@@ -1,0 +1,49 @@
+scenario:
+  create_sequence:
+    - create
+    - prepare
+  destroy_sequence:
+    - destroy
+  test_sequence:
+    - destroy
+    - create
+    - prepare
+    - verify
+    - destroy
+# configuration for building the isolated container
+driver:
+  name: docker
+platforms:
+- name: molecule-aiida-${AIIDA_TEST_BACKEND:-django}
+  image: molecule_tests
+  context: "../.."
+  command: /sbin/my_init
+  healthcheck:
+    test: wait-for-services
+  volumes:
+  - molecule-pip-cache-${AIIDA_TEST_BACKEND:-django}:/home/.cache/pip
+  privileged: true
+  retries: 3
+# configuration for how to setup the container
+provisioner:
+  name: ansible
+  # log: true  # for debugging
+  config_options:
+    defaults:
+      # nicer stdout printing
+      stdout_callback: yaml
+      bin_ansible_callbacks: true
+      # add timing to tasks
+      callback_whitelist: profile_tasks
+  inventory:
+    hosts:
+      all:
+        vars:
+          venv_bin: /opt/conda/bin
+          ansible_python_interpreter: "{{ venv_bin }}/python"
+          aiida_backend: ${AIIDA_TEST_BACKEND:-django}
+          aiida_workers: ${AIIDA_TEST_WORKERS:-2}
+  playbooks:
+    create: create_docker.yml
+    prepare: setup_aiida.yml
+    verify: run_tests.yml

@@ -1,0 +1,85 @@
+- name: Python Environment
+  hosts: all
+  gather_facts: false
+
+  # run as root user
+
+  tasks:
+
+  - name: pip install aiida-core requirements
+    pip:
+      chdir: aiida-core
+      # TODO dynamically change for python version
+      requirements: requirements/requirements-py-3.7.txt
+      executable: "{{ venv_bin }}/pip"
+      extra_args: --cache-dir /home/.cache/pip
+
+  - name: pip install aiida-core
+    pip:
+      chdir: aiida-core
+      name: .
+      executable: "{{ venv_bin }}/pip"
+      extra_args: --no-deps
+
+- name: AiiDa Environment
+  hosts: all
+  gather_facts: false
+
+  # run as aiida user
+  become: true
+  become_method: su
+  become_user: aiida
+
+  tasks:
+
+  - name: reentry scan
+    command: "{{ venv_bin }}/reentry scan"
+    changed_when: false
+
+  - name: verdi quicksetup
+    expect:
+      command: >
+        {{ venv_bin }}/verdi quicksetup
+        --non-interactive
+        --profile "{{ aiida_backend }}"
+        --email "aiida@localhost"
+        --first-name "ringo"
+        --last-name "starr"
+        --institution "the beatles"
+        --db-backend "{{ aiida_backend }}"
+      responses:
+        ".*Use it?.*": "y"
+      timeout: null
+      creates: "${HOME}/.aiida/repository/{{ aiida_backend }}"
+
+  - name: "Check if computer is already present"
+    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost"
+    ignore_errors: true
+    changed_when: false
+    no_log: true
+    register: aiida_check_computer
+
+  - name: verdi computer setup localhost
+    when: aiida_check_computer.rc != 0
+    shell: >
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} computer setup
+      --non-interactive
+      --label "localhost"
+      --description "this computer"
+      --hostname "localhost"
+      --transport local
+      --scheduler direct
+      --work-dir /home/aiida/aiida_run/
+      --mpirun-command "mpirun -np {tot_num_mpiprocs}"
+      --mpiprocs-per-machine 1
+
+  - name: verdi computer configure localhost
+    when: aiida_check_computer.rc != 0
+    shell: >
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} computer configure local "localhost"
+      --non-interactive
+      --safe-interval 0.0
+
+  - name: verdi start daemon with {{ aiida_workers }} workers
+    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}"
+    register: aiida_start_daemon

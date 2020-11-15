@@ -1,13 +1,21 @@
+# when we run locally, we must first create a docker container
+# then we run the playbooks inside that
+
 scenario:
   create_sequence:
     - create
     - prepare
+  converge_sequence:
+    - create
+    - prepare
+    - converge
   destroy_sequence:
     - destroy
   test_sequence:
     - destroy
     - create
     - prepare
+    - converge
     - verify
     - destroy
 # configuration for building the isolated container
@@ -24,10 +32,15 @@ platforms:
   - molecule-pip-cache-${AIIDA_TEST_BACKEND:-django}:/home/.cache/pip
   privileged: true
   retries: 3
-# configuration for how to setup the container
+# configuration for how to run the playbooks
 provisioner:
   name: ansible
   # log: true  # for debugging
+  playbooks:
+    create: create_docker.yml
+    prepare: setup_python.yml
+    converge: setup_aiida.yml
+    verify: run_tests.yml
   config_options:
     defaults:
       # nicer stdout printing
@@ -42,11 +55,12 @@ provisioner:
     hosts:
       all:
         vars:
+          become_method: su
+          aiida_user: aiida
+          aiida_core_dir: /aiida-core
+          aiida_pip_cache: /home/.cache/pip
           venv_bin: /opt/conda/bin
           ansible_python_interpreter: "{{ venv_bin }}/python"
           aiida_backend: ${AIIDA_TEST_BACKEND:-django}
           aiida_workers: ${AIIDA_TEST_WORKERS:-2}
-  playbooks:
-    create: create_docker.yml
-    prepare: setup_aiida.yml
-    verify: run_tests.yml
+          aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-django}

@@ -1,11 +1,14 @@
-- name: Run workchain tests
+- name: Run tests against environment
   hosts: all
   gather_facts: false
 
   # run as aiida user
   become: true
-  become_method: su
-  become_user: aiida
+  become_method: "{{ become_method }}"
+  become_user: "{{ aiida_user }}"
+
+  environment:
+    AIIDA_PATH: "{{ aiida_path }}"
 
   vars:
     aiida_add_code: "add"
@@ -30,20 +33,28 @@
   - name: Copy workchain files
     copy:
       src: polish
-      dest: "${HOME}"
+      dest: "${HOME}/{{ aiida_backend }}"
 
-  - name: Add workchains to pythonpath and daemons
-    # note verdi daemon restart did not seem to update the environmanetal variables?
+  - name: get python path including workchains
+    shell: echo "${PYTHONPATH}:${HOME}/{{ aiida_backend }}/polish"
+    register: echo_pythonpath
+
+  - set_fact:
+      aiida_pythonpath: "{{ echo_pythonpath.stdout }}"
+
+  - name: Reset pythonpath of daemon workers
+    # note `verdi daemon restart` did not seem to update the environmental variables?
     shell: |
-      export PYTHONPATH="${PYTHONPATH}:${HOME}/polish"
       {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon stop
       {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}
+    environment:
+      PYTHONPATH: "{{ aiida_pythonpath }}"
 
-  - name: batch polish notation workchains
-    include_tasks: run_polish_batch.yml
+  - name: run polish notation workchains (parallel)
+    include_tasks: run_polish_parallel.yml
     vars:
-      polish_script: "${HOME}/polish/cli.py"
-      polish_timeout: 301
+      polish_script: "${HOME}/{{ aiida_backend }}/polish/cli.py"
+      polish_timeout: 600
       all_expressions:
         - "1 -2 -1 4 -5 -5 * * * * +"
         - "2 1 3 3 -1 + ^ ^ +"
@@ -52,4 +63,4 @@
         - "3 1 1 5 ^ ^ ^"
         - "3 1 3 4 -4 2 * + + ^ ^"
       polish_expressions: "{{ item }}"
-    loop: "{{ all_expressions | batch(2) | list }}"
+    loop: "{{ all_expressions | batch(6) | list }}"

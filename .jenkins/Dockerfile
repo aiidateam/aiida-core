@@ -1,12 +1,10 @@
-FROM quay.io/ansible/toolset:0.2
+FROM aiidateam/aiida-prerequisites:0.2.1
 
-# install sudo and docker
+# to run the tests
+RUN pip install ansible~=2.10.0 molecule~=3.1.0
+
 RUN apt-get update && \
-    apt-get install -y curl gnupg-agent sudo software-properties-common && \
-    curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - && \
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian stretch stable" && \
-    apt-get update && \
-    apt-get install -y docker-ce docker-ce-cli containerd.io && \
+    apt-get install -y sudo && \
     apt-get autoclean
 
 ARG uid=1000
@@ -16,12 +14,12 @@ ARG gid=1000
 RUN groupadd -g ${gid} jenkins && useradd -m -s /bin/bash -u ${uid} -g ${gid} jenkins
 
 # add to sudoers and don't ask password
-RUN adduser jenkins sudo && adduser jenkins adm
+RUN adduser jenkins sudo && adduser jenkins adm && adduser jenkins root
 RUN echo "%sudo   ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/nopwd
 RUN mkdir -p /scratch/jenkins/ && chown jenkins /scratch/jenkins/ && chmod o+rX /scratch/
 
-# install rest of the packages as normal user
-USER jenkins
-
-# set $HOME, create git directory
+# set $HOME to the directory where the repository is mounted
 ENV HOME /home/jenkins
+
+# this is added since otherwise jenkins prints /etc/profile contents for all sh commands
+RUN echo 'set +x' | cat - /etc/profile > temp && mv temp /etc/profile

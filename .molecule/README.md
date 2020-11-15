@@ -11,27 +11,30 @@ $ pip install tox
 $ tox -e molecule-django
 ```
 
-This wil run the `test` scenario (defined in `molecule.yml`) which:
+**NOTE**: if you wan to run molecule directly, ensure that you set `export MOLECULE_GLOB=.molecule/*/config_local.yml`.
+
+This wil run the `test` scenario (defined in `config_local.yml`) which:
 
 1. Deletes any existing container with the same label
 2. Creates a docker container, based on the `Dockerfile` in this folder, which also copies the repository code into the container (see `create_docker.yml`).
-3. Installs aiida-core and sets up an AiiDA profile and computer (see `setup.yml`).
-4. Sets up a number of workchains of varying complexity,defined by [reverse polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation), and runs them (see `run_tests.yml`).
-5. Deletes the container.
+3. Installs aiida-core (see `setup_python.yml`)
+4. Sets up an AiiDA profile and computer (see `setup_aiida.yml`).
+5. Sets up a number of workchains of varying complexity,defined by [reverse polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation), and runs them (see `run_tests.yml`).
+6. Deletes the container.
 
-If you wish to setup the container for manual inspection (i.e. only run steps 2 and 3) you can run:
+If you wish to setup the container for manual inspection (i.e. only run steps 2 - 4) you can run:
 
 ```console
-$ tox -e molecule-django create
+$ tox -e molecule-django converge
 ```
 
-Then you can run the tests (step 4) separately with:
+Then you can jump into this container or run the tests (step 5) separately with:
 
 ```console
 $ tox -e molecule-django validate
 ```
 
-and finally run step 5:
+and finally run step 6:
 
 ```console
 $ tox -e molecule-django destroy

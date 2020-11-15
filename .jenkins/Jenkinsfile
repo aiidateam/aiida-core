@@ -14,29 +14,47 @@ pipeline {
         dockerfile {
             filename 'Dockerfile'
             dir '.jenkins'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
+            args '-u root:root -v jenkins-pip-cache:/home/jenkins/.cache/pip/'
             additionalBuildArgs "--build-arg uid=${user_id} --build-arg gid=${group_id}"
         }
     }
     environment {
-        MOLECULE_GLOB = ".molecule/*/molecule.yml"
-        AIIDA_TEST_WORKERS=2
-        RUN_ALSO_DJANGO="true"
-        RUN_ALSO_SQLALCHEMY="true"
+        MOLECULE_GLOB = ".molecule/*/config_jenkins.yml"
+        AIIDA_TEST_WORKERS = 4
+        RUN_ALSO_DJANGO = "true"
+        RUN_ALSO_SQLALCHEMY = "true"
     }
     stages {
-
-        stage ('Display versions') {
-        steps {
-                sh '''
-                ansible --version
-                molecule --version
-                '''
+        stage ('Init services') {
+            steps {
+                // we must run /sbin/my_init directly (rather than in a separate process)
+                // see: https://github.com/phusion/baseimage-docker/blob/18.04-1.0.0/image/bin/my_init
+                sh '/etc/my_init.d/00_regen_ssh_host_keys.sh'
+                sh '/etc/my_init.d/10_create-system-user.sh'
+                // we cannot run this task because it tries to write to the jenkins log file without permission:
+                // Cannot contact : java.io.FileNotFoundException: /var/jenkins_home/workspace/aiida_core_aiidateam_PR-4565@2@tmp/durable-65ec45aa/jenkins-log.txt (Permission denied)
+                // sh '/etc/my_init.d/10_syslog-ng.init'
+                sh '/etc/my_init.d/20_start-rabbitmq.sh'
+                sh '/etc/my_init.d/30_start-postgres.sh'
+                sh '/sbin/my_init --skip-startup-files --no-kill-all-on-exit 2> /dev/null &'
             }
         }
+        stage ('Prepare environment') {
+            steps {
+                    // Clean work dir
+                    // often runs reshare the same folder, and it might contain old data from previous runs
+                    // this is particularly problematic when a folder is deleted from git but .pyc files are left in
+                    sh 'git clean -fdx'
+                    // this folder is mounted from a volume so will have wrong permissions
+                    sh 'sudo chown root:root /home/jenkins/.cache'
+                    // prepare environment (install python dependencies etc)
+                    sh 'molecule prepare --force'
+                    // for some reason if we don't change permissions here then python can't import the modules
+                    sh 'sudo chmod -R a+rwX /opt/conda/lib/python3.7/site-packages/'
+                }
+            }
         stage('Test') {
-            failFast false // It is the default, but I still put it for future reference
-                           // failFast would stop as soon as there is a failing test
+            failFast false // Do not kill one if the other fails
             parallel {
                 stage('Test-Django') {
                     environment {
@@ -46,7 +64,7 @@ pipeline {
                         environment name: 'RUN_ALSO_DJANGO', value: 'true'
                     }
                     steps {
-                        sh 'sudo -E molecule test --all --parallel'
+                        sh 'molecule test --parallel'
                     }
                 }
                 stage('Test-SQLAlchemy') {
@@ -57,7 +75,7 @@ pipeline {
                         environment name: 'RUN_ALSO_SQLALCHEMY', value: 'true'
                     }
                     steps {
-                        sh 'sudo -E molecule test --all --parallel'
+                        sh 'molecule test --parallel'
                     }
                 }
             }
@@ -66,9 +84,10 @@ pipeline {
     post {
         always {
             // Some debug stuff
-            sh 'whoami; pwd'
-            sh 'ls -a'
-            sh 'sudo docker ps'
+            sh '''
+               whoami
+               pwd
+               '''
 	    cleanWs()
         }
         success {

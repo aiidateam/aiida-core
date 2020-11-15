@@ -1,39 +1,19 @@
-- name: Python Environment
-  hosts: all
-  gather_facts: false
-
-  # run as root user
-
-  tasks:
-
-  - name: pip install aiida-core requirements
-    pip:
-      chdir: aiida-core
-      # TODO dynamically change for python version
-      requirements: requirements/requirements-py-3.7.txt
-      executable: "{{ venv_bin }}/pip"
-      extra_args: --cache-dir /home/.cache/pip
-
-  - name: pip install aiida-core
-    pip:
-      chdir: aiida-core
-      name: .
-      executable: "{{ venv_bin }}/pip"
-      extra_args: --no-deps
-
-- name: AiiDa Environment
+- name: Set up AiiDa Environment
   hosts: all
   gather_facts: false
 
   # run as aiida user
   become: true
-  become_method: su
-  become_user: aiida
+  become_method: "{{ become_method }}"
+  become_user: "{{ aiida_user }}"
+
+  environment:
+    AIIDA_PATH: "{{ aiida_path }}"
 
   tasks:
 
   - name: reentry scan
-    command: "{{ venv_bin }}/reentry scan"
+    shell: "{{ venv_bin }}/reentry scan"
     changed_when: false
 
   - name: verdi quicksetup
@@ -50,7 +30,7 @@
       responses:
         ".*Use it?.*": "y"
       timeout: null
-      creates: "${HOME}/.aiida/repository/{{ aiida_backend }}"
+      creates: "{{ aiida_path }}/repository/{{ aiida_backend }}"
 
   - name: "Check if computer is already present"
     shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost"
@@ -69,7 +49,7 @@
       --hostname "localhost"
       --transport local
       --scheduler direct
-      --work-dir /home/aiida/aiida_run/
+      --work-dir {{ aiida_path }}/local_work_dir/
       --mpirun-command "mpirun -np {tot_num_mpiprocs}"
       --mpiprocs-per-machine 1
 
@@ -82,4 +62,12 @@
 
   - name: verdi start daemon with {{ aiida_workers }} workers
     shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}"
-    register: aiida_start_daemon
+
+  - name: get verdi status
+    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} status"
+    register: verdi_status
+    changed_when: false
+
+  - name: print verdi status
+    debug:
+      var: verdi_status.stdout

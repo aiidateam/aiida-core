@@ -1,0 +1,50 @@
+# On Jenkins we are already inside the container,
+# so we simply run the playbooks in the local environment 
+
+scenario:
+  converge_sequence:
+    - prepare
+    - converge
+  test_sequence:
+    - converge
+    - verify
+# connect to local environment
+driver:
+  name: delegated
+  options:
+    managed: False
+    ansible_connection_options:
+      ansible_connection: local
+platforms:
+- name: molecule-aiida-${AIIDA_TEST_BACKEND:-django}
+# configuration for how to run the playbooks
+provisioner:
+  name: ansible
+  # log: true  # for debugging
+  playbooks:
+    prepare: setup_python.yml
+    converge: setup_aiida.yml
+    verify: run_tests.yml
+  config_options:
+    defaults:
+      # nicer stdout printing
+      stdout_callback: yaml
+      bin_ansible_callbacks: true
+      # add timing to tasks
+      callback_whitelist: profile_tasks
+    ssh_connection:
+      # reduce network operations
+      pipelining: True
+  inventory:
+    hosts:
+      all:
+        vars:
+          become_method: sudo
+          aiida_user: aiida
+          aiida_core_dir: $WORKSPACE
+          aiida_pip_cache: /home/jenkins/.cache/pip
+          venv_bin: /opt/conda/bin
+          ansible_python_interpreter: "{{ venv_bin }}/python"
+          aiida_backend: ${AIIDA_TEST_BACKEND:-django}
+          aiida_workers: ${AIIDA_TEST_WORKERS:-2}
+          aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-django}

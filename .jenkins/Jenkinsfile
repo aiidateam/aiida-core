@@ -32,7 +32,6 @@ pipeline {
                 ansible --version
                 molecule --version
                 '''
-                sh 'sudo docker ps'
             }
         }
         stage('Test') {
@@ -67,8 +66,9 @@ pipeline {
     post {
         always {
             // Some debug stuff
-            sh 'whoami; pwd; echo $AIIDA_TEST_BACKEND'
+            sh 'whoami; pwd'
             sh 'ls -a'
+            sh 'sudo docker ps'
 	    cleanWs()
         }
         success {
@@ -99,8 +99,8 @@ pipeline {
     }
     options {
         // we do not want the whole run to hang forever -
- 	// we set a total timeout of 1 hour
-        timeout(time: 60, unit: 'MINUTES')
+ 	    // we set a total timeout of 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
     }
 }
 

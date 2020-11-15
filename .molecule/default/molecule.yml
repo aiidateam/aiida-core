@@ -35,6 +35,9 @@ provisioner:
       bin_ansible_callbacks: true
       # add timing to tasks
       callback_whitelist: profile_tasks
+    ssh_connection:
+      # reduce network operations
+      pipelining: True
   inventory:
     hosts:
       all:

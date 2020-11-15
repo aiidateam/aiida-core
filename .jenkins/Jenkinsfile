@@ -20,7 +20,7 @@ pipeline {
     }
     environment {
         MOLECULE_GLOB = ".molecule/*/molecule.yml"
-        AIIDA_TEST_WORKERS=4
+        AIIDA_TEST_WORKERS=2
         RUN_ALSO_DJANGO="true"
         RUN_ALSO_SQLALCHEMY="true"
     }
@@ -32,6 +32,7 @@ pipeline {
                 ansible --version
                 molecule --version
                 '''
+                sh 'sudo docker ps'
             }
         }
         stage('Test') {

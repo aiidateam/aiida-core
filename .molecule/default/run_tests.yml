@@ -39,17 +39,37 @@
       {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon stop
       {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}
 
-  - name: iterate polish notations
-    include_tasks: run_polish_workchain.yml
+  - name: start polish notation workchains
+    shell: |
+      export PYTHONPATH="${PYTHONPATH}:${HOME}/polish"
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} run "{{ polish_script }}" -X {{ aiida_add_code }}! -C -F -d -t {{ polish_timeout }} "{{ polish_expr }}"
     vars:
       polish_script: "${HOME}/polish/cli.py"
       polish_timeout: 600
     loop:
+      - "3 1 3 4 -4 2 * + + ^ ^"
       - "1 -2 -1 4 -5 -5 * * * * +"
       - "2 1 3 3 -1 + ^ ^ +"
       - "3 -5 -1 -4 + * ^"
       - "2 4 2 -4 * * +"
       - "3 1 1 5 ^ ^ ^"
-      - "3 1 3 4 -4 2 * + + ^ ^"
     loop_control:
       loop_var: polish_expr
+    async: 300
+    poll: 0
+    register: async_results
+
+  - name: Wait for polish workchains to finish
+    async_status:
+      jid: "{{ async_result_item.ansible_job_id }}"
+    loop: "{{ async_results.results }}"
+    loop_control:
+      loop_var: "async_result_item"
+    register: async_poll_results
+    until: async_poll_results.finished
+    retries: 60
+    delay: 15
+
+  - name: print polish workchain stdout
+    debug:
+      var: async_poll_results.results | map(attribute='stdout', default='')

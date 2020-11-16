@@ -1,5 +1,72 @@
 # Changelog
 
+## v1.5.0
+
+In this minor version release, support for Python 3.9 is added [[#4301]](https://github.com/aiidateam/aiida-core/pull/4301), while support for Python 3.5 is dropped [[#4386]](https://github.com/aiidateam/aiida-core/pull/4386).
+This version is compatible with all current Python versions that are not end-of-life:
+ * 3.6
+ * 3.7
+ * 3.8
+ * 3.9
+
+
+### Features
+- Process functions (`calcfunction` and `workfunction`) can now be submitted to the daemon just like `CalcJob`s and `WorkChain`s [[#4539]](https://github.com/aiidateam/aiida-core/pull/4539)
+- REST API: list endpoints at base URL [[#4412]](https://github.com/aiidateam/aiida-core/pull/4412)
+- REST API: new `full_types_count` endpoint that counts the number of nodes for each type of node [[#4277]](https://github.com/aiidateam/aiida-core/pull/4277)
+- `ProcessBuilder`: allow unsetting of inputs through attribute deletion [[#4419]](https://github.com/aiidateam/aiida-core/pull/4419)
+- `verdi migrate`: make `--in-place` work across different file systems [[#4393]](https://github.com/aiidateam/aiida-core/pull/4393)
+
+### Improvements
+- Added remaining original documentation that didn't make it into the first step of the recent major overhaul of v1.3.0
+- `verdi process show`: order by ctime and print process label [[#4407]](https://github.com/aiidateam/aiida-core/pull/4407)
+- `LinkManager`: fix inaccuracy in exception message for non-existent link [[#4388]](https://github.com/aiidateam/aiida-core/pull/4388)
+- Add `reset` method to`ProgressReporterAbstract` [[#4522]](https://github.com/aiidateam/aiida-core/pull/4522)
+- Improve the deprecation warning for `Node.open` outside context manager [[#4434]](https://github.com/aiidateam/aiida-core/pull/4434)
+
+### Bug fixes
+- `SlurmScheduler`: fix bug in validation of job resources [[#4555]](https://github.com/aiidateam/aiida-core/pull/4555)
+- Fix `ZeroDivisionError` in worker slots check [[#4513]](https://github.com/aiidateam/aiida-core/pull/4513)
+- `CalcJob`: only attempt to clean up the retrieve temporary folder after parsing if it is present [[#4379]](https://github.com/aiidateam/aiida-core/pull/4379)
+- Add missing entry point groups to the mapping [[#4395]](https://github.com/aiidateam/aiida-core/pull/4395)
+- REST API: the `process_type` can now identify pathological empty-stringed or null entries in the database [[#4277]](https://github.com/aiidateam/aiida-core/pull/4277)
+
+
+### Developers
+- `verdi group delete`: deprecate and ignore the `--clear` option [[#4357]](https://github.com/aiidateam/aiida-core/pull/4357)
+- Replace old format string interpolation with f-strings [[#4400]](https://github.com/aiidateam/aiida-core/pull/4400)
+- CI: move `pylint` configuration to `pyproject.toml` [[#4411]](https://github.com/aiidateam/aiida-core/pull/4411)
+- CI: use `-e` install for tox + add docker-compose for isolated RabbitMQ [[#4375]](https://github.com/aiidateam/aiida-core/pull/4375)
+- CI: add coverage patch threshold to prevent false positives [[#4413]](https://github.com/aiidateam/aiida-core/pull/4413)
+- CI: Allow for mypy type checking of third-party imports [[#4553]](https://github.com/aiidateam/aiida-core/pull/4553)
+
+### Dependencies
+- Update requirement `pytest~=6.0` and use `pyproject.toml` [[#4410]](https://github.com/aiidateam/aiida-core/pull/4410)
+
+### Archive (import/export) refactor:
+- The refactoring goal was to pave the way for the implementation of a new archive format in v2.0.0 ([ aiidateamAEP005](https://github.com/aiidateam/AEP/pull/21))
+- Three abstract+concrete interface classes are defined; writer, reader, migrator, which are **independent of theinternal structure of the archive**. These classes are used within the export/import code.
+- The code in `aiida/tools/importexport` has been largely re-written, in particular adding `aiida/toolsimportexport/archive`, which contains this code for interfacing with an archive, and **does not require connectionto an AiiDA profile**.
+- The export logic has been re-written; to minimise required queries (faster), and to allow for "streaming" datainto the writer (minimise RAM requirement with new format). It is intended that a similiar PR will be made for the import code.
+- A general progress bar implementation is now available in `aiida/common/progress_reporter.py`. All correspondingCLI commands now also have `--verbosity` option.
+- Merged PRs:
+    - Refactor export archive ([#4448](https://github.com/aiidateam/aiida-core/pull/4448) & [#4534](https://githubcom/aiidateam/aiida-core/pull/4534))
+    - Refactor import archive ([#4510](https://github.com/aiidateam/aiida-core/pull/4510))
+    - Refactor migrate archive ([#4532](https://github.com/aiidateam/aiida-core/pull/4532))
+    - Add group extras to archive ([#4521](https://github.com/aiidateam/aiida-core/pull/4521))
+    - Refactor cmdline progress bar ([#4504](https://github.com/aiidateam/aiida-core/pull/4504) & [#4522](https:/github.com/aiidateam/aiida-core/pull/4522))
+- Updated archive version from `0.9` -> `0.10` ([#4561](https://github.com/aiidateam/aiida-core/pull/4561)
+- Deprecations: `export_zip`, `export_tar`, `export_tree`, `extract_zip`, `extract_tar` and `extract_tree`functions. `silent` key-word in the `export` function
+- Removed: `ZipFolder` class
+
+
+## v1.4.3
+
+### Bug fixes
+- RabbitMQ: update `topika` requirement to fix SSL connections and remove validation of `broker_parameters` from profile [[#4542]](https://github.com/aiidateam/aiida-core/pull/4542)
+- Fix `UnboundLocalError` in `aiida.cmdline.utils.edit_multiline_template`, which affected `verdi code/computer setup` [[#4436]](https://github.com/aiidateam/aiida-core/pull/4436)
+
+
 ## v1.4.2
 
 ### Critical bug fixes

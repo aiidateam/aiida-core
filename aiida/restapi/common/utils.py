@@ -208,8 +208,8 @@ class Utils:
             return (resource_type, page, node_id, query_type)
 
         if path[0] in [
-            'projectable_properties', 'statistics', 'full_types', 'download', 'download_formats', 'report', 'status',
-            'input_files', 'output_files'
+            'projectable_properties', 'statistics', 'full_types', 'full_types_count', 'download', 'download_formats',
+            'report', 'status', 'input_files', 'output_files'
         ]:
             query_type = path.pop(0)
             if path:

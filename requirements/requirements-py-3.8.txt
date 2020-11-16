@@ -4,6 +4,7 @@ aldjemy==0.9.1
 alembic==1.4.1
 aniso8601==8.0.0
 appnope==0.1.0
+archive-path==0.2.1
 ase==3.19.0
 attrs==19.3.0
 Babel==2.8.0
@@ -146,7 +147,7 @@ tabulate==0.8.6
 terminado==0.8.3
 testpath==0.4.4
 toml==0.10.1
-topika==0.2.1
+topika==0.2.2
 tornado==4.5.3
 tqdm==4.45.0
 traitlets==4.3.3

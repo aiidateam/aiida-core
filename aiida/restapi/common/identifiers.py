@@ -103,16 +103,26 @@ def get_full_type_filters(full_type):
         node_type = escape_for_sql_like(node_type) + LIKE_OPERATOR_CHARACTER
         filters['node_type'] = {'like': node_type}
     else:
-        filters['node_type'] = escape_for_sql_like(node_type)
+        filters['node_type'] = {'==': node_type}
 
     if LIKE_OPERATOR_CHARACTER in process_type:
-        # Remove the trailing `LIKE_OPERATOR_CHARACTER`, escape the string and reattach the character
+        # Remove the trailing `LIKE_OPERATOR_CHARACTER` ()
+        # If that was the only specification, just ignore this filter (looking for any process_type)
+        # If there was more: escape the string and reattach the character
         process_type = process_type[:-1]
-        process_type = escape_for_sql_like(process_type) + LIKE_OPERATOR_CHARACTER
-        filters['process_type'] = {'like': process_type}
+        if process_type:
+            process_type = escape_for_sql_like(process_type) + LIKE_OPERATOR_CHARACTER
+            filters['process_type'] = {'like': process_type}
     else:
         if process_type:
-            filters['process_type'] = escape_for_sql_like(process_type)
+            filters['process_type'] = {'==': process_type}
+        else:
+            # A `process_type=''` is used to represents both `process_type='' and `process_type=None`.
+            # This is because there is no simple way to single out null `process_types`, and therefore
+            # we consider them together with empty-string process_types.
+            # Moreover, the existence of both is most likely a bug of migrations and thus both share
+            # this same "erroneous" origin.
+            filters['process_type'] = {'or': [{'==': ''}, {'==': None}]}
 
     return filters
 
@@ -188,18 +198,26 @@ class Namespace(MutableMapping):
         'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
     }
 
+    process_full_type_mapping_unplugged = {
+        'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|{plugin_name}.%',
+        'process.calculation.calcfunction.': 'process.calculation.calcfunction.CalcFunctionNode.|{plugin_name}.%',
+        'process.workflow.workfunction.': 'process.workflow.workfunction.WorkFunctionNode.|{plugin_name}.%',
+        'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|{plugin_name}.%',
+    }
+
     def __str__(self):
         import json
         return json.dumps(self.get_description(), sort_keys=True, indent=4)
 
-    def __init__(self, namespace, path=None, label=None, full_type=None, is_leaf=True):
+    def __init__(self, namespace, path=None, label=None, full_type=None, counter=None, is_leaf=True):
         """Construct a new node class namespace."""
-        # pylint: disable=super-init-not-called
+        # pylint: disable=super-init-not-called, too-many-arguments
         self._namespace = namespace
         self._path = path if path else namespace
         self._full_type = self._infer_full_type(full_type)
         self._subspaces = {}
         self._is_leaf = is_leaf
+        self._counter = counter
 
         try:
             self._label = label if label is not None else self.mapping_path_to_label[path]
@@ -226,7 +244,12 @@ class Namespace(MutableMapping):
             for basepath, full_type_template in self.process_full_type_mapping.items():
                 if full_type.startswith(basepath):
                     plugin_name = strip_prefix(full_type, basepath)
-                    full_type = full_type_template.format(plugin_name=plugin_name)
+                    if plugin_name.startswith(DEFAULT_NAMESPACE_LABEL):
+                        temp_type_template = self.process_full_type_mapping_unplugged[basepath]
+                        plugin_name = strip_prefix(plugin_name, DEFAULT_NAMESPACE_LABEL + '.')
+                        full_type = temp_type_template.format(plugin_name=plugin_name)
+                    else:
+                        full_type = full_type_template.format(plugin_name=plugin_name)
                     return full_type
 
         full_type += f'.{LIKE_OPERATOR_CHARACTER}{FULL_TYPE_CONCATENATOR}'
@@ -267,10 +290,19 @@ class Namespace(MutableMapping):
             'full_type': self._full_type,
             'label': self._label,
             'path': self._path,
-            'subspaces': []
+            'subspaces': [],
         }
+
         for _, port in self._subspaces.items():
-            result['subspaces'].append(port.get_description())
+            subspace_result = port.get_description()
+            result['subspaces'].append(subspace_result)
+            if 'counter' in subspace_result:
+                if self._counter is None:
+                    self._counter = 0
+                self._counter = self._counter + subspace_result['counter']
+
+        if self._counter is not None:
+            result['counter'] = self._counter
 
         return result
 
@@ -329,15 +361,22 @@ class Namespace(MutableMapping):
         return self[port_name]
 
 
-def get_node_namespace():
+def get_node_namespace(user_pk=None, count_nodes=False):
     """Return the full namespace of all available nodes in the current database.
 
     :return: complete node `Namespace`
     """
+    # pylint: disable=too-many-branches
     from aiida import orm
     from aiida.plugins.entry_point import is_valid_entry_point_string, parse_entry_point_string
 
-    builder = orm.QueryBuilder().append(orm.Node, project=['node_type', 'process_type']).distinct()
+    filters = {}
+    if user_pk is not None:
+        filters['user_id'] = user_pk
+
+    builder = orm.QueryBuilder().append(orm.Node, filters=filters, project=['node_type', 'process_type']).distinct()
+
+    # All None instances of process_type are turned into ''
     unique_types = {(node_type, process_type if process_type else '') for node_type, process_type in builder.all()}
 
     # First we create a flat list of all "leaf" node types.
@@ -346,10 +385,11 @@ def get_node_namespace():
     for node_type, process_type in unique_types:
 
         label = None
+        counter = None
         namespace = None
 
         if process_type:
-            # Process nodes
+            # Only process nodes
             parts = node_type.rsplit('.', 2)
             if is_valid_entry_point_string(process_type):
                 _, entry_point_name = parse_entry_point_string(process_type)
@@ -357,10 +397,10 @@ def get_node_namespace():
                 namespace = '.'.join(parts[:-2] + [entry_point_name])
             else:
                 label = process_type.rsplit('.', 1)[-1]
-                namespace = '.'.join(parts[:-2] + [DEFAULT_NAMESPACE_LABEL, label])
+                namespace = '.'.join(parts[:-2] + [DEFAULT_NAMESPACE_LABEL, process_type])
 
         else:
-            # Data nodes
+            # Data nodes and process nodes without process type (='' or =None)
             parts = node_type.rsplit('.', 2)
             try:
                 label = parts[-2]
@@ -368,12 +408,32 @@ def get_node_namespace():
             except IndexError:
                 continue
 
+        if count_nodes:
+            builder = orm.QueryBuilder()
+            concat_filters = [{'node_type': {'==': node_type}}]
+
+            if node_type.startswith('process.'):
+                if process_type:
+                    concat_filters.append({'process_type': {'==': process_type}})
+                else:
+                    concat_filters.append({'process_type': {'or': [{'==': ''}, {'==': None}]}})
+
+            if user_pk:
+                concat_filters.append({'user_id': {'==': user_pk}})
+
+            if len(concat_filters) == 1:
+                builder.append(orm.Node, filters=concat_filters[0])
+            else:
+                builder.append(orm.Node, filters={'and': concat_filters})
+
+            counter = builder.count()
+
         full_type = construct_full_type(node_type, process_type)
-        namespaces.append((namespace, label, full_type))
+        namespaces.append((namespace, label, full_type, counter))
 
     node_namespace = Namespace('node')
 
-    for namespace, label, full_type in sorted(namespaces, key=lambda x: x[0], reverse=False):
-        node_namespace.create_namespace(namespace, label=label, full_type=full_type)
+    for namespace, label, full_type, counter in sorted(namespaces, key=lambda x: x[0], reverse=False):
+        node_namespace.create_namespace(namespace, label=label, full_type=full_type, counter=counter)
 
     return node_namespace

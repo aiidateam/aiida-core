@@ -9,7 +9,7 @@
 ###########################################################################
 """Common import functions for both database backend"""
 import copy
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from aiida.common import timezone
 from aiida.common.folders import RepositoryFolder
@@ -18,7 +18,6 @@ from aiida.orm import Group, ImportGroup, Node, QueryBuilder
 from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
 from aiida.tools.importexport.common import exceptions
-from aiida.tools.importexport.common.config import NODE_ENTITY_NAME
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
 
 MAX_COMPUTERS = 100
@@ -35,7 +34,7 @@ def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReader
     if not uuids_to_create:
         return
     IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
-    with get_progress_reporter()(total=1) as progress:
+    with get_progress_reporter()(total=1, desc='Creating new node repos') as progress:
 
         _callback = create_callback(progress)
 
@@ -48,27 +47,15 @@ def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReader
             destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
 
 
-def _make_import_group(
-    *, group: Optional[ImportGroup], existing_entries: Dict[str, Dict[str, dict]],
-    new_entries: Dict[str, Dict[str, dict]], foreign_ids_reverse_mappings: Dict[str, Dict[str, int]]
-) -> ImportGroup:
+def _make_import_group(*, group: Optional[ImportGroup], node_pks: List[int]) -> ImportGroup:
     """Make an import group containing all imported nodes.
 
     :param group: Use an existing group
-    :param existing_entries: Entities that already exist in the AiiDA database: entity_name -> str(pk) -> fields
-    :param new_entries: Entities that are new to the AiiDA database: entity_name -> str(pk) -> fields
-    :param foreign_ids_reverse_mappings: Mapping of identifiers to primary keys: entity_name -> identifier -> pk
+    :param node_pks: node pks to add to group
 
     """
-    existing = existing_entries.get(NODE_ENTITY_NAME, {})
-    existing_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in existing.values()]
-    new = new_entries.get(NODE_ENTITY_NAME, {})
-    new_pk = [foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']] for v in new.values()]
-
-    pks_for_group = existing_pk + new_pk
-
     # So that we do not create empty groups
-    if not pks_for_group:
+    if not node_pks:
         IMPORT_LOGGER.debug('No nodes to import, so no import group created')
         return group
 
@@ -90,13 +77,13 @@ def _make_import_group(
         group = ImportGroup(label=group_label).store()
 
     # Add all the nodes to the new group
-    builder = QueryBuilder().append(Node, filters={'id': {'in': pks_for_group}})
+    builder = QueryBuilder().append(Node, filters={'id': {'in': node_pks}})
 
     first = True
     nodes = []
     description = 'Creating import Group - Preprocessing'
 
-    with get_progress_reporter()(total=len(pks_for_group), desc=description) as progress:
+    with get_progress_reporter()(total=len(node_pks), desc=description) as progress:
         for entry in builder.iterall():
             if first:
                 progress.set_description_str('Creating import Group', refresh=False)

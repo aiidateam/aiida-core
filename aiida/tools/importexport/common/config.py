@@ -15,7 +15,7 @@ from aiida.orm import Computer, Group, Node, User, Log, Comment
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
-EXPORT_VERSION = '0.9'
+EXPORT_VERSION = '0.10'
 
 
 class ExportFileFormat(str, Enum):
@@ -178,7 +178,13 @@ def get_all_fields_info():
             'related_name': 'dbnodes'
         },
         'description': {},
-        'process_type': {}
+        'process_type': {},
+        'extras': {
+            'convert_type': 'jsonb'
+        },
+        'attributes': {
+            'convert_type': 'jsonb'
+        }
     }
     all_fields_info[GROUP_ENTITY_NAME] = {
         'description': {},

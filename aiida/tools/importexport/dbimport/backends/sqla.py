@@ -11,7 +11,7 @@
 """ SQLAlchemy-specific import of AiiDA entities """
 from contextlib import contextmanager
 from itertools import chain
-from typing import Any, Dict, Iterable, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import warnings
 
 from sqlalchemy.orm import Session
@@ -242,6 +242,17 @@ def import_data_sqla(
                     session=session
                 )
 
+            # store all pks to add to import group
+            pks_for_group: List[int] = [
+                foreign_ids_reverse_mappings[NODE_ENTITY_NAME][v['uuid']]
+                for entries in [existing_entries, new_entries]
+                for v in entries.get(NODE_ENTITY_NAME, {}).values()
+            ]
+
+            # now delete the entity data because we no longer need it
+            del existing_entries
+            del new_entries
+
             IMPORT_LOGGER.debug('STORING NODE LINKS...')
             _store_node_links(
                 reader=reader,
@@ -263,12 +274,7 @@ def import_data_sqla(
         # Put everything in a specific group #
         ######################################
         # Note this is done in a separate transaction
-        group = _make_import_group(
-            group=group,
-            existing_entries=existing_entries,
-            new_entries=new_entries,
-            foreign_ids_reverse_mappings=foreign_ids_reverse_mappings
-        )
+        group = _make_import_group(group=group, node_pks=pks_for_group)
 
     # Summarize import
     result_summary(ret_dict, getattr(group, 'label', None))
@@ -414,12 +420,6 @@ def _store_entity_data(
 
     fields_info = reader.metadata.all_fields_info.get(entity_name, {})
     unique_identifier = reader.metadata.unique_identifiers.get(entity_name, None)
-
-    if entity_name == NODE_ENTITY_NAME:
-        # in the current export process these fields are not present,
-        # because they are retrieved by a separate query
-        fields_info.setdefault('attributes', {'convert_type': 'jsonb'})
-        fields_info.setdefault('extras', {'convert_type': 'jsonb'})
 
     pbar_base_str = f'{entity_name}s - '
 

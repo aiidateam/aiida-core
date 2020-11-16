@@ -228,6 +228,13 @@ def backend():
 
 
 @pytest.fixture
+def communicator():
+    """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
+    from aiida.manage.manager import get_manager
+    return get_manager().get_communicator()
+
+
+@pytest.fixture
 def skip_if_not_django(backend):
     """Fixture that will skip any test that uses it when a profile is loaded with any other backend then Django."""
     from aiida.orm.implementation.django.backend import DjangoBackend

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `aiida.manage.external.rmq` module."""
+from kiwipy.rmq import RmqThreadCommunicator
 import pytest
 
 from aiida.manage.external import rmq
@@ -34,3 +35,22 @@ def test_get_rmq_url(args, kwargs, expected):
     else:
         with pytest.raises(expected):
             rmq.get_rmq_url(*args, **kwargs)
+
+
+@pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
+def test_communicator(url):
+    """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
+
+    This class is used by all runners to communicate with the RabbitMQ server.
+    """
+    RmqThreadCommunicator.connect(connection_params={'url': url})
+
+
+def test_add_rpc_subscriber(communicator):
+    """Test ``add_rpc_subscriber``."""
+    communicator.add_rpc_subscriber(None)
+
+
+def test_add_broadcast_subscriber(communicator):
+    """Test ``add_broadcast_subscriber``."""
+    communicator.add_broadcast_subscriber(None)

@@ -1,5 +1,5 @@
 # On Jenkins we are already inside the container,
-# so we simply run the playbooks in the local environment 
+# so we simply run the playbooks in the local environment
 
 scenario:
   converge_sequence:
@@ -48,3 +48,4 @@ provisioner:
           aiida_backend: ${AIIDA_TEST_BACKEND:-django}
           aiida_workers: ${AIIDA_TEST_WORKERS:-2}
           aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-django}
+          run_wkchains_parallel: ${AIIDA_TEST_PARALLEL:-false}

@@ -44,11 +44,19 @@ You can set up the aiida profile with either django or sqla,
 and even run both in parallel:
 
 ```console
-$tox -e molecule-django,molecule-sqla -p
+$ tox -e molecule-django,molecule-sqla -p -- test --parallel
 ```
 
-You can also specify the number of daemon worker to spawn using the `AIIDA_TEST_WORKERS` environmental variable:
+## Additional variables
+
+You can specify the number of daemon worker to spawn using the `AIIDA_TEST_WORKERS` environmental variable:
 
 ```console
-$AIIDA_TEST_WORKERS=4 tox -e molecule-django
+$ AIIDA_TEST_WORKERS=4 tox -e molecule-django
+```
+
+and also run the workchains in parallel using the `AIIDA_TEST_PARALLEL` variable:
+
+```console
+$ AIIDA_TEST_PARALLEL=true tox -e molecule-django
 ```

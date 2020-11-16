@@ -1,0 +1,11 @@
+- name: "run polish workchain: {{ polish_expr }}"
+  # Note the exclamation point after the code is necessary to force the value to be interpreted as LABEL type identifier
+  shell: |
+    {{ venv_bin }}/verdi -p {{ aiida_backend }} run "{{ polish_script }}" -X {{ aiida_add_code }}! -C -F -d -t {{ polish_timeout }} "{{ polish_expr }}"
+  environment:
+      PYTHONPATH: "{{ aiida_pythonpath }}"
+  register: polish_output
+
+- name: print polish workchain stdout
+  debug:
+    msg: "{{ polish_output.stdout }}"

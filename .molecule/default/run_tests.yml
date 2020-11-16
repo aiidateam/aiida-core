@@ -12,6 +12,13 @@
 
   vars:
     aiida_add_code: "add"
+    polish_expressions:
+      - "1 -2 -1 4 -5 -5 * * * * +"
+      - "2 1 3 3 -1 + ^ ^ +"
+      - "3 -5 -1 -4 + * ^"
+      - "2 4 2 -4 * * +"
+      - "3 1 1 5 ^ ^ ^"
+      # - "3 1 3 4 -4 2 * + + ^ ^"  # this takes a longer time to run
 
   tasks:
 
@@ -50,17 +57,21 @@
     environment:
       PYTHONPATH: "{{ aiida_pythonpath }}"
 
+  - name: run polish notation workchains (serial)
+    when: not (run_wkchains_parallel | default(true) | bool)
+    include_tasks: run_polish_serial.yml
+    vars:
+      polish_script: "${HOME}/{{ aiida_backend }}/polish/cli.py"
+      polish_timeout: 600
+    loop: "{{ polish_expressions }}"
+    loop_control:
+      loop_var: polish_expr
+
   - name: run polish notation workchains (parallel)
+    when: run_wkchains_parallel | default(true) | bool
     include_tasks: run_polish_parallel.yml
     vars:
       polish_script: "${HOME}/{{ aiida_backend }}/polish/cli.py"
       polish_timeout: 600
-      all_expressions:
-        - "1 -2 -1 4 -5 -5 * * * * +"
-        - "2 1 3 3 -1 + ^ ^ +"
-        - "3 -5 -1 -4 + * ^"
-        - "2 4 2 -4 * * +"
-        - "3 1 1 5 ^ ^ ^"
-        - "3 1 3 4 -4 2 * + + ^ ^"
-      polish_expressions: "{{ item }}"
-    loop: "{{ all_expressions | batch(6) | list }}"
+      polish_batch: "{{ item }}"
+    loop: "{{ polish_expressions | batch(6) | list }}"

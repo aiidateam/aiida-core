@@ -64,3 +64,4 @@ provisioner:
           aiida_backend: ${AIIDA_TEST_BACKEND:-django}
           aiida_workers: ${AIIDA_TEST_WORKERS:-2}
           aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-django}
+          run_wkchains_parallel: ${AIIDA_TEST_PARALLEL:-false}

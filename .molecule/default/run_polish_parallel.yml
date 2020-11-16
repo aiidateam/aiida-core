@@ -3,7 +3,7 @@
     {{ venv_bin }}/verdi -p {{ aiida_backend }} run "{{ polish_script }}" -X {{ aiida_add_code }}! -C -F -d -t {{ polish_timeout }} "{{ polish_expr }}"
   environment:
     PYTHONPATH: "{{ aiida_pythonpath }}"
-  loop: "{{ polish_expressions }}"
+  loop: "{{ polish_batch }}"
   loop_control:
     loop_var: polish_expr
   async: 611

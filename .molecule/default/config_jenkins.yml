@@ -31,7 +31,9 @@ provisioner:
       stdout_callback: yaml
       bin_ansible_callbacks: true
       # add timing to tasks
-      callback_whitelist: profile_tasks
+      callback_whitelist: timer, profile_tasks
+      # reduce CPU load
+      internal_poll_interval: 0.002
     ssh_connection:
       # reduce network operations
       pipelining: True
@@ -48,4 +50,3 @@ provisioner:
           aiida_backend: ${AIIDA_TEST_BACKEND:-django}
           aiida_workers: ${AIIDA_TEST_WORKERS:-2}
           aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-django}
-          run_wkchains_parallel: ${AIIDA_TEST_PARALLEL:-false}

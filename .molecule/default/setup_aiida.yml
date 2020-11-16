@@ -13,27 +13,48 @@
   tasks:
 
   - name: reentry scan
-    shell: "{{ venv_bin }}/reentry scan"
+    command: "{{ venv_bin }}/reentry scan"
     changed_when: false
 
-  - name: verdi quicksetup
-    expect:
-      command: >
-        {{ venv_bin }}/verdi quicksetup
-        --non-interactive
-        --profile "{{ aiida_backend }}"
-        --email "aiida@localhost"
-        --first-name "ringo"
-        --last-name "starr"
-        --institution "the beatles"
-        --db-backend "{{ aiida_backend }}"
-      responses:
-        ".*Use it?.*": "y"
-      timeout: null
-      creates: "{{ aiida_path }}/repository/{{ aiida_backend }}"
+  - name: Create a new database with name "{{ aiida_backend }}"
+    postgresql_db:
+      name: "{{ aiida_backend }}"
+      login_host: localhost
+      login_user: aiida
+      login_password: ''
+      encoding: UTF8
+      lc_collate: en_US.UTF-8
+      lc_ctype: en_US.UTF-8
+      template: template0
+
+  - name: Add pg_stat_statements extension to the database
+    when: aiida_query_stats | default(false) | bool
+    postgresql_ext:
+      name: pg_stat_statements
+      login_host: localhost
+      login_user: aiida
+      login_password: ''
+      db: "{{ aiida_backend }}"
+
+  - name: verdi setup for "{{ aiida_backend }}"
+    command: >
+      {{ venv_bin }}/verdi setup
+      --non-interactive
+      --profile "{{ aiida_backend }}"
+      --email "aiida@localhost"
+      --first-name "ringo"
+      --last-name "starr"
+      --institution "the beatles"
+      --db-backend "{{ aiida_backend }}"
+      --db-host=localhost
+      --db-name="{{ aiida_backend }}"
+      --db-username=aiida
+      --db-password=''
+    args:
+      creates: "{{ aiida_path }}/.aiida/config.json"
 
   - name: "Check if computer is already present"
-    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost"
+    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost"
     ignore_errors: true
     changed_when: false
     no_log: true
@@ -41,7 +62,7 @@
 
   - name: verdi computer setup localhost
     when: aiida_check_computer.rc != 0
-    shell: >
+    command: >
       {{ venv_bin }}/verdi -p {{ aiida_backend }} computer setup
       --non-interactive
       --label "localhost"
@@ -55,16 +76,17 @@
 
   - name: verdi computer configure localhost
     when: aiida_check_computer.rc != 0
-    shell: >
+    command: >
       {{ venv_bin }}/verdi -p {{ aiida_backend }} computer configure local "localhost"
       --non-interactive
       --safe-interval 0.0
 
-  - name: verdi start daemon with {{ aiida_workers }} workers
-    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}"
+  # we restart the daemon in run_tests.yml, so no need to start here
+  # - name: verdi start daemon with {{ aiida_workers }} workers
+  #   command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}"
 
   - name: get verdi status
-    shell: "{{ venv_bin }}/verdi -p {{ aiida_backend }} status"
+    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} status"
     register: verdi_status
     changed_when: false
 

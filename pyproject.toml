@@ -138,7 +138,6 @@ setenv =
     django: AIIDA_TEST_BACKEND = django
     sqla: AIIDA_TEST_BACKEND = sqlalchemy
 passenv =
-    AIIDA_TEST_PARALLEL
     AIIDA_TEST_WORKERS
 commands = molecule {posargs:test}
 """

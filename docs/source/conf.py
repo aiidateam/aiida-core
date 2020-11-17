@@ -97,7 +97,6 @@ exclude_patterns = [
     'get_started/**',
     'howto/installation_more/index.rst',
     'import_export/**',
-    'internals/engine.rst',
     'internals/global_design.rst',
     'internals/orm.rst',
     'scheduler/index.rst',

@@ -1,20 +1,44 @@
-.. todo::
+.. _internal_architecture:engine:
 
-    .. _internal_architecture:engine:
+******
+Engine
+******
 
-    ******
-    Engine
-    ******
 
-    .. _internal_architecture:engine:caching:
 
-    Controlling caching
-    -------------------
+.. _internal_architecture:engine:caching:
 
-    Old Docs: This should also contain the contents of "Controlling caching" inside of developer_guide/core/caching.rst.
-    You should include links to the other sections topics:provenance:caching: and how-to:run-codes:caching:, and in those sections as well.
-    Example for topics:provenance:caching: If you want more details of the internal architecture instead, you can check out the :ref:`relevant subsection <internal_architecture:engine:caching>` in the engine documentation.
+Controlling caching
+-------------------
 
-    `#4038`_
+.. important::
+
+    This section covers some details of the caching mechanism which are not discussed in the :ref:`topics section <topics:provenance:caching>`.
+    If you are developing plugins and want to modify the caching behavior of your classes, we recommend you read that section first.
+
+There are several methods you can use to disable caching for particular nodes:
+
+On the level of generic :class:`aiida.orm.nodes.Node`:
+
+* The :meth:`~aiida.orm.nodes.Node.is_valid_cache` property determines whether a particular node can be used as a cache. This is used for example to disable caching from failed calculations.
+* Node classes have a ``_cachable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class. This avoids performing queries for the hash altogether.
+
+On the level of :class:`aiida.engine.processes.process.Process` and :class:`aiida.orm.nodes.process.ProcessNode`:
+
+* The :meth:`ProcessNode.is_valid_cache <aiida.orm.nodes.process.ProcessNode.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself. This can be used in :class:`~aiida.engine.processes.process.Process` subclasses (e.g. in calculation plugins) to implement custom ways of invalidating the cache.
+* The ``spec.exit_code`` has a keyword argument ``invalidates_cache``. If this is set to ``True``, returning that exit code means the process is no longer considered a valid cache. This is implemented in :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`.
+
+
+The ``WorkflowNode`` example
+............................
+
+As discussed in the :ref:`topic section <topics:provenance:caching:limitations>`, nodes which can have ``RETURN`` links cannot be cached.
+This is enforced on two levels:
+
+* The ``_cachable`` property is set to ``False`` in the :class:`~aiida.orm.nodes.Node`, and only re-enabled in :class:`~aiida.orm.nodes.process.calculation.calculation.CalculationNode` (which affects CalcJobs and calcfunctions).
+  This means that a :class:`~aiida.orm.nodes.process.workflow.workflow.WorkflowNode` will not be cached.
+* The ``_store_from_cache`` method, which is used to "clone" an existing node, will raise an error if the existing node has any ``RETURN`` links.
+  This extra safe-guard prevents cases where a user might incorrectly override the ``_cachable`` property on a ``WorkflowNode`` subclass.
+
 
 .. _#4038: https://github.com/aiidateam/aiida-core/issues/4038

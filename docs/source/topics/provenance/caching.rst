@@ -5,7 +5,8 @@ Caching and hashing
 ===================
 
 This section covers the more general considerations of the hashing/caching mechanism.
-For a more practical guide on usage, please visit the corresponding :ref:`how-to section <how-to:run-codes:caching>`.
+For a more practical guide on how to enable and disable this feature, please visit the corresponding :ref:`how-to section <how-to:run-codes:caching>`.
+If you want to know more about how the internal design of the mechanism is implemented, you can check the :ref:`internals section <internal_architecture:engine:caching>` instead.
 
 
 .. _topics:provenance:caching:hashing:
@@ -27,7 +28,7 @@ The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hash
 
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match.
-Use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
+You can use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
 In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method may be useful:
 
 .. code-block:: ipython

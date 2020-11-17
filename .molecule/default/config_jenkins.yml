@@ -45,6 +45,7 @@ provisioner:
           aiida_user: aiida
           aiida_core_dir: $WORKSPACE
           aiida_pip_cache: /home/jenkins/.cache/pip
+          aiida_pip_editable: false
           venv_bin: /opt/conda/bin
           ansible_python_interpreter: "{{ venv_bin }}/python"
           aiida_backend: ${AIIDA_TEST_BACKEND:-django}

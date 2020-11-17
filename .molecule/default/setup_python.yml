@@ -23,4 +23,5 @@
       chdir: "{{ aiida_core_dir }}"
       name: .
       executable: "{{ venv_bin }}/pip"
+      editable: "{{ aiida_pip_editable | default(true) }}"
       extra_args: --no-deps

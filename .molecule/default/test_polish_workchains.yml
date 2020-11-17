@@ -5,7 +5,7 @@
   # run as aiida user
   become: true
   become_method: "{{ become_method }}"
-  become_user: "{{ aiida_user }}"
+  become_user: "{{ aiida_user | default('aiida') }}"
 
   environment:
     AIIDA_PATH: "{{ aiida_path }}"
@@ -56,7 +56,7 @@
       set -e
       declare -a EXPRESSIONS=({{ polish_expressions | map('quote') | join(' ') }})
       for expression in "${EXPRESSIONS[@]}"; do
-        {{ venv_bin }}/verdi -p {{ aiida_backend }} run "{{ polish_script }}" -X add! -C -F -d -t {{ polish_timeout }} "$expression"
+        {{ venv_bin }}/verdi -p {{ aiida_backend }} run --auto-group -l polish -- "{{ polish_script }}" -X add! -C -F -d -t {{ polish_timeout }} "$expression"
       done
     args:
       executable: /bin/bash

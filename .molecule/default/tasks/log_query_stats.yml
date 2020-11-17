@@ -1,7 +1,7 @@
 - name: Get DB summary statistics
   postgresql_query:
     login_host: localhost
-    login_user: "{{ aiida_user }}"
+    login_user: "{{ aiida_user | default('aiida') }}"
     login_password: ''
     db: "{{ aiida_backend }}"
     query: |
@@ -19,7 +19,7 @@
 - name: Get DB statistics for largest queries by time
   postgresql_query:
     login_host: localhost
-    login_user: "{{ aiida_user }}"
+    login_user: "{{ aiida_user | default('aiida') }}"
     login_password: ''
     db: "{{ aiida_backend }}"
     query: |
@@ -40,7 +40,7 @@
 - name: Get DB statistics for largest queries by calls
   postgresql_query:
     login_host: localhost
-    login_user: "{{ aiida_user }}"
+    login_user: "{{ aiida_user | default('aiida') }}"
     login_password: ''
     db: "{{ aiida_backend }}"
     query: |

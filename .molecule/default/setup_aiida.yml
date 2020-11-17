@@ -5,7 +5,7 @@
   # run as aiida user
   become: true
   become_method: "{{ become_method }}"
-  become_user: "{{ aiida_user }}"
+  become_user: "{{ aiida_user | default('aiida') }}"
 
   environment:
     AIIDA_PATH: "{{ aiida_path }}"

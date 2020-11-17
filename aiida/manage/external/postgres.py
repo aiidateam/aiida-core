@@ -166,7 +166,7 @@ class Postgres(PGSU):
         :returns: tuple (dbname, created)
         """
         if not self.interactive:
-            return dbname, not self.db_exists(dbuser)
+            return dbname, not self.db_exists(dbname)
         create = True
         while create and self.db_exists(dbname):
             echo.echo_info(f'database {dbname} already exists!')

@@ -48,7 +48,8 @@ pipeline {
                     // this folder is mounted from a volume so will have wrong permissions
                     sh 'sudo chown root:root /home/jenkins/.cache'
                     // prepare environment (install python dependencies etc)
-                    sh 'molecule prepare --force'
+                    sh 'pip install -r requirements/requirements-py-3.7.txt --cache-dir /home/jenkins/.cache/pip'
+                    sh 'pip install --no-deps .'
                     // for some reason if we don't change permissions here then python can't import the modules
                     sh 'sudo chmod -R a+rwX /opt/conda/lib/python3.7/site-packages/'
                 }
@@ -118,8 +119,7 @@ pipeline {
     }
     options {
         // we do not want the whole run to hang forever -
- 	    // we set a total timeout of 30 minutes
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 40, unit: 'MINUTES')
     }
 }
 

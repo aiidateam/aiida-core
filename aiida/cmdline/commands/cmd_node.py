@@ -296,13 +296,13 @@ def tree(nodes, depth):
 
 
 @verdi_node.command('delete')
-@arguments.NODES('nodes', required=True)
+@click.argument('pks', type=int, nargs=-1, metavar='PKs')
 @options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, **kwargs):
+def node_delete(pks, dry_run, verbose, force, **kwargs):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
@@ -317,9 +317,7 @@ def node_delete(nodes, dry_run, verbose, force, **kwargs):
     elif verbose:
         verbosity = 2
 
-    node_pks_to_delete = [node.pk for node in nodes]
-
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
+    delete_nodes(pks, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
 
 
 @verdi_node.command('rehash')

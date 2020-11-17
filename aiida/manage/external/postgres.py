@@ -116,6 +116,8 @@ class Postgres(PGSU):
         :param str dbuser: Name of the user to be created or reused.
         :returns: tuple (dbuser, created)
         """
+        if not self.interactive:
+            return dbuser, not self.dbuser_exists(dbuser)
         create = True
         while create and self.dbuser_exists(dbuser):
             echo.echo_info(f'Database user "{dbuser}" already exists!')
@@ -163,6 +165,8 @@ class Postgres(PGSU):
         :param str dbname: Name of the database to be created or reused.
         :returns: tuple (dbname, created)
         """
+        if not self.interactive:
+            return dbname, not self.db_exists(dbuser)
         create = True
         while create and self.db_exists(dbname):
             echo.echo_info(f'database {dbname} already exists!')

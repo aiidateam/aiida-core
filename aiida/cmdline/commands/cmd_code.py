@@ -196,25 +196,23 @@ def delete(codes, verbose, dry_run, force):
     from aiida.common.log import override_log_formatter_context
     from aiida.manage.database.delete.nodes import delete_nodes, DELETE_LOGGER
 
-    verbosity = logging.INFO
-    if force:
-        verbosity = logging.WARNING
-    elif verbose:
-        verbosity = logging.DEBUG
+    verbosity = logging.DEBUG if verbose else logging.INFO
+    DELETE_LOGGER.setLevel(verbosity)
 
     node_pks_to_delete = [code.pk for code in codes]
 
     def _dry_run_callback(pks):
-        if dry_run:
-            return True
-        if force:
+        if not pks or force:
             return False
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
         return not click.confirm('Shall I continue?')
 
     DELETE_LOGGER.setLevel(verbosity)
     with override_log_formatter_context('%(message)s'):
-        delete_nodes(node_pks_to_delete, dry_run=_dry_run_callback)
+        _, was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
+
+    if was_deleted:
+        echo.echo_success('Finished deletion.')
 
 
 @verdi_code.command()

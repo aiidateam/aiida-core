@@ -76,10 +76,7 @@ def group_remove_nodes(group, nodes, clear, force):
 )
 @with_dbenv()
 def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversal_rules):
-    """Delete a group.
-
-    Note that this command only deletes groups - nodes contained in the group will remain untouched.
-    """
+    """Delete a group and (optionally) the nodes it contains."""
     from aiida.common.log import override_log_formatter_context
     from aiida.manage.database.delete.nodes import delete_group_nodes, DELETE_LOGGER
     from aiida import orm

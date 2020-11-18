@@ -12,6 +12,7 @@
 import difflib
 import click
 
+from aiida import __version__
 from aiida.cmdline.params import options, types
 
 GIU = (
@@ -82,26 +83,9 @@ class MostSimilarCommandGroup(click.Group):
         return None
 
 
-def version_callback(ctx, param, value):  # pylint: disable=unused-argument
-    """Callback for supplying version information"""
-    if not value or ctx.resilient_parsing:
-        return
-    from aiida import __version__
-    click.echo(f'AiiDA version {__version__}')
-    ctx.exit()
-
-
 @click.command(cls=MostSimilarCommandGroup, context_settings={'help_option_names': ['-h', '--help']})
 @options.PROFILE(type=types.ProfileParamType(load_profile=True))
-@click.option(
-    '-v',
-    '--version',
-    is_flag=True,
-    expose_value=False,
-    is_eager=True,
-    help='Show the version and exit.',
-    callback=version_callback,
-)
+@click.version_option(__version__, '-v', '--version', message='AiiDA version %(version)s')
 @click.pass_context
 def verdi(ctx, profile):
     """The command line interface of AiiDA."""

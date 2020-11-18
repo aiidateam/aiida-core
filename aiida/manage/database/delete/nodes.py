@@ -8,12 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function to delete nodes from the database."""
+from typing import Iterable
 
 import click
 from aiida.cmdline.utils import echo
 
 
-def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
+def delete_nodes(
+    pks: Iterable[int], verbosity: int = 0, dry_run: bool = False, force: bool = False, **traversal_rules: bool
+):
     """Delete nodes by a list of pks.
 
     This command will delete not only the specified nodes, but also the ones that are
@@ -36,41 +39,36 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
     inputs, and so on.
 
     :param pks: a list of the PKs of the nodes to delete
-    :param bool force: do not ask for confirmation to delete nodes.
-    :param int verbosity: 0 prints nothing,
+    :param force: do not ask for confirmation to delete nodes.
+    :param verbosity: 0 prints nothing,
                           1 prints just sums and total,
                           2 prints individual nodes.
 
-    :param kwargs: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
+    :param dry_run:
+        Just perform a dry run and do not delete anything.
+        Print statistics according to the verbosity level set.
+    :param force: Do not ask for confirmation to delete nodes
+
+    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
         are toggleable and what the defaults are.
-    :param bool dry_run:
-        Just perform a dry run and do not delete anything. Print statistics according
-        to the verbosity level set.
-    :param bool force:
-        Do not ask for confirmation to delete nodes.
     """
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
     from aiida.backends.utils import delete_nodes_and_connections
-    from aiida.common import exceptions
     from aiida.orm import Node, QueryBuilder, load_node
     from aiida.tools.graph.graph_traversers import get_nodes_delete
 
-    starting_pks = []
-    for pk in pks:
-        try:
-            load_node(pk)
-        except exceptions.NotExistent:
-            echo.echo_warning(f'warning: node with pk<{pk}> does not exist, skipping')
-        else:
-            starting_pks.append(pk)
+    def _missing_callback(_pks: Iterable[int]):
+        for _pk in _pks:
+            echo.echo_warning(f'warning: node with pk<{_pk}> does not exist, skipping')
+
+    pks_set_to_delete = get_nodes_delete(pks, get_links=False, missing_callback=_missing_callback,
+                                         **traversal_rules)['nodes']
 
     # An empty set might be problematic for the queries done below.
-    if not starting_pks:
+    if not pks_set_to_delete:
         if verbosity:
             echo.echo('Nothing to delete')
         return
-
-    pks_set_to_delete = get_nodes_delete(starting_pks, **kwargs)['nodes']
 
     if verbosity > 0:
         echo.echo(
@@ -78,19 +76,19 @@ def delete_nodes(pks, verbosity=0, dry_run=False, force=False, **kwargs):
                 'would' if dry_run else 'will', len(pks_set_to_delete), 's' if len(pks_set_to_delete) > 1 else ''
             )
         )
-        if verbosity > 1:
-            builder = QueryBuilder().append(
-                Node, filters={'id': {
-                    'in': pks_set_to_delete
-                }}, project=('uuid', 'id', 'node_type', 'label')
-            )
-            echo.echo(f"The nodes I {'would' if dry_run else 'will'} delete:")
-            for uuid, pk, type_string, label in builder.iterall():
-                try:
-                    short_type_string = type_string.split('.')[-2]
-                except IndexError:
-                    short_type_string = type_string
-                echo.echo(f'   {uuid} {pk} {short_type_string} {label}')
+    if verbosity > 1:
+        builder = QueryBuilder().append(
+            Node, filters={'id': {
+                'in': pks_set_to_delete
+            }}, project=('uuid', 'id', 'node_type', 'label')
+        )
+        echo.echo(f"The nodes I {'would' if dry_run else 'will'} delete:")
+        for uuid, pk, type_string, label in builder.iterall():
+            try:
+                short_type_string = type_string.split('.')[-2]
+            except IndexError:
+                short_type_string = type_string
+            echo.echo(f'   {uuid} {pk} {short_type_string} {label}')
 
     if dry_run:
         if verbosity > 0:

@@ -296,19 +296,20 @@ def tree(nodes, depth):
 
 
 @verdi_node.command('delete')
-@arguments.NODES('nodes', required=True)
+@click.argument('identifier', nargs=-1, metavar='NODES')
 @options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, **kwargs):
+def node_delete(identifier, dry_run, verbose, force, **kwargs):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    from aiida.orm.utils.loaders import NodeEntityLoader
     from aiida.manage.database.delete.nodes import delete_nodes
 
     verbosity = 1
@@ -317,9 +318,16 @@ def node_delete(nodes, dry_run, verbose, force, **kwargs):
     elif verbose:
         verbosity = 2
 
-    node_pks_to_delete = [node.pk for node in nodes]
+    pks = []
 
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
+    for obj in identifier:
+        # we only load the node if we need to convert from a uuid/label
+        if isinstance(obj, int):
+            pks.append(obj)
+        else:
+            pks.append(NodeEntityLoader.load_entity(obj).pk)
+
+    delete_nodes(pks, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
 
 
 @verdi_node.command('rehash')

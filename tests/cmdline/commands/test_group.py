@@ -171,7 +171,9 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_03'])
         self.assertClickResultNoException(result)
 
-        # check nodes no longer exist
+        # check group and nodes no longer exist
+        with self.assertRaises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_03')
         for pk in node_pks:
             with self.assertRaises(exceptions.NotExistent):
                 orm.load_node(pk)

@@ -13,18 +13,17 @@ import pytest
 
 from aiida import orm
 from aiida.common import datastructures
-#from aiida.calculations.transfer import TransferCalculation
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
 
-    file1 = tmp_path / 'file1'
+    file1 = tmp_path / 'file1.txt'
     file1.write_text('file 1 content')
     folder = tmp_path / 'folder'
     folder.mkdir()
-    file2 = folder / 'file2'
+    file2 = folder / 'file2.txt'
     file2.write_text('file 2 content')
     data_source = orm.RemoteData(computer=aiida_localhost, remote_path=str(tmp_path))
 
@@ -69,11 +68,11 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
 def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
 
-    file1 = tmp_path / 'file1'
+    file1 = tmp_path / 'file1.txt'
     file1.write_text('file 1 content')
     folder = tmp_path / 'folder'
     folder.mkdir()
-    file2 = folder / 'file2'
+    file2 = folder / 'file2.txt'
     file2.write_text('file 2 content')
     data_source = orm.FolderData(tree=str(tmp_path))
 
@@ -102,3 +101,52 @@ def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     assert sorted(calc_info.remote_copy_list) == sorted(list())
     assert sorted(calc_info.local_copy_list) == sorted(copy_list)
     assert sorted(calc_info.retrieve_list) == sorted(list())
+
+
+def test_integration_transfer(aiida_localhost, tmp_path):
+    """Test a default `TransferCalculation`."""
+    from aiida.calculations.transfer import TransferCalculation
+    from aiida.engine import run
+
+    content_local0 = 'Content of local file'
+    srcfile_local0 = tmp_path / 'file_local0.txt'
+    srcfile_local0.write_text(content_local0)
+    srcnode_local0 = orm.FolderData(tree=str(tmp_path))
+
+    content_remote = 'Content of remote file'
+    srcfile_remote = tmp_path / 'file_remote.txt'
+    srcfile_remote.write_text(content_remote)
+    srcnode_remote = orm.RemoteData(computer=aiida_localhost, remote_path=str(tmp_path))
+
+    list_of_nodes = {}
+    list_of_nodes['source_local0'] = srcnode_local0
+    list_for_local0 = [('source_local0', 'file_local0.txt', 'file_local0.txt')]
+    list_of_nodes['source_remote'] = srcnode_remote
+    list_for_remote = [('source_remote', 'file_remote.txt', 'file_remote.txt')]
+
+    instructions = orm.Dict(
+        dict={
+            'retrieve_files': True,
+            'local_files': list_for_local0,
+            'remote_files': list_for_remote,
+        }
+    )
+    inputs = {'instructions': instructions, 'source_nodes': list_of_nodes, 'metadata': {'computer': aiida_localhost}}
+
+    output_nodes = run(TransferCalculation, **inputs)
+
+    output_remotedir = output_nodes['remote_folder']
+    output_retrieved = output_nodes['retrieved']
+
+    # Check the retrieved folder
+    assert sorted(output_retrieved.list_object_names()) == sorted(['file_local0.txt', 'file_remote.txt'])
+    assert output_retrieved.get_object_content('file_local0.txt') == content_local0
+    assert output_retrieved.get_object_content('file_remote.txt') == content_remote
+
+    # Check the remote folder
+    assert 'file_local0.txt' in output_remotedir.listdir()
+    assert 'file_remote.txt' in output_remotedir.listdir()
+    output_remotedir.getfile(relpath='file_local0.txt', destpath=str(tmp_path / 'retrieved_local0.txt'))
+    output_remotedir.getfile(relpath='file_remote.txt', destpath=str(tmp_path / 'retrieved_remote.txt'))
+    assert (tmp_path / 'retrieved_local0.txt').read_text() == content_local0
+    assert (tmp_path / 'retrieved_remote.txt').read_text() == content_remote

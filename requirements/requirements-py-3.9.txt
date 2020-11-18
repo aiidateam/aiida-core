@@ -67,6 +67,7 @@ numpy==1.19.4
 orderedmultidict==1.0.1
 packaging==20.4
 palettable==3.3.0
+pamqp~=2.0
 pandas==1.1.4
 pandocfilters==1.4.3
 paramiko==2.7.2

@@ -48,6 +48,7 @@ def get_nodes_delete(
         Pass True to also return the links between all nodes (found + initial).
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
+    	For example to ignore them: ``missing_callback=lambda missing_pks: None``
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
         are toggleable and what the defaults are.

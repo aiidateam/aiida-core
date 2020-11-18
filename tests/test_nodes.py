@@ -18,7 +18,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.manage.database.delete.nodes import delete_nodes
+from aiida.manage.database.delete.nodes import delete_nodes, delete_group_nodes
 
 
 class TestNodeIsStorable(AiidaTestCase):
@@ -1545,6 +1545,33 @@ class TestNodeDeletion(AiidaTestCase):
         non_existing_pk = -1
         delete_nodes([non_existing_pk], dry_run=False)
 
+    def test_deletion_dry_run_true(self):
+        """Verify that a dry run should not delete the node."""
+        node = orm.Data().store()
+        node_pk = node.pk
+        deleted_pks, was_deleted = delete_nodes([node_pk], dry_run=True)
+        self.assertTrue(not was_deleted)
+        self.assertSetEqual(deleted_pks, {node_pk})
+        orm.load_node(node_pk)
+
+    def test_deletion_dry_run_callback(self):
+        """Verify that a dry_run callback works."""
+        from aiida.common.exceptions import NotExistent
+        node = orm.Data().store()
+        node_pk = node.pk
+        callback_pks = []
+
+        def _callback(pks):
+            callback_pks.extend(pks)
+            return False
+
+        deleted_pks, was_deleted = delete_nodes([node_pk], dry_run=_callback)
+        self.assertTrue(was_deleted)
+        self.assertSetEqual(deleted_pks, {node_pk})
+        with self.assertRaises(NotExistent):
+            orm.load_node(node_pk)
+        self.assertListEqual(callback_pks, [node_pk])
+
 
 #   TEST BASIC CASES
 
@@ -2018,3 +2045,27 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_deleted = [n.uuid for n in node_list[3:]]
         delete_nodes((node_list[3].pk,), dry_run=False, create_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
+
+    def test_delete_group_nodes(self):
+        """Test deleting all nodes in a group."""
+        group = orm.Group(label='agroup').store()
+        nodes = [orm.Data().store() for _ in range(2)]
+        node_pks = {node.pk for node in nodes}
+        node_uuids = {node.uuid for node in nodes}
+        group.add_nodes(nodes)
+        deleted_pks, was_deleted = delete_group_nodes([group.pk], dry_run=False)
+        self.assertTrue(was_deleted)
+        self.assertSetEqual(deleted_pks, node_pks)
+        self._check_existence([], node_uuids)
+
+    def test_delete_group_nodes_dry_run_true(self):
+        """Verify that a dry run should not delete the node."""
+        group = orm.Group(label='agroup2').store()
+        nodes = [orm.Data().store() for _ in range(2)]
+        node_pks = {node.pk for node in nodes}
+        node_uuids = {node.uuid for node in nodes}
+        group.add_nodes(nodes)
+        deleted_pks, was_deleted = delete_group_nodes([group.pk], dry_run=True)
+        self.assertTrue(not was_deleted)
+        self.assertSetEqual(deleted_pks, node_pks)
+        self._check_existence(node_uuids, [])

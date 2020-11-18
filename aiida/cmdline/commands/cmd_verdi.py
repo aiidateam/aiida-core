@@ -85,6 +85,7 @@ class MostSimilarCommandGroup(click.Group):
 
 @click.command(cls=MostSimilarCommandGroup, context_settings={'help_option_names': ['-h', '--help']})
 @options.PROFILE(type=types.ProfileParamType(load_profile=True))
+# Note, __version__ should always be passed explicitly here, because click does not retrieve a dynamic version when installed in editable mode
 @click.version_option(__version__, '-v', '--version', message='AiiDA version %(version)s')
 @click.pass_context
 def verdi(ctx, profile):

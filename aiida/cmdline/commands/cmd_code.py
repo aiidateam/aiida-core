@@ -9,6 +9,7 @@
 ###########################################################################
 """`verdi code` command."""
 from functools import partial
+import logging
 
 import click
 import tabulate
@@ -192,16 +193,28 @@ def delete(codes, verbose, dry_run, force):
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.manage.database.delete.nodes import delete_nodes
+    from aiida.common.log import override_log_formatter_context
+    from aiida.manage.database.delete.nodes import delete_nodes, DELETE_LOGGER
 
-    verbosity = 1
+    verbosity = logging.INFO
     if force:
-        verbosity = 0
+        verbosity = logging.WARNING
     elif verbose:
-        verbosity = 2
+        verbosity = logging.DEBUG
 
     node_pks_to_delete = [code.pk for code in codes]
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force)
+
+    def _dry_run_callback(pks):
+        if dry_run:
+            return True
+        if force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        return not click.confirm('Shall I continue?')
+
+    DELETE_LOGGER.setLevel(verbosity)
+    with override_log_formatter_context('%(message)s'):
+        delete_nodes(node_pks_to_delete, dry_run=_dry_run_callback)
 
 
 @verdi_code.command()

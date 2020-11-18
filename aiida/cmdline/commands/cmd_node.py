@@ -9,6 +9,7 @@
 ###########################################################################
 """`verdi node` command."""
 
+import logging
 import shutil
 import pathlib
 
@@ -302,32 +303,41 @@ def tree(nodes, depth):
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(identifier, dry_run, verbose, force, **kwargs):
+def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
+    from aiida.common.log import override_log_formatter_context
     from aiida.orm.utils.loaders import NodeEntityLoader
-    from aiida.manage.database.delete.nodes import delete_nodes
+    from aiida.manage.database.delete.nodes import delete_nodes, DELETE_LOGGER
 
-    verbosity = 1
+    verbosity = logging.INFO
     if force:
-        verbosity = 0
+        verbosity = logging.WARNING
     elif verbose:
-        verbosity = 2
+        verbosity = logging.DEBUG
+    DELETE_LOGGER.setLevel(verbosity)
 
     pks = []
 
     for obj in identifier:
         # we only load the node if we need to convert from a uuid/label
-        if isinstance(obj, int):
-            pks.append(obj)
-        else:
+        try:
+            pks.append(int(obj))
+        except ValueError:
             pks.append(NodeEntityLoader.load_entity(obj).pk)
 
-    delete_nodes(pks, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
+    def _dry_run_callback(pks):
+        if not pks or force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        return not click.confirm('Shall I continue?')
+
+    with override_log_formatter_context('%(message)s'):
+        delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
 
 
 @verdi_node.command('rehash')

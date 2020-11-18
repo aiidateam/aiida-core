@@ -651,3 +651,8 @@ class TestVerdiDelete(AiidaTestCase):
 
         with self.assertRaises(NotExistent):
             orm.load_node(newnodepk)
+
+    def test_missing_pk(self):
+        """Check that no exception is raised when a non-existent pk is given (just warns)."""
+        result = self.cli_runner.invoke(cmd_node.node_delete, ['999'])
+        self.assertClickResultNoException(result)

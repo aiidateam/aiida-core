@@ -18,7 +18,6 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.common.utils import Capturing
 from aiida.manage.database.delete.nodes import delete_nodes
 
 
@@ -1544,8 +1543,7 @@ class TestNodeDeletion(AiidaTestCase):
     def test_deletion_non_existing_pk():
         """Verify that passing a non-existing pk should not raise."""
         non_existing_pk = -1
-        with Capturing():
-            delete_nodes([non_existing_pk], force=True)
+        delete_nodes([non_existing_pk], dry_run=False)
 
 
 #   TEST BASIC CASES
@@ -1642,15 +1640,13 @@ class TestNodeDeletion(AiidaTestCase):
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di]]
         uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([w1.pk], force=True)
+        delete_nodes([w1.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di]]
         uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([w2.pk], force=True)
+        delete_nodes([w2.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # By default, targetting a calculation will have the same effect because
@@ -1659,15 +1655,13 @@ class TestNodeDeletion(AiidaTestCase):
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di]]
         uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([c1.pk], force=True)
+        delete_nodes([c1.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di]]
         uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([c2.pk], force=True)
+        delete_nodes([c2.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # By default, targetting a data node will also have the same effect because
@@ -1676,22 +1670,19 @@ class TestNodeDeletion(AiidaTestCase):
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in []]
         uuids_check_deleted = [n.uuid for n in [di, dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([di.pk], force=True)
+        delete_nodes([di.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di]]
         uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([dm.pk], force=True)
+        delete_nodes([dm.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di]]
         uuids_check_deleted = [n.uuid for n in [dm, do, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([do.pk], force=True)
+        delete_nodes([do.pk], dry_run=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # Data deletion within the highest level workflow can be prevented by
@@ -1700,15 +1691,13 @@ class TestNodeDeletion(AiidaTestCase):
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di, dm, do]]
         uuids_check_deleted = [n.uuid for n in [c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([w2.pk], force=True, create_forward=False)
+        delete_nodes([w2.pk], dry_run=False, create_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [dm, do]]
         uuids_check_deleted = [n.uuid for n in [di, c1, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([di.pk], force=True, create_forward=False)
+        delete_nodes([di.pk], dry_run=False, create_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # On the other hand, the whole data provenance can be protected by
@@ -1719,15 +1708,13 @@ class TestNodeDeletion(AiidaTestCase):
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di, dm, do, c1, c2]]
         uuids_check_deleted = [n.uuid for n in [w1, w2]]
-        with Capturing():
-            delete_nodes([w2.pk], force=True, call_calc_forward=False)
+        delete_nodes([w2.pk], dry_run=False, call_calc_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di, dm, c1]]
         uuids_check_deleted = [n.uuid for n in [do, c2, w1, w2]]
-        with Capturing():
-            delete_nodes([c2.pk], force=True, call_calc_forward=False)
+        delete_nodes([c2.pk], dry_run=False, call_calc_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # Another posibility which also exists, though may have more limited
@@ -1739,22 +1726,19 @@ class TestNodeDeletion(AiidaTestCase):
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di, dm, c1, w1]]
         uuids_check_deleted = [n.uuid for n in [do, c2, w2]]
-        with Capturing():
-            delete_nodes([w2.pk], force=True, call_work_forward=False)
+        delete_nodes([w2.pk], dry_run=False, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di, dm, do, c1, w1]]
         uuids_check_deleted = [n.uuid for n in [c2, w2]]
-        with Capturing():
-            delete_nodes([w2.pk], force=True, call_work_forward=False, create_forward=False)
+        delete_nodes([w2.pk], dry_run=False, call_work_forward=False, create_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         di, dm, do, c1, c2, w1, w2 = self._create_simple_graph()
         uuids_check_existence = [n.uuid for n in [di, dm, do, c1, c2, w1]]
         uuids_check_deleted = [n.uuid for n in [w2]]
-        with Capturing():
-            delete_nodes([w2.pk], force=True, call_work_forward=False, call_calc_forward=False)
+        delete_nodes([w2.pk], dry_run=False, call_work_forward=False, call_calc_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
     @staticmethod
@@ -1850,15 +1834,13 @@ class TestNodeDeletion(AiidaTestCase):
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
         uuids_check_existence = [n.uuid for n in [dia, dib]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
-        with Capturing():
-            delete_nodes((pca.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        delete_nodes((pca.pk,), dry_run=False, create_forward=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
         uuids_check_existence = [n.uuid for n in [dia, dib]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, dob, pcb, pwb, pw0]]
-        with Capturing():
-            delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        delete_nodes((pwa.pk,), dry_run=False, create_forward=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # In this particular case where the workflow (pwa) only calls a single
@@ -1872,15 +1854,13 @@ class TestNodeDeletion(AiidaTestCase):
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
         uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
-        with Capturing():
-            delete_nodes((pca.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=False)
+        delete_nodes((pca.pk,), dry_run=False, create_forward=True, call_calc_forward=True, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0 = self._create_indep2w_graph()
         uuids_check_existence = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
         uuids_check_deleted = [n.uuid for n in [doa, pca, pwa, pw0]]
-        with Capturing():
-            delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=False)
+        delete_nodes((pwa.pk,), dry_run=False, create_forward=True, call_calc_forward=True, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # The best and most controlled way to deal with this situation would be
@@ -1897,12 +1877,10 @@ class TestNodeDeletion(AiidaTestCase):
         uuids_check_existence2 = [n.uuid for n in [dia, dib, dob, pcb, pwb]]
         uuids_check_deleted2 = [n.uuid for n in [doa, pca, pwa, pw0]]
 
-        with Capturing():
-            delete_nodes((pw0.pk,), force=True, create_forward=False, call_calc_forward=False, call_work_forward=False)
+        delete_nodes((pw0.pk,), dry_run=False, create_forward=False, call_calc_forward=False, call_work_forward=False)
         self._check_existence(uuids_check_existence1, uuids_check_deleted1)
 
-        with Capturing():
-            delete_nodes((pwa.pk,), force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        delete_nodes((pwa.pk,), dry_run=False, create_forward=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence2, uuids_check_deleted2)
 
     @staticmethod
@@ -1972,8 +1950,7 @@ class TestNodeDeletion(AiidaTestCase):
         di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in [di1, di2]]
         uuids_check_deleted = [n.uuid for n in [di3, do1, pcs, pws, pwm]]
-        with Capturing():
-            delete_nodes([di3.pk], force=True, create_forward=True, call_calc_forward=True, call_work_forward=True)
+        delete_nodes([di3.pk], dry_run=False, create_forward=True, call_calc_forward=True, call_work_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # When disabling the call_calc and call_work forward rules, deleting
@@ -1982,8 +1959,7 @@ class TestNodeDeletion(AiidaTestCase):
         di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in [di1, di2, do1, pcs]]
         uuids_check_deleted = [n.uuid for n in [di3, pws, pwm]]
-        with Capturing():
-            delete_nodes([di3.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
+        delete_nodes([di3.pk], dry_run=False, create_forward=True, call_calc_forward=False, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # Of course, deleting the selected input will cause all the procedure to
@@ -1991,8 +1967,7 @@ class TestNodeDeletion(AiidaTestCase):
         di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in [di2, di3]]
         uuids_check_deleted = [n.uuid for n in [di1, do1, pws, pcs, pwm]]
-        with Capturing():
-            delete_nodes([di1.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
+        delete_nodes([di1.pk], dry_run=False, create_forward=True, call_calc_forward=False, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
         # Deleting with these settings the workflow that chooses inputs should
@@ -2000,8 +1975,7 @@ class TestNodeDeletion(AiidaTestCase):
         di1, di2, di3, do1, pws, pcs, pwm = self._create_looped_graph()
         uuids_check_existence = [n.uuid for n in [di1, di2, di3, do1, pcs]]
         uuids_check_deleted = [n.uuid for n in [pws, pwm]]
-        with Capturing():
-            delete_nodes([pws.pk], force=True, create_forward=True, call_calc_forward=False, call_work_forward=False)
+        delete_nodes([pws.pk], dry_run=False, create_forward=True, call_calc_forward=False, call_work_forward=False)
         self._check_existence(uuids_check_existence, uuids_check_deleted)
 
     @staticmethod
@@ -2042,6 +2016,5 @@ class TestNodeDeletion(AiidaTestCase):
         node_list = self._create_long_graph(10)
         uuids_check_existence = [n.uuid for n in node_list[:3]]
         uuids_check_deleted = [n.uuid for n in node_list[3:]]
-        with Capturing():
-            delete_nodes((node_list[3].pk,), force=True, create_forward=True)
+        delete_nodes((node_list[3].pk,), dry_run=False, create_forward=True)
         self._check_existence(uuids_check_existence, uuids_check_deleted)

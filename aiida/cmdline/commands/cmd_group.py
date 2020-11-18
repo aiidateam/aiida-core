@@ -88,11 +88,7 @@ def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversa
         warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     label = group.label
-    verbosity = logging.INFO
-    if force:
-        verbosity = logging.WARNING
-    elif verbose:
-        verbosity = logging.DEBUG
+    verbosity = logging.DEBUG if verbose else logging.INFO
     DELETE_LOGGER.setLevel(verbosity)
 
     if not (force or dry_run):

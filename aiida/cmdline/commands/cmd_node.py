@@ -314,11 +314,7 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
     from aiida.orm.utils.loaders import NodeEntityLoader
     from aiida.manage.database.delete.nodes import delete_nodes, DELETE_LOGGER
 
-    verbosity = logging.INFO
-    if force:
-        verbosity = logging.WARNING
-    elif verbose:
-        verbosity = logging.DEBUG
+    verbosity = logging.DEBUG if verbose else logging.INFO
     DELETE_LOGGER.setLevel(verbosity)
 
     pks = []
@@ -337,7 +333,10 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
         return not click.confirm('Shall I continue?')
 
     with override_log_formatter_context('%(message)s'):
-        delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+
+    if was_deleted:
+        echo.echo_success(f'Finished deletion.')
 
 
 @verdi_node.command('rehash')

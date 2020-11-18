@@ -63,15 +63,23 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
 Controlling hashing
 -------------------
 
-Below are some methods you can use to control how the hashes of calculation and data classes are computed:
+There are a couple of ways in which you can customized what properties are being considered when calculating the hash for a new instance of a data node.
+Most of this are established at the time of creating the data plugin extension:
 
-* To ignore specific attributes, a :py:class:`~aiida.orm.nodes.Node` subclass can have a ``_hash_ignored_attributes`` attribute.
+* If you wish to ignore specific attributes, a :py:class:`~aiida.orm.nodes.Node` subclass can have a ``_hash_ignored_attributes`` attribute.
   This is a list of attribute names, which are ignored when creating the hash.
-* For calculations, the ``_hash_ignored_inputs`` attribute lists inputs that should be ignored when creating the hash.
 * To add things which should be considered in the hash, you can override the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method.
-  Note that doing so overrides the behavior described above, so you should make sure to use the ``super()`` method.
-* Pass a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`.
-  These are passed on to :meth:`~aiida.common.hashing.make_hash`.
+  Note that doing so also overrides the behavior described above, so make sure to use the ``super()`` method in order to prevent this.
+* You can pass a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`.
+  These are, in turn, passed on to :meth:`~aiida.common.hashing.make_hash`.
+
+The process nodes have a fixed behavior that is internal to AiiDA and are not subclassable, so they can't be customized in a direct way.
+To know more about the specifics of these internals you can visit the :ref:`corresponding section <internal_architecture:engine:caching>`.
+There are only two ways in which these can be influenced by plugin designers:
+
+* Indirectly via the hash criteria for the associated data types of their inputs.
+* The :meth:` spec.exit_code <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` has a keyword argument ``invalidates_cache``.
+  If this is set to ``True``, that means that a calculation with this exit code will not be used as a cache source for another one, even if their hashes match.
 
 
 .. _topics:provenance:caching:limitations:

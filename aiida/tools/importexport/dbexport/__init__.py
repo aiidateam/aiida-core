@@ -280,7 +280,7 @@ def export(
         _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
 
         # write the link data
-        if traverse_output['links']:
+        if traverse_output['links'] is not None:
             with get_progress_reporter()(total=len(traverse_output['links']), desc='Writing links') as progress:
                 for link in traverse_output['links']:
                     progress.update()

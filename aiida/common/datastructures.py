@@ -98,7 +98,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'remote_symlink_list',
         'provenance_exclude_list',
         'codes_info',
-        'codes_run_mode'
+        'codes_run_mode',
+        'skip_submit'
     )
 
 

@@ -42,6 +42,7 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     assert isinstance(calc_info, datastructures.CalcInfo)
     assert isinstance(calc_info.codes_info, list)
     assert len(calc_info.codes_info) == 0
+    assert calc_info.skip_submit
 
     # Check that the lists were set correctly
     copy_list = [
@@ -90,6 +91,7 @@ def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     assert isinstance(calc_info, datastructures.CalcInfo)
     assert isinstance(calc_info.codes_info, list)
     assert len(calc_info.codes_info) == 0
+    assert calc_info.skip_submit
 
     # Check that the lists were set correctly
     copy_list = [

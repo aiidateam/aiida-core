@@ -204,18 +204,19 @@ class TransferCalculation(CalcJob):
         symlink_files = instructions.get('symlink_files', [])
         retrieve_files = instructions.get('retrieve_files')
 
-        calcinfo = CalcInfo()
-        calcinfo.codes_info = []
-        calcinfo.local_copy_list = []
-        calcinfo.remote_copy_list = []
-        calcinfo.remote_symlink_list = []
+        calc_info = CalcInfo()
+        calc_info.skip_submit = True
+        calc_info.codes_info = []
+        calc_info.local_copy_list = []
+        calc_info.remote_copy_list = []
+        calc_info.remote_symlink_list = []
         retrieve_paths = []
 
         for source_label, source_relpath, target_relpath in local_files:
 
             source_node = source_nodes[source_label]
             retrieve_paths.append(target_relpath)
-            calcinfo.local_copy_list.append((
+            calc_info.local_copy_list.append((
                 source_node.uuid,
                 source_relpath,
                 target_relpath,
@@ -225,7 +226,7 @@ class TransferCalculation(CalcJob):
 
             source_node = source_nodes[source_label]
             retrieve_paths.append(target_relpath)
-            calcinfo.remote_copy_list.append((
+            calc_info.remote_copy_list.append((
                 source_node.computer.uuid,
                 os.path.join(source_node.get_remote_path(), source_relpath),
                 target_relpath,
@@ -235,15 +236,15 @@ class TransferCalculation(CalcJob):
 
             source_node = source_nodes[source_label]
             retrieve_paths.append(target_relpath)
-            calcinfo.remote_symlink_list.append((
+            calc_info.remote_symlink_list.append((
                 source_node.computer.uuid,
                 os.path.join(source_node.get_remote_path(), source_relpath),
                 target_relpath,
             ))
 
         if retrieve_files:
-            calcinfo.retrieve_list = retrieve_paths
+            calc_info.retrieve_list = retrieve_paths
         else:
-            calcinfo.retrieve_list = []
+            calc_info.retrieve_list = []
 
-        return calcinfo
+        return calc_info

@@ -32,7 +32,7 @@ def verdi_group():
 @arguments.NODES()
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
-    """Add nodes to the a group."""
+    """Add nodes to a group."""
     if not force:
         click.confirm(f'Do you really want to add {len(nodes)} nodes to Group<{group.label}>?', abort=True)
 

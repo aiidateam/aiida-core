@@ -336,7 +336,7 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
         _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
 
     if was_deleted:
-        echo.echo_success(f'Finished deletion.')
+        echo.echo_success('Finished deletion.')
 
 
 @verdi_node.command('rehash')

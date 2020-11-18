@@ -88,13 +88,15 @@ def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversa
         warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     label = group.label
+    klass = group.__class__.__name__
+
     verbosity = logging.DEBUG if verbose else logging.INFO
     DELETE_LOGGER.setLevel(verbosity)
 
     if not (force or dry_run):
-        click.confirm(f'Are you sure to delete Group<{label}>?', abort=True)
+        click.confirm(f'Are you sure to delete {klass}<{label}>?', abort=True)
     elif dry_run:
-        echo.echo_info(f'Would have deleted Group<{label}>.')
+        echo.echo_info(f'Would have deleted {klass}<{label}>.')
 
     if delete_nodes:
 
@@ -110,8 +112,9 @@ def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversa
             # don't delete the group if the nodes were not deleted
             return
 
-    orm.Group.objects.delete(group.pk)
-    echo.echo_success(f'Group<{label}> deleted.')
+    if not dry_run:
+        orm.Group.objects.delete(group.pk)
+        echo.echo_success(f'{klass}<{label}> deleted.')
 
 
 @verdi_group.command('relabel')

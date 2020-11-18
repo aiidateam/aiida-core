@@ -23,7 +23,6 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
         sudo apt install libkrb5-dev ruby ruby-dev
 

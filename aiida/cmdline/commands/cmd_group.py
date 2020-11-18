@@ -63,10 +63,6 @@ def group_remove_nodes(group, nodes, clear, force):
 
 @verdi_group.command('delete')
 @arguments.GROUP()
-@options.GROUP_CLEAR(
-    help='Remove all nodes before deleting the group itself.' +
-    ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
-)
 @options.FORCE()
 @click.option(
     '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
@@ -74,6 +70,10 @@ def group_remove_nodes(group, nodes, clear, force):
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
 @options.VERBOSE()
+@options.GROUP_CLEAR(
+    help='Remove all nodes before deleting the group itself.' +
+    ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
+)
 @with_dbenv()
 def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversal_rules):
     """Delete a group.

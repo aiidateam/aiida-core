@@ -215,7 +215,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
           (aiida) $ reentry scan
 
    ---
-   
+
    **Setup profile**
 
    Next, set up an AiiDA configuration profile and related data storage, with the ``verdi quicksetup`` command.

@@ -95,8 +95,10 @@ def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversa
         verbosity = logging.DEBUG
     DELETE_LOGGER.setLevel(verbosity)
 
-    if not force:
+    if not (force or dry_run):
         click.confirm(f'Are you sure to delete Group<{label}>?', abort=True)
+    elif dry_run:
+        echo.echo_info(f'Would have deleted Group<{label}>.')
 
     if delete_nodes:
 

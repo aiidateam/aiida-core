@@ -356,12 +356,12 @@ class TestCalcJob(AiidaTestCase):
 
 
 @pytest.fixture
-def get_process(aiida_local_code_factory):
+def generate_process(aiida_local_code_factory):
     """Instantiate a process with default inputs and return the `Process` instance."""
     from aiida.engine.utils import instantiate_process
     from aiida.manage.manager import get_manager
 
-    def _get_process(inputs=None):
+    def _generate_process(inputs=None):
 
         base_inputs = {
             'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
@@ -384,16 +384,16 @@ def get_process(aiida_local_code_factory):
 
         return process
 
-    return _get_process
+    return _generate_process
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_insufficient_data(get_process):
+def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly that the parsing does not except even if the required information is not available.
     """
-    process = get_process()
+    process = generate_process()
 
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -418,13 +418,13 @@ def test_parse_insufficient_data(get_process):
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_non_zero_retval(get_process):
+def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     This is testing the case where the `detailed_job_info` is incomplete because the call failed. This is checked
     through the return value that is stored within the attribute dictionary.
     """
-    process = get_process()
+    process = generate_process()
 
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -437,12 +437,12 @@ def test_parse_non_zero_retval(get_process):
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_not_implemented(get_process):
+def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly that the parsing does not except even if the scheduler does not implement the method.
     """
-    process = get_process()
+    process = generate_process()
 
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -470,14 +470,14 @@ def test_parse_not_implemented(get_process):
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_scheduler_excepted(get_process, monkeypatch):
+def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly the case where the `Scheduler.parse_output` method excepts
     """
     from aiida.schedulers.plugins.direct import DirectScheduler
 
-    process = get_process()
+    process = generate_process()
 
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -576,28 +576,42 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_additional_retrieve_list(get_process, fixture_sandbox):
+def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
-    process = get_process()
+    process = generate_process()
     process.presubmit(fixture_sandbox)
     retrieve_list = process.node.get_attribute('retrieve_list')
+
+    # Keep reference of the base contents of the retrieve list.
+    base_retrieve_list = retrieve_list
 
     # Test that the code works if no explicit additional retrieve list is specified
     assert len(retrieve_list) != 0
     assert isinstance(process.node.get_attribute('retrieve_list'), list)
 
-    # Defining explicit additional retrieve list
+    # Defining explicit additional retrieve list that is disjoint with the base retrieve list
     additional_retrieve_list = ['file.txt', 'folder/file.txt']
-    process = get_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
+    process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
     process.presubmit(fixture_sandbox)
     retrieve_list = process.node.get_attribute('retrieve_list')
+
+    # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
     assert isinstance(process.node.get_attribute('retrieve_list'), list)
-    for value in additional_retrieve_list:
-        assert value in retrieve_list
+    assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
+
+    # Defining explicit additional retrieve list with elements that overlap with `base_retrieve_list
+    additional_retrieve_list = ['file.txt', 'folder/file.txt'] + base_retrieve_list
+    process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
+    process.presubmit(fixture_sandbox)
+    retrieve_list = process.node.get_attribute('retrieve_list')
+
+    # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
+    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
 
     # Test the validator
     with pytest.raises(ValueError, match=r'`additional_retrieve_list` should only contain relative filepaths.*'):
-        process = get_process({'metadata': {'options': {'additional_retrieve_list': [None]}}})
+        process = generate_process({'metadata': {'options': {'additional_retrieve_list': [None]}}})
 
     with pytest.raises(ValueError, match=r'`additional_retrieve_list` should only contain relative filepaths.*'):
-        process = get_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
+        process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})

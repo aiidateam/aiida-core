@@ -1371,10 +1371,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('Remotedestination cannot have patterns')
 
+            self.makedirs(dest, ignore_existing=True)
             # find all files matching pattern
             for this_source in self.glob(source):
                 # create the name of the link: take the last part of the path
-                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
+                this_dest = os.path.join(dest, os.path.split(this_source)[-1])
                 self._symlink(this_source, this_dest)
         else:
             self._symlink(source, dest)

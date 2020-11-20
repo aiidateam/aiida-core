@@ -845,6 +845,7 @@ class LocalTransport(Transport):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('Remotedestination cannot have patterns')
 
+            self.makedirs(remotedestination, ignore_existing=True)
             # find all files matching pattern
             for this_file in self.glob(remotesource):
                 # create the name of the link: take the last part of the path

@@ -108,10 +108,10 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     from aiida.calculations.transfer import TransferCalculation
     from aiida.engine import run
 
-    content_local0 = 'Content of local file'
-    srcfile_local0 = tmp_path / 'file_local0.txt'
-    srcfile_local0.write_text(content_local0)
-    srcnode_local0 = orm.FolderData(tree=str(tmp_path))
+    content_local = 'Content of local file'
+    srcfile_local = tmp_path / 'file_local.txt'
+    srcfile_local.write_text(content_local)
+    srcnode_local = orm.FolderData(tree=str(tmp_path))
 
     content_remote = 'Content of remote file'
     srcfile_remote = tmp_path / 'file_remote.txt'
@@ -119,15 +119,15 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     srcnode_remote = orm.RemoteData(computer=aiida_localhost, remote_path=str(tmp_path))
 
     list_of_nodes = {}
-    list_of_nodes['source_local0'] = srcnode_local0
-    list_for_local0 = [('source_local0', 'file_local0.txt', 'file_local0.txt')]
+    list_of_nodes['source_local'] = srcnode_local
+    list_for_local = [('source_local', 'file_local.txt', 'file_local.txt')]
     list_of_nodes['source_remote'] = srcnode_remote
     list_for_remote = [('source_remote', 'file_remote.txt', 'file_remote.txt')]
 
     instructions = orm.Dict(
         dict={
             'retrieve_files': True,
-            'local_files': list_for_local0,
+            'local_files': list_for_local,
             'remote_files': list_for_remote,
         }
     )
@@ -139,14 +139,14 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     output_retrieved = output_nodes['retrieved']
 
     # Check the retrieved folder
-    assert sorted(output_retrieved.list_object_names()) == sorted(['file_local0.txt', 'file_remote.txt'])
-    assert output_retrieved.get_object_content('file_local0.txt') == content_local0
+    assert sorted(output_retrieved.list_object_names()) == sorted(['file_local.txt', 'file_remote.txt'])
+    assert output_retrieved.get_object_content('file_local.txt') == content_local
     assert output_retrieved.get_object_content('file_remote.txt') == content_remote
 
     # Check the remote folder
-    assert 'file_local0.txt' in output_remotedir.listdir()
+    assert 'file_local.txt' in output_remotedir.listdir()
     assert 'file_remote.txt' in output_remotedir.listdir()
-    output_remotedir.getfile(relpath='file_local0.txt', destpath=str(tmp_path / 'retrieved_local0.txt'))
+    output_remotedir.getfile(relpath='file_local.txt', destpath=str(tmp_path / 'retrieved_local.txt'))
     output_remotedir.getfile(relpath='file_remote.txt', destpath=str(tmp_path / 'retrieved_remote.txt'))
-    assert (tmp_path / 'retrieved_local0.txt').read_text() == content_local0
+    assert (tmp_path / 'retrieved_local.txt').read_text() == content_local
     assert (tmp_path / 'retrieved_remote.txt').read_text() == content_remote

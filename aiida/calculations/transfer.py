@@ -15,7 +15,7 @@ from aiida.engine import CalcJob
 from aiida.common.datastructures import CalcInfo
 
 
-def validate_instructions(instructions, ctx):  # pylint: disable=inconsistent-return-statements, unused-argument
+def validate_instructions(instructions, _):
     """Check that the instructions dict contains the necessary keywords"""
 
     instructions_dict = instructions.get_dict()
@@ -24,19 +24,22 @@ def validate_instructions(instructions, ctx):  # pylint: disable=inconsistent-re
     if retrieve_files is None:
         errmsg = (
             '\n\n'
-            'no indication of what to do in the instruction node:\n > {}\n'
+            'no indication of what to do in the instruction node:\n'
+            f' > {instructions.uuid}\n'
             '(to store the files in the repository set retrieve_files=True,\n'
             'to copy them to the specified folder on the remote computer,\n'
             'set it to False)\n'
         )
-        return errmsg.format(instructions.uuid)
+        return errmsg
 
     if not isinstance(retrieve_files, bool):
         errmsg = (
-            'entry for retrieve files inside of instruction node {} must be\n'
-            'either True or False; instead, it is: {}'
+            'entry for retrieve files inside of instruction node:\n'
+            f' > {instructions.uuid}\n'
+            'must be either True or False; instead, it is:\n'
+            f' > {retrieve_files}\n'
         )
-        return errmsg.format(instructions.uuid, retrieve_files)
+        return errmsg
 
     local_files = instructions_dict.get('local_files', None)
     remote_files = instructions_dict.get('remote_files', None)
@@ -44,15 +47,16 @@ def validate_instructions(instructions, ctx):  # pylint: disable=inconsistent-re
 
     if not any([local_files, remote_files, symlink_files]):
         errmsg = (
-            'no indication of which files to copy were found in the instruction node {}.\n'
+            'no indication of which files to copy were found in the instruction node:\n'
+            f' > {instructions.uuid}\n'
             'Please include at least one of `local_files`, `remote_files`, or `symlink_files`.\n'
-            'These should be lists containing tuples following the pattern:\n'
-            '[ ... (source_node_key, source_relpath, target_relpath) ... ] \n'
+            'These should be lists containing 3-tuples with the following format:\n'
+            '    (source_node_key, source_relpath, target_relpath)\n'
         )
-        return errmsg.format(instructions.uuid)
+        return errmsg
 
 
-def validate_transfer_inputs(inputs, ctx):  # pylint: disable=inconsistent-return-statements, unused-argument
+def validate_transfer_inputs(inputs, _):
     """Check that the instructions dict and the source nodes are consistent"""
 
     source_nodes = inputs['source_nodes']
@@ -60,9 +64,9 @@ def validate_transfer_inputs(inputs, ctx):  # pylint: disable=inconsistent-retur
     computer = inputs['metadata']['computer']
 
     instructions_dict = instructions.get_dict()
-    local_files = instructions_dict.get('local_files', list())
-    remote_files = instructions_dict.get('remote_files', list())
-    symlink_files = instructions_dict.get('symlink_files', list())
+    local_files = instructions_dict.get('local_files', [])
+    remote_files = instructions_dict.get('remote_files', [])
+    symlink_files = instructions_dict.get('symlink_files', [])
 
     source_nodes_provided = set()
     source_nodes_required = set()
@@ -71,8 +75,10 @@ def validate_transfer_inputs(inputs, ctx):  # pylint: disable=inconsistent-retur
     for node_label, node_object in source_nodes.items():
         if isinstance(node_object, orm.RemoteData):
             if computer.name != node_object.computer.name:
-                error_message = ' > remote node `{}` points to computer `{}`, not the one being used (`{}`)'
-                error_message = error_message.format(node_label, node_object.computer.name, computer.name)
+                error_message = (
+                    f' > remote node `{node_label}` points to computer `{node_object.computer}`,',
+                    f'not the one being used (`{computer.name}`)'
+                )
                 error_message_list.append(error_message)
 
     for source_label, _, _ in local_files:
@@ -98,8 +104,7 @@ def validate_transfer_inputs(inputs, ctx):  # pylint: disable=inconsistent-retur
 
     unrequired_nodes = source_nodes_provided.difference(source_nodes_required)
     for node_label in unrequired_nodes:
-        error_message = ' > node `{}` provided as inputs is not being used'
-        error_message = error_message.format(node_label)
+        error_message = f' > node `{node_label}` provided as inputs is not being used'
         error_message_list.append(error_message)
 
     if len(error_message_list) > 0:
@@ -130,9 +135,8 @@ class TransferCalculation(CalcJob):
     new FolderData node to store them) or in the remote computer (by leaving the files in a
     new remote folder saved in a RemoteData node).
 
-    Only files from the local computer and a single remote computer can be moved with a single
-    instance of this CalcJob (so you can't directly move files from remote to remote and all
-    RemoteData nodes must be from the same machine).
+    Only files from the local computer and from remote folders in the same external computer
+    can be moved at the same time with a single instance of this CalcJob.
 
     The user needs to provide three inputs:
 
@@ -142,17 +146,17 @@ class TransferCalculation(CalcJob):
           the final RemoteData node.
 
     The ``instructions`` dict must have the ``retrieve_files`` flag. The CalcJob will create a
-    new folder in the remote machine (RemoteData) and put all the files there and will either:
+    new folder in the remote machine (``RemoteData``) and put all the files there and will either:
 
         (1) leave them there (``retrieve_files = False``) or ...
-        (2) create a local FolderData and copy there all the files (``retrieve_files = True``)
+        (2) retrieve all the files and store them locally in a ``FolderData``  (``retrieve_files = True``)
 
     The `instructions` dict must also contain at least one list with specifications of which files
     to copy and from where. All these lists take tuples of 3 that have the following format:
 
     .. code-block:: python
 
-        [ ..., ( source_node_key, path_to_file_in_source, path_to_file_in_target), ... ]
+        ( source_node_key, path_to_file_in_source, path_to_file_in_target)
 
     where the ``source_node_key`` has to be the respective one used when providing the node in the
     ``source_nodes`` input nodes dictionary.

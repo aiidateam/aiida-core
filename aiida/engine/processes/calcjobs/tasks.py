@@ -22,6 +22,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.engine.utils import exponential_backoff_retry, interruptable_task
 from aiida.schedulers.datastructures import JobState
+from aiida.manage.configuration import get_config
 
 from ..process import ProcessState
 
@@ -31,8 +32,8 @@ UPDATE_COMMAND = 'update'
 RETRIEVE_COMMAND = 'retrieve'
 KILL_COMMAND = 'kill'
 
-TRANSPORT_TASK_RETRY_INITIAL_INTERVAL = 20
-TRANSPORT_TASK_MAXIMUM_ATTEMTPS = 5
+TRANSPORT_TASK_RETRY_INITIAL_INTERVAL = get_config().get_option('transport.task_retry_initial_interval')
+TRANSPORT_TASK_MAXIMUM_ATTEMPTS = get_config().get_option('transport.task_maximum_attempts')
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def task_upload_job(process, transport_queue, cancellable):
         raise Return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
-    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMPTS
 
     authinfo = node.computer.get_authinfo(node.user)
 
@@ -125,7 +126,7 @@ def task_submit_job(node, transport_queue, cancellable):
         raise Return(node.get_job_id())
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
-    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMPTS
 
     authinfo = node.computer.get_authinfo(node.user)
 
@@ -173,7 +174,7 @@ def task_update_job(node, job_manager, cancellable):
         raise Return(True)
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
-    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMPTS
 
     authinfo = node.computer.get_authinfo(node.user)
     job_id = node.get_job_id()
@@ -234,7 +235,7 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         raise Return
 
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
-    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMPTS
 
     authinfo = node.computer.get_authinfo(node.user)
 
@@ -292,7 +293,7 @@ def task_kill_job(node, transport_queue, cancellable):
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     initial_interval = TRANSPORT_TASK_RETRY_INITIAL_INTERVAL
-    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMTPS
+    max_attempts = TRANSPORT_TASK_MAXIMUM_ATTEMPTS
 
     if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
         logger.warning(f'CalcJob<{node.pk}> killed, it was in the {node.get_state()} state')

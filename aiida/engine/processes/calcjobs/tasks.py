@@ -32,6 +32,9 @@ UPDATE_COMMAND = 'update'
 RETRIEVE_COMMAND = 'retrieve'
 KILL_COMMAND = 'kill'
 
+RETRY_INTERVAL_OPTION = 'transport.task_retry_initial_interval'
+MAX_ATTEMPTS_OPTION = 'transport.task_maximum_attempts'
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,8 +64,8 @@ def task_upload_job(process, transport_queue, cancellable):
         logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
         raise Return
 
-    initial_interval = get_config().get_option('transport.task_retry_initial_interval')
-    max_attempts = get_config().get_option('transport.task_maximum_attempts')
+    initial_interval = get_config().get_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config().get_option(MAX_ATTEMPTS_OPTION)
 
     authinfo = node.computer.get_authinfo(node.user)
 
@@ -122,8 +125,8 @@ def task_submit_job(node, transport_queue, cancellable):
         logger.warning(f'CalcJob<{node.pk}> already marked as WITHSCHEDULER, skipping task_submit_job')
         raise Return(node.get_job_id())
 
-    initial_interval = get_config().get_option('transport.task_retry_initial_interval')
-    max_attempts = get_config().get_option('transport.task_maximum_attempts')
+    initial_interval = get_config().get_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config().get_option(MAX_ATTEMPTS_OPTION)
 
     authinfo = node.computer.get_authinfo(node.user)
 
@@ -170,8 +173,8 @@ def task_update_job(node, job_manager, cancellable):
         logger.warning(f'CalcJob<{node.pk}> already marked as RETRIEVING, skipping task_update_job')
         raise Return(True)
 
-    initial_interval = get_config().get_option('transport.task_retry_initial_interval')
-    max_attempts = get_config().get_option('transport.task_maximum_attempts')
+    initial_interval = get_config().get_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config().get_option(MAX_ATTEMPTS_OPTION)
 
     authinfo = node.computer.get_authinfo(node.user)
     job_id = node.get_job_id()
@@ -231,8 +234,8 @@ def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancell
         logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
         raise Return
 
-    initial_interval = get_config().get_option('transport.task_retry_initial_interval')
-    max_attempts = get_config().get_option('transport.task_maximum_attempts')
+    initial_interval = get_config().get_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config().get_option(MAX_ATTEMPTS_OPTION)
 
     authinfo = node.computer.get_authinfo(node.user)
 
@@ -289,8 +292,8 @@ def task_kill_job(node, transport_queue, cancellable):
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    initial_interval = get_config().get_option('transport.task_retry_initial_interval')
-    max_attempts = get_config().get_option('transport.task_maximum_attempts')
+    initial_interval = get_config().get_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config().get_option(MAX_ATTEMPTS_OPTION)
 
     if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
         logger.warning(f'CalcJob<{node.pk}> killed, it was in the {node.get_state()} state')

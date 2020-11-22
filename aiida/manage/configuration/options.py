@@ -185,6 +185,22 @@ CONFIG_OPTIONS = {
         'description': 'Boolean whether to print AiiDA deprecation warnings',
         'global_only': False,
     },
+    'transport.task_retry_initial_interval': {
+        'key': 'task_retry_initial_interval',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 20,
+        'description': 'Initial time interval for the exponential backoff mechanism.',
+        'global_only': False,
+    },
+    'transport.task_maximum_attempts': {
+        'key': 'task_maximum_attempts',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 5,
+        'description': 'Maximum number of transport task attempts before a Process is Paused.',
+        'global_only': False,
+    },
 }
 
 

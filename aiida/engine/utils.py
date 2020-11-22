@@ -154,7 +154,8 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
     This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
     finished without raising an exception, at which point the returned result will be raised, wrapped in a
     ``tornado.gen.Result`` instance. If an exception is caught, the function will yield a ``tornado.gen.sleep`` with a
-    time interval equal to the ``initial_interval`` multiplied by ``2*N`` where ``N`` is the number of excepted calls.
+    time interval equal to the ``initial_interval`` multiplied by ``2 ** (N - 1)`` where ``N`` is the number of
+    excepted calls.
 
     :param fct: the function to call, which will be turned into a coroutine first if it is not already
     :param initial_interval: the time to wait after the first caught exception before calling the coroutine again

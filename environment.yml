@@ -23,7 +23,7 @@ dependencies:
 - jinja2~=2.10
 - kiwipy[rmq]~=0.6.1
 - numpy~=1.17
-- pamqp~=2.0
+- pamqp~=2.3
 - paramiko~=2.7
 - plumpy~=0.17.1
 - pgsu~=0.1.0

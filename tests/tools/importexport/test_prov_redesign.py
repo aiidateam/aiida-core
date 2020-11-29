@@ -206,6 +206,7 @@ class TestProvenanceRedesign(AiidaTestCase):
             '<PP_HEADER',
             'contents before element tag',
             "element=\"Al\"",
+            "z_valence=\"    11.00\"",
             'contents following element tag',
             '>',
         ])

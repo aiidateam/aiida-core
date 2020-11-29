@@ -175,11 +175,12 @@ class TestUpfParser(AiidaTestCase):
         upf_contents = '\n'.join([
             '<PP_INFO>'
             'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
+            '<PP_HEADER>',
             'contents before element tag',
             'O                     Element',
+            '4.00000000000         Z valence',
             'contents following element tag',
-            '>',
+            '</PP_HEADER>',
         ])
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
@@ -189,6 +190,7 @@ class TestUpfParser(AiidaTestCase):
         # check that parsed data matches the expected one
         self.assertEqual(parsed_data['version'], '1')
         self.assertEqual(parsed_data['element'], 'O')
+        self.assertEqual(parsed_data['z_valence'], 4.00)
 
     def test_upf_version_two(self):
         """Check if parsing for regular UPF file (version 2) succeeds."""
@@ -201,6 +203,7 @@ class TestUpfParser(AiidaTestCase):
             '<PP_HEADER',
             'contents before element tag',
             "element=\"Al\"",
+            "z_valence=\"    4.00\"",
             'contents following element tag',
             '>',
         ])
@@ -212,6 +215,7 @@ class TestUpfParser(AiidaTestCase):
         # check that parsed data matches the expected one
         self.assertEqual(parsed_data['version'], '2.0.1')
         self.assertEqual(parsed_data['element'], 'Al')
+        self.assertEqual(parsed_data['z_valence'], 4.00)
 
     def test_additional_header_line(self):
         """Regression #2228: check if parsing succeeds if additional header line is present."""
@@ -309,11 +313,11 @@ class TestUpfParser(AiidaTestCase):
         upf_contents = '\n'.join([
             '<PP_INFO>'
             'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
+            '<PP_HEADER>',
             'contents before element tag',
             'element should be here but is missing',
             'contents following element tag',
-            '>',
+            '</PP_HEADER>',
         ])
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:
@@ -354,11 +358,11 @@ class TestUpfParser(AiidaTestCase):
         upf_contents = '\n'.join([
             '<PP_INFO>'
             'Human readable section is completely irrelevant for parsing!',
-            '<PP_HEADER',
+            '<PP_HEADER>',
             'contents before element tag',
             'Ab                     Element',
             'contents following element tag',
-            '>',
+            '</PP_HEADER>',
         ])
         path_to_upf = os.path.join(self.temp_dir, upf_filename)
         with open(path_to_upf, 'w') as upf_file:

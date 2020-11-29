@@ -36,6 +36,24 @@ REGEX_ELEMENT_V2 = re.compile(
     """, re.VERBOSE
 )
 
+REGEX_HEADER_V1 = re.compile(
+    r"""
+    <PP_HEADER>\s*
+    (?P<header>.*)\s*
+    </PP_HEADER>
+    """, re.DOTALL | re.VERBOSE
+)
+
+REGEX_HEADER_V2 = re.compile(r"""
+    <PP_HEADER\s
+    (?P<header>.*?)\s*
+    /?>
+    """, re.DOTALL | re.VERBOSE)
+
+REGEX_HEADER_PARA_V2 = re.compile(r"""
+    (\w*)\s*=\s*"\s*(.*)\s*"
+    """, re.VERBOSE)
+
 
 def get_pseudos_from_structure(structure, family_name):
     """Return a dictionary mapping each kind name of the structure to corresponding `UpfData` from given family.
@@ -185,6 +203,7 @@ def parse_upf(fname, check_filename=True):
     If check_filename is True, raise a ParsingError exception if the filename
     does not start with the element name.
     """
+    # pylint: disable=too-many-statements,too-many-branches
     import os
 
     from aiida.common.exceptions import ParsingError
@@ -219,13 +238,28 @@ def parse_upf(fname, check_filename=True):
 
     element = None
     if version_major == 1:
-        match = REGEX_ELEMENT_V1.search(upf_contents)
-        if match:
-            element = match.group('element_name')
+        header_match = REGEX_HEADER_V1.search(upf_contents)
+        header = header_match.group('header')
+        for line in header.splitlines():
+            if 'Element' in line:
+                parsed_data['element'] = line.split()[0]
+
+            if 'Z valence' in line:
+                parsed_data['z_valence'] = float(line.split()[0])
+
+        element = parsed_data.get('element', None)
+
     else:  # all versions > 1
-        match = REGEX_ELEMENT_V2.search(upf_contents)
-        if match:
-            element = match.group('element_name')
+        header_match = REGEX_HEADER_V2.search(upf_contents)
+        header = header_match.group('header')
+        para_pairs = REGEX_HEADER_PARA_V2.findall(header)
+        for (key, value) in para_pairs:
+            if key in ['z_valence']:
+                value = float(value)
+
+            parsed_data[key] = value
+
+        element = parsed_data.get('element', None)
 
     if element is None:
         raise ParsingError(f'Unable to find the element of UPF {fname}')
@@ -297,9 +331,25 @@ class UpfData(SinglefileData):
 
         return (pseudos[0], False)
 
+    def _set_upf_info(self, parsed_data: dict):
+        """set upf info from pp header as attributes"""
+        from aiida.common.exceptions import ParsingError
+
+        try:
+            element = parsed_data['element']
+        except KeyError:
+            raise ParsingError(f'Could not parse the element from the UPF file {self.filename}')
+
+        try:
+            z_valence = parsed_data['z_valence']
+        except KeyError:
+            raise ParsingError(f'Could not parse the z_valence from the UPF file {self.filename}')
+
+        self.set_attribute('element', str(element))
+        self.set_attribute('z_valence', z_valence)
+
     def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""
-        from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_from_filelike
 
         if self.is_stored:
@@ -308,16 +358,12 @@ class UpfData(SinglefileData):
         with self.open(mode='r') as handle:
             parsed_data = parse_upf(handle)
 
+        self._set_upf_info(parsed_data)
+
         # Open in binary mode which is required for generating the md5 checksum
         with self.open(mode='rb') as handle:
             md5 = md5_from_filelike(handle)
 
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            raise ParsingError(f'Could not parse the element from the UPF file {self.filename}')
-
-        self.set_attribute('element', str(element))
         self.set_attribute('md5', md5)
 
         return super().store(*args, **kwargs)
@@ -344,24 +390,18 @@ class UpfData(SinglefileData):
         :param filename: specify filename to use (defaults to name of provided file).
         """
         # pylint: disable=redefined-builtin
-        from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_file, md5_from_filelike
 
         parsed_data = parse_upf(file)
+
+        self._set_upf_info(parsed_data)
 
         try:
             md5sum = md5_file(file)
         except TypeError:
             md5sum = md5_from_filelike(file)
 
-        try:
-            element = parsed_data['element']
-        except KeyError:
-            raise ParsingError(f"No 'element' parsed in the UPF file {self.filename}; unable to store")
-
         super().set_file(file, filename=filename)
-
-        self.set_attribute('element', str(element))
         self.set_attribute('md5', md5sum)
 
     def get_upf_family_names(self):

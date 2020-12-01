@@ -51,14 +51,19 @@ class Config:  # pylint: disable=too-many-public-methods
             config = Config(filepath, check_and_migrate_config({}))
             config.store()
         else:
+            migrated = False
+
             # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
             if config_needs_migrating(config):
+                migrated = True
                 echo.echo_warning(f'current configuration file `{filepath}` is outdated and will be migrated')
                 filepath_backup = cls._backup(filepath)
                 echo.echo_warning(f'original backed up to `{filepath_backup}`')
 
             config = Config(filepath, check_and_migrate_config(config))
-            config.store()
+
+            if migrated:
+                config.store()
 
         return config
 

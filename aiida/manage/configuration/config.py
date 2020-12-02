@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
-
 import os
 import shutil
+import tempfile
 
 from aiida.common import json
 
@@ -47,7 +47,7 @@ class Config:  # pylint: disable=too-many-public-methods
         try:
             with open(filepath, 'r', encoding='utf8') as handle:
                 config = json.load(handle)
-        except (IOError, OSError):
+        except FileNotFoundError:
             config = Config(filepath, check_and_migrate_config({}))
             config.store()
         else:
@@ -378,38 +378,52 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :return: self
         """
-        import tempfile
         from aiida.common.files import md5_from_filelike, md5_file
+        from .settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.
         if not os.path.isfile(self.filepath):
-            with open(self.filepath, 'wb') as handle:
-                self._write(handle)
+            self._atomic_write()
             return self
 
         # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
         # disk. When the checksums differ, we first create a backup and only then overwrite the existing file.
         with tempfile.NamedTemporaryFile() as handle:
-            self._write(handle)
+            json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
             handle.seek(0)
 
             if md5_from_filelike(handle) != md5_file(self.filepath):
                 self._backup(self.filepath)
 
-            shutil.copy(handle.name, self.filepath)
+        self._atomic_write()
 
         return self
 
-    def _write(self, filelike):
-        """Write the contents of `self.dictionary` to the given file handle.
+    def _atomic_write(self, filepath=None):
+        """Write the config as it is in memory, i.e. the contents of ``self.dictionary``, to disk.
 
-        :param filelike: the filelike object to write the current configuration to
+        .. note:: this command will write the config from memory to a temporary file in the same directory as the
+            target file ``filepath``. It will then use ``os.rename`` to move the temporary file to ``filepath`` which
+            will be overwritten if it already exists. The ``os.rename`` is the operation that gives the best guarantee
+            of being atomic within the limitations of the application.
+
+        :param filepath: optional filepath to write the contents to, if not specified, the default filename is used.
         """
         from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 
         umask = os.umask(DEFAULT_UMASK)
 
-        try:
-            json.dump(self.dictionary, filelike, indent=DEFAULT_CONFIG_INDENT_SIZE)
-        finally:
-            os.umask(umask)
+        if filepath is None:
+            filepath = self.filepath
+
+        # Create a temporary file in the same directory as the target filepath, which guarantees that the temporary
+        # file is on the same filesystem, which is necessary to be able to use ``os.rename``. Since we are moving the
+        # temporary file, we should also tell the tempfile to not be automatically deleted as that will raise.
+        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False) as handle:
+            try:
+                json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
+            finally:
+                os.umask(umask)
+
+            handle.flush()
+            os.rename(handle.name, self.filepath)

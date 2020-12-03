@@ -190,7 +190,7 @@ class TransferCalculation(CalcJob):
         )
 
         # The transfer just needs a computer, the code are resources are set here
-        spec.inputs['code'].required = False
+        spec.inputs.pop('code', None)
         spec.inputs['metadata']['computer'].required = True
         spec.inputs['metadata']['options']['resources'].default = {
             'num_machines': 1,

@@ -92,6 +92,7 @@ jobs:
 
     - name: Install aiida-core
       run: |
+        pip install numpy==1.19.4
         pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip install --use-feature=2020-resolver --no-deps -e .
         reentry scan

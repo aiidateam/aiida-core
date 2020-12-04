@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.4
+
+### Bug fixes
+- `Dict`: accessing an inexistent key now raises a `KeyError` (instead of an `AttributeError`) [[#4616]](https://github.com/aiidateam/aiida-core/pull/4616)
+
+### Developers
+- CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
+
 ## v1.4.3
 
 ### Bug fixes

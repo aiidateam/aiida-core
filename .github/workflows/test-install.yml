@@ -155,6 +155,13 @@ jobs:
 
     - run: pip install --upgrade pip
 
+    # Work-around issue caused by pymatgen's setup process, which will install the latest
+    # numpy version (including release candidates) regardless of our actual specification
+    # By installing the version from the requirements file, we should get a compatible version
+    - name: Install numpy
+      run: |
+        pip install `grep 'numpy==' requirements/requirements-py-${{ matrix.python-version }}.txt`
+
     - name: Install aiida-core
       run: |
         pip install -e .[atomic_tools,docs,notebook,rest,tests]

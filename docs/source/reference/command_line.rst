@@ -199,6 +199,7 @@ Below is a list with all available subcommands.
     Commands:
       integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
+      version    Show the version of the database.
 
 
 .. _reference:command-line:verdi-devel:

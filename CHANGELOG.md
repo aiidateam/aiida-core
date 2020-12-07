@@ -1,6 +1,8 @@
 # Changelog
 
-## v1.5.1
+## v1.5.2
+
+Note: release `v1.5.1` was skipped due to a problem with the uploaded files to PyPI.
 
 ### Bug fixes
 - `Dict`: accessing an inexistent key now raises a `KeyError` (instead of `AttributeError`) [[#4577]](https://github.com/aiidateam/aiida-core/pull/4577)
@@ -75,7 +77,7 @@ This version is compatible with all current Python versions that are not end-of-
 
 ## v1.4.4
 
-This patch is a backport for 2 of the fixes in `v1.5.1`.
+This patch is a backport for 2 of the fixes in `v1.5.2`.
 
 ### Bug fixes
 - `Dict`: accessing an inexistent key now raises a `KeyError` (instead of an `AttributeError`) [[#4616]](https://github.com/aiidateam/aiida-core/pull/4616)

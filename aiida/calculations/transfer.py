@@ -68,7 +68,7 @@ def validate_transfer_inputs(inputs, _):
     remote_files = instructions_dict.get('remote_files', [])
     symlink_files = instructions_dict.get('symlink_files', [])
 
-    source_nodes_provided = set()
+    source_nodes_provided = set(source_nodes.keys())
     source_nodes_required = set()
     error_message_list = []
 
@@ -76,8 +76,8 @@ def validate_transfer_inputs(inputs, _):
         if isinstance(node_object, orm.RemoteData):
             if computer.name != node_object.computer.name:
                 error_message = (
-                    f' > remote node `{node_label}` points to computer `{node_object.computer}`,',
-                    f'not the one being used (`{computer.name}`)'
+                    f' > remote node `{node_label}` points to computer `{node_object.computer}`, '
+                    f'not the one being used (`{computer}`)'
                 )
                 error_message_list.append(error_message)
 
@@ -118,12 +118,11 @@ def check_node_type(list_name, node_label, node_object, node_type):
     """Common utility function to check the type of a node"""
 
     if node_object is None:
-        error_message = ' > node `{}` requested on list `{}` not found among inputs'
-        return error_message.format(node_label, list_name)
+        return f' > node `{node_label}` requested on list `{list_name}` not found among inputs'
 
     if not isinstance(node_object, node_type):
-        error_message = ' > node `{}`, requested on list {} should be of type `{}`'
-        return error_message.format(node_label, list_name, node_type.class_node_type)
+        target_class = node_type.class_node_type
+        return f' > node `{node_label}`, requested on list `{list_name}` should be of type `{target_class}`'
 
     return None
 

@@ -125,6 +125,7 @@
             "runaiida=aiida.cmdline.commands.cmd_run:run"
         ],
         "aiida.calculations": [
+            "core.transfer = aiida.calculations.transfer:TransferCalculation",
             "arithmetic.add = aiida.calculations.arithmetic.add:ArithmeticAddCalculation",
             "templatereplacer = aiida.calculations.templatereplacer:TemplatereplacerCalculation"
         ],

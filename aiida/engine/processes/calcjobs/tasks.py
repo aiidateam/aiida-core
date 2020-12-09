@@ -77,13 +77,14 @@ async def task_upload_job(process, transport_queue, cancellable):
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
                     execmanager.upload_calculation(node, transport, calc_info, folder)
+                    skip_submit = calc_info.skip_submit or False
 
-            return
+            return skip_submit
 
     try:
         logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
-        result = await exponential_backoff_retry(
+        skip_submit = await exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except PreSubmitException:
@@ -96,7 +97,7 @@ async def task_upload_job(process, transport_queue, cancellable):
     else:
         logger.info(f'uploading CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.SUBMITTING)
-        return result
+        return skip_submit
 
 
 async def task_submit_job(node, transport_queue, cancellable):
@@ -323,7 +324,7 @@ class Waiting(plumpy.Waiting):
 
     async def execute(self):  # pylint: disable=invalid-overridden-method
         """Override the execute coroutine of the base `Waiting` state."""
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches, too-many-statements
         node = self.process.node
         transport_queue = self.process.runner.transport
         command = self.data
@@ -335,8 +336,11 @@ class Waiting(plumpy.Waiting):
 
             if command == UPLOAD_COMMAND:
                 node.set_process_status(process_status)
-                await self._launch_task(task_upload_job, self.process, transport_queue)
-                result = self.submit()
+                skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
+                if skip_submit:
+                    result = self.retrieve()
+                else:
+                    result = self.submit()
 
             elif command == SUBMIT_COMMAND:
                 node.set_process_status(process_status)

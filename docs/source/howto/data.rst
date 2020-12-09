@@ -823,7 +823,7 @@ Some of these files might have been :ref:`retrieved<topics:calculations:usage:ca
 
 In order to give the users more flexibility when deciding what files to keep locally, AiiDA ships with a calculation plugin called :py:class:`~aiida.calculations.transfer.TransferCalculation`.
 You can use this feature to get files from a remote machine to be saved in a local :py:class:`~aiida.orm.nodes.data.folder.FolderData`.
-The specifications of what to copy are provided through an input of type 
+The specifications of what to copy are provided through an input of type
 
 .. code-block:: ipython
 

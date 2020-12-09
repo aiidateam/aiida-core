@@ -805,3 +805,66 @@ This command will delete both the file repository and the database.
 .. danger::
 
   It is not possible to restore a deleted profile unless it was previously backed up!
+
+
+Transfering data
+================
+
+.. danger::
+
+    This feature is still in beta version and its API might change in the near future.
+    It is therefore not recommended that you rely on it for your public/production workflows.
+
+    Moreover, feedback on its implementation will be very appreciated.
+
+After you run a calculation in a remote machine, AiiDA will create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node pointing at the folder where it was executed.
+However, this folder and all of its files remain in the remote machine.
+Some of these files might have been :ref:`retrieved<topics:calculations:usage:calcjobs:file_lists_retrieve>` when the calculation finished, but there will be no local copy for the rest of them.
+
+In order to give the users more flexibility when deciding what files to keep locally, AiiDA ships with a calculation plugin called :py:class:`~aiida.calculations.transfer.TransferCalculation`.
+You can use this feature to get files from a remote machine to be saved in a local :py:class:`~aiida.orm.nodes.data.folder.FolderData`.
+The specifications of what to copy are provided through an input of type 
+
+.. code-block:: ipython
+
+    In [1]: instructions_cont = {}
+        ... instructions_cont['retrieve_files'] = True
+        ... instructions_cont['symlink_files'] = [
+        ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
+        ... ]
+        ... instructions_node = orm.Dict( dict = instructions_cont )
+
+The ``'source/path/filename'`` and ``'target/path/filename'`` are both relative paths (to their respective folders).
+The ``node_keyname`` is a string that will be used when providing the source :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node to the calculation.
+You also need to provide the computer between which the transfer will ocurr:
+
+.. code-block:: ipython
+
+    In [2]: transfer_builder = CalculationFactory('core.transfer').get_builder()
+        ... transfer_builder.instructions = instructions_node
+        ... transfer_builder.source_nodes = {'node_keyname': source_node}
+        ... transfer_builder.metadata.computer = computer_node
+
+The variables ``source_node`` and ``computer_node`` must already contain the corresponding nodes.
+Finally, you just run or submit the calculation as you would do with any other:
+
+.. code-block:: ipython
+
+    In [2]: from aiida.engine import submit
+        ... submit( transfer_builder )
+
+You can also use this to copy local files into a new :py:class:`~aiida.orm.nodes.data.remote.RemoteData` folder.
+In this case the ``source_node`` must be of type :py:class:`~aiida.orm.nodes.data.folder.FolderData`, and you must adapt the instructions to set ``'retrieve_files'`` to ``False`` and use a ``'local_files'`` list instead of the ``'symlink_files'``:
+
+.. code-block:: ipython
+
+    In [1]: instructions_cont = {}
+        ... instructions_cont['retrieve_files'] = False
+        ... instructions_cont['local_files'] = [
+        ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
+        ... ]
+        ... instructions_node = orm.Dict( dict = instructions_cont )
+
+In both cases, you can copy many files by appending them to the respective list.
+It is also possible to copy files from any number of nodes by providing several ``source_node`` s, each with a different ``'node_keyname'``.
+The target node will always be one (so you can *"gather"* files in a single call, but not *"distribute"* them).

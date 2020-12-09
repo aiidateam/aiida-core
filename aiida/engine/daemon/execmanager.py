@@ -40,13 +40,13 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     from logging import LoggerAdapter
     from tempfile import NamedTemporaryFile
-    from aiida.orm import load_node, Code, RemoteData
+    from aiida.orm import load_node, Code, RemoteFolderData
 
     # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
     link_label = 'remote_folder'
-    if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
+    if node.get_outgoing(RemoteFolderData, link_label_filter=link_label).first():
         execlogger.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
         return calc_info
 
@@ -289,7 +289,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         # will simply retry the upload, unless we got here and managed to link it up, in which case we move to the next
         # task. Because in that case, the check for the existence of this link at the top of this function will exit
         # early from this command.
-        remotedata = RemoteData(computer=computer, remote_path=workdir)
+        remotedata = RemoteFolderData(computer=computer, remote_path=workdir)
         remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
 

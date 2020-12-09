@@ -7,11 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Data plugin that models a folder on a remote computer."""
+"""Data plugin that models data on a remote computer but effectively is just a symbolic link."""
 import os
 
 from aiida.orm import AuthInfo
-from .data import Data
+from ..data import Data
 
 __all__ = ('RemoteData',)
 

@@ -204,7 +204,7 @@ class CalcJob(Process):
             valid_type=(list, tuple), validator=validate_additional_retrieve_list,
             help='List of relative file paths that should be retrieved in addition to what the plugin specifies.')
 
-        spec.output('remote_folder', valid_type=orm.RemoteData,
+        spec.output('remote_folder', valid_type=orm.RemoteFolderData,
             help='Input files necessary to run the process will be stored in this folder node.')
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '

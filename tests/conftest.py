@@ -221,17 +221,31 @@ def create_profile() -> Profile:
 
 
 @pytest.fixture
-def backend():
-    """Get the ``Backend`` instance of the currently loaded profile."""
+def manager(aiida_profile):  # pylint: disable=unused-argument
+    """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage.manager import get_manager
-    return get_manager().get_backend()
+    return get_manager()
 
 
 @pytest.fixture
-def communicator():
+def event_loop(manager):
+    """Get the event loop instance of the currently loaded profile.
+
+    This is automatically called as a fixture for any test marked with ``@pytest.mark.asyncio``.
+    """
+    yield manager.get_runner().loop
+
+
+@pytest.fixture
+def backend(manager):
+    """Get the ``Backend`` instance of the currently loaded profile."""
+    return manager.get_backend()
+
+
+@pytest.fixture
+def communicator(manager):
     """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
-    from aiida.manage.manager import get_manager
-    return get_manager().get_communicator()
+    return manager.get_communicator()
 
 
 @pytest.fixture

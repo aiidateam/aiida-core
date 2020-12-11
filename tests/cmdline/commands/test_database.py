@@ -12,6 +12,7 @@
 import enum
 
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_database
@@ -170,3 +171,12 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_database.detect_invalid_nodes, [])
         self.assertNotEqual(result.exit_code, 0)
         self.assertIsNotNone(result.exception)
+
+
+@pytest.mark.usefixtures('aiida_profile')
+def tests_database_version(run_cli_command, manager):
+    """Test the ``verdi database version`` command."""
+    backend_manager = manager.get_backend_manager()
+    result = run_cli_command(cmd_database.database_version)
+    assert result.output_lines[0].endswith(backend_manager.get_schema_generation_database())
+    assert result.output_lines[1].endswith(backend_manager.get_schema_version_database())

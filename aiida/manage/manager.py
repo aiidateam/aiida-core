@@ -86,8 +86,9 @@ class Manager:
 
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            manager = self.get_backend_manager()
-            manager.load_backend_environment(profile, validate_schema=schema_check)
+            from aiida.backends import get_backend_manager
+            backend_manager = get_backend_manager(self.get_profile().database_backend)
+            backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 
         backend_type = profile.database_backend
@@ -123,8 +124,10 @@ class Manager:
         :return: the database backend manager
         :rtype: :class:`aiida.backend.manager.BackendManager`
         """
+        from aiida.backends import get_backend_manager
+
         if self._backend_manager is None:
-            from aiida.backends import get_backend_manager
+            self._load_backend()
             self._backend_manager = get_backend_manager(self.get_profile().database_backend)
 
         return self._backend_manager

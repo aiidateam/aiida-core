@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the Config class."""
-
 import os
 import shutil
 import tempfile
@@ -185,19 +184,31 @@ class TestConfig(AiidaTestCase):
         :param filepath: absolute filepath to a configuration file
         :raises AssertionError: if content of `config` is not equal to that of file on disk
         """
-        from io import BytesIO
+        from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
-        # Write the content of the `config` in memory to a byte stream
-        stream = BytesIO()
-        config._write(stream)  # pylint: disable=protected-access
-        in_memory = stream.getvalue()
+        in_memory = json.dumps(config.dictionary, indent=DEFAULT_CONFIG_INDENT_SIZE)
 
         # Read the content stored on disk
-        with open(filepath, 'rb') as handle:
+        with open(filepath, 'r') as handle:
             on_disk = handle.read()
 
         # Compare content of in memory config and the one on disk
         self.assertEqual(in_memory, on_disk)
+
+    def test_from_file_no_migrate(self):
+        """Test that ``Config.from_file`` does not overwrite if the content was not migrated."""
+        from time import sleep
+
+        # Construct the ``Config`` instance and write it to disk
+        Config(self.config_filepath, self.config_dictionary).store()
+
+        timestamp = os.path.getmtime(self.config_filepath)
+        Config.from_file(self.config_filepath)
+
+        # Sleep a second, because for some operating systems the time resolution is of the order of a second
+        sleep(1)
+
+        assert os.path.getmtime(self.config_filepath) == timestamp
 
     def test_from_file(self):
         """Test the `Config.from_file` class method.
@@ -210,8 +221,7 @@ class TestConfig(AiidaTestCase):
         config = Config.from_file(filepath_nonexisting)
 
         # Make sure that the migrated config is written to disk, by loading it from disk and comparing to the content
-        # of the in memory config object. This we do by calling `Config._write` passing a simple stream to have the
-        # class write the file to memory instead of overwriting the file on disk.
+        # of the in memory config object.
         self.compare_config_in_memory_and_on_disk(config, filepath_nonexisting)
 
         # Now repeat the test for an existing file. The previous filepath now *does* exist and is migrated

@@ -74,6 +74,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         already indirectly present in the repository through one of the data nodes passed as input to the calculation.
     * codes_info: a list of dictionaries used to pass the info of the execution of a code
     * codes_run_mode: a string used to specify the order in which multi codes can be executed
+    * skip_submit: a flag that, when set to True, orders the engine to skip the submit/update steps (so no code will
+        run, it will only upload the files and then retrieve/parse).
     """
 
     _default_fields = (
@@ -98,7 +100,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'remote_symlink_list',
         'provenance_exclude_list',
         'codes_info',
-        'codes_run_mode'
+        'codes_run_mode',
+        'skip_submit'
     )
 
 

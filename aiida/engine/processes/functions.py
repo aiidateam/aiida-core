@@ -113,7 +113,7 @@ def process_function(node_class):
             :rtype: (dict, int)
             """
             manager = get_manager()
-            runner = manager.get_runner(with_persistence=False)
+            runner = manager.get_runner()
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs

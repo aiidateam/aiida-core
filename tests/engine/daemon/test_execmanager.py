@@ -109,6 +109,8 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
     ([('path/sub/file_c.txt', 'target', 3)], {'target': {'path': {'sub': {'file_c.txt': 'file_c'}}}}),
     ([('path/sub', 'target', 1)], {'target': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
     ([('path/sub/*c.txt', 'target', 2)], {'target': {'sub': {'file_c.txt': 'file_c'}}}),
+    # Missing files should be ignored and not cause the retrieval to except
+    (['file_a.txt', 'file_u.txt', 'path/file_u.txt', ('path/sub/file_u.txt', '.', 3)], {'file_a.txt': 'file_a'}),
 ))
 # yapf: enable
 def test_retrieve_files_from_list(

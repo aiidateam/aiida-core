@@ -313,17 +313,18 @@ Note that the source path can point to a directory, in which case its contents w
 Retrieve list
 ~~~~~~~~~~~~~
 The retrieve list is a list of instructions of what files and folders should be retrieved by the engine once a calculation job has terminated.
-An instruction can have one of two forms:
+Each instruction should have one of two formats:
 
     * a string representing a relative filepath in the remote working directory
     * a tuple of length three that allows to control the name of the retrieved file or folder in the retrieved folder
 
-The first method is obviously the most simple, however, this requires one knows the exact name of the file or folder to be retrieved and in addition any subdirectories will be ignored when it is retrieved.
+The retrieve list can contain any number of instructions and can use both formats at the same time.
+The first format is obviously the simplest, however, this requires one knows the exact name of the file or folder to be retrieved and in addition any subdirectories will be ignored when it is retrieved.
 If the exact filename is not known and `glob patterns <https://en.wikipedia.org/wiki/Glob_%28programming%29>`_ should be used, or if the original folder structure should be (partially) kept, one should use the tuple format, which has the following format:
 
-    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve
-    * `target relative path`: the relative path where to copy the files locally in the retrieved folder. The string ``'.'`` indicates the top level in the retrieved folder.
-    * `depth`: the number of levels of nesting in the folder hierarchy to maintain when copying, starting from the deepest file
+    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve.
+    * `target relative path`: the relative path of the directory in the retrieved folder in to which the content of the source will be copied. The string ``'.'`` indicates the top level in the retrieved folder.
+    * `depth`: the number of levels of nesting in the source path to maintain when copying, starting from the deepest file.
 
 To illustrate the various possibilities, consider the following example file hierarchy in the remote working directory:
 
@@ -467,6 +468,7 @@ The same applies for folders that are to be retrieved:
             ├─ file_c.txt
             └─ file_d.txt
 
+Note that `target` here is not used to rename the retrieved file or folder, but indicates the path of the directory into which the source is copied.
 The target relative path is also compatible with glob patterns in the source relative paths:
 
 .. code:: bash

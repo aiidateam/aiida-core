@@ -312,38 +312,171 @@ Note that the source path can point to a directory, in which case its contents w
 
 Retrieve list
 ~~~~~~~~~~~~~
-The retrieve list supports various formats to define what files should be retrieved.
-The simplest is retrieving a single file, whose filename you know before hand and you simply want to copy with the same name in the retrieved folder.
-Imagine you want to retrieve the files ``output1.out`` and ``output_folder/output2.out`` you would simply add them as strings to the retrieve list:
+The retrieve list is a list of instructions of what files and folders should be retrieved by the engine once a calculation job has terminated.
+Each instruction should have one of two formats:
 
-.. code:: python
+    * a string representing a relative filepath in the remote working directory
+    * a tuple of length three that allows to control the name of the retrieved file or folder in the retrieved folder
 
-    calc_info.retrieve_list = ['output1.out', 'output_folder/output2.out']
+The retrieve list can contain any number of instructions and can use both formats at the same time.
+The first format is obviously the simplest, however, this requires one knows the exact name of the file or folder to be retrieved and in addition any subdirectories will be ignored when it is retrieved.
+If the exact filename is not known and `glob patterns <https://en.wikipedia.org/wiki/Glob_%28programming%29>`_ should be used, or if the original folder structure should be (partially) kept, one should use the tuple format, which has the following format:
 
-The retrieved files will be copied over keeping the exact names and hierarchy.
-If you require more control over the hierarchy and nesting, you can use tuples of length three instead, with the following items:
+    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve.
+    * `target relative path`: the relative path of the directory in the retrieved folder in to which the content of the source will be copied. The string ``'.'`` indicates the top level in the retrieved folder.
+    * `depth`: the number of levels of nesting in the source path to maintain when copying, starting from the deepest file.
 
-    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve
-    * `target relative path`: the relative path where to copy the files locally in the retrieved folder. The string `'.'` indicates the top level in the retrieved folder.
-    * `depth`: the number of levels of nesting in the folder hierarchy to maintain when copying, starting from the deepest file
+To illustrate the various possibilities, consider the following example file hierarchy in the remote working directory:
 
-For example, imagine the calculation will have written a file in the remote working directory with the folder hierarchy ``some/remote/path/files/output.dat``.
-If you want to copy the file, with the final resulting path ``path/files/output.dat``, you would specify:
+.. code:: bash
 
-.. code:: python
+    ├─ path
+    |  ├── sub
+    │  │   ├─ file_c.txt
+    │  │   └─ file_d.txt
+    |  └─ file_b.txt
+    └─ file_a.txt
 
-    calc_info.retrieve_list = [('some/remote/path/files/output.dat', '.', 2)]
+Below, you will find examples for various use cases of files and folders to be retrieved.
+Each example starts with the format of the ``retrieve_list``, followed by a schematic depiction of the final file hierarchy that would be created in the retrieved folder.
 
-The depth of two, ensures that only two levels of nesting are copied.
-If the output files have dynamic names that one cannot know beforehand, the ``'*'`` glob pattern can be used.
-For example, if the code will generate a number of XML files in the folder ``relative/path/output`` with filenames that follow the pattern ``file_*[0-9].xml``, you can instruct to retrieve all of them as follows:
+Explicit file or folder
+.......................
 
-.. code:: python
+Retrieving a single toplevel file or folder (with all its contents) where the final folder structure is not important.
 
-    calc_info.retrieve_list = [('relative/path/output/file_*[0-9].xml', '.', 1)]
+.. code:: bash
 
-The second item when using globbing *has* to be ``'.'`` and the depth works just as before.
-In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node.
+    retrieve_list = ['file_a.txt']
+
+    └─ file_a.txt
+
+.. code:: bash
+
+    retrieve_list = ['path']
+
+    ├── sub
+    │   ├─ file_c.txt
+    │   └─ file_d.txt
+    └─ file_b.txt
+
+
+Explicit nested file or folder
+..............................
+
+Retrieving a single file or folder (with all its contents) that is located in a subdirectory in the remote working directory, where the final folder structure is not important.
+
+.. code:: bash
+
+    retrieve_list = ['path/file_b.txt']
+
+    └─ file_b.txt
+
+.. code:: bash
+
+    retrieve_list = ['path/sub']
+
+    ├─ file_c.txt
+    └─ file_d.txt
+
+
+Explicit nested file or folder keeping (partial) hierarchy
+..........................................................
+
+The following examples show how the file hierarchy of the retrieved files can be controlled.
+By changing the ``depth`` parameter of the tuple, one can control what part of the remote folder hierarchy is kept.
+In the given example, the maximum depth of the remote folder hierarchy is ``3``.
+The following example shows that by specifying ``3``, the exact folder structure is kept:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', '.', 3)]
+
+    └─ path
+        └─ sub
+           └─ file_c.txt
+
+For ``depth=2``, only two levels of nesting are kept (including the file itself) and so the ``path`` folder is discarded.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', '.', 2)]
+
+    └─ sub
+       └─ file_c.txt
+
+The same applies for directories.
+By specifying a directory for the first element, all its contents will be retrieved.
+With ``depth=1``, only the first level ``sub`` is kept of the folder hierarchy.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub', '.', 1)]
+
+    └── sub
+        ├─ file_c.txt
+        └─ file_d.txt
+
+
+Pattern matching
+................
+
+If the exact file or folder name is not known beforehand, glob patterns can be used.
+In the following examples, all files that match ``*c.txt`` in the directory ``path/sub`` will be retrieved.
+Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', 0)]
+
+    └─ file_c.txt
+
+To keep the subdirectory structure, one can set the depth parameter, just as in the previous examples.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', 2)]
+
+    └── sub
+        └─ file_c.txt
+
+
+Specific target directory
+.........................
+
+The final folder hierarchy of the retrieved files in the retrieved folder is not only determined by the hierarchy of the remote working directory, but can also be controlled through the second and third elements of the instructions tuples.
+The final ``depth`` element controls what level of hierarchy of the source is maintained, where the second element specifies the base path in the retrieved folder into which the remote files should be retrieved.
+For example, to retrieve a nested file, maintaining the remote hierarchy and storing it locally in the ``target`` directory, one can do the following:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', 'target', 3)]
+
+    └─ target
+        └─ path
+            └─ sub
+               └─ file_c.txt
+
+The same applies for folders that are to be retrieved:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub', 'target', 1)]
+
+    └─ target
+        └── sub
+            ├─ file_c.txt
+            └─ file_d.txt
+
+Note that `target` here is not used to rename the retrieved file or folder, but indicates the path of the directory into which the source is copied.
+The target relative path is also compatible with glob patterns in the source relative paths:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', 'target', 0)]
+
+    └─ target
+        └─ file_c.txt
 
 
 Retrieve temporary list

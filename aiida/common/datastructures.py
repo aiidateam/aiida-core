@@ -32,25 +32,32 @@ class CalcInfo(DefaultFieldsAttributeDict):
 
     In the following descriptions all paths have to be considered relative
 
-    * retrieve_list: a list of strings or tuples that indicate files that are to be retrieved from the remote
-        after the calculation has finished and stored in the repository in a FolderData.
-        If the entry in the list is just a string, it is assumed to be the filepath on the remote and it will
-        be copied to '.' of the repository with name os.path.split(item)[1]
-        If the entry is a tuple it is expected to have the following format
+    * retrieve_list: a list of strings or tuples that indicate files that are to be retrieved from the remote after the
+        calculation has finished and stored in the ``retrieved_folder`` output node of type ``FolderData``. If the entry
+        in the list is just a string, it is assumed to be the filepath on the remote and it will be copied to the base
+        directory of the retrieved folder, where the name corresponds to the basename of the remote relative path. This
+        means that any remote folder hierarchy is ignored entirely.
 
-            ('remotepath', 'localpath', depth)
+        Remote folder hierarchy can be (partially) maintained by using a tuple instead, with the following format
 
-        If the 'remotepath' is a file or folder, it will be copied in the repository to 'localpath'.
-        However, if the 'remotepath' contains file patterns with wildcards, the 'localpath' should be set to '.'
-        and the depth parameter should be an integer that decides the localname. The 'remotepath' will be split on
-        file separators and the local filename will be determined by joining the N last elements, where N is
-        given by the depth variable.
+            (source, target, depth)
 
-        Example: ('some/remote/path/files/pattern*[0-9].xml', '.', 2)
+        The ``source`` and ``target`` elements are relative filepaths in the remote and retrieved folder. The contents
+        of ``source`` (whether it is a file or folder) are copied in its entirety to the ``target`` subdirectory in the
+        retrieved folder. If no subdirectory should be created, ``'.'`` should be specified for ``target``.
 
-        Will result in all files that match the pattern to be copied to the local repository with path
+        The ``source`` filepaths support glob patterns ``*`` in case the exact name of the files that are to be
+        retrieved are not know a priori.
 
-            'files/pattern*[0-9].xml'
+        The ``depth`` element can be used to control what level of nesting of the source folder hierarchy should be
+        maintained. If ``depth`` equals ``0`` or ``1`` (they are equivalent), only the basename of the ``source``
+        filepath is kept. For each additional level, another subdirectory of the remote hierarchy is kept. For example:
+
+            ('path/sub/file.txt', '.', 2)
+
+        will retrieve the ``file.txt`` and store it under the path:
+
+            sub/file.txt
 
     * retrieve_temporary_list: a list of strings or tuples that indicate files that will be retrieved
         and stored temporarily in a FolderData, that will be available only during the parsing call.

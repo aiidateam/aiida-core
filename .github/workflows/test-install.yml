@@ -153,14 +153,11 @@ jobs:
         sudo apt update
         sudo apt install postgresql-10 graphviz
 
-    - run: pip install --upgrade pip
-
-    # Work-around issue caused by pymatgen's setup process, which will install the latest
-    # numpy version (including release candidates) regardless of our actual specification
-    # By installing the version from the requirements file, we should get a compatible version
-    - name: Install numpy
+    - name: Upgrade pip and setuptools
+      # It is crucial to update `setuptools` or the installation of `pymatgen` can break
       run: |
-        pip install `grep 'numpy==' requirements/requirements-py-${{ matrix.python-version }}.txt`
+        pip install --upgrade pip setuptools
+        pip --version
 
     - name: Install aiida-core
       run: |

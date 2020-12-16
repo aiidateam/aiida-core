@@ -7,52 +7,33 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Module to test remote data."""
-import errno
-import os
-import shutil
-import tempfile
+import pytest
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import RemoteData, User, AuthInfo
+from aiida.orm import RemoteData
 
 
-class TestRemoteData(AiidaTestCase):
-    """Test for the RemoteData class."""
+@pytest.fixture
+def remote_data(aiida_localhost, tmp_path):
+    """Return an instance of a ``RemoteData`` instance containing a single file."""
+    remote_data = RemoteData(computer=aiida_localhost)
+    remote_data.set_remote_path(str(tmp_path))
 
-    @classmethod
-    def setUpClass(cls):  # pylint: disable=arguments-differ
-        super().setUpClass()
-        user = User.objects.get_default()
-        authinfo = AuthInfo(cls.computer, user)
-        authinfo.store()
+    with open(tmp_path / 'file.txt', 'w') as handle:
+        handle.write('content')
+        handle.flush()
 
-    def setUp(self):
-        """Create a dummy RemoteData on the default computer."""
-        self.tmp_path = tempfile.mkdtemp()
-        self.remote = RemoteData(computer=self.computer)
-        self.remote.set_remote_path(self.tmp_path)
+    return remote_data
 
-        with open(os.path.join(self.tmp_path, 'file.txt'), 'w', encoding='utf8') as fhandle:
-            fhandle.write('test string')
 
-        self.remote.computer = self.computer
-        self.remote.store()
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_clean(remote_data):
+    """Try the ``RemoteData._clean`` method."""
+    with remote_data.computer.get_transport() as transport:
+        assert not remote_data.is_empty(transport=transport)
+        remote_data._clean(transport=transport)  # pylint: disable=protected-access
+        assert remote_data.is_empty(transport=transport)
 
-    def tearDown(self):
-        """Delete the temporary path for the dummy RemoteData node."""
-        try:
-            shutil.rmtree(self.tmp_path)
-        except OSError as exception:
-            if exception.errno == errno.ENOENT:
-                pass
-            elif exception.errno == errno.ENOTDIR:
-                os.remove(self.tmp_path)
-            else:
-                raise IOError(exception)
-
-    def test_clean(self):
-        """Try cleaning a RemoteData node."""
-        self.assertFalse(self.remote.is_empty)
-        self.remote._clean()  # pylint: disable=protected-access
-        self.assertTrue(self.remote.is_empty)
+        # Second call should be a no-op
+        remote_data._clean(transport=transport)  # pylint: disable=protected-access

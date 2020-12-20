@@ -10,7 +10,7 @@ How to work with data
 Importing data
 ==============
 
-AiiDA allows users to export data from their database into an export archive file, which can be imported in any other AiiDA database.
+AiiDA allows users to export data from their database into an export archive file, which can be imported into any other AiiDA database.
 If you have an AiiDA export archive that you would like to import, you can use the ``verdi import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
 
 .. note:: For information on exporting and importing data via AiiDA archives, see :ref:`"How to share data"<how-to:share:archives>`.
@@ -71,7 +71,7 @@ Then we just construct an instance of that class, passing the file of interest a
 Note that after construction, you will get an *unstored* node.
 This means that at this point your data is not yet stored in the database and you can first inspect it and optionally modify it.
 If you are happy with the results, you can store the new data permanently by calling the :py:meth:`~aiida.orm.nodes.node.Node.store` method.
-Every node is assigned a Universal Unique Identifer (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
+Every node is assigned a Universal Unique Identifier (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
 You can use these identifiers to reference and or retrieve a node.
 Ways to find and retrieve data that have previously been imported are described in section :ref:`"How to find data"<how-to:data:find>`.
 
@@ -129,7 +129,7 @@ However, they have to be of the same ORM-type (e.g. all have to be subclasses of
 .. code-block:: python
 
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
+    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertices of path, either WorkChainNode or Job.
 
 .. note::
 
@@ -148,7 +148,7 @@ There are several ways to obtain data from a query:
 .. code-block:: python
 
     qb = QueryBuilder()                 # Instantiating instance
-    qb.append(CalcJobNode)              # Setting first vertice of path
+    qb.append(CalcJobNode)              # Setting first vertices of path
 
     first_row = qb.first()              # Returns a list (!) of the results of the first row
 

@@ -150,11 +150,14 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
         sudo apt install postgresql-10 graphviz
 
-    - run: pip install --upgrade pip
+    - name: Upgrade pip and setuptools
+      # It is crucial to update `setuptools` or the installation of `pymatgen` can break
+      run: |
+        pip install --upgrade pip setuptools
+        pip --version
 
     - name: Install aiida-core
       run: |

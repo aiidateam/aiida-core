@@ -89,14 +89,6 @@ CONFIG_OPTIONS = {
         'description': 'Minimum level to log to the DbLog table',
         'global_only': False,
     },
-    'logging.tornado_loglevel': {
-        'key': 'logging_tornado_log_level',
-        'valid_type': 'string',
-        'valid_values': VALID_LOG_LEVELS,
-        'default': 'WARNING',
-        'description': 'Minimum level to log to daemon log and the `DbLog` table for the `tornado` logger',
-        'global_only': False,
-    },
     'logging.plumpy_loglevel': {
         'key': 'logging_plumpy_log_level',
         'valid_type': 'string',
@@ -183,6 +175,22 @@ CONFIG_OPTIONS = {
         'valid_values': None,
         'default': True,
         'description': 'Boolean whether to print AiiDA deprecation warnings',
+        'global_only': False,
+    },
+    'transport.task_retry_initial_interval': {
+        'key': 'task_retry_initial_interval',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 20,
+        'description': 'Initial time interval for the exponential backoff mechanism.',
+        'global_only': False,
+    },
+    'transport.task_maximum_attempts': {
+        'key': 'task_maximum_attempts',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 5,
+        'description': 'Maximum number of transport task attempts before a Process is Paused.',
         'global_only': False,
     },
 }

@@ -32,6 +32,8 @@ py:class aiida.tools.importexport.dbexport.ArchiveData
 py:class EntityType
 py:class aiida.tools.groups.paths.WalkNodeResult
 
+py:class aiida.orm.utils.links.LinkQuadruple
+
 ### python packages
 # Note: These exceptions are needed if
 # * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
@@ -60,10 +62,7 @@ py:class paramiko.proxy.ProxyCommand
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
 
-py:class topika.Connection
-
-py:class tornado.ioloop.IOLoop
-py:class tornado.concurrent.Future
+py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
 

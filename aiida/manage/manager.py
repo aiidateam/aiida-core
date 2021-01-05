@@ -86,8 +86,9 @@ class Manager:
 
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            manager = self.get_backend_manager()
-            manager.load_backend_environment(profile, validate_schema=schema_check)
+            from aiida.backends import get_backend_manager
+            backend_manager = get_backend_manager(self.get_profile().database_backend)
+            backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 
         backend_type = profile.database_backend
@@ -123,8 +124,10 @@ class Manager:
         :return: the database backend manager
         :rtype: :class:`aiida.backend.manager.BackendManager`
         """
+        from aiida.backends import get_backend_manager
+
         if self._backend_manager is None:
-            from aiida.backends import get_backend_manager
+            self._load_backend()
             self._backend_manager = get_backend_manager(self.get_profile().database_backend)
 
         return self._backend_manager
@@ -234,14 +237,14 @@ class Manager:
 
         return self._process_controller
 
-    def get_runner(self):
+    def get_runner(self, **kwargs):
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
         :rtype: :class:`aiida.engine.runners.Runner`
         """
         if self._runner is None:
-            self._runner = self.create_runner()
+            self._runner = self.create_runner(**kwargs)
 
         return self._runner
 
@@ -287,8 +290,8 @@ class Manager:
 
         This is used by workers when the daemon is running and in testing.
 
-        :param loop: the (optional) tornado event loop to use
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: the (optional) asyncio event loop to use
+        :type loop: the asyncio event loop
         :return: a runner configured to work in the daemon configuration
         :rtype: :class:`aiida.engine.runners.Runner`
         """
@@ -314,7 +317,7 @@ class Manager:
     def close(self):
         """Reset the global settings entirely and release any global objects."""
         if self._communicator is not None:
-            self._communicator.stop()
+            self._communicator.close()
         if self._runner is not None:
             self._runner.stop()
 

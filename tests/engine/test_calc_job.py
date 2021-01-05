@@ -356,36 +356,45 @@ class TestCalcJob(AiidaTestCase):
 
 
 @pytest.fixture
-def process(aiida_local_code_factory):
+def generate_process(aiida_local_code_factory):
     """Instantiate a process with default inputs and return the `Process` instance."""
     from aiida.engine.utils import instantiate_process
     from aiida.manage.manager import get_manager
 
-    inputs = {
-        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
-        'x': orm.Int(1),
-        'y': orm.Int(2),
-        'metadata': {
-            'options': {}
+    def _generate_process(inputs=None):
+
+        base_inputs = {
+            'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+            'x': orm.Int(1),
+            'y': orm.Int(2),
+            'metadata': {
+                'options': {}
+            }
         }
-    }
 
-    manager = get_manager()
-    runner = manager.get_runner()
+        if inputs is not None:
+            base_inputs = {**base_inputs, **inputs}
 
-    process_class = CalculationFactory('arithmetic.add')
-    process = instantiate_process(runner, process_class, **inputs)
-    process.node.set_state(CalcJobState.PARSING)
+        manager = get_manager()
+        runner = manager.get_runner()
 
-    return process
+        process_class = CalculationFactory('arithmetic.add')
+        process = instantiate_process(runner, process_class, **base_inputs)
+        process.node.set_state(CalcJobState.PARSING)
+
+        return process
+
+    return _generate_process
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_insufficient_data(process):
+def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly that the parsing does not except even if the required information is not available.
     """
+    process = generate_process()
+
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
     process.parse()
@@ -409,12 +418,14 @@ def test_parse_insufficient_data(process):
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_non_zero_retval(process):
+def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     This is testing the case where the `detailed_job_info` is incomplete because the call failed. This is checked
     through the return value that is stored within the attribute dictionary.
     """
+    process = generate_process()
+
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
@@ -426,11 +437,13 @@ def test_parse_non_zero_retval(process):
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_not_implemented(process):
+def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly that the parsing does not except even if the scheduler does not implement the method.
     """
+    process = generate_process()
+
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
@@ -457,12 +470,14 @@ def test_parse_not_implemented(process):
 
 
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
-def test_parse_scheduler_excepted(process, monkeypatch):
+def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
     Here we check explicitly the case where the `Scheduler.parse_output` method excepts
     """
     from aiida.schedulers.plugins.direct import DirectScheduler
+
+    process = generate_process()
 
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
@@ -558,3 +573,45 @@ def test_parse_exit_code_priority(
     result = process.parse()
     assert isinstance(result, ExitCode)
     assert result.status == final
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_additional_retrieve_list(generate_process, fixture_sandbox):
+    """Test the ``additional_retrieve_list`` option."""
+    process = generate_process()
+    process.presubmit(fixture_sandbox)
+    retrieve_list = process.node.get_attribute('retrieve_list')
+
+    # Keep reference of the base contents of the retrieve list.
+    base_retrieve_list = retrieve_list
+
+    # Test that the code works if no explicit additional retrieve list is specified
+    assert len(retrieve_list) != 0
+    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+
+    # Defining explicit additional retrieve list that is disjoint with the base retrieve list
+    additional_retrieve_list = ['file.txt', 'folder/file.txt']
+    process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
+    process.presubmit(fixture_sandbox)
+    retrieve_list = process.node.get_attribute('retrieve_list')
+
+    # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
+    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
+
+    # Defining explicit additional retrieve list with elements that overlap with `base_retrieve_list
+    additional_retrieve_list = ['file.txt', 'folder/file.txt'] + base_retrieve_list
+    process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
+    process.presubmit(fixture_sandbox)
+    retrieve_list = process.node.get_attribute('retrieve_list')
+
+    # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
+    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
+
+    # Test the validator
+    with pytest.raises(ValueError, match=r'`additional_retrieve_list` should only contain relative filepaths.*'):
+        process = generate_process({'metadata': {'options': {'additional_retrieve_list': [None]}}})
+
+    with pytest.raises(ValueError, match=r'`additional_retrieve_list` should only contain relative filepaths.*'):
+        process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})

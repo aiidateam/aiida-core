@@ -13,9 +13,10 @@ import enum
 import inspect
 import uuid
 import traceback
+import asyncio
+from typing import Union
 
-from pika.exceptions import ConnectionClosed
-
+from aio_pika.exceptions import ConnectionClosed
 import plumpy
 from plumpy import ProcessState
 from kiwipy.communications import UnroutableError
@@ -247,14 +248,11 @@ class Process(plumpy.Process):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg=None):
+    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.Future]:
         """
         Kill the process and all the children calculations it called
 
         :param msg: message
-        :type msg: str
-
-        :rtype: bool
         """
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
@@ -268,20 +266,28 @@ class Process(plumpy.Process):
             for child in self.node.called:
                 try:
                     result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
-                    if isinstance(result, plumpy.Future):
+                    result = asyncio.wrap_future(result)
+                    if asyncio.isfuture(result):
                         killing.append(result)
                 except ConnectionClosed:
                     self.logger.info('no connection available to kill child<%s>', child.pk)
                 except UnroutableError:
                     self.logger.info('kill signal was unable to reach child<%s>', child.pk)
 
-            if isinstance(result, plumpy.Future):
+            if asyncio.isfuture(result):
                 # We ourselves are waiting to be killed so add it to the list
                 killing.append(result)
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
-                result = plumpy.gather(killing)
+                kill_future = plumpy.gather(*killing)
+                result = self.loop.create_future()
+
+                def done(done_future: plumpy.Future):
+                    is_all_killed = all(done_future.result())
+                    result.set_result(is_all_killed)
+
+                kill_future.add_done_callback(done)
 
         return result
 

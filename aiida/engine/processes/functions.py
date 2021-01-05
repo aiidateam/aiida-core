@@ -107,17 +107,13 @@ def process_function(node_class):
             """
             Run the FunctionProcess with the supplied inputs in a local runner.
 
-            The function will have to create a new runner for the FunctionProcess instead of using the global runner,
-            because otherwise if this process function were to call another one from within its scope, that would use
-            the same runner and it would be blocking the event loop from continuing.
-
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
             :return: tuple of the outputs of the process and the process node pk
             :rtype: (dict, int)
             """
             manager = get_manager()
-            runner = manager.create_runner(with_persistence=False)
+            runner = manager.get_runner()
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs
@@ -140,10 +136,9 @@ def process_function(node_class):
 
                 def kill_process(_num, _frame):
                     """Send the kill signal to the process in the current scope."""
-                    from tornado import gen
                     LOGGER.critical('runner received interrupt, killing process %s', process.pid)
                     result = process.kill(msg='Process was killed because the runner received an interrupt')
-                    raise gen.Return(result)
+                    return result
 
                 # Store the current handler on the signal such that it can be restored after process has terminated
                 original_handler = signal.getsignal(kill_signal)
@@ -155,7 +150,6 @@ def process_function(node_class):
                 # If the `original_handler` is set, that means the `kill_process` was bound, which needs to be reset
                 if original_handler:
                     signal.signal(signal.SIGINT, original_handler)
-                runner.close()
 
             store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
             if not store_provenance:

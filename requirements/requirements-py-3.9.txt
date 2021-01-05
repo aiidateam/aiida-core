@@ -1,6 +1,7 @@
 aiida-export-migration-tests==0.9.0
 alabaster==0.7.12
 aldjemy==0.9.1
+aio-pika==6.6.1
 alembic==1.4.3
 aniso8601==8.0.0
 archive-path==0.2.1
@@ -13,7 +14,7 @@ bleach==3.2.1
 certifi==2020.6.20
 cffi==1.14.3
 chardet==3.0.4
-circus==0.16.1
+circus==0.17.1
 click==7.1.2
 click-completion==0.5.2
 click-config-file==0.6.0
@@ -50,7 +51,7 @@ jupyter==1.0.0
 jupyter-client==6.1.7
 jupyter-console==6.2.0
 jupyter-core==4.6.3
-kiwipy==0.5.5
+kiwipy==0.7.1
 kiwisolver==1.3.1
 Mako==1.1.3
 MarkupSafe==1.1.1
@@ -61,11 +62,12 @@ mpmath==1.1.0
 nbconvert==5.6.1
 nbformat==5.0.8
 networkx==2.5
-notebook==5.7.10
+notebook==6.1.5
 numpy==1.19.4
 orderedmultidict==1.0.1
 packaging==20.4
 palettable==3.3.0
+pamqp==2.3
 pandas==1.1.4
 pandocfilters==1.4.3
 paramiko==2.7.2
@@ -79,7 +81,7 @@ pika==1.1.0
 Pillow==8.0.1
 plotly==4.12.0
 pluggy==0.13.1
-plumpy==0.15.1
+plumpy==0.18.1
 prometheus-client==0.8.0
 prompt-toolkit==3.0.8
 psutil==5.7.3
@@ -101,6 +103,7 @@ pytest-benchmark==3.2.3
 pytest-cov==2.10.1
 pytest-rerunfailures==9.1.1
 pytest-timeout==1.4.2
+pytest-asyncio==0.12.0
 python-dateutil==2.8.1
 python-editor==1.0.4
 python-memcached==1.59
@@ -144,8 +147,6 @@ tabulate==0.8.7
 terminado==0.9.1
 testpath==0.4.4
 toml==0.10.2
-topika==0.2.2
-tornado==4.5.3
 tqdm==4.51.0
 traitlets==5.0.5
 tzlocal==2.1

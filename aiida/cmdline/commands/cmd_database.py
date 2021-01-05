@@ -23,6 +23,24 @@ def verdi_database():
     """Inspect and manage the database."""
 
 
+@verdi_database.command('version')
+def database_version():
+    """Show the version of the database.
+
+    The database version is defined by the tuple of the schema generation and schema revision.
+    """
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    backend_manager = manager.get_backend_manager()
+
+    echo.echo('Generation: ', bold=True, nl=False)
+    echo.echo(backend_manager.get_schema_generation_database())
+    echo.echo('Revision:   ', bold=True, nl=False)
+    echo.echo(backend_manager.get_schema_version_database())
+
+
 @verdi_database.command('migrate')
 @options.FORCE()
 def database_migrate(force):

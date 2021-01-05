@@ -95,7 +95,7 @@ deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
-    py38: -rrequirements/requirements-py-3.9.txt
+    py39: -rrequirements/requirements-py-3.9.txt
 passenv = RUN_APIDOC
 setenv =
     update: RUN_APIDOC = False

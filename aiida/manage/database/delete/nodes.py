@@ -15,8 +15,6 @@ import warnings
 from aiida.backends.utils import delete_nodes_and_connections
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm import Group, Node, QueryBuilder, load_node
-from aiida.tools.graph.graph_traversers import get_nodes_delete
 
 __all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')
 
@@ -73,6 +71,9 @@ def delete_nodes(
 
     """
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
+
+    from aiida.orm import Node, QueryBuilder, load_node
+    from aiida.tools.graph.graph_traversers import get_nodes_delete
 
     if verbosity is not None:
         warnings.warn(
@@ -181,6 +182,8 @@ def delete_group_nodes(
     :returns: (node pks to delete, whether they were deleted)
 
     """
+    from aiida.orm import Group, Node, QueryBuilder
+
     group_node_query = QueryBuilder().append(
         Group,
         filters={

@@ -312,7 +312,7 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
     """
     from aiida.common.log import override_log_formatter_context
     from aiida.orm.utils.loaders import NodeEntityLoader
-    from aiida.manage.database.delete.nodes import delete_nodes, DELETE_LOGGER
+    from aiida.tools import delete_nodes, DELETE_LOGGER
 
     verbosity = logging.DEBUG if verbose else logging.INFO
     DELETE_LOGGER.setLevel(verbosity)

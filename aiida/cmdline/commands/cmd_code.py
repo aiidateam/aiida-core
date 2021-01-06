@@ -194,7 +194,7 @@ def delete(codes, verbose, dry_run, force):
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
     from aiida.common.log import override_log_formatter_context
-    from aiida.manage.database.delete.nodes import delete_nodes, DELETE_LOGGER
+    from aiida.tools import delete_nodes, DELETE_LOGGER
 
     verbosity = logging.DEBUG if verbose else logging.INFO
     DELETE_LOGGER.setLevel(verbosity)

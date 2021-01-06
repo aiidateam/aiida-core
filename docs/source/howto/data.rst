@@ -769,7 +769,7 @@ Deleting data
 
 By default, every time you run or submit a new calculation, AiiDA will create for you new nodes in the database, and will never replace or delete data.
 There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
-For this case, AiiDA provides the ``verdi node delete`` command and the :py:func:`~aiida.manage.database.delete.nodes.delete_nodes` function, to remove the nodes from the provenance graph:
+For this case, AiiDA provides the ``verdi node delete`` command and the :py:func:`~aiida.tools.graph.deletions.delete_nodes` function, to remove the nodes from the provenance graph:
 
 .. caution::
    Once the data is deleted, there is no way to recover it (unless you made a backup).
@@ -787,7 +787,7 @@ The full list of these flags is available from the help command ``verdi node del
 
 .. code-block:: python
 
-    from aiida.manage.database import delete_nodes
+    from aiida.tools import delete_nodes
     pks_to_be_deleted = delete_nodes(
         [1, 2, 3], dry_run=True, create_forward=True, call_calc_forward=True, call_work_forward=True
     )

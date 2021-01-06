@@ -18,7 +18,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.manage.database import delete_nodes, delete_group_nodes
+from aiida.tools import delete_nodes, delete_group_nodes
 
 
 class TestNodeIsStorable(AiidaTestCase):

@@ -9,6 +9,7 @@
 ###########################################################################
 """Functions to delete nodes from the database, preserving provenance integrity."""
 from typing import Callable, Iterable, Optional, Set, Tuple, Union
+import warnings
 
 
 def delete_nodes(
@@ -25,6 +26,12 @@ def delete_nodes(
         It should now be imported using `from aiida.tools import delete_nodes`
 
     """
+    from aiida.common.warnings import AiidaDeprecationWarning
     from aiida.tools import delete_nodes as _delete
+
+    warnings.warn(
+        'This function has been moved and will be removed in `v2.0.0`.'
+        'It should now be imported using `from aiida.tools import delete_nodes`', AiidaDeprecationWarning
+    )  # pylint: disable=no-member
 
     return _delete(pks, verbosity, dry_run, force, **traversal_rules)

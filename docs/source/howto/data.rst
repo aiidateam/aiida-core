@@ -511,7 +511,7 @@ Any deletion operation related to groups, by default, will not affect the nodes 
 For example if you delete a group, the nodes that belonged to the group will remain in the database.
 The same happens if you remove nodes from the group -- they will remain in the database but won't belong to the group anymore.
 
-If you also wish to delete the nodes, when deleting the group, use the ``--delete-nodes``:
+If you also wish to delete the nodes, when deleting the group, use the ``--delete-nodes`` option:
 
 .. code-block:: console
 
@@ -769,7 +769,7 @@ Deleting data
 
 By default, every time you run or submit a new calculation, AiiDA will create for you new nodes in the database, and will never replace or delete data.
 There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
-For this case, AiiDA provides the ``verdi node delete`` command and the :py:func:`~aiida.tools.graph.deletions.delete_nodes` function, to remove the nodes from the provenance graph:
+For this case, AiiDA provides the ``verdi node delete`` command and the :py:func:`~aiida.tools.graph.deletions.delete_nodes` function, to remove the nodes from the provenance graph.
 
 .. caution::
    Once the data is deleted, there is no way to recover it (unless you made a backup).

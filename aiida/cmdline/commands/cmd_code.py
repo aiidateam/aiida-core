@@ -205,7 +205,7 @@ def delete(codes, verbose, dry_run, force):
         if not pks or force:
             return False
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        return not click.confirm('Shall I continue?')
+        return not click.confirm('Shall I continue?', abort=True)
 
     DELETE_LOGGER.setLevel(verbosity)
     with override_log_formatter_context('%(message)s'):

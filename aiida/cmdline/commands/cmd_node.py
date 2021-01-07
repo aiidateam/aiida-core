@@ -330,7 +330,7 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
         if not pks or force:
             return False
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        return not click.confirm('Shall I continue?')
+        return not click.confirm('Shall I continue?', abort=True)
 
     with override_log_formatter_context('%(message)s'):
         _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)

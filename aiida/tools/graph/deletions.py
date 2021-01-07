@@ -34,7 +34,7 @@ def delete_nodes(
 
     This command will delete not only the specified nodes, but also the ones that are
     linked to these and should be also deleted in order to keep a consistent provenance
-    according to the rules explained in the concepts section of the documentation.
+    according to the rules explained in the Topics - Provenance section of the documentation.
     In summary:
 
     1. If a DATA node is deleted, any process nodes linked to it will also be deleted.

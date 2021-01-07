@@ -126,7 +126,7 @@ simplejson==3.17.2
 six==1.15.0
 snowballstemmer==2.0.0
 spglib==1.16.0
-Sphinx==3.3.0
+Sphinx==3.2.1
 sphinx-copybutton==0.3.1
 sphinx-notfound-page==0.5
 sphinx-panels==0.5.2

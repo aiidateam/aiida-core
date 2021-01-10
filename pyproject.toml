@@ -87,6 +87,16 @@ setenv =
     sqla: AIIDA_TEST_BACKEND = sqlalchemy
 commands = pytest {posargs}
 
+[testenv:py{36,37,38,39}-verdi]
+deps =
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
+    py39: -rrequirements/requirements-py-3.9.txt
+setenv =
+    AIIDA_TEST_BACKEND = django
+commands = verdi {posargs}
+
 [testenv:py{36,37,38,39}-docs-{clean,update}]
 description =
     clean: Build the documentation (remove any existing build)
@@ -95,7 +105,7 @@ deps =
     py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
-    py38: -rrequirements/requirements-py-3.9.txt
+    py39: -rrequirements/requirements-py-3.9.txt
 passenv = RUN_APIDOC
 setenv =
     update: RUN_APIDOC = False

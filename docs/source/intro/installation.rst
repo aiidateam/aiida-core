@@ -6,7 +6,7 @@ Advanced configuration
 **********************
 
 This chapter covers topics that go beyond the :ref:`standard setup of AiiDA <intro:get_started:setup>`.
-If you are new to AiiDA, we recommed you first go through the :ref:`Basic Tutorial <tutorial:basic>`,
+If you are new to AiiDA, we recommend you first go through the :ref:`Basic Tutorial <tutorial:basic>`,
 or see our :ref:`Next steps guide <tutorial:next-steps>`.
 
 .. _intro:install:database:

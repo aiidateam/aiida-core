@@ -216,19 +216,37 @@ class Runner:  # pylint: disable=too-many-public-methods
             result, node = process.run_get_node(*args, **inputs)
             return result, node
 
-        with utils.loop_scope(self.loop):
-            process = self.instantiate_process(process, *args, **inputs)
+        process = self.instantiate_process(process, *args, **inputs)
 
-            def kill_process(_num, _frame):
-                """Send the kill signal to the process in the current scope."""
-                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                process.kill(msg='Process was killed because the runner received an interrupt')
+        async def kill_process(_signal, process):
+            """Send the kill signal to the process in the current scope."""
+            LOGGER.critical(f'runner received interrupt signal {_signal.name}, killing process {process.pid}')
+            try:
+                from asyncio import all_tasks
+                from asyncio import current_task
+            except ImportError:
+                # Necessary for Python 3.6 as `asyncio.all_tasks` and `asyncio.current_task`
+                # were introduced in Python 3.7. The Standalone functions
+                # should be used as the classmethods are removed as of Python 3.9.
+                all_tasks = asyncio.Task.all_tasks
+                current_task = asyncio.Task.current_task
 
-            signal.signal(signal.SIGINT, kill_process)
-            signal.signal(signal.SIGTERM, kill_process)
+            tasks = [task for task in all_tasks() if task is not current_task()]
+            for task in tasks:
+                task.cancel()
 
-            process.execute()
-            return process.outputs, process.node
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+            res = process.kill(msg='Process was killed because the runner received an interrupt')
+            if asyncio.isfuture(res):
+                await res
+
+        signals = (signal.SIGTERM, signal.SIGINT)
+        for s in signals:  # pylint: disable=invalid-name
+            self.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(kill_process(s, process)))
+
+        process.execute()
+        return process.outputs, process.node
 
     def run(self, process, *args, **inputs):
         """

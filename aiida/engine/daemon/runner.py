@@ -19,16 +19,17 @@ from aiida.manage.manager import get_manager
 LOGGER = logging.getLogger(__name__)
 
 
-async def shutdown_runner(runner):
+async def shutdown_runner(_signal, runner):
     """Cleanup tasks tied to the service's shutdown."""
-    LOGGER.info('Received signal to shut down the daemon runner')
+    LOGGER.info(f'Received signal {_signal.name} to shut down the daemon runner')
 
     try:
         from asyncio import all_tasks
         from asyncio import current_task
     except ImportError:
-        # Necessary for Python 3.6 as `asyncio.all_tasks` and `asyncio.current_task` were introduced in Python 3.7. The
-        # Standalone functions should be used as the classmethods are removed as of Python 3.9.
+        # Necessary for Python 3.6 as `asyncio.all_tasks` and `asyncio.current_task`
+        # were introduced in Python 3.7. The Standalone functions
+        # should be used as the classmethods are removed as of Python 3.9.
         all_tasks = asyncio.Task.all_tasks
         current_task = asyncio.Task.current_task
 
@@ -56,7 +57,7 @@ def start_daemon():
 
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:  # pylint: disable=invalid-name
-        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_runner(runner)))
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_runner(s, runner)))
 
     try:
         LOGGER.info('Starting a daemon runner')

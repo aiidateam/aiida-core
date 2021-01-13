@@ -427,6 +427,8 @@ class CalcJobNode(CalculationNode):
     def get_detailed_job_info(self):
         """Return the detailed job info dictionary.
 
+        The scheduler is polled for the detailed job info after the job is completed and ready to be retrieved.
+
         :return: the dictionary with detailed job info if defined or None
         """
         return self.get_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
@@ -440,6 +442,12 @@ class CalcJobNode(CalculationNode):
 
     def get_last_job_info(self):
         """Return the last information asked to the scheduler about the status of the job.
+
+        The last job info is updated on every poll of the scheduler, except for the final poll when the job drops from
+        the scheduler's job queue.
+        For completed jobs, the last job info therefore contains the "second-to-last" job info that still shows the job
+        as running. Please use :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_detailed_job_info`
+        instead.
 
         :return: a `JobInfo` object (that closely resembles a dictionary) or None.
         """

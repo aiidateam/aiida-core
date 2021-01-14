@@ -288,60 +288,44 @@ class TestVerdiProcess(AiidaTestCase):
             self.assertEqual(get_result_lines(result)[0], 'No log messages recorded for this entry')
 
 
-class TestVerdiProcessListWarning(AiidaTestCase):
-    """Tests for the `verdi process list` active slots warning."""
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_list_worker_slot_warning(run_cli_command, monkeypatch):
+    """
+    Test that the if the number of used worker process slots exceeds a threshold,
+    that the warning message is displayed to the user when running `verdi process list`
+    """
+    from aiida.cmdline.utils import common
+    from aiida.engine import ProcessState, DaemonClient
+    from aiida.manage.configuration import get_config
 
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
-        # Override the call to the circus client to retrieve the number of workers
-        # As we don't have a running circus client, this will normally fail, so here we simulate the
-        # response by redefining the function to get the final value we want.
-        import aiida.cmdline.utils.common
-        self.real_get_num_workers = aiida.cmdline.utils.common.get_num_workers
-        aiida.cmdline.utils.common.get_num_workers = lambda: 1
+    monkeypatch.setattr(common, 'get_num_workers', lambda: 1)
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', lambda: True)
 
-    def tearDown(self):
-        # Reset the redefined function
-        import aiida.cmdline.utils.common
-        aiida.cmdline.utils.common.get_num_workers = self.real_get_num_workers
-        super().tearDown()
+    # Get the number of allowed processes per worker:
+    config = get_config()
+    worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+    limit = int(worker_process_slots * 0.9)
 
-    def test_list_worker_slot_warning(self):
-        """
-        Test that the if the number of used worker process slots exceeds a threshold,
-        that the warning message is displayed to the user when running `verdi process list`
-        """
-        from aiida.engine import ProcessState
-        from aiida.manage.configuration import get_config
-
-        # Get the number of allowed processes per worker:
-        config = get_config()
-        worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
-        limit = int(worker_process_slots * 0.9)
-
-        # Create additional active nodes such that we have 90% of the active slot limit
-        for _ in range(limit):
-            calc = WorkFunctionNode()
-            calc.set_process_state(ProcessState.RUNNING)
-            calc.store()
-
-        # Default cmd should not throw the warning as we are below the limit
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertClickResultNoException(result)
-        warning_phrase = 'of the available daemon worker slots have been used!'
-        self.assertTrue(all([warning_phrase not in line for line in get_result_lines(result)]))
-
-        # Add one more running node to put us over the limit
+    # Create additional active nodes such that we have 90% of the active slot limit
+    for _ in range(limit):
         calc = WorkFunctionNode()
         calc.set_process_state(ProcessState.RUNNING)
         calc.store()
 
-        # Now the warning should fire
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertClickResultNoException(result)
-        warning_phrase = '% of the available daemon worker slots have been used!'
-        self.assertTrue(any([warning_phrase in line for line in get_result_lines(result)]))
+    # Default cmd should not throw the warning as we are below the limit
+    result = run_cli_command(cmd_process.process_list)
+    warning_phrase = 'of the available daemon worker slots have been used!'
+    assert all([warning_phrase not in line for line in result.output_lines])
+
+    # Add one more running node to put us over the limit
+    calc = WorkFunctionNode()
+    calc.set_process_state(ProcessState.RUNNING)
+    calc.store()
+
+    # Now the warning should fire
+    result = run_cli_command(cmd_process.process_list)
+    warning_phrase = '% of the available daemon worker slots have been used!'
+    assert any([warning_phrase in line for line in result.output_lines])
 
 
 class TestVerdiProcessCallRoot(AiidaTestCase):

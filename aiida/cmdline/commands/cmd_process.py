@@ -54,6 +54,7 @@ def process_list(
     # pylint: disable=too-many-locals
     from tabulate import tabulate
     from aiida.cmdline.utils.common import print_last_process_state_change, check_worker_load
+    from aiida.engine.daemon.client import get_daemon_client
 
     relationships = {}
 
@@ -77,15 +78,19 @@ def process_list(
         echo.echo(tabulated)
         echo.echo(f'\nTotal results: {len(projected)}\n')
         print_last_process_state_change()
-        # Second query to get active process count
-        # Currently this is slow but will be fixed wiith issue #2770
-        # We place it at the end so that the user can Ctrl+C after getting the process table.
-        builder = CalculationQueryBuilder()
-        filters = builder.get_filters(process_state=('created', 'waiting', 'running'))
-        query_set = builder.get_query_set(filters=filters)
-        projected = builder.get_projected(query_set, projections=['pk'])
-        worker_slot_use = len(projected) - 1
-        check_worker_load(worker_slot_use)
+
+        if not get_daemon_client().is_daemon_running:
+            echo.echo_warning('the daemon is not running', bold=True)
+        else:
+            # Second query to get active process count
+            # Currently this is slow but will be fixed with issue #2770
+            # We place it at the end so that the user can Ctrl+C after getting the process table.
+            builder = CalculationQueryBuilder()
+            filters = builder.get_filters(process_state=('created', 'waiting', 'running'))
+            query_set = builder.get_query_set(filters=filters)
+            projected = builder.get_projected(query_set, projections=['pk'])
+            worker_slot_use = len(projected) - 1
+            check_worker_load(worker_slot_use)
 
 
 @verdi_process.command('show')

@@ -46,7 +46,9 @@ repos:
                 aiida/manage/manager.py|
                 aiida/engine/exceptions.py|
                 aiida/engine/launch.py|
+                aiida/engine/persistence.py|
                 aiida/engine/processes/.*py|
+                aiida/engine/runners.py|
                 aiida/manage/database/delete/nodes.py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|

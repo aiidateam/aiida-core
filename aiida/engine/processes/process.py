@@ -13,10 +13,10 @@ import collections
 import enum
 import inspect
 import logging
-import uuid
+from uuid import UUID
 import traceback
 from types import TracebackType
-from typing import Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union
+from typing import Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union, TYPE_CHECKING
 
 from aio_pika.exceptions import ConnectionClosed
 import plumpy.exceptions
@@ -37,7 +37,9 @@ from .exit_code import ExitCode, ExitCodesNamespace
 from .builder import ProcessBuilder
 from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
 from .process_spec import ProcessSpec
-from ..runners import Runner
+
+if TYPE_CHECKING:
+    from aiida.engine.runners import Runner
 
 __all__ = ('Process', 'ProcessState')
 
@@ -117,7 +119,7 @@ class Process(plumpy.processes.Process):
         self,
         inputs: Optional[Dict[str, Any]] = None,
         logger: Optional[logging.Logger] = None,
-        runner: Optional[Runner] = None,
+        runner: Optional['Runner'] = None,
         parent_pid: Optional[int] = None,
         enable_persistence: bool = True
     ) -> None:
@@ -481,7 +483,7 @@ class Process(plumpy.processes.Process):
         return self.runner.submit(process, *args, **kwargs)
 
     @property
-    def runner(self) -> Runner:
+    def runner(self) -> 'Runner':
         """Get process runner."""
         return self._runner
 
@@ -535,7 +537,7 @@ class Process(plumpy.processes.Process):
         message = f'[{self.node.pk}|{self.__class__.__name__}|{inspect.stack()[1][3]}]: {msg}'
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
-    def _create_and_setup_db_record(self) -> Union[int, uuid.UUID]:  # type: ignore[name-defined]
+    def _create_and_setup_db_record(self) -> Union[int, UUID]:
         """
         Create and setup the database record for this process
 
@@ -567,7 +569,7 @@ class Process(plumpy.processes.Process):
         if self.node.pk is not None:
             return self.node.pk
 
-        return uuid.UUID(self.node.uuid)
+        return UUID(self.node.uuid)
 
     @override
     def encode_input_args(self, inputs: Dict[str, Any]) -> str:  # pylint: disable=no-self-use

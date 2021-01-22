@@ -117,9 +117,12 @@ class AiidaProcessDirective(SphinxDirective):
         content += self.build_doctree(title='Outputs:', port_namespace=self.process_spec.outputs)
 
         if hasattr(self.process_spec, 'get_outline'):
-            outline = self.process_spec.get_outline()
-            if outline is not None:
-                content += self.build_outline_doctree(outline=outline)
+            try:
+                outline = self.process_spec.get_outline()
+                if outline is not None:
+                    content += self.build_outline_doctree(outline=outline)
+            except AssertionError:
+                pass
         return content
 
     def build_doctree(self, title, port_namespace):

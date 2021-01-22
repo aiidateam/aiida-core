@@ -112,14 +112,13 @@ class Runner:  # pylint: disable=too-many-public-methods
         return self._transport
 
     @property
-    def persister(self) -> Persister:
-        assert self._persister is not None, 'persister not set for runner'
+    def persister(self) -> Optional[Persister]:
+        """Get the persister used by this runner."""
         return self._persister
 
     @property
-    def communicator(self) -> kiwipy.Communicator:
+    def communicator(self) -> Optional[kiwipy.Communicator]:
         """Get the communicator used by this runner."""
-        assert self._communicator is not None, 'communicator not set for runner'
         return self._communicator
 
     @property
@@ -131,9 +130,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         return self._job_manager
 
     @property
-    def controller(self) -> RemoteProcessThreadController:
+    def controller(self) -> Optional[RemoteProcessThreadController]:
         """Get the controller used by this runner."""
-        assert self._controller is not None, 'controller not set for runner'
         return self._controller
 
     @property
@@ -192,6 +190,8 @@ class Runner:  # pylint: disable=too-many-public-methods
             raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
 
         if self._rmq_submit:
+            assert self.persister is not None, 'runner does not have a persister'
+            assert self.controller is not None, 'runner does not have a controller'
             self.persister.save_checkpoint(process_inited)
             process_inited.close()
             self.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
@@ -290,6 +290,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param pk: pk of the process
         :param callback: function to be called upon process termination
         """
+        assert self.communicator is not None, 'communicator not set for runner'
+
         node = load_node(pk=pk)
         subscriber_identifier = str(uuid.uuid4())
         event = threading.Event()
@@ -307,7 +309,7 @@ class Runner:  # pylint: disable=too-many-public-methods
                 callback()
             finally:
                 event.set()
-                self.communicator.remove_broadcast_subscriber(subscriber_identifier)
+                self.communicator.remove_broadcast_subscriber(subscriber_identifier)  # type: ignore[union-attr]
 
         broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:

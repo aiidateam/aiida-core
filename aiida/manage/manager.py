@@ -368,6 +368,7 @@ class Manager:
             loader=persistence.get_object_loader()
         )
 
+        assert runner.communicator is not None, 'communicator not set for runner'
         runner.communicator.add_task_subscriber(task_receiver)
 
         return runner

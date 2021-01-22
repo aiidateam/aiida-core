@@ -95,6 +95,8 @@ def submit(process: TYPE_SUBMIT_PROCESS, **inputs: Any) -> ProcessNode:
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
     runner = manager.get_manager().get_runner()
+    assert runner.persister is not None, 'runner does not have a persister'
+    assert runner.controller is not None, 'runner does not have a persister'
 
     process_inited = instantiate_process(runner, process, **inputs)
 

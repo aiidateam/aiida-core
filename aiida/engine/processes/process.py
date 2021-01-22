@@ -137,12 +137,13 @@ class Process(plumpy.processes.Process):
         from aiida.manage import manager
 
         self._runner = runner if runner is not None else manager.get_manager().get_runner()
+        assert self._runner.communicator is not None, 'communicator not set for runner'
 
         super().__init__(
             inputs=self.spec().inputs.serialize(inputs),
             logger=logger,
             loop=self._runner.loop,
-            communicator=self.runner.communicator
+            communicator=self._runner.communicator
         )
 
         self._node: Optional[orm.ProcessNode] = None
@@ -223,6 +224,12 @@ class Process(plumpy.processes.Process):
         If the persistence call excepts with a PersistenceError, it will be caught and a warning will be logged.
         """
         if self._enable_persistence and not self._state.is_terminal():
+            if self.runner.persister is None:
+                self.logger.exception(
+                    'No persister set to save checkpoint, this means you will '
+                    'not be able to restart in case of a crash until the next successful checkpoint.'
+                )
+                return None
             try:
                 self.runner.persister.save_checkpoint(self)
             except plumpy.exceptions.PersistenceError:
@@ -298,6 +305,9 @@ class Process(plumpy.processes.Process):
         if result is not False and not had_been_terminated:
             killing = []
             for child in self.node.called:
+                if self.runner.controller is None:
+                    self.logger.info('no controller available to kill child<%s>', child.pk)
+                    continue
                 try:
                     result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
                     result = asyncio.wrap_future(result)  # type: ignore[arg-type]
@@ -383,9 +393,10 @@ class Process(plumpy.processes.Process):
         super().on_terminated()
         if self._enable_persistence:
             try:
+                assert self.runner.persister is not None
                 self.runner.persister.delete_checkpoint(self.pid)
-            except Exception:  # pylint: disable=broad-except
-                self.logger.exception('Failed to delete checkpoint')
+            except Exception as error:  # pylint: disable=broad-except
+                self.logger.exception('Failed to delete checkpoint: %s', error)
 
         try:
             self.node.seal()

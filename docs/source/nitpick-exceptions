@@ -29,6 +29,7 @@ py:class traceback
 
 # issues with order of object processing and type hinting
 py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
+py:class aiida.manage.manager.Manager
 py:class aiida.orm.utils.links.LinkQuadruple
 py:class aiida.tools.importexport.dbexport.ExportReport
 py:class aiida.tools.importexport.dbexport.ArchiveData

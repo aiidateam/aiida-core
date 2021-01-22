@@ -16,7 +16,9 @@ import logging
 from uuid import UUID
 import traceback
 from types import TracebackType
-from typing import Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union, TYPE_CHECKING
+from typing import (
+    Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union, TYPE_CHECKING
+)
 
 from aio_pika.exceptions import ConnectionClosed
 import plumpy.exceptions

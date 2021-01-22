@@ -28,6 +28,8 @@ py:class traceback
 ### AiiDA
 
 # issues with order of object processing and type hinting
+py:class aiida.engine.runners.ResultAndNode
+py:class aiida.engine.runners.ResultAndPk
 py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
 py:class aiida.manage.manager.Manager
 py:class aiida.orm.utils.links.LinkQuadruple
@@ -45,6 +47,7 @@ py:class ProcessNode
 py:class PortNamespace
 py:class Runner
 py:class TransportQueue
+py:class PersistenceError
 py:class Port
 py:class Data
 py:class JobInfo

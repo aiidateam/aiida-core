@@ -13,18 +13,23 @@ import functools
 import inspect
 import logging
 import signal
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, TYPE_CHECKING
 
 from aiida.common.lang import override
 from aiida.manage.manager import get_manager
 
 from .process import Process
 
+if TYPE_CHECKING:
+    from aiida.orm import ProcessNode
+    from .exit_code import ExitCode
+
 __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
 
-def calcfunction(function):
+def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -55,7 +60,7 @@ def calcfunction(function):
     return process_function(node_class=CalcFunctionNode)(function)
 
 
-def workfunction(function):
+def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -86,7 +91,7 @@ def workfunction(function):
     return process_function(node_class=WorkFunctionNode)(function)
 
 
-def process_function(node_class):
+def process_function(node_class: Type['ProcessNode']) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     The base function decorator to create a FunctionProcess out of a normal python function.
 
@@ -94,7 +99,7 @@ def process_function(node_class):
     :type node_class: :class:`aiida.orm.ProcessNode`
     """
 
-    def decorator(function):
+    def decorator(function: Callable[..., Any]) -> Callable[..., Any]:
         """
         Turn the decorated function into a FunctionProcess.
 
@@ -103,14 +108,14 @@ def process_function(node_class):
         """
         process_class = FunctionProcess.build(function, node_class=node_class)
 
-        def run_get_node(*args, **kwargs):
+        def run_get_node(*args, **kwargs) -> Tuple[Optional[Dict[str, Any]], 'ProcessNode']:
             """
             Run the FunctionProcess with the supplied inputs in a local runner.
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
-            :return: tuple of the outputs of the process and the process node pk
-            :rtype: (dict, int)
+            :return: tuple of the outputs of the process and the process node
+
             """
             manager = get_manager()
             runner = manager.get_runner()
@@ -158,13 +163,13 @@ def process_function(node_class):
 
             return result, process.node
 
-        def run_get_pk(*args, **kwargs):
+        def run_get_pk(*args, **kwargs) -> Tuple[Optional[Dict[str, Any]], int]:
             """Recreate the `run_get_pk` utility launcher.
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
             :return: tuple of the outputs of the process and the process node pk
-            :rtype: (dict, int)
+
             """
             result, node = run_get_node(*args, **kwargs)
             return result, node.pk
@@ -175,14 +180,14 @@ def process_function(node_class):
             result, _ = run_get_node(*args, **kwargs)
             return result
 
-        decorated_function.run = decorated_function
-        decorated_function.run_get_pk = run_get_pk
-        decorated_function.run_get_node = run_get_node
-        decorated_function.is_process_function = True
-        decorated_function.node_class = node_class
-        decorated_function.process_class = process_class
-        decorated_function.recreate_from = process_class.recreate_from
-        decorated_function.spec = process_class.spec
+        decorated_function.run = decorated_function  # type: ignore[attr-defined]
+        decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
+        decorated_function.run_get_node = run_get_node  # type: ignore[attr-defined]
+        decorated_function.is_process_function = True  # type: ignore[attr-defined]
+        decorated_function.node_class = node_class  # type: ignore[attr-defined]
+        decorated_function.process_class = process_class  # type: ignore[attr-defined]
+        decorated_function.recreate_from = process_class.recreate_from  # type: ignore[attr-defined]
+        decorated_function.spec = process_class.spec  # type: ignore[attr-defined]
 
         return decorated_function
 
@@ -192,10 +197,10 @@ def process_function(node_class):
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
-    _func_args = None
+    _func_args: Sequence[str] = ()
 
     @staticmethod
-    def _func(*_args, **_kwargs):
+    def _func(*_args, **_kwargs) -> dict:
         """
         This is used internally to store the actual function that is being
         wrapped and will be replaced by the build method.
@@ -203,7 +208,7 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func, node_class):
+    def build(func: Callable[..., Any], node_class: Type['ProcessNode']) -> Type['FunctionProcess']:
         """
         Build a Process from the given function.
 
@@ -211,14 +216,11 @@ class FunctionProcess(Process):
         these will also become inputs.
 
         :param func: The function to build a process from
-        :type func: callable
-
         :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
             be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils.mixins.FunctionCalculationMixin`.
-        :type node_class: :class:`aiida.orm.nodes.process.process.ProcessNode`
 
         :return: A Process class that represents the function
-        :rtype: :class:`FunctionProcess`
+
         """
         from aiida import orm
         from aiida.orm.utils.mixins import FunctionCalculationMixin
@@ -240,7 +242,7 @@ class FunctionProcess(Process):
 
             for i, arg in enumerate(args):
                 default = ()
-                if i >= first_default_pos:
+                if defaults and i >= first_default_pos:
                     default = defaults[i - first_default_pos]
 
                 # If the keyword was already specified, simply override the default
@@ -283,7 +285,7 @@ class FunctionProcess(Process):
         )
 
     @classmethod
-    def validate_inputs(cls, *args, **kwargs):  # pylint: disable=unused-argument
+    def validate_inputs(cls, *args: Any, **kwargs: Any) -> None:  # pylint: disable=unused-argument
         """
         Validate the positional and keyword arguments passed in the function call.
 
@@ -302,11 +304,8 @@ class FunctionProcess(Process):
             raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
 
     @classmethod
-    def create_inputs(cls, *args, **kwargs):
-        """Create the input args for the FunctionProcess.
-
-        :rtype: dict
-        """
+    def create_inputs(cls, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Create the input args for the FunctionProcess."""
         cls.validate_inputs(*args, **kwargs)
 
         ins = {}
@@ -317,29 +316,28 @@ class FunctionProcess(Process):
         return ins
 
     @classmethod
-    def args_to_dict(cls, *args):
+    def args_to_dict(cls, *args: Any) -> Dict[str, Any]:
         """
         Create an input dictionary (of form label -> value) from supplied args.
 
         :param args: The values to use for the dictionary
-        :type args: list
 
         :return: A label -> value dictionary
-        :rtype: dict
+
         """
         return dict(list(zip(cls._func_args, args)))
 
     @classmethod
-    def get_or_create_db_record(cls):
+    def get_or_create_db_record(cls) -> 'ProcessNode':
         return cls._node_class()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         if kwargs.get('enable_persistence', False):
             raise RuntimeError('Cannot persist a function process')
-        super().__init__(enable_persistence=False, *args, **kwargs)
+        super().__init__(enable_persistence=False, *args, **kwargs)  # type: ignore
 
     @property
-    def process_class(self):
+    def process_class(self) -> Callable[..., Any]:
         """
         Return the class that represents this Process, for the FunctionProcess this is the function itself.
 
@@ -348,32 +346,29 @@ class FunctionProcess(Process):
         class that really represents what was being executed.
 
         :return: A Process class that represents the function
-        :rtype: :class:`FunctionProcess`
+
         """
         return self._func
 
-    def execute(self):
+    def execute(self) -> Optional[Dict[str, Any]]:
         """Execute the process."""
         result = super().execute()
 
         # FunctionProcesses can return a single value as output, and not a dictionary, so we should also return that
-        if len(result) == 1 and self.SINGLE_OUTPUT_LINKNAME in result:
+        if result and len(result) == 1 and self.SINGLE_OUTPUT_LINKNAME in result:
             return result[self.SINGLE_OUTPUT_LINKNAME]
 
         return result
 
     @override
-    def _setup_db_record(self):
+    def _setup_db_record(self) -> None:
         """Set up the database record for the process."""
         super()._setup_db_record()
         self.node.store_source_info(self._func)
 
     @override
-    def run(self):
-        """Run the process.
-
-        :rtype: :class:`aiida.engine.ExitCode`
-        """
+    def run(self) -> Optional['ExitCode']:
+        """Run the process."""
         from aiida.orm import Data
         from .exit_code import ExitCode
 
@@ -388,9 +383,9 @@ class FunctionProcess(Process):
         args = [None] * len(self._func_args)
         kwargs = {}
 
-        for name, value in self.inputs.items():
+        for name, value in (self.inputs or {}).items():
             try:
-                if self.spec().inputs[name].non_db:
+                if self.spec().inputs[name].non_db:  # type: ignore[union-attr]
                     # Don't consider non-database inputs
                     continue
             except KeyError:
@@ -418,4 +413,4 @@ class FunctionProcess(Process):
                 'Must be a Data type or a mapping of {{string: Data}}'.format(result.__class__)
             )
 
-        return ExitCode()
+        return ExitCode()  # type: ignore[call-arg]

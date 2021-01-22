@@ -34,7 +34,7 @@ class ExitCode(namedtuple('ExitCode', ['status', 'message', 'invalidates_cache']
     :type invalidates_cache: bool
     """
 
-    def format(self, **kwargs):
+    def format(self, **kwargs: str) -> 'ExitCode':
         """Create a clone of this exit code where the template message is replaced by the keyword arguments.
 
         :param kwargs: replacement parameters for the template message
@@ -50,7 +50,7 @@ class ExitCode(namedtuple('ExitCode', ['status', 'message', 'invalidates_cache']
 
 
 # Set the defaults for the `ExitCode` attributes
-ExitCode.__new__.__defaults__ = (0, None, False)
+ExitCode.__new__.__defaults__ = (0, None, False)  # type: ignore[attr-defined]
 
 
 class ExitCodesNamespace(AttributeDict):
@@ -60,15 +60,13 @@ class ExitCodesNamespace(AttributeDict):
     `ExitCode` that needs to be retrieved or the key in the collection.
     """
 
-    def __call__(self, identifier):
+    def __call__(self, identifier: str) -> ExitCode:
         """Return a specific exit code identified by either its exit status or label.
 
         :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as the exit
             code status, otherwise it be interpreted as the exit code label
-        :type identifier: str
 
         :returns: an `ExitCode` instance
-        :rtype: :class:`aiida.engine.ExitCode`
 
         :raises ValueError: if no exit code with the given label is defined for this process
         """

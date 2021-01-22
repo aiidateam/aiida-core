@@ -9,6 +9,7 @@
 ###########################################################################
 """Enums and function for the awaitables of Processes."""
 from enum import Enum
+from typing import Union
 
 from plumpy.utils import AttributesDict
 from aiida.orm import ProcessNode
@@ -31,7 +32,7 @@ class AwaitableAction(Enum):
     APPEND = 'append'
 
 
-def construct_awaitable(target):
+def construct_awaitable(target: Union[Awaitable, ProcessNode]) -> Awaitable:
     """
     Construct an instance of the Awaitable class that will contain the information
     related to the action to be taken with respect to the context once the awaitable

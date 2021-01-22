@@ -9,6 +9,8 @@
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
 import functools
+from types import FunctionType
+from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -17,10 +19,17 @@ from .context import ToContext, append_
 from .workchain import WorkChain
 from .utils import ProcessHandlerReport, process_handler
 
+if TYPE_CHECKING:
+    from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
+
 __all__ = ('BaseRestartWorkChain',)
 
 
-def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint: disable=unused-argument
+def validate_handler_overrides(
+    process_class: 'BaseRestartWorkChain',
+    handler_overrides: Optional[orm.Dict],
+    ctx: 'PortNamespace'  # pylint: disable=unused-argument
+) -> Optional[str]:
     """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain.
 
     The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
@@ -36,7 +45,7 @@ def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint
     :param ctx: the `PortNamespace` in which the port is embedded
     """
     if not handler_overrides:
-        return
+        return None
 
     for handler, override in handler_overrides.get_dict().items():
         if not isinstance(handler, str):
@@ -47,6 +56,8 @@ def validate_handler_overrides(process_class, handler_overrides, ctx):  # pylint
 
         if not isinstance(override, bool):
             return f'The value of key `{handler}` is not a boolean.'
+
+    return None
 
 
 class BaseRestartWorkChain(WorkChain):
@@ -101,50 +112,73 @@ class BaseRestartWorkChain(WorkChain):
     `inspect_process`. Refer to their respective documentation for details.
     """
 
-    _process_class = None
+    _process_class: Optional[Type['Process']] = None
     _considered_handlers_extra = 'considered_handlers'
 
-    @classmethod
-    def define(cls, spec):
-        """Define the process specification."""
-        # yapf: disable
-        super().define(spec)
-        spec.input('max_iterations', valid_type=orm.Int, default=lambda: orm.Int(5),
-            help='Maximum number of iterations the work chain will restart the process to finish successfully.')
-        spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
-            help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.')
-        spec.input('handler_overrides',
-            valid_type=orm.Dict, required=False, validator=functools.partial(validate_handler_overrides, cls),
-            help='Mapping where keys are process handler names and the values are a boolean, where `True` will enable '
-                 'the corresponding handler and `False` will disable it. This overrides the default value set by the '
-                 '`enabled` keyword of the `process_handler` decorator with which the method is decorated.')
-        spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED',
-            message='The sub process excepted.')
-        spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED',
-            message='The sub process was killed.')
-        spec.exit_code(401, 'ERROR_MAXIMUM_ITERATIONS_EXCEEDED',
-            message='The maximum number of iterations was exceeded.')
-        spec.exit_code(402, 'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
-            message='The process failed for an unknown reason, twice in a row.')
+    @property
+    def process_class(self) -> Type['Process']:
+        """Return the process class to run in the loop."""
+        from ..process import Process  # pylint: disable=cyclic-import
+        if self._process_class is None or not issubclass(self._process_class, Process):
+            raise ValueError('no valid Process class defined for `_process_class` attribute')
+        return self._process_class
 
-    def setup(self):
+    @classmethod
+    def define(cls, spec: 'ProcessSpec') -> None:  # type: ignore[override]
+        """Define the process specification."""
+        super().define(spec)
+        spec.input(
+            'max_iterations',
+            valid_type=orm.Int,
+            default=lambda: orm.Int(5),
+            help='Maximum number of iterations the work chain will restart the process to finish successfully.'
+        )
+        spec.input(
+            'clean_workdir',
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(False),
+            help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.'
+        )
+        spec.input(
+            'handler_overrides',
+            valid_type=orm.Dict,
+            required=False,
+            validator=functools.partial(validate_handler_overrides, cls),
+            help='Mapping where keys are process handler names and the values are a boolean, where `True` will enable '
+            'the corresponding handler and `False` will disable it. This overrides the default value set by the '
+            '`enabled` keyword of the `process_handler` decorator with which the method is decorated.'
+        )
+        spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
+        spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED', message='The sub process was killed.')
+        spec.exit_code(
+            401, 'ERROR_MAXIMUM_ITERATIONS_EXCEEDED', message='The maximum number of iterations was exceeded.'
+        )
+        spec.exit_code(
+            402,
+            'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
+            message='The process failed for an unknown reason, twice in a row.'
+        )
+
+    def setup(self) -> None:
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""
-        overrides = self.inputs.handler_overrides.get_dict() if 'handler_overrides' in self.inputs else {}
+        overrides = self.inputs.handler_overrides.get_dict() if (self.inputs and
+                                                                 'handler_overrides' in self.inputs) else {}
         self.ctx.handler_overrides = overrides
-        self.ctx.process_name = self._process_class.__name__
+        self.ctx.process_name = self.process_class.__name__
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
         self.ctx.iteration = 0
 
-    def should_run_process(self):
+    def should_run_process(self) -> bool:
         """Return whether a new process should be run.
 
         This is the case as long as the last process has not finished successfully and the maximum number of restarts
         has not yet been exceeded.
         """
-        return not self.ctx.is_finished and self.ctx.iteration < self.inputs.max_iterations.value
+        max_iterations = self.inputs.max_iterations.value  # type: ignore[union-attr]
+        return not self.ctx.is_finished and self.ctx.iteration < max_iterations
 
-    def run_process(self):
+    def run_process(self) -> ToContext:
         """Run the next process, taking the input dictionary from the context at `self.ctx.inputs`."""
         self.ctx.iteration += 1
 
@@ -156,8 +190,8 @@ class BaseRestartWorkChain(WorkChain):
         # Set the `CALL` link label
         unwrapped_inputs.setdefault('metadata', {})['call_link_label'] = f'iteration_{self.ctx.iteration:02d}'
 
-        inputs = self._wrap_bare_dict_inputs(self._process_class.spec().inputs, unwrapped_inputs)
-        node = self.submit(self._process_class, **inputs)
+        inputs = self._wrap_bare_dict_inputs(self.process_class.spec().inputs, unwrapped_inputs)
+        node = self.submit(self.process_class, **inputs)
 
         # Add a new empty list to the `BaseRestartWorkChain._considered_handlers_extra` extra. This will contain the
         # name and return value of all class methods, decorated with `process_handler`, that are called during
@@ -170,7 +204,7 @@ class BaseRestartWorkChain(WorkChain):
 
         return ToContext(children=append_(node))
 
-    def inspect_process(self):  # pylint: disable=too-many-branches
+    def inspect_process(self) -> Optional['ExitCode']:  # pylint: disable=too-many-branches
         """Analyse the results of the previous process and call the handlers when necessary.
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called
@@ -202,10 +236,11 @@ class BaseRestartWorkChain(WorkChain):
         last_report = None
 
         # Sort the handlers with a priority defined, based on their priority in reverse order
-        for handler in sorted(self.get_process_handlers(), key=lambda handler: handler.priority, reverse=True):
+        get_priority = lambda handler: handler.priority
+        for handler in sorted(self.get_process_handlers(), key=get_priority, reverse=True):
 
             # Skip if the handler is enabled, either explicitly through `handler_overrides` or by default
-            if not self.ctx.handler_overrides.get(handler.__name__, handler.enabled):
+            if not self.ctx.handler_overrides.get(handler.__name__, handler.enabled):  # type: ignore[attr-defined]
                 continue
 
             # Even though the `handler` is an instance method, the `get_process_handlers` method returns unbound methods
@@ -236,7 +271,7 @@ class BaseRestartWorkChain(WorkChain):
 
             self.ctx.unhandled_failure = True
             self.report('{}<{}> failed and error was not handled, restarting once more'.format(*report_args))
-            return
+            return None
 
         # Here either the process finished successful or at least one handler returned a report so it can no longer be
         # considered to be an unhandled failed process and therefore we reset the flag
@@ -260,16 +295,21 @@ class BaseRestartWorkChain(WorkChain):
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True
 
-    def results(self):
+        return None
+
+    def results(self) -> Optional['ExitCode']:
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
 
         # We check the `is_finished` attribute of the work chain and not the successfulness of the last process
         # because the error handlers in the last iteration can have qualified a "failed" process as satisfactory
         # for the outcome of the work chain and so have marked it as `is_finished=True`.
-        if not self.ctx.is_finished and self.ctx.iteration >= self.inputs.max_iterations.value:
-            self.report('reached the maximum number of iterations {}: last ran {}<{}>'.format(
-                self.inputs.max_iterations.value, self.ctx.process_name, node.pk))
+        max_iterations = self.inputs.max_iterations.value  # type: ignore[union-attr]
+        if not self.ctx.is_finished and self.ctx.iteration >= max_iterations:
+            self.report(
+                f'reached the maximum number of iterations {max_iterations}: '
+                f'last ran {self.ctx.process_name}<{node.pk}>'
+            )
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED  # pylint: disable=no-member
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
@@ -284,16 +324,17 @@ class BaseRestartWorkChain(WorkChain):
             else:
                 self.out(name, output)
 
-    def __init__(self, *args, **kwargs):
+        return None
+
+    def __init__(self, *args, **kwargs) -> None:
         """Construct the instance."""
-        from ..process import Process  # pylint: disable=cyclic-import
         super().__init__(*args, **kwargs)
 
-        if self._process_class is None or not issubclass(self._process_class, Process):
-            raise ValueError('no valid Process class defined for `_process_class` attribute')
+        # try retrieving process class
+        self.process_class  # pylint: disable=pointless-statement
 
     @classmethod
-    def is_process_handler(cls, process_handler_name):
+    def is_process_handler(cls, process_handler_name: Union[str, FunctionType]) -> bool:
         """Return whether the given method name corresponds to a process handler of this class.
 
         :param process_handler_name: string name of the instance method
@@ -308,7 +349,7 @@ class BaseRestartWorkChain(WorkChain):
         return getattr(handler, 'decorator', None) == process_handler
 
     @classmethod
-    def get_process_handlers(cls):
+    def get_process_handlers(cls) -> List[FunctionType]:
         from inspect import getmembers
         return [method[1] for method in getmembers(cls) if cls.is_process_handler(method[1])]
 
@@ -316,7 +357,7 @@ class BaseRestartWorkChain(WorkChain):
         """Clean the working directories of all child calculation jobs if `clean_workdir=True` in the inputs."""
         super().on_terminated()
 
-        if self.inputs.clean_workdir.value is False:
+        if self.inputs.clean_workdir.value is False:  # type: ignore[union-attr]
             self.report('remote folders will not be cleaned')
             return
 
@@ -333,7 +374,7 @@ class BaseRestartWorkChain(WorkChain):
         if cleaned_calcs:
             self.report(f"cleaned remote folders of calculations: {' '.join(cleaned_calcs)}")
 
-    def _wrap_bare_dict_inputs(self, port_namespace, inputs):
+    def _wrap_bare_dict_inputs(self, port_namespace: 'PortNamespace', inputs: Dict[str, Any]) -> AttributeDict:
         """Wrap bare dictionaries in `inputs` in a `Dict` node if dictated by the corresponding inputs portnamespace.
 
         :param port_namespace: a `PortNamespace`

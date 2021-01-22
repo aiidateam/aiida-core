@@ -81,7 +81,7 @@ pika==1.1.0
 Pillow==8.0.1
 plotly==4.12.0
 pluggy==0.13.1
-plumpy==0.18.1
+plumpy==0.18.4
 prometheus-client==0.8.0
 prompt-toolkit==3.0.8
 psutil==5.7.3

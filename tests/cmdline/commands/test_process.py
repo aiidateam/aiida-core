@@ -12,7 +12,6 @@ import sys
 import time
 import asyncio
 from concurrent.futures import Future
-import pytest
 
 from click.testing import CliRunner
 import kiwipy
@@ -398,8 +397,9 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
 
 
+@pytest.mark.parametrize('cmd_try_all', (True, False))
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_pause_play_kill(run_cli_command):
+def test_pause_play_kill(run_cli_command, cmd_try_all):
     """
     Test the pause/play/kill commands
     """
@@ -462,7 +462,12 @@ def test_pause_play_kill(run_cli_command):
     assert result.exception is None, result.output
     assert calc.paused
 
-    result = run_cli_command(process_play, ['--wait', str(calc.pk)])
+    if cmd_try_all:
+        cmd_option = '--all'
+    else:
+        cmd_option = str(calc.pk)
+
+    result = run_cli_command(process_play, ['--wait', cmd_option])
     assert result.exception is None, result.output
     assert not calc.paused
 

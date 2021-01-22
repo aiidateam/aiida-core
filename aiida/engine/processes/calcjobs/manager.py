@@ -195,8 +195,6 @@ class JobsList:
     def _has_job_state_changed(old: Optional['JobInfo'], new: Optional['JobInfo']) -> bool:
         """Return whether the states `old` and `new` are different.
 
-        :type old: :class:`aiida.schedulers.JobInfo` or `None`
-        :type new: :class:`aiida.schedulers.JobInfo` or `None`
 
         """
         if old is None and new is None:

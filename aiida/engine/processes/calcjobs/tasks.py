@@ -23,13 +23,13 @@ from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import exponential_backoff_retry, interruptable_task, InterruptableFuture
+from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 from aiida.manage.configuration import get_config_option
 
 from ..process import ProcessState
 
 if TYPE_CHECKING:
-    from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
     from .calcjob import CalcJob
 
 UPLOAD_COMMAND = 'upload'
@@ -108,7 +108,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         return skip_submit
 
 
-async def task_submit_job(node: 'CalcJobNode', transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to submit a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -157,7 +157,7 @@ async def task_submit_job(node: 'CalcJobNode', transport_queue: TransportQueue, 
         return result
 
 
-async def task_update_job(node: 'CalcJobNode', job_manager, cancellable: InterruptableFuture):
+async def task_update_job(node: CalcJobNode, job_manager, cancellable: InterruptableFuture):
     """Transport task that will attempt to update the scheduler status of the job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -222,7 +222,7 @@ async def task_update_job(node: 'CalcJobNode', job_manager, cancellable: Interru
 
 
 async def task_retrieve_job(
-    node: 'CalcJobNode', transport_queue: TransportQueue, retrieved_temporary_folder: str,
+    node: CalcJobNode, transport_queue: TransportQueue, retrieved_temporary_folder: str,
     cancellable: InterruptableFuture
 ):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
@@ -288,7 +288,7 @@ async def task_retrieve_job(
         return result
 
 
-async def task_kill_job(node: 'CalcJobNode', transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to kill a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager

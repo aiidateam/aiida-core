@@ -44,6 +44,8 @@ repos:
             (?x)^(
                 aiida/common/progress_reporter.py|
                 aiida/manage/manager.py|
+                aiida/engine/exceptions.py|
+                aiida/engine/launch.py|
                 aiida/engine/processes/.*py|
                 aiida/manage/database/delete/nodes.py|
                 aiida/tools/graph/graph_traversers.py|

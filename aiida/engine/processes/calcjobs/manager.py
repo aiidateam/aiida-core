@@ -41,7 +41,7 @@ class JobsList:
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo: 'AuthInfo', transport_queue: 'TransportQueue', last_updated: Optional[float] = None):
+    def __init__(self, authinfo: AuthInfo, transport_queue: 'TransportQueue', last_updated: Optional[float] = None):
         """Construct an instance for the given authinfo and transport queue.
 
         :param authinfo: The authinfo used to check the jobs list
@@ -258,7 +258,7 @@ class JobManager:
         self._transport_queue = transport_queue
         self._job_lists: Dict[Hashable, 'JobInfo'] = {}
 
-    def get_jobs_list(self, authinfo: 'AuthInfo') -> JobsList:
+    def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.
 
         :param authinfo: the `AuthInfo`
@@ -270,7 +270,7 @@ class JobManager:
         return self._job_lists[authinfo.id]
 
     @contextlib.contextmanager
-    def request_job_info_update(self, authinfo: 'AuthInfo', job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
+    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
         """Get a future that will resolve to information about a given job.
 
         This is a context manager so that if the user leaves the context the request is automatically cancelled.

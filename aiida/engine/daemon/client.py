@@ -73,7 +73,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
     _DAEMON_NAME = 'aiida-{name}'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
-    def __init__(self, profile: 'Profile'):
+    def __init__(self, profile: Profile):
         """
         Construct a DaemonClient instance for a given profile
 
@@ -85,7 +85,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         self._DAEMON_TIMEOUT: int = config.get_option('daemon.timeout')  # pylint: disable=invalid-name
 
     @property
-    def profile(self) -> 'Profile':
+    def profile(self) -> Profile:
         return self._profile
 
     @property

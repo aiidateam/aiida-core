@@ -284,9 +284,9 @@ class Process(plumpy.processes.Process):
 
         if self.SaveKeys.CALC_ID.value in saved_state:
             self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])
-            self._pid = self.node.pk
+            self._pid = self.node.pk  # pylint: disable=attribute-defined-outside-init
         else:
-            self._pid = self._create_and_setup_db_record()
+            self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
@@ -372,7 +372,7 @@ class Process(plumpy.processes.Process):
             current = Process.current()
             if isinstance(current, Process):
                 self._parent_pid = current.pid  # type: ignore[assignment]
-        self._pid = self._create_and_setup_db_record()
+        self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
 
     @override
     def on_entering(self, state: plumpy.process_states.State) -> None:
@@ -564,7 +564,7 @@ class Process(plumpy.processes.Process):
             try:
                 self.node.store_all()
                 if self.node.is_finished_ok:
-                    self._state = Finished(self, None, True)
+                    self._state = Finished(self, None, True)  # pylint: disable=attribute-defined-outside-init
                     for entry in self.node.get_outgoing(link_type=LinkType.RETURN):
                         if entry.link_label.endswith(f'_{entry.node.pk}'):
                             continue

@@ -10,7 +10,7 @@
 # pylint: disable=cyclic-import
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
 import asyncio
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, Union
 
 import kiwipy
 
@@ -75,7 +75,7 @@ class ProcessFuture(asyncio.Future):
             self._communicator = None
             self._broadcast_identifier = None
 
-    async def _poll_process(self, node: 'Node', poll_interval: Union[int, float]) -> None:
+    async def _poll_process(self, node: Node, poll_interval: Union[int, float]) -> None:
         """Poll whether the process node has reached a terminal state."""
         while not self.done() and not node.is_terminated:
             await asyncio.sleep(poll_interval)

@@ -410,8 +410,10 @@ class Waiting(plumpy.process_states.Waiting):
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
         except plumpy.process_states.KillInterruption:
             await self._launch_task(task_kill_job, node, transport_queue)
-            if self._killing is not None:  # TODO possible source of bug
+            if self._killing is not None:
                 self._killing.set_result(True)
+            else:
+                logger.warning(f'killed CalcJob<{node.pk}> but async future was None')
             raise
         except (plumpy.process_states.Interruption, plumpy.futures.CancelledError):
             node.set_process_status(f'Transport task {command} was interrupted')

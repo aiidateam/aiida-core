@@ -564,7 +564,7 @@ class Process(plumpy.processes.Process):
             try:
                 self.node.store_all()
                 if self.node.is_finished_ok:
-                    self._state = Finished(self, None, True)  # TODO check correct
+                    self._state = Finished(self, None, True)
                     for entry in self.node.get_outgoing(link_type=LinkType.RETURN):
                         if entry.link_label.endswith(f'_{entry.node.pk}'):
                             continue

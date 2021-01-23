@@ -150,7 +150,7 @@ class JobsList:
             self._job_update_requests = {}
 
     @contextlib.contextmanager
-    def request_job_info_update(self, job_id: Hashable) -> 'JobInfo':
+    def request_job_info_update(self, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
         """Request job info about a job when the job next changes state.
 
         If the job is not found in the jobs list at the update, the future will resolve to `None`.
@@ -270,12 +270,10 @@ class JobManager:
         return self._job_lists[authinfo.id]
 
     @contextlib.contextmanager
-    def request_job_info_update(self, authinfo: 'AuthInfo', job_id: Hashable) -> Iterator[asyncio.Future]:
+    def request_job_info_update(self, authinfo: 'AuthInfo', job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
         """Get a future that will resolve to information about a given job.
 
         This is a context manager so that if the user leaves the context the request is automatically cancelled.
-
-        :return: A tuple containing the `JobInfo` object and detailed job info. Both can be None.
 
         """
         with self.get_jobs_list(authinfo).request_job_info_update(job_id) as request:

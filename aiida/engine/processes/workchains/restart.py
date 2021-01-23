@@ -127,38 +127,26 @@ class BaseRestartWorkChain(WorkChain):
     @classmethod
     def define(cls, spec: 'ProcessSpec') -> None:  # type: ignore[override]
         """Define the process specification."""
+        # yapf: disable
         super().define(spec)
-        spec.input(
-            'max_iterations',
-            valid_type=orm.Int,
-            default=lambda: orm.Int(5),
-            help='Maximum number of iterations the work chain will restart the process to finish successfully.'
-        )
-        spec.input(
-            'clean_workdir',
-            valid_type=orm.Bool,
-            default=lambda: orm.Bool(False),
-            help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.'
-        )
-        spec.input(
-            'handler_overrides',
-            valid_type=orm.Dict,
-            required=False,
-            validator=functools.partial(validate_handler_overrides, cls),
+        spec.input('max_iterations', valid_type=orm.Int, default=lambda: orm.Int(5),
+            help='Maximum number of iterations the work chain will restart the process to finish successfully.')
+        spec.input('clean_workdir', valid_type=orm.Bool, default=lambda: orm.Bool(False),
+            help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.')
+        spec.input('handler_overrides',
+            valid_type=orm.Dict, required=False, validator=functools.partial(validate_handler_overrides, cls),
             help='Mapping where keys are process handler names and the values are a boolean, where `True` will enable '
-            'the corresponding handler and `False` will disable it. This overrides the default value set by the '
-            '`enabled` keyword of the `process_handler` decorator with which the method is decorated.'
-        )
-        spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
-        spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED', message='The sub process was killed.')
-        spec.exit_code(
-            401, 'ERROR_MAXIMUM_ITERATIONS_EXCEEDED', message='The maximum number of iterations was exceeded.'
-        )
-        spec.exit_code(
-            402,
-            'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
-            message='The process failed for an unknown reason, twice in a row.'
-        )
+                 'the corresponding handler and `False` will disable it. This overrides the default value set by the '
+                 '`enabled` keyword of the `process_handler` decorator with which the method is decorated.')
+        spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED',
+            message='The sub process excepted.')
+        spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED',
+            message='The sub process was killed.')
+        spec.exit_code(401, 'ERROR_MAXIMUM_ITERATIONS_EXCEEDED',
+            message='The maximum number of iterations was exceeded.')
+        spec.exit_code(402, 'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
+            message='The process failed for an unknown reason, twice in a row.')
+        # yapf: enable
 
     def setup(self) -> None:
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""

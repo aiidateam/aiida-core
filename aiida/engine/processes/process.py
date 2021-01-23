@@ -29,6 +29,7 @@ from plumpy.process_states import ProcessState, Finished
 from kiwipy.communications import UnroutableError
 
 from aiida import orm
+from aiida.orm.utils import serialize
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
@@ -592,7 +593,6 @@ class Process(plumpy.processes.Process):
         :param inputs: A mapping of the inputs as passed to the process
         :return: The encoded (serialized) inputs
         """
-        from aiida.orm.utils import serialize
         return serialize.serialize(inputs)
 
     @override
@@ -603,7 +603,6 @@ class Process(plumpy.processes.Process):
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        from aiida.orm.utils import serialize
         return serialize.deserialize(encoded)
 
     def update_node_state(self, state: plumpy.process_states.State) -> None:

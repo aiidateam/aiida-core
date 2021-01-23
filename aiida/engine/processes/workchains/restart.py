@@ -9,6 +9,7 @@
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
 import functools
+from inspect import getmembers
 from types import FunctionType
 from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
 
@@ -350,7 +351,6 @@ class BaseRestartWorkChain(WorkChain):
 
     @classmethod
     def get_process_handlers(cls) -> List[FunctionType]:
-        from inspect import getmembers
         return [method[1] for method in getmembers(cls) if cls.is_process_handler(method[1])]
 
     def on_terminated(self):

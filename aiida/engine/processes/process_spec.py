@@ -12,6 +12,8 @@ from typing import Optional
 
 import plumpy.process_spec
 
+from aiida.orm import Dict
+
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import InputPort, PortNamespace, CalcJobOutputPort
 
@@ -108,8 +110,6 @@ class CalcJobProcessSpec(ProcessSpec):
 
     @default_output_node.setter
     def default_output_node(self, port_name: str) -> None:
-        from aiida.orm import Dict
-
         if port_name not in self.outputs:
             raise ValueError(f'{port_name} is not a registered output port')
 

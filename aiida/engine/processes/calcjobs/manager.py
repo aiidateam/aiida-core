@@ -15,10 +15,10 @@ import time
 from typing import Any, Dict, Hashable, Iterator, List, Optional, TYPE_CHECKING
 
 from aiida.common import lang
+from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
     from aiida.engine.transports import TransportQueue
-    from aiida.orm import AuthInfo
     from aiida.schedulers.datastructures import JobInfo
 
 __all__ = ('JobsList', 'JobManager')

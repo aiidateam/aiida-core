@@ -10,13 +10,14 @@
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
 import collections
 import re
-from typing import Any, Callable, Dict, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Callable, Dict, Optional, Sequence
 import warnings
 
 from plumpy import ports
+from plumpy.ports import breadcrumbs_to_port
 
-if TYPE_CHECKING:
-    from aiida.orm import Data
+from aiida.common.links import validate_link_label
+from aiida.orm import Data, Node
 
 __all__ = (
     'PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
@@ -84,8 +85,6 @@ class WithSerialize:
         :param value: the value to be serialized
         :returns: a serialized version of the value or the unchanged value
         """
-        from aiida.orm import Data
-
         if self._serializer is None or isinstance(value, Data):
             return value
 
@@ -101,8 +100,6 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
     def __init__(self, *args, **kwargs) -> None:
         """Override the constructor to check the type of the default if set and warn if not immutable."""
         # pylint: disable=redefined-builtin,too-many-arguments
-        from aiida.orm import Node
-
         if 'default' in kwargs:
             default = kwargs['default']
             # If the default is specified and it is a node instance, raise a warning. This is to try and prevent that
@@ -183,8 +180,6 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :raise TypeError: if the port name is not a string type
         :raise ValueError: if the port name is invalid
         """
-        from aiida.common.links import validate_link_label
-
         try:
             validate_link_label(port_name)
         except ValueError as exception:
@@ -206,8 +201,6 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :param breadcrumbs: a tuple with the namespaces of parent namespaces
         :returns: the serialized mapping
         """
-        from plumpy.ports import breadcrumbs_to_port
-
         if mapping is None:
             return None
 

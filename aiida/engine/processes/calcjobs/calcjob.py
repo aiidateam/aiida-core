@@ -9,6 +9,8 @@
 ###########################################################################
 """Implementation of the CalcJob process."""
 import io
+import os
+import shutil
 from typing import Any, Dict, Hashable, Optional, Type, Union
 
 import plumpy.ports
@@ -116,8 +118,6 @@ def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> 
 
     :return: string with error message in case the input is invalid.
     """
-    import os
-
     if additional_retrieve_list is plumpy.ports.UNSPECIFIED:
         return None
 
@@ -428,8 +428,6 @@ class CalcJob(Process):
         :param retrieved_temporary_folder: The path to the temporary folder
 
         """
-        import shutil
-
         try:
             retrieved = self.node.outputs.retrieved
         except exceptions.NotExistent:
@@ -554,8 +552,6 @@ class CalcJob(Process):
 
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        import os
-
         from aiida.common.exceptions import PluginInternalError, ValidationError, InvalidOperation, InputValidationError
         from aiida.common import json
         from aiida.common.utils import validate_list_of_string_tuples

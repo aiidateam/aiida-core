@@ -14,8 +14,7 @@ from typing import Optional, Union, TYPE_CHECKING
 
 import kiwipy
 
-if TYPE_CHECKING:
-    from aiida.orm import Node
+from aiida.orm import Node, load_node
 
 __all__ = ('ProcessFuture',)
 
@@ -42,7 +41,6 @@ class ProcessFuture(asyncio.Future):
         :param poll_interval: optional polling interval, if None, polling is not activated.
         :param communicator: optional communicator, if None, will not subscribe to broadcasts.
         """
-        from aiida.orm import load_node
         from .process import ProcessState
 
         # create future in specified event loop

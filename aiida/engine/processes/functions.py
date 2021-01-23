@@ -17,11 +17,12 @@ from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, TYPE_CH
 
 from aiida.common.lang import override
 from aiida.manage.manager import get_manager
+from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode
+from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
 
 if TYPE_CHECKING:
-    from aiida.orm import ProcessNode
     from .exit_code import ExitCode
 
 __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
@@ -56,7 +57,6 @@ def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     :return: The decorated function.
     :rtype: callable
     """
-    from aiida.orm import CalcFunctionNode
     return process_function(node_class=CalcFunctionNode)(function)
 
 
@@ -85,9 +85,8 @@ def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     :type function: callable
 
     :return: The decorated function.
-    :rtype: callable
-        """
-    from aiida.orm import WorkFunctionNode
+
+    """
     return process_function(node_class=WorkFunctionNode)(function)
 
 
@@ -222,10 +221,7 @@ class FunctionProcess(Process):
         :return: A Process class that represents the function
 
         """
-        from aiida import orm
-        from aiida.orm.utils.mixins import FunctionCalculationMixin
-
-        if not issubclass(node_class, orm.ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
+        if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
         args, varargs, keywords, defaults, _, _, _ = inspect.getfullargspec(func)
@@ -253,9 +249,9 @@ class FunctionProcess(Process):
                     # Note that we cannot use `None` because the validation will call `isinstance` which does not work
                     # when passing `None`, but it does work with `NoneType` which is returned by calling `type(None)`
                     if default is None:
-                        valid_type = (orm.Data, type(None))
+                        valid_type = (Data, type(None))
                     else:
-                        valid_type = (orm.Data,)
+                        valid_type = (Data,)
 
                     spec.input(arg, valid_type=valid_type, default=default)
 
@@ -271,7 +267,7 @@ class FunctionProcess(Process):
             # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
             # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
             # the output namespace can be nested.
-            spec.outputs.valid_type = (orm.Data, dict)
+            spec.outputs.valid_type = (Data, dict)
 
         return type(
             func.__name__, (FunctionProcess,), {
@@ -369,7 +365,6 @@ class FunctionProcess(Process):
     @override
     def run(self) -> Optional['ExitCode']:
         """Run the process."""
-        from aiida.orm import Data
         from .exit_code import ExitCode
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process

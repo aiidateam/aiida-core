@@ -319,6 +319,7 @@ Let's now start up the ``verdi shell`` again and load the ``add@tutor`` code usi
 
 .. code-block:: ipython
 
+    In [0]: from aiida.orm import load_code
     In [1]: code = load_code(label='add')
 
 Every code has a convenient tool for setting up the required input, called the *builder*.

@@ -12,7 +12,11 @@ from collections import namedtuple
 import contextlib
 import logging
 import traceback
+from typing import Awaitable, Dict, Hashable, Iterator, Optional
 import asyncio
+
+from aiida.orm import AuthInfo
+from aiida.transports import Transport
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +26,7 @@ class TransportRequest:
 
     def __init__(self):
         super().__init__()
-        self.future = asyncio.Future()
+        self.future: asyncio.Future = asyncio.Future()
         self.count = 0
 
 
@@ -39,20 +43,20 @@ class TransportQueue:
     """
     AuthInfoEntry = namedtuple('AuthInfoEntry', ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
-    def __init__(self, loop=None):
+    def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
         """
         :param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied
         """
         self._loop = loop if loop is not None else asyncio.get_event_loop()
-        self._transport_requests = {}
+        self._transport_requests: Dict[Hashable, TransportRequest] = {}
 
     @property
-    def loop(self):
+    def loop(self) -> asyncio.AbstractEventLoop:
         """ Get the loop being used by this transport queue """
         return self._loop
 
     @contextlib.contextmanager
-    def request_transport(self, authinfo):
+    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable[Transport]]:
         """
         Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future
@@ -79,7 +83,7 @@ class TransportQueue:
 
             def do_open():
                 """ Actually open the transport """
-                if transport_request.count > 0:
+                if transport_request and transport_request.count > 0:
                     # The user still wants the transport so open it
                     _LOGGER.debug('Transport request opening transport for %s', authinfo)
                     try:

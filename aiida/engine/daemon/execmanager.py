@@ -13,23 +13,56 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from collections.abc import Mapping
+from logging import LoggerAdapter
 import os
 import shutil
+from tempfile import NamedTemporaryFile
+from typing import Any, List, Optional, Mapping as MappingType, Tuple, Union
 
 from aiida.common import AIIDA_LOGGER, exceptions
+from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import FolderData, Node
+from aiida.orm import load_node, CalcJobNode, Code, FolderData, Node, RemoteData
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.plugins import DataFactory
 from aiida.schedulers.datastructures import JobState
+from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
 execlogger = AIIDA_LOGGER.getChild('execmanager')
 
 
-def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=False):
+def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
+    """Find and return the node with the given UUID from a nested mapping of input nodes.
+
+    :param inputs: (nested) mapping of nodes
+    :param uuid: UUID of the node to find
+    :return: instance of `Node` or `None` if not found
+    """
+    data_node = None
+
+    for input_node in inputs.values():
+        if isinstance(input_node, Mapping):
+            data_node = _find_data_node(input_node, uuid)
+        elif isinstance(input_node, Node) and input_node.uuid == uuid:
+            data_node = input_node
+        if data_node is not None:
+            break
+
+    return data_node
+
+
+def upload_calculation(
+    node: CalcJobNode,
+    transport: Transport,
+    calc_info: CalcInfo,
+    folder: SandboxFolder,
+    inputs: Optional[MappingType[str, Any]] = None,
+    dry_run: bool = False
+) -> None:
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
@@ -38,9 +71,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
     """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    from logging import LoggerAdapter
-    from tempfile import NamedTemporaryFile
-    from aiida.orm import load_node, Code, RemoteData
 
     # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
@@ -162,30 +192,10 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
-        def find_data_node(inputs, uuid):
-            """Find and return the node with the given UUID from a nested mapping of input nodes.
-
-            :param inputs: (nested) mapping of nodes
-            :param uuid: UUID of the node to find
-            :return: instance of `Node` or `None` if not found
-            """
-            from collections.abc import Mapping
-            data_node = None
-
-            for input_node in inputs.values():
-                if isinstance(input_node, Mapping):
-                    data_node = find_data_node(input_node, uuid)
-                elif isinstance(input_node, Node) and input_node.uuid == uuid:
-                    data_node = input_node
-                if data_node is not None:
-                    break
-
-            return data_node
-
         try:
             data_node = load_node(uuid=uuid)
         except exceptions.NotExistent:
-            data_node = find_data_node(inputs, uuid)
+            data_node = _find_data_node(inputs, uuid) if inputs else None
 
         if data_node is None:
             logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
@@ -294,7 +304,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         remotedata.store()
 
 
-def submit_calculation(calculation, transport):
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -322,7 +332,7 @@ def submit_calculation(calculation, transport):
     return job_id
 
 
-def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
+def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
@@ -394,7 +404,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
-def kill_calculation(calculation, transport):
+def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
     """
     Kill the calculation through the scheduler
 
@@ -425,7 +435,13 @@ def kill_calculation(calculation, transport):
     return True
 
 
-def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_extra=None):
+def _retrieve_singlefiles(
+    job: CalcJobNode,
+    transport: Transport,
+    folder: SandboxFolder,
+    retrieve_file_list: List[Tuple[str, str, str]],
+    logger_extra: Optional[dict] = None
+):
     """Retrieve files specified through the singlefile list mechanism."""
     singlefile_list = []
     for (linkname, subclassname, filename) in retrieve_file_list:
@@ -454,7 +470,10 @@ def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_ext
         fil.store()
 
 
-def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
+def retrieve_files_from_list(
+    calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
+                                                                                           list]]
+) -> None:
     """
     Retrieve all the files in the retrieve_list from the remote into the
     local folder instance through the transport. The entries in the retrieve_list

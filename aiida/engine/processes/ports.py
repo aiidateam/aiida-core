@@ -10,9 +10,14 @@
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
 import collections
 import re
+from typing import Any, Callable, Dict, Optional, Sequence
 import warnings
 
 from plumpy import ports
+from plumpy.ports import breadcrumbs_to_port
+
+from aiida.common.links import validate_link_label
+from aiida.orm import Data, Node
 
 __all__ = (
     'PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
@@ -26,21 +31,21 @@ OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
 class WithNonDb:
     """
-    A mixin that adds support to a port to flag a that should not be stored
+    A mixin that adds support to a port to flag that it should not be stored
     in the database using the non_db=True flag.
 
     The mixins have to go before the main port class in the superclass order
     to make sure the mixin has the chance to strip out the non_db keyword.
     """
 
-    def __init__(self, *args, **kwargs):
-        self._non_db_explicitly_set = bool('non_db' in kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        self._non_db_explicitly_set: bool = bool('non_db' in kwargs)
         non_db = kwargs.pop('non_db', False)
-        super().__init__(*args, **kwargs)
-        self._non_db = non_db
+        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        self._non_db: bool = non_db
 
     @property
-    def non_db_explicitly_set(self):
+    def non_db_explicitly_set(self) -> bool:
         """Return whether the a value for `non_db` was explicitly passed in the construction of the `Port`.
 
         :return: boolean, True if `non_db` was explicitly defined during construction, False otherwise
@@ -48,7 +53,7 @@ class WithNonDb:
         return self._non_db_explicitly_set
 
     @property
-    def non_db(self):
+    def non_db(self) -> bool:
         """Return whether the value of this `Port` should be stored as a `Node` in the database.
 
         :return: boolean, True if it should be storable as a `Node`, False otherwise
@@ -56,10 +61,8 @@ class WithNonDb:
         return self._non_db
 
     @non_db.setter
-    def non_db(self, non_db):
+    def non_db(self, non_db: bool) -> None:
         """Set whether the value of this `Port` should be stored as a `Node` in the database.
-
-        :param non_db: boolean
         """
         self._non_db_explicitly_set = True
         self._non_db = non_db
@@ -71,19 +74,17 @@ class WithSerialize:
     that are not AiiDA data types.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
-        super().__init__(*args, **kwargs)
-        self._serializer = serializer
+        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        self._serializer: Callable[[Any], 'Data'] = serializer
 
-    def serialize(self, value):
+    def serialize(self, value: Any) -> 'Data':
         """Serialize the given value if it is not already a Data type and a serializer function is defined
 
         :param value: the value to be serialized
         :returns: a serialized version of the value or the unchanged value
         """
-        from aiida.orm import Data
-
         if self._serializer is None or isinstance(value, Data):
             return value
 
@@ -96,11 +97,9 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
     value serialization to database storable types and support non database storable input types as well.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Override the constructor to check the type of the default if set and warn if not immutable."""
         # pylint: disable=redefined-builtin,too-many-arguments
-        from aiida.orm import Node
-
         if 'default' in kwargs:
             default = kwargs['default']
             # If the default is specified and it is a node instance, raise a warning. This is to try and prevent that
@@ -112,7 +111,7 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
 
         super(InputPort, self).__init__(*args, **kwargs)
 
-    def get_description(self):
+    def get_description(self) -> Dict[str, str]:
         """
         Return a description of the InputPort, which will be a dictionary of its attributes
 
@@ -127,13 +126,13 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
 class CalcJobOutputPort(ports.OutputPort):
     """Sub class of plumpy.OutputPort which adds the `_pass_to_parser` attribute."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         pass_to_parser = kwargs.pop('pass_to_parser', False)
         super().__init__(*args, **kwargs)
-        self._pass_to_parser = pass_to_parser
+        self._pass_to_parser: bool = pass_to_parser
 
     @property
-    def pass_to_parser(self):
+    def pass_to_parser(self) -> bool:
         return self._pass_to_parser
 
 
@@ -143,7 +142,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
     serialization of a given mapping onto the ports of the PortNamespace.
     """
 
-    def __setitem__(self, key, port):
+    def __setitem__(self, key: str, port: ports.Port) -> None:
         """Ensure that a `Port` being added inherits the `non_db` attribute if not explicitly defined at construction.
 
         The reasoning is that if a `PortNamespace` has `non_db=True`, which is different from the default value, very
@@ -157,13 +156,13 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
 
         self.validate_port_name(key)
 
-        if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:
-            port.non_db = self.non_db
+        if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:  # type: ignore[attr-defined]
+            port.non_db = self.non_db  # type: ignore[attr-defined]
 
         super().__setitem__(key, port)
 
     @staticmethod
-    def validate_port_name(port_name):
+    def validate_port_name(port_name: str) -> None:
         """Validate the given port name.
 
         Valid port names adhere to the following restrictions:
@@ -181,8 +180,6 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :raise TypeError: if the port name is not a string type
         :raise ValueError: if the port name is invalid
         """
-        from aiida.common.links import validate_link_label
-
         try:
             validate_link_label(port_name)
         except ValueError as exception:
@@ -195,7 +192,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
             raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
-    def serialize(self, mapping, breadcrumbs=()):
+    def serialize(self, mapping: Optional[Dict[str, Any]], breadcrumbs: Sequence[str] = ()) -> Optional[Dict[str, Any]]:
         """Serialize the given mapping onto this `Portnamespace`.
 
         It will recursively call this function on any nested `PortNamespace` or the serialize function on any `Ports`.
@@ -204,26 +201,27 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         :param breadcrumbs: a tuple with the namespaces of parent namespaces
         :returns: the serialized mapping
         """
-        from plumpy.ports import breadcrumbs_to_port
-
         if mapping is None:
             return None
 
-        breadcrumbs += (self.name,)
+        breadcrumbs = (*breadcrumbs, self.name)
 
         if not isinstance(mapping, collections.Mapping):
-            port = breadcrumbs_to_port(breadcrumbs)
-            raise TypeError(f'port namespace `{port}` received `{type(mapping)}` instead of a dictionary')
+            port_name = breadcrumbs_to_port(breadcrumbs)
+            raise TypeError(f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary')
 
         result = {}
 
         for name, value in mapping.items():
             if name in self:
+
                 port = self[name]
                 if isinstance(port, PortNamespace):
                     result[name] = port.serialize(value, breadcrumbs)
-                else:
+                elif isinstance(port, InputPort):
                     result[name] = port.serialize(value)
+                else:
+                    raise AssertionError(f'port does not have a serialize method: {port}')
             else:
                 result[name] = value
 

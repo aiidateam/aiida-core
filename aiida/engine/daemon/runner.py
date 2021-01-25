@@ -14,12 +14,13 @@ import asyncio
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.runners import Runner
 from aiida.manage.manager import get_manager
 
 LOGGER = logging.getLogger(__name__)
 
 
-async def shutdown_runner(runner):
+async def shutdown_runner(runner: Runner) -> None:
     """Cleanup tasks tied to the service's shutdown."""
     LOGGER.info('Received signal to shut down the daemon runner')
 
@@ -40,8 +41,10 @@ async def shutdown_runner(runner):
     await asyncio.gather(*tasks, return_exceptions=True)
     runner.close()
 
+    LOGGER.info('Daemon runner stopped')
 
-def start_daemon():
+
+def start_daemon() -> None:
     """Start a daemon runner for the currently configured profile."""
     daemon_client = get_daemon_client()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
@@ -65,4 +68,4 @@ def start_daemon():
         LOGGER.info('Received a SystemError: %s', exception)
         runner.close()
 
-    LOGGER.info('Daemon runner stopped')
+    LOGGER.info('Daemon runner started')

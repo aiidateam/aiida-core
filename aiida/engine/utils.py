@@ -10,9 +10,15 @@
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
 
-import contextlib
-import logging
 import asyncio
+import contextlib
+from datetime import datetime
+import logging
+from typing import Any, Awaitable, Callable, Iterator, List, Optional, Type, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .processes import Process, ProcessBuilder
+    from .runners import Runner
 
 __all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
 
@@ -21,7 +27,9 @@ PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 
 
-def instantiate_process(runner, process, *args, **inputs):
+def instantiate_process(
+    runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], *args, **inputs
+) -> 'Process':
     """
     Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
@@ -48,7 +56,7 @@ def instantiate_process(runner, process, *args, **inputs):
         process_class = builder.process_class
         inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
     elif is_process_function(process):
-        process_class = process.process_class
+        process_class = process.process_class  # type: ignore[attr-defined]
     elif issubclass(process, Process):
         process_class = process
     else:
@@ -62,11 +70,11 @@ def instantiate_process(runner, process, *args, **inputs):
 class InterruptableFuture(asyncio.Future):
     """A future that can be interrupted by calling `interrupt`."""
 
-    def interrupt(self, reason):
+    def interrupt(self, reason: Exception) -> None:
         """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
         self.set_exception(reason)
 
-    async def with_interrupt(self, coro):
+    async def with_interrupt(self, coro: Awaitable[Any]) -> Any:
         """
         return result of a coroutine which will be interrupted if this future is interrupted ::
 
@@ -91,7 +99,10 @@ class InterruptableFuture(asyncio.Future):
         return result
 
 
-def interruptable_task(coro, loop=None):
+def interruptable_task(
+    coro: Callable[[InterruptableFuture], Awaitable[Any]],
+    loop: Optional[asyncio.AbstractEventLoop] = None
+) -> InterruptableFuture:
     """
     Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
@@ -126,7 +137,7 @@ def interruptable_task(coro, loop=None):
     return future
 
 
-def ensure_coroutine(fct):
+def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
     """
     Ensure that the given function ``fct`` is a coroutine
 
@@ -144,7 +155,13 @@ def ensure_coroutine(fct):
     return wrapper
 
 
-async def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None, ignore_exceptions=None):
+async def exponential_backoff_retry(
+    fct: Callable[..., Any],
+    initial_interval: Union[int, float] = 10.0,
+    max_attempts: int = 5,
+    logger: Optional[logging.Logger] = None,
+    ignore_exceptions=None
+) -> Any:
     """
     Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
@@ -162,7 +179,7 @@ async def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, 
     if logger is None:
         logger = LOGGER
 
-    result = None
+    result: Any = None
     coro = ensure_coroutine(fct)
     interval = initial_interval
 
@@ -191,7 +208,7 @@ async def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, 
     return result
 
 
-def is_process_function(function):
+def is_process_function(function: Any) -> bool:
     """Return whether the given function is a process function
 
     :param function: a function
@@ -203,7 +220,7 @@ def is_process_function(function):
         return False
 
 
-def is_process_scoped():
+def is_process_scoped() -> bool:
     """Return whether the current scope is within a process.
 
     :returns: True if the current scope is within a nested process, False otherwise
@@ -213,7 +230,7 @@ def is_process_scoped():
 
 
 @contextlib.contextmanager
-def loop_scope(loop):
+def loop_scope(loop) -> Iterator[None]:
     """
     Make an event loop current for the scope of the context
 
@@ -229,7 +246,7 @@ def loop_scope(loop):
         asyncio.set_event_loop(current)
 
 
-def set_process_state_change_timestamp(process):
+def set_process_state_change_timestamp(process: 'Process') -> None:
     """
     Set the global setting that reflects the last time a process changed state, for the process type
     of the given process, to the current timestamp. The process type will be determined based on
@@ -263,7 +280,7 @@ def set_process_state_change_timestamp(process):
         process.logger.debug(f'could not update the {key} setting because of a UniquenessError: {exception}')
 
 
-def get_process_state_change_timestamp(process_type=None):
+def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
     """
     Get the global setting that reflects the last time a process of the given process type changed its state.
     The returned value will be the corresponding timestamp or None if the setting does not exist.
@@ -288,7 +305,7 @@ def get_process_state_change_timestamp(process_type=None):
     else:
         process_types = [process_type]
 
-    timestamps = []
+    timestamps: List[datetime] = []
 
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)

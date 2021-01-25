@@ -14,4 +14,4 @@ from .restart import *
 from .utils import *
 from .workchain import *
 
-__all__ = (context.__all__ + restart.__all__ + utils.__all__ + workchain.__all__)
+__all__ = (context.__all__ + restart.__all__ + utils.__all__ + workchain.__all__)  # type: ignore[name-defined]

@@ -9,11 +9,23 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
+import asyncio
 import functools
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from kiwipy.rmq import RmqThreadCommunicator
+    from plumpy.process_comms import RemoteProcessThreadController
+
+    from aiida.backends.manager import BackendManager
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.engine.runners import Runner
+    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration.profile import Profile
+    from aiida.orm.implementation import Backend
+    from aiida.engine.persistence import AiiDAPersister
 
 __all__ = ('get_manager', 'reset_manager')
-
-MANAGER = None
 
 
 class Manager:
@@ -32,34 +44,62 @@ class Manager:
       * reset manager cache when loading a new profile
     """
 
+    def __init__(self) -> None:
+        self._backend: Optional['Backend'] = None
+        self._backend_manager: Optional['BackendManager'] = None
+        self._config: Optional['Config'] = None
+        self._daemon_client: Optional['DaemonClient'] = None
+        self._profile: Optional['Profile'] = None
+        self._communicator: Optional['RmqThreadCommunicator'] = None
+        self._process_controller: Optional['RemoteProcessThreadController'] = None
+        self._persister: Optional['AiiDAPersister'] = None
+        self._runner: Optional['Runner'] = None
+
+    def close(self) -> None:
+        """Reset the global settings entirely and release any global objects."""
+        if self._communicator is not None:
+            self._communicator.close()
+        if self._runner is not None:
+            self._runner.stop()
+
+        self._backend = None
+        self._backend_manager = None
+        self._config = None
+        self._profile = None
+        self._communicator = None
+        self._daemon_client = None
+        self._process_controller = None
+        self._persister = None
+        self._runner = None
+
     @staticmethod
-    def get_config():
+    def get_config() -> 'Config':
         """Return the current config.
 
         :return: current loaded config instance
-        :rtype: :class:`~aiida.manage.configuration.config.Config`
         :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
+
         """
         from .configuration import get_config
         return get_config()
 
     @staticmethod
-    def get_profile():
+    def get_profile() -> Optional['Profile']:
         """Return the current loaded profile, if any
 
         :return: current loaded profile instance
-        :rtype: :class:`~aiida.manage.configuration.profile.Profile` or None
+
         """
         from .configuration import get_profile
         return get_profile()
 
-    def unload_backend(self):
+    def unload_backend(self) -> None:
         """Unload the current backend and its corresponding database environment."""
         manager = self.get_backend_manager()
         manager.reset_backend_environment()
         self._backend = None
 
-    def _load_backend(self, schema_check=True):
+    def _load_backend(self, schema_check: bool = True) -> 'Backend':
         """Load the backend for the currently configured profile and return it.
 
         .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
@@ -67,7 +107,7 @@ class Manager:
 
         :param schema_check: force a database schema check if the database environment has not yet been loaded
         :return: the database backend
-        :rtype: :class:`aiida.orm.implementation.Backend`
+
         """
         from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.common import ConfigurationError, InvalidOperation
@@ -87,7 +127,7 @@ class Manager:
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
             from aiida.backends import get_backend_manager
-            backend_manager = get_backend_manager(self.get_profile().database_backend)
+            backend_manager = get_backend_manager(profile.database_backend)
             backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 
@@ -108,46 +148,52 @@ class Manager:
         return self._backend
 
     @property
-    def backend_loaded(self):
+    def backend_loaded(self) -> bool:
         """Return whether a database backend has been loaded.
 
         :return: boolean, True if database backend is currently loaded, False otherwise
         """
         return self._backend is not None
 
-    def get_backend_manager(self):
+    def get_backend_manager(self) -> 'BackendManager':
         """Return the database backend manager.
 
         .. note:: this is not the actual backend, but a manager class that is necessary for database operations that
             go around the actual ORM. For example when the schema version has not yet been validated.
 
         :return: the database backend manager
-        :rtype: :class:`aiida.backend.manager.BackendManager`
+
         """
         from aiida.backends import get_backend_manager
+        from aiida.common import ConfigurationError
 
         if self._backend_manager is None:
             self._load_backend()
-            self._backend_manager = get_backend_manager(self.get_profile().database_backend)
+            profile = self.get_profile()
+            if profile is None:
+                raise ConfigurationError(
+                    'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+                )
+            self._backend_manager = get_backend_manager(profile.database_backend)
 
         return self._backend_manager
 
-    def get_backend(self):
+    def get_backend(self) -> 'Backend':
         """Return the database backend
 
         :return: the database backend
-        :rtype: :class:`aiida.orm.implementation.Backend`
+
         """
         if self._backend is None:
             self._load_backend()
 
         return self._backend
 
-    def get_persister(self):
+    def get_persister(self) -> 'AiiDAPersister':
         """Return the persister
 
         :return: the current persister instance
-        :rtype: :class:`plumpy.Persister`
+
         """
         from aiida.engine import persistence
 
@@ -156,18 +202,20 @@ class Manager:
 
         return self._persister
 
-    def get_communicator(self):
+    def get_communicator(self) -> 'RmqThreadCommunicator':
         """Return the communicator
 
         :return: a global communicator instance
-        :rtype: :class:`kiwipy.Communicator`
+
         """
         if self._communicator is None:
             self._communicator = self.create_communicator()
 
         return self._communicator
 
-    def create_communicator(self, task_prefetch_count=None, with_orm=True):
+    def create_communicator(
+        self, task_prefetch_count: Optional[int] = None, with_orm: bool = True
+    ) -> 'RmqThreadCommunicator':
         """Create a Communicator.
 
         :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
@@ -175,12 +223,17 @@ class Manager:
             This is used by verdi status to get a communicator without needing to load the dbenv.
 
         :return: the communicator instance
-        :rtype: :class:`~kiwipy.rmq.communicator.RmqThreadCommunicator`
+
         """
+        from aiida.common import ConfigurationError
         from aiida.manage.external import rmq
         import kiwipy.rmq
 
         profile = self.get_profile()
+        if profile is None:
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
 
         if task_prefetch_count is None:
             task_prefetch_count = self.get_config().get_option('daemon.worker_process_slots', profile.name)
@@ -210,11 +263,11 @@ class Manager:
             testing_mode=profile.is_test_profile,
         )
 
-    def get_daemon_client(self):
+    def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
 
         :return: the daemon client
-        :rtype: :class:`aiida.daemon.client.DaemonClient`
+
         :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
         :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         """
@@ -225,52 +278,57 @@ class Manager:
 
         return self._daemon_client
 
-    def get_process_controller(self):
+    def get_process_controller(self) -> 'RemoteProcessThreadController':
         """Return the process controller
 
         :return: the process controller instance
-        :rtype: :class:`plumpy.RemoteProcessThreadController`
+
         """
-        import plumpy
+        from plumpy.process_comms import RemoteProcessThreadController
         if self._process_controller is None:
-            self._process_controller = plumpy.RemoteProcessThreadController(self.get_communicator())
+            self._process_controller = RemoteProcessThreadController(self.get_communicator())
 
         return self._process_controller
 
-    def get_runner(self, **kwargs):
+    def get_runner(self, **kwargs) -> 'Runner':
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
-        :rtype: :class:`aiida.engine.runners.Runner`
+
         """
         if self._runner is None:
             self._runner = self.create_runner(**kwargs)
 
         return self._runner
 
-    def set_runner(self, new_runner):
+    def set_runner(self, new_runner: 'Runner') -> None:
         """Set the currently used runner
 
         :param new_runner: the new runner to use
-        :type new_runner: :class:`aiida.engine.runners.Runner`
+
         """
         if self._runner is not None:
             self._runner.close()
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence=True, **kwargs):
+    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> 'Runner':
         """Create and return a new runner
 
         :param with_persistence: create a runner with persistence enabled
-        :type with_persistence: bool
+
         :return: a new runner instance
-        :rtype: :class:`aiida.engine.runners.Runner`
+
         """
+        from aiida.common import ConfigurationError
         from aiida.engine import runners
 
         config = self.get_config()
         profile = self.get_profile()
+        if profile is None:
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
         poll_interval = 0.0 if profile.is_test_profile else config.get_option('runner.poll.interval', profile.name)
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
@@ -285,17 +343,17 @@ class Manager:
 
         return runners.Runner(**settings)
 
-    def create_daemon_runner(self, loop=None):
+    def create_daemon_runner(self, loop: Optional[asyncio.AbstractEventLoop] = None) -> 'Runner':
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.
 
         :param loop: the (optional) asyncio event loop to use
-        :type loop: the asyncio event loop
+
         :return: a runner configured to work in the daemon configuration
-        :rtype: :class:`aiida.engine.runners.Runner`
+
         """
-        import plumpy
+        from plumpy.persistence import LoadSaveContext
         from aiida.engine import persistence
         from aiida.manage.external import rmq
 
@@ -306,52 +364,27 @@ class Manager:
         task_receiver = rmq.ProcessLauncher(
             loop=runner_loop,
             persister=self.get_persister(),
-            load_context=plumpy.LoadSaveContext(runner=runner),
+            load_context=LoadSaveContext(runner=runner),
             loader=persistence.get_object_loader()
         )
 
+        assert runner.communicator is not None, 'communicator not set for runner'
         runner.communicator.add_task_subscriber(task_receiver)
 
         return runner
 
-    def close(self):
-        """Reset the global settings entirely and release any global objects."""
-        if self._communicator is not None:
-            self._communicator.close()
-        if self._runner is not None:
-            self._runner.stop()
 
-        self._backend = None
-        self._backend_manager = None
-        self._config = None
-        self._profile = None
-        self._communicator = None
-        self._daemon_client = None
-        self._process_controller = None
-        self._persister = None
-        self._runner = None
-
-    def __init__(self):
-        super().__init__()
-        self._backend = None  # type: aiida.orm.implementation.Backend
-        self._backend_manager = None  # type: aiida.backend.manager.BackendManager
-        self._config = None  # type: aiida.manage.configuration.config.Config
-        self._daemon_client = None  # type: aiida.daemon.client.DaemonClient
-        self._profile = None  # type: aiida.manage.configuration.profile.Profile
-        self._communicator = None  # type: kiwipy.rmq.RmqThreadCommunicator
-        self._process_controller = None  # type: plumpy.RemoteProcessThreadController
-        self._persister = None  # type: aiida.engine.persistence.AiiDAPersister
-        self._runner = None  # type: aiida.engine.runners.Runner
+MANAGER: Optional[Manager] = None
 
 
-def get_manager():
+def get_manager() -> Manager:
     global MANAGER  # pylint: disable=global-statement
     if MANAGER is None:
         MANAGER = Manager()
     return MANAGER
 
 
-def reset_manager():
+def reset_manager() -> None:
     global MANAGER  # pylint: disable=global-statement
     if MANAGER is not None:
         MANAGER.close()

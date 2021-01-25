@@ -69,7 +69,7 @@ def construct_full_type(node_type, process_type):
     :return: the full type, which is a unique identifier
     """
     if node_type is None:
-        process_type = ''
+        node_type = ''
 
     if process_type is None:
         process_type = ''

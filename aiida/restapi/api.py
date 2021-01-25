@@ -25,13 +25,8 @@ class App(Flask):
 
     def __init__(self, *args, **kwargs):
 
-        # Decide whether or not to catch the internal server exceptions (
-        # default is True)
-        catch_internal_server = True
-        try:
-            catch_internal_server = kwargs.pop('catch_internal_server')
-        except KeyError:
-            pass
+        # Decide whether or not to catch the internal server exceptions (default is True)
+        catch_internal_server = kwargs.pop('catch_internal_server', True)
 
         # Basic initialization
         super().__init__(*args, **kwargs)

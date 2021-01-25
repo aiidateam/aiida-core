@@ -121,4 +121,4 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     # Instantiate and return a Flask RESTful API by associating its app
-    return flask_api(app, **API_CONFIG)
+    return flask_api(app, **config_module.API_CONFIG)

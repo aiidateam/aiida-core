@@ -156,178 +156,81 @@ class CalcJob(Process):
 
         :param spec: the calculation job process spec to define.
         """
+        # yapf: disable
         super().define(spec)
         spec.inputs.validator = validate_calc_job  # type: ignore[assignment]  # takes only PortNamespace not Port
         spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
-        spec.input(
-            'metadata.dry_run',
-            valid_type=bool,
-            default=False,
-            help='When set to `True` will prepare the calculation job for submission but not actually launch it.'
-        )
-        spec.input(
-            'metadata.computer',
-            valid_type=orm.Computer,
-            required=False,
-            help='When using a "local" code, set the computer on which the calculation should be run.'
-        )
+        spec.input('metadata.dry_run', valid_type=bool, default=False,
+            help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
+        spec.input('metadata.computer', valid_type=orm.Computer, required=False,
+            help='When using a "local" code, set the computer on which the calculation should be run.')
         spec.input_namespace(f'{spec.metadata_key}.{spec.options_key}', required=False)
-        spec.input(
-            'metadata.options.input_filename',
-            valid_type=str,
-            required=False,
-            help='Filename to which the input for the code that is to be run is written.'
-        )
-        spec.input(
-            'metadata.options.output_filename',
-            valid_type=str,
-            required=False,
-            help='Filename to which the content of stdout of the code that is to be run is written.'
-        )
-        spec.input(
-            'metadata.options.submit_script_filename',
-            valid_type=str,
-            default='_aiidasubmit.sh',
-            help='Filename to which the job submission script is written.'
-        )
-        spec.input(
-            'metadata.options.scheduler_stdout',
-            valid_type=str,
-            default='_scheduler-stdout.txt',
-            help='Filename to which the content of stdout of the scheduler is written.'
-        )
-        spec.input(
-            'metadata.options.scheduler_stderr',
-            valid_type=str,
-            default='_scheduler-stderr.txt',
-            help='Filename to which the content of stderr of the scheduler is written.'
-        )
-        spec.input(
-            'metadata.options.resources',
-            valid_type=dict,
-            required=True,
+        spec.input('metadata.options.input_filename', valid_type=str, required=False,
+            help='Filename to which the input for the code that is to be run is written.')
+        spec.input('metadata.options.output_filename', valid_type=str, required=False,
+            help='Filename to which the content of stdout of the code that is to be run is written.')
+        spec.input('metadata.options.submit_script_filename', valid_type=str, default='_aiidasubmit.sh',
+            help='Filename to which the job submission script is written.')
+        spec.input('metadata.options.scheduler_stdout', valid_type=str, default='_scheduler-stdout.txt',
+            help='Filename to which the content of stdout of the scheduler is written.')
+        spec.input('metadata.options.scheduler_stderr', valid_type=str, default='_scheduler-stderr.txt',
+            help='Filename to which the content of stderr of the scheduler is written.')
+        spec.input('metadata.options.resources', valid_type=dict, required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-            'scheduler for more details.'
-        )
-        spec.input(
-            'metadata.options.max_wallclock_seconds',
-            valid_type=int,
-            required=False,
-            help='Set the wallclock in seconds asked to the scheduler'
-        )
-        spec.input(
-            'metadata.options.custom_scheduler_commands',
-            valid_type=str,
-            default='',
+                 'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+                 'scheduler for more details.')
+        spec.input('metadata.options.max_wallclock_seconds', valid_type=int, required=False,
+            help='Set the wallclock in seconds asked to the scheduler')
+        spec.input('metadata.options.custom_scheduler_commands', valid_type=str, default='',
             help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-            'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
-            'the scheduler submission file where such text is inserted: with this option, the string is '
-            'inserted before any non-scheduler command'
-        )
-        spec.input(
-            'metadata.options.queue_name',
-            valid_type=str,
-            required=False,
-            help='Set the name of the queue on the remote computer'
-        )
-        spec.input(
-            'metadata.options.account',
-            valid_type=str,
-            required=False,
-            help='Set the account to use in for the queue on the remote computer'
-        )
-        spec.input(
-            'metadata.options.qos',
-            valid_type=str,
-            required=False,
-            help='Set the quality of service to use in for the queue on the remote computer'
-        )
-        spec.input(
-            'metadata.options.withmpi',
-            valid_type=bool,
-            default=False,
-            help='Set the calculation to use mpi',
-        )
-        spec.input(
-            'metadata.options.mpirun_extra_params',
-            valid_type=(list, tuple),
-            default=lambda: [],
+                 'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+                 'the scheduler submission file where such text is inserted: with this option, the string is '
+                 'inserted before any non-scheduler command')
+        spec.input('metadata.options.queue_name', valid_type=str, required=False,
+            help='Set the name of the queue on the remote computer')
+        spec.input('metadata.options.account', valid_type=str, required=False,
+            help='Set the account to use in for the queue on the remote computer')
+        spec.input('metadata.options.qos', valid_type=str, required=False,
+            help='Set the quality of service to use in for the queue on the remote computer')
+        spec.input('metadata.options.withmpi', valid_type=bool, default=False,
+            help='Set the calculation to use mpi',)
+        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=lambda: [],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
-        )
-        spec.input(
-            'metadata.options.import_sys_environment',
-            valid_type=bool,
-            default=True,
-            help='If set to true, the submission script will load the system environment variables',
-        )
-        spec.input(
-            'metadata.options.environment_variables',
-            valid_type=dict,
-            default=lambda: {},
-            help='Set a dictionary of custom environment variables for this calculation',
-        )
-        spec.input(
-            'metadata.options.priority',
-            valid_type=str,
-            required=False,
-            help='Set the priority of the job to be queued'
-        )
-        spec.input(
-            'metadata.options.max_memory_kb',
-            valid_type=int,
-            required=False,
-            help='Set the maximum memory (in KiloBytes) to be asked to the scheduler'
-        )
-        spec.input(
-            'metadata.options.prepend_text',
-            valid_type=str,
-            default='',
+                 'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',)
+        spec.input('metadata.options.import_sys_environment', valid_type=bool, default=True,
+            help='If set to true, the submission script will load the system environment variables',)
+        spec.input('metadata.options.environment_variables', valid_type=dict, default=lambda: {},
+            help='Set a dictionary of custom environment variables for this calculation',)
+        spec.input('metadata.options.priority', valid_type=str, required=False,
+            help='Set the priority of the job to be queued')
+        spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
+            help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
+        spec.input('metadata.options.prepend_text', valid_type=str, default='',
             help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
-            'script, just before the code execution',
-        )
-        spec.input(
-            'metadata.options.append_text',
-            valid_type=str,
-            default='',
+                 'script, just before the code execution',)
+        spec.input('metadata.options.append_text', valid_type=str, default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
-            'script, just after the code execution',
-        )
-        spec.input(
-            'metadata.options.parser_name',
-            valid_type=str,
-            required=False,
-            validator=validate_parser,
-            help='Set a string for the output parser. Can be None if no output plugin is available or needed'
-        )
-        spec.input(
-            'metadata.options.additional_retrieve_list',
-            required=False,
-            valid_type=(list, tuple),
-            validator=validate_additional_retrieve_list,
-            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.'
-        )
+                 'script, just after the code execution',)
+        spec.input('metadata.options.parser_name', valid_type=str, required=False, validator=validate_parser,
+            help='Set a string for the output parser. Can be None if no output plugin is available or needed')
+        spec.input('metadata.options.additional_retrieve_list', required=False,
+            valid_type=(list, tuple), validator=validate_additional_retrieve_list,
+            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.')
 
-        spec.output(
-            'remote_folder',
-            valid_type=orm.RemoteData,
-            help='Input files necessary to run the process will be stored in this folder node.'
-        )
-        spec.output(
-            cls.link_label_retrieved,
-            valid_type=orm.FolderData,
-            pass_to_parser=True,
+        spec.output('remote_folder', valid_type=orm.RemoteData,
+            help='Input files necessary to run the process will be stored in this folder node.')
+        spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
-            'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.'
-        )
+                 'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
 
         # Errors caused or returned by the scheduler
-        spec.exit_code(
-            100, 'ERROR_NO_RETRIEVED_FOLDER', message='The process did not have the required `retrieved` output.'
-        )
-        spec.exit_code(110, 'ERROR_SCHEDULER_OUT_OF_MEMORY', message='The job ran out of memory.')
-        spec.exit_code(120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME', message='The job ran out of walltime.')
+        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
+            message='The process did not have the required `retrieved` output.')
+        spec.exit_code(110, 'ERROR_SCHEDULER_OUT_OF_MEMORY',
+            message='The job ran out of memory.')
+        spec.exit_code(120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME',
+            message='The job ran out of walltime.')
+        # yapf: enable
 
     @classproperty
     def spec_options(cls):  # pylint: disable=no-self-argument

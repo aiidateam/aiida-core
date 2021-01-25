@@ -207,6 +207,133 @@ class BaseResource(Resource):
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
+class QueryBuilder(BaseResource):
+    """
+    Representation of a QueryBuilder REST API resource (instantiated with a queryhelp JSON).
+
+    It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.queryhelp`
+    objects and returning the :py:class:`~aiida.orm.querybuilder.QueryBuilder` result accordingly.
+    """
+    from aiida.restapi.translator.nodes.node import NodeTranslator
+
+    _translator_class = NodeTranslator
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # HTTP Request method decorators
+        if 'get_decorators' in kwargs and isinstance(kwargs['get_decorators'], (tuple, list, set)):
+            self.method_decorators.update({'post': list(kwargs['get_decorators'])})
+
+    def get(self):  # pylint: disable=arguments-differ
+        """Static return to state information about this endpoint."""
+        data = {
+            'message': (
+                'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
+                'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
+                'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
+                'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
+            ),
+        }
+
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+        return self.utils.build_response(
+            status=405,  # Method Not Allowed
+            headers=headers,
+            data={
+                'method': request.method,
+                'url': unquote(request.url),
+                'url_root': unquote(request.url_root),
+                'path': unquote(request.path),
+                'query_string': request.query_string.decode('utf-8'),
+                'resource_type': self.__class__.__name__,
+                'data': data,
+            },
+        )
+
+    def post(self):  # pylint: disable=too-many-branches
+        """
+        POST method to pass query help JSON.
+
+        If the posted JSON is not a valid QueryBuilder queryhelp, the request will fail with an internal server error.
+
+        This uses the NodeTranslator in order to best return Nodes according to the general AiiDA
+        REST API data format, while still allowing the return of other AiiDA entities.
+
+        :return: QueryBuilder result of AiiDA entities in "standard" REST API format.
+        """
+        # pylint: disable=protected-access
+        self.trans._query_help = request.get_json(force=True)
+        # While the data may be correct JSON, it MUST be a single JSON Object,
+        # equivalent of a QuieryBuilder.queryhelp dictionary.
+        assert isinstance(self.trans._query_help, dict), (
+            'POSTed data MUST be a valid QueryBuilder.queryhelp dictionary. '
+            f'Got instead (type: {type(self.trans._query_help)}): {self.trans._query_help}'
+        )
+        self.trans.__label__ = self.trans._result_type = self.trans._query_help['path'][-1]['tag']
+
+        # Handle empty list projections
+        number_projections = len(self.trans._query_help['project'])
+        empty_projections_counter = 0
+        skip_tags = []
+        for tag, projections in tuple(self.trans._query_help['project'].items()):
+            if projections == [{'*': {}}]:
+                self.trans._query_help['project'][tag] = self.trans._default
+            elif not projections:
+                empty_projections_counter += 1
+                skip_tags.append(tag)
+            else:
+                # Use projections as given, no need to "correct" them.
+                pass
+
+        if empty_projections_counter == number_projections:
+            # No projections have been specified in the queryhelp.
+            # To be true to the QueryBuilder response, the last entry in path
+            # is the only entry to be returned, all without edges/links.
+            self.trans._query_help['project'][self.trans.__label__] = self.trans._default
+
+        self.trans.init_qb()
+
+        data = {}
+        if self.trans.get_total_count():
+            if empty_projections_counter == number_projections:
+                # "Normal" REST API retrieval can be used.
+                data = self.trans.get_results()
+            else:
+                # Since the "normal" REST API retrieval relies on single-tag retrieval,
+                # we must instead be more creative with how we retrieve the results here.
+                # So we opt for a dictionary, with the tags being the keys.
+                for tag in self.trans._query_help['project']:
+                    if tag in skip_tags:
+                        continue
+                    self.trans.__label__ = tag
+                    data.update(self.trans.get_formatted_result(tag))
+
+        # Remove 'full_type's when they're `None`
+        for tag, entities in list(data.items()):
+            updated_entities = []
+            for entity in entities:
+                if entity.get('full_type') is None:
+                    entity.pop('full_type', None)
+                updated_entities.append(entity)
+            data[tag] = updated_entities
+
+        headers = self.utils.build_headers(url=request.url, total_count=self.trans.get_total_count())
+        return self.utils.build_response(
+            status=200,
+            headers=headers,
+            data={
+                'method': request.method,
+                'url': unquote(request.url),
+                'url_root': unquote(request.url_root),
+                'path': unquote(request.path),
+                'query_string': request.query_string.decode('utf-8'),
+                'resource_type': self.__class__.__name__,
+                'data': data,
+            },
+        )
+
+
 class Node(BaseResource):
     """
     Differs from BaseResource in trans.set_query() mostly because it takes

@@ -288,5 +288,7 @@ def float_to_text(value, sig):
     :param value: the float value to convert
     :param sig: choose how many digits after the comma should be output
     """
+    if value == 0:
+        value = 0.  # Identify value of -0. and overwrite with 0.
     fmt = f'{{:.{sig}g}}'
     return fmt.format(value)

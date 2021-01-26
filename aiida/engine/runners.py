@@ -38,12 +38,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ResultAndNode(NamedTuple):
-    node: ProcessNode
     result: Dict[str, Any]
+    node: ProcessNode
 
 
 class ResultAndPk(NamedTuple):
-    node: ProcessNode
+    result: Dict[str, Any]
     pk: int
 
 

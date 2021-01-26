@@ -67,7 +67,7 @@ Work chains
 
 To launch a work chain, you can either use the ``run`` or ``submit`` functions.
 For either function, you need to provide the class of the work chain as the first argument, followed by the inputs as keyword arguments.
-Using the ``run`` function, or "running", a work chain means it is executed in the same system process as the interpreter in which it is launched:
+When "running the work chain" (using the ``run`` function), it will be executed in the same system process as the interpreter in which it is launched:
 
 .. code-block:: python
 
@@ -329,7 +329,7 @@ In order to do this, we replace the ``multiply``, ``add`` and ``validate_result`
     :pyobject: BetterMultiplyAddIsEvenWorkChain
 
 This already simplifies the extended work chain, and avoids duplicating the steps of the ``MultiplyAddWorkChain`` in the outline.
-However, we still had copy all of the input definitions of the ``MultiplyAddWorkChain``, and manually extract them from the inputs before passing them to the ``self.submit`` method.
+However, we still had to copy all of the input definitions of the ``MultiplyAddWorkChain``, and manually extract them from the inputs before passing them to the ``self.submit`` method.
 Fortunately, there is a better way of *exposing* the inputs and outputs of subprocesses of the work chain.
 
 Exposing inputs and outputs
@@ -337,7 +337,7 @@ Exposing inputs and outputs
 
 Any work chain *needs* to *expose* the inputs of the subprocess it wraps, and perhaps *wants* to do the same for the outputs it produces, although the latter is not necessary.
 For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``MultiplyAddWorkChain`` was not too troublesome.
-However, this quickly becomes tedious, and more importantly, error-prone once you start to wrap processes with quite a few more inputs.
+However, this quickly becomes more tedious and error-prone once you start to wrap processes with quite a few more inputs.
 
 To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs` methods.
 Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` class, will automatically copy the inputs of the class into the inputs namespace of the process specification:
@@ -442,7 +442,7 @@ For example, we could do this in the ``is_even`` step by using the ``self.out`` 
         self.out('is_even', result_is_even)
 
 This works fine if we want to pass a single output to the parent work chain, but once again becomes tedious and error-prone when passing multiple outputs.
-Instead we can use the :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method in combination with the :meth:`~aiida.engine.processes.process.Process.out_many` method:
+Instead we can use the :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method in combination with the :meth:`~aiida.engine.processes.process.Process.out_many` method:
 
 .. code-block:: python
 
@@ -453,7 +453,7 @@ Instead we can use the :meth:`~aiida.engine.processes.process.Process.exposed_in
         self.out_many(self.exposed_outputs(self.ctx.multi_addition, MultiplyAddWorkChain))
         self.out('is_even', result_is_even)
 
-The :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method returns a dictionary of the exposed outputs of the ``MultiplyAddWorkChain``, extracted from the workchain node stored in the ``multi_addition`` key of the context.
+The :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method returns a dictionary of the exposed outputs of the ``MultiplyAddWorkChain``, extracted from the workchain node stored in the ``multi_addition`` key of the context.
 The :meth:`~aiida.engine.processes.process.Process.out_many` method takes this dictionary and assigns its values to the output ports with names equal to the corresponding keys.
 
 .. important::

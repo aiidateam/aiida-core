@@ -316,13 +316,13 @@ However, this would lead to a lot of code duplication, and longer workflows cons
     .. literalinclude:: include/snippets/extend_workflows.py
         :language: python
         :pyobject: BadMultiplyAddIsEvenWorkChain
-.. note::
 
-    We've removed the ``result`` step from the outline, as well as the ``result`` output.
-    For this work chain, we're assuming that for now we are only interested in whether or not the result is even.
+    .. note::
 
-We can avoid some code duplication by simply submitting the ``MultiplyAddWorkChain`` within one of the steps of our new work chain.
-In order to do this, we replace the ``multiply``, ``add`` and ``validate_result`` steps in the outline with one ``multiply_add`` step, in which we ``submit`` the ``MultiplyAddWorkChain`` and add the returned ``WorkChainNode`` to the context:
+        We've removed the ``result`` step from the outline, as well as the ``result`` output.
+        For this work chain, we're assuming that for now we are only interested in whether or not the result is even.
+
+We can avoid some code duplication by simply submitting the ``MultiplyAddWorkChain`` within one of the steps of a new work chain which would then call `is_even` in a second step:
 
 .. literalinclude:: include/snippets/extend_workflows.py
     :language: python
@@ -335,9 +335,9 @@ Fortunately, there is a better way of *exposing* the inputs and outputs of subpr
 Exposing inputs and outputs
 ---------------------------
 
-Any work chain *needs* to *expose* the inputs of the subprocess it wraps, and perhaps *wants* to do the same for the outputs it produces, although the latter is not necessary.
+A work chain often needs to *expose* the inputs of some of the subprocesses it wraps, and perhaps wants to do the same for the outputs it produces.
 For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``MultiplyAddWorkChain`` was not too troublesome.
-However, this quickly becomes more tedious and error-prone once you start to wrap processes with quite a few more inputs.
+However, this quickly becomes tedious and error-prone once you start to wrap processes with quite a few more inputs.
 
 To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs` methods.
 Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` class, will automatically copy the inputs of the class into the inputs namespace of the process specification:
@@ -428,7 +428,8 @@ Say we want to add the ``result`` of the ``MultiplyAddWorkChain`` as one of the 
         spec.output('is_even', valid_type=Bool)
 
 Since there is not one output port that is shared by all process classes, it is less critical to use the ``namespace`` argument when exposing outputs.
-However, we still need to pass the ``result`` of the ``MultiplyAddWorkChain`` to the outputs of the parent work chain.
+However, take care not to override the outputs of the parent work chain in the process.
+We still need to pass the ``result`` of the ``MultiplyAddWorkChain`` to the outputs of the parent work chain.
 For example, we could do this in the ``is_even`` step by using the ``self.out`` method:
 
 .. code-block:: python

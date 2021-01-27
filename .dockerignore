@@ -1,6 +1,5 @@
 .benchmarks
 .coverage
-.git
 .mypy_cache
 .pytest_cache
 .tox

@@ -39,7 +39,7 @@
         "kiwipy[rmq]~=0.7.1",
         "numpy~=1.17",
         "pamqp~=2.3",
-        "paramiko~=2.7",
+        "paramiko~=2.7,>=2.7.2",
         "plumpy~=0.18.4",
         "pgsu~=0.1.0",
         "psutil~=5.6",

@@ -102,6 +102,7 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
     load_code
     load_computer
     load_group
+    to_aiida_type
 
 
 ``aiida.parsers``

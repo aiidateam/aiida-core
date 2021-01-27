@@ -112,8 +112,8 @@ def process_handler(
         node = args[0]
 
         if exit_codes is not None and node.exit_status not in [
-            exit_code.status for exit_code in exit_codes
-        ]:  # type: ignore[union-attr]
+            exit_code.status for exit_code in exit_codes  # type: ignore[union-attr]
+        ]:
             result = None
         else:
             result = wrapped(*args, **kwargs)

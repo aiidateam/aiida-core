@@ -39,6 +39,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
     :param hookup: If true, hook up application to built-in server, else just return it. This parameter
         is deprecated as of AiiDA 1.2.1. If you don't intend to run the API (hookup=False) use `configure_api` instead.
+    :param posting: Whether or not to include POST-enabled endpoints (currently only `/querybuilder`).
 
     :returns: tuple (app, api) if hookup==False or runs app if hookup==True
     """
@@ -80,6 +81,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     :param catch_internal_server:  If true, catch and print internal server errors with full python traceback.
         Useful during app development.
     :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in the web application
+    :param posting: Whether or not to include POST-enabled endpoints (currently only `/querybuilder`).
 
     :returns: Flask RESTful API
     :rtype: :py:class:`flask_restful.Api`
@@ -89,6 +91,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     config = kwargs.pop('config', CLI_DEFAULTS['CONFIG_DIR'])
     catch_internal_server = kwargs.pop('catch_internal_server', CLI_DEFAULTS['CATCH_INTERNAL_SERVER'])
     wsgi_profile = kwargs.pop('wsgi_profile', CLI_DEFAULTS['WSGI_PROFILE'])
+    posting = kwargs.pop('posting', CLI_DEFAULTS['POSTING'])
 
     if kwargs:
         raise ValueError(f'Unknown keyword arguments: {kwargs}')
@@ -121,4 +124,4 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     # Instantiate and return a Flask RESTful API by associating its app
-    return flask_api(app, **API_CONFIG)
+    return flask_api(app, posting=posting, **config_module.API_CONFIG)

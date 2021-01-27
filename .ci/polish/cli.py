@@ -102,26 +102,27 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     import uuid
     from aiida.orm import Code, Int, Str
     from aiida.engine import run_get_node, submit
-    from lib.expression import generate, validate, evaluate  # pylint: disable=import-error
-    from lib.workchain import generate_outlines, format_outlines, write_workchain  # pylint: disable=import-error
+
+    lib_expression = importlib.import_module('lib.expression')
+    lib_workchain = importlib.import_module('lib.workchain')
 
     if use_calculations and not isinstance(code, Code):
         raise click.BadParameter('if you specify the -C flag, you have to specify a code as well')
 
     if expression is None:
-        expression = generate()
+        expression = lib_expression.generate()
 
-    valid, error = validate(expression)
+    valid, error = lib_expression.validate(expression)
 
     if not valid:
         click.echo(f"the expression '{expression}' is invalid: {error}")
         sys.exit(1)
 
     filename = f'polish_{str(uuid.uuid4().hex)}.py'
-    evaluated = evaluate(expression, modulo)
-    outlines, stack = generate_outlines(expression)
-    outlines_string = format_outlines(outlines, use_calculations, use_calcfunctions)
-    write_workchain(outlines_string, filename=filename)
+    evaluated = lib_expression.evaluate(expression, modulo)
+    outlines, stack = lib_workchain.generate_outlines(expression)
+    outlines_string = lib_workchain.format_outlines(outlines, use_calculations, use_calcfunctions)
+    lib_workchain.write_workchain(outlines_string, filename=filename)
 
     click.echo(f'Expression: {expression}')
 

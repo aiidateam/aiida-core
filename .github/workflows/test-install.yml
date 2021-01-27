@@ -288,3 +288,25 @@ jobs:
         body: |
           Please update the requirements/ files to ensure that they
           are consistent with the dependencies specified in the 'setup.json' file.
+
+  notifications:
+
+    needs: [install-with-pip, install-with-conda, tests]
+    if: |
+      always() && (
+        needs.install-with-pip.outputs.job_status == 'failure' ||
+        needs.install-with-conda.outputs.job_status == 'failure' ||
+        needs.tests.outputs.job_status == 'failure')
+
+    steps:
+
+      - name: Send Slack notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
+          SLACK_USERNAME: aiida-core
+          SLACK_CHANNEL: dev-aiida-core
+          SLACK_COLOR: b60205
+          SLACK_TITLE: "Nightly test-install workflow of `aiida-core` failed."
+          SLACK_MESSAGE: "Please check https://github.com/aiidateam/aiida-core/actions?query=workflow%3Atest-install to determine the reason for failure."

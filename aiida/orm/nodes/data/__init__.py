@@ -10,7 +10,7 @@
 """Module with `Node` sub classes for data structures."""
 
 from .array import ArrayData, BandsData, KpointsData, ProjectionData, TrajectoryData, XyData
-from .base import BaseType
+from .base import BaseType, to_aiida_type
 from .bool import Bool
 from .cif import CifData
 from .code import Code
@@ -31,5 +31,5 @@ from .upf import UpfData
 __all__ = (
     'Data', 'BaseType', 'ArrayData', 'BandsData', 'KpointsData', 'ProjectionData', 'TrajectoryData', 'XyData', 'Bool',
     'CifData', 'Code', 'Float', 'FolderData', 'Int', 'List', 'OrbitalData', 'Dict', 'RemoteData', 'SinglefileData',
-    'Str', 'StructureData', 'UpfData', 'NumericType'
+    'Str', 'StructureData', 'UpfData', 'NumericType', 'to_aiida_type'
 )

@@ -201,12 +201,14 @@ This function, passed as ``serializer`` parameter to ``spec.input``, is invoked 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type.
 For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
 
-The following example work chain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`aiida.orm.nodes.data.base.to_aiida_type` function is used as serialization function.
+The following example work chain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs.
+The :func:`~aiida.orm.nodes.data.base.to_aiida_type` function is used as serialization function.
 
 .. include:: include/snippets/serialize/workchain_serialize.py
     :code: python
 
-This work chain can now be called with native Python types, which will automatically be converted to AiiDA types by the :func:`aiida.orm.nodes.data.base.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`aiida.orm.nodes.data.base.to_aiida_type`.
+This work chain can now be called with native Python types, which will automatically be converted to AiiDA types by the :func:`~aiida.orm.nodes.data.base.to_aiida_type` function.
+Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`~aiida.orm.nodes.data.base.to_aiida_type`.
 
 .. include:: include/snippets/serialize/run_workchain_serialize.py
     :code: python

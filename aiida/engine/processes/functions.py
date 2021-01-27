@@ -408,4 +408,4 @@ class FunctionProcess(Process):
                 'Must be a Data type or a mapping of {{string: Data}}'.format(result.__class__)
             )
 
-        return ExitCode()  # type: ignore[call-arg]
+        return ExitCode()

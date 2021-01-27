@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A transport queue to batch process multiple tasks that require a Transport."""
-from collections import namedtuple
 import contextlib
 import logging
 import traceback
@@ -41,7 +40,6 @@ class TransportQueue:
     up to that point.  This way opening of transports (a costly operation) can
     be minimised.
     """
-    AuthInfoEntry = namedtuple('AuthInfoEntry', ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
         """

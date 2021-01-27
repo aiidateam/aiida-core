@@ -672,7 +672,7 @@ class Process(plumpy.processes.Process):
 
     def _setup_metadata(self) -> None:
         """Store the metadata on the ProcessNode."""
-        version_info = self.runner.plugin_version_provider.get_version_info(self)
+        version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.set_attribute_many(version_info)
 
         for name, metadata in self.metadata.items():

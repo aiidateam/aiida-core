@@ -29,7 +29,7 @@
         "click-completion~=0.5.1",
         "click-config-file~=0.6.0",
         "click-spinner~=0.1.8",
-        "click~=7.0",
+        "click~=7.1",
         "dataclasses~=0.7; python_version < '3.7.0'",
         "django~=2.2",
         "ete3~=3.1",

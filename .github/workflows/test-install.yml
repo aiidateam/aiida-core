@@ -72,6 +72,14 @@ jobs:
       run:
         python -c "import aiida"
 
+    - name: Send Slack notification
+      if: ${{ failure() && github.event_name == 'schedule' }}
+      uses: kpritam/slack-job-status-action@v1
+      with:
+        job-status: ${{ job.status }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel: dev-aiida-core
+
     - name: Warn about pip 2020 resolver issues.
       if: steps.pip_install.outcome == 'failure' && contains(matrix.pip-feature-flag, '2020-resolver')
       run: |
@@ -108,6 +116,14 @@ jobs:
       run: |
         source activate test-environment
         python -c "import aiida"
+
+    - name: Send Slack notification
+      if: ${{ failure() && github.event_name == 'schedule' }}
+      uses: kpritam/slack-job-status-action@v1
+      with:
+        job-status: ${{ job.status }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel: dev-aiida-core
 
   tests:
 
@@ -177,6 +193,14 @@ jobs:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:
         .github/workflows/tests.sh
+
+    - name: Send Slack notification
+      if: ${{ failure() && github.event_name == 'schedule' }}
+      uses: kpritam/slack-job-status-action@v1
+      with:
+        job-status: ${{ job.status }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel: dev-aiida-core
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt

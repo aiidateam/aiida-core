@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.engine import WorkChain
-from aiida.orm.nodes.data import to_aiida_type
-# The basic types need to be loaded such that they are registered with
-# the 'to_aiida_type' function.
-from aiida.orm.nodes.data.base import *
+from aiida.orm import to_aiida_type
 
 
 class SerializeWorkChain(WorkChain):

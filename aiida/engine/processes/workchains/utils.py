@@ -11,7 +11,7 @@
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType  # pylint: disable=no-name-in-module
-from typing import cast, List, Optional, Union, NamedTuple
+from typing import List, Optional, Union, NamedTuple
 from wrapt import decorator
 
 from ..exit_code import ExitCode

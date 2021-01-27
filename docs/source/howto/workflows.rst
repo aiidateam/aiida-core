@@ -18,6 +18,10 @@ The recommended method for loading a workflow is using the ``WorkflowFactory``, 
     add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
     MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
 
+.. note::
+
+    As of v1.5.0 it is possible to register entry points for both work chains and work functions and load them using the ``WorkflowFactory``. In previous versions, this was only possible for work chains.
+
 This is essentially the same as importing the workflow from its respective module, but using the ``WorkflowFactory`` has the advantage that the so called *entry point* (e.g. ``'arithmetic.multiply_add'``) will not change when the packages or plugins are reorganised.
 This means your code is less likely to break when updating AiiDA or the plugin that supplies the workflow.
 
@@ -116,9 +120,9 @@ This allows you to submit multiple work chains at the same time and the daemon w
 Once the ``submit`` call returns, you will not get the result as with ``run``, but you will get the **node** representing the work chain.
 Submitting a work chain instead of directly running it not only makes it easier to execute multiple work chains in parallel, but also ensures that the progress of a workchain is not lost when you restart your computer.
 
-.. important::
+.. note::
 
-    In contrast to work chains, work *functions* cannot be submitted to the daemon, and hence can only be *run*.
+    As of AiiDA v1.5.0, it is possible to submit both work *chains* and work *functions* to the daemon. Older versions only allow the submission of work *chains*, whereas work *functions* cannot be submitted to the daemon, and hence can only be *run*.
 
 If you are unfamiliar with the inputs of a particular ``WorkChain``, a convenient tool for setting up the work chain is the :ref:`process builder<topics:processes:usage:builder>`.
 This can be obtained by using the ``get_builder()`` method, which is implemented for every ``CalcJob`` and ``WorkChain``:
@@ -335,7 +339,7 @@ Fortunately, there is a better way of *exposing* the inputs and outputs of subpr
 Exposing inputs and outputs
 ---------------------------
 
-A work chain often needs to *expose* the inputs of some of the subprocesses it wraps, and perhaps wants to do the same for the outputs it produces.
+In many cases it is convenient for work chains to expose the inputs of the subprocesses it wraps so users can specify these inputs directly, as well as exposing some of the outputs produced as one of the results of the parent work chain.
 For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``MultiplyAddWorkChain`` was not too troublesome.
 However, this quickly becomes tedious and error-prone once you start to wrap processes with quite a few more inputs.
 
@@ -428,7 +432,7 @@ Say we want to add the ``result`` of the ``MultiplyAddWorkChain`` as one of the 
         spec.output('is_even', valid_type=Bool)
 
 Since there is not one output port that is shared by all process classes, it is less critical to use the ``namespace`` argument when exposing outputs.
-However, take care not to override the outputs of the parent work chain in the process.
+However, take care not to override the outputs of the parent work chain in case they do have outputs with the same port name.
 We still need to pass the ``result`` of the ``MultiplyAddWorkChain`` to the outputs of the parent work chain.
 For example, we could do this in the ``is_even`` step by using the ``self.out`` method:
 

@@ -8,33 +8,36 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for `WorkChain` implementations."""
-from collections import namedtuple
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType  # pylint: disable=no-name-in-module
-from typing import List, Optional, Union
+from typing import List, Optional, Union, NamedTuple
 from wrapt import decorator
 
 from ..exit_code import ExitCode
 
 __all__ = ('ProcessHandlerReport', 'process_handler')
 
-ProcessHandlerReport = namedtuple('ProcessHandlerReport', 'do_break exit_code')
-ProcessHandlerReport.__new__.__defaults__ = (False, ExitCode())  # type: ignore[attr-defined,call-arg]
-"""A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
-This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was
-met by the completed process. If no further handling should be performed after this method the `do_break` field should
-be set to `True`. If the handler encountered a fatal error and the work chain needs to be terminated, an `ExitCode` with
-non-zero exit status can be set. This exit code is what will be set on the work chain itself. This works because the
-value of the `exit_code` field returned by the handler, will in turn be returned by the `inspect_process` step and
-returning a non-zero exit code from any work chain step will instruct the engine to abort the work chain.
+class ProcessHandlerReport(NamedTuple):
+    """A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
-:param do_break: boolean, set to `True` if no further process handlers should be called, default is `False`
-:param exit_code: an instance of the :class:`~aiida.engine.processes.exit_code.ExitCode` tuple. If not explicitly set,
-    the default `ExitCode` will be instantiated which has status `0` meaning that the work chain step will be considered
-    successful and the work chain will continue to the next step.
-"""
+    This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was
+    met by the completed process. If no further handling should be performed after this method the `do_break` field
+    should be set to `True`.
+    If the handler encountered a fatal error and the work chain needs to be terminated, an `ExitCode` with
+    non-zero exit status can be set. This exit code is what will be set on the work chain itself. This works because the
+    value of the `exit_code` field returned by the handler, will in turn be returned by the `inspect_process` step and
+    returning a non-zero exit code from any work chain step will instruct the engine to abort the work chain.
+
+    :param do_break: boolean, set to `True` if no further process handlers should be called, default is `False`
+    :param exit_code: an instance of the :class:`~aiida.engine.processes.exit_code.ExitCode` tuple.
+        If not explicitly set, the default `ExitCode` will be instantiated,
+        which has status `0` meaning that the work chain step will be considered
+        successful and the work chain will continue to the next step.
+    """
+    do_break: bool = False
+    exit_code: ExitCode = ExitCode()
 
 
 def process_handler(
@@ -108,7 +111,9 @@ def process_handler(
         # When the handler will be called by the `BaseRestartWorkChain` it will pass the node as the only argument
         node = args[0]
 
-        if exit_codes is not None and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
+        if exit_codes is not None and node.exit_status not in [
+            exit_code.status for exit_code in exit_codes  # type: ignore[union-attr]
+        ]:
             result = None
         else:
             result = wrapped(*args, **kwargs)

@@ -214,7 +214,7 @@ class WorkChain(Process):
         else:
             # Set result to None unless stepper_result was non-zero positive integer or ExitCode with similar status
             if isinstance(stepper_result, int) and stepper_result > 0:
-                result = ExitCode(stepper_result)  # type: ignore[call-arg]
+                result = ExitCode(stepper_result)
             elif isinstance(stepper_result, ExitCode) and stepper_result.status > 0:
                 result = stepper_result
             else:

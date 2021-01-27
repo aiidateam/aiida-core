@@ -370,7 +370,7 @@ class CalcJob(Process):
         for entry in self.node.get_outgoing():
             self.out(entry.link_label, entry.node)
 
-        return exit_code or ExitCode(0)  # type: ignore[call-arg]
+        return exit_code or ExitCode(0)
 
     def parse_scheduler_output(self, retrieved: orm.Node) -> Optional[ExitCode]:
         """Parse the output of the scheduler if that functionality has been implemented for the plugin."""

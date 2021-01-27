@@ -11,6 +11,7 @@
 import inspect
 import os
 import warnings
+import pathlib
 
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
@@ -102,7 +103,7 @@ class SinglefileData(Data):
         """
         # pylint: disable=redefined-builtin
 
-        if isinstance(file, str):
+        if isinstance(file, (str, pathlib.Path)):
             is_filelike = False
 
             key = os.path.basename(file)

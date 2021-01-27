@@ -199,6 +199,7 @@ Below is a list with all available subcommands.
     Commands:
       integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
+      version    Show the version of the database.
 
 
 .. _reference:command-line:verdi-devel:
@@ -277,10 +278,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      add-nodes     Add nodes to the a group.
+      add-nodes     Add nodes to a group.
       copy          Duplicate a group.
       create        Create an empty group with a given name.
-      delete        Delete a group.
+      delete        Delete a group and (optionally) the nodes it contains.
       description   Change the description of a group.
       list          Show a list of existing groups.
       path          Inspect groups of nodes, with delimited label paths.

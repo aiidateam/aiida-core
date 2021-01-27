@@ -10,6 +10,7 @@
 # pylint: disable=redefined-outer-name
 """Module to test process runners."""
 import threading
+import asyncio
 
 import plumpy
 import pytest
@@ -24,7 +25,8 @@ def create_runner():
     """Construct and return a `Runner`."""
 
     def _create_runner(poll_interval=0.5):
-        return get_manager().create_runner(poll_interval=poll_interval)
+        loop = asyncio.new_event_loop()
+        return get_manager().create_runner(poll_interval=poll_interval, loop=loop)
 
     return _create_runner
 
@@ -53,7 +55,7 @@ def test_call_on_process_finish(create_runner):
 
     def calc_done():
         if event.is_set():
-            future.set_exc_info(AssertionError('the callback was called twice, which should never happen'))
+            future.set_exception(AssertionError('the callback was called twice, which should never happen'))
 
         future.set_result(True)
         event.set()
@@ -62,9 +64,9 @@ def test_call_on_process_finish(create_runner):
     runner.call_on_process_finish(proc.node.pk, calc_done)
 
     # Run the calculation
-    runner.loop.add_callback(proc.step_until_terminated)
+    runner.loop.create_task(proc.step_until_terminated())
     loop.call_later(5, the_hans_klok_comeback, runner.loop)
-    loop.start()
+    loop.run_forever()
 
-    assert not future.exc_info()
+    assert not future.exception()
     assert future.result()

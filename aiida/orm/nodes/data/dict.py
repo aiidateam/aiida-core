@@ -62,7 +62,10 @@ class Dict(Data):
             self.set_dict(dictionary)
 
     def __getitem__(self, key):
-        return self.get_attribute(key)
+        try:
+            return self.get_attribute(key)
+        except AttributeError as exc:
+            raise KeyError from exc
 
     def __setitem__(self, key, value):
         self.set_attribute(key, value)

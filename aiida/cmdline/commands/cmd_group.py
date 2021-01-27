@@ -9,6 +9,7 @@
 ###########################################################################
 """`verdi group` commands"""
 import warnings
+import logging
 import click
 
 from aiida.common.exceptions import UniquenessError
@@ -17,6 +18,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('group')
@@ -30,7 +32,7 @@ def verdi_group():
 @arguments.NODES()
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
-    """Add nodes to the a group."""
+    """Add nodes to a group."""
     if not force:
         click.confirm(f'Do you really want to add {len(nodes)} nodes to Group<{group.label}>?', abort=True)
 
@@ -61,29 +63,55 @@ def group_remove_nodes(group, nodes, clear, force):
 
 @verdi_group.command('delete')
 @arguments.GROUP()
+@options.FORCE()
+@click.option(
+    '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
+)
+@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.DRY_RUN()
+@options.VERBOSE()
 @options.GROUP_CLEAR(
     help='Remove all nodes before deleting the group itself.' +
     ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
 )
-@options.FORCE()
 @with_dbenv()
-def group_delete(group, clear, force):
-    """Delete a group.
-
-    Note that this command only deletes groups - nodes contained in the group will remain untouched.
-    """
+def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversal_rules):
+    """Delete a group and (optionally) the nodes it contains."""
+    from aiida.common.log import override_log_formatter_context
+    from aiida.tools import delete_group_nodes, DELETE_LOGGER
     from aiida import orm
-
-    label = group.label
 
     if clear:
         warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
-    if not force:
-        click.confirm(f'Are you sure to delete Group<{label}>?', abort=True)
+    label = group.label
+    klass = group.__class__.__name__
 
-    orm.Group.objects.delete(group.pk)
-    echo.echo_success(f'Group<{label}> deleted.')
+    verbosity = logging.DEBUG if verbose else logging.INFO
+    DELETE_LOGGER.setLevel(verbosity)
+
+    if not (force or dry_run):
+        click.confirm(f'Are you sure to delete {klass}<{label}>?', abort=True)
+    elif dry_run:
+        echo.echo_info(f'Would have deleted {klass}<{label}>.')
+
+    if delete_nodes:
+
+        def _dry_run_callback(pks):
+            if not pks or force:
+                return False
+            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+            return not click.confirm('Shall I continue?', abort=True)
+
+        with override_log_formatter_context('%(message)s'):
+            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        if not nodes_deleted:
+            # don't delete the group if the nodes were not deleted
+            return
+
+    if not dry_run:
+        orm.Group.objects.delete(group.pk)
+        echo.echo_success(f'{klass}<{label}> deleted.')
 
 
 @verdi_group.command('relabel')

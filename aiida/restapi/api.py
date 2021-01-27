@@ -25,13 +25,8 @@ class App(Flask):
 
     def __init__(self, *args, **kwargs):
 
-        # Decide whether or not to catch the internal server exceptions (
-        # default is True)
-        catch_internal_server = True
-        try:
-            catch_internal_server = kwargs.pop('catch_internal_server')
-        except KeyError:
-            pass
+        # Decide whether or not to catch the internal server exceptions (default is True)
+        catch_internal_server = kwargs.pop('catch_internal_server', True)
 
         # Basic initialization
         super().__init__(*args, **kwargs)
@@ -95,11 +90,16 @@ class AiidaApi(Api):
           configuration and PREFIX
         """
 
-        from aiida.restapi.resources import ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo
+        from aiida.restapi.common.config import CLI_DEFAULTS
+        from aiida.restapi.resources import (
+            ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo, QueryBuilder
+        )
 
         self.app = app
 
         super().__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
+
+        posting = kwargs.pop('posting', CLI_DEFAULTS['POSTING'])
 
         self.add_resource(
             ServerInfo,
@@ -110,6 +110,15 @@ class AiidaApi(Api):
             strict_slashes=False,
             resource_class_kwargs=kwargs
         )
+
+        if posting:
+            self.add_resource(
+                QueryBuilder,
+                '/querybuilder/',
+                endpoint='querybuilder',
+                strict_slashes=False,
+                resource_class_kwargs=kwargs,
+            )
 
         ## Add resources and endpoints to the api
         self.add_resource(

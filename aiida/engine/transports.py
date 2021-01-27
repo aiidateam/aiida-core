@@ -12,7 +12,11 @@ from collections import namedtuple
 import contextlib
 import logging
 import traceback
-from tornado import concurrent, gen, ioloop
+from typing import Awaitable, Dict, Hashable, Iterator, Optional
+import asyncio
+
+from aiida.orm import AuthInfo
+from aiida.transports import Transport
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +26,7 @@ class TransportRequest:
 
     def __init__(self):
         super().__init__()
-        self.future = concurrent.Future()
+        self.future: asyncio.Future = asyncio.Future()
         self.count = 0
 
 
@@ -39,29 +43,28 @@ class TransportQueue:
     """
     AuthInfoEntry = namedtuple('AuthInfoEntry', ['authinfo', 'transport', 'callbacks', 'callback_handle'])
 
-    def __init__(self, loop=None):
+    def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
         """
-        :param loop: The event loop to use, will use `tornado.ioloop.IOLoop.current()` if not supplied
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied
         """
-        self._loop = loop if loop is not None else ioloop.IOLoop.current()
-        self._transport_requests = {}
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
+        self._transport_requests: Dict[Hashable, TransportRequest] = {}
 
-    def loop(self):
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop:
         """ Get the loop being used by this transport queue """
         return self._loop
 
     @contextlib.contextmanager
-    def request_transport(self, authinfo):
+    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable[Transport]]:
         """
         Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future
-        that can be yielded to get the transport::
+        that can be awaited to get the transport::
 
-            @tornado.gen.coroutine
-            def transport_task(transport_queue, authinfo):
+            async def transport_task(transport_queue, authinfo):
                 with transport_queue.request_transport(authinfo) as request:
-                    transport = yield request
+                    transport = await request
                     # Do some work with the transport
 
         :param authinfo: The authinfo to be used to get transport
@@ -80,7 +83,7 @@ class TransportQueue:
 
             def do_open():
                 """ Actually open the transport """
-                if transport_request.count > 0:
+                if transport_request and transport_request.count > 0:
                     # The user still wants the transport so open it
                     _LOGGER.debug('Transport request opening transport for %s', authinfo)
                     try:
@@ -100,9 +103,6 @@ class TransportQueue:
         try:
             transport_request.count += 1
             yield transport_request.future
-        except gen.Return:
-            # Have to have this special case so tornado returns are propagated up to the loop
-            raise
         except Exception:
             _LOGGER.error('Exception whilst using transport:\n%s', traceback.format_exc())
             raise
@@ -115,6 +115,6 @@ class TransportQueue:
                     _LOGGER.debug('Transport request closing transport for %s', authinfo)
                     transport_request.future.result().close()
                 elif open_callback_handle is not None:
-                    self._loop.remove_timeout(open_callback_handle)
+                    open_callback_handle.cancel()
 
                 self._transport_requests.pop(authinfo.id, None)

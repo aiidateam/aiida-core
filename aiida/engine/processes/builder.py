@@ -9,9 +9,13 @@
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
+from typing import Any, Type, TYPE_CHECKING
 
 from aiida.orm import Node
 from aiida.engine.processes.ports import PortNamespace
+
+if TYPE_CHECKING:
+    from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
@@ -22,7 +26,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
     Dynamically generates the getters and setters for the input ports of a given PortNamespace
     """
 
-    def __init__(self, port_namespace):
+    def __init__(self, port_namespace: PortNamespace) -> None:
         """Dynamically construct the get and set properties for the ports of the given port namespace.
 
         For each port in the given port namespace a get and set property will be constructed dynamically
@@ -30,7 +34,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         by calling str() on the Port, which should return the description of the Port.
 
         :param port_namespace: the inputs PortNamespace for which to construct the builder
-        :type port_namespace: str
+
         """
         # pylint: disable=super-init-not-called
         self._port_namespace = port_namespace
@@ -52,7 +56,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, default=port.default):  # pylint: disable=cell-var-from-loop
+                def fgetter(self, name=name, default=port.default):  # type: ignore # pylint: disable=cell-var-from-loop
                     return self._data.get(name, default)
             else:
 
@@ -67,16 +71,12 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             getter.setter(fsetter)  # pylint: disable=too-many-function-args
             setattr(self.__class__, name, getter)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: Any) -> None:
         """Assign the given value to the port with key `attr`.
 
         .. note:: Any attributes without a leading underscore being set correspond to inputs and should hence be
             validated with respect to the corresponding input port from the process spec
 
-        :param attr: attribute
-        :type attr: str
-
-        :param value: value
         """
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
@@ -87,7 +87,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
                 if not self._port_namespace.dynamic:
                     raise AttributeError(f'Unknown builder parameter: {attr}')
             else:
-                value = port.serialize(value)
+                value = port.serialize(value)  # type: ignore[union-attr]
                 validation_error = port.validate(value)
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
@@ -126,10 +126,8 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         principle the method functions just as `collections.abc.MutableMapping.update`.
 
         :param args: a single mapping that should be mapped on the namespace
-        :type args: list
 
         :param kwds: keyword value pairs that should be mapped onto the ports
-        :type kwds: dict
         """
         if len(args) > 1:
             raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
@@ -147,7 +145,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             else:
                 self.__setattr__(key, value)
 
-    def _inputs(self, prune=False):
+    def _inputs(self, prune: bool = False) -> dict:
         """Return the entire mapping of inputs specified for this builder.
 
         :param prune: boolean, when True, will prune nested namespaces that contain no actual values whatsoever
@@ -182,7 +180,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
 class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ancestors
     """A process builder that helps setting up the inputs for creating a new process."""
 
-    def __init__(self, process_class):
+    def __init__(self, process_class: Type['Process']):
         """Construct a `ProcessBuilder` instance for the given `Process` class.
 
         :param process_class: the `Process` subclass
@@ -192,6 +190,6 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
         super().__init__(self._process_spec.inputs)
 
     @property
-    def process_class(self):
+    def process_class(self) -> Type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class

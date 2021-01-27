@@ -12,13 +12,19 @@
 import collections
 import logging
 
-from tornado import gen
 from kiwipy import communications, Future
+import pamqp.encode
 import plumpy
 
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'BROKER_DEFAULTS')
+
+# The following statement enables support for RabbitMQ 3.5 because without it, connections established by `aiormq` will
+# fail because the interpretation of the types of integers passed in connection parameters has changed after that
+# version. Once RabbitMQ 3.5 is no longer supported (it has been EOL since October 2016) this can be removed. This
+# should also allow to remove the direct dependency on `pamqp` entirely.
+pamqp.encode.support_deprecated_rabbitmq()
 
 LOGGER = logging.getLogger(__name__)
 
@@ -146,14 +152,13 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         """
         from aiida.engine import ProcessState
 
-        if not node.is_excepted:
+        if not node.is_excepted and not node.is_sealed:
             node.logger.exception(message)
             node.set_exception(str(exception))
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 
-    @gen.coroutine
-    def _continue(self, communicator, pid, nowait, tag=None):
+    async def _continue(self, communicator, pid, nowait, tag=None):
         """Continue the task.
 
         Note that the task may already have been completed, as indicated from the corresponding the node, in which
@@ -180,7 +185,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             # we raise `Return` instead of `TaskRejected` because the latter would cause the task to be resent and start
             # to ping-pong between RabbitMQ and the daemon workers.
             LOGGER.exception('Cannot continue process<%d>', pid)
-            raise gen.Return(False) from exception
+            return False
 
         if node.is_terminated:
 
@@ -195,10 +200,10 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             elif node.is_killed:
                 future.set_exception(plumpy.KilledError())
 
-            raise gen.Return(future.result())
+            return future.result()
 
         try:
-            result = yield super()._continue(communicator, pid, nowait, tag)
+            result = await super()._continue(communicator, pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)
@@ -215,4 +220,4 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             LOGGER.exception('failed to serialize the result for process<%d>', pid)
             raise
 
-        raise gen.Return(serialized)
+        return serialized

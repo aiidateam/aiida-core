@@ -10,8 +10,7 @@
 """Tests for the classes in `aiida.engine.processes.calcjobs.manager`."""
 
 import time
-
-import tornado
+import asyncio
 
 from aiida.orm import AuthInfo, User
 from aiida.backends.testbase import AiidaTestCase
@@ -24,7 +23,7 @@ class TestJobManager(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.loop = tornado.ioloop.IOLoop()
+        self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.objects.get_default()
         self.auth_info = AuthInfo(self.computer, self.user).store()
@@ -45,7 +44,7 @@ class TestJobManager(AiidaTestCase):
     def test_request_job_info_update(self):
         """Test the `JobManager.request_job_info_update` method."""
         with self.manager.request_job_info_update(self.auth_info, job_id=1) as request:
-            self.assertIsInstance(request, tornado.concurrent.Future)
+            self.assertIsInstance(request, asyncio.Future)
 
 
 class TestJobsList(AiidaTestCase):
@@ -53,7 +52,7 @@ class TestJobsList(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.loop = tornado.ioloop.IOLoop()
+        self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.objects.get_default()
         self.auth_info = AuthInfo(self.computer, self.user).store()

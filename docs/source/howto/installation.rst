@@ -166,7 +166,7 @@ By default, each AiiDA instance (each installation) will store associated profil
 A best practice is to always separate the profiles together with the code to which they belong.
 The typical approach is to place the configuration folder in the virtual environment itself and have it automatically selected whenever the environment is activated.
 
-The location of the AiiDA configuration folder, can be controlled with the ``AIIDA_PATH`` environment variable.
+The location of the AiiDA configuration folder can be controlled with the ``AIIDA_PATH`` environment variable.
 This allows us to change the configuration folder automatically, by adding the following lines to the activation script of a virtual environment.
 For example, if the path of your virtual environment is ``/home/user/.virtualenvs/aiida``, add the following line:
 

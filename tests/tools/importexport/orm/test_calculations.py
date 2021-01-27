@@ -23,10 +23,12 @@ class TestCalculations(AiidaTestCase):
     """Test ex-/import cases related to Calculations"""
 
     def setUp(self):
+        super().setUp()
         self.reset_database()
 
     def tearDown(self):
         self.reset_database()
+        super().tearDown()
 
     @with_temp_dir
     def test_calcfunction(self, temp_dir):

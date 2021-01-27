@@ -131,6 +131,12 @@ class TestVerdiGroup(AiidaTestCase):
         """Test `verdi group delete` command."""
         orm.Group(label='group_test_delete_01').store()
         orm.Group(label='group_test_delete_02').store()
+        orm.Group(label='group_test_delete_03').store()
+
+        # dry run
+        result = self.cli_runner.invoke(cmd_group.group_delete, ['--dry-run', 'group_test_delete_01'])
+        self.assertClickResultNoException(result)
+        orm.load_group(label='group_test_delete_01')
 
         result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', 'group_test_delete_01'])
         self.assertClickResultNoException(result)
@@ -142,6 +148,7 @@ class TestVerdiGroup(AiidaTestCase):
 
         node_01 = orm.CalculationNode().store()
         node_02 = orm.CalculationNode().store()
+        node_pks = {node_01.pk, node_02.pk}
 
         # Add some nodes and then use `verdi group delete` to delete a group that contains nodes
         group = orm.load_group(label='group_test_delete_02')
@@ -153,6 +160,23 @@ class TestVerdiGroup(AiidaTestCase):
 
         with self.assertRaises(exceptions.NotExistent):
             orm.load_group(label='group_test_delete_02')
+
+        # check nodes still exist
+        for pk in node_pks:
+            orm.load_node(pk)
+
+        # delete the group and the nodes it contains
+        group = orm.load_group(label='group_test_delete_03')
+        group.add_nodes([node_01, node_02])
+        result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_03'])
+        self.assertClickResultNoException(result)
+
+        # check group and nodes no longer exist
+        with self.assertRaises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_03')
+        for pk in node_pks:
+            with self.assertRaises(exceptions.NotExistent):
+                orm.load_node(pk)
 
     def test_show(self):
         """Test `verdi group show` command."""

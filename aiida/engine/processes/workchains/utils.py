@@ -12,6 +12,7 @@ from collections import namedtuple
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType  # pylint: disable=no-name-in-module
+from typing import List, Optional, Union
 from wrapt import decorator
 
 from ..exit_code import ExitCode
@@ -19,7 +20,7 @@ from ..exit_code import ExitCode
 __all__ = ('ProcessHandlerReport', 'process_handler')
 
 ProcessHandlerReport = namedtuple('ProcessHandlerReport', 'do_break exit_code')
-ProcessHandlerReport.__new__.__defaults__ = (False, ExitCode())
+ProcessHandlerReport.__new__.__defaults__ = (False, ExitCode())  # type: ignore[attr-defined,call-arg]
 """A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
 This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was
@@ -36,7 +37,13 @@ returning a non-zero exit code from any work chain step will instruct the engine
 """
 
 
-def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
+def process_handler(
+    wrapped: Optional[FunctionType] = None,
+    *,
+    priority: int = 0,
+    exit_codes: Union[None, ExitCode, List[ExitCode]] = None,
+    enabled: bool = True
+) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
 
     The decorator will validate the `priority` and `exit_codes` optional keyword arguments and then add itself as an
@@ -55,7 +62,7 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     `do_break` attribute should be set to `True`. If the work chain is to be aborted entirely, the `exit_code` of the
     report can be set to an `ExitCode` instance with a non-zero status.
 
-    :param cls: the work chain class to register the process handler with
+    :param wrapped: the work chain method to register the process handler with
     :param priority: optional integer that defines the order in which registered handlers will be called during the
         handling of a finished process. Higher priorities will be handled first. Default value is `0`. Multiple handlers
         with the same priority is allowed, but the order of those is not well defined.
@@ -67,7 +74,9 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
         basis through the input `handler_overrides`.
     """
     if wrapped is None:
-        return partial(process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled)
+        return partial(
+            process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled
+        )  # type: ignore[return-value]
 
     if not isinstance(wrapped, FunctionType):
         raise TypeError('first argument can only be an instance method, use keywords for decorator arguments.')
@@ -89,9 +98,9 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     if len(handler_args) != 2:
         raise TypeError(f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)')
 
-    wrapped.decorator = process_handler
-    wrapped.priority = priority
-    wrapped.enabled = enabled
+    wrapped.decorator = process_handler  # type: ignore[attr-defined]
+    wrapped.priority = priority  # type: ignore[attr-defined]
+    wrapped.enabled = enabled  # type: ignore[attr-defined]
 
     @decorator
     def wrapper(wrapped, instance, args, kwargs):

@@ -13,7 +13,7 @@ Basic tutorial
 
 Welcome to the AiiDA tutorial!
 The goal of this tutorial is to give you a basic idea of how AiiDA helps you in executing data-driven workflows.
-At the end of this tutorial you will know how to:
+At the end of this tutorial, you will know how to:
 
 * Store data in the database and subsequently retrieve it.
 * Decorate a Python function such that its inputs and outputs are automatically tracked.
@@ -22,7 +22,7 @@ At the end of this tutorial you will know how to:
 
 .. important::
 
-    If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment.
+    If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation and have set up your AiiDA profile in the current Python environment.
     If this is not the case, consult the :ref:`getting started page<intro:get_started>`.
 
 Provenance
@@ -44,7 +44,7 @@ In the provenance graph, you can see different types of *nodes* represented by d
 The green ellipses are ``Data`` nodes, the blue ellipse is a ``Code`` node, and the rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
 
 The provenance graph allows us to not only see what data we have, but also how it was produced.
-During this tutorial we will be using AiiDA to generate the provenance graph in :numref:`fig_intro_workchain_graph` step by step.
+During this tutorial, we will be using AiiDA to generate the provenance graph in :numref:`fig_intro_workchain_graph` step by step.
 
 Data nodes
 ==========
@@ -94,7 +94,7 @@ Use the PK only if you are working within a single database, i.e. in an interact
     The PK numbers shown throughout this tutorial assume that you start from a completely empty database.
     It is possible that the nodes' PKs will be different for your database!
 
-    The UUIDs are generated randomly and are therefore **guaranteed** to be different.
+    The UUIDs are generated randomly and are, therefore, **guaranteed** to be different.
 
 Next, let's leave the IPython shell by typing ``exit()`` and then enter.
 Back in the terminal, use the ``verdi`` command line interface (CLI) to check the data node we have just created:

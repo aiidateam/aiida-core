@@ -9,22 +9,25 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Runners that can run and submit processes."""
-import collections
+import asyncio
 import functools
 import logging
 import signal
 import threading
+from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 import uuid
 
 import kiwipy
-import plumpy
-import tornado.ioloop
+from plumpy.persistence import Persister
+from plumpy.process_comms import RemoteProcessThreadController
+from plumpy.events import set_event_loop_policy, reset_event_loop_policy
+from plumpy.communications import wrap_communicator
 
 from aiida.common import exceptions
-from aiida.orm import load_node
+from aiida.orm import load_node, ProcessNode
 from aiida.plugins.utils import PluginVersionProvider
 
-from .processes import futures, ProcessState
+from .processes import futures, Process, ProcessBuilder, ProcessState
 from .processes.calcjobs import manager
 from . import transports
 from . import utils
@@ -33,41 +36,52 @@ __all__ = ('Runner',)
 
 LOGGER = logging.getLogger(__name__)
 
-ResultAndNode = collections.namedtuple('ResultAndNode', ['result', 'node'])
-ResultAndPk = collections.namedtuple('ResultAndPk', ['result', 'pk'])
+
+class ResultAndNode(NamedTuple):
+    result: Dict[str, Any]
+    node: ProcessNode
+
+
+class ResultAndPk(NamedTuple):
+    result: Dict[str, Any]
+    pk: int
+
+
+TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+# run can also be process function, but it is not clear what type this should be
+TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
 
 
 class Runner:  # pylint: disable=too-many-public-methods
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
-    _persister = None
-    _communicator = None
-    _controller = None
-    _closed = False
+    _persister: Optional[Persister] = None
+    _communicator: Optional[kiwipy.Communicator] = None
+    _controller: Optional[RemoteProcessThreadController] = None
+    _closed: bool = False
 
-    def __init__(self, poll_interval=0, loop=None, communicator=None, rmq_submit=False, persister=None):
+    def __init__(
+        self,
+        poll_interval: Union[int, float] = 0,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        communicator: Optional[kiwipy.Communicator] = None,
+        rmq_submit: bool = False,
+        persister: Optional[Persister] = None
+    ):
         """Construct a new runner.
 
         :param poll_interval: interval in seconds between polling for status of active sub processes
-        :param loop: an event loop to use, if none is suppled a new one will be created
-        :type loop: :class:`tornado.ioloop.IOLoop`
+        :param loop: an asyncio event loop, if none is suppled a new one will be created
         :param communicator: the communicator to use
-        :type communicator: :class:`kiwipy.Communicator`
         :param rmq_submit: if True, processes will be submitted to RabbitMQ, otherwise they will be scheduled here
         :param persister: the persister to use to persist processes
-        :type persister: :class:`plumpy.Persister`
+
         """
         assert not (rmq_submit and persister is None), \
             'Must supply a persister if you want to submit using communicator'
 
-        # Runner take responsibility to clear up loop only if the loop was created by Runner
-        self._do_close_loop = False
-        if loop is not None:
-            self._loop = loop
-        else:
-            self._loop = tornado.ioloop.IOLoop()
-            self._do_close_loop = True
-
+        set_event_loop_policy()
+        self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -76,96 +90,86 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._plugin_version_provider = PluginVersionProvider()
 
         if communicator is not None:
-            self._communicator = plumpy.wrap_communicator(communicator, self._loop)
-            self._controller = plumpy.RemoteProcessThreadController(communicator)
+            self._communicator = wrap_communicator(communicator, self._loop)
+            self._controller = RemoteProcessThreadController(communicator)
         elif self._rmq_submit:
             LOGGER.warning('Disabling RabbitMQ submission, no communicator provided')
             self._rmq_submit = False
 
-    def __enter__(self):
+    def __enter__(self) -> 'Runner':
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
     @property
-    def loop(self):
-        """
-        Get the event loop of this runner
-
-        :return: the event loop
-        :rtype: :class:`tornado.ioloop.IOLoop`
-        """
+    def loop(self) -> asyncio.AbstractEventLoop:
+        """Get the event loop of this runner."""
         return self._loop
 
     @property
-    def transport(self):
+    def transport(self) -> transports.TransportQueue:
         return self._transport
 
     @property
-    def persister(self):
+    def persister(self) -> Optional[Persister]:
+        """Get the persister used by this runner."""
         return self._persister
 
     @property
-    def communicator(self):
-        """
-        Get the communicator used by this runner
-
-        :return: the communicator
-        :rtype: :class:`kiwipy.Communicator`
-        """
+    def communicator(self) -> Optional[kiwipy.Communicator]:
+        """Get the communicator used by this runner."""
         return self._communicator
 
     @property
-    def plugin_version_provider(self):
+    def plugin_version_provider(self) -> PluginVersionProvider:
         return self._plugin_version_provider
 
     @property
-    def job_manager(self):
+    def job_manager(self) -> manager.JobManager:
         return self._job_manager
 
     @property
-    def controller(self):
+    def controller(self) -> Optional[RemoteProcessThreadController]:
+        """Get the controller used by this runner."""
         return self._controller
 
     @property
-    def is_daemon_runner(self):
+    def is_daemon_runner(self) -> bool:
         """Return whether the runner is a daemon runner, which means it submits processes over RabbitMQ.
 
         :return: True if the runner is a daemon runner
-        :rtype: bool
         """
         return self._rmq_submit
 
-    def is_closed(self):
+    def is_closed(self) -> bool:
         return self._closed
 
-    def start(self):
+    def start(self) -> None:
         """Start the internal event loop."""
-        self._loop.start()
+        self._loop.run_forever()
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the internal event loop."""
         self._loop.stop()
 
-    def run_until_complete(self, future):
+    def run_until_complete(self, future: asyncio.Future) -> Any:
         """Run the loop until the future has finished and return the result."""
         with utils.loop_scope(self._loop):
-            return self._loop.run_sync(lambda: future)
+            return self._loop.run_until_complete(future)
 
-    def close(self):
+    def close(self) -> None:
         """Close the runner by stopping the loop."""
         assert not self._closed
         self.stop()
-        if self._do_close_loop:
-            self._loop.close()
+        reset_event_loop_policy()
         self._closed = True
 
-    def instantiate_process(self, process, *args, **inputs):
+    def instantiate_process(self, process: TYPE_RUN_PROCESS, *args, **inputs):
         from .utils import instantiate_process
         return instantiate_process(self, process, *args, **inputs)
 
-    def submit(self, process, *args, **inputs):
+    def submit(self, process: TYPE_SUBMIT_PROCESS, *args: Any, **inputs: Any):
         """
         Submit the process with the supplied inputs to this runner immediately returning control to
         the interpreter. The return value will be the calculation node of the submitted process
@@ -177,24 +181,26 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
-        process = self.instantiate_process(process, *args, **inputs)
+        process_inited = self.instantiate_process(process, *args, **inputs)
 
-        if not process.metadata.store_provenance:
+        if not process_inited.metadata.store_provenance:
             raise exceptions.InvalidOperation('cannot submit a process with `store_provenance=False`')
 
-        if process.metadata.get('dry_run', False):
+        if process_inited.metadata.get('dry_run', False):
             raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
 
         if self._rmq_submit:
-            self.persister.save_checkpoint(process)
-            process.close()
-            self.controller.continue_process(process.pid, nowait=False, no_reply=True)
+            assert self.persister is not None, 'runner does not have a persister'
+            assert self.controller is not None, 'runner does not have a controller'
+            self.persister.save_checkpoint(process_inited)
+            process_inited.close()
+            self.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
         else:
-            self.loop.add_callback(process.step_until_terminated)
+            self.loop.create_task(process_inited.step_until_terminated())
 
-        return process.node
+        return process_inited.node
 
-    def schedule(self, process, *args, **inputs):
+    def schedule(self, process: TYPE_SUBMIT_PROCESS, *args: Any, **inputs: Any) -> ProcessNode:
         """
         Schedule a process to be executed by this runner
 
@@ -205,11 +211,11 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
-        process = self.instantiate_process(process, *args, **inputs)
-        self.loop.add_callback(process.step_until_terminated)
-        return process.node
+        process_inited = self.instantiate_process(process, *args, **inputs)
+        self.loop.create_task(process_inited.step_until_terminated())
+        return process_inited.node
 
-    def _run(self, process, *args, **inputs):
+    def _run(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[Dict[str, Any], ProcessNode]:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -221,24 +227,24 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not self._closed
 
         if utils.is_process_function(process):
-            result, node = process.run_get_node(*args, **inputs)
+            result, node = process.run_get_node(*args, **inputs)  # type: ignore[union-attr]
             return result, node
 
         with utils.loop_scope(self.loop):
-            process = self.instantiate_process(process, *args, **inputs)
+            process_inited = self.instantiate_process(process, *args, **inputs)
 
             def kill_process(_num, _frame):
                 """Send the kill signal to the process in the current scope."""
-                LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                process.kill(msg='Process was killed because the runner received an interrupt')
+                LOGGER.critical('runner received interrupt, killing process %s', process_inited.pid)
+                process_inited.kill(msg='Process was killed because the runner received an interrupt')
 
             signal.signal(signal.SIGINT, kill_process)
             signal.signal(signal.SIGTERM, kill_process)
 
-            process.execute()
-            return process.outputs, process.node
+            process_inited.execute()
+            return process_inited.outputs, process_inited.node
 
-    def run(self, process, *args, **inputs):
+    def run(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Dict[str, Any]:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -250,7 +256,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         result, _ = self._run(process, *args, **inputs)
         return result
 
-    def run_get_node(self, process, *args, **inputs):
+    def run_get_node(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAndNode:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -262,7 +268,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         result, node = self._run(process, *args, **inputs)
         return ResultAndNode(result, node)
 
-    def run_get_pk(self, process, *args, **inputs):
+    def run_get_pk(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAndPk:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -274,7 +280,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         result, node = self._run(process, *args, **inputs)
         return ResultAndPk(result, node.pk)
 
-    def call_on_process_finish(self, pk, callback):
+    def call_on_process_finish(self, pk: int, callback: Callable[[], Any]) -> None:
         """Schedule a callback when the process of the given pk is terminated.
 
         This method will add a broadcast subscriber that will listen for state changes of the target process to be
@@ -284,6 +290,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param pk: pk of the process
         :param callback: function to be called upon process termination
         """
+        assert self.communicator is not None, 'communicator not set for runner'
+
         node = load_node(pk=pk)
         subscriber_identifier = str(uuid.uuid4())
         event = threading.Event()
@@ -301,17 +309,17 @@ class Runner:  # pylint: disable=too-many-public-methods
                 callback()
             finally:
                 event.set()
-                self._communicator.remove_broadcast_subscriber(subscriber_identifier)
+                self.communicator.remove_broadcast_subscriber(subscriber_identifier)  # type: ignore[union-attr]
 
         broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 
         LOGGER.info('adding subscriber for broadcasts of %d', pk)
-        self._communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
+        self.communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
 
-    def get_process_future(self, pk):
+    def get_process_future(self, pk: int) -> futures.ProcessFuture:
         """Return a future for a process.
 
         The future will have the process node as the result when finished.
@@ -329,6 +337,6 @@ class Runner:  # pylint: disable=too-many-public-methods
         if node.is_terminated:
             args = [node.__class__.__name__, node.pk]
             LOGGER.info('%s<%d> confirmed to be terminated by backup polling mechanism', *args)
-            self._loop.add_callback(callback)
+            self._loop.call_soon(callback)
         else:
             self._loop.call_later(self._poll_interval, self._poll_process, node, callback)

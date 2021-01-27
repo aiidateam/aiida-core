@@ -38,7 +38,15 @@ from aiida.restapi.common import config
     help='Whether to enable WSGI profiler middleware for finding bottlenecks'
 )
 @click.option('--hookup/--no-hookup', 'hookup', is_flag=True, default=None, help='Hookup app to flask server')
-def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
+@click.option(
+    '--posting/--no-posting',
+    'posting',
+    is_flag=True,
+    default=config.CLI_DEFAULTS['POSTING'],
+    help='Enable POST endpoints (currently only /querybuilder).',
+    hidden=True,
+)
+def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup, posting):
     """
     Run the AiiDA REST API server.
 
@@ -55,4 +63,5 @@ def restapi(hostname, port, config_dir, debug, wsgi_profile, hookup):
         debug=debug,
         wsgi_profile=wsgi_profile,
         hookup=hookup,
+        posting=posting,
     )

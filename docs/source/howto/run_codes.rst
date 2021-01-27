@@ -4,14 +4,14 @@
 How to run external codes
 *************************
 
-This how-to walks you through the steps of setting up a (possibly remote) compute resource, setting up a code on that computer and submitting a calculation through AiiDA (similar to the :ref:`introductory tutorial <tutorial:basic:calcjob>`, but in more detail).
+This how-to walks you through the steps of setting up a (possibly remote) compute resource, setting up a code on that computer, and submitting a calculation through AiiDA (similar to the :ref:`introductory tutorial <tutorial:basic:calcjob>`, but in more detail).
 
 To run an external code with AiiDA, you need an appropriate :ref:`calculation plugin <topics:plugins>`.
 In the following, we assume that a plugin for your code is already available from the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_ and installed on your machine.
 Refer to the :ref:`how-to:plugins-install` section for details on how to install an existing plugin.
 If a plugin for your code is not yet available, see :ref:`how-to:plugin-codes`.
 
-Throughout the process you will be prompted for information on the computer and code.
+Throughout the process, you will be prompted for information on the computer and code.
 In these prompts:
 
  * Type ``?`` followed by ``<enter>`` to get help on what is being asked at any prompt.
@@ -150,7 +150,7 @@ This command will perform various tests to make sure that AiiDA can connect to t
 Mitigating connection overloads
 ----------------------------------
 
-Some compute resources, particularly large supercomputing centres, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently or opening too many SSH connections.
+Some compute resources, particularly large supercomputing centers, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently, or opening too many SSH connections.
 
   * Limit the number of jobs in the queue.
 
@@ -257,7 +257,7 @@ At the end of these steps, you will be prompted to edit a script, where you can 
  * *before* running the submission script (after the 'Pre execution script' lines), and
  * *after* running the submission script (after the 'Post execution script' separator).
 
-Use this for instance to load modules or set variables that are needed by the code, such as:
+Use this, for instance, to load modules or set variables that are needed by the code, such as:
 
 .. code-block:: bash
 

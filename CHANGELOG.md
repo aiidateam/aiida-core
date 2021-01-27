@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.5.2
+
+Note: release `v1.5.1` was skipped due to a problem with the uploaded files to PyPI.
+
+### Bug fixes
+- `Dict`: accessing an inexistent key now raises a `KeyError` (instead of `AttributeError`) [[#4577]](https://github.com/aiidateam/aiida-core/pull/4577)
+- Config: make writing to disk as atomic as possible [[#4607]](https://github.com/aiidateam/aiida-core/pull/4607)
+- Config: do not overwrite when loaded and not migrated [[#4605]](https://github.com/aiidateam/aiida-core/pull/4605)
+- SqlAlchemy: fix bug in `Group` extras migration with revision `0edcdd5a30f0` [[#4602]](https://github.com/aiidateam/aiida-core/pull/4602)
+
+### Developers
+- SqlAlchemy: improve the alembic migration code [[#4602]](https://github.com/aiidateam/aiida-core/pull/4602)
+4607
+- CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
+
+
 ## v1.5.0
 
 In this minor version release, support for Python 3.9 is added [[#4301]](https://github.com/aiidateam/aiida-core/pull/4301), while support for Python 3.5 is dropped [[#4386]](https://github.com/aiidateam/aiida-core/pull/4386).
@@ -58,6 +74,16 @@ This version is compatible with all current Python versions that are not end-of-
 - Updated archive version from `0.9` -> `0.10` ([#4561](https://github.com/aiidateam/aiida-core/pull/4561)
 - Deprecations: `export_zip`, `export_tar`, `export_tree`, `extract_zip`, `extract_tar` and `extract_tree`functions. `silent` key-word in the `export` function
 - Removed: `ZipFolder` class
+
+## v1.4.4
+
+This patch is a backport for 2 of the fixes in `v1.5.2`.
+
+### Bug fixes
+- `Dict`: accessing an inexistent key now raises a `KeyError` (instead of an `AttributeError`) [[#4616]](https://github.com/aiidateam/aiida-core/pull/4616)
+
+### Developers
+- CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
 
 
 ## v1.4.3

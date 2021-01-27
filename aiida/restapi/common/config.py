@@ -47,4 +47,5 @@ CLI_DEFAULTS = {
     'WSGI_PROFILE': False,
     'HOOKUP_APP': True,
     'CATCH_INTERNAL_SERVER': False,
+    'POSTING': True,  # Include POST endpoints (currently only /querybuilder)
 }

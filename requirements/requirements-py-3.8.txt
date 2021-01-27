@@ -72,7 +72,7 @@ palettable==3.3.0
 pamqp==2.3
 pandas==0.25.3
 pandocfilters==1.4.2
-paramiko==2.7.1
+paramiko==2.7.2
 parso==0.6.2
 pexpect==4.8.0
 pg8000==1.13.2

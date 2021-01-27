@@ -19,20 +19,45 @@ py:class builtins.str
 py:class builtins.dict
 
 # typing
-py:class traceback
+py:class asyncio.events.AbstractEventLoop
+py:class EntityType
+py:class function
 py:class IO
+py:class traceback
 
 ### AiiDA
 
 # issues with order of object processing and type hinting
-py:class WorkChainSpec
+py:class aiida.engine.runners.ResultAndNode
+py:class aiida.engine.runners.ResultAndPk
+py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
+py:class aiida.manage.manager.Manager
+py:class aiida.orm.utils.links.LinkQuadruple
 py:class aiida.tools.importexport.dbexport.ExportReport
 py:class aiida.tools.importexport.dbexport.ArchiveData
-
-py:class EntityType
 py:class aiida.tools.groups.paths.WalkNodeResult
 
-py:class aiida.orm.utils.links.LinkQuadruple
+py:class Node
+py:class ProcessSpec
+py:class CalcJobNode
+py:class ExitCode
+py:class Process
+py:class AuthInfo
+py:class ProcessNode
+py:class PortNamespace
+py:class Runner
+py:class TransportQueue
+py:class PersistenceError
+py:class Port
+py:class Data
+py:class JobInfo
+py:class CalcJob
+py:class WorkChainSpec
+
+py:class kiwipy.communications.Communicator
+py:class plumpy.process_states.State
+py:class plumpy.workchains._If
+py:class plumpy.workchains._While
 
 ### python packages
 # Note: These exceptions are needed if

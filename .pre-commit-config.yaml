@@ -43,7 +43,8 @@ repos:
         files: >-
             (?x)^(
                 aiida/common/progress_reporter.py|
-                aiida/engine/processes/calcjobs/calcjob.py|
+                aiida/manage/manager.py|
+                aiida/engine/.*py|
                 aiida/manage/database/delete/nodes.py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|

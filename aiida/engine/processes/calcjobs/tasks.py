@@ -11,18 +11,26 @@
 import functools
 import logging
 import tempfile
+from typing import Any, Callable, Optional, TYPE_CHECKING
 
 import plumpy
+import plumpy.process_states
+import plumpy.futures
 
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
-from aiida.engine.utils import exponential_backoff_retry, interruptable_task
+from aiida.engine.transports import TransportQueue
+from aiida.engine.utils import exponential_backoff_retry, interruptable_task, InterruptableFuture
+from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 from aiida.manage.configuration import get_config_option
 
 from ..process import ProcessState
+
+if TYPE_CHECKING:
+    from .calcjob import CalcJob
 
 UPLOAD_COMMAND = 'upload'
 SUBMIT_COMMAND = 'submit'
@@ -40,7 +48,7 @@ class PreSubmitException(Exception):
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
-async def task_upload_job(process, transport_queue, cancellable):
+async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -48,10 +56,10 @@ async def task_upload_job(process, transport_queue, cancellable):
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
-    :param node: the node that represents the job calculation
+    :param process: the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
-    :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
+
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     node = process.node
@@ -83,13 +91,13 @@ async def task_upload_job(process, transport_queue, cancellable):
 
     try:
         logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.CancelledError, PreSubmitException)
+        ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException)
         skip_submit = await exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except PreSubmitException:
         raise
-    except plumpy.CancelledError:
+    except plumpy.futures.CancelledError:
         pass
     except Exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
@@ -100,7 +108,7 @@ async def task_upload_job(process, transport_queue, cancellable):
         return skip_submit
 
 
-async def task_submit_job(node, transport_queue, cancellable):
+async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to submit a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -111,7 +119,7 @@ async def task_submit_job(node, transport_queue, cancellable):
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
-    :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
+
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     if node.get_state() == CalcJobState.WITHSCHEDULER:
@@ -132,9 +140,13 @@ async def task_submit_job(node, transport_queue, cancellable):
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
         result = await exponential_backoff_retry(
-            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+            do_submit,
+            initial_interval,
+            max_attempts,
+            logger=node.logger,
+            ignore_exceptions=plumpy.process_states.Interruption
         )
-    except plumpy.Interruption:
+    except plumpy.process_states.Interruption:
         pass
     except Exception:
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
@@ -145,7 +157,7 @@ async def task_submit_job(node, transport_queue, cancellable):
         return result
 
 
-async def task_update_job(node, job_manager, cancellable):
+async def task_update_job(node: CalcJobNode, job_manager, cancellable: InterruptableFuture):
     """Transport task that will attempt to update the scheduler status of the job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -190,9 +202,13 @@ async def task_update_job(node, job_manager, cancellable):
     try:
         logger.info(f'scheduled request to update CalcJob<{node.pk}>')
         job_done = await exponential_backoff_retry(
-            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+            do_update,
+            initial_interval,
+            max_attempts,
+            logger=node.logger,
+            ignore_exceptions=plumpy.process_states.Interruption
         )
-    except plumpy.Interruption:
+    except plumpy.process_states.Interruption:
         raise
     except Exception:
         logger.warning(f'updating CalcJob<{node.pk}> failed')
@@ -205,7 +221,10 @@ async def task_update_job(node, job_manager, cancellable):
         return job_done
 
 
-async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, cancellable):
+async def task_retrieve_job(
+    node: CalcJobNode, transport_queue: TransportQueue, retrieved_temporary_folder: str,
+    cancellable: InterruptableFuture
+):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -215,8 +234,9 @@ async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, c
 
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
+    :param retrieved_temporary_folder: the absolute path to a directory to store files
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
-    :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
+
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     if node.get_state() == CalcJobState.PARSING:
@@ -251,9 +271,13 @@ async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, c
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
         result = await exponential_backoff_retry(
-            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=plumpy.Interruption
+            do_retrieve,
+            initial_interval,
+            max_attempts,
+            logger=node.logger,
+            ignore_exceptions=plumpy.process_states.Interruption
         )
-    except plumpy.Interruption:
+    except plumpy.process_states.Interruption:
         raise
     except Exception:
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
@@ -264,7 +288,7 @@ async def task_retrieve_job(node, transport_queue, retrieved_temporary_folder, c
         return result
 
 
-async def task_kill_job(node, transport_queue, cancellable):
+async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to kill a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -275,7 +299,7 @@ async def task_kill_job(node, transport_queue, cancellable):
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
-    :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
+
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
@@ -295,7 +319,7 @@ async def task_kill_job(node, transport_queue, cancellable):
     try:
         logger.info(f'scheduled request to kill CalcJob<{node.pk}>')
         result = await exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
-    except plumpy.Interruption:
+    except plumpy.process_states.Interruption:
         raise
     except Exception:
         logger.warning(f'killing CalcJob<{node.pk}> failed')
@@ -306,29 +330,42 @@ async def task_kill_job(node, transport_queue, cancellable):
         return result
 
 
-class Waiting(plumpy.Waiting):
+class Waiting(plumpy.process_states.Waiting):
     """The waiting state for the `CalcJob` process."""
 
-    def __init__(self, process, done_callback, msg=None, data=None):
+    def __init__(
+        self,
+        process: 'CalcJob',
+        done_callback: Optional[Callable[..., Any]],
+        msg: Optional[str] = None,
+        data: Optional[Any] = None
+    ):
         """
-        :param :class:`~plumpy.base.state_machine.StateMachine` process: The process this state belongs to
+        :param process: The process this state belongs to
         """
         super().__init__(process, done_callback, msg, data)
-        self._task = None
-        self._killing = None
+        self._task: Optional[InterruptableFuture] = None
+        self._killing: Optional[plumpy.futures.Future] = None
+
+    @property
+    def process(self) -> 'CalcJob':
+        """
+        :return: The process
+        """
+        return self.state_machine  # type: ignore[return-value]
 
     def load_instance_state(self, saved_state, load_context):
         super().load_instance_state(saved_state, load_context)
         self._task = None
         self._killing = None
 
-    async def execute(self):  # pylint: disable=invalid-overridden-method
+    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override] # pylint: disable=invalid-overridden-method
         """Override the execute coroutine of the base `Waiting` state."""
         # pylint: disable=too-many-branches, too-many-statements
         node = self.process.node
         transport_queue = self.process.runner.transport
         command = self.data
-        result = self
+        result: plumpy.process_states.State = self
 
         process_status = f'Waiting for transport task: {command}'
 
@@ -370,12 +407,15 @@ class Waiting(plumpy.Waiting):
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException as exception:
-            raise plumpy.PauseInterruption(f'Pausing after failed transport task: {exception}')
-        except plumpy.KillInterruption:
+            raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+        except plumpy.process_states.KillInterruption:
             await self._launch_task(task_kill_job, node, transport_queue)
-            self._killing.set_result(True)
+            if self._killing is not None:
+                self._killing.set_result(True)
+            else:
+                logger.warning(f'killed CalcJob<{node.pk}> but async future was None')
             raise
-        except (plumpy.Interruption, plumpy.CancelledError):
+        except (plumpy.process_states.Interruption, plumpy.futures.CancelledError):
             node.set_process_status(f'Transport task {command} was interrupted')
             raise
         else:
@@ -396,39 +436,45 @@ class Waiting(plumpy.Waiting):
         finally:
             self._task = None
 
-    def upload(self):
+    def upload(self) -> 'Waiting':
         """Return the `Waiting` state that will `upload` the `CalcJob`."""
         msg = 'Waiting for calculation folder upload'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPLOAD_COMMAND)
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPLOAD_COMMAND)  # type: ignore[return-value]
 
-    def submit(self):
+    def submit(self) -> 'Waiting':
         """Return the `Waiting` state that will `submit` the `CalcJob`."""
         msg = 'Waiting for scheduler submission'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=SUBMIT_COMMAND)
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=SUBMIT_COMMAND)  # type: ignore[return-value]
 
-    def update(self):
+    def update(self) -> 'Waiting':
         """Return the `Waiting` state that will `update` the `CalcJob`."""
         msg = 'Waiting for scheduler update'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPDATE_COMMAND)
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPDATE_COMMAND)  # type: ignore[return-value]
 
-    def retrieve(self):
+    def retrieve(self) -> 'Waiting':
         """Return the `Waiting` state that will `retrieve` the `CalcJob`."""
         msg = 'Waiting to retrieve'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=RETRIEVE_COMMAND)
+        return self.create_state(
+            ProcessState.WAITING, None, msg=msg, data=RETRIEVE_COMMAND
+        )  # type: ignore[return-value]
 
-    def parse(self, retrieved_temporary_folder):
+    def parse(self, retrieved_temporary_folder: str) -> plumpy.process_states.Running:
         """Return the `Running` state that will parse the `CalcJob`.
 
         :param retrieved_temporary_folder: temporary folder used in retrieving that can be used during parsing.
         """
-        return self.create_state(ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder)
+        return self.create_state(
+            ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder
+        )  # type: ignore[return-value]
 
-    def interrupt(self, reason):
+    def interrupt(self, reason: Any) -> Optional[plumpy.futures.Future]:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)
 
-        if isinstance(reason, plumpy.KillInterruption):
+        if isinstance(reason, plumpy.process_states.KillInterruption):
             if self._killing is None:
-                self._killing = plumpy.Future()
+                self._killing = plumpy.futures.Future()
             return self._killing
+
+        return None

@@ -8,12 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
+import asyncio
 import contextlib
 import logging
 import time
-import asyncio
+from typing import Any, Dict, Hashable, Iterator, List, Optional, TYPE_CHECKING
 
 from aiida.common import lang
+from aiida.orm import AuthInfo
+
+if TYPE_CHECKING:
+    from aiida.engine.transports import TransportQueue
+    from aiida.schedulers.datastructures import JobInfo
 
 __all__ = ('JobsList', 'JobManager')
 
@@ -35,15 +41,13 @@ class JobsList:
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo, transport_queue, last_updated=None):
+    def __init__(self, authinfo: AuthInfo, transport_queue: 'TransportQueue', last_updated: Optional[float] = None):
         """Construct an instance for the given authinfo and transport queue.
 
         :param authinfo: The authinfo used to check the jobs list
-        :type authinfo: :class:`aiida.orm.AuthInfo`
         :param transport_queue: A transport queue
-        :type: :class:`aiida.engine.transports.TransportQueue`
         :param last_updated: initialize the last updated timestamp
-        :type: float
+
         """
         lang.type_check(last_updated, float, allow_none=True)
 
@@ -52,41 +56,41 @@ class JobsList:
         self._loop = transport_queue.loop
         self._logger = logging.getLogger(__name__)
 
-        self._jobs_cache = {}
-        self._job_update_requests = {}  # Mapping: {job_id: Future}
+        self._jobs_cache: Dict[Hashable, 'JobInfo'] = {}
+        self._job_update_requests: Dict[Hashable, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
-        self._update_handle = None
+        self._update_handle: Optional[asyncio.TimerHandle] = None
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
         """Return the logger configured for this instance.
 
         :return: the logger
         """
         return self._logger
 
-    def get_minimum_update_interval(self):
+    def get_minimum_update_interval(self) -> float:
         """Get the minimum interval that should be respected between updates of the list.
 
         :return: the minimum interval
-        :rtype: float
+
         """
         return self._authinfo.computer.get_minimum_job_poll_interval()
 
     @property
-    def last_updated(self):
+    def last_updated(self) -> Optional[float]:
         """Get the timestamp of when the list was last updated as produced by `time.time()`
 
         :return: The last update point
-        :rtype: float
+
         """
         return self._last_updated
 
-    async def _get_jobs_from_scheduler(self):
+    async def _get_jobs_from_scheduler(self) -> Dict[Hashable, 'JobInfo']:
         """Get the current jobs list from the scheduler.
 
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
-        :rtype: dict
+
         """
         with self._transport_queue.request_transport(self._authinfo) as request:
             self.logger.info('waiting for transport')
@@ -95,7 +99,7 @@ class JobsList:
             scheduler = self._authinfo.computer.get_scheduler()
             scheduler.set_transport(transport)
 
-            kwargs = {'as_dict': True}
+            kwargs: Dict[str, Any] = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
@@ -113,7 +117,7 @@ class JobsList:
 
             return jobs_cache
 
-    async def _update_job_info(self):
+    async def _update_job_info(self) -> None:
         """Update all of the job information objects.
 
         This will set the futures for all pending update requests where the corresponding job has a new status compared
@@ -146,7 +150,7 @@ class JobsList:
             self._job_update_requests = {}
 
     @contextlib.contextmanager
-    def request_job_info_update(self, job_id):
+    def request_job_info_update(self, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
         """Request job info about a job when the job next changes state.
 
         If the job is not found in the jobs list at the update, the future will resolve to `None`.
@@ -164,7 +168,7 @@ class JobsList:
         finally:
             pass
 
-    def _ensure_updating(self):
+    def _ensure_updating(self) -> None:
         """Ensure that we are updating the job list from the remote resource.
 
         This will automatically stop if there are no outstanding requests.
@@ -188,12 +192,10 @@ class JobsList:
             )
 
     @staticmethod
-    def _has_job_state_changed(old, new):
+    def _has_job_state_changed(old: Optional['JobInfo'], new: Optional['JobInfo']) -> bool:
         """Return whether the states `old` and `new` are different.
 
-        :type old: :class:`aiida.schedulers.JobInfo` or `None`
-        :type new: :class:`aiida.schedulers.JobInfo` or `None`
-        :rtype: bool
+
         """
         if old is None and new is None:
             return False
@@ -204,14 +206,14 @@ class JobsList:
 
         return old.job_state != new.job_state or old.job_substate != new.job_substate
 
-    def _get_next_update_delay(self):
+    def _get_next_update_delay(self) -> float:
         """Calculate when we are next allowed to poll the scheduler.
 
         This delay is calculated as the minimum polling interval defined by the authentication info for this instance,
         minus time elapsed since the last update.
 
         :return: delay (in seconds) after which the scheduler may be polled again
-        :rtype: float
+
         """
         if self.last_updated is None:
             # Never updated, so do it straight away
@@ -225,10 +227,10 @@ class JobsList:
 
         return delay
 
-    def _update_requests_outstanding(self):
+    def _update_requests_outstanding(self) -> bool:
         return any(not request.done() for request in self._job_update_requests.values())
 
-    def _get_jobs_with_scheduler(self):
+    def _get_jobs_with_scheduler(self) -> List[str]:
         """Get all the jobs that are currently with scheduler.
 
         :return: the list of jobs with the scheduler
@@ -252,11 +254,11 @@ class JobManager:
     only hold per runner.
     """
 
-    def __init__(self, transport_queue):
+    def __init__(self, transport_queue: 'TransportQueue') -> None:
         self._transport_queue = transport_queue
-        self._job_lists = {}
+        self._job_lists: Dict[Hashable, 'JobInfo'] = {}
 
-    def get_jobs_list(self, authinfo):
+    def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.
 
         :param authinfo: the `AuthInfo`
@@ -268,13 +270,11 @@ class JobManager:
         return self._job_lists[authinfo.id]
 
     @contextlib.contextmanager
-    def request_job_info_update(self, authinfo, job_id):
+    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
         """Get a future that will resolve to information about a given job.
 
         This is a context manager so that if the user leaves the context the request is automatically cancelled.
 
-        :return: A tuple containing the `JobInfo` object and detailed job info. Both can be None.
-        :rtype: :class:`asyncio.Future`
         """
         with self.get_jobs_list(authinfo).request_job_info_update(job_id) as request:
             try:

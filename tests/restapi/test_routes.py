@@ -1147,3 +1147,225 @@ class RESTApiTestSuite(RESTApiTestCase):
             for key in ['cif', 'xsf', 'xyz']:
                 self.assertIn(key, response['data']['data.structure.StructureData.|'])
             self.assertIn('cif', response['data']['data.cif.CifData.|'])
+
+    ############### querybuilder ###############
+    def test_querybuilder(self):
+        """Test POSTing a queryhelp dictionary as JSON to /querybuilder
+
+        This also checks that `full_type` is _not_ included in the result no matter the entity.
+        """
+        queryhelp = orm.QueryBuilder().append(
+            orm.CalculationNode,
+            tag='calc',
+            project=['id', 'uuid', 'user_id'],
+        ).order_by({
+            'calc': [{
+                'id': {
+                    'order': 'desc'
+                }
+            }]
+        }).queryhelp
+
+        expected_node_uuids = []
+        # dummy data already ordered 'desc' by 'id'
+        for calc in self.get_dummy_data()['calculations']:
+            if calc['node_type'].startswith('process.calculation.'):
+                expected_node_uuids.append(calc['uuid'])
+
+        with self.app.test_client() as client:
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+
+        self.assertEqual('POST', response.get('method', ''))
+        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+
+        self.assertEqual(
+            len(expected_node_uuids),
+            len(response.get('data', {}).get('calc', [])),
+            msg=json.dumps(response, indent=2),
+        )
+        self.assertListEqual(
+            expected_node_uuids,
+            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])],
+        )
+        for entities in response.get('data', {}).values():
+            for entity in entities:
+                # All are Nodes, but neither `node_type` or `process_type` are requested,
+                # hence `full_type` should not be present.
+                self.assertFalse('full_type' in entity)
+
+    def test_get_querybuilder(self):
+        """Test GETting the /querybuilder endpoint
+
+        This should return with 405 Method Not Allowed.
+        Otherwise, a "conventional" JSON response should be returned with a helpful message.
+        """
+        with self.app.test_client() as client:
+            response_value = client.get(f'{self.get_url_prefix()}/querybuilder')
+            response = response_value.json
+
+        self.assertEqual(response_value.status_code, 405)
+        self.assertEqual(response_value.status, '405 METHOD NOT ALLOWED')
+
+        self.assertEqual('GET', response.get('method', ''))
+        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+
+        message = (
+            'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
+            'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
+            'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
+            'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
+        )
+        self.assertEqual(message, response.get('data', {}).get('message', ''))
+
+    def test_querybuilder_user(self):
+        """Retrieve a User through the use of the /querybuilder endpoint
+
+        This also checks that `full_type` is _not_ included in the result no matter the entity.
+        """
+        queryhelp = orm.QueryBuilder().append(
+            orm.CalculationNode,
+            tag='calc',
+            project=['id', 'user_id'],
+        ).append(
+            orm.User,
+            tag='users',
+            with_node='calc',
+            project=['id', 'email'],
+        ).order_by({
+            'calc': [{
+                'id': {
+                    'order': 'desc'
+                }
+            }]
+        }).queryhelp
+
+        expected_user_ids = []
+        for calc in self.get_dummy_data()['calculations']:
+            if calc['node_type'].startswith('process.calculation.'):
+                expected_user_ids.append(calc['user_id'])
+
+        with self.app.test_client() as client:
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+
+        self.assertEqual('POST', response.get('method', ''))
+        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+
+        self.assertEqual(
+            len(expected_user_ids),
+            len(response.get('data', {}).get('users', [])),
+            msg=json.dumps(response, indent=2),
+        )
+        self.assertListEqual(
+            expected_user_ids,
+            [_.get('id', '') for _ in response.get('data', {}).get('users', [])],
+        )
+        self.assertListEqual(
+            expected_user_ids,
+            [_.get('user_id', '') for _ in response.get('data', {}).get('calc', [])],
+        )
+        for entities in response.get('data', {}).values():
+            for entity in entities:
+                # User is not a Node (no full_type)
+                self.assertFalse('full_type' in entity)
+
+    def test_querybuilder_project_explicit(self):
+        """Expliticly project everything from the resulting entities
+
+        Here "project" will use the wildcard (*).
+        This should result in both CalculationNodes and Data to be returned.
+        """
+        queryhelp = orm.QueryBuilder().append(
+            orm.CalculationNode,
+            tag='calc',
+            project='*',
+        ).append(
+            orm.Data,
+            tag='data',
+            with_incoming='calc',
+            project='*',
+        ).order_by({'data': [{
+            'id': {
+                'order': 'desc'
+            }
+        }]})
+
+        expected_calc_uuids = []
+        expected_data_uuids = []
+        for calc, data in queryhelp.all():
+            expected_calc_uuids.append(calc.uuid)
+            expected_data_uuids.append(data.uuid)
+
+        queryhelp = queryhelp.queryhelp
+
+        with self.app.test_client() as client:
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+
+        self.assertEqual('POST', response.get('method', ''))
+        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+
+        self.assertEqual(
+            len(expected_calc_uuids),
+            len(response.get('data', {}).get('calc', [])),
+            msg=json.dumps(response, indent=2),
+        )
+        self.assertEqual(
+            len(expected_data_uuids),
+            len(response.get('data', {}).get('data', [])),
+            msg=json.dumps(response, indent=2),
+        )
+        self.assertListEqual(
+            expected_calc_uuids,
+            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])],
+        )
+        self.assertListEqual(
+            expected_data_uuids,
+            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])],
+        )
+        for entities in response.get('data', {}).values():
+            for entity in entities:
+                # All are Nodes, and all properties are projected, full_type should be present
+                self.assertTrue('full_type' in entity)
+                self.assertTrue('attributes' in entity)
+
+    def test_querybuilder_project_implicit(self):
+        """Implicitly project everything from the resulting entities
+
+        Here "project" will be an empty list, resulting in only the Data node being returned.
+        """
+        queryhelp = orm.QueryBuilder().append(orm.CalculationNode, tag='calc').append(
+            orm.Data,
+            tag='data',
+            with_incoming='calc',
+        ).order_by({'data': [{
+            'id': {
+                'order': 'desc'
+            }
+        }]})
+
+        expected_data_uuids = []
+        for data in queryhelp.all(flat=True):
+            expected_data_uuids.append(data.uuid)
+
+        queryhelp = queryhelp.queryhelp
+
+        with self.app.test_client() as client:
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+
+        self.assertEqual('POST', response.get('method', ''))
+        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+
+        self.assertListEqual(['data'], list(response.get('data', {}).keys()))
+        self.assertEqual(
+            len(expected_data_uuids),
+            len(response.get('data', {}).get('data', [])),
+            msg=json.dumps(response, indent=2),
+        )
+        self.assertListEqual(
+            expected_data_uuids,
+            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])],
+        )
+        for entities in response.get('data', {}).values():
+            for entity in entities:
+                # All are Nodes, and all properties are projected, full_type should be present
+                self.assertTrue('full_type' in entity)
+                self.assertTrue('attributes' in entity)

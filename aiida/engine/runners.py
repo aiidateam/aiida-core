@@ -238,10 +238,17 @@ class Runner:  # pylint: disable=too-many-public-methods
                 LOGGER.critical('runner received interrupt, killing process %s', process_inited.pid)
                 process_inited.kill(msg='Process was killed because the runner received an interrupt')
 
-            signal.signal(signal.SIGINT, kill_process)
-            signal.signal(signal.SIGTERM, kill_process)
+            original_handler_int = signal.getsignal(signal.SIGINT)
+            original_handler_term = signal.getsignal(signal.SIGTERM)
 
-            process_inited.execute()
+            try:
+                signal.signal(signal.SIGINT, kill_process)
+                signal.signal(signal.SIGTERM, kill_process)
+                process_inited.execute()
+            finally:
+                signal.signal(signal.SIGINT, original_handler_int)
+                signal.signal(signal.SIGTERM, original_handler_term)
+
             return process_inited.outputs, process_inited.node
 
     def run(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Dict[str, Any]:

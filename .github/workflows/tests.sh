@@ -24,6 +24,7 @@ verdi daemon stop
 
 # tests for the testing infrastructure
 pytest --noconftest .ci/test_test_manager.py
+pytest --noconftest .ci/test_ipython_magics.py
 pytest --noconftest .ci/test_profile_manager.py
 python .ci/test_plugin_testcase.py  # uses custom unittest test runner
 

@@ -91,13 +91,15 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
 
     try:
         logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
-        ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException)
+        ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
         skip_submit = await exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except PreSubmitException:
         raise
     except plumpy.futures.CancelledError:
+        pass
+    except plumpy.process_states.Interruption:
         pass
     except Exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')

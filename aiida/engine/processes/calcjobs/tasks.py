@@ -97,9 +97,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         )
     except PreSubmitException:
         raise
-    except plumpy.futures.CancelledError:
-        pass
-    except plumpy.process_states.Interruption:
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         pass
     except Exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')

@@ -23,10 +23,47 @@ _LOGGER = logging.getLogger(__name__)
 class TransportRequest:
     """ Information kept about request for a transport object """
 
-    def __init__(self):
+    def __init__(self, authinfo: AuthInfo):
         super().__init__()
         self.future: asyncio.Future = asyncio.Future()
         self.count = 0
+
+        self._callback_handle: Optional[asyncio.TimerHandle] = None
+        self._authinfo = authinfo
+        self._transport = authinfo.get_transport()
+
+    def do_open(self):
+        """ Actually open the transport
+
+        Sets self.future to the open transport, if successful, or to an exception.
+        """
+        if self.count > 0:
+
+            # The user still wants the transport so open it
+            _LOGGER.debug('Transport request opening transport for %s', self._authinfo)
+            try:
+                self._transport.open()
+            except Exception as exception:  # pylint: disable=broad-except
+                _LOGGER.error('exception occurred while trying to open transport:\n %s', exception)
+                self.future.set_exception(exception)
+
+                # Cleanup of the stale TransportRequest with the excepted transport future
+                # self._transport_requests.pop(authinfo.id, None)
+            else:
+                self.future.set_result(self._transport)
+
+    def open_later(self, loop: asyncio.AbstractEventLoop):
+        # Save the handle so that we can cancel the callback if the user no longer wants it
+        self._callback_handle = loop.call_later(self._transport.get_safe_open_interval(), self.do_open)
+
+    def cleanup(self):
+        """Close transport, cancel callback"""
+        if self.future.done():
+            _LOGGER.debug('Transport request closing transport for %s', self._authinfo)
+            self.future.result().close()
+
+        if self._callback_handle is not None:
+            self._callback_handle.cancel()  # has no effect if already cancelled
 
 
 class TransportQueue:
@@ -47,6 +84,7 @@ class TransportQueue:
         """
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._transport_requests: Dict[Hashable, TransportRequest] = {}
+        self._callback_handles: Dict[Hashable, asyncio.TimerHandle] = {}
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -56,47 +94,26 @@ class TransportQueue:
     @contextlib.contextmanager
     def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable[Transport]]:
         """
-        Request a transport from an authinfo.  Because the client is not allowed to
-        request a transport immediately they will instead be given back a future
-        that can be awaited to get the transport::
+        Request a transport from an authinfo. Returns a future that can be awaited to get the transport::
 
             async def transport_task(transport_queue, authinfo):
                 with transport_queue.request_transport(authinfo) as request:
                     transport = await request
                     # Do some work with the transport
 
+        All context managers entered during the safe_open_interval get access to the same transport instance.
+        The last context manager to finish takes care of cleaning up.
+
         :param authinfo: The authinfo to be used to get transport
         :return: A future that can be yielded to give the transport
         """
-        open_callback_handle = None
         transport_request = self._transport_requests.get(authinfo.id, None)
 
         if transport_request is None:
             # There is no existing request for this transport (i.e. on this authinfo)
-            transport_request = TransportRequest()
+            transport_request = TransportRequest(authinfo)
+            transport_request.open_later(loop=self._loop)
             self._transport_requests[authinfo.id] = transport_request
-
-            transport = authinfo.get_transport()
-            safe_open_interval = transport.get_safe_open_interval()
-
-            def do_open():
-                """ Actually open the transport """
-                if transport_request and transport_request.count > 0:
-                    # The user still wants the transport so open it
-                    _LOGGER.debug('Transport request opening transport for %s', authinfo)
-                    try:
-                        transport.open()
-                    except Exception as exception:  # pylint: disable=broad-except
-                        _LOGGER.error('exception occurred while trying to open transport:\n %s', exception)
-                        transport_request.future.set_exception(exception)
-
-                        # Cleanup of the stale TransportRequest with the excepted transport future
-                        self._transport_requests.pop(authinfo.id, None)
-                    else:
-                        transport_request.future.set_result(transport)
-
-            # Save the handle so that we can cancel the callback if the user no longer wants it
-            open_callback_handle = self._loop.call_later(safe_open_interval, do_open)
 
         try:
             transport_request.count += 1
@@ -109,10 +126,5 @@ class TransportQueue:
             assert transport_request.count >= 0, 'Transport request count dropped below 0!'
             # Check if there are no longer any users that want the transport
             if transport_request.count == 0:
-                if transport_request.future.done():
-                    _LOGGER.debug('Transport request closing transport for %s', authinfo)
-                    transport_request.future.result().close()
-                elif open_callback_handle is not None:
-                    open_callback_handle.cancel()
-
+                transport_request.cleanup()
                 self._transport_requests.pop(authinfo.id, None)

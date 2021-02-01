@@ -13,11 +13,14 @@ import subprocess
 import sys
 import time
 
+from pympler import muppy
+
 from aiida.common import exceptions
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.caching import enable_caching
+from aiida.engine.processes import Process
 from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add_multiply, add
@@ -485,7 +488,7 @@ def main():
     process_functions_pks = sorted(expected_results_process_functions.keys())
     pks = calculation_pks + workchains_pks + process_functions_pks
 
-    print('Wating for end of execution...')
+    print('Waiting for end of execution...')
     start_time = time.time()
     exited_with_timeout = True
     while time.time() - start_time < TIMEOUTSECS:
@@ -525,30 +528,37 @@ def main():
         print('')
         print(f'Timeout!! Calculation did not complete after {TIMEOUTSECS} seconds')
         sys.exit(2)
-    else:
-        # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
-        cached_calcs = []
-        with enable_caching(identifier='aiida.calculations:templatereplacer'):
-            for counter in range(1, NUMBER_CALCULATIONS + 1):
-                inputval = counter
-                calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
-                cached_calcs.append(calc)
-                expected_results_calculations[calc.pk] = expected_result
 
-        if (
-            validate_calculations(expected_results_calculations) and
-            validate_workchains(expected_results_workchains) and validate_cached(cached_calcs) and
-            validate_process_functions(expected_results_process_functions)
-        ):
-            print_daemon_log()
-            print('')
-            print('OK, all calculations have the expected parsed result')
-            sys.exit(0)
-        else:
-            print_daemon_log()
-            print('')
-            print('ERROR! Some return values are different from the expected value')
-            sys.exit(3)
+    # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
+    cached_calcs = []
+    with enable_caching(identifier='aiida.calculations:templatereplacer'):
+        for counter in range(1, NUMBER_CALCULATIONS + 1):
+            inputval = counter
+            calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
+            cached_calcs.append(calc)
+            expected_results_calculations[calc.pk] = expected_result
+
+    if not (
+        validate_calculations(expected_results_calculations) and validate_workchains(expected_results_workchains) and
+        validate_cached(cached_calcs) and validate_process_functions(expected_results_process_functions)
+    ):
+        print_daemon_log()
+        print('')
+        print('ERROR! Some return values are different from the expected value')
+        sys.exit(3)
+
+    print_daemon_log()
+    print('')
+    print('OK, all calculations have the expected parsed result')
+
+    # check that no reference to processes remain in memory
+    # Note: This tests only processes that were `run`, not those that were `submitted`
+    all_objects = muppy.get_objects()  # note: this also calls gc.collect()
+    processes = [o for o in all_objects if hasattr(o, '__class__') and isinstance(o, Process)]
+    if processes:
+        print(f'Memory leak! Process instances remained in memory: {processes}')
+
+    sys.exit(0)
 
 
 if __name__ == '__main__':

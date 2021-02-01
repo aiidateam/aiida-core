@@ -97,7 +97,13 @@ class TransportQueue:
                         transport_request.future.set_result(transport)
 
             # Save the handle so that we can cancel the callback if the user no longer wants it
-            open_callback_handle = self._loop.call_later(safe_open_interval, do_open, context=contextvars.Context())
+            # Note: Don't pass the Process context, since (a) it is not needed by `do_open` and (b) the transport is
+            # passed around to many places, including outside aiida-core (e.g. paramiko). Anyone keeping a reference
+            # to this handle would otherwise keep the Process context (and thus the process itself) in memory.
+            # See https://github.com/aiidateam/aiida-core/issues/4698
+            open_callback_handle = self._loop.call_later(
+                safe_open_interval, do_open, context=contextvars.Context()
+            )  #  type: ignore[call-arg]
 
         try:
             transport_request.count += 1

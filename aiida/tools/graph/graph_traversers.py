@@ -9,7 +9,7 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 import sys
-from typing import Any, Callable, cast, Dict, Iterable, List, Mapping, Optional, Set
+from typing import Any, Callable, cast, Dict, Iterable, List, Mapping, Optional, Set, Union
 
 from numpy import inf
 
@@ -182,7 +182,7 @@ def validate_traversal_rules(
 
 def traverse_graph(
     starting_pks: Iterable[int],
-    max_iterations: Optional[int] = None,
+    max_iterations: Union[None, int, inf] = None,
     get_links: bool = False,
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),

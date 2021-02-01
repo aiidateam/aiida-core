@@ -13,6 +13,7 @@ import logging
 import traceback
 from typing import Awaitable, Dict, Hashable, Iterator, Optional
 import asyncio
+import contextvars
 
 from aiida.orm import AuthInfo
 from aiida.transports import Transport
@@ -96,7 +97,7 @@ class TransportQueue:
                         transport_request.future.set_result(transport)
 
             # Save the handle so that we can cancel the callback if the user no longer wants it
-            open_callback_handle = self._loop.call_later(safe_open_interval, do_open)
+            open_callback_handle = self._loop.call_later(safe_open_interval, do_open, context=contextvars.Context())
 
         try:
             transport_request.count += 1

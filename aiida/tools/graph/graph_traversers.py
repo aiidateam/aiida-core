@@ -209,7 +209,7 @@ def traverse_graph(
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
 
     if max_iterations is None:
-        max_iterations = inf
+        max_iterations = cast(int, inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):
         raise TypeError('Max_iterations has to be an integer or infinity')
 

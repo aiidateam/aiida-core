@@ -573,6 +573,7 @@ def main():
 
     # Check that no references to processes remain in memory
     # Note: This tests only processes that were `run` in the same interpreter, not those that were `submitted`
+    del results
     all_objects = muppy.get_objects()  # note: this also calls gc.collect()
     processes = [o for o in all_objects if hasattr(o, '__class__') and isinstance(o, Process)]
     if processes:

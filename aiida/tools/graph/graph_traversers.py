@@ -9,7 +9,7 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 import sys
-from typing import Any, Callable, cast, Dict, Iterable, List, Mapping, Optional, Set, Union
+from typing import Any, Callable, cast, Dict, Iterable, List, Mapping, Optional, Set
 
 from numpy import inf
 
@@ -182,7 +182,7 @@ def validate_traversal_rules(
 
 def traverse_graph(
     starting_pks: Iterable[int],
-    max_iterations: Union[None, int, inf] = None,
+    max_iterations: Optional[int] = None,
     get_links: bool = False,
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
@@ -209,7 +209,7 @@ def traverse_graph(
     # pylint: disable=too-many-locals,too-many-statements,too-many-branches
 
     if max_iterations is None:
-        max_iterations = inf
+        max_iterations = cast(int, inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):
         raise TypeError('Max_iterations has to be an integer or infinity')
 

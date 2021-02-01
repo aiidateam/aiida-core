@@ -121,7 +121,7 @@ jobs:
 
     needs: [install-with-pip, install-with-conda]
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
 
     strategy:
       fail-fast: false

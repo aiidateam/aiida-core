@@ -392,9 +392,12 @@ def run_multiply_add_workchain():
     assert results['result'].value == 5
 
 
-def main():
-    """Launch a bunch of calculation jobs and workchains."""
-    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+def launch_all():
+    """Launch a bunch of calculation jobs and workchains.
+
+    :returns: dictionary with expected results and pks of all launched calculations and workchains
+    """
+    # pylint: disable=too-many-locals,too-many-statements
     expected_results_process_functions = {}
     expected_results_calculations = {}
     expected_results_workchains = {}
@@ -440,8 +443,8 @@ def main():
     builder = NestedWorkChain.get_builder()
     input_val = 4
     builder.inp = Int(input_val)
-    proc = submit(builder)
-    expected_results_workchains[proc.pk] = input_val
+    pk = submit(builder).pk
+    expected_results_workchains[pk] = input_val
 
     print('Submitting a workchain with a nested input namespace.')
     value = Int(-12)
@@ -486,7 +489,44 @@ def main():
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())
     process_functions_pks = sorted(expected_results_process_functions.keys())
-    pks = calculation_pks + workchains_pks + process_functions_pks
+
+    return {
+        'pks': calculation_pks + workchains_pks + process_functions_pks,
+        'calculations': expected_results_calculations,
+        'process_functions': expected_results_process_functions,
+        'workchains': expected_results_workchains,
+    }
+
+
+def relaunch_cached(results):
+    """Launch the same calculations but with caching enabled -- these should be FINISHED immediately."""
+    code_doubler = load_code(CODENAME_DOUBLER)
+    cached_calcs = []
+    with enable_caching(identifier='aiida.calculations:templatereplacer'):
+        for counter in range(1, NUMBER_CALCULATIONS + 1):
+            inputval = counter
+            calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
+            cached_calcs.append(calc)
+            results['calculations'][calc.pk] = expected_result
+
+    if not (
+        validate_calculations(results['calculations']) and validate_workchains(results['workchains']) and
+        validate_cached(cached_calcs) and validate_process_functions(results['process_functions'])
+    ):
+        print_daemon_log()
+        print('')
+        print('ERROR! Some return values are different from the expected value')
+        sys.exit(3)
+
+    print_daemon_log()
+    print('')
+    print('OK, all calculations have the expected parsed result')
+
+
+def main():
+    """Launch a bunch of calculation jobs and workchains."""
+
+    results = launch_all()
 
     print('Waiting for end of execution...')
     start_time = time.time()
@@ -518,7 +558,7 @@ def main():
         except subprocess.CalledProcessError as exception:
             print(f'Note: the command failed, message: {exception}')
 
-        if jobs_have_finished(pks):
+        if jobs_have_finished(results['pks']):
             print('Calculation terminated its execution')
             exited_with_timeout = False
             break
@@ -529,34 +569,15 @@ def main():
         print(f'Timeout!! Calculation did not complete after {TIMEOUTSECS} seconds')
         sys.exit(2)
 
-    # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
-    cached_calcs = []
-    with enable_caching(identifier='aiida.calculations:templatereplacer'):
-        for counter in range(1, NUMBER_CALCULATIONS + 1):
-            inputval = counter
-            calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
-            cached_calcs.append(calc)
-            expected_results_calculations[calc.pk] = expected_result
+    relaunch_cached(results)
 
-    if not (
-        validate_calculations(expected_results_calculations) and validate_workchains(expected_results_workchains) and
-        validate_cached(cached_calcs) and validate_process_functions(expected_results_process_functions)
-    ):
-        print_daemon_log()
-        print('')
-        print('ERROR! Some return values are different from the expected value')
-        sys.exit(3)
-
-    print_daemon_log()
-    print('')
-    print('OK, all calculations have the expected parsed result')
-
-    # check that no reference to processes remain in memory
-    # Note: This tests only processes that were `run`, not those that were `submitted`
+    # Check that no references to processes remain in memory
+    # Note: This tests only processes that were `run` in the same interpreter, not those that were `submitted`
     all_objects = muppy.get_objects()  # note: this also calls gc.collect()
     processes = [o for o in all_objects if hasattr(o, '__class__') and isinstance(o, Process)]
     if processes:
         print(f'Memory leak! Process instances remained in memory: {processes}')
+        sys.exit(4)
 
     sys.exit(0)
 

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-few-public-methods
+# pylint: disable=invalid-name
 """Update all link labels with the value `_return` which is the legacy default single link label.
 
 The old process functions used to use `_return` as the default link label, however, since labels that start or end with

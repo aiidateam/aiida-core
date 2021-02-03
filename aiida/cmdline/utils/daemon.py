@@ -124,8 +124,7 @@ def delete_stale_pid_file(client):
                 raise StartCircusNotFound()  # Also this is a case in which the process is not there anymore
         except (psutil.AccessDenied, psutil.NoSuchProcess, StartCircusNotFound):
             echo.echo_warning(
-                'Deleted apparently stale daemon PID file as its associated process<{}> does not exist anymore'.
-                format(pid)
+                f'Deleted apparently stale daemon PID file as its associated process<{pid}> does not exist anymore'
             )
             if os.path.isfile(client.circus_pid_file):
                 os.remove(client.circus_pid_file)

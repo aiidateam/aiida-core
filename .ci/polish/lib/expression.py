@@ -73,7 +73,7 @@ def validate(expression):
     try:
         symbols = expression.split()
     except ValueError as exception:
-        return False, 'failed to split the expression into symbols: {}'.format(exception)
+        return False, f'failed to split the expression into symbols: {exception}'
 
     while len(symbols) > 1:
         try:
@@ -85,19 +85,19 @@ def validate(expression):
         try:
             operand = int(operand)
         except ValueError:
-            return False, 'the operand {} is not a valid integer'.format(operand)
+            return False, f'the operand {operand} is not a valid integer'
 
         if operator not in OPERATORS.keys():
-            return False, 'the operator {} is not supported'.format(operator)
+            return False, f'the operator {operator} is not supported'
 
         if OPERATORS[operator] is operators.pow and operand < 0:
-            return False, 'a negative operand {} was found for the ^ operator, which is not allowed'.format(operand)
+            return False, f'a negative operand {operand} was found for the ^ operator, which is not allowed'
 
     # At this point the symbols list should only contain the initial operand
     try:
         operand = int(symbols.pop())
     except ValueError:
-        return False, 'the operand {} is not a valid integer'.format(operand)
+        return False, f'the operand {operand} is not a valid integer'
 
     if symbols:
         return False, 'incorrect number of symbols found, should contain N operands followed by (N - 1) operators'

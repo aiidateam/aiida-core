@@ -39,8 +39,7 @@ def remote_ls(ls_long, path, datum):
         content = datum.listdir_withattributes(path=path)
     except (IOError, OSError) as err:
         echo.echo_critical(
-            'Unable to access the remote folder or file, check if it exists.\n'
-            'Original error: {}'.format(str(err))
+            f'Unable to access the remote folder or file, check if it exists.\nOriginal error: {str(err)}'
         )
     for metadata in content:
         if ls_long:
@@ -71,7 +70,7 @@ def remote_cat(datum, path):
             with open(tmpf.name, encoding='utf8') as fhandle:
                 sys.stdout.write(fhandle.read())
     except IOError as err:
-        echo.echo_critical('{}: {}'.format(err.errno, str(err)))
+        echo.echo_critical(f'{err.errno}: {str(err)}')
 
     try:
         os.remove(tmpf.name)
@@ -85,6 +84,6 @@ def remote_cat(datum, path):
 def remote_show(datum):
     """Show information for a RemoteData object."""
     click.echo('- Remote computer name:')
-    click.echo('  {}'.format(datum.computer.label))
+    click.echo(f'  {datum.computer.label}')
     click.echo('- Remote folder full path:')
-    click.echo('  {}'.format(datum.get_remote_path()))
+    click.echo(f'  {datum.get_remote_path()}')

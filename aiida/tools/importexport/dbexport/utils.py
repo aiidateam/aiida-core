@@ -9,11 +9,10 @@
 ###########################################################################
 """ Utility functions for export of AiiDA entities """
 # pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
-from enum import Enum
 import warnings
 
 from aiida.orm import QueryBuilder, ProcessNode
-from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT, override_log_formatter
+from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
 from aiida.common.warnings import AiidaDeprecationWarning
 
 from aiida.tools.importexport.common import exceptions
@@ -22,12 +21,6 @@ from aiida.tools.importexport.common.config import (
 )
 
 EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
-
-
-class ExportFileFormat(str, Enum):
-    """Export file formats"""
-    ZIP = 'zip'
-    TAR_GZIPPED = 'tar.gz'
 
 
 def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag_suffixes=None, entity_separator='_'):
@@ -131,10 +124,7 @@ def check_licenses(node_licenses, allowed_licenses, forbidden_licenses):
                         raise LicensingException
             except LicensingException:
                 raise LicensingException(
-                    'Node {} is licensed '
-                    'under {} license, which '
-                    'is not in the list of '
-                    'allowed licenses'.format(pk, license_)
+                    f'Node {pk} is licensed under {license_} license, which is not in the list of allowed licenses'
                 )
         if forbidden_licenses is not None:
             try:
@@ -149,10 +139,7 @@ def check_licenses(node_licenses, allowed_licenses, forbidden_licenses):
                         raise LicensingException
             except LicensingException:
                 raise LicensingException(
-                    'Node {} is licensed '
-                    'under {} license, which '
-                    'is in the list of '
-                    'forbidden licenses'.format(pk, license_)
+                    f'Node {pk} is licensed under {license_} license, which is in the list of forbidden licenses'
                 )
 
 
@@ -285,31 +272,19 @@ def check_process_nodes_sealed(nodes):
         )
 
 
-@override_log_formatter('%(message)s')
-def summary(file_format, outfile, **kwargs):
+def summary(*, file_format, export_version, outfile, include_comments, include_logs, traversal_rules):
     """Print summary for export"""
     from tabulate import tabulate
-    from aiida.tools.importexport.common.config import EXPORT_VERSION
 
-    parameters = [['Archive', outfile], ['Format', file_format], ['Export version', EXPORT_VERSION]]
+    parameters = [['Archive', outfile], ['Format', file_format], ['Export version', export_version]]
 
-    result = '\n{}'.format(tabulate(parameters, headers=['EXPORT', '']))
-
-    include_comments = kwargs.get('include_comments', True)
-    include_logs = kwargs.get('include_logs', True)
-    input_forward = kwargs.get('input_forward', False)
-    create_reversed = kwargs.get('create_reversed', True)
-    return_reversed = kwargs.get('return_reversed', False)
-    call_reversed = kwargs.get('call_reversed', False)
+    result = f"\n{tabulate(parameters, headers=['EXPORT', ''])}"
 
     inclusions = [['Include Comments', include_comments], ['Include Logs', include_logs]]
-    result += '\n\n{}'.format(tabulate(inclusions, headers=['Inclusion rules', '']))
+    result += f"\n\n{tabulate(inclusions, headers=['Inclusion rules', ''])}"
 
-    traversal_rules = [['Follow INPUT Links forwards',
-                        input_forward], ['Follow CREATE Links backwards', create_reversed],
-                       ['Follow RETURN Links backwards', return_reversed],
-                       ['Follow CALL Links backwards', call_reversed]]
-    result += '\n\n{}\n'.format(tabulate(traversal_rules, headers=['Traversal rules', '']))
+    traversal_rules = [[f"Follow links {' '.join(name.split('_'))}s", value] for name, value in traversal_rules.items()]
+    result += f"\n\n{tabulate(traversal_rules, headers=['Traversal rules', ''])}\n"
 
     EXPORT_LOGGER.log(msg=result, level=LOG_LEVEL_REPORT)
 
@@ -327,9 +302,9 @@ def deprecated_parameters(old, new):
     """
     if old.get('value', None) is not None:
         if new.get('value', None) is not None:
-            message = '`{}` is deprecated, the supplied `{}` input will be used'.format(old['name'], new['name'])
+            message = f"`{old['name']}` is deprecated, the supplied `{new['name']}` input will be used"
         else:
-            message = '`{}` is deprecated, please use `{}` instead'.format(old['name'], new['name'])
+            message = f"`{old['name']}` is deprecated, please use `{new['name']}` instead"
             new['value'] = old['value']
         warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
 

@@ -31,10 +31,10 @@ def validate_daemon_workers(ctx, param, value):  # pylint: disable=unused-argume
         value = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
 
     if not isinstance(value, int):
-        raise click.BadParameter('{} is not an integer'.format(value))
+        raise click.BadParameter(f'{value} is not an integer')
 
     if value <= 0:
-        raise click.BadParameter('{} is not a positive non-zero integer'.format(value))
+        raise click.BadParameter(f'{value} is not a positive non-zero integer')
 
     return value
 
@@ -102,7 +102,7 @@ def status(all_profiles):
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho('{}'.format(profile.name), bold=True)
+        click.secho(f'{profile.name}', bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
         daemons_running.append(client.is_daemon_running)
@@ -169,7 +169,7 @@ def stop(no_wait, all_profiles):
         client = get_daemon_client(profile.name)
 
         click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho('{}'.format(profile.name), bold=True)
+        click.secho(f'{profile.name}', bold=True)
 
         if not client.is_daemon_running:
             echo.echo('Daemon was not running')

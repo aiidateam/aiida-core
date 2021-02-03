@@ -199,7 +199,7 @@ class BackendQueryBuilder:
         from sqlalchemy.types import String
 
         if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
-            raise TypeError('column ({}) {} is not a valid column'.format(type(column), column))
+            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
         database_entity = column
         if operator == '==':
             expr = database_entity == value
@@ -220,7 +220,7 @@ class BackendQueryBuilder:
         elif operator == 'in':
             expr = database_entity.in_(value)
         else:
-            raise InputValidationError('Unknown operator {} for filters on columns'.format(operator))
+            raise InputValidationError(f'Unknown operator {operator} for filters on columns')
         return expr
 
     def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
@@ -244,7 +244,7 @@ class BackendQueryBuilder:
         elif cast == 'd':
             entity = entity.astext.cast(DateTime)
         else:
-            raise InputValidationError('Unkown casting key {}'.format(cast))
+            raise InputValidationError(f'Unkown casting key {cast}')
         return entity
 
     def get_aiida_res(self, res):
@@ -310,7 +310,7 @@ class BackendQueryBuilder:
         """
         try:
             if not tag_to_index_dict:
-                raise Exception('Got an empty dictionary: {}'.format(tag_to_index_dict))
+                raise Exception(f'Got an empty dictionary: {tag_to_index_dict}')
 
             results = query.yield_per(batch_size)
 

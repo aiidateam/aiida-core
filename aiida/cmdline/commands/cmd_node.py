@@ -9,6 +9,7 @@
 ###########################################################################
 """`verdi node` command."""
 
+import logging
 import shutil
 import pathlib
 
@@ -52,7 +53,7 @@ def repo_cat(node, relative_path):
         # The sepcial case is breakon pipe error, which is usually OK.
         if exception.errno != errno.EPIPE:
             # Incorrect path or file not readable
-            echo.echo_critical('failed to get the content of file `{}`: {}'.format(relative_path, exception))
+            echo.echo_critical(f'failed to get the content of file `{relative_path}`: {exception}')
 
 
 @verdi_node_repo.command('ls')
@@ -67,7 +68,7 @@ def repo_ls(node, relative_path, color):
     try:
         list_repository_contents(node, relative_path, color)
     except FileNotFoundError:
-        echo.echo_critical('the path `{}` does not exist for the given node'.format(relative_path))
+        echo.echo_critical(f'the path `{relative_path}` does not exist for the given node')
 
 
 @verdi_node_repo.command('dump')
@@ -84,32 +85,32 @@ def repo_dump(node, output_directory):
     The output directory should not exist. If it does, the command
     will abort.
     """
-    from aiida.orm.utils.repository import FileType
+    from aiida.repository import FileType
 
     output_directory = pathlib.Path(output_directory)
 
     try:
         output_directory.mkdir(parents=True, exist_ok=False)
     except FileExistsError:
-        echo.echo_critical('Invalid value for "OUTPUT_DIRECTORY": Path "{}" exists.'.format(output_directory))
+        echo.echo_critical(f'Invalid value for "OUTPUT_DIRECTORY": Path "{output_directory}" exists.')
 
     def _copy_tree(key, output_dir):  # pylint: disable=too-many-branches
         """
         Recursively copy the content at the ``key`` path in the given node to
         the ``output_dir``.
         """
-        for file in node.list_objects(key=key):
+        for file in node.list_objects(key):
             # Not using os.path.join here, because this is the "path"
             # in the AiiDA node, not an actual OS - level path.
-            file_key = file.name if not key else key + '/' + file.name
-            if file.type == FileType.DIRECTORY:
+            file_key = file.name if not key else f'{key}/{file.name}'
+            if file.file_type == FileType.DIRECTORY:
                 new_out_dir = output_dir / file.name
                 assert not new_out_dir.exists()
                 new_out_dir.mkdir()
                 _copy_tree(key=file_key, output_dir=new_out_dir)
 
             else:
-                assert file.type == FileType.FILE
+                assert file.file_type == FileType.FILE
                 out_file_path = output_dir / file.name
                 assert not out_file_path.exists()
                 with node.open(file_key, 'rb') as in_file:
@@ -144,13 +145,13 @@ def node_label(nodes, label, raw, force):
 
     else:
         if not force:
-            warning = 'Are you sure you want to set the label for {} nodes?'.format(len(nodes))
+            warning = f'Are you sure you want to set the label for {len(nodes)} nodes?'
             click.confirm(warning, abort=True)
 
         for node in nodes:
             node.label = label
 
-        echo.echo_success("Set label '{}' for {} nodes".format(label, len(nodes)))
+        echo.echo_success(f"Set label '{label}' for {len(nodes)} nodes")
 
 
 @verdi_node.command('description')
@@ -178,13 +179,13 @@ def node_description(nodes, description, force, raw):
 
     else:
         if not force:
-            warning = 'Are you sure you want to set the description for  {} nodes?'.format(len(nodes))
+            warning = f'Are you sure you want to set the description for  {len(nodes)} nodes?'
             click.confirm(warning, abort=True)
 
         for node in nodes:
             node.description = description
 
-        echo.echo_success('Set description for {} nodes'.format(len(nodes)))
+        echo.echo_success(f'Set description for {len(nodes)} nodes')
 
 
 @verdi_node.command('show')
@@ -214,9 +215,9 @@ def node_show(nodes, print_groups):
             echo.echo('#### GROUPS:')
 
             if qb.count() == 0:
-                echo.echo('Node {} does not belong to any group'.format(node.pk))
+                echo.echo(f'Node {node.pk} does not belong to any group')
             else:
-                echo.echo('Node {} belongs to the following groups:'.format(node.pk))
+                echo.echo(f'Node {node.pk} belongs to the following groups:')
                 res = qb.iterdict()
                 table = [(gr['groups']['id'], gr['groups']['label'], gr['groups']['type_string']) for gr in res]
                 table.sort()
@@ -248,7 +249,7 @@ def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
         if raw:
             all_nodes.append({id_name: id_value, dict_name: node_dict})
         else:
-            echo.echo('{}: {}'.format(id_name, id_value), bold=True)
+            echo.echo(f'{id_name}: {id_value}', bold=True)
             echo.echo_dictionary(node_dict, fmt=fmt)
     if raw:
         echo.echo_dictionary(all_nodes, fmt=fmt)
@@ -296,30 +297,46 @@ def tree(nodes, depth):
 
 
 @verdi_node.command('delete')
-@arguments.NODES('nodes', required=True)
+@click.argument('identifier', nargs=-1, metavar='NODES')
 @options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, **kwargs):
+def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.manage.database.delete.nodes import delete_nodes
+    from aiida.common.log import override_log_formatter_context
+    from aiida.orm.utils.loaders import NodeEntityLoader
+    from aiida.tools import delete_nodes, DELETE_LOGGER
 
-    verbosity = 1
-    if force:
-        verbosity = 0
-    elif verbose:
-        verbosity = 2
+    verbosity = logging.DEBUG if verbose else logging.INFO
+    DELETE_LOGGER.setLevel(verbosity)
 
-    node_pks_to_delete = [node.pk for node in nodes]
+    pks = []
 
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
+    for obj in identifier:
+        # we only load the node if we need to convert from a uuid/label
+        try:
+            pks.append(int(obj))
+        except ValueError:
+            pks.append(NodeEntityLoader.load_entity(obj).pk)
+
+    def _dry_run_callback(pks):
+        if not pks or force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        return not click.confirm('Shall I continue?', abort=True)
+
+    with override_log_formatter_context('%(message)s'):
+        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+
+    if was_deleted:
+        echo.echo_success('Finished deletion.')
 
 
 @verdi_node.command('rehash')
@@ -374,7 +391,7 @@ def rehash(nodes, entry_point, force):
         for node, in iter_hash:
             node.rehash()
 
-    echo.echo_success('{} nodes re-hashed.'.format(num_nodes))
+    echo.echo_success(f'{num_nodes} nodes re-hashed.')
 
 
 @verdi_node.group('graph')
@@ -447,9 +464,9 @@ def graph_generate(
     print_func = echo.echo_info if verbose else None
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
-    echo.echo_info('Initiating graphviz engine: {}'.format(engine))
+    echo.echo_info(f'Initiating graphviz engine: {engine}')
     graph = Graph(engine=engine, node_id_type=identifier)
-    echo.echo_info('Recursing ancestors, max depth={}'.format(ancestor_depth))
+    echo.echo_info(f'Recursing ancestors, max depth={ancestor_depth}')
 
     graph.recurse_ancestors(
         root_node,
@@ -460,7 +477,7 @@ def graph_generate(
         highlight_classes=highlight_classes,
         print_func=print_func
     )
-    echo.echo_info('Recursing descendants, max depth={}'.format(descendant_depth))
+    echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
     graph.recurse_descendants(
         root_node,
         depth=descendant_depth,
@@ -471,10 +488,10 @@ def graph_generate(
         print_func=print_func
     )
     output_file_name = graph.graphviz.render(
-        filename='{}.{}'.format(root_node.pk, engine), format=output_format, view=show, cleanup=True
+        filename=f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True
     )
 
-    echo.echo_success('Output file: {}'.format(output_file_name))
+    echo.echo_success(f'Output file: {output_file_name}')
 
 
 @verdi_node.group('comment')
@@ -494,7 +511,7 @@ def comment_add(nodes, content):
     for node in nodes:
         node.add_comment(content)
 
-    echo.echo_success('comment added to {} nodes'.format(len(nodes)))
+    echo.echo_success(f'comment added to {len(nodes)} nodes')
 
 
 @verdi_comment.command('update')
@@ -508,14 +525,14 @@ def comment_update(comment_id, content):
     try:
         comment = Comment.objects.get(id=comment_id)
     except (exceptions.NotExistent, exceptions.MultipleObjectsError):
-        echo.echo_critical('comment<{}> not found'.format(comment_id))
+        echo.echo_critical(f'comment<{comment_id}> not found')
 
     if content is None:
         content = multi_line_input.edit_comment(comment.content)
 
     comment.set_content(content)
 
-    echo.echo_success('comment<{}> updated'.format(comment_id))
+    echo.echo_success(f'comment<{comment_id}> updated')
 
 
 @verdi_comment.command('show')
@@ -525,7 +542,7 @@ def comment_update(comment_id, content):
 def comment_show(user, nodes):
     """Show the comments of one or multiple nodes."""
     for node in nodes:
-        msg = '* Comments for Node<{}>'.format(node.pk)
+        msg = f'* Comments for Node<{node.pk}>'
         echo.echo('*' * len(msg))
         echo.echo(msg)
         echo.echo('*' * len(msg))
@@ -537,18 +554,18 @@ def comment_show(user, nodes):
 
             if not comments:
                 valid_users = ', '.join(set(comment.user.email for comment in all_comments))
-                echo.echo_warning('no comments found for user {}'.format(user))
-                echo.echo_info('valid users found for Node<{}>: {}'.format(node.pk, valid_users))
+                echo.echo_warning(f'no comments found for user {user}')
+                echo.echo_info(f'valid users found for Node<{node.pk}>: {valid_users}')
 
         else:
             comments = all_comments
 
         for comment in comments:
             comment_msg = [
-                'Comment<{}> for Node<{}> by {}'.format(comment.id, node.pk, comment.user.email),
-                'Created on {}'.format(timezone.localtime(comment.ctime).strftime('%Y-%m-%d %H:%M')),
-                'Last modified on {}'.format(timezone.localtime(comment.mtime).strftime('%Y-%m-%d %H:%M')),
-                '\n{}\n'.format(comment.content),
+                f'Comment<{comment.id}> for Node<{node.pk}> by {comment.user.email}',
+                f"Created on {timezone.localtime(comment.ctime).strftime('%Y-%m-%d %H:%M')}",
+                f"Last modified on {timezone.localtime(comment.mtime).strftime('%Y-%m-%d %H:%M')}",
+                f'\n{comment.content}\n',
             ]
             echo.echo('\n'.join(comment_msg))
 
@@ -565,11 +582,11 @@ def comment_remove(force, comment):
     from aiida.orm.comments import Comment
 
     if not force:
-        click.confirm('Are you sure you want to remove comment<{}>'.format(comment), abort=True)
+        click.confirm(f'Are you sure you want to remove comment<{comment}>', abort=True)
 
     try:
         Comment.objects.delete(comment)
     except exceptions.NotExistent as exception:
-        echo.echo_critical('failed to remove comment<{}>: {}'.format(comment, exception))
+        echo.echo_critical(f'failed to remove comment<{comment}>: {exception}')
     else:
-        echo.echo_success('removed comment<{}>'.format(comment))
+        echo.echo_success(f'removed comment<{comment}>')

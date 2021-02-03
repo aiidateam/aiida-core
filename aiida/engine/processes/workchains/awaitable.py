@@ -7,9 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-few-public-methods
 """Enums and function for the awaitables of Processes."""
 from enum import Enum
+from typing import Union
 
 from plumpy.utils import AttributesDict
 from aiida.orm import ProcessNode
@@ -32,7 +32,7 @@ class AwaitableAction(Enum):
     APPEND = 'append'
 
 
-def construct_awaitable(target):
+def construct_awaitable(target: Union[Awaitable, ProcessNode]) -> Awaitable:
     """
     Construct an instance of the Awaitable class that will contain the information
     related to the action to be taken with respect to the context once the awaitable
@@ -53,7 +53,7 @@ def construct_awaitable(target):
     if isinstance(target, ProcessNode):
         awaitable_target = AwaitableTarget.PROCESS
     else:
-        raise ValueError('invalid class for awaitable target: {}'.format(type(target)))
+        raise ValueError(f'invalid class for awaitable target: {type(target)}')
 
     awaitable = Awaitable(
         **{

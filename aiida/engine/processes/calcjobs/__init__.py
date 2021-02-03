@@ -12,4 +12,4 @@
 
 from .calcjob import *
 
-__all__ = (calcjob.__all__)
+__all__ = (calcjob.__all__)  # type: ignore[name-defined]

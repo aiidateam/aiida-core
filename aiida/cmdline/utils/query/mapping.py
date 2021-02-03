@@ -83,14 +83,14 @@ class CalculationProjectionMapper(ProjectionMapper):
 
         self._valid_projections = projections
 
-        sealed_key = 'attributes.{}'.format(Sealable.SEALED_KEY)
-        job_state_key = 'attributes.{}'.format('state')
-        scheduler_state_key = 'attributes.{}'.format('scheduler_state')
-        process_paused_key = 'attributes.{}'.format(ProcessNode.PROCESS_PAUSED_KEY)
-        process_label_key = 'attributes.{}'.format(ProcessNode.PROCESS_LABEL_KEY)
-        process_state_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATE_KEY)
-        process_status_key = 'attributes.{}'.format(ProcessNode.PROCESS_STATUS_KEY)
-        exit_status_key = 'attributes.{}'.format(ProcessNode.EXIT_STATUS_KEY)
+        sealed_key = f'attributes.{Sealable.SEALED_KEY}'
+        job_state_key = 'attributes.state'
+        scheduler_state_key = 'attributes.scheduler_state'
+        process_paused_key = f'attributes.{ProcessNode.PROCESS_PAUSED_KEY}'
+        process_label_key = f'attributes.{ProcessNode.PROCESS_LABEL_KEY}'
+        process_state_key = f'attributes.{ProcessNode.PROCESS_STATE_KEY}'
+        process_status_key = f'attributes.{ProcessNode.PROCESS_STATUS_KEY}'
+        exit_status_key = f'attributes.{ProcessNode.EXIT_STATUS_KEY}'
 
         default_labels = {'pk': 'PK', 'uuid': 'UUID', 'ctime': 'Created', 'mtime': 'Modified', 'state': 'Process State'}
 
@@ -123,21 +123,21 @@ class CalculationProjectionMapper(ProjectionMapper):
         if projection_labels is not None:
             for projection, label in projection_labels.items():
                 if projection not in self.valid_projections:
-                    raise ValueError('{} is not a valid projection'.format(projection))
+                    raise ValueError(f'{projection} is not a valid projection')
                 else:
                     default_labels[projection] = label
 
         if projection_attributes is not None:
             for projection, attribute in projection_attributes.items():
                 if projection not in self.valid_projections:
-                    raise ValueError('{} is not a valid projection'.format(projection))
+                    raise ValueError(f'{projection} is not a valid projection')
                 else:
                     default_attributes[projection] = attribute
 
         if projection_formatters is not None:
             for projection, formatter in projection_formatters.items():
                 if projection not in self.valid_projections:
-                    raise ValueError('{} is not a valid projection'.format(projection))
+                    raise ValueError(f'{projection} is not a valid projection')
                 else:
                     default_formatters[projection] = formatter
 

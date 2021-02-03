@@ -23,6 +23,24 @@ def verdi_database():
     """Inspect and manage the database."""
 
 
+@verdi_database.command('version')
+def database_version():
+    """Show the version of the database.
+
+    The database version is defined by the tuple of the schema generation and schema revision.
+    """
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    backend_manager = manager.get_backend_manager()
+
+    echo.echo('Generation: ', bold=True, nl=False)
+    echo.echo(backend_manager.get_schema_generation_database())
+    echo.echo('Revision:   ', bold=True, nl=False)
+    echo.echo(backend_manager.get_schema_version_database())
+
+
 @verdi_database.command('migrate')
 @options.FORCE()
 def database_migrate(force):
@@ -111,7 +129,7 @@ def detect_duplicate_uuid(table, apply_patch):
     try:
         messages = deduplicate_uuids(table=table, dry_run=not apply_patch)
     except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical('integrity check failed: {}'.format(str(exception)))
+        echo.echo_critical(f'integrity check failed: {str(exception)}')
     else:
         for message in messages:
             echo.echo_info(message)
@@ -141,7 +159,7 @@ def detect_invalid_links():
 
         if result:
             integrity_violated = True
-            echo.echo_warning('{}:\n'.format(check.message))
+            echo.echo_warning(f'{check.message}:\n')
             echo.echo(tabulate(result, headers=check.headers))
 
     if not integrity_violated:
@@ -169,7 +187,7 @@ def detect_invalid_nodes():
 
         if result:
             integrity_violated = True
-            echo.echo_warning('{}:\n'.format(check.message))
+            echo.echo_warning(f'{check.message}:\n')
             echo.echo(tabulate(result, headers=check.headers))
 
     if not integrity_violated:

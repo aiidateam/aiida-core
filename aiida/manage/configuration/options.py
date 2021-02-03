@@ -89,14 +89,6 @@ CONFIG_OPTIONS = {
         'description': 'Minimum level to log to the DbLog table',
         'global_only': False,
     },
-    'logging.tornado_loglevel': {
-        'key': 'logging_tornado_log_level',
-        'valid_type': 'string',
-        'valid_values': VALID_LOG_LEVELS,
-        'default': 'WARNING',
-        'description': 'Minimum level to log to daemon log and the `DbLog` table for the `tornado` logger',
-        'global_only': False,
-    },
     'logging.plumpy_loglevel': {
         'key': 'logging_plumpy_log_level',
         'valid_type': 'string',
@@ -185,6 +177,22 @@ CONFIG_OPTIONS = {
         'description': 'Boolean whether to print AiiDA deprecation warnings',
         'global_only': False,
     },
+    'transport.task_retry_initial_interval': {
+        'key': 'task_retry_initial_interval',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 20,
+        'description': 'Initial time interval for the exponential backoff mechanism.',
+        'global_only': False,
+    },
+    'transport.task_maximum_attempts': {
+        'key': 'task_maximum_attempts',
+        'valid_type': 'int',
+        'valid_values': None,
+        'default': 5,
+        'description': 'Maximum number of transport task attempts before a Process is Paused.',
+        'global_only': False,
+    },
 }
 
 
@@ -198,7 +206,7 @@ def get_option(option_name):
     try:
         option = Option(option_name, **CONFIG_OPTIONS[option_name])
     except KeyError:
-        raise ValueError('the option {} does not exist'.format(option_name))
+        raise ValueError(f'the option {option_name} does not exist')
     else:
         return option
 
@@ -229,7 +237,7 @@ def parse_option(option_name, option_value):
             elif option_value.strip().lower() in ['1', 'true', 't']:
                 value = True
             else:
-                raise ValueError('option {} expects a boolean value'.format(option.name))
+                raise ValueError(f'option {option.name} expects a boolean value')
         else:
             value = bool(option_value)
     elif option.valid_type == 'string':
@@ -239,7 +247,7 @@ def parse_option(option_name, option_value):
     elif option.valid_type == 'list_of_str':
         value = option_value.split()
     else:
-        raise NotImplementedError('Type string {} not implemented yet'.format(option.valid_type))
+        raise NotImplementedError(f'Type string {option.valid_type} not implemented yet')
 
     if option.valid_values is not None:
         if value not in option.valid_values:

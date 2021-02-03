@@ -36,19 +36,19 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
         server_thread.start()
 
         for _ in range(NO_OF_REQUESTS):
-            response = requests.get(server_url + '/computers/{}'.format(computer_id), timeout=10)
+            response = requests.get(f'{server_url}/computers/{computer_id}', timeout=10)
 
             assert response.status_code == 200
 
             try:
                 response_json = response.json()
             except ValueError:
-                pytest.fail('Could not turn response into JSON. Response: {}'.format(response.raw))
+                pytest.fail(f'Could not turn response into JSON. Response: {response.raw}')
             else:
                 assert 'data' in response_json
 
     except Exception as exc:  # pylint: disable=broad-except
-        pytest.fail('Something went terribly wrong! Exception: {}'.format(repr(exc)))
+        pytest.fail(f'Something went terribly wrong! Exception: {repr(exc)}')
     finally:
         server.shutdown()
 
@@ -62,8 +62,7 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
             pytest.fail('Thread did not close/join within 1 min after REST API server was called to shutdown')
 
 
-# Tracked in issue #4281
-@pytest.mark.flaky(reruns=2)
+@pytest.mark.skip('Is often failing on Python 3.8 and 3.9: see https://github.com/aiidateam/aiida-core/issues/4281')
 @pytest.mark.usefixtures('clear_database_before_test', 'restrict_sqlalchemy_queuepool')
 def test_run_without_close_session(restapi_server, server_url, aiida_localhost, capfd):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests"""
@@ -100,13 +99,13 @@ def test_run_without_close_session(restapi_server, server_url, aiida_localhost, 
         server_thread.start()
 
         for _ in range(NO_OF_REQUESTS):
-            requests.get(server_url + '/computers_no_close_session/{}'.format(computer_id), timeout=10)
-        pytest.fail('{} requests were not enough to raise a SQLAlchemy TimeoutError!'.format(NO_OF_REQUESTS))
+            requests.get(f'{server_url}/computers_no_close_session/{computer_id}', timeout=10)
+        pytest.fail(f'{NO_OF_REQUESTS} requests were not enough to raise a SQLAlchemy TimeoutError!')
 
     except (requests.exceptions.ConnectionError, OSError):
         pass
     except Exception as exc:  # pylint: disable=broad-except
-        pytest.fail('Something went terribly wrong! Exception: {}'.format(repr(exc)))
+        pytest.fail(f'Something went terribly wrong! Exception: {repr(exc)}')
     finally:
         server.shutdown()
 

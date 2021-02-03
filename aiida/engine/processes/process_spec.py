@@ -8,7 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy's ProcessSpec."""
-import plumpy
+from typing import Optional
+
+import plumpy.process_spec
+
+from aiida.orm import Dict
 
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import InputPort, PortNamespace, CalcJobOutputPort
@@ -16,32 +20,32 @@ from .ports import InputPort, PortNamespace, CalcJobOutputPort
 __all__ = ('ProcessSpec', 'CalcJobProcessSpec')
 
 
-class ProcessSpec(plumpy.ProcessSpec):
+class ProcessSpec(plumpy.process_spec.ProcessSpec):
     """Default process spec for process classes defined in `aiida-core`.
 
     This sub class defines custom classes for input ports and port namespaces. It also adds support for the definition
     of exit codes and retrieving them subsequently.
     """
 
-    METADATA_KEY = 'metadata'
-    METADATA_OPTIONS_KEY = 'options'
+    METADATA_KEY: str = 'metadata'
+    METADATA_OPTIONS_KEY: str = 'options'
     INPUT_PORT_TYPE = InputPort
     PORT_NAMESPACE_TYPE = PortNamespace
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._exit_codes = ExitCodesNamespace()
 
     @property
-    def metadata_key(self):
+    def metadata_key(self) -> str:
         return self.METADATA_KEY
 
     @property
-    def options_key(self):
+    def options_key(self) -> str:
         return self.METADATA_OPTIONS_KEY
 
     @property
-    def exit_codes(self):
+    def exit_codes(self) -> ExitCodesNamespace:
         """
         Return the namespace of exit codes defined for this ProcessSpec
 
@@ -49,7 +53,7 @@ class ProcessSpec(plumpy.ProcessSpec):
         """
         return self._exit_codes
 
-    def exit_code(self, status, label, message, invalidates_cache=False):
+    def exit_code(self, status: int, label: str, message: str, invalidates_cache: bool = False) -> None:
         """
         Add an exit code to the ProcessSpec
 
@@ -60,21 +64,35 @@ class ProcessSpec(plumpy.ProcessSpec):
             with this exit code will not be considered for caching
         """
         if not isinstance(status, int):
-            raise TypeError('status should be of integer type and not of {}'.format(type(status)))
+            raise TypeError(f'status should be of integer type and not of {type(status)}')
 
         if status < 0:
-            raise ValueError('status should be a positive integer, received {}'.format(type(status)))
+            raise ValueError(f'status should be a positive integer, received {type(status)}')
 
         if not isinstance(label, str):
-            raise TypeError('label should be of str type and not of {}'.format(type(label)))
+            raise TypeError(f'label should be of str type and not of {type(label)}')
 
         if not isinstance(message, str):
-            raise TypeError('message should be of str type and not of {}'.format(type(message)))
+            raise TypeError(f'message should be of str type and not of {type(message)}')
 
         if not isinstance(invalidates_cache, bool):
-            raise TypeError('invalidates_cache should be of type bool and not of {}'.format(type(invalidates_cache)))
+            raise TypeError(f'invalidates_cache should be of type bool and not of {type(invalidates_cache)}')
 
         self._exit_codes[label] = ExitCode(status, message, invalidates_cache=invalidates_cache)
+
+    # override return type to aiida's PortNamespace subclass
+
+    @property
+    def ports(self) -> PortNamespace:
+        return super().ports  # type: ignore[return-value]
+
+    @property
+    def inputs(self) -> PortNamespace:
+        return super().inputs  # type: ignore[return-value]
+
+    @property
+    def outputs(self) -> PortNamespace:
+        return super().outputs  # type: ignore[return-value]
 
 
 class CalcJobProcessSpec(ProcessSpec):
@@ -82,29 +100,25 @@ class CalcJobProcessSpec(ProcessSpec):
 
     OUTPUT_PORT_TYPE = CalcJobOutputPort
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self._default_output_node = None
+        self._default_output_node: Optional[str] = None
 
     @property
-    def default_output_node(self):
+    def default_output_node(self) -> Optional[str]:
         return self._default_output_node
 
     @default_output_node.setter
-    def default_output_node(self, port_name):
-        from aiida.orm import Dict
-
+    def default_output_node(self, port_name: str) -> None:
         if port_name not in self.outputs:
-            raise ValueError('{} is not a registered output port'.format(port_name))
+            raise ValueError(f'{port_name} is not a registered output port')
 
         valid_type_port = self.outputs[port_name].valid_type
         valid_type_required = Dict
 
         if valid_type_port is not valid_type_required:
             raise ValueError(
-                'the valid type of a default output has to be a {} but it is {}'.format(
-                    valid_type_port, valid_type_required
-                )
+                f'the valid type of a default output has to be a {valid_type_port} but it is {valid_type_required}'
             )
 
         self._default_output_node = port_name

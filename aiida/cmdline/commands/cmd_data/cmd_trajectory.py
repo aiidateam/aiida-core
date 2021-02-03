@@ -60,7 +60,7 @@ def trajectory_list(raw, past_days, groups, all_users):
         echo.echo(tabulate(struct_list_data, tablefmt='plain'))
     else:
         echo.echo(tabulate(struct_list_data, headers='firstrow'))
-        echo.echo('\nTotal results: {}\n'.format(counter))
+        echo.echo(f'\nTotal results: {counter}\n')
 
 
 @trajectory.command('show')
@@ -71,9 +71,9 @@ def trajectory_list(raw, past_days, groups, all_users):
 def trajectory_show(data, fmt):
     """Visualize a trajectory."""
     try:
-        show_function = getattr(cmd_show, '_show_{}'.format(fmt))
+        show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
-        echo.echo_critical('visualization format {} is not supported'.format(fmt))
+        echo.echo_critical(f'visualization format {fmt} is not supported')
 
     show_function(fmt, data)
 

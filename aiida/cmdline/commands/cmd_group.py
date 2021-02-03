@@ -8,13 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
+import warnings
+import logging
 import click
 
 from aiida.common.exceptions import UniquenessError
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.links import GraphTraversalRules
 
 
 @verdi.group('group')
@@ -28,9 +32,9 @@ def verdi_group():
 @arguments.NODES()
 @with_dbenv()
 def group_add_nodes(group, force, nodes):
-    """Add nodes to the a group."""
+    """Add nodes to a group."""
     if not force:
-        click.confirm('Do you really want to add {} nodes to Group<{}>?'.format(len(nodes), group.label), abort=True)
+        click.confirm(f'Do you really want to add {len(nodes)} nodes to Group<{group.label}>?', abort=True)
 
     group.add_nodes(nodes)
 
@@ -44,9 +48,9 @@ def group_add_nodes(group, force, nodes):
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
     if clear:
-        message = 'Do you really want to remove ALL the nodes from Group<{}>?'.format(group.label)
+        message = f'Do you really want to remove ALL the nodes from Group<{group.label}>?'
     else:
-        message = 'Do you really want to remove {} nodes from Group<{}>?'.format(len(nodes), group.label)
+        message = f'Do you really want to remove {len(nodes)} nodes from Group<{group.label}>?'
 
     if not force:
         click.confirm(message, abort=True)
@@ -59,35 +63,55 @@ def group_remove_nodes(group, nodes, clear, force):
 
 @verdi_group.command('delete')
 @arguments.GROUP()
-@options.GROUP_CLEAR(help='Remove all nodes before deleting the group itself.')
 @options.FORCE()
+@click.option(
+    '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
+)
+@options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
+@options.DRY_RUN()
+@options.VERBOSE()
+@options.GROUP_CLEAR(
+    help='Remove all nodes before deleting the group itself.' +
+    ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
+)
 @with_dbenv()
-def group_delete(group, clear, force):
-    """Delete a group.
-
-    Note that a group that contains nodes cannot be deleted if it contains any nodes. If you still want to delete the
-    group, use the `-c/--clear` flag to remove the contents before deletion. Note that in any case, the nodes themselves
-    will not actually be deleted from the database.
-    """
+def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversal_rules):
+    """Delete a group and (optionally) the nodes it contains."""
+    from aiida.common.log import override_log_formatter_context
+    from aiida.tools import delete_group_nodes, DELETE_LOGGER
     from aiida import orm
 
-    label = group.label
-
-    if group.count() > 0 and not clear:
-        echo.echo_critical((
-            'Group<{}> contains {} nodes. Pass `--clear` if you want to empty it before deleting the group'.format(
-                label, group.count()
-            )
-        ))
-
-    if not force:
-        click.confirm('Are you sure to delete Group<{}>?'.format(label), abort=True)
-
     if clear:
-        group.clear()
+        warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
-    orm.Group.objects.delete(group.pk)
-    echo.echo_success('Group<{}> deleted.'.format(label))
+    label = group.label
+    klass = group.__class__.__name__
+
+    verbosity = logging.DEBUG if verbose else logging.INFO
+    DELETE_LOGGER.setLevel(verbosity)
+
+    if not (force or dry_run):
+        click.confirm(f'Are you sure to delete {klass}<{label}>?', abort=True)
+    elif dry_run:
+        echo.echo_info(f'Would have deleted {klass}<{label}>.')
+
+    if delete_nodes:
+
+        def _dry_run_callback(pks):
+            if not pks or force:
+                return False
+            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+            return not click.confirm('Shall I continue?', abort=True)
+
+        with override_log_formatter_context('%(message)s'):
+            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        if not nodes_deleted:
+            # don't delete the group if the nodes were not deleted
+            return
+
+    if not dry_run:
+        orm.Group.objects.delete(group.pk)
+        echo.echo_success(f'{klass}<{label}> deleted.')
 
 
 @verdi_group.command('relabel')
@@ -99,9 +123,9 @@ def group_relabel(group, label):
     try:
         group.label = label
     except UniquenessError as exception:
-        echo.echo_critical('Error: {}.'.format(exception))
+        echo.echo_critical(f'Error: {exception}.')
     else:
-        echo.echo_success('Label changed to {}'.format(label))
+        echo.echo_success(f'Label changed to {label}')
 
 
 @verdi_group.command('description')
@@ -115,7 +139,7 @@ def group_description(group, description):
     """
     if description:
         group.description = description
-        echo.echo_success('Changed the description of Group<{}>'.format(group.label))
+        echo.echo_success(f'Changed the description of Group<{group.label}>')
     else:
         echo.echo(group.description)
 
@@ -232,11 +256,9 @@ def group_list(
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
-    import warnings
     from aiida import orm
     from aiida.common import timezone
     from aiida.common.escaping import escape_for_sql_like
-    from aiida.common.warnings import AiidaDeprecationWarning
     from tabulate import tabulate
 
     builder = orm.QueryBuilder()
@@ -269,11 +291,11 @@ def group_list(
     # Query for specific group names
     filters['or'] = []
     if startswith:
-        filters['or'].append({'label': {'like': '{}%'.format(escape_for_sql_like(startswith))}})
+        filters['or'].append({'label': {'like': f'{escape_for_sql_like(startswith)}%'}})
     if endswith:
-        filters['or'].append({'label': {'like': '%{}'.format(escape_for_sql_like(endswith))}})
+        filters['or'].append({'label': {'like': f'%{escape_for_sql_like(endswith)}'}})
     if contains:
-        filters['or'].append({'label': {'like': '%{}%'.format(escape_for_sql_like(contains))}})
+        filters['or'].append({'label': {'like': f'%{escape_for_sql_like(contains)}%'}})
 
     builder.append(orm.Group, filters=filters, tag='group', project='*')
 
@@ -338,9 +360,9 @@ def group_create(group_label):
     group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
-        echo.echo_success("Group created with PK = {} and name '{}'".format(group.id, group.label))
+        echo.echo_success(f"Group created with PK = {group.id} and name '{group.label}'")
     else:
-        echo.echo_info("Group '{}' already exists, PK = {}".format(group.label, group.id))
+        echo.echo_info(f"Group '{group.label}' already exists, PK = {group.id}")
 
 
 @verdi_group.command('copy')
@@ -358,12 +380,12 @@ def group_copy(source_group, destination_group):
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
-        echo.echo_warning('Destination group<{}> already exists and is not empty.'.format(dest_group.label))
+        echo.echo_warning(f'Destination group<{dest_group.label}> already exists and is not empty.')
         click.confirm('Do you wish to continue anyway?', abort=True)
 
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
-    echo.echo_success('Nodes copied from group<{}> to group<{}>'.format(source_group.label, dest_group.label))
+    echo.echo_success(f'Nodes copied from group<{source_group.label}> to group<{dest_group.label}>')
 
 
 @verdi_group.group('path')

@@ -115,7 +115,7 @@ class MaterialsProjectImporter(DbImporter):
             properties = self._properties
 
         if properties != 'structure':
-            raise ValueError('Unsupported properties: {}'.format(properties))
+            raise ValueError(f'Unsupported properties: {properties}')
 
         results = []
         properties_list = ['material_id', 'cif']

@@ -8,9 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Implementation of RESTful API for materialscloud.org based on flask +
-flask_restful module
-For the time being the API returns the parsed valid endpoints upon GET request
+Implementation of RESTful API for AiiDA based on flask and flask_restful.
+
 Author: Snehal P. Waychal and Fernando Gargiulo @ Theos, EPFL
 """
 
@@ -26,13 +25,8 @@ class App(Flask):
 
     def __init__(self, *args, **kwargs):
 
-        # Decide whether or not to catch the internal server exceptions (
-        # default is True)
-        catch_internal_server = True
-        try:
-            catch_internal_server = kwargs.pop('catch_internal_server')
-        except KeyError:
-            pass
+        # Decide whether or not to catch the internal server exceptions (default is True)
+        catch_internal_server = kwargs.pop('catch_internal_server', True)
 
         # Basic initialization
         super().__init__(*args, **kwargs)
@@ -96,20 +90,35 @@ class AiidaApi(Api):
           configuration and PREFIX
         """
 
-        from aiida.restapi.resources import ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo
+        from aiida.restapi.common.config import CLI_DEFAULTS
+        from aiida.restapi.resources import (
+            ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo, QueryBuilder
+        )
 
         self.app = app
 
         super().__init__(app=app, prefix=kwargs['PREFIX'], catch_all_404s=True)
 
+        posting = kwargs.pop('posting', CLI_DEFAULTS['POSTING'])
+
         self.add_resource(
             ServerInfo,
+            '/',
             '/server/',
             '/server/endpoints/',
             endpoint='server',
             strict_slashes=False,
             resource_class_kwargs=kwargs
         )
+
+        if posting:
+            self.add_resource(
+                QueryBuilder,
+                '/querybuilder/',
+                endpoint='querybuilder',
+                strict_slashes=False,
+                resource_class_kwargs=kwargs,
+            )
 
         ## Add resources and endpoints to the api
         self.add_resource(
@@ -131,6 +140,7 @@ class AiidaApi(Api):
             '/nodes/projectable_properties/',
             '/nodes/statistics/',
             '/nodes/full_types/',
+            '/nodes/full_types_count/',
             '/nodes/download_formats/',
             '/nodes/page/',
             '/nodes/page/<int:page>/',

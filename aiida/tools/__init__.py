@@ -25,5 +25,8 @@ from .calculations import *
 from .data.array.kpoints import *
 from .data.structure import *
 from .dbimporters import *
+from .graph import *
 
-__all__ = (calculations.__all__ + data.array.kpoints.__all__ + data.structure.__all__ + dbimporters.__all__)
+__all__ = (
+    calculations.__all__ + data.array.kpoints.__all__ + data.structure.__all__ + dbimporters.__all__ + graph.__all__
+)

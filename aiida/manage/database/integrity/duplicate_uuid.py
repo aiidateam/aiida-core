@@ -71,10 +71,10 @@ def deduplicate_uuids(table=None, dry_run=True):
     from collections import defaultdict
 
     from aiida.common.utils import get_new_uuid
-    from aiida.orm.utils.repository import Repository
+    from aiida.orm.utils._repository import Repository
 
     if table not in TABLES_UUID_DEDUPLICATION:
-        raise ValueError('invalid table {}: choose from {}'.format(table, ', '.join(TABLES_UUID_DEDUPLICATION)))
+        raise ValueError(f"invalid table {table}: choose from {', '.join(TABLES_UUID_DEDUPLICATION)}")
 
     mapping = defaultdict(list)
 
@@ -99,9 +99,9 @@ def deduplicate_uuids(table=None, dry_run=True):
             mapping_new_uuid[pk] = uuid_new
 
             if dry_run:
-                messages.append('would update UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_ref, uuid_new))
+                messages.append(f'would update UUID of {table} row<{pk}> from {uuid_ref} to {uuid_new}')
             else:
-                messages.append('updated UUID of {} row<{}> from {} to {}'.format(table, pk, uuid_ref, uuid_new))
+                messages.append(f'updated UUID of {table} row<{pk}> from {uuid_ref} to {uuid_new}')
                 repo_ref = Repository(uuid_ref, True, 'path')
                 repo_new = Repository(uuid_new, False, 'path')
                 repo_new.put_object_from_tree(repo_ref._get_base_folder().abspath)  # pylint: disable=protected-access

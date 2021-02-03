@@ -8,38 +8,36 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
-from collections import namedtuple
+from typing import NamedTuple, Optional
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('ExitCode', 'ExitCodesNamespace')
 
 
-class ExitCode(namedtuple('ExitCode', ['status', 'message', 'invalidates_cache'])):
+class ExitCode(NamedTuple):
     """A simple data class to define an exit code for a :class:`~aiida.engine.processes.process.Process`.
 
-    When an instance of this clas is returned from a `Process._run()` call, it will be interpreted that the `Process`
+    When an instance of this class is returned from a `Process._run()` call, it will be interpreted that the `Process`
     should be terminated and that the exit status and message of the namedtuple should be set to the corresponding
     attributes of the node.
 
-    .. note:: this class explicitly sub-classes a namedtuple to not break backwards compatibility and to have it behave
-        exactly as a tuple.
-
     :param status: positive integer exit status, where a non-zero value indicated the process failed, default is `0`
-    :type status: int
-
     :param message: optional message with more details about the failure mode
-    :type message: str
-
     :param invalidates_cache: optional flag, indicating that a process should not be used in caching
-    :type invalidates_cache: bool
     """
 
-    def format(self, **kwargs):
+    status: int = 0
+    message: Optional[str] = None
+    invalidates_cache: bool = False
+
+    def format(self, **kwargs: str) -> 'ExitCode':
         """Create a clone of this exit code where the template message is replaced by the keyword arguments.
 
         :param kwargs: replacement parameters for the template message
-        :return: `ExitCode`
+
         """
+        if self.message is None:
+            raise ValueError('message is None')
         try:
             message = self.message.format(**kwargs)
         except KeyError:
@@ -49,10 +47,6 @@ class ExitCode(namedtuple('ExitCode', ['status', 'message', 'invalidates_cache']
         return ExitCode(self.status, message, self.invalidates_cache)
 
 
-# Set the defaults for the `ExitCode` attributes
-ExitCode.__new__.__defaults__ = (0, None, False)
-
-
 class ExitCodesNamespace(AttributeDict):
     """A namespace of `ExitCode` instances that can be accessed through getattr as well as getitem.
 
@@ -60,15 +54,13 @@ class ExitCodesNamespace(AttributeDict):
     `ExitCode` that needs to be retrieved or the key in the collection.
     """
 
-    def __call__(self, identifier):
+    def __call__(self, identifier: str) -> ExitCode:
         """Return a specific exit code identified by either its exit status or label.
 
         :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as the exit
             code status, otherwise it be interpreted as the exit code label
-        :type identifier: str
 
         :returns: an `ExitCode` instance
-        :rtype: :class:`aiida.engine.ExitCode`
 
         :raises ValueError: if no exit code with the given label is defined for this process
         """

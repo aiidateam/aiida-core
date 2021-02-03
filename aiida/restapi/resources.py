@@ -37,9 +37,12 @@ class ServerInfo(Resource):
         url = unquote(request.url)
         url_root = unquote(request.url_root)
 
-        pathlist = self.utils.split_path(self.utils.strip_api_prefix(path))
+        subpath = self.utils.strip_api_prefix(path).strip('/')
+        pathlist = self.utils.split_path(subpath)
 
-        if len(pathlist) > 1:
+        if subpath == '':
+            resource_type = 'endpoints'
+        elif len(pathlist) > 1:
             resource_type = pathlist.pop(1)
         else:
             resource_type = 'info'
@@ -122,7 +125,7 @@ class BaseResource(Resource):
 
         if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access,isinstance-second-argument-not-valid-type
             raise RestInputValidationError(
-                'node {} is not of the required type {}'.format(node_id, self.trans._aiida_class)  # pylint: disable=protected-access
+                f'node {node_id} is not of the required type {self.trans._aiida_class}'  # pylint: disable=protected-access
             )
 
         return node
@@ -204,6 +207,133 @@ class BaseResource(Resource):
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
+class QueryBuilder(BaseResource):
+    """
+    Representation of a QueryBuilder REST API resource (instantiated with a queryhelp JSON).
+
+    It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.queryhelp`
+    objects and returning the :py:class:`~aiida.orm.querybuilder.QueryBuilder` result accordingly.
+    """
+    from aiida.restapi.translator.nodes.node import NodeTranslator
+
+    _translator_class = NodeTranslator
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # HTTP Request method decorators
+        if 'get_decorators' in kwargs and isinstance(kwargs['get_decorators'], (tuple, list, set)):
+            self.method_decorators.update({'post': list(kwargs['get_decorators'])})
+
+    def get(self):  # pylint: disable=arguments-differ
+        """Static return to state information about this endpoint."""
+        data = {
+            'message': (
+                'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
+                'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
+                'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
+                'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
+            ),
+        }
+
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+        return self.utils.build_response(
+            status=405,  # Method Not Allowed
+            headers=headers,
+            data={
+                'method': request.method,
+                'url': unquote(request.url),
+                'url_root': unquote(request.url_root),
+                'path': unquote(request.path),
+                'query_string': request.query_string.decode('utf-8'),
+                'resource_type': self.__class__.__name__,
+                'data': data,
+            },
+        )
+
+    def post(self):  # pylint: disable=too-many-branches
+        """
+        POST method to pass query help JSON.
+
+        If the posted JSON is not a valid QueryBuilder queryhelp, the request will fail with an internal server error.
+
+        This uses the NodeTranslator in order to best return Nodes according to the general AiiDA
+        REST API data format, while still allowing the return of other AiiDA entities.
+
+        :return: QueryBuilder result of AiiDA entities in "standard" REST API format.
+        """
+        # pylint: disable=protected-access
+        self.trans._query_help = request.get_json(force=True)
+        # While the data may be correct JSON, it MUST be a single JSON Object,
+        # equivalent of a QuieryBuilder.queryhelp dictionary.
+        assert isinstance(self.trans._query_help, dict), (
+            'POSTed data MUST be a valid QueryBuilder.queryhelp dictionary. '
+            f'Got instead (type: {type(self.trans._query_help)}): {self.trans._query_help}'
+        )
+        self.trans.__label__ = self.trans._result_type = self.trans._query_help['path'][-1]['tag']
+
+        # Handle empty list projections
+        number_projections = len(self.trans._query_help['project'])
+        empty_projections_counter = 0
+        skip_tags = []
+        for tag, projections in tuple(self.trans._query_help['project'].items()):
+            if projections == [{'*': {}}]:
+                self.trans._query_help['project'][tag] = self.trans._default
+            elif not projections:
+                empty_projections_counter += 1
+                skip_tags.append(tag)
+            else:
+                # Use projections as given, no need to "correct" them.
+                pass
+
+        if empty_projections_counter == number_projections:
+            # No projections have been specified in the queryhelp.
+            # To be true to the QueryBuilder response, the last entry in path
+            # is the only entry to be returned, all without edges/links.
+            self.trans._query_help['project'][self.trans.__label__] = self.trans._default
+
+        self.trans.init_qb()
+
+        data = {}
+        if self.trans.get_total_count():
+            if empty_projections_counter == number_projections:
+                # "Normal" REST API retrieval can be used.
+                data = self.trans.get_results()
+            else:
+                # Since the "normal" REST API retrieval relies on single-tag retrieval,
+                # we must instead be more creative with how we retrieve the results here.
+                # So we opt for a dictionary, with the tags being the keys.
+                for tag in self.trans._query_help['project']:
+                    if tag in skip_tags:
+                        continue
+                    self.trans.__label__ = tag
+                    data.update(self.trans.get_formatted_result(tag))
+
+        # Remove 'full_type's when they're `None`
+        for tag, entities in list(data.items()):
+            updated_entities = []
+            for entity in entities:
+                if entity.get('full_type') is None:
+                    entity.pop('full_type', None)
+                updated_entities.append(entity)
+            data[tag] = updated_entities
+
+        headers = self.utils.build_headers(url=request.url, total_count=self.trans.get_total_count())
+        return self.utils.build_response(
+            status=200,
+            headers=headers,
+            data={
+                'method': request.method,
+                'url': unquote(request.url),
+                'url_root': unquote(request.url_root),
+                'path': unquote(request.path),
+                'query_string': request.query_string.decode('utf-8'),
+                'resource_type': self.__class__.__name__,
+                'data': data,
+            },
+        )
+
+
 class Node(BaseResource):
     """
     Differs from BaseResource in trans.set_query() mostly because it takes
@@ -261,14 +391,22 @@ class Node(BaseResource):
         elif query_type == 'statistics':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             if filters:
-                usr = filters['user']['==']
+                user_pk = filters['user']['==']
             else:
-                usr = None
-            results = self.trans.get_statistics(usr)
+                user_pk = None
+            results = self.trans.get_statistics(user_pk)
 
         elif query_type == 'full_types':
             headers = self.utils.build_headers(url=request.url, total_count=0)
             results = self.trans.get_namespace()
+
+        elif query_type == 'full_types_count':
+            headers = self.utils.build_headers(url=request.url, total_count=0)
+            if filters:
+                user_pk = filters['user']['==']
+            else:
+                user_pk = None
+            results = self.trans.get_namespace(user_pk=user_pk, count_nodes=True)
 
         # TODO improve the performance of tree endpoint by getting the data from database faster
         # TODO add pagination for this endpoint (add default max limit)
@@ -318,7 +456,7 @@ class Node(BaseResource):
                 if query_type == 'repo_contents' and results:
                     response = make_response(results)
                     response.headers['content-type'] = 'application/octet-stream'
-                    response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+                    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
                     return response
 
                 if query_type == 'download' and download not in ['false', 'False', False] and results:
@@ -341,8 +479,8 @@ class Node(BaseResource):
                     if not isinstance(attributes_filter, list):
                         attributes_filter = [attributes_filter]
                     for attr in attributes_filter:
-                        node['attributes'][str(attr)] = node['attributes.' + str(attr)]
-                        del node['attributes.' + str(attr)]
+                        node['attributes'][str(attr)] = node[f'attributes.{str(attr)}']
+                        del node[f'attributes.{str(attr)}']
 
             if extras_filter is not None and extras:
                 for node in results['nodes']:
@@ -350,8 +488,8 @@ class Node(BaseResource):
                     if not isinstance(extras_filter, list):
                         extras_filter = [extras_filter]
                     for extra in extras_filter:
-                        node['extras'][str(extra)] = node['extras.' + str(extra)]
-                        del node['extras.' + str(extra)]
+                        node['extras'][str(extra)] = node[f'extras.{str(extra)}']
+                        del node[f'extras.{str(extra)}']
 
         ## Build response
         data = dict(
@@ -406,10 +544,9 @@ class ProcessNode(Node):
         :return: http response
         """
 
-        ## Decode url parts
+        headers = self.utils.build_headers(url=request.url, total_count=1)
+
         path = unquote(request.path)
-        url = unquote(request.url)
-        url_root = unquote(request.url_root)
 
         ## Parse request
         (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
@@ -425,14 +562,11 @@ class ProcessNode(Node):
             projectable_properties, ordering = self.trans.get_projectable_properties()
             results = dict(fields=projectable_properties, ordering=ordering)
 
-        ## Build response and return it
-        headers = self.utils.build_headers(url=request.url, total_count=1)
-
         ## Build response
         data = dict(
             method=request.method,
-            url=url,
-            url_root=url_root,
+            url=unquote(request.url),
+            url_root=unquote(request.url_root),
             path=path,
             id=node_id,
             query_string=request.query_string.decode('utf-8'),

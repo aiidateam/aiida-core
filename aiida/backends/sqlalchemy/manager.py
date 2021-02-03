@@ -7,16 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the SqlAlchemy database schema."""
-
 import os
 import contextlib
-
-from alembic import command
-from alembic.config import Config
-from alembic.runtime.environment import EnvironmentContext
-from alembic.script import ScriptDirectory
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -24,7 +17,6 @@ from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import NotExistent
 from ..manager import BackendManager, SettingsManager, Setting
 
-ALEMBIC_FILENAME = 'alembic.ini'
 ALEMBIC_REL_PATH = 'migrations'
 
 # The database schema version required to perform schema reset for a given code schema generation
@@ -37,18 +29,44 @@ class SqlaBackendManager(BackendManager):
     @staticmethod
     @contextlib.contextmanager
     def alembic_config():
-        """Context manager to return an instance of an Alembic configuration with the current connection inserted.
+        """Context manager to return an instance of an Alembic configuration.
 
-        :return: instance of :py:class:`alembic.config.Config`
+        The current database connection is added in the `attributes` property, through which it can then also be
+        retrieved, also in the `env.py` file, which is run when the database is migrated.
         """
         from . import ENGINE
+        from alembic.config import Config
 
         with ENGINE.begin() as connection:
             dir_path = os.path.dirname(os.path.realpath(__file__))
-            config = Config(os.path.join(dir_path, ALEMBIC_FILENAME))
+            config = Config()
             config.set_main_option('script_location', os.path.join(dir_path, ALEMBIC_REL_PATH))
             config.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
             yield config
+
+    @contextlib.contextmanager
+    def alembic_script(self):
+        """Context manager to return an instance of an Alembic `ScriptDirectory`."""
+        from alembic.script import ScriptDirectory
+
+        with self.alembic_config() as config:
+            yield ScriptDirectory.from_config(config)
+
+    @contextlib.contextmanager
+    def migration_context(self):
+        """Context manager to return an instance of an Alembic migration context.
+
+        This migration context will have been configured with the current database connection, which allows this context
+        to be used to inspect the contents of the database, such as the current revision.
+        """
+        from alembic.runtime.environment import EnvironmentContext
+        from alembic.script import ScriptDirectory
+
+        with self.alembic_config() as config:
+            script = ScriptDirectory.from_config(config)
+            with EnvironmentContext(config, script) as context:
+                context.configure(context.config.attributes['connection'])
+                yield context.get_context()
 
     def get_settings_manager(self):
         """Return an instance of the `SettingsManager`.
@@ -80,29 +98,13 @@ class SqlaBackendManager(BackendManager):
 
         :return: boolean, True if the database schema version is ahead of the code schema version.
         """
-        from alembic.util import CommandError
-
-        # In the case of SqlAlchemy, if the database revision is ahead of the code, that means the revision stored in
-        # the database is not even present in the code base. Therefore we cannot locate it in the revision graph and
-        # determine whether it is ahead of the current code head. We simply try to get the revision and if it does not
-        # exist it means it is ahead.
-        with self.alembic_config() as config:
-            try:
-                script = ScriptDirectory.from_config(config)
-                script.get_revision(self.get_schema_version_database())
-            except CommandError:
-                # Raised when the revision of the database is not present in the revision graph.
-                return True
-            else:
-                return False
+        with self.alembic_script() as script:
+            return self.get_schema_version_database() not in [entry.revision for entry in script.walk_revisions()]
 
     def get_schema_version_code(self):
         """Return the code schema version."""
-        with self.alembic_config() as config:
-            script = ScriptDirectory.from_config(config)
-            schema_version_code = script.get_current_head()
-
-        return schema_version_code
+        with self.alembic_script() as script:
+            return script.get_current_head()
 
     def get_schema_version_reset(self, schema_generation_code):
         """Return schema version the database should have to be able to automatically reset to code schema generation.
@@ -117,38 +119,24 @@ class SqlaBackendManager(BackendManager):
 
         :return: `distutils.version.StrictVersion` with schema version of the database
         """
-
-        def get_database_version(revision, _):
-            """Get the current revision."""
-            if isinstance(revision, tuple) and revision:
-                config.attributes['rev'] = revision[0]  # pylint: disable=unsupported-assignment-operation
-            else:
-                config.attributes['rev'] = None  # pylint: disable=unsupported-assignment-operation
-            return []
-
-        with self.alembic_config() as config:
-
-            script = ScriptDirectory.from_config(config)
-
-            with EnvironmentContext(config, script, fn=get_database_version):
-                script.run_env()
-                return config.attributes['rev']  # pylint: disable=unsubscriptable-object
+        with self.migration_context() as context:
+            return context.get_current_revision()
 
     def set_schema_version_database(self, version):
         """Set the database schema version.
 
         :param version: string with schema version to set
         """
-        # pylint: disable=cyclic-import
-        from aiida.manage.manager import get_manager
-        backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
-        backend.execute_raw(r"""UPDATE alembic_version SET version_num='{}';""".format(version))
+        with self.migration_context() as context:
+            return context.stamp(context.script, 'head')
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version."""
         super()._migrate_database_version()
+        from alembic.command import upgrade
+
         with self.alembic_config() as config:
-            command.upgrade(config, 'head')
+            upgrade(config, 'head')
 
 
 class SqlaSettingsManager(SettingsManager):
@@ -179,7 +167,7 @@ class SqlaSettingsManager(SettingsManager):
         try:
             setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
         except NoResultFound:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent(f'setting `{key}` does not exist') from NoResultFound
 
         return Setting(key, setting.getvalue(), setting.description, setting.time)
 
@@ -191,7 +179,7 @@ class SqlaSettingsManager(SettingsManager):
         :param description: optional setting description
         """
         from aiida.backends.sqlalchemy.models.settings import DbSetting
-        from aiida.orm.utils.node import validate_attribute_extra_key
+        from aiida.orm.implementation.utils import validate_attribute_extra_key
 
         self.validate_table_existence()
         validate_attribute_extra_key(key)
@@ -215,4 +203,4 @@ class SqlaSettingsManager(SettingsManager):
             setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
             setting.delete()
         except NoResultFound:
-            raise NotExistent('setting `{}` does not exist'.format(key))
+            raise NotExistent(f'setting `{key}` does not exist') from NoResultFound

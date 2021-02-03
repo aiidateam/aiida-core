@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi code` command."""
-
 from functools import partial
+import logging
+
 import click
 import tabulate
 
@@ -18,7 +19,6 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.utils.multi_line_input import ensure_scripts
 from aiida.common.exceptions import InputValidationError
 
 
@@ -69,8 +69,8 @@ def set_code_builder(ctx, param, value):
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
-@options.PREPEND_TEXT()
-@options.APPEND_TEXT()
+@options_code.PREPEND_TEXT()
+@options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @with_dbenv()
@@ -78,15 +78,6 @@ def setup_code(non_interactive, **kwargs):
     """Setup a new code."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
@@ -98,15 +89,15 @@ def setup_code(non_interactive, **kwargs):
     try:
         code = code_builder.new()
     except InputValidationError as exception:
-        echo.echo_critical('invalid inputs: {}'.format(exception))
+        echo.echo_critical(f'invalid inputs: {exception}')
 
     try:
         code.store()
         code.reveal()
     except ValidationError as exception:
-        echo.echo_critical('Unable to store the Code: {}'.format(exception))
+        echo.echo_critical(f'Unable to store the Code: {exception}')
 
-    echo.echo_success('Code<{}> {} created'.format(code.pk, code.full_label))
+    echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
 @verdi_code.command('duplicate')
@@ -119,8 +110,8 @@ def setup_code(non_interactive, **kwargs):
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
-@options.PREPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'prepend_text'))
-@options.APPEND_TEXT(cls=options.ContextualDefaultOption, contextual_default=partial(get_default, 'append_text'))
+@options_code.PREPEND_TEXT(contextual_default=partial(get_default, 'prepend_text'))
+@options_code.APPEND_TEXT(contextual_default=partial(get_default, 'append_text'))
 @options.NON_INTERACTIVE()
 @click.option('--hide-original', is_flag=True, default=False, help='Hide the code being copied.')
 @click.pass_context
@@ -129,15 +120,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     """Duplicate a code allowing to change some parameters."""
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
-
-    if not non_interactive:
-        try:
-            pre, post = ensure_scripts(kwargs.pop('prepend_text', ''), kwargs.pop('append_text', ''), kwargs)
-        except InputValidationError as exception:
-            raise click.BadParameter('invalid prepend and or append text: {}'.format(exception))
-
-        kwargs['prepend_text'] = pre
-        kwargs['append_text'] = post
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
@@ -157,9 +139,9 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
         new_code.store()
         new_code.reveal()
     except ValidationError as exception:
-        echo.echo_critical('Unable to store the Code: {}'.format(exception))
+        echo.echo_critical(f'Unable to store the Code: {exception}')
 
-    echo.echo_success('Code<{}> {} created'.format(new_code.pk, new_code.full_label))
+    echo.echo_success(f'Code<{new_code.pk}> {new_code.full_label} created')
 
 
 @verdi_code.command()
@@ -168,7 +150,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code, verbose):
     """Display detailed information for a code."""
-    from aiida.orm.utils.repository import FileType
+    from aiida.repository import FileType
 
     table = []
     table.append(['PK', code.pk])
@@ -182,7 +164,7 @@ def show(code, verbose):
         table.append(['Exec name', code.get_execname()])
         table.append(['List of files/folders:', ''])
         for obj in code.list_objects():
-            if obj.type == FileType.DIRECTORY:
+            if obj.file_type == FileType.DIRECTORY:
                 table.append(['directory', obj.name])
             else:
                 table.append(['file', obj.name])
@@ -211,16 +193,25 @@ def delete(codes, verbose, dry_run, force):
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.manage.database.delete.nodes import delete_nodes
+    from aiida.common.log import override_log_formatter_context
+    from aiida.tools import delete_nodes, DELETE_LOGGER
 
-    verbosity = 1
-    if force:
-        verbosity = 0
-    elif verbose:
-        verbosity = 2
+    verbosity = logging.DEBUG if verbose else logging.INFO
+    DELETE_LOGGER.setLevel(verbosity)
 
     node_pks_to_delete = [code.pk for code in codes]
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force)
+
+    def _dry_run_callback(pks):
+        if not pks or force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        return not click.confirm('Shall I continue?', abort=True)
+
+    with override_log_formatter_context('%(message)s'):
+        _, was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
+
+    if was_deleted:
+        echo.echo_success('Finished deletion.')
 
 
 @verdi_code.command()
@@ -230,7 +221,7 @@ def hide(codes):
     """Hide one or more codes from `verdi code list`."""
     for code in codes:
         code.hide()
-        echo.echo_success('Code<{}> {} hidden'.format(code.pk, code.full_label))
+        echo.echo_success(f'Code<{code.pk}> {code.full_label} hidden')
 
 
 @verdi_code.command()
@@ -240,7 +231,7 @@ def reveal(codes):
     """Reveal one or more hidden codes in `verdi code list`."""
     for code in codes:
         code.reveal()
-        echo.echo_success('Code<{}> {} revealed'.format(code.pk, code.full_label))
+        echo.echo_success(f'Code<{code.pk}> {code.full_label} revealed')
 
 
 @verdi_code.command()
@@ -254,9 +245,9 @@ def relabel(code, label):
     try:
         code.relabel(label)
     except InputValidationError as exception:
-        echo.echo_critical('invalid code label: {}'.format(exception))
+        echo.echo_critical(f'invalid code label: {exception}')
     else:
-        echo.echo_success('Code<{}> relabeled from {} to {}'.format(code.pk, old_label, code.full_label))
+        echo.echo_success(f'Code<{code.pk}> relabeled from {old_label} to {code.full_label}')
 
 
 @verdi_code.command('list')
@@ -291,7 +282,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
                 '!has_key': Code.HIDDEN_KEY
             }
         }, {
-            'extras.{}'.format(Code.HIDDEN_KEY): {
+            f'extras.{Code.HIDDEN_KEY}': {
                 '==': False
             }
         }]
@@ -365,11 +356,11 @@ def print_list_res(qb_query, show_owner):
             return
 
         if show_owner:
-            owner_string = ' ({})'.format(useremail)
+            owner_string = f' ({useremail})'
         else:
             owner_string = ''
         if computername is None:
             computernamestring = ''
         else:
-            computernamestring = '@{}'.format(computername)
-        echo.echo('* pk {} - {}{}{}'.format(pk, label, computernamestring, owner_string))
+            computernamestring = f'@{computername}'
+        echo.echo(f'* pk {pk} - {label}{computernamestring}{owner_string}')

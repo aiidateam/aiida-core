@@ -51,11 +51,11 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
         }
 
         if ctime:
-            lang.type_check(ctime, datetime, 'the given ctime is of type {}'.format(type(ctime)))
+            lang.type_check(ctime, datetime, f'the given ctime is of type {type(ctime)}')
             arguments['ctime'] = ctime
 
         if mtime:
-            lang.type_check(mtime, datetime, 'the given mtime is of type {}'.format(type(mtime)))
+            lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
         self._dbmodel = ModelWrapper(models.DbComment(**arguments), auto_flush=self._auto_flush)
@@ -134,7 +134,7 @@ class DjangoCommentCollection(BackendCommentCollection):
         try:
             models.DbComment.objects.get(id=comment_id).delete()
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent("Comment with id '{}' not found".format(comment_id))
+            raise exceptions.NotExistent(f"Comment with id '{comment_id}' not found")
 
     def delete_all(self):
         """
@@ -147,7 +147,7 @@ class DjangoCommentCollection(BackendCommentCollection):
             with transaction.atomic():
                 models.DbComment.objects.all().delete()
         except Exception as exc:
-            raise exceptions.IntegrityError('Could not delete all Comments. Full exception: {}'.format(exc))
+            raise exceptions.IntegrityError(f'Could not delete all Comments. Full exception: {exc}')
 
     def delete_many(self, filters):
         """

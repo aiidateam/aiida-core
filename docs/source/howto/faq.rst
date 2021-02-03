@@ -39,11 +39,11 @@ Simply reloading your shell will solve the problem.
 
 Why are calculation jobs taking very long to run on remote machines even though the actual computation time should be fast?
 ===========================================================================================================================
-First make sure that the calculation is not actually waiting in the queue of the scheduler, but it is actually running or has already completed.
+First, make sure that the calculation is not actually waiting in the queue of the scheduler, but it is actually running or has already completed.
 If it then still takes seemingly a lot of time for AiiDA to update your calculations, there are a couple of explanations.
 First, if you are running many processes, your daemon workers may simply be busy managing other calculations and workflows.
-If that is not the case, you may be witnessing the effects of the built in throttling mechanisms of AiiDA's engine.
-To ensure that the AiiDA daemon does not overload remote computers or their schedulers, there are built in limits to how often the daemon workers are allowed to open an SSH connection, or poll the scheduler.
+If that is not the case, you may be witnessing the effects of the built-in throttling mechanisms of AiiDA's engine.
+To ensure that the AiiDA daemon does not overload remote computers or their schedulers, there are built-in limits to how often the daemon workers are allowed to open an SSH connection, or poll the scheduler.
 To determine the minimum transport and job polling interval, use ``verdi computer configure show <COMPUTER>`` and ``computer.get_minimum_job_poll_interval()``, respectively.
 You can lower these values using:
 
@@ -62,11 +62,12 @@ However, be careful, if you make these intervals too short, the daemon workers m
 An additional note of importance is that each interval is guaranteed to be respected per daemon worker individually, but not as a collective.
 That is to say, if the safe interval is set to 60 seconds, any single worker is guaranteed to open a connection to that machine at most once every minute, however, if you have multiple active daemon workers, the machine may be accessed more than once per minute.
 
+.. _how-to:faq:process-not-importable-daemon:
 
 Why would a process that runs fine locally raise an exception when submitted to the daemon?
 ===========================================================================================
 This is almost always caused by an import issue.
-To determine exactly what might be going wrong, first `set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
+To determine exactly what might be going wrong, first :ref:`set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
 
 .. code-block:: console
 

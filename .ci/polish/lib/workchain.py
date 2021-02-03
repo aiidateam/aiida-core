@@ -231,15 +231,15 @@ def write_workchain(outlines, directory=None, filename=None):
 
             outline_string = ''
             for subline in outline.split('\n'):
-                outline_string += '\t\t\t{}\n'.format(subline)
+                outline_string += f'\t\t\t{subline}\n'
 
             if counter == len(outlines) - 1:
                 child_class = None
             else:
-                child_class = 'Polish{:02d}WorkChain'.format(counter + 1)
+                child_class = f'Polish{counter + 1:02d}WorkChain'
 
             subs = {
-                'class_name': 'Polish{:02d}WorkChain'.format(counter),
+                'class_name': f'Polish{counter:02d}WorkChain',
                 'child_class': child_class,
                 'outline': outline_string,
             }

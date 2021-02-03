@@ -8,23 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-import datetime
 import subprocess
 import sys
 import time
+import asyncio
 from concurrent.futures import Future
 
 from click.testing import CliRunner
-from tornado import gen
-import kiwipy
 import plumpy
+import kiwipy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.manage.manager import get_manager
-from aiida.orm import WorkflowNode, WorkFunctionNode, WorkChainNode
+from aiida.orm import CalcJobNode, WorkflowNode, WorkFunctionNode, WorkChainNode
 
 from tests.utils import processes as test_processes
 
@@ -107,7 +106,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
         calc = load_node(calc.pk)
         if calc.process_state != plumpy.ProcessState.WAITING:
-            self.runner.loop.run_sync(lambda: with_timeout(waiting_future))
+            self.runner.loop.run_until_complete(asyncio.wait_for(waiting_future, timeout=5.0))
 
         # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
         # the `verdi process` commands that we want to test
@@ -274,8 +273,26 @@ class TestVerdiProcess(AiidaTestCase):
 
     def test_process_show(self):
         """Test verdi process show"""
-        # We must choose a Node we can store
-        node = WorkflowNode().store()
+        workchain_one = WorkChainNode()
+        workchain_two = WorkChainNode()
+        workchains = [workchain_one, workchain_two]
+
+        workchain_two.set_attribute('process_label', 'workchain_one_caller')
+        workchain_two.store()
+        workchain_one.add_incoming(workchain_two, link_type=LinkType.CALL_WORK, link_label='called')
+        workchain_one.store()
+
+        calcjob_one = CalcJobNode()
+        calcjob_two = CalcJobNode()
+
+        calcjob_one.set_attribute('process_label', 'process_label_one')
+        calcjob_two.set_attribute('process_label', 'process_label_two')
+
+        calcjob_one.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='one')
+        calcjob_two.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='two')
+
+        calcjob_one.store()
+        calcjob_two.store()
 
         # Running without identifiers should not except and not print anything
         options = []
@@ -284,13 +301,17 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 0)
 
         # Giving a single identifier should print a non empty string message
-        options = [str(node.pk)]
+        options = [str(workchain_one.pk)]
         result = self.cli_runner.invoke(cmd_process.process_show, options)
+        lines = get_result_lines(result)
         self.assertClickResultNoException(result)
-        self.assertTrue(len(get_result_lines(result)) > 0)
+        self.assertTrue(len(lines) > 0)
+        self.assertIn('workchain_one_caller', result.output)
+        self.assertIn('process_label_one', lines[-2])
+        self.assertIn('process_label_two', lines[-1])
 
         # Giving multiple identifiers should print a non empty string message
-        options = [str(calc.pk) for calc in [node]]
+        options = [str(node.pk) for node in workchains]
         result = self.cli_runner.invoke(cmd_process.process_show, options)
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)
@@ -359,30 +380,6 @@ class TestVerdiProcess(AiidaTestCase):
             self.assertIsNone(result.exception, result.output)
             self.assertEqual(len(get_result_lines(result)), 1)
             self.assertEqual(get_result_lines(result)[0], 'No log messages recorded for this entry')
-
-    def test_work_show(self):
-        """Test verdi process show"""
-        workchain_one = WorkChainNode().store()
-        workchain_two = WorkChainNode().store()
-        workchains = [workchain_one, workchain_two]
-
-        # Running without identifiers should not except and not print anything
-        options = []
-        result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 0)
-
-        # Giving a single identifier should print a non empty string message
-        options = [str(workchain_one.pk)]
-        result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(len(get_result_lines(result)) > 0)
-
-        # Giving multiple identifiers should print a non empty string message
-        options = [str(workchain.pk) for workchain in workchains]
-        result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(len(get_result_lines(result)) > 0)
 
 
 class TestVerdiProcessListWarning(AiidaTestCase):
@@ -490,8 +487,3 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         self.assertIn('No callers found', get_result_lines(result)[0])
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[1])
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
-
-
-@gen.coroutine
-def with_timeout(what, timeout=5.0):
-    raise gen.Return((yield gen.with_timeout(datetime.timedelta(seconds=timeout), what)))

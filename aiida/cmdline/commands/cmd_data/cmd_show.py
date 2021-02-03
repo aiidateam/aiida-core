@@ -66,7 +66,7 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
             subprocess.check_output([exec_name, handle.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
+            echo.echo_info(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -97,7 +97,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
             subprocess.check_output([exec_name, '--xsf', tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
+            echo.echo_info(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -159,7 +159,7 @@ def _show_vesta(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
+            echo.echo_info(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -190,7 +190,7 @@ def _show_vmd(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info('the call to {} ended with an error.'.format(exec_name))
+            echo.echo_info(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -230,10 +230,10 @@ def _show_xmgrace(exec_name, list_bands):
     try:
         subprocess.check_output([exec_name] + [f.name for f in list_files])
     except subprocess.CalledProcessError:
-        print('Note: the call to {} ended with an error.'.format(exec_name))
+        print(f'Note: the call to {exec_name} ended with an error.')
     except OSError as err:
         if err.errno == 2:
-            print("No executable '{}' found. Add to the path, or try with an absolute path.".format(exec_name))
+            print(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             sys.exit(1)
         else:
             raise

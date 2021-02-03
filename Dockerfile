@@ -1,4 +1,4 @@
-FROM aiidateam/aiida-prerequisites:0.2.0
+FROM aiidateam/aiida-prerequisites:0.2.1
 
 USER root
 
@@ -14,6 +14,7 @@ ENV AIIDADB_BACKEND django
 # Copy and install AiiDA
 COPY . aiida-core
 RUN pip install ./aiida-core[atomic_tools]
+RUN pip install --upgrade git+https://github.com/unkcpz/circus.git@fix/quit-wait
 
 # Configure aiida for the user
 COPY .docker/opt/configure-aiida.sh /opt/configure-aiida.sh

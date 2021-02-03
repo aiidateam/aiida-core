@@ -19,7 +19,32 @@ __all__ = ('Dict',)
 
 
 class Dict(Data):
-    """`Data` sub class to represent a dictionary."""
+    """`Data` sub class to represent a dictionary.
+
+    The dictionary contents of a `Dict` node are stored in the database as attributes. The dictionary
+    can be initialized through the `dict` argument in the constructor. After construction, values can
+    be retrieved and updated through the item getters and setters, respectively:
+
+        node['key'] = 'value'
+
+    Alternatively, the `dict` property returns an instance of the `AttributeManager` that can be used
+    to get and set values through attribute notation:
+
+        node.dict.key = 'value'
+
+    Note that trying to set dictionary values directly on the node, e.g. `node.key = value`, will not
+    work as intended. It will merely set the `key` attribute on the node instance, but will not be
+    stored in the database. As soon as the node goes out of scope, the value will be lost.
+
+    It is also relevant to note here the difference in something being an "attribute of a node" (in
+    the sense that it is stored in the "attribute" column of the database when the node is stored)
+    and something being an "attribute of a python object" (in the sense of being able to modify and
+    access it as if it was a property of the variable, e.g. `node.key = value`). This is true of all
+    types of nodes, but it becomes more relevant for `Dict` nodes where one is constantly manipulating
+    these attributes.
+
+    Finally, all dictionary mutations will be forbidden once the node is stored.
+    """
 
     def __init__(self, **kwargs):
         """Store a dictionary as a `Node` instance.
@@ -37,7 +62,13 @@ class Dict(Data):
             self.set_dict(dictionary)
 
     def __getitem__(self, key):
-        return self.get_dict()[key]
+        try:
+            return self.get_attribute(key)
+        except AttributeError as exc:
+            raise KeyError from exc
+
+    def __setitem__(self, key, value):
+        self.set_attribute(key, value)
 
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.

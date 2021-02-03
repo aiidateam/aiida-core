@@ -164,9 +164,7 @@ class TestSessionSqla(AiidaTestCase):
         def check_attrs_match(name):
             node_attr = getattr(node, name)
             dbnode_attr = getattr(dbnode_reloaded, name)
-            self.assertEqual(
-                node_attr, dbnode_attr, "Values of '{}' don't match ({} != {})".format(name, node_attr, dbnode_attr)
-            )
+            self.assertEqual(node_attr, dbnode_attr, f"Values of '{name}' don't match ({node_attr} != {dbnode_attr})")
 
         def do_value_checks(attr_name, original, changed):
             try:

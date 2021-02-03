@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,no-member
 """Module that defines db models."""
 import contextlib
 
@@ -63,7 +63,7 @@ class AiidaObjectManager(m.Manager):
         return AiidaQuerySet(self.model, using=self._db)
 
 
-class DbUser(m.Model):  # pylint: disable=too-few-public-methods
+class DbUser(m.Model):
     """Class that represents a user as the owner of a specific Node."""
 
     is_anonymous = False
@@ -154,8 +154,8 @@ class DbNode(m.Model):
         simplename = self.get_simple_name(invalid_result='Unknown')
         # node pk + type
         if self.label:
-            return '{} node [{}]: {}'.format(simplename, self.pk, self.label)
-        return '{} node [{}]'.format(simplename, self.pk)
+            return f'{simplename} node [{self.pk}]: {self.label}'
+        return f'{simplename} node [{self.pk}]'
 
 
 class DbLink(m.Model):
@@ -190,7 +190,7 @@ class DbSetting(m.Model):
     time = m.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return "'{}'={}".format(self.key, self.getvalue())
+        return f"'{self.key}'={self.getvalue()}"
 
     @classmethod
     def set_value(cls, key, value, other_attribs=None, stop_if_existing=False):
@@ -254,12 +254,14 @@ class DbGroup(m.Model):
     # On user deletion, remove his/her groups too (not the calcuations, only
     # the groups
     user = m.ForeignKey(DbUser, on_delete=m.CASCADE, related_name='dbgroups')
+    # JSON Extras
+    extras = JSONField(default=dict, null=False)
 
-    class Meta:  # pylint: disable=too-few-public-methods
+    class Meta:
         unique_together = (('label', 'type_string'),)
 
     def __str__(self):
-        return '<DbGroup [type_string: {}] "{}">'.format(self.type_string, self.label)
+        return f'<DbGroup [type_string: {self.type_string}] "{self.label}">'
 
 
 class DbComputer(m.Model):
@@ -303,7 +305,7 @@ class DbComputer(m.Model):
     metadata = JSONField(default=dict)
 
     def __str__(self):
-        return '{} ({})'.format(self.name, self.hostname)
+        return f'{self.name} ({self.hostname})'
 
 
 class DbAuthInfo(m.Model):
@@ -323,13 +325,13 @@ class DbAuthInfo(m.Model):
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
-    class Meta:  # pylint: disable=too-few-public-methods
+    class Meta:
         unique_together = (('aiidauser', 'dbcomputer'),)
 
     def __str__(self):
         if self.enabled:
-            return 'DB authorization info for {} on {}'.format(self.aiidauser.email, self.dbcomputer.name)
-        return 'DB authorization info for {} on {} [DISABLED]'.format(self.aiidauser.email, self.dbcomputer.name)
+            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name}'
+        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name} [DISABLED]'
 
 
 class DbComment(m.Model):
@@ -361,7 +363,7 @@ class DbLog(m.Model):
     metadata = JSONField(default=dict)
 
     def __str__(self):
-        return 'DbLog: {} for node {}: {}'.format(self.levelname, self.dbnode.id, self.message)
+        return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
 
 
 @contextlib.contextmanager

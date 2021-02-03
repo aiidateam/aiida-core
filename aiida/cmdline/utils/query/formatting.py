@@ -49,9 +49,9 @@ def format_state(process_state, paused=None, exit_status=None):
         symbol = '\u00B7'  # middle dot
 
     if process_state == 'finished' and exit_status is not None:
-        return '{} {} [{}]'.format(symbol, format_process_state(process_state), exit_status)
+        return f'{symbol} {format_process_state(process_state)} [{exit_status}]'
 
-    return '{} {}'.format(symbol, format_process_state(process_state))
+    return f'{symbol} {format_process_state(process_state)}'
 
 
 def format_process_state(process_state):
@@ -61,7 +61,7 @@ def format_process_state(process_state):
     :param process_state: the process state
     :return: string representation of process state
     """
-    return '{}'.format(process_state.capitalize() if process_state else None)
+    return f'{process_state.capitalize() if process_state else None}'
 
 
 def format_sealed(sealed):

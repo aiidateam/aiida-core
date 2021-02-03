@@ -20,8 +20,6 @@ __all__ = ('WorkFunctionNode',)
 class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
     """ORM class for all nodes representing the execution of a workfunction."""
 
-    # pylint: disable=too-few-public-methods
-
     def validate_outgoing(self, target, link_type, link_label):
         """
         Validate adding a link of the given type from ourself to a given node.

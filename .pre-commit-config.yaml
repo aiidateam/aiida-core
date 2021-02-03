@@ -8,6 +8,15 @@ repos:
     -   id: mixed-line-ending
     -   id: trailing-whitespace
 
+-   repo: https://github.com/ikamensh/flynt/
+    rev: '0.55'
+    hooks:
+    -   id: flynt
+        args: [
+            '--line-length=120',
+            '--fail-on-change',
+        ]
+
 -   repo: https://github.com/pre-commit/mirrors-yapf
     rev: v0.30.0
     hooks:
@@ -20,20 +29,30 @@ repos:
             )$
         args: ['-i']
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.780
-    hooks:
-    -   id: mypy
-        pass_filenames: true
-        files: >-
-            (?x)^(
-                aiida/engine/processes/calcjobs/calcjob.py|
-                aiida/tools/groups/paths.py
-            )$
-
 -   repo: local
 
     hooks:
+
+    -   id: mypy
+        name: mypy
+        entry: mypy
+        language: python
+        types: [python]
+        require_serial: true
+        pass_filenames: true
+        files: >-
+            (?x)^(
+                aiida/common/progress_reporter.py|
+                aiida/manage/manager.py|
+                aiida/engine/.*py|
+                aiida/manage/database/delete/nodes.py|
+                aiida/tools/graph/graph_traversers.py|
+                aiida/tools/groups/paths.py|
+                aiida/tools/importexport/archive/.*py|
+                aiida/tools/importexport/dbexport/__init__.py|
+                aiida/tools/importexport/dbimport/backends/.*.py|
+            )$
+
     -   id: pylint
         name: pylint
         entry: pylint

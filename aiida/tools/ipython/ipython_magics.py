@@ -34,10 +34,8 @@ Usage
    In [2]: %aiida
 """
 
-from IPython import version_info  # pylint: disable=no-name-in-module
-from IPython.core import magic  # pylint: disable=no-name-in-module,import-error
-
-from aiida.common import json
+from IPython import version_info, get_ipython
+from IPython.core import magic
 
 
 def add_to_ns(local_ns, name, obj):
@@ -87,7 +85,7 @@ class AiiDALoaderMagics(magic.Magics):
         else:
             profile = load_profile()
 
-        self.current_state = 'Loaded AiiDA DB environment - profile name: {}.'.format(profile.name)
+        self.current_state = f'Loaded AiiDA DB environment - profile name: {profile.name}.'
 
         user_ns = get_start_namespace()
         for key, value in user_ns.items():
@@ -99,6 +97,8 @@ class AiiDALoaderMagics(magic.Magics):
         """
         Output in JSON format.
         """
+        from aiida.common import json
+
         obj = {'current_state': self.current_state}
         if version_info[0] >= 3:
             return obj
@@ -126,26 +126,43 @@ class AiiDALoaderMagics(magic.Magics):
         if self.is_warning:
             latex = '\\emph{%s}\n' % self.current_state
         else:
-            latex = '%s\n' % self.current_state
+            latex = f'{self.current_state}\n'
 
         return latex
 
-    def _repr_pretty_(self, pretty_print, cycle):
+    def _repr_pretty_(self, pretty_print, cycle):  # pylint: disable=unused-argument
         """
         Output in text format.
         """
-        # pylint: disable=unused-argument
         if self.is_warning:
             warning_str = '** '
         else:
             warning_str = ''
-        text = '%s%s\n' % (warning_str, self.current_state)
+        text = f'{warning_str}{self.current_state}\n'
 
         pretty_print.text(text)
 
 
 def load_ipython_extension(ipython):
     """
-    Triggers the load of all the AiiDA magic commands.
+    Registers the %aiida IPython extension.
+
+    .. deprecated:: v3.0.0
+        Use :py:func:`~aiida.tools.ipython.ipython_magics.register_ipython_extension` instead.
     """
+    register_ipython_extension(ipython)
+
+
+def register_ipython_extension(ipython=None):
+    """
+    Registers the %aiida IPython extension.
+
+    The %aiida IPython extension provides the same environment as the `verdi shell`.
+
+    :param ipython: InteractiveShell instance. If omitted, the global InteractiveShell is used.
+
+    """
+    if ipython is None:
+        ipython = get_ipython()
+
     ipython.register_magics(AiiDALoaderMagics)

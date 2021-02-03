@@ -342,6 +342,10 @@ def get_explicit_kpoints_path(
     explicit_kpoints = [tuple(point_coordinates[path[0][0]])]
     labels = [(0, path[0][0])]
 
+    assert all([_.is_integer() for _ in num_points if isinstance(_, (float, numpy.float64))]
+               ), f'Could not determine number of points as a whole number. num_points={num_points}'
+    num_points = [int(_) for _ in num_points]
+
     for count_piece, i in enumerate(path):
         ini_label = i[0]
         end_label = i[1]
@@ -1108,8 +1112,8 @@ def find_bravais_info(cell, pbc, epsilon_length=_default_epsilon_length, epsilon
             permutation = [0, 1, 2]
 
         bravais_info = {
-            'short_name': '{}D'.format(dimension),
-            'extended_name': '{}D'.format(dimension),
+            'short_name': f'{dimension}D',
+            'extended_name': f'{dimension}D',
             'index': 1,
             'permutation': permutation,
         }

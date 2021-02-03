@@ -12,9 +12,3 @@ This module is for subclasses of the generic backend entities that only apply to
 
 All SQL backends with an ORM should subclass from the classes in this module
 """
-
-# pylint: disable=wildcard-import
-
-from .backends import *
-
-__all__ = (backends.__all__)

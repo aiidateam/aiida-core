@@ -12,8 +12,6 @@ import os
 import unittest
 import traceback
 
-from tornado import ioloop
-
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
 from aiida.common.lang import classproperty
 from aiida.manage import configuration
@@ -26,7 +24,7 @@ def check_if_tests_can_run():
     """Verify that the currently loaded profile is a test profile, otherwise raise `TestsNotAllowedError`."""
     profile = configuration.PROFILE
     if not profile.is_test_profile:
-        raise TestsNotAllowedError('currently loaded profile {} is not a valid test profile'.format(profile.name))
+        raise TestsNotAllowedError(f'currently loaded profile {profile.name} is not a valid test profile')
 
 
 class AiidaTestCase(unittest.TestCase):
@@ -83,19 +81,8 @@ class AiidaTestCase(unittest.TestCase):
         cls.clean_db()
         cls.insert_data()
 
-    def setUp(self):
-        # Install a new IOLoop so that any messing up of the state of the loop is not propagated
-        # to subsequent tests.
-        # This call should come before the backend instance setup call just in case it uses the loop
-        ioloop.IOLoop().make_current()
-
     def tearDown(self):
-        # Clean up the loop we created in set up.
-        # Call this after the instance tear down just in case it uses the loop
         reset_manager()
-        loop = ioloop.IOLoop.current()
-        if not loop._closing:  # pylint: disable=protected-access,no-member
-            loop.close()
 
     def reset_database(self):
         """Reset the database to the default state deleting any content currently stored"""

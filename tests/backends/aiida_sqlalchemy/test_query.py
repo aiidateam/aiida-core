@@ -10,6 +10,7 @@
 """Tests for generic queries."""
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.orm import Group, User, Computer, Node, Data, ProcessNode, QueryBuilder
 
 
 class TestQueryBuilderSQLA(AiidaTestCase):
@@ -17,14 +18,10 @@ class TestQueryBuilderSQLA(AiidaTestCase):
 
     def test_clsf_sqla(self):
         """Test SQLA classifiers"""
-        from aiida.orm import Group, User, Computer, Node, Data
-        from aiida.orm import ProcessNode
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.backends.sqlalchemy.models.group import DbGroup
         from aiida.backends.sqlalchemy.models.user import DbUser
         from aiida.backends.sqlalchemy.models.computer import DbComputer
-
-        from aiida.orm.querybuilder import QueryBuilder
 
         q_b = QueryBuilder()
         for aiida_cls, orm_cls in zip((Group, User, Computer, Node, Data, ProcessNode),
@@ -39,8 +36,6 @@ class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):
 
     def test_ordering_limits_offsets_sqla(self):
         """Test ordering limits offsets of SQLA query results."""
-        from aiida.orm import Node, Data
-        from aiida.orm.querybuilder import QueryBuilder
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
             node = Data()

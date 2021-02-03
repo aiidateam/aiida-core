@@ -199,6 +199,7 @@ Below is a list with all available subcommands.
     Commands:
       integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
+      version    Show the version of the database.
 
 
 .. _reference:command-line:verdi-devel:
@@ -277,10 +278,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      add-nodes     Add nodes to the a group.
+      add-nodes     Add nodes to a group.
       copy          Duplicate a group.
       create        Create an empty group with a given name.
-      delete        Delete a group.
+      delete        Delete a group and (optionally) the nodes it contains.
       description   Change the description of a group.
       list          Show a list of existing groups.
       path          Inspect groups of nodes, with delimited label paths.
@@ -320,8 +321,8 @@ Below is a list with all available subcommands.
     Options:
       -w, --webpages TEXT...          Discover all URL targets pointing to files with the
                                       .aiida extension for these HTTP addresses. Automatically
-                                      discovered archive URLs will be downloadeded and added
-                                      to ARCHIVES for importing
+                                      discovered archive URLs will be downloaded and added to
+                                      ARCHIVES for importing
 
       -G, --group GROUP               Specify group to which all the import nodes will be
                                       added. If such a group does not exist, it will be
@@ -348,10 +349,14 @@ Below is a list with all available subcommands.
                                       (default).overwrite: Replace existing Comments with
                                       those from the import file.
 
-      --migration / --no-migration    Force migration of export file archives, if needed.
+      --migration / --no-migration    Force migration of archive file archives, if needed.
                                       [default: True]
 
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -v, --verbosity [DEBUG|INFO|WARNING|CRITICAL]
+                                      Control the verbosity of console logging
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --help                          Show this message and exit.
 
 
@@ -460,7 +465,9 @@ Below is a list with all available subcommands.
       Setup a new profile in a fully automated fashion.
 
     Options:
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -485,6 +492,20 @@ Below is a list with all available subcommands.
 
       --su-db-username TEXT           User name of the database super user.
       --su-db-password TEXT           Password to connect as the database superuser.
+      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.  [default: amqp]
+      --broker-username NONEMPTYSTRING
+                                      Username to use for authentication with the message
+                                      broker.  [default: guest]
+
+      --broker-password NONEMPTYSTRING
+                                      Password to use for authentication with the message
+                                      broker.  [default: guest]
+
+      --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
+      --broker-port INTEGER           Port for the message broker.  [default: 5672]
+      --broker-virtual-host TEXT      Name of the virtual host for the message broker without
+                                      leading forward slash.  [default: ]
+
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILEORURL              Load option values from configuration file in yaml
                                       format (local path or URL).
@@ -583,7 +604,9 @@ Below is a list with all available subcommands.
       Setup a new profile.
 
     Options:
-      -n, --non-interactive           Non-interactive mode: never prompt for input.
+      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
+                                      simply uses default values for options that define one.
+
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
@@ -603,6 +626,24 @@ Below is a list with all available subcommands.
       --db-name NONEMPTYSTRING        Name of the database to create.  [required]
       --db-username NONEMPTYSTRING    Name of the database user to create.  [required]
       --db-password TEXT              Password of the database user.  [required]
+      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.  [default: amqp;
+                                      required]
+
+      --broker-username NONEMPTYSTRING
+                                      Username to use for authentication with the message
+                                      broker.  [default: guest; required]
+
+      --broker-password NONEMPTYSTRING
+                                      Password to use for authentication with the message
+                                      broker.  [default: guest; required]
+
+      --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1;
+                                      required]
+
+      --broker-port INTEGER           Port for the message broker.  [default: 5672; required]
+      --broker-virtual-host TEXT      Name of the virtual host for the message broker without
+                                      leading forward slash.  [default: ; required]
+
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILEORURL              Load option values from configuration file in yaml
                                       format (local path or URL).
@@ -643,8 +684,9 @@ Below is a list with all available subcommands.
       Print status of AiiDA services.
 
     Options:
-      --no-rmq  Do not check RabbitMQ status
-      --help    Show this message and exit.
+      -t, --print-traceback  Print the full traceback in case an exception is raised.
+      --no-rmq               Do not check RabbitMQ status
+      --help                 Show this message and exit.
 
 
 .. _reference:command-line:verdi-user:

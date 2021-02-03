@@ -68,13 +68,11 @@ class TemplatereplacerCalculation(CalcJob):
             help='A template for the input file.')
         spec.input('parameters', valid_type=orm.Dict, required=False,
             help='Parameters used to replace placeholders in the template.')
-        spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False)
+        spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False, dynamic=True)
 
         spec.output('output_parameters', valid_type=orm.Dict, required=True)
         spec.default_output_node = 'output_parameters'
 
-        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
-            message='The retrieved folder data node could not be accessed.')
         spec.exit_code(101, 'ERROR_NO_TEMPORARY_RETRIEVED_FOLDER',
             message='The temporary retrieved folder data node could not be accessed.')
         spec.exit_code(105, 'ERROR_NO_OUTPUT_FILE_NAME_DEFINED',
@@ -85,6 +83,7 @@ class TemplatereplacerCalculation(CalcJob):
             message='A temporary retrieved file could not be read from the temporary retrieved folder.')
         spec.exit_code(120, 'ERROR_INVALID_OUTPUT',
             message='The output file contains invalid output.')
+
 
     def prepare_for_submission(self, folder):
         """
@@ -114,12 +113,12 @@ class TemplatereplacerCalculation(CalcJob):
 
         if template:
             raise exceptions.InputValidationError(
-                'The following keys could not be used in the template node: {}'.format(template.keys()))
+                f'The following keys could not be used in the template node: {template.keys()}')
 
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
         except ValidationError as exc:
-            raise exceptions.InputValidationError('invalid file_to_copy format: {}'.format(exc))
+            raise exceptions.InputValidationError(f'invalid file_to_copy format: {exc}')
 
         local_copy_list = []
         remote_copy_list = []

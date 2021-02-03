@@ -116,9 +116,11 @@ class Postgres(PGSU):
         :param str dbuser: Name of the user to be created or reused.
         :returns: tuple (dbuser, created)
         """
+        if not self.interactive:
+            return dbuser, not self.dbuser_exists(dbuser)
         create = True
         while create and self.dbuser_exists(dbuser):
-            echo.echo_info('Database user "{}" already exists!'.format(dbuser))
+            echo.echo_info(f'Database user "{dbuser}" already exists!')
             if not click.confirm('Use it? '):
                 dbuser = click.prompt('New database user name: ', type=str, default=dbuser)
             else:
@@ -163,9 +165,11 @@ class Postgres(PGSU):
         :param str dbname: Name of the database to be created or reused.
         :returns: tuple (dbname, created)
         """
+        if not self.interactive:
+            return dbname, not self.db_exists(dbname)
         create = True
         while create and self.db_exists(dbname):
-            echo.echo_info('database {} already exists!'.format(dbname))
+            echo.echo_info(f'database {dbname} already exists!')
             if not click.confirm('Use it (make sure it is not used by another profile)?'):
                 dbname = click.prompt('new name', type=str, default=dbname)
             else:
@@ -216,8 +220,8 @@ def manual_setup_instructions(dbuser, dbname):
         'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
         '',
         '\t$ psql template1',
-        '\t==> ' + _CREATE_USER_COMMAND.format(dbuser, dbpass),
-        '\t==> ' + _CREATE_DB_COMMAND.format(dbname, dbuser),
-        '\t==> ' + _GRANT_PRIV_COMMAND.format(dbname, dbuser),
+        f'	==> {_CREATE_USER_COMMAND.format(dbuser, dbpass)}',
+        f'	==> {_CREATE_DB_COMMAND.format(dbname, dbuser)}',
+        f'	==> {_GRANT_PRIV_COMMAND.format(dbname, dbuser)}',
     ])
     return instructions

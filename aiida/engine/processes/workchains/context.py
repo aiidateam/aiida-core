@@ -8,14 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience functions to add awaitables to the Context of a WorkChain."""
-from .awaitable import construct_awaitable, AwaitableAction
+from typing import Union
+
+from aiida.orm import ProcessNode
+from .awaitable import construct_awaitable, Awaitable, AwaitableAction
 
 __all__ = ('ToContext', 'assign_', 'append_')
 
 ToContext = dict
 
 
-def assign_(target):
+def assign_(target: Union[Awaitable, ProcessNode]) -> Awaitable:
     """
     Convenience function that will construct an Awaitable for a given class instance
     with the context action set to ASSIGN. When the awaitable target is completed
@@ -24,14 +27,14 @@ def assign_(target):
     :param target: an instance of a Process or Awaitable
 
     :returns: the awaitable
-    :rtype: Awaitable
+
     """
     awaitable = construct_awaitable(target)
     awaitable.action = AwaitableAction.ASSIGN
     return awaitable
 
 
-def append_(target):
+def append_(target: Union[Awaitable, ProcessNode]) -> Awaitable:
     """
     Convenience function that will construct an Awaitable for a given class instance
     with the context action set to APPEND. When the awaitable target is completed
@@ -40,7 +43,7 @@ def append_(target):
     :param target: an instance of a Process or Awaitable
 
     :returns: the awaitable
-    :rtype: Awaitable
+
     """
     awaitable = construct_awaitable(target)
     awaitable.action = AwaitableAction.APPEND

@@ -10,7 +10,7 @@
 """
 This module contains tests for the to_aiida_type serializer
 """
-from aiida.orm.nodes.data.base import to_aiida_type
+from aiida.orm import to_aiida_type
 from aiida.orm import Dict, Int, Float, Bool, Str
 
 from aiida.backends.testbase import AiidaTestCase

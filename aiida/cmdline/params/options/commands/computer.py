@@ -8,11 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for Computer commands."""
-
 import click
 
 from aiida.cmdline.params import options, types
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
 
@@ -31,7 +30,7 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
         try:
             scheduler_cls = scheduler_ep.load()
         except ImportError:
-            raise ImportError("Unable to load the '{}' scheduler".format(scheduler_ep.name))
+            raise ImportError(f"Unable to load the '{scheduler_ep.name}' scheduler")
     else:
         raise ValidationError(
             'The should_call_... function should always be run (and prompted) AFTER asking for a scheduler'
@@ -49,15 +48,15 @@ LABEL = options.LABEL.clone(
     prompt='Computer label',
     cls=InteractiveOption,
     required=True,
-    help='Unique, human-readable label for this computer'
+    help='Unique, human-readable label for this computer.'
 )
 
 HOSTNAME = options.HOSTNAME.clone(
     prompt='Hostname',
     cls=InteractiveOption,
     required=True,
-    help='The fully qualified hostname of the computer (e.g. daint.cscs.ch). ' +
-    'Use "localhost" when setting up the computer that AiiDA is running on',
+    help='The fully qualified hostname of the computer (e.g. daint.cscs.ch). '
+    'Use "localhost" when setting up the computer that AiiDA is running on.',
 )
 
 DESCRIPTION = options.DESCRIPTION.clone(
@@ -73,8 +72,7 @@ SHEBANG = OverridableOption(
     prompt='Shebang line (first line of each script, starting with #!)',
     default='#!/bin/bash',
     cls=InteractiveOption,
-    help=
-    'This line specifies the first line of the submission script for this computer (only the bash shell is supported).',
+    help='Specify the first line of the submission script for this computer (only the bash shell is supported).',
     type=types.ShebangParamType()
 )
 
@@ -95,9 +93,8 @@ MPI_RUN_COMMAND = OverridableOption(
     prompt='Mpirun command',
     default='mpirun -np {tot_num_mpiprocs}',
     cls=InteractiveOption,
-    help='The mpirun command needed on the cluster to run parallel MPI '
-    'programs. The {tot_num_mpiprocs} string will be replaced by the total number of cpus.'
-    'See the scheduler docs for further scheduler-dependent template variables .',
+    help='The mpirun command needed on the cluster to run parallel MPI programs. The {tot_num_mpiprocs} string will be '
+    'replaced by the total number of cpus. See the scheduler docs for further scheduler-dependent template variables.',
     type=types.MpirunCommandParamType()
 )
 
@@ -110,4 +107,30 @@ MPI_PROCS_PER_MACHINE = OverridableOption(
     type=click.INT,
     help='The default number of MPI processes that should be executed per machine (node), if not otherwise specified.'
     'Use 0 to specify no default value.',
+)
+
+PREPEND_TEXT = OverridableOption(
+    '--prepend-text',
+    cls=TemplateInteractiveOption,
+    prompt='Prepend script',
+    type=click.STRING,
+    default='',
+    help='Bash commands that should be prepended to the executable call in all submit scripts for this computer.',
+    extension='.bash',
+    header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call in all '
+    'submit scripts for this computer, type that between the equal signs below and save the file.',
+    footer='All lines that start with `#=` will be ignored.'
+)
+
+APPEND_TEXT = OverridableOption(
+    '--append-text',
+    cls=TemplateInteractiveOption,
+    prompt='Append script',
+    type=click.STRING,
+    default='',
+    help='Bash commands that should be appended to the executable call in all submit scripts for this computer.',
+    extension='.bash',
+    header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call in all '
+    'submit scripts for this computer, type that between the equal signs below and save the file.',
+    footer='All lines that start with `#=` will be ignored.'
 )

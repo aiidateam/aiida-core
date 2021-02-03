@@ -312,38 +312,171 @@ Note that the source path can point to a directory, in which case its contents w
 
 Retrieve list
 ~~~~~~~~~~~~~
-The retrieve list supports various formats to define what files should be retrieved.
-The simplest is retrieving a single file, whose filename you know before hand and you simply want to copy with the same name in the retrieved folder.
-Imagine you want to retrieve the files ``output1.out`` and ``output_folder/output2.out`` you would simply add them as strings to the retrieve list:
+The retrieve list is a list of instructions of what files and folders should be retrieved by the engine once a calculation job has terminated.
+Each instruction should have one of two formats:
 
-.. code:: python
+    * a string representing a relative filepath in the remote working directory
+    * a tuple of length three that allows to control the name of the retrieved file or folder in the retrieved folder
 
-    calc_info.retrieve_list = ['output1.out', 'output_folder/output2.out']
+The retrieve list can contain any number of instructions and can use both formats at the same time.
+The first format is obviously the simplest, however, this requires one knows the exact name of the file or folder to be retrieved and in addition any subdirectories will be ignored when it is retrieved.
+If the exact filename is not known and `glob patterns <https://en.wikipedia.org/wiki/Glob_%28programming%29>`_ should be used, or if the original folder structure should be (partially) kept, one should use the tuple format, which has the following format:
 
-The retrieved files will be copied over keeping the exact names and hierarchy.
-If you require more control over the hierarchy and nesting, you can use tuples of length three instead, with the following items:
+    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve.
+    * `target relative path`: the relative path of the directory in the retrieved folder in to which the content of the source will be copied. The string ``'.'`` indicates the top level in the retrieved folder.
+    * `depth`: the number of levels of nesting in the source path to maintain when copying, starting from the deepest file.
 
-    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve
-    * `target relative path`: the relative path where to copy the files locally in the retrieved folder. The string `'.'` indicates the top level in the retrieved folder.
-    * `depth`: the number of levels of nesting in the folder hierarchy to maintain when copying, starting from the deepest file
+To illustrate the various possibilities, consider the following example file hierarchy in the remote working directory:
 
-For example, imagine the calculation will have written a file in the remote working directory with the folder hierarchy ``some/remote/path/files/output.dat``.
-If you want to copy the file, with the final resulting path ``path/files/output.dat``, you would specify:
+.. code:: bash
 
-.. code:: python
+    ├─ path
+    |  ├── sub
+    │  │   ├─ file_c.txt
+    │  │   └─ file_d.txt
+    |  └─ file_b.txt
+    └─ file_a.txt
 
-    calc_info.retrieve_list = [('some/remote/path/files/output.dat', '.', 2)]
+Below, you will find examples for various use cases of files and folders to be retrieved.
+Each example starts with the format of the ``retrieve_list``, followed by a schematic depiction of the final file hierarchy that would be created in the retrieved folder.
 
-The depth of two, ensures that only two levels of nesting are copied.
-If the output files have dynamic names that one cannot know beforehand, the ``'*'`` glob pattern can be used.
-For example, if the code will generate a number of XML files in the folder ``relative/path/output`` with filenames that follow the pattern ``file_*[0-9].xml``, you can instruct to retrieve all of them as follows:
+Explicit file or folder
+.......................
 
-.. code:: python
+Retrieving a single toplevel file or folder (with all its contents) where the final folder structure is not important.
 
-    calc_info.retrieve_list = [('relative/path/output/file_*[0-9].xml', '.', 1)]
+.. code:: bash
 
-The second item when using globbing *has* to be ``'.'`` and the depth works just as before.
-In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node.
+    retrieve_list = ['file_a.txt']
+
+    └─ file_a.txt
+
+.. code:: bash
+
+    retrieve_list = ['path']
+
+    ├── sub
+    │   ├─ file_c.txt
+    │   └─ file_d.txt
+    └─ file_b.txt
+
+
+Explicit nested file or folder
+..............................
+
+Retrieving a single file or folder (with all its contents) that is located in a subdirectory in the remote working directory, where the final folder structure is not important.
+
+.. code:: bash
+
+    retrieve_list = ['path/file_b.txt']
+
+    └─ file_b.txt
+
+.. code:: bash
+
+    retrieve_list = ['path/sub']
+
+    ├─ file_c.txt
+    └─ file_d.txt
+
+
+Explicit nested file or folder keeping (partial) hierarchy
+..........................................................
+
+The following examples show how the file hierarchy of the retrieved files can be controlled.
+By changing the ``depth`` parameter of the tuple, one can control what part of the remote folder hierarchy is kept.
+In the given example, the maximum depth of the remote folder hierarchy is ``3``.
+The following example shows that by specifying ``3``, the exact folder structure is kept:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', '.', 3)]
+
+    └─ path
+        └─ sub
+           └─ file_c.txt
+
+For ``depth=2``, only two levels of nesting are kept (including the file itself) and so the ``path`` folder is discarded.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', '.', 2)]
+
+    └─ sub
+       └─ file_c.txt
+
+The same applies for directories.
+By specifying a directory for the first element, all its contents will be retrieved.
+With ``depth=1``, only the first level ``sub`` is kept of the folder hierarchy.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub', '.', 1)]
+
+    └── sub
+        ├─ file_c.txt
+        └─ file_d.txt
+
+
+Pattern matching
+................
+
+If the exact file or folder name is not known beforehand, glob patterns can be used.
+In the following examples, all files that match ``*c.txt`` in the directory ``path/sub`` will be retrieved.
+Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', 0)]
+
+    └─ file_c.txt
+
+To keep the subdirectory structure, one can set the depth parameter, just as in the previous examples.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', 2)]
+
+    └── sub
+        └─ file_c.txt
+
+
+Specific target directory
+.........................
+
+The final folder hierarchy of the retrieved files in the retrieved folder is not only determined by the hierarchy of the remote working directory, but can also be controlled through the second and third elements of the instructions tuples.
+The final ``depth`` element controls what level of hierarchy of the source is maintained, where the second element specifies the base path in the retrieved folder into which the remote files should be retrieved.
+For example, to retrieve a nested file, maintaining the remote hierarchy and storing it locally in the ``target`` directory, one can do the following:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', 'target', 3)]
+
+    └─ target
+        └─ path
+            └─ sub
+               └─ file_c.txt
+
+The same applies for folders that are to be retrieved:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub', 'target', 1)]
+
+    └─ target
+        └── sub
+            ├─ file_c.txt
+            └─ file_d.txt
+
+Note that `target` here is not used to rename the retrieved file or folder, but indicates the path of the directory into which the source is copied.
+The target relative path is also compatible with glob patterns in the source relative paths:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', 'target', 0)]
+
+    └─ target
+        └─ file_c.txt
 
 
 Retrieve temporary list
@@ -466,45 +599,32 @@ The advantage of adding the raw output data in different form as output nodes, i
 This allows one to query for calculations that produced specific outputs with a certain value, which becomes a very powerful approach for post-processing and analyses of big databases.
 
 The ``retrieved`` attribute of the parser will return the ``FolderData`` node that should have been attached by the engine containing all the retrieved files, as specified using the :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>` in the :ref:`preparation step of the calculation job<topics:calculations:usage:calcjobs:prepare>`.
-If this node has not been attached for whatever reason, this call will throw an :py:class:`~aiida.common.exceptions.NotExistent` exception.
-This is why we wrap the ``self.retrieved`` call in a try-catch block:
-
-.. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
-    :language: python
-    :lines: 11-14
-    :linenos:
-    :lineno-start: 11
-
-If the exception is thrown, it means the retrieved files are not available and something must have has gone terribly awry with the calculation.
-In this case, there is nothing to do for the parser and so we return an exit code.
-Specific exit codes can be referenced by their label, such as ``ERROR_NO_RETRIEVED_FOLDER`` in this example, through the ``self.exit_codes`` property.
-This call will retrieve the corresponding exit code defined on the ``CalcJob`` that we are currently parsing.
-Returning this exit code from the parser will stop the parsing immediately and will instruct the engine to set its exit status and exit message on the node of this calculation job.
-This should scenario should however never occur, but it is just here as a safety.
-If the exception would not be caught, the engine will catch the exception instead and set the process state of the corresponding calculation to ``Excepted``.
-Note that this will happen for any exception that occurs during parsing.
-
-Assuming that everything went according to plan during the retrieval, we now have access to those retrieved files and can start to parse them.
+This retrieved folder can be used to open and read the contents of the files it contains.
 In this example, there should be a single output file that was written by redirecting the standard output of the bash script that added the two integers.
 The parser opens this file, reads its content and tries to parse the sum from it:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 16-20
+    :lines: 12-16
     :linenos:
-    :lineno-start: 16
+    :lineno-start: 12
 
-Note that again we wrap this parsing action in a try-except block.
-If the file cannot be found or cannot be read, we return the appropriate exit code.
+Note that this parsing action is wrapped in a try-except block to catch the exceptions that would be thrown if the output file could not be read.
+If the exception would not be caught, the engine will catch the exception instead and set the process state of the corresponding calculation to ``Excepted``.
+Note that this will happen for any uncaught exception that is thrown during parsing.
+Instead, we catch these exceptions and return an exit code that is retrieved by referencing it by its label, such as ``ERROR_READING_OUTPUT_FILE`` in this example, through the ``self.exit_codes`` property.
+This call will retrieve the corresponding exit code defined on the ``CalcJob`` that we are currently parsing.
+Returning this exit code from the parser will stop the parsing immediately and will instruct the engine to set its exit status and exit message on the node of this calculation job.
+
 The ``parse_stdout`` method is just a small utility function to separate the actual parsing of the data from the main parser code.
 In this case, the parsing is so simple that we might have as well kept it in the main method, but this is just to illustrate that you are completely free to organize the code within the ``parse`` method for clarity.
 If we manage to parse the sum, produced by the calculation, we wrap it in the appropriate :py:class:`~aiida.orm.nodes.data.int.Int` data node class, and register it as an output through the ``out`` method:
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py
     :language: python
-    :lines: 25-25
+    :lines: 21-21
     :linenos:
-    :lineno-start: 25
+    :lineno-start: 21
 
 Note that if we encountered no problems, we do not have to return anything.
 The engine will interpret this as the calculation having finished successfully.
@@ -518,3 +638,50 @@ However, we can give you some guidelines:
         If you were to store all this data in the database, it would become unnecessarily bloated, because the chances you would have to query for this data are unlikely.
         Instead these array type data nodes store the bulk of their content in the repository.
         This way you still keep the data and therewith the provenance of your calculations, while keeping your database lean and fast!
+
+
+.. _topics:calculations:usage:calcjobs:scheduler-errors:
+
+Scheduler errors
+----------------
+
+Besides the output parsers, the scheduler plugins can also provide parsing of the output generated by the job scheduler, by implementing the :meth:`~aiida.schedulers.scheduler.Scheduler.parse_output` method.
+If the scheduler plugin has implemented this method, the output generated by the scheduler, written to the stdout and stderr file descriptors as well as the output of the detailed job info command, is parsed.
+If the parser detects a known problem, such as an out-of-memory (OOM) error, the corresponding exit code will already be set on the calculation job node.
+The output parser, if defined in the inputs, can inspect the exit status on the node and decide to keep it or override it with a different, potentially more useful, exit code.
+
+.. code:: python
+
+    class SomeParser(Parser):
+
+        def parse(self, **kwargs):
+            """Parse the contents of the output files retrieved in the `FolderData`."""
+            if self.node.exit_status is not None:
+                # If an exit status is already set on the node, that means the
+                # scheduler plugin detected a problem.
+                return
+
+Note that in the example given above, the parser returns immediately if it detects that the scheduler detected a problem.
+Since it returns `None`, the exit code of the scheduler will be kept and will be the final exit code of the calculation job.
+However, the parser does not have to immediately return.
+It can still try to parse some of the retrieved output, if there is any.
+If it finds a more specific problem than the generic scheduler error, it can always return an exit code of itself to override it.
+The parser can even return ``ExitCode(0)`` to have the calculation marked as successfully finished, despite the scheduler having determined that there was a problem.
+The following table summarizes the possible scenarios of the scheduler parser and output parser returning an exit code and what the final resulting exit code will be that is set on the node:
+
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| **Scenario**                                                                       | **Scheduler result**  | **Retrieved result**  | **Final result**      |
++====================================================================================+=======================+=======================+=======================+
+| Neither parser found any problem.                                                  | ``None``              | ``None``              | ``ExitCode(0)``       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Scheduler parser found an issue,                                                   | ``ExitCode(100)``     | ``None``              | ``ExitCode(100)``     |
+| but output parser does not override.                                               |                       |                       |                       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Only output parser found a problem.                                                | ``None``              | ``ExitCode(400)``     | ``ExitCode(400)``     |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Scheduler parser found an issue, but the output parser overrides with a more       | ``ExitCode(100)``     | ``ExitCode(400)``     | ``ExitCode(400)``     |
+| specific error code.                                                               |                       |                       |                       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+
+| Scheduler found issue but output parser overrides saying that despite that the     | ``ExitCode(100)``     | ``ExitCode(0)``       | ``ExitCode(0)``       |
+| calculation should be considered finished successfully.                            |                       |                       |                       |
++------------------------------------------------------------------------------------+-----------------------+-----------------------+-----------------------+

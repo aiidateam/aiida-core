@@ -12,11 +12,19 @@
 import collections
 import logging
 
-from tornado import gen
-import plumpy
 from kiwipy import communications, Future
+import pamqp.encode
+import plumpy
 
-__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher')
+from aiida.common.extendeddicts import AttributeDict
+
+__all__ = ('RemoteException', 'CommunicationTimeout', 'DeliveryFailed', 'ProcessLauncher', 'BROKER_DEFAULTS')
+
+# The following statement enables support for RabbitMQ 3.5 because without it, connections established by `aiormq` will
+# fail because the interpretation of the types of integers passed in connection parameters has changed after that
+# version. Once RabbitMQ 3.5 is no longer supported (it has been EOL since October 2016) this can be removed. This
+# should also allow to remove the direct dependency on `pamqp` entirely.
+pamqp.encode.support_deprecated_rabbitmq()
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,70 +32,95 @@ RemoteException = plumpy.RemoteException
 DeliveryFailed = plumpy.DeliveryFailed
 CommunicationTimeout = communications.TimeoutError  # pylint: disable=invalid-name
 
-# GP: Using here 127.0.0.1 instead of localhost because on some computers
-# localhost resolves first to IPv6 with address ::1 and if RMQ is not
-# running on IPv6 one gets an annoying warning. When moving this to
-# a user-configurable variable, make sure users are aware of this and
-# know how to avoid warnings. For more info see
-# https://github.com/aiidateam/aiida-core/issues/1142
-_RMQ_URL = 'amqp://127.0.0.1'
-_RMQ_HEARTBEAT_TIMEOUT = 600  # Maximum that can be set by client, with default RabbitMQ server configuration
 _LAUNCH_QUEUE = 'process.queue'
 _MESSAGE_EXCHANGE = 'messages'
 _TASK_EXCHANGE = 'tasks'
 
+BROKER_DEFAULTS = AttributeDict({
+    'protocol': 'amqp',
+    'username': 'guest',
+    'password': 'guest',
+    'host': '127.0.0.1',
+    'port': 5672,
+    'virtual_host': '',
+    'heartbeat': 600,
+})
 
-def get_rmq_url(heartbeat_timeout=None):
+
+def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, virtual_host=None, **kwargs):
+    """Return the URL to connect to RabbitMQ.
+
+    .. note::
+
+        The default of the ``host`` is set to ``127.0.0.1`` instead of ``localhost`` because on some computers localhost
+        resolves first to IPv6 with address ::1 and if RMQ is not running on IPv6 one gets an annoying warning. For more
+        info see: https://github.com/aiidateam/aiida-core/issues/1142
+
+    :param protocol: the protocol to use, `amqp` or `amqps`.
+    :param username: the username for authentication.
+    :param password: the password for authentication.
+    :param host: the hostname of the RabbitMQ server.
+    :param port: the port of the RabbitMQ server.
+    :param virtual_host: the virtual host to connect to.
+    :param kwargs: remaining keyword arguments that will be encoded as query parameters.
+    :returns: the connection URL string.
     """
-    Get the URL to connect to RabbitMQ
+    from urllib.parse import urlencode, urlunparse
 
-    :param heartbeat_timeout: the interval in seconds for the heartbeat timeout
-    :returns: the connection URL string
-    """
-    url = _RMQ_URL
+    if 'heartbeat' not in kwargs:
+        kwargs['heartbeat'] = BROKER_DEFAULTS.heartbeat
 
-    if heartbeat_timeout is None:
-        heartbeat_timeout = _RMQ_HEARTBEAT_TIMEOUT
+    scheme = protocol or BROKER_DEFAULTS.protocol
+    netloc = '{username}:{password}@{host}:{port}'.format(
+        username=username or BROKER_DEFAULTS.username,
+        password=password or BROKER_DEFAULTS.password,
+        host=host or BROKER_DEFAULTS.host,
+        port=port or BROKER_DEFAULTS.port,
+    )
+    path = virtual_host or BROKER_DEFAULTS.virtual_host
+    parameters = ''
+    query = urlencode(kwargs)
+    fragment = ''
 
-    if heartbeat_timeout is not None:
-        url += '?heartbeat={}'.format(heartbeat_timeout)
+    # The virtual host is optional but if it is specified it needs to start with a forward slash. If the virtual host
+    # itself contains forward slashes, they need to be encoded.
+    if path and not path.startswith('/'):
+        path = f'/{path}'
 
-    return url
+    return urlunparse((scheme, netloc, path, parameters, query, fragment))
 
 
 def get_launch_queue_name(prefix=None):
-    """
-    Return the launch queue name with an optional prefix
+    """Return the launch queue name with an optional prefix.
 
     :returns: launch queue name
     """
     if prefix is not None:
-        return '{}.{}'.format(prefix, _LAUNCH_QUEUE)
+        return f'{prefix}.{_LAUNCH_QUEUE}'
 
     return _LAUNCH_QUEUE
 
 
 def get_message_exchange_name(prefix):
-    """
-    Return the message exchange name for a given prefix
+    """Return the message exchange name for a given prefix.
 
     :returns: message exchange name
     """
-    return '{}.{}'.format(prefix, _MESSAGE_EXCHANGE)
+    return f'{prefix}.{_MESSAGE_EXCHANGE}'
 
 
 def get_task_exchange_name(prefix):
-    """
-    Return the task exchange name for a given prefix
+    """Return the task exchange name for a given prefix.
 
     :returns: task exchange name
     """
-    return '{}.{}'.format(prefix, _TASK_EXCHANGE)
+    return f'{prefix}.{_TASK_EXCHANGE}'
 
 
 def _store_inputs(inputs):
-    """
-    Try to store the values in the input dictionary. For nested dictionaries, the values are stored by recursively.
+    """Try to store the values in the input dictionary.
+
+    For nested dictionaries, the values are stored by recursively.
     """
     for node in inputs.values():
         try:
@@ -119,14 +152,13 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         """
         from aiida.engine import ProcessState
 
-        if not node.is_excepted:
+        if not node.is_excepted and not node.is_sealed:
             node.logger.exception(message)
             node.set_exception(str(exception))
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 
-    @gen.coroutine
-    def _continue(self, communicator, pid, nowait, tag=None):
+    async def _continue(self, communicator, pid, nowait, tag=None):
         """Continue the task.
 
         Note that the task may already have been completed, as indicated from the corresponding the node, in which
@@ -146,14 +178,14 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         try:
             node = load_node(pk=pid)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
             # In this case, the process node corresponding to the process id, cannot be resolved uniquely or does not
             # exist. The latter being the most common case, where someone deleted the node, before the process was
             # properly terminated. Since the node is never coming back and so the process will never be able to continue
             # we raise `Return` instead of `TaskRejected` because the latter would cause the task to be resent and start
             # to ping-pong between RabbitMQ and the daemon workers.
             LOGGER.exception('Cannot continue process<%d>', pid)
-            raise gen.Return(False)
+            return False
 
         if node.is_terminated:
 
@@ -168,10 +200,10 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             elif node.is_killed:
                 future.set_exception(plumpy.KilledError())
 
-            raise gen.Return(future.result())
+            return future.result()
 
         try:
-            result = yield super()._continue(communicator, pid, nowait, tag)
+            result = await super()._continue(communicator, pid, nowait, tag)
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)
@@ -188,4 +220,4 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             LOGGER.exception('failed to serialize the result for process<%d>', pid)
             raise
 
-        raise gen.Return(serialized)
+        return serialized

@@ -75,7 +75,7 @@ def process_list(
     else:
         tabulated = tabulate(projected, headers=headers)
         echo.echo(tabulated)
-        echo.echo('\nTotal results: {}\n'.format(len(projected)))
+        echo.echo(f'\nTotal results: {len(projected)}\n')
         print_last_process_state_change()
         # Second query to get active process count
         # Currently this is slow but will be fixed wiith issue #2770
@@ -109,7 +109,7 @@ def process_call_root(processes):
         caller = process.caller
 
         if caller is None:
-            echo.echo('No callers found for Process<{}>'.format(process.pk))
+            echo.echo(f'No callers found for Process<{process.pk}>')
             continue
 
         while True:
@@ -120,7 +120,7 @@ def process_call_root(processes):
 
             caller = next_caller
 
-        echo.echo('{}'.format(caller.pk))
+        echo.echo(f'{caller.pk}')
 
 
 @verdi_process.command('report')
@@ -150,7 +150,7 @@ def process_report(processes, levelname, indent_size, max_depth):
         elif isinstance(process, (CalcFunctionNode, WorkFunctionNode)):
             echo.echo(get_process_function_report(process))
         else:
-            echo.echo('Nothing to show for node type {}'.format(process.__class__))
+            echo.echo(f'Nothing to show for node type {process.__class__}')
 
 
 @verdi_process.command('status')
@@ -179,13 +179,13 @@ def process_kill(processes, timeout, wait):
     for process in processes:
 
         if process.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is already terminated')
             continue
 
         try:
             future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
         except communications.UnroutableError:
-            echo.echo_error('Process<{}> is unreachable'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is unreachable')
         else:
             futures[future] = process
 
@@ -217,13 +217,13 @@ def process_pause(processes, all_entries, timeout, wait):
     for process in processes:
 
         if process.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is already terminated')
             continue
 
         try:
             future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
         except communications.UnroutableError:
-            echo.echo_error('Process<{}> is unreachable'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is unreachable')
         else:
             futures[future] = process
 
@@ -254,13 +254,13 @@ def process_play(processes, all_entries, timeout, wait):
     for process in processes:
 
         if process.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is already terminated')
             continue
 
         try:
             future = controller.play_process(process.pk)
         except communications.UnroutableError:
-            echo.echo_error('Process<{}> is unreachable'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is unreachable')
         else:
             futures[future] = process
 
@@ -284,7 +284,7 @@ def process_watch(processes):
         if correlation_id is None:
             correlation_id = '--'
 
-        echo.echo('Process<{}> [{}|{}]: {}'.format(sender, subject, correlation_id, body))
+        echo.echo(f'Process<{sender}> [{subject}|{correlation_id}]: {body}')
 
     communicator = get_manager().get_communicator()
     echo.echo_info('watching for broadcasted messages, press CTRL+C to stop...')
@@ -292,7 +292,7 @@ def process_watch(processes):
     for process in processes:
 
         if process.is_terminated:
-            echo.echo_error('Process<{}> is already terminated'.format(process.pk))
+            echo.echo_error(f'Process<{process.pk}> is already terminated')
             continue
 
         communicator.add_broadcast_subscriber(BroadcastFilter(_print, sender=process.pk))
@@ -336,6 +336,7 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
     """
     # pylint: disable=too-many-branches
     import kiwipy
+    from plumpy.futures import unwrap_kiwi_future
     from concurrent import futures
 
     from aiida.manage.external.rmq import CommunicationTimeout
@@ -347,26 +348,26 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
             process = futures_map[future]
 
             try:
+                # unwrap is need here since LoopCommunicator will also wrap a future
+                future = unwrap_kiwi_future(future)
                 result = future.result()
             except CommunicationTimeout:
-                echo.echo_error('call to {} Process<{}> timed out'.format(infinitive, process.pk))
+                echo.echo_error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:  # pylint: disable=broad-except
-                echo.echo_error('failed to {} Process<{}>: {}'.format(infinitive, process.pk, exception))
+                echo.echo_error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:
                 if result is True:
-                    echo.echo_success('{} Process<{}>'.format(past, process.pk))
+                    echo.echo_success(f'{past} Process<{process.pk}>')
                 elif result is False:
-                    echo.echo_error('problem {} Process<{}>'.format(present, process.pk))
+                    echo.echo_error(f'problem {present} Process<{process.pk}>')
                 elif isinstance(result, kiwipy.Future):
-                    echo.echo_success('scheduled {} Process<{}>'.format(infinitive, process.pk))
+                    echo.echo_success(f'scheduled {infinitive} Process<{process.pk}>')
                     scheduled[result] = process
                 else:
-                    echo.echo_error(
-                        'got unexpected response when {} Process<{}>: {}'.format(present, process.pk, result)
-                    )
+                    echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
 
         if wait and scheduled:
-            echo.echo_info('waiting for process(es) {}'.format(','.join([str(proc.pk) for proc in scheduled.values()])))
+            echo.echo_info(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
 
             for future in futures.as_completed(scheduled.keys(), timeout=timeout):
                 process = scheduled[future]
@@ -374,16 +375,14 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
                 try:
                     result = future.result()
                 except Exception as exception:  # pylint: disable=broad-except
-                    echo.echo_error('failed to {} Process<{}>: {}'.format(infinitive, process.pk, exception))
+                    echo.echo_error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
                 else:
                     if result is True:
-                        echo.echo_success('{} Process<{}>'.format(past, process.pk))
+                        echo.echo_success(f'{past} Process<{process.pk}>')
                     elif result is False:
-                        echo.echo_error('problem {} Process<{}>'.format(present, process.pk))
+                        echo.echo_error(f'problem {present} Process<{process.pk}>')
                     else:
-                        echo.echo_error(
-                            'got unexpected response when {} Process<{}>: {}'.format(present, process.pk, result)
-                        )
+                        echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
 
     except futures.TimeoutError:
-        echo.echo_error('timed out trying to {} processes {}'.format(infinitive, futures_map.values()))
+        echo.echo_error(f'timed out trying to {infinitive} processes {futures_map.values()}')

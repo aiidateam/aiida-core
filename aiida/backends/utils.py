@@ -55,6 +55,6 @@ def delete_nodes_and_connections(pks):
     elif configuration.PROFILE.database_backend == BACKEND_SQLA:
         from aiida.backends.sqlalchemy.utils import delete_nodes_and_connections_sqla as delete_nodes_backend
     else:
-        raise Exception('unknown backend {}'.format(configuration.PROFILE.database_backend))
+        raise Exception(f'unknown backend {configuration.PROFILE.database_backend}')
 
     delete_nodes_backend(pks)

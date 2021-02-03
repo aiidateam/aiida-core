@@ -11,6 +11,7 @@
 import unittest
 
 from aiida.backends.testbase import AiidaTestCase
+from tests.static import STATIC_DIR
 
 
 class TestCodDbImporter(AiidaTestCase):
@@ -256,9 +257,8 @@ class TestNnincDbImporter(AiidaTestCase):
         results = NnincSearchResults([{'id': upf}])
         entry = results.at(0)
 
-        path_root = os.path.split(__file__)[0]
-        path_pseudos = os.path.join(path_root, 'fixtures', 'pseudos')
-        with open(os.path.join(path_pseudos, '{}.UPF'.format(upf)), 'r', encoding='utf8') as fpntr:
+        path_pseudos = os.path.join(STATIC_DIR, 'pseudos')
+        with open(os.path.join(path_pseudos, f'{upf}.UPF'), 'r', encoding='utf8') as fpntr:
             entry._contents = fpntr.read()  # pylint: disable=protected-access
 
         upfnode = entry.get_upf_node()

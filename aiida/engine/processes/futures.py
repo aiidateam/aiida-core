@@ -9,34 +9,44 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
-import tornado.gen
+import asyncio
+from typing import Optional, Union
 
-import plumpy
 import kiwipy
+
+from aiida.orm import Node, load_node
 
 __all__ = ('ProcessFuture',)
 
 
-class ProcessFuture(plumpy.Future):
+class ProcessFuture(asyncio.Future):
     """Future that waits for a process to complete using both polling and listening for broadcast events if possible."""
 
     _filtered = None
 
-    def __init__(self, pk, loop=None, poll_interval=None, communicator=None):
+    def __init__(
+        self,
+        pk: int,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        poll_interval: Union[None, int, float] = None,
+        communicator: Optional[kiwipy.Communicator] = None
+    ):
         """Construct a future for a process node being finished.
 
-        If a None poll_interval is supplied polling will not be used. If a communicator is supplied it will be used
-        to listen for broadcast messages.
+        If a None poll_interval is supplied polling will not be used.
+        If a communicator is supplied it will be used to listen for broadcast messages.
 
         :param pk: process pk
         :param loop: An event loop
         :param poll_interval: optional polling interval, if None, polling is not activated.
         :param communicator: optional communicator, if None, will not subscribe to broadcasts.
         """
-        from aiida.orm import load_node
         from .process import ProcessState
 
-        super().__init__()
+        # create future in specified event loop
+        loop = loop if loop is not None else asyncio.get_event_loop()
+        super().__init__(loop=loop)
+
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
         node = load_node(pk=pk)
@@ -51,25 +61,24 @@ class ProcessFuture(plumpy.Future):
             if self._communicator is not None:
                 broadcast_filter = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(node), sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
-                    broadcast_filter.add_subject_filter('state_changed.*.{}'.format(state.value))
+                    broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
                 self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)
 
             # Start polling
             if poll_interval is not None:
-                loop.add_callback(self._poll_process, node, poll_interval)
+                loop.create_task(self._poll_process(node, poll_interval))
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up the future by removing broadcast subscribers from the communicator if it still exists."""
         if self._communicator is not None:
             self._communicator.remove_broadcast_subscriber(self._broadcast_identifier)
             self._communicator = None
             self._broadcast_identifier = None
 
-    @tornado.gen.coroutine
-    def _poll_process(self, node, poll_interval):
+    async def _poll_process(self, node: Node, poll_interval: Union[int, float]) -> None:
         """Poll whether the process node has reached a terminal state."""
         while not self.done() and not node.is_terminated:
-            yield tornado.gen.sleep(poll_interval)
+            await asyncio.sleep(poll_interval)
 
         if not self.done():
             self.set_result(node)

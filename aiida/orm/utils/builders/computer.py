@@ -108,7 +108,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
             raise self.ComputerValidationError(
-                'Unknown parameters passed to the ComputerBuilder: {}'.format(', '.join(sorted(passed_keys - used)))
+                f"Unknown parameters passed to the ComputerBuilder: {', '.join(sorted(passed_keys - used))}"
             )
 
         return computer
@@ -119,7 +119,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
             try:
                 return self._computer_spec[key]
             except KeyError:
-                raise self.ComputerValidationError(key + ' not set')
+                raise self.ComputerValidationError(f'{key} not set')
         return None
 
     def _get(self, key):
@@ -172,4 +172,4 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
             return self.msg
 
         def __repr__(self):
-            return '<ComputerValidationError: {}>'.format(self)
+            return f'<ComputerValidationError: {self}>'

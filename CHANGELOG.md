@@ -1,5 +1,168 @@
 # Changelog
 
+## v1.5.2
+
+Note: release `v1.5.1` was skipped due to a problem with the uploaded files to PyPI.
+
+### Bug fixes
+- `Dict`: accessing an inexistent key now raises a `KeyError` (instead of `AttributeError`) [[#4577]](https://github.com/aiidateam/aiida-core/pull/4577)
+- Config: make writing to disk as atomic as possible [[#4607]](https://github.com/aiidateam/aiida-core/pull/4607)
+- Config: do not overwrite when loaded and not migrated [[#4605]](https://github.com/aiidateam/aiida-core/pull/4605)
+- SqlAlchemy: fix bug in `Group` extras migration with revision `0edcdd5a30f0` [[#4602]](https://github.com/aiidateam/aiida-core/pull/4602)
+
+### Developers
+- SqlAlchemy: improve the alembic migration code [[#4602]](https://github.com/aiidateam/aiida-core/pull/4602)
+4607
+- CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
+
+
+## v1.5.0
+
+In this minor version release, support for Python 3.9 is added [[#4301]](https://github.com/aiidateam/aiida-core/pull/4301), while support for Python 3.5 is dropped [[#4386]](https://github.com/aiidateam/aiida-core/pull/4386).
+This version is compatible with all current Python versions that are not end-of-life:
+ * 3.6
+ * 3.7
+ * 3.8
+ * 3.9
+
+
+### Features
+- Process functions (`calcfunction` and `workfunction`) can now be submitted to the daemon just like `CalcJob`s and `WorkChain`s [[#4539]](https://github.com/aiidateam/aiida-core/pull/4539)
+- REST API: list endpoints at base URL [[#4412]](https://github.com/aiidateam/aiida-core/pull/4412)
+- REST API: new `full_types_count` endpoint that counts the number of nodes for each type of node [[#4277]](https://github.com/aiidateam/aiida-core/pull/4277)
+- `ProcessBuilder`: allow unsetting of inputs through attribute deletion [[#4419]](https://github.com/aiidateam/aiida-core/pull/4419)
+- `verdi migrate`: make `--in-place` work across different file systems [[#4393]](https://github.com/aiidateam/aiida-core/pull/4393)
+
+### Improvements
+- Added remaining original documentation that didn't make it into the first step of the recent major overhaul of v1.3.0
+- `verdi process show`: order by ctime and print process label [[#4407]](https://github.com/aiidateam/aiida-core/pull/4407)
+- `LinkManager`: fix inaccuracy in exception message for non-existent link [[#4388]](https://github.com/aiidateam/aiida-core/pull/4388)
+- Add `reset` method to`ProgressReporterAbstract` [[#4522]](https://github.com/aiidateam/aiida-core/pull/4522)
+- Improve the deprecation warning for `Node.open` outside context manager [[#4434]](https://github.com/aiidateam/aiida-core/pull/4434)
+
+### Bug fixes
+- `SlurmScheduler`: fix bug in validation of job resources [[#4555]](https://github.com/aiidateam/aiida-core/pull/4555)
+- Fix `ZeroDivisionError` in worker slots check [[#4513]](https://github.com/aiidateam/aiida-core/pull/4513)
+- `CalcJob`: only attempt to clean up the retrieve temporary folder after parsing if it is present [[#4379]](https://github.com/aiidateam/aiida-core/pull/4379)
+- Add missing entry point groups to the mapping [[#4395]](https://github.com/aiidateam/aiida-core/pull/4395)
+- REST API: the `process_type` can now identify pathological empty-stringed or null entries in the database [[#4277]](https://github.com/aiidateam/aiida-core/pull/4277)
+
+
+### Developers
+- `verdi group delete`: deprecate and ignore the `--clear` option [[#4357]](https://github.com/aiidateam/aiida-core/pull/4357)
+- Replace old format string interpolation with f-strings [[#4400]](https://github.com/aiidateam/aiida-core/pull/4400)
+- CI: move `pylint` configuration to `pyproject.toml` [[#4411]](https://github.com/aiidateam/aiida-core/pull/4411)
+- CI: use `-e` install for tox + add docker-compose for isolated RabbitMQ [[#4375]](https://github.com/aiidateam/aiida-core/pull/4375)
+- CI: add coverage patch threshold to prevent false positives [[#4413]](https://github.com/aiidateam/aiida-core/pull/4413)
+- CI: Allow for mypy type checking of third-party imports [[#4553]](https://github.com/aiidateam/aiida-core/pull/4553)
+
+### Dependencies
+- Update requirement `pytest~=6.0` and use `pyproject.toml` [[#4410]](https://github.com/aiidateam/aiida-core/pull/4410)
+
+### Archive (import/export) refactor:
+- The refactoring goal was to pave the way for the implementation of a new archive format in v2.0.0 ([ aiidateamAEP005](https://github.com/aiidateam/AEP/pull/21))
+- Three abstract+concrete interface classes are defined; writer, reader, migrator, which are **independent of theinternal structure of the archive**. These classes are used within the export/import code.
+- The code in `aiida/tools/importexport` has been largely re-written, in particular adding `aiida/toolsimportexport/archive`, which contains this code for interfacing with an archive, and **does not require connectionto an AiiDA profile**.
+- The export logic has been re-written; to minimise required queries (faster), and to allow for "streaming" datainto the writer (minimise RAM requirement with new format). It is intended that a similiar PR will be made for the import code.
+- A general progress bar implementation is now available in `aiida/common/progress_reporter.py`. All correspondingCLI commands now also have `--verbosity` option.
+- Merged PRs:
+    - Refactor export archive ([#4448](https://github.com/aiidateam/aiida-core/pull/4448) & [#4534](https://githubcom/aiidateam/aiida-core/pull/4534))
+    - Refactor import archive ([#4510](https://github.com/aiidateam/aiida-core/pull/4510))
+    - Refactor migrate archive ([#4532](https://github.com/aiidateam/aiida-core/pull/4532))
+    - Add group extras to archive ([#4521](https://github.com/aiidateam/aiida-core/pull/4521))
+    - Refactor cmdline progress bar ([#4504](https://github.com/aiidateam/aiida-core/pull/4504) & [#4522](https:/github.com/aiidateam/aiida-core/pull/4522))
+- Updated archive version from `0.9` -> `0.10` ([#4561](https://github.com/aiidateam/aiida-core/pull/4561)
+- Deprecations: `export_zip`, `export_tar`, `export_tree`, `extract_zip`, `extract_tar` and `extract_tree`functions. `silent` key-word in the `export` function
+- Removed: `ZipFolder` class
+
+## v1.4.4
+
+This patch is a backport for 2 of the fixes in `v1.5.2`.
+
+### Bug fixes
+- `Dict`: accessing an inexistent key now raises a `KeyError` (instead of an `AttributeError`) [[#4616]](https://github.com/aiidateam/aiida-core/pull/4616)
+
+### Developers
+- CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
+
+
+## v1.4.3
+
+### Bug fixes
+- RabbitMQ: update `topika` requirement to fix SSL connections and remove validation of `broker_parameters` from profile [[#4542]](https://github.com/aiidateam/aiida-core/pull/4542)
+- Fix `UnboundLocalError` in `aiida.cmdline.utils.edit_multiline_template`, which affected `verdi code/computer setup` [[#4436]](https://github.com/aiidateam/aiida-core/pull/4436)
+
+
+## v1.4.2
+
+### Critical bug fixes
+- `CalcJob`: make sure `local_copy_list` files do not end up in the node's repository folder [[#4415]](https://github.com/aiidateam/aiida-core/pull/4415)
+
+
+## v1.4.1
+
+### Improvements
+- `verdi setup`: forward broker defaults to interactive mode [[#4405]](https://github.com/aiidateam/aiida-core/pull/4405)
+
+### Bug fixes
+- `verdi setup`: improve validation and help string of broker virtual host [[#4408]](https://github.com/aiidateam/aiida-core/pull/4408)
+- Implement `next` and `iter` for the `Node.open` deprecation wrapper [[#4399]](https://github.com/aiidateam/aiida-core/pull/4399)
+- Dependencies: increase minimum version requirement `plumpy~=0.15.1` to suppress noisy warning at end of interpreter that ran processes [[#4398]](https://github.com/aiidateam/aiida-core/pull/4398)
+
+
+## v1.4.0
+
+### Improvements
+- Add defaults for configure options of the `SshTransport` plugin [[#4223]](https://github.com/aiidateam/aiida-core/pull/4223)
+- `verdi status`: distinguish database schema version incompatible [[#4319]](https://github.com/aiidateam/aiida-core/pull/4319)
+- `SlurmScheduler`: implement `parse_output` to detect OOM and OOW [[#3931]](https://github.com/aiidateam/aiida-core/pull/3931)
+
+### Features
+- Make the RabbitMQ connection parameters configurable [[#4341]](https://github.com/aiidateam/aiida-core/pull/4341)
+- Add infrastructure to parse scheduler output for `CalcJobs` [[#3906]](https://github.com/aiidateam/aiida-core/pull/3906)
+- Add support for "peer" authentication with PostgreSQL [[#4255]](https://github.com/aiidateam/aiida-core/pull/4255)
+- Add the `--paused` flag to `verdi process list` [[#4213]](https://github.com/aiidateam/aiida-core/pull/4213)
+- Make the loglevel of the daemonizer configurable [[#4276]](https://github.com/aiidateam/aiida-core/pull/4276)
+- `Transport`: add option to not use a login shell for all commands [[#4271]](https://github.com/aiidateam/aiida-core/pull/4271)
+- Implement `skip_orm` option for SqlAlchemy `Group.remove_nodes` [[#4214]](https://github.com/aiidateam/aiida-core/pull/4214)
+- `Dict`: allow setting attributes through setitem and `AttributeManager` [[#4351]](https://github.com/aiidateam/aiida-core/pull/4351)
+- `CalcJob`: allow nested target paths for `local_copy_list` [[#4373]](https://github.com/aiidateam/aiida-core/pull/4373)
+- `verdi export migrate`: add `--in-place` flag to migrate archive in place [[#4220]](https://github.com/aiidateam/aiida-core/pull/4220)
+
+### Bug fixes
+- `verdi`: make `--prepend-text` and `--append-text` options properly interactive [[#4318]](https://github.com/aiidateam/aiida-core/pull/4318)
+- `verdi computer test`: fix failing result in harmless `stderr` responses [[#4316]](https://github.com/aiidateam/aiida-core/pull/4316)
+- `QueryBuilder`: Accept empty string for `entity_type` in `append` method [[#4299]](https://github.com/aiidateam/aiida-core/pull/4299)
+- `verdi status`: do not except when no profile is configured [[#4253]](https://github.com/aiidateam/aiida-core/pull/4253)
+- `ArithmeticAddParser`: attach output before checking for negative value [[#4267]](https://github.com/aiidateam/aiida-core/pull/4267)
+- `CalcJob`: fix bug in `retrieve_list` affecting entries without wildcards [[#4275]](https://github.com/aiidateam/aiida-core/pull/4275)
+- `TemplateReplacerCalculation`: make `files` namespace dynamic [[#4348]](https://github.com/aiidateam/aiida-core/pull/4348)
+
+### Developers
+- Rename folder `test.fixtures` to `test.static` [[#4219]](https://github.com/aiidateam/aiida-core/pull/4219)
+- Remove all files from the pre-commit exclude list [[#4196]](https://github.com/aiidateam/aiida-core/pull/4196)
+- ORM: move attributes/extras methods of frontend and backend nodes to mixins [[#4376]](https://github.com/aiidateam/aiida-core/pull/4376)
+
+### Dependencies
+- Dependencies: update minimum requirement `paramiko~=2.7` [[#4222]](https://github.com/aiidateam/aiida-core/pull/4222)
+- Depedencies: remove upper limit and allow `numpy~=1.17` [[#4378]](https://github.com/aiidateam/aiida-core/pull/4378)
+
+### Deprecations
+- Deprecate getter and setter methods of `Computer` properties [[#4252]](https://github.com/aiidateam/aiida-core/pull/4252)
+- Deprecate methods that refer to a computer's label as name [[#4309]](https://github.com/aiidateam/aiida-core/pull/4309)
+
+### Changes
+- `BaseRestartWorkChain`: do not run `process_handler` when `exit_codes=[]` [[#4380]](https://github.com/aiidateam/aiida-core/pull/4380)
+- `SlurmScheduler`: always raise for non-zero exit code [[#4332]](https://github.com/aiidateam/aiida-core/pull/4332)
+- Remove superfluous `ERROR_NO_RETRIEVED_FOLDER` from `CalcJob` subclasses [[#3906]](https://github.com/aiidateam/aiida-core/pull/3906)
+
+
+## v1.3.1
+
+### Bug fixes:
+- Fix a file handle leak due to the `Runner` not closing the event loop if it created it itself [[#4307]](https://github.com/aiidateam/aiida-core/pull/4307)
+- `ArithmeticAddParser`: attach output before checking for negative value [[#4267]](https://github.com/aiidateam/aiida-core/pull/4267)
+
 
 ## v1.3.0
 
@@ -340,9 +503,9 @@ Changes between 1.0 alpha/beta releases are not included - for those see the cha
 - Implement the exporting and importing of node extras [[#2416]](https://github.com/aiidateam/aiida-core/pull/2416)
 - Implement the exporting and importing of comments [[#2413]](https://github.com/aiidateam/aiida-core/pull/2413)
 - Implement the exporting and importing of logs [[#2393]](https://github.com/aiidateam/aiida-core/pull/2393)
-- Add `export_parameters` to the `metadata.json` in archive export files [[#3386]](https://github.com/aiidateam/aiida-core/pull/3386)
+- Add `export_parameters` to the `metadata.json` in archive files [[#3386]](https://github.com/aiidateam/aiida-core/pull/3386)
 - Simplify the data format of export archives, greatly reducing file size [[#3090]](https://github.com/aiidateam/aiida-core/pull/3090)
-- `verdi import` automatically migrates export files of old formats [[#2820]](https://github.com/aiidateam/aiida-core/pull/2820)
+- `verdi import` automatically migrates archive files of old formats [[#2820]](https://github.com/aiidateam/aiida-core/pull/2820)
 
 #### Miscellaneous
 - Refactor unit test managers and add basic fixtures for `pytest` [[#3319]](https://github.com/aiidateam/aiida-core/pull/3319)
@@ -456,7 +619,7 @@ Changes between 1.0 alpha/beta releases are not included - for those see the cha
 - Delete nodes via `verdi node delete` [[#1083]](https://github.com/aiidateam/aiida-core/pull/1083)
 - Import structures using ASE [[#1085]](https://github.com/aiidateam/aiida-core/pull/1085)
 - `StructureData` - `pymatgen` - `StructureData` roundtrip works for arbitrary kind names [[#1285]](https://github.com/aiidateam/aiida-core/pull/1285) [[#1306]](https://github.com/aiidateam/aiida-core/pull/1306) [[#1357]](https://github.com/aiidateam/aiida-core/pull/1357)
-- Output format of export file can now be defined for `verdi export migrate` [[#1383]](https://github.com/aiidateam/aiida-core/pull/1383)
+- Output format of archive file can now be defined for `verdi export migrate` [[#1383]](https://github.com/aiidateam/aiida-core/pull/1383)
 - Automatic reporting of code coverage by unit tests has been added [[#1422]](https://github.com/aiidateam/aiida-core/pull/1422)
 
 ### Critical bug fixes

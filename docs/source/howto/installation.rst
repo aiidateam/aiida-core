@@ -157,7 +157,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro:install:aiida-core>` after activation.
+To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv, as described :ref:`here <intro:get_started:setup>`.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
@@ -166,7 +166,7 @@ By default, each AiiDA instance (each installation) will store associated profil
 A best practice is to always separate the profiles together with the code to which they belong.
 The typical approach is to place the configuration folder in the virtual environment itself and have it automatically selected whenever the environment is activated.
 
-The location of the AiiDA configuration folder, can be controlled with the ``AIIDA_PATH`` environment variable.
+The location of the AiiDA configuration folder can be controlled with the ``AIIDA_PATH`` environment variable.
 This allows us to change the configuration folder automatically, by adding the following lines to the activation script of a virtual environment.
 For example, if the path of your virtual environment is ``/home/user/.virtualenvs/aiida``, add the following line:
 
@@ -218,13 +218,14 @@ the configuration directory ``~/project_a/.aiida`` will be used.
     If there was no ``.aiida`` directory in ``~/project_a``, AiiDA would have created it for you, so make sure to set the ``AIIDA_PATH`` correctly.
 
 
-.. todo::
+.. _how-to:installation:configure:daemon-as-service:
 
-    .. _how-to:installation:plugins:
+Daemon as a service
+===================
 
-    title: Installing plugins
-
-    `#4122`_
+The daemon can be set up as a system service, such that it automatically starts at system startup.
+How to do this, is operating system specific.
+For Ubuntu, here is `a template for the service file <https://github.com/marvel-nccr/ansible-role-aiida/blob/c709088dff74d1e1ae4d8379e740aba35fb2ef97/templates/aiida-daemon%40.service>`_ and `ansible instructions to install the service <https://github.com/marvel-nccr/ansible-role-aiida/blob/c709088dff74d1e1ae4d8379e740aba35fb2ef97/tasks/aiida-daemon.yml>`_.
 
 
 .. _how-to:installation:performance:
@@ -483,7 +484,7 @@ Instead, each AiiDA user should install AiiDA in a Unix/Windows account on their
 Under this account it is possible to configure all the credentials necessary to connect to remote computers.
 Using independent accounts will ensure that, for instance, the SSH credentials to connect to supercomputers are not shared with others.
 
-Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:data:share>`.
+Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:share:archives>`.
 Sharing (subsets of) the AiiDA graph can be done as often as needed.
 
 .. _#4122: https://github.com/aiidateam/aiida-core/issues/4122

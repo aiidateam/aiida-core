@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test transport."""
-from tornado.gen import coroutine, Return
+import asyncio
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.transports import TransportQueue
@@ -30,70 +30,65 @@ class TestTransportQueue(AiidaTestCase):
     def test_simple_request(self):
         """ Test a simple transport request """
         queue = TransportQueue()
-        loop = queue.loop()
+        loop = queue.loop
 
-        @coroutine
-        def test():
+        async def test():
             trans = None
             with queue.request_transport(self.authinfo) as request:
-                trans = yield request
+                trans = await request
                 self.assertTrue(trans.is_open)
             self.assertFalse(trans.is_open)
 
-        loop.run_sync(lambda: test())  # pylint: disable=unnecessary-lambda
+        loop.run_until_complete(test())
 
     def test_get_transport_nested(self):
         """Test nesting calls to get the same transport."""
         transport_queue = TransportQueue()
-        loop = transport_queue.loop()
+        loop = transport_queue.loop
 
-        @coroutine
-        def nested(queue, authinfo):
+        async def nested(queue, authinfo):
             with queue.request_transport(authinfo) as request1:
-                trans1 = yield request1
+                trans1 = await request1
                 self.assertTrue(trans1.is_open)
                 with queue.request_transport(authinfo) as request2:
-                    trans2 = yield request2
+                    trans2 = await request2
                     self.assertIs(trans1, trans2)
                     self.assertTrue(trans2.is_open)
 
-        loop.run_sync(lambda: nested(transport_queue, self.authinfo))
+        loop.run_until_complete(nested(transport_queue, self.authinfo))
 
     def test_get_transport_interleaved(self):
         """Test interleaved calls to get the same transport."""
         transport_queue = TransportQueue()
-        loop = transport_queue.loop()
+        loop = transport_queue.loop
 
-        @coroutine
-        def interleaved(authinfo):
+        async def interleaved(authinfo):
             with transport_queue.request_transport(authinfo) as trans_future:
-                yield trans_future
+                await trans_future
 
-        loop.run_sync(lambda: [interleaved(self.authinfo), interleaved(self.authinfo)])
+        loop.run_until_complete(asyncio.gather(interleaved(self.authinfo), interleaved(self.authinfo)))
 
     def test_return_from_context(self):
         """Test raising a Return from coroutine context."""
         queue = TransportQueue()
-        loop = queue.loop()
+        loop = queue.loop
 
-        @coroutine
-        def test():
+        async def test():
             with queue.request_transport(self.authinfo) as request:
-                trans = yield request
-                raise Return(trans.is_open)
+                trans = await request
+                return trans.is_open
 
-        retval = loop.run_sync(lambda: test())  # pylint: disable=unnecessary-lambda
+        retval = loop.run_until_complete(test())
         self.assertTrue(retval)
 
     def test_open_fail(self):
         """Test that if opening fails."""
         queue = TransportQueue()
-        loop = queue.loop()
+        loop = queue.loop
 
-        @coroutine
-        def test():
+        async def test():
             with queue.request_transport(self.authinfo) as request:
-                yield request
+                await request
 
         def broken_open(trans):
             raise RuntimeError('Could not open transport')
@@ -104,7 +99,7 @@ class TestTransportQueue(AiidaTestCase):
             original = self.authinfo.get_transport().__class__.open
             self.authinfo.get_transport().__class__.open = broken_open
             with self.assertRaises(RuntimeError):
-                loop.run_sync(lambda: test())  # pylint: disable=unnecessary-lambda
+                loop.run_until_complete(test())
         finally:
             self.authinfo.get_transport().__class__.open = original
 
@@ -120,22 +115,21 @@ class TestTransportQueue(AiidaTestCase):
 
             import time
             queue = TransportQueue()
-            loop = queue.loop()
+            loop = queue.loop
 
             time_start = time.time()
 
-            @coroutine
-            def test(iteration):
+            async def test(iteration):
                 trans = None
                 with queue.request_transport(self.authinfo) as request:
-                    trans = yield request
+                    trans = await request
                     time_current = time.time()
                     time_elapsed = time_current - time_start
                     time_minimum = trans.get_safe_open_interval() * (iteration + 1)
                     self.assertTrue(time_elapsed > time_minimum, 'transport safe interval was violated')
 
-            for i in range(5):
-                loop.run_sync(lambda iteration=i: test(iteration))
+            for iteration in range(5):
+                loop.run_until_complete(test(iteration))
 
         finally:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval  # pylint: disable=protected-access

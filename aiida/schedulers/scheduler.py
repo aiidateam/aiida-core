@@ -111,7 +111,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         try:
             return self._features[feature_name]
         except KeyError:
-            raise NotImplementedError('Feature {} not implemented for this scheduler'.format(feature_name))
+            raise NotImplementedError(f'Feature {feature_name} not implemented for this scheduler')
 
     @property
     def logger(self):
@@ -163,7 +163,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         elif job_tmpl.shebang is None:
             script_lines.append('#!/bin/bash')
         else:
-            raise ValueError('Invalid shebang set: {}'.format(job_tmpl.shebang))
+            raise ValueError(f'Invalid shebang set: {job_tmpl.shebang}')
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
@@ -220,20 +220,20 @@ class Scheduler(metaclass=abc.ABCMeta):
                 command_to_exec_list.append(escape_for_bash(arg))
             command_to_exec = ' '.join(command_to_exec_list)
 
-            stdin_str = '< {}'.format(escape_for_bash(code_info.stdin_name)) if code_info.stdin_name else ''
-            stdout_str = '> {}'.format(escape_for_bash(code_info.stdout_name)) if code_info.stdout_name else ''
+            stdin_str = f'< {escape_for_bash(code_info.stdin_name)}' if code_info.stdin_name else ''
+            stdout_str = f'> {escape_for_bash(code_info.stdout_name)}' if code_info.stdout_name else ''
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = '2>&1'
             else:
-                stderr_str = '2> {}'.format(escape_for_bash(code_info.stderr_name)) if code_info.stderr_name else ''
+                stderr_str = f'2> {escape_for_bash(code_info.stderr_name)}' if code_info.stderr_name else ''
 
-            output_string = ('{} {} {} {}'.format(command_to_exec, stdin_str, stdout_str, stderr_str))
+            output_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
 
             list_of_runlines.append(output_string)
 
-        self.logger.debug('_get_run_line output: {}'.format(list_of_runlines))
+        self.logger.debug(f'_get_run_line output: {list_of_runlines}')
 
         if codes_run_mode == CodeRunMode.PARALLEL:
             list_of_runlines.append('wait\n')
@@ -310,14 +310,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
 
-        return """Detailed jobinfo obtained with command '{}'
-Return Code: {}
+        return f"""Detailed jobinfo obtained with command '{command}'
+Return Code: {retval}
 -------------------------------------------------------------
 stdout:
-{}
+{stdout}
 stderr:
-{}
-""".format(command, retval, stdout, stderr)
+{stderr}
+"""
 
     @abc.abstractmethod
     def _parse_joblist_output(self, retval, stdout, stderr):
@@ -414,3 +414,15 @@ stderr:
 
         :return: True if everything seems ok, False otherwise.
         """
+
+    def parse_output(self, detailed_job_info, stdout, stderr):
+        """Parse the output of the scheduler.
+
+        :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
+            This should contain the keys `retval`, `stdout` and `stderr` corresponding to the return value, stdout and
+            stderr returned by the accounting command executed for a specific job id.
+        :param stdout: string with the output written by the scheduler to stdout
+        :param stderr: string with the output written by the scheduler to stderr
+        :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
+        """
+        raise exceptions.FeatureNotAvailable(f'output parsing is not available for `{self.__class__.__name__}`')

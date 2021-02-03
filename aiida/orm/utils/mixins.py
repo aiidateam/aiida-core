@@ -176,7 +176,7 @@ class Sealable:
             raise exceptions.ModificationNotAllowed('attributes of a sealed node are immutable')
 
         if self.is_stored and key not in self._updatable_attributes:  # pylint: disable=unsupported-membership-test
-            raise exceptions.ModificationNotAllowed('`{}` is not an updatable attribute'.format(key))
+            raise exceptions.ModificationNotAllowed(f'`{key}` is not an updatable attribute')
 
         self.backend_entity.set_attribute(key, value)
 
@@ -193,6 +193,6 @@ class Sealable:
             raise exceptions.ModificationNotAllowed('attributes of a sealed node are immutable')
 
         if self.is_stored and key not in self._updatable_attributes:  # pylint: disable=unsupported-membership-test
-            raise exceptions.ModificationNotAllowed('`{}` is not an updatable attribute'.format(key))
+            raise exceptions.ModificationNotAllowed(f'`{key}` is not an updatable attribute')
 
         self.backend_entity.delete_attribute(key)

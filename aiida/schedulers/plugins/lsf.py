@@ -252,15 +252,13 @@ class LsfScheduler(aiida.schedulers.Scheduler):
 
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
-        command = [
-            'bjobs', '-noheader', "-o '{} delimiter=\"{}\"'".format(' '.join(self._joblist_fields), _FIELD_SEPARATOR)
-        ]
+        command = ['bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in LSF')
 
         if user:
-            command.append('-u{}'.format(user))
+            command.append(f'-u{user}')
 
         if jobs:
             joblist = []
@@ -273,7 +271,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             command.append(' '.join(joblist))
 
         comm = ' '.join(command)
-        self.logger.debug('bjobs command: {}'.format(comm))
+        self.logger.debug(f'bjobs command: {comm}')
         return comm
 
     def _get_detailed_job_info_command(self, job_id):
@@ -283,7 +281,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
 
         The output text is just retrieved, and returned for logging purposes.
         """
-        return 'bjobs -l {}'.format(escape_for_bash(job_id))
+        return f'bjobs -l {escape_for_bash(job_id)}'
 
     def _get_submit_script_header(self, job_tmpl):
         """
@@ -313,7 +311,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.email:
             # If not specified, but email events are set, SLURM
             # sends the mail to the job owner by default
-            lines.append('#BSUB -u {}'.format(job_tmpl.email))
+            lines.append(f'#BSUB -u {job_tmpl.email}')
 
         if job_tmpl.email_on_started:
             lines.append('#BSUB -B')
@@ -333,22 +331,22 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid character
             if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
-                job_title = 'j' + job_title
+                job_title = f'j{job_title}'
 
             # Truncate to the first 128 characters
             # Nothing is done if the string is shorter.
             job_title = job_title[:128]
-            lines.append('#BSUB -J "{}"'.format(job_title))
+            lines.append(f'#BSUB -J "{job_title}"')
 
         if not job_tmpl.import_sys_environment:
             self.logger.warning('LSF scheduler cannot ignore the user environment')
 
         if job_tmpl.sched_output_path:
-            lines.append('#BSUB -o {}'.format(job_tmpl.sched_output_path))
+            lines.append(f'#BSUB -o {job_tmpl.sched_output_path}')
 
         sched_error_path = getattr(job_tmpl, 'sched_error_path', None)
         if job_tmpl.sched_join_files:
-            sched_error_path = '{}_'.format(job_tmpl.sched_output_path)
+            sched_error_path = f'{job_tmpl.sched_output_path}_'
             self.logger.warning(
                 'LSF scheduler does not support joining '
                 'the standard output and standard error '
@@ -357,10 +355,10 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             )
 
         if sched_error_path:
-            lines.append('#BSUB -e {}'.format(job_tmpl.sched_error_path))
+            lines.append(f'#BSUB -e {job_tmpl.sched_error_path}')
 
         if job_tmpl.queue_name:
-            lines.append('#BSUB -q {}'.format(job_tmpl.queue_name))
+            lines.append(f'#BSUB -q {job_tmpl.queue_name}')
 
         if job_tmpl.priority:
             # Specifies user-assigned job priority that orders all jobs
@@ -369,18 +367,18 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             # (configured in lsb.params, displayed by "bparams -l").
             # Jobs are scheduled based first on their queue priority first, then
             # job priority, and lastly in first-come first-served order.
-            lines.append('#BSUB -sp {}'.format(job_tmpl.priority))
+            lines.append(f'#BSUB -sp {job_tmpl.priority}')
 
         if not job_tmpl.job_resource:
             raise ValueError('Job resources (as the tot_num_mpiprocs) are required for the LSF scheduler plugin')
 
-        lines.append('#BSUB -n {}'.format(job_tmpl.job_resource.get_tot_num_mpiprocs()))
+        lines.append(f'#BSUB -n {job_tmpl.job_resource.get_tot_num_mpiprocs()}')
         # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT
         # defined in lsb.params (you can check with the output of bparams -l).
         # Note: the -n option of bsub can also contain a maximum number of
         # procs to be used
         if job_tmpl.job_resource.parallel_env:
-            lines.append('#BSUB -m "{}"'.format(job_tmpl.job_resource.parallel_env))
+            lines.append(f'#BSUB -m "{job_tmpl.job_resource.parallel_env}"')
 
         if job_tmpl.max_wallclock_seconds is not None:
             # ABS_RUNLIMIT=Y should be set, in lsb.params (check with bparams -l)
@@ -398,7 +396,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             # The double negation results in the ceiling rather than the floor
             # of the division
             minutes = -(-(tot_secs % 3600) // 60)
-            lines.append('#BSUB -W {:02d}:{:02d}'.format(hours, minutes))
+            lines.append(f'#BSUB -W {hours:02d}:{minutes:02d}')
 
         # TODO: check if this is the memory per node  # pylint: disable=fixme
         if job_tmpl.max_memory_kb:
@@ -414,7 +412,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                 )
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
-            lines.append('#BSUB -M {}'.format(virtual_memory_kb))
+            lines.append(f'#BSUB -M {virtual_memory_kb}')
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
@@ -430,7 +428,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError('If you provide job_environment, it must be a dictionary')
             for key, value in job_tmpl.job_environment.items():
-                lines.append('export {}={}'.format(key.strip(), escape_for_bash(value)))
+                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
             lines.append('# ENVIRONMENT VARIABLES END  ###')
             lines.append(empty_line)
 
@@ -480,9 +478,9 @@ fi
                 directory.
                 IMPORTANT: submit_script should be already escaped.
         """
-        submit_command = 'bsub < {}'.format(submit_script)
+        submit_command = f'bsub < {submit_script}'
 
-        self.logger.info('submitting with: ' + submit_command)
+        self.logger.info(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -507,14 +505,9 @@ fi
         num_fields = len(self._joblist_fields)
 
         if retval != 0:
-            self.logger.warning(
-                'Error in _parse_joblist_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.warning(f'Error in _parse_joblist_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             raise SchedulerError(
-                'Error during parsing joblist output, '
-                'retval={}\n'
-                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
+                f'Error during parsing joblist output, retval={retval}\nstdout={stdout}\nstderr={stderr}'
             )
 
         # will contain raw data parsed from output: only lines with the
@@ -534,7 +527,7 @@ fi
             if len(job) != num_fields:
                 # I skip this calculation
                 # (I don't append anything to job_list before continuing)
-                self.logger.error("Wrong line length in squeue output! '{}'".format(job))
+                self.logger.error(f"Wrong line length in squeue output! '{job}'")
                 continue
 
             this_job = JobInfo()
@@ -571,16 +564,14 @@ fi
                 this_job.num_machines = int(number_nodes)
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated nodes is not '
-                    'an integer ({}) for job id {}!'.format(number_nodes, this_job.job_id)
+                    f'The number of allocated nodes is not an integer ({number_nodes}) for job id {this_job.job_id}!'
                 )
 
             try:
                 this_job.num_mpiprocs = int(number_cpus)
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated cores is not '
-                    'an integer ({}) for job id {}!'.format(number_cpus, this_job.job_id)
+                    f'The number of allocated cores is not an integer ({number_cpus}) for job id {this_job.job_id}!'
                 )
 
             # ALLOCATED NODES HERE
@@ -622,18 +613,18 @@ fi
 
                     this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()  # pylint: disable=invalid-name
                 except (TypeError, ValueError):
-                    self.logger.warning('Error parsing the time limit for job id {}'.format(this_job.job_id))
+                    self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 
                 try:
                     psd_percent_complete = float(percent_complete.strip(' L').strip('%'))
                     this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete / 100.
                 except ValueError:
-                    self.logger.warning('Error parsing the time used for job id {}'.format(this_job.job_id))
+                    self.logger.warning(f'Error parsing the time used for job id {this_job.job_id}')
 
             try:
                 this_job.submission_time = psd_submission_time
             except ValueError:
-                self.logger.warning('Error parsing submission time for job id {}'.format(this_job.job_id))
+                self.logger.warning(f'Error parsing submission time for job id {this_job.job_id}')
 
             this_job.title = job_name
 
@@ -668,30 +659,21 @@ fi
         Return a string with the JobID.
         """
         if retval != 0:
-            self.logger.error(
-                'Error in _parse_submit_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
-            raise SchedulerError(
-                'Error during submission, retval={}\n'
-                'stdout={}\nstderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+            raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
         try:
-            transport_string = ' for {}'.format(self.transport)
+            transport_string = f' for {self.transport}'
         except SchedulerError:
             transport_string = ''
 
         if stderr.strip():
-            self.logger.warning(
-                'in _parse_submit_output{}: '
-                'there was some text in stderr: {}'.format(transport_string, stderr)
-            )
+            self.logger.warning(f'in _parse_submit_output{transport_string}: there was some text in stderr: {stderr}')
 
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
         except IndexError:
-            raise SchedulerParsingError('Cannot parse submission output: {}'.format(stdout))
+            raise SchedulerParsingError(f'Cannot parse submission output: {stdout}')
 
     def _parse_time_string(self, string, fmt='%b %d %H:%M'):
         """
@@ -706,16 +688,16 @@ fi
         # The year is not specified. I have to add it, and I set it to the
         # current year. This is actually not correct, if we are close
         # new year... we should ask the scheduler also the year.
-        actual_string = '{} {}'.format(datetime.datetime.now().year, string)
-        actual_fmt = '%Y {}'.format(fmt)
+        actual_string = f'{datetime.datetime.now().year} {string}'
+        actual_fmt = f'%Y {fmt}'
 
         try:
             try:
                 thetime = datetime.datetime.strptime(actual_string, actual_fmt)
             except ValueError:
-                thetime = datetime.datetime.strptime(actual_string, '{} L'.format(actual_fmt))
+                thetime = datetime.datetime.strptime(actual_string, f'{actual_fmt} L')
         except Exception as exc:
-            self.logger.debug('Unable to parse time string {}, the message was {}'.format(string, exc))
+            self.logger.debug(f'Unable to parse time string {string}, the message was {exc}')
             raise ValueError('Problem parsing the time string.')
 
         return thetime
@@ -724,8 +706,8 @@ fi
         """
         Return the command to kill the job with specified jobid.
         """
-        submit_command = 'bkill {}'.format(jobid)
-        self.logger.info('killing job {}'.format(jobid))
+        submit_command = f'bkill {jobid}'
+        self.logger.info(f'killing job {jobid}')
         return submit_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
@@ -736,33 +718,23 @@ fi
         """
         if retval == 255:
             self.logger.error(
-                'Error in _parse_kill_output: retval={} (Job already finished); '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
+                f'Error in _parse_kill_output: retval={retval} (Job already finished); stdout={stdout}; stderr={stderr}'
             )
             return False
 
         if retval != 0:
-            self.logger.error(
-                'Error in _parse_kill_output: retval={}; '
-                'stdout={}; stderr={}'.format(retval, stdout, stderr)
-            )
+            self.logger.error(f'Error in _parse_kill_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             return False
 
         try:
-            transport_string = ' for {}'.format(self.transport)
+            transport_string = f' for {self.transport}'
         except SchedulerError:
             transport_string = ''
 
         if stderr.strip():
-            self.logger.warning(
-                'in _parse_kill_output{}: '
-                'there was some text in stderr: {}'.format(transport_string, stderr)
-            )
+            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stderr: {stderr}')
 
         if stdout.strip():
-            self.logger.warning(
-                'in _parse_kill_output{}: '
-                'there was some text in stdout: {}'.format(transport_string, stdout)
-            )
+            self.logger.warning(f'in _parse_kill_output{transport_string}: there was some text in stdout: {stdout}')
 
         return True

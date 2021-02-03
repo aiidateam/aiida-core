@@ -1,3 +1,129 @@
 [build-system]
-requires = [ "setuptools>=40.8.0", "wheel", "reentry~=1.3", "fastentrypoints~=0.12",]
+requires = ["setuptools>=40.8.0,<50", "wheel", "reentry~=1.3", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta:__legacy__"
+
+[tool.pylint.master]
+load-plugins = "pylint_django"
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.messages_control]
+disable = [
+    "bad-continuation",
+    "bad-option-value",
+    "cyclic-import",
+    "django-not-available",
+    "duplicate-code",
+    "import-outside-toplevel",
+    "inconsistent-return-statements",
+    "locally-disabled",
+    "logging-fstring-interpolation",
+    "no-else-raise",
+    "too-few-public-methods",
+    "too-many-ancestors",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "useless-suppression",
+]
+
+[tool.pylint.basic]
+good-names = [
+    "_",
+    "x",
+    "y",
+    "z",
+    "i",
+    "j",
+    "k",
+    "pk",
+    "TemplatereplacerCalculation",
+    "ArithmeticAddCalculation",
+    "MultiplyAddWorkChain"
+]
+no-docstring-rgx = "^_,setUp,tearDown"
+docstring-min-length = 5
+
+[tool.pylint.design]
+max-locals = 20
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--benchmark-skip"
+testpaths = [
+    "tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:babel:",
+    "ignore::DeprecationWarning:django:",
+    "ignore::DeprecationWarning:frozendict:",
+    "ignore::DeprecationWarning:sqlalchemy:",
+    "ignore::DeprecationWarning:yaml:",
+    "ignore::DeprecationWarning:pymatgen:",
+    "ignore::DeprecationWarning:jsonbackend:",
+    "ignore::DeprecationWarning:reentry:",
+    "ignore::DeprecationWarning:pkg_resources:",
+]
+markers = [
+    "sphinx: set parameters for the sphinx `app` fixture"
+]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py37-django
+
+[testenv]
+usedevelop=True
+deps =
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
+    py39: -rrequirements/requirements-py-3.9.txt
+
+[testenv:py{36,37,38,39}-{django,sqla}]
+setenv =
+    django: AIIDA_TEST_BACKEND = django
+    sqla: AIIDA_TEST_BACKEND = sqlalchemy
+commands = pytest {posargs}
+
+[testenv:py{36,37,38,39}-verdi]
+setenv =
+    AIIDA_TEST_BACKEND = django
+commands = verdi {posargs}
+
+[testenv:py{36,37,38,39}-docs-{clean,update}]
+description =
+    clean: Build the documentation (remove any existing build)
+    update: Build the documentation (modify any existing build)
+passenv = RUN_APIDOC
+setenv =
+    update: RUN_APIDOC = False
+changedir = docs
+whitelist_externals = make
+commands =
+    clean: make clean
+    make debug
+
+[testenv:py{36,37,38,39}-docs-live]
+# tip: remove apidocs before using this feature (`cd docs; make clean`)
+description = Build the documentation and launch browser (with live updates)
+deps =
+    py36: -rrequirements/requirements-py-3.6.txt
+    py37: -rrequirements/requirements-py-3.7.txt
+    py38: -rrequirements/requirements-py-3.8.txt
+    py39: -rrequirements/requirements-py-3.9.txt
+    sphinx-autobuild
+setenv =
+    RUN_APIDOC = False
+commands =
+    sphinx-autobuild \
+        --re-ignore build/.* \
+        --port 0 --open-browser \
+        -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
+
+[testenv:py{36,37,38,39}-pre-commit]
+description = Run the pre-commit checks
+extras = pre-commit
+commands = pre-commit run {posargs}
+"""

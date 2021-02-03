@@ -41,6 +41,13 @@ class Profile:  # pylint: disable=too-many-public-methods
     KEY_DATABASE_HOSTNAME = 'AIIDADB_HOST'
     KEY_DATABASE_USERNAME = 'AIIDADB_USER'
     KEY_DATABASE_PASSWORD = 'AIIDADB_PASS'  # noqa
+    KEY_BROKER_PROTOCOL = 'broker_protocol'
+    KEY_BROKER_USERNAME = 'broker_username'
+    KEY_BROKER_PASSWORD = 'broker_password'  # noqa
+    KEY_BROKER_HOST = 'broker_host'
+    KEY_BROKER_PORT = 'broker_port'
+    KEY_BROKER_VIRTUAL_HOST = 'broker_virtual_host'
+    KEY_BROKER_PARAMETERS = 'broker_parameters'
     KEY_REPOSITORY_URI = 'AIIDADB_REPOSITORY_URI'
 
     # A mapping of valid attributes to the key under which they are stored in the configuration dictionary
@@ -55,6 +62,13 @@ class Profile:  # pylint: disable=too-many-public-methods
         KEY_DATABASE_HOSTNAME: 'database_hostname',
         KEY_DATABASE_USERNAME: 'database_username',
         KEY_DATABASE_PASSWORD: 'database_password',
+        KEY_BROKER_PROTOCOL: 'broker_protocol',
+        KEY_BROKER_USERNAME: 'broker_username',
+        KEY_BROKER_PASSWORD: 'broker_password',
+        KEY_BROKER_HOST: 'broker_host',
+        KEY_BROKER_PORT: 'broker_port',
+        KEY_BROKER_VIRTUAL_HOST: 'broker_virtual_host',
+        KEY_BROKER_PARAMETERS: 'broker_parameters',
         KEY_REPOSITORY_URI: 'repository_uri',
     }
 
@@ -69,7 +83,7 @@ class Profile:  # pylint: disable=too-many-public-methods
 
     def __init__(self, name, attributes, from_config=False):
         if not isinstance(attributes, collections.abc.Mapping):
-            raise TypeError('attributes should be a mapping but is {}'.format(type(attributes)))
+            raise TypeError(f'attributes should be a mapping but is {type(attributes)}')
 
         self._name = name
         self._attributes = {}
@@ -81,9 +95,7 @@ class Profile:  # pylint: disable=too-many-public-methods
                 except KeyError:
                     from aiida.cmdline.utils import echo
                     echo.echo_warning(
-                        'removed unsupported key `{}` with value `{}` from profile `{}`'.format(
-                            internal_key, value, name
-                        )
+                        f'removed unsupported key `{internal_key}` with value `{value}` from profile `{name}`'
                     )
                     continue
             setattr(self, internal_key, value)
@@ -174,6 +186,62 @@ class Profile:  # pylint: disable=too-many-public-methods
     @database_password.setter
     def database_password(self, value):
         self._attributes[self.KEY_DATABASE_PASSWORD] = value
+
+    @property
+    def broker_protocol(self):
+        return self._attributes[self.KEY_BROKER_PROTOCOL]
+
+    @broker_protocol.setter
+    def broker_protocol(self, value):
+        self._attributes[self.KEY_BROKER_PROTOCOL] = value
+
+    @property
+    def broker_host(self):
+        return self._attributes[self.KEY_BROKER_HOST]
+
+    @broker_host.setter
+    def broker_host(self, value):
+        self._attributes[self.KEY_BROKER_HOST] = value
+
+    @property
+    def broker_port(self):
+        return self._attributes[self.KEY_BROKER_PORT]
+
+    @broker_port.setter
+    def broker_port(self, value):
+        self._attributes[self.KEY_BROKER_PORT] = value
+
+    @property
+    def broker_username(self):
+        return self._attributes[self.KEY_BROKER_USERNAME]
+
+    @broker_username.setter
+    def broker_username(self, value):
+        self._attributes[self.KEY_BROKER_USERNAME] = value
+
+    @property
+    def broker_password(self):
+        return self._attributes[self.KEY_BROKER_PASSWORD]
+
+    @broker_password.setter
+    def broker_password(self, value):
+        self._attributes[self.KEY_BROKER_PASSWORD] = value
+
+    @property
+    def broker_virtual_host(self):
+        return self._attributes[self.KEY_BROKER_VIRTUAL_HOST]
+
+    @broker_virtual_host.setter
+    def broker_virtual_host(self, value):
+        self._attributes[self.KEY_BROKER_VIRTUAL_HOST] = value
+
+    @property
+    def broker_parameters(self):
+        return self._attributes.get(self.KEY_BROKER_PARAMETERS, {})
+
+    @broker_parameters.setter
+    def broker_parameters(self, value):
+        self._attributes[self.KEY_BROKER_PARAMETERS] = value
 
     @property
     def repository_uri(self):
@@ -268,6 +336,18 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         return parts.scheme, os.path.expanduser(parts.path)
 
+    def get_rmq_url(self):
+        from aiida.manage.external.rmq import get_rmq_url
+        return get_rmq_url(
+            protocol=self.broker_protocol,
+            username=self.broker_username,
+            password=self.broker_password,
+            host=self.broker_host,
+            port=self.broker_port,
+            virtual_host=self.broker_virtual_host,
+            **self.broker_parameters
+        )
+
     def configure_repository(self):
         """Validates the configured repository and in the case of a file system repo makes sure the folder exists."""
         import errno
@@ -277,7 +357,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise exceptions.ConfigurationError(
-                    'could not create the configured repository `{}`: {}'.format(self.repository_path, str(exception))
+                    f'could not create the configured repository `{self.repository_path}`: {str(exception)}'
                 )
 
     @property

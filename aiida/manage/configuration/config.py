@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
-
 import os
 import shutil
+import tempfile
 
 from aiida.common import json
 
@@ -47,18 +47,23 @@ class Config:  # pylint: disable=too-many-public-methods
         try:
             with open(filepath, 'r', encoding='utf8') as handle:
                 config = json.load(handle)
-        except (IOError, OSError):
+        except FileNotFoundError:
             config = Config(filepath, check_and_migrate_config({}))
             config.store()
         else:
+            migrated = False
+
             # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
             if config_needs_migrating(config):
-                echo.echo_warning('current configuration file `{}` is outdated and will be migrated'.format(filepath))
+                migrated = True
+                echo.echo_warning(f'current configuration file `{filepath}` is outdated and will be migrated')
                 filepath_backup = cls._backup(filepath)
-                echo.echo_warning('original backed up to `{}`'.format(filepath_backup))
+                echo.echo_warning(f'original backed up to `{filepath_backup}`')
 
             config = Config(filepath, check_and_migrate_config(config))
-            config.store()
+
+            if migrated:
+                config.store()
 
         return config
 
@@ -75,7 +80,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = '{}.{}'.format(filepath, timezone.now().strftime('%Y%m%d-%H%M%S.%f'))
+            filepath_backup = f"{filepath}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
 
         shutil.copy(filepath, filepath_backup)
 
@@ -105,7 +110,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if unknown_keys:
             keys = ', '.join(unknown_keys)
-            self.handle_invalid('encountered unknown keys [{}] in `{}` which have been removed'.format(keys, filepath))
+            self.handle_invalid(f'encountered unknown keys [{keys}] in `{filepath}` which have been removed')
 
         try:
             self._options = config[self.KEY_OPTIONS]
@@ -119,7 +124,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         for name, config_profile in config.get(self.KEY_PROFILES, {}).items():
             if Profile.contains_unknown_keys(config_profile):
-                self.handle_invalid('encountered unknown keys in profile `{}` which have been removed'.format(name))
+                self.handle_invalid(f'encountered unknown keys in profile `{name}` which have been removed')
             self._profiles[name] = Profile(name, config_profile, from_config=True)
 
     def __eq__(self, other):
@@ -140,7 +145,7 @@ class Config:  # pylint: disable=too-many-public-methods
         from aiida.cmdline.utils import echo
         filepath_backup = self._backup(self.filepath)
         echo.echo_warning(message)
-        echo.echo_warning('backup of the original config file written to: `{}`'.format(filepath_backup))
+        echo.echo_warning(f'backup of the original config file written to: `{filepath_backup}`')
 
     @property
     def dictionary(self):
@@ -235,7 +240,7 @@ class Config:  # pylint: disable=too-many-public-methods
         from aiida.common import exceptions
 
         if name not in self.profile_names:
-            raise exceptions.ProfileConfigurationError('profile `{}` does not exist'.format(name))
+            raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
 
     def get_profile(self, name=None):
         """Return the profile for the given name or the default one if not specified.
@@ -247,7 +252,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if not name and not self.default_profile_name:
             raise exceptions.ProfileConfigurationError(
-                'no default profile defined: {}\n{}'.format(self._default_profile, self.dictionary)
+                f'no default profile defined: {self._default_profile}\n{self.dictionary}'
             )
 
         if not name:
@@ -373,38 +378,52 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :return: self
         """
-        import tempfile
         from aiida.common.files import md5_from_filelike, md5_file
+        from .settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.
         if not os.path.isfile(self.filepath):
-            with open(self.filepath, 'wb') as handle:
-                self._write(handle)
+            self._atomic_write()
             return self
 
         # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
         # disk. When the checksums differ, we first create a backup and only then overwrite the existing file.
         with tempfile.NamedTemporaryFile() as handle:
-            self._write(handle)
+            json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
             handle.seek(0)
 
             if md5_from_filelike(handle) != md5_file(self.filepath):
                 self._backup(self.filepath)
 
-            shutil.copy(handle.name, self.filepath)
+        self._atomic_write()
 
         return self
 
-    def _write(self, filelike):
-        """Write the contents of `self.dictionary` to the given file handle.
+    def _atomic_write(self, filepath=None):
+        """Write the config as it is in memory, i.e. the contents of ``self.dictionary``, to disk.
 
-        :param filelike: the filelike object to write the current configuration to
+        .. note:: this command will write the config from memory to a temporary file in the same directory as the
+            target file ``filepath``. It will then use ``os.rename`` to move the temporary file to ``filepath`` which
+            will be overwritten if it already exists. The ``os.rename`` is the operation that gives the best guarantee
+            of being atomic within the limitations of the application.
+
+        :param filepath: optional filepath to write the contents to, if not specified, the default filename is used.
         """
         from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
 
         umask = os.umask(DEFAULT_UMASK)
 
-        try:
-            json.dump(self.dictionary, filelike, indent=DEFAULT_CONFIG_INDENT_SIZE)
-        finally:
-            os.umask(umask)
+        if filepath is None:
+            filepath = self.filepath
+
+        # Create a temporary file in the same directory as the target filepath, which guarantees that the temporary
+        # file is on the same filesystem, which is necessary to be able to use ``os.rename``. Since we are moving the
+        # temporary file, we should also tell the tempfile to not be automatically deleted as that will raise.
+        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False) as handle:
+            try:
+                json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
+            finally:
+                os.umask(umask)
+
+            handle.flush()
+            os.rename(handle.name, self.filepath)

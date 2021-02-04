@@ -9,10 +9,12 @@
 ###########################################################################
 # pylint: disable=invalid-name,protected-access
 """Tests for the `DirectScheduler` plugin."""
+import logging
 import unittest
 
 from aiida.schedulers.plugins.direct import DirectScheduler
 from aiida.schedulers import SchedulerError
+from aiida.common.log import NotInTestingFilter
 
 # This was executed with ps -o pid,stat,user,time | tail -n +2
 mac_ps_output_str = """21259 S+   broeder   0:00.04
@@ -86,3 +88,23 @@ class TestParserGetJobList(unittest.TestCase):
 
         job_ids = [job.job_id for job in result]
         self.assertIn('11383', job_ids)
+
+
+def test_submit_script_rerunnable(caplog):
+    """Test that setting the `rerunnable` option gives a warning."""
+    from aiida.schedulers.datastructures import JobTemplate
+
+    direct = DirectScheduler()
+    job_tmpl = JobTemplate()
+
+    # AiiDA by default filters logging when testing
+    direct.logger.removeFilter(NotInTestingFilter)
+
+    job_tmpl.rerunnable = True
+    with caplog.at_level(logging.WARNING, logger=direct.logger.name):
+        direct._get_submit_script_header(job_tmpl)
+
+    assert 'rerunnable' in caplog.text
+    assert 'has no effect' in caplog.text
+
+    direct.logger.addFilter(NotInTestingFilter)

@@ -138,6 +138,30 @@ def test_submit_script():
     assert '#BSUB -G account_id' in submit_script_text
     assert "'mpirun' '-np' '2' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text
 
+def test_submit_script_rerunnable():
+    """Test the `rerunnable` option of the submit script."""
+    from aiida.schedulers.datastructures import JobTemplate
+    from aiida.common.datastructures import CodeInfo, CodeRunMode
+
+    scheduler = LsfScheduler()
+
+    job_tmpl = JobTemplate()
+    job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
+    code_info = CodeInfo()
+    code_info.cmdline_params = []
+    job_tmpl.codes_info = [code_info]
+    job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+    job_tmpl.rerunnable = True
+    submit_script_text = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -r\n' in submit_script_text
+    assert '#BSUB -rn' not in submit_script_text
+
+    job_tmpl.rerunnable = False
+    submit_script_text = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -r\n' not in submit_script_text
+    assert '#BSUB -rn' in submit_script_text
+
 
 def test_create_job_resource():
     """

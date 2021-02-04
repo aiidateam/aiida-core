@@ -168,8 +168,9 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             lines.append(f'#$ -h {job_tmpl.submit_as_hold}')
 
         if job_tmpl.rerunnable:
-            # if isinstance(job_tmpl.rerunnable, str):
-            lines.append(f'#$ -r {job_tmpl.rerunnable}')
+            lines.append('#$ -r yes')
+        else:
+            lines.append('#$ -r no')
 
         if job_tmpl.email:
             # If not specified, but email events are set, PBSPro

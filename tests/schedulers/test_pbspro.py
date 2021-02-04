@@ -1063,3 +1063,27 @@ class TestSubmitScript(unittest.TestCase):
             job_tmpl.job_resource = scheduler.create_job_resource(
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
+
+    def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
+        """Test the `rerunnable` option of the submit script."""
+        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
+
+        scheduler = PbsproScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+        code_info = CodeInfo()
+        code_info.cmdline_params = []
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+        job_tmpl.rerunnable = True
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#PBS -r y' in submit_script_text
+        assert '#PBS -r n' not in submit_script_text
+
+        job_tmpl.rerunnable = False
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#PBS -r y' not in submit_script_text
+        assert '#PBS -r n' in submit_script_text

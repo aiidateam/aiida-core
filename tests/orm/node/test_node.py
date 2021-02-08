@@ -845,7 +845,7 @@ def test_store_from_cache():
     assert data.get_hash() == clone.get_hash()
 
 
-@pytest.mark.filterwarnings('ignore::AiidaDeprecationWarning')
+@pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_open_wrapper():
     """Test the wrapper around the return value of ``Node.open``.

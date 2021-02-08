@@ -13,8 +13,6 @@ import subprocess
 import sys
 import time
 
-from pympler import muppy
-
 from aiida.common import exceptions
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
@@ -28,6 +26,8 @@ from workchains import (
     NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
     WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
 )
+
+from tests.utils.memory import get_instances  # pylint: disable=import-error
 
 CODENAME_ADD = 'add@localhost'
 CODENAME_DOUBLER = 'doubler@localhost'
@@ -574,8 +574,7 @@ def main():
     # Check that no references to processes remain in memory
     # Note: This tests only processes that were `run` in the same interpreter, not those that were `submitted`
     del results
-    all_objects = muppy.get_objects()  # note: this also calls gc.collect()
-    processes = [o for o in all_objects if hasattr(o, '__class__') and isinstance(o, Process)]
+    processes = get_instances(Process, delay=1.0)
     if processes:
         print(f'Memory leak! Process instances remained in memory: {processes}')
         sys.exit(4)

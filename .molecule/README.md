@@ -1,10 +1,10 @@
 # Molecule System Integration Testing
 
-This folder contains configuration for running automated system integration tests against an isolated AiiDa environment.
+This folder contains configuration for running automated system integration tests against an isolated AiiDA environment.
 
 This utilises [molecule](https://molecule.readthedocs.io) to automate the creation/destruction of a docker container environment and the setup and testing within it.
 
-The simplest way to run these tests is to use the `tox` environment provided in this repositories `pyproject.toml` file:
+The simplest way to run these tests is to use the `tox` environment provided in this repository's `pyproject.toml` file:
 
 ```console
 $ pip install tox
@@ -13,7 +13,7 @@ $ tox -e molecule-django
 
 **NOTE**: if you wan to run molecule directly, ensure that you set `export MOLECULE_GLOB=.molecule/*/config_local.yml`.
 
-This wil run the `test` scenario (defined in `config_local.yml`) which:
+This runs the `test` scenario (defined in `config_local.yml`) which:
 
 1. Deletes any existing container with the same label
 2. Creates a docker container, based on the `Dockerfile` in this folder, which also copies the repository code into the container (see `create_docker.yml`).
@@ -49,7 +49,7 @@ $ tox -e molecule-django,molecule-sqla -p -- test --parallel
 
 ## Additional variables
 
-You can specify the number of daemon worker to spawn using the `AIIDA_TEST_WORKERS` environmental variable:
+You can specify the number of daemon workers to spawn using the `AIIDA_TEST_WORKERS` environment variable:
 
 ```console
 $ AIIDA_TEST_WORKERS=4 tox -e molecule-django

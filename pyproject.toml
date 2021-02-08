@@ -63,6 +63,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:jsonbackend:",
     "ignore::DeprecationWarning:reentry:",
     "ignore::DeprecationWarning:pkg_resources:",
+    "ignore::PytestCollectionWarning",
 ]
 markers = [
     "sphinx: set parameters for the sphinx `app` fixture"

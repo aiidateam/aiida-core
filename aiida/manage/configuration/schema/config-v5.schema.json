@@ -12,7 +12,7 @@
                     "minimum": 0,
                     "description": "The polling interval in seconds to be used by process runners"
                 },
-                "daemon.default.workers": {
+                "daemon.default_workers": {
                     "type": "integer",
                     "default": 1,
                     "minimum": 1,

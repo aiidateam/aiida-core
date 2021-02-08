@@ -186,9 +186,11 @@ def format_indent(level=0, width=INDENTATION_WIDTH):
     return ' ' * level * width
 
 
-def write_workchain(outlines, directory=None):
+def write_workchain(outlines, directory=None) -> Path:
     """
     Given a list of string formatted outlines, write the corresponding workchains to file
+
+    :returns: file path
     """
     dirpath = os.path.dirname(os.path.realpath(__file__))
     template_dir = os.path.join(dirpath, 'template')
@@ -244,4 +246,4 @@ def write_workchain(outlines, directory=None):
 
     filepath.write_text(code_string)
 
-    return filepath.name
+    return filepath

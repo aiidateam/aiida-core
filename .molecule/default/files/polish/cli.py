@@ -120,7 +120,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     evaluated = lib_expression.evaluate(expression, modulo)
     outlines, stack = lib_workchain.generate_outlines(expression)
     outlines_string = lib_workchain.format_outlines(outlines, use_calculations, use_calcfunctions)
-    filename = lib_workchain.write_workchain(outlines_string)
+    filename = lib_workchain.write_workchain(outlines_string).name
 
     click.echo(f'Expression: {expression}')
 

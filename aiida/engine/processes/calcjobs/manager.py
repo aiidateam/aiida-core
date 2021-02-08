@@ -184,7 +184,7 @@ class JobsList:
                     self._get_next_update_delay(),
                     asyncio.ensure_future,
                     updating(),
-                    context=contextvars.Context(),
+                    context=contextvars.Context(),  #  type: ignore[call-arg]
                 )
             else:
                 self._update_handle = None
@@ -195,7 +195,7 @@ class JobsList:
                 self._get_next_update_delay(),
                 asyncio.ensure_future,
                 updating(),
-                context=contextvars.Context(),
+                context=contextvars.Context(),  #  type: ignore[call-arg]
             )
 
     @staticmethod

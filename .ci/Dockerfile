@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 MAINTAINER AiiDA Team <info@aiida.net>
 
 # This is necessary such that the setup of `tzlocal` is non-interactive
@@ -34,15 +34,12 @@ RUN apt-get update \
     git \
     vim \
     openssh-client \
-    postgresql-client-10 \
-    postgresql-10 \
-    postgresql-server-dev-10 \
+    postgresql \
+    postgresql-client \
     && apt-get -y install \
-    python3.7 python3.7-dev \
     python3-pip \
-    ipython \
     texlive-base \
-    texlive-generic-recommended \
+    texlive-plain-generic \
     texlive-fonts-recommended \
     texlive-latex-base \
     texlive-latex-recommended \
@@ -57,8 +54,8 @@ RUN apt-get update \
 
 # Disable password requests for requests coming from localhost
 # Of course insecure, but ok for testing
-RUN cp /etc/postgresql/10/main/pg_hba.conf /etc/postgresql/10/main/pg_hba.conf~ && \
-    perl -npe 's/^([^#]*)md5$/$1trust/' /etc/postgresql/10/main/pg_hba.conf~ > /etc/postgresql/10/main/pg_hba.conf
+RUN cp /etc/postgresql/12/main/pg_hba.conf /etc/postgresql/12/main/pg_hba.conf~ && \
+    perl -npe 's/^([^#]*)md5$/$1trust/' /etc/postgresql/12/main/pg_hba.conf~ > /etc/postgresql/12/main/pg_hba.conf
 
 # install sudo otherwise tests for quicksetup fail,
 # see #1382. I think this part should be removed in the

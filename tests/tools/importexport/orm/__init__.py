@@ -8,18 +8,3 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for archive-related operations (import, export) on ORM entities."""
-from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.importexport import EXPORT_LOGGER, IMPORT_LOGGER
-
-
-class AiidaArchiveTestCase(AiidaTestCase):
-    """Testcase for tests of archive-related functionality (import, export)."""
-
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """Only run to prepare an archive file"""
-        super().setUpClass()
-
-        # don't want output
-        EXPORT_LOGGER.setLevel('CRITICAL')
-        IMPORT_LOGGER.setLevel('CRITICAL')

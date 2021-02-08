@@ -23,7 +23,7 @@ from aiida.tools.importexport.common.exceptions import DanglingLinkError
 
 from tests.utils.configuration import with_temp_dir
 from tests.tools.importexport.utils import get_all_node_links
-from . import AiidaArchiveTestCase
+from .. import AiidaArchiveTestCase
 
 
 class TestLinks(AiidaArchiveTestCase):

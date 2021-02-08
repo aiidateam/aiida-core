@@ -16,7 +16,7 @@ from aiida import orm
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
-from . import AiidaArchiveTestCase
+from .. import AiidaArchiveTestCase
 
 
 class TestCalculations(AiidaArchiveTestCase):

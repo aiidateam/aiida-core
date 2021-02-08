@@ -28,7 +28,7 @@ from tests.static import STATIC_DIR
 def isnumeric(vector):
     """Check if elements of iterable `x` are numbers."""
     # pylint: disable=invalid-name
-    numeric_types = (float, int, numpy.float, numpy.float64, numpy.int64)
+    numeric_types = (float, int, numpy.float64, numpy.int64)
     for xi in vector:
         if isinstance(xi, numeric_types):
             yield True

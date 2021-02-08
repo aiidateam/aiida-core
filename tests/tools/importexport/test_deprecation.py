@@ -19,6 +19,7 @@ from aiida.tools.importexport import dbexport
 pytestmark = pytest.mark.usefixtures('clear_database_before_test')
 
 
+@pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
 def test_export_functions(temp_dir):
     """Check `what` and `outfile` in export(), export_tar() and export_zip()"""
     what = []

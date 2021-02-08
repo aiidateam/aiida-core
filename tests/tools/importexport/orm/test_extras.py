@@ -16,7 +16,7 @@ import tempfile
 
 from aiida import orm
 from aiida.tools.importexport import import_data, export
-from . import AiidaArchiveTestCase
+from .. import AiidaArchiveTestCase
 
 
 class TestExtras(AiidaArchiveTestCase):

@@ -398,18 +398,44 @@ class Transport(abc.ABC):
         """
         raise NotImplementedError
 
-    def exec_command_wait(self, command, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
         """
         Execute the command on the shell, waits for it to finish,
-        and return the retcode, the stdout and the stderr.
+        and return the retcode, the stdout and the stderr as bytes.
 
-        Enforce the execution to be run from the pwd (as given by
-        self.getcwd), if this is not None.
+        Enforce the execution to be run from the pwd (as given by self.getcwd), if this is not None.
+
+        The command implementation can have some additional plugin-specific kwargs.
 
         :param str command: execute the command given as a string
-        :return: a list: the retcode (int), stdout (str) and stderr (str).
+        :param stdin: (optional,default=None) can be a string or a file-like object.
+        :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
         raise NotImplementedError
+
+    def exec_command_wait(self, command, stdin=None, encoding='utf-8', **kwargs):
+        """
+        Executes the specified command and waits for it to finish.
+
+        :note: this function also decodes the bytes received into a string with the specified encoding,
+            which is set to be ``utf-8`` by default (for backward-compatibility with earlier versions) of
+            AiiDA.
+            Use this method only if you are sure that you are getting a properly encoded string; otherwise,
+            use the ``exec_command_wait_bytes`` method that returns the undecoded byte stream.
+
+        :note: additional kwargs are passed to the ``exec_command_wait_bytes`` function, that might use them
+            depending on the plugin.
+
+        :param command: the command to execute
+        :param stdin: (optional,default=None) can be a string or a file-like object.
+        :param encoding: the encoding to use to decode the byte stream received from the remote command execution.
+
+        :return: a tuple with (return_value, stdout, stderr) where stdout and stderr are both strings, decoded
+            with the specified encoding.
+        """
+        retval, stdout_bytes, stderr_bytes = self.exec_command_wait_bytes(command=command, stdin=stdin, **kwargs)
+        # Return the decoded strings
+        return (retval, stdout_bytes.decode(encoding), stderr_bytes.decode(encoding))
 
     def get(self, remotepath, localpath, *args, **kwargs):
         """
@@ -689,6 +715,8 @@ class Transport(abc.ABC):
         """
 
         command = 'whoami'
+        # Assuming here that the username is either ASCII or UTF-8 encoded
+        # This should be true essentially always
         retval, username, stderr = self.exec_command_wait(command)
         if retval == 0:
             if stderr.strip():

@@ -677,7 +677,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         command = f'{rm_exe} {rm_flags} {escape_for_bash(path)}'
 
-        retval, stdout, stderr = self.exec_command_wait(command)
+        retval, stdout, stderr = self.exec_command_wait_bytes(command)
 
         if retval == 0:
             if stderr.strip():
@@ -1133,7 +1133,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # to simplify writing the above copy function
         command = f'{cp_exe} {cp_flags} {escape_for_bash(src)} {escape_for_bash(dst)}'
 
-        retval, stdout, stderr = self.exec_command_wait(command)
+        retval, stdout, stderr = self.exec_command_wait_bytes(command)
 
         if retval == 0:
             if stderr.strip():
@@ -1283,7 +1283,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait(self, command, stdin=None, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ
+    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ, too-many-branches
         """
         Executes the specified command and waits for it to finish.
 
@@ -1295,7 +1295,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         :param bufsize: same meaning of paramiko.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
-            are strings.
+            are both bytes.
         """
         import socket
         import time
@@ -1305,14 +1305,21 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if stdin is not None:
             if isinstance(stdin, str):
                 filelike_stdin = io.StringIO(stdin)
+            elif isinstance(stdin, bytes):
+                filelike_stdin = io.BytesIO(stdin)
             else:
+                # It seems both StringIO and BytesIO work correctly when doing ssh_stdin.write(line)?
+                # (The ChannelFile is opened with mode 'b', but until now it always has been a StringIO)
+                if not isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
+                    raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
+
                 filelike_stdin = stdin
 
             try:
-                for line in filelike_stdin.readlines():
+                for line in filelike_stdin:
                     ssh_stdin.write(line)
             except AttributeError:
-                raise ValueError('stdin can only be either a string of a file-like object!')
+                raise ValueError('stdin can only be either a string, bytes or a file-like object!')
 
         # I flush and close them anyway; important to call shutdown_write
         # to avoid hangouts
@@ -1326,8 +1333,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # Also, apparently if the data is coming slowly, the read() command will not unlock even for
         # times much larger than the timeout. Therefore we don't want to have very large buffers otherwise
         # you risk that a lot of output is sent to both stdout and stderr, and stderr goes beyond the
-        # winodw size and blocks.
-        bufsize = 10 * 1024
+        # window size and blocks.
+        # Note that this is different than the bufsize of paramiko.
+        internal_bufsize = 10 * 1024
 
         # Set a small timeout on the channels, so that if we get data from both
         # stderr and stdout, and the connection is slow, we interleave the receive and don't hang
@@ -1340,7 +1348,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             if stdout.channel.recv_ready():  # True means that the next .read call will at least receive 1 byte
                 chunk_exists = True
                 try:
-                    piece = stdout.read(bufsize)
+                    piece = stdout.read(internal_bufsize)
                     stdout_bytes.append(piece)
                 except socket.timeout:
                     # There was a timeout: I continue as there should still be data
@@ -1349,7 +1357,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             if stderr.channel.recv_stderr_ready():  # True means that the next .read call will at least receive 1 byte
                 chunk_exists = True
                 try:
-                    piece = stderr.read(bufsize)
+                    piece = stderr.read(internal_bufsize)
                     stderr_bytes.append(piece)
                 except socket.timeout:
                     # There was a timeout: I continue as there should still be data
@@ -1380,7 +1388,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # However, if I am here, the exit status is ready so this should be returning very quickly
         retval = channel.recv_exit_status()
 
-        return (retval, b''.join(stdout_bytes).decode('utf-8'), b''.join(stderr_bytes).decode('utf-8'))
+        return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
     def gotocomputer_command(self, remotedir):
         """

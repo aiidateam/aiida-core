@@ -1245,7 +1245,7 @@ class TestExecuteCommandWait(unittest.TestCase):
     @run_for_all_plugins
     def test_exec_with_stdin_string(self, custom_transport):
         """Test command execution with a stdin string."""
-        test_string = str('some_test String')
+        test_string = 'some_test String'
         with custom_transport as transport:
             retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=test_string)
             self.assertEqual(retcode, 0)
@@ -1253,14 +1253,18 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEqual(stderr, '')
 
     @run_for_all_plugins
-    def test_exec_with_stdin_unicode(self, custom_transport):
-        """Test command execution with a unicode stdin string."""
-        test_string = 'some_test String'
+    def test_exec_with_stdin_bytes(self, custom_transport):
+        """Test command execution with a stdin bytes.
+
+        I test directly the exec_command_wait_bytes function; I also pass some non-unicode
+        bytes to check that there is no internal implicit encoding/decoding in the code.
+        """
+        test_string = b'some_test bytes with non-unicode -> \xFA'
         with custom_transport as transport:
-            retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=test_string)
+            retcode, stdout, stderr = transport.exec_command_wait_bytes('cat', stdin=test_string)
             self.assertEqual(retcode, 0)
             self.assertEqual(stdout, test_string)
-            self.assertEqual(stderr, '')
+            self.assertEqual(stderr, b'')
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
@@ -1272,6 +1276,34 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEqual(retcode, 0)
             self.assertEqual(stdout, test_string)
             self.assertEqual(stderr, '')
+
+    @run_for_all_plugins
+    def test_exec_with_stdin_filelike_bytes(self, custom_transport):
+        """Test command execution with a stdin from filelike of type bytes.
+
+        I test directly the exec_command_wait_bytes function; I also pass some non-unicode
+        bytes to check that there is no internal implicit encoding/decoding in the code.
+        """
+        test_string = b'some_test bytes with non-unicode -> \xFA'
+        stdin = io.BytesIO(test_string)
+        with custom_transport as transport:
+            retcode, stdout, stderr = transport.exec_command_wait_bytes('cat', stdin=stdin)
+            self.assertEqual(retcode, 0)
+            self.assertEqual(stdout, test_string)
+            self.assertEqual(stderr, b'')
+
+    @run_for_all_plugins
+    def test_exec_with_stdin_filelike_bytes_decoding(self, custom_transport):
+        """Test command execution with a stdin from filelike of type bytes, trying to decod.
+
+        I test that the exec_command_wait function fails if I pass some non-unicode
+        bytes to check that there is no internal implicit encoding/decoding in the code.
+        """
+        test_string = b'some_test bytes with non-unicode -> \xFA'
+        stdin = io.BytesIO(test_string)
+        with custom_transport as transport:
+            with self.assertRaises(UnicodeDecodeError):
+                transport.exec_command_wait('cat', stdin=stdin, encoding='utf-8')
 
     @run_for_all_plugins
     def test_exec_with_wrong_stdin(self, custom_transport):

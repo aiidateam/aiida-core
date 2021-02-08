@@ -141,9 +141,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      get    Get the value of an AiiDA option for the current profile.
       list   List AiiDA options for the current profile.
       set    Unset an AiiDA option.
-      show   Show an AiiDA option for the current profile.
+      show   Show details of an AiiDA option for the current profile.
       unset  Set an AiiDA option.
 
 

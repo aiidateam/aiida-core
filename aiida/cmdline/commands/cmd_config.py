@@ -80,7 +80,7 @@ def verdi_config_list(ctx, description: bool):
 @arguments.CONFIG_OPTION(metavar='OPTION_NAME')
 @click.pass_context
 def verdi_config_show(ctx, option):
-    """Show an AiiDA option for the current profile."""
+    """Show details of an AiiDA option for the current profile."""
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
@@ -95,6 +95,24 @@ def verdi_config_show(ctx, option):
     }
 
     echo.echo_dictionary(dct, fmt='yaml')
+
+
+@verdi_config.command('get')
+@arguments.CONFIG_OPTION(metavar='OPTION_NAME')
+@click.pass_context
+def verdi_config_get(ctx, option):
+    """Get the value of an AiiDA option for the current profile."""
+    from aiida.manage.configuration import Config, Profile
+
+    config: Config = ctx.obj.config
+    profile: Profile = ctx.obj.profile
+
+    if option.global_only:
+        value = config.get_option(option.name)
+    else:
+        value = config.get_option(option.name, scope=profile.name)
+
+    echo.echo(str(value))
 
 
 @verdi_config.command('set')
@@ -164,4 +182,4 @@ def verdi_config_deprecated(ctx, value, globally, unset):
     elif value is not None:
         ctx.invoke(verdi_config_set, option=option, value=value, globally=globally)
     else:
-        ctx.invoke(verdi_config_show, option=option)
+        ctx.invoke(verdi_config_get, option=option)

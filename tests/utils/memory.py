@@ -19,9 +19,9 @@ def get_instances(classes, delay=0.0):
 
     :param classes: A class or tuple of classes to check (passed to `isinstance`).
     :param delay: How long to sleep (seconds) before collecting the memory dump.
-        This is a convenience function for tests involving Processes - functions like aiida.engine.run return
-        before all futures are resolved/cleaned up. Dumping memory too early catches those (although they are
-        note relevant for memory leaks).
+        This is a convenience function for tests involving Processes. For example, :py:func:`~aiida.engine.run` returns
+        before all futures are resolved/cleaned up. Dumping memory too early would catch those and the references they
+        carry, although they may not actually be leaking memory.
     """
     if delay > 0:
         loop = asyncio.get_event_loop()

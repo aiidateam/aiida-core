@@ -2,7 +2,7 @@
 set -ev
 
 # Make sure the folder containing the workchains is in the python path before the daemon is started
-LOCAL_TESTS="${GITHUB_WORKSPACE}/.github/local_tests"
+LOCAL_TESTS="${GITHUB_WORKSPACE}/.github/ci_only_tests"
 
 export PYTHONPATH="${PYTHONPATH}:${LOCAL_TESTS}"
 

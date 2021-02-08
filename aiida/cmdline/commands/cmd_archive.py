@@ -90,7 +90,7 @@ def inspect(archive, version, data, meta_data):
 @options.ARCHIVE_FORMAT(
     type=click.Choice(['zip', 'zip-uncompressed', 'zip-lowmemory', 'tar.gz', 'null']),
 )
-@options.FORCE(help='overwrite output file if it already exists')
+@options.FORCE(help='Overwrite output file if it already exists.')
 @click.option(
     '-v',
     '--verbosity',
@@ -287,7 +287,7 @@ class ExtrasImportCode(Enum):
     type=click.STRING,
     cls=options.MultipleValueOption,
     help='Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. '
-    'Automatically discovered archive URLs will be downloaded and added to ARCHIVES for importing'
+    'Automatically discovered archive URLs will be downloaded and added to ARCHIVES for importing.'
 )
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),

@@ -1335,12 +1335,17 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # you risk that a lot of output is sent to both stdout and stderr, and stderr goes beyond the
         # window size and blocks.
         # Note that this is different than the bufsize of paramiko.
-        internal_bufsize = 10 * 1024
+        internal_bufsize = 100 * 1024
 
         # Set a small timeout on the channels, so that if we get data from both
         # stderr and stdout, and the connection is slow, we interleave the receive and don't hang
-        stdout.channel.settimeout(0.1)
-        stderr.channel.settimeout(0.1)  # Maybe redundant, as this could be the same channel.
+        # NOTE: Timeouts and sleep time below, as well as the internal_bufsize above, have been benchmarked
+        # to try to optimize the overall throughput. I could get ~100MB/s on a localhost via ssh (and 3x slower
+        # if compression is enabled).
+        # It's important to mention that, for speed benchmarks, it's important to disable compression
+        # in the SSH transport settings, as it will cap the max speed.
+        stdout.channel.settimeout(0.01)
+        stderr.channel.settimeout(0.01)  # Maybe redundant, as this could be the same channel.
 
         while True:
             chunk_exists = False
@@ -1382,7 +1387,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 # The exit status is not ready:
                 # I just put a small sleep to avoid infinite fast loops when data
                 # is not available on a slow connection, and loop
-                time.sleep(0.05)
+                time.sleep(0.01)
 
         # I get the return code (blocking)
         # However, if I am here, the exit status is ready so this should be returning very quickly

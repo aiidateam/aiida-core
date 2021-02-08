@@ -13,7 +13,7 @@ from importlib import resources
 import os
 import shutil
 import tempfile
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import jsonschema
 
@@ -38,15 +38,20 @@ def config_schema() -> Dict[str, Any]:
 class ConfigValidationError(ConfigurationError):
     """Configuration error raised when the file contents fails validation."""
 
-    def __init__(self, exc: jsonschema.ValidationError, path: Optional[str] = None):
-        super().__init__(exc.message)
-        self._exc = exc
-        self._path = path
+    def __init__(
+        self, message: str, keypath: Sequence[str] = (), schema: Optional[dict] = None, filepath: Optional[str] = None
+    ):
+        super().__init__(message)
+        self._message = message
+        self._keypath = keypath
+        self._filepath = filepath
+        self._schema = schema
 
     def __str__(self) -> str:
-        prefix = f'{self._path}:' if self._path else ''
-        path = '/'.join(self._exc.path) + ': ' if self._exc.path else ''
-        return f'{prefix}{path}{self._exc.message}\n  schema:\n  {self._exc.schema}'
+        prefix = f'{self._filepath}:' if self._filepath else ''
+        path = '/'.join(self._keypath) + ': ' if self._keypath else ''
+        schema = f'\n  schema:\n  {self._schema}' if self._schema else ''
+        return f'{prefix}{path}{self._message}{schema}'
 
 
 class Config:  # pylint: disable=too-many-public-methods
@@ -131,7 +136,9 @@ class Config:  # pylint: disable=too-many-public-methods
             try:
                 jsonschema.validate(instance=config, schema=config_schema())
             except jsonschema.ValidationError as error:
-                raise ConfigValidationError(error, filepath)
+                raise ConfigValidationError(
+                    message=error.message, keypath=error.path, schema=error.schema, filepath=filepath
+                )
 
         self._filepath = filepath
         self._schema = config.get(self.KEY_SCHEMA, None)

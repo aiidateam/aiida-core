@@ -10,8 +10,8 @@
 """Tests for the configuration options."""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option, ValidationError
-from aiida.manage.configuration import get_config, get_config_option
+from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option
+from aiida.manage.configuration import get_config, get_config_option, ConfigValidationError
 
 from tests.utils.configuration import with_temporary_config_instance
 
@@ -37,10 +37,10 @@ class TestConfigurationOptions(AiidaTestCase):
     def test_parse_option(self):
         """Test `parse_option` function."""
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ConfigValidationError):
             parse_option('logging.aiida_loglevel', 1)
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ConfigValidationError):
             parse_option('logging.aiida_loglevel', 'INVALID_LOG_LEVEL')
 
     def test_options(self):

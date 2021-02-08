@@ -84,7 +84,7 @@ class Option:
         try:
             jsonschema.validate(instance=value, schema=self.schema)
         except jsonschema.ValidationError as error:
-            raise ConfigValidationError(error)
+            raise ConfigValidationError(message=error.message, keypath=error.path, schema=error.schema)
 
         return value
 

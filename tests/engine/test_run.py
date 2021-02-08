@@ -8,9 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `run` functions."""
+from pympler import muppy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import run, run_get_node
+from aiida.engine.processes import Process
 from aiida.orm import Int, Str, ProcessNode
 
 from tests.utils.processes import DummyProcess
@@ -24,6 +26,11 @@ class TestRun(AiidaTestCase):
         """Test the `run` function."""
         inputs = {'a': Int(2), 'b': Str('test')}
         run(DummyProcess, **inputs)
+
+        # check that no references to processes are left in memory
+        all_objects = muppy.get_objects()  # note: this also calls gc.collect()
+        processes = [o for o in all_objects if hasattr(o, '__class__') and isinstance(o, Process)]
+        assert not processes
 
     def test_run_get_node(self):
         """Test the `run_get_node` function."""

@@ -17,7 +17,7 @@ from jsonschema import validate, ValidationError
 
 from . import schema as schema_module
 
-__all__ = ('get_option', 'get_option_names', 'parse_option', 'ValidationError')
+__all__ = ('get_option', 'get_option_names', 'parse_option', 'ValidationError', 'Option')
 
 SCHEMA_FILE = 'config-v5.schema.json'
 NO_DEFAULT = ()
@@ -29,6 +29,9 @@ class Option:
     def __init__(self, name: str, schema: Dict[str, Any]):
         self._name = name
         self._schema = schema
+
+    def __str__(self) -> str:
+        return f'Option(name={self._name})'
 
     @property
     def name(self) -> str:

@@ -141,11 +141,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
-            do_submit,
-            initial_interval,
-            max_attempts,
-            logger=node.logger,
-            ignore_exceptions=ignore_exceptions
+            do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
@@ -204,11 +200,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         logger.info(f'scheduled request to update CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
         job_done = await exponential_backoff_retry(
-            do_update,
-            initial_interval,
-            max_attempts,
-            logger=node.logger,
-            ignore_exceptions=ignore_exceptions
+            do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption):
         raise
@@ -274,11 +266,7 @@ async def task_retrieve_job(
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         result = await exponential_backoff_retry(
-            do_retrieve,
-            initial_interval,
-            max_attempts,
-            logger=node.logger,
-            ignore_exceptions=ignore_exceptions
+            do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
     except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise

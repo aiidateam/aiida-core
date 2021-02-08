@@ -10,7 +10,7 @@ attrs==20.2.0
 Babel==2.8.0
 backcall==0.2.0
 bcrypt==3.2.0
-bleach==3.2.1
+bleach==3.3.0
 certifi==2020.6.20
 cffi==1.14.3
 chardet==3.0.4

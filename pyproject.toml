@@ -90,6 +90,7 @@ commands = pytest {posargs}
 [testenv:py{36,37,38,39}-verdi]
 setenv =
     AIIDA_TEST_BACKEND = django
+    AIIDA_PATH = {toxinidir}/.tox/.aiida
 commands = verdi {posargs}
 
 [testenv:py{36,37,38,39}-docs-{clean,update}]

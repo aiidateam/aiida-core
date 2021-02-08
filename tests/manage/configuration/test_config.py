@@ -374,7 +374,7 @@ class TestConfig(AiidaTestCase):
 
     def test_option_global_only(self):
         """Test that `global_only` options are only set globally even if a profile specific scope is set."""
-        option_name = 'user.email'
+        option_name = 'autofill.user.email'
         option_value = 'some@email.com'
 
         config = Config(self.config_filepath, self.config_dictionary)
@@ -390,7 +390,7 @@ class TestConfig(AiidaTestCase):
 
     def test_set_option_override(self):
         """Test that `global_only` options are only set globally even if a profile specific scope is set."""
-        option_name = 'user.email'
+        option_name = 'autofill.user.email'
         option_value_one = 'first@email.com'
         option_value_two = 'second@email.com'
 

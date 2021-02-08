@@ -70,3 +70,10 @@ class TestConfigMigration(TestCase):
         config_reference = self.load_config_sample('reference/4.json')
         config_migrated = _MIGRATION_LOOKUP[3].apply(config_initial)
         self.assertEqual(config_migrated, config_reference)
+
+    def test_4_5_migration(self):
+        """Test the step between config versions 4 and 5."""
+        config_initial = self.load_config_sample('input/4.json')
+        config_reference = self.load_config_sample('reference/5.json')
+        config_migrated = _MIGRATION_LOOKUP[4].apply(config_initial)
+        self.assertEqual(config_migrated, config_reference)

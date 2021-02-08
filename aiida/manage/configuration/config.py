@@ -11,10 +11,11 @@
 import os
 import shutil
 import tempfile
+from typing import Any, Dict, Tuple
 
 from aiida.common import json
 
-from .options import get_option, parse_option, NO_DEFAULT
+from .options import get_option, get_option_names, Option, parse_option, NO_DEFAULT
 from .profile import Profile
 
 __all__ = ('Config',)
@@ -86,7 +87,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         return filepath_backup
 
-    def __init__(self, filepath, config):
+    def __init__(self, filepath: str, config: dict):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
 
         If an empty dictionary is passed, the constructor will create the skeleton configuration dictionary.
@@ -332,12 +333,12 @@ class Config:  # pylint: disable=too-many-public-methods
             return
 
         if not option.global_only and scope is not None:
-            self.get_profile(scope).set_option(option.key, value, override=override)
+            self.get_profile(scope).set_option(option.name, value, override=override)
         else:
-            if option.key not in self.options or override:
-                self.options[option.key] = value
+            if option.name not in self.options or override:
+                self.options[option.name] = value
 
-    def unset_option(self, option_name, scope=None):
+    def unset_option(self, option_name: str, scope=None):
         """Unset a configuration option for a certain scope.
 
         :param option_name: the name of the configuration option
@@ -346,9 +347,9 @@ class Config:  # pylint: disable=too-many-public-methods
         option = get_option(option_name)
 
         if scope is not None:
-            self.get_profile(scope).unset_option(option.key)
+            self.get_profile(scope).unset_option(option.name)
         else:
-            self.options.pop(option.key, None)
+            self.options.pop(option.name, None)
 
     def get_option(self, option_name, scope=None, default=True):
         """Get a configuration option for a certain scope.
@@ -364,11 +365,34 @@ class Config:  # pylint: disable=too-many-public-methods
         default_value = option.default if default and option.default is not NO_DEFAULT else None
 
         if scope is not None:
-            value = self.get_profile(scope).get_option(option.key, default_value)
+            value = self.get_profile(scope).get_option(option.name, default_value)
         else:
-            value = self.options.get(option.key, default_value)
+            value = self.options.get(option.name, default_value)
 
         return value
+
+    def get_options(self, scope=None) -> Dict[str, Tuple[Option, str, Any]]:
+        """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
+
+        :returns: (option, source, value)
+        """
+        profile = self.get_profile(scope) if scope else None
+        output = {}
+        for name in get_option_names():
+            option = get_option(name)
+            if name in profile.options:
+                value = profile.options.get(name)
+                source = 'profile'
+            elif name in self.options:
+                value = self.options.get(name)
+                source = 'global'
+            elif 'default' in option.schema:
+                value = option.default
+                source = 'default'
+            else:
+                continue
+            output[name] = (option, source, value)
+        return output
 
     def store(self):
         """Write the current config to file.

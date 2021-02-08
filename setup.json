@@ -36,6 +36,7 @@
         "graphviz~=0.13",
         "ipython~=7.0",
         "jinja2~=2.10",
+        "jsonschema~=3.0",
         "kiwipy[rmq]~=0.7.1",
         "numpy~=1.17",
         "pamqp~=2.3",

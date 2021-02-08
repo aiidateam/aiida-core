@@ -78,13 +78,13 @@ class TestVerdiConfig(AiidaTestCase):
         options = ['config', option_name]
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
         self.assertClickSuccess(result)
-        self.assertEqual(result.output, '')
+        # self.assertEqual(result.output, '')  #  now has deprecation warning
 
     @with_temporary_config_instance
     def test_config_set_option_global_only(self):
         """Test that `global_only` options are only set globally even if the `--global` flag is not set."""
         config = get_config()
-        option_name = 'user.email'
+        option_name = 'autofill.user.email'
         option_value = 'some@email.com'
 
         options = ['config', option_name, str(option_value)]

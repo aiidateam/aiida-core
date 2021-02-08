@@ -133,14 +133,18 @@ Below is a list with all available subcommands.
 
 .. code:: console
 
-    Usage:  [OPTIONS] OPTION_NAME OPTION_VALUE
+    Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Configure profile-specific or global AiiDA options.
+      Manage AiiDA configuration.
 
     Options:
-      --global  Apply the option configuration wide.
-      --unset   Remove the line matching the option name from the config file.
-      --help    Show this message and exit.
+      --help  Show this message and exit.
+
+    Commands:
+      list   List AiiDA options for the current profile.
+      set    Unset an AiiDA option.
+      show   Show an AiiDA option for the current profile.
+      unset  Set an AiiDA option.
 
 
 .. _reference:command-line:verdi-daemon:

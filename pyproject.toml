@@ -76,7 +76,6 @@ envlist = py37-django
 [testenv]
 usedevelop=True
 deps =
-    py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
     py39: -rrequirements/requirements-py-3.9.txt
@@ -110,7 +109,6 @@ commands =
 # tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =
-    py36: -rrequirements/requirements-py-3.6.txt
     py37: -rrequirements/requirements-py-3.7.txt
     py38: -rrequirements/requirements-py-3.8.txt
     py39: -rrequirements/requirements-py-3.9.txt

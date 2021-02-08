@@ -70,6 +70,8 @@ jobs:
         image: rabbitmq:latest
         ports:
           - 5672:5672
+      slurm:
+        image: xenonmiddleware/slurm:17
 
     steps:
     - uses: actions/checkout@v2

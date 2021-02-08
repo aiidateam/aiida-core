@@ -20,6 +20,8 @@ sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${CONFIG}/doubler.sh|" "${CONFIG}/
 verdi setup --config "${CONFIG}/profile.yaml"
 verdi computer setup --config "${CONFIG}/localhost.yaml"
 verdi computer configure local localhost --config "${CONFIG}/localhost-config.yaml"
+verdi computer setup --config "${CONFIG}/slurm-ssh.yaml"
+verdi computer configure ssh slurm-ssh --config "${CONFIG}/slurm-ssh-config.yaml" -n  # needs slurm container
 verdi code setup --config "${CONFIG}/doubler.yaml"
 verdi code setup --config "${CONFIG}/add.yaml"
 

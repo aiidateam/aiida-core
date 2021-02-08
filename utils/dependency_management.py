@@ -247,7 +247,8 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
         # The Python version should be specified as supported in 'setup.json'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
             raise DependencySpecificationError(
-                "Required Python version between 'setup.json' and 'environment.yml' not consistent."
+                f"Required Python version {spec.version} from 'environment.yaml' is not consistent with " +
+                "required version in 'setup.json'."
             )
 
         break

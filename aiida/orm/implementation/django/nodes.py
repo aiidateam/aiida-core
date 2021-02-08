@@ -201,10 +201,8 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         if clean:
             self.clean_values()
 
-        # `contextlib.suppress` provides empty context and can be replaced with `contextlib.nullcontext` after we drop
-        # support for python 3.6
-        with transaction.atomic() if with_transaction else contextlib.suppress():
-            with suppress_auto_now([(models.DbNode, ['mtime'])]) if self.mtime else contextlib.suppress():
+        with transaction.atomic() if with_transaction else contextlib.nullcontext():
+            with suppress_auto_now([(models.DbNode, ['mtime'])]) if self.mtime else contextlib.nullcontext():
                 # We need to save the node model instance itself first such that it has a pk
                 # that can be used in the foreign keys that will be needed for setting the
                 # attributes and links

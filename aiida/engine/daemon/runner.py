@@ -22,17 +22,10 @@ LOGGER = logging.getLogger(__name__)
 
 async def shutdown_runner(runner: Runner) -> None:
     """Cleanup tasks tied to the service's shutdown."""
+    from asyncio import all_tasks
+    from asyncio import current_task
+
     LOGGER.info('Received signal to shut down the daemon runner')
-
-    try:
-        from asyncio import all_tasks
-        from asyncio import current_task
-    except ImportError:
-        # Necessary for Python 3.6 as `asyncio.all_tasks` and `asyncio.current_task` were introduced in Python 3.7. The
-        # Standalone functions should be used as the classmethods are removed as of Python 3.9.
-        all_tasks = asyncio.Task.all_tasks
-        current_task = asyncio.Task.current_task
-
     tasks = [task for task in all_tasks() if task is not current_task()]
 
     for task in tasks:

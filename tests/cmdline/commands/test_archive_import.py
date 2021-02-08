@@ -14,11 +14,18 @@ from click.exceptions import BadParameter
 import pytest
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import cmd_import
+from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
 from aiida.tools.importexport import EXPORT_VERSION
 
 from tests.utils.archives import get_archive_file
+
+
+def test_cmd_import_deprecation():
+    """Test that the deprecated `verdi import` command can still be called."""
+    from aiida.cmdline.commands import cmd_import
+    result = CliRunner().invoke(cmd_import.cmd_import, '--help')
+    assert result.exit_code == 0
 
 
 class TestVerdiImport(AiidaTestCase):
@@ -40,7 +47,7 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_no_archives(self):
         """Test that passing no valid archives will lead to command failure."""
         options = []
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNotNone(result.exception, result.output)
         self.assertIn('Critical', result.output)
@@ -49,7 +56,7 @@ class TestVerdiImport(AiidaTestCase):
     def test_import_non_existing_archives(self):
         """Test that passing a non-existing archive will lead to command failure."""
         options = ['non-existing-archive.aiida']
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNotNone(result.exception, result.output)
         self.assertNotEqual(result.exit_code, 0, result.output)
@@ -64,7 +71,7 @@ class TestVerdiImport(AiidaTestCase):
         ]
 
         options = [] + archives
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(result.exit_code, 0, result.output)
@@ -86,7 +93,7 @@ class TestVerdiImport(AiidaTestCase):
 
         # Invoke `verdi import`, making sure there are no exceptions
         options = ['-G', group.label] + [archives[0]]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
@@ -96,7 +103,7 @@ class TestVerdiImport(AiidaTestCase):
 
         # Invoke `verdi import` again, making sure Group count doesn't change
         options = ['-G', group.label] + [archives[0]]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
@@ -108,7 +115,7 @@ class TestVerdiImport(AiidaTestCase):
 
         # Invoke `verdi import` again with new archive, making sure Group count is upped
         options = ['-G', group.label] + [archives[1]]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
@@ -134,7 +141,7 @@ class TestVerdiImport(AiidaTestCase):
 
         # Invoke `verdi import`, making sure there are no exceptions
         options = ['-G', group_label] + archives
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
 
@@ -143,7 +150,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertFalse(new_group, msg='The Group should not have been created now, but instead when it was imported.')
         self.assertFalse(group.is_empty, msg='The Group should not be empty.')
 
-    @pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')
+    @pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')  # pylint: disable=not-callable
     def test_comment_mode(self):
         """Test toggling comment mode flag"""
         import re
@@ -151,7 +158,7 @@ class TestVerdiImport(AiidaTestCase):
 
         for mode in ['newest', 'overwrite']:
             options = ['--comment-mode', mode] + archives
-            result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+            result = self.cli_runner.invoke(cmd_archive.import_archive, options)
             self.assertIsNone(result.exception, result.output)
             self.assertTrue(
                 any([re.fullmatch(r'Comment rules[\s]*{}'.format(mode), line) for line in result.output.split('\n')]),
@@ -169,7 +176,7 @@ class TestVerdiImport(AiidaTestCase):
 
         for archive, version in archives:
             options = [get_archive_file(archive, filepath=self.archive_path)]
-            result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+            result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
             self.assertIsNone(result.exception, msg=result.output)
             self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -184,7 +191,7 @@ class TestVerdiImport(AiidaTestCase):
         version = '0.3'
 
         options = [self.url_path + archive]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -200,7 +207,7 @@ class TestVerdiImport(AiidaTestCase):
             get_archive_file(local_archive, filepath=self.archive_path), self.url_path + url_archive,
             get_archive_file(local_archive, filepath=self.archive_path)
         ]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNone(result.exception, result.output)
         self.assertEqual(result.exit_code, 0, result.output)
@@ -222,7 +229,7 @@ class TestVerdiImport(AiidaTestCase):
         """Test the correct error is raised when supplying a malformed URL"""
         malformed_url = 'htp://www.aiida.net'
 
-        result = self.cli_runner.invoke(cmd_import.cmd_import, [malformed_url])
+        result = self.cli_runner.invoke(cmd_archive.import_archive, [malformed_url])
 
         self.assertIsNotNone(result.exception, result.output)
         self.assertNotEqual(result.exit_code, 0, result.output)
@@ -243,7 +250,7 @@ class TestVerdiImport(AiidaTestCase):
         # Import "normally", but explicitly specifying `--migration`, make sure confirm message is present
         # `migration` = True (default), `non_interactive` = False (default), Expected: Query user, migrate
         options = ['--migration', archive]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -254,7 +261,7 @@ class TestVerdiImport(AiidaTestCase):
         # Import using non-interactive, make sure confirm message has gone
         # `migration` = True (default), `non_interactive` = True, Expected: No query, migrate
         options = ['--non-interactive', archive]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNone(result.exception, msg=result.output)
         self.assertEqual(result.exit_code, 0, msg=result.output)
@@ -264,7 +271,7 @@ class TestVerdiImport(AiidaTestCase):
         # Import using `--no-migration`, make sure confirm message has gone
         # `migration` = False, `non_interactive` = False (default), Expected: No query, no migrate
         options = ['--no-migration', archive]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNotNone(result.exception, msg=result.output)
         self.assertNotEqual(result.exit_code, 0, msg=result.output)
@@ -275,7 +282,7 @@ class TestVerdiImport(AiidaTestCase):
         # Import using `--no-migration` and `--non-interactive`, make sure confirm message has gone
         # `migration` = False, `non_interactive` = True, Expected: No query, no migrate
         options = ['--no-migration', '--non-interactive', archive]
-        result = self.cli_runner.invoke(cmd_import.cmd_import, options)
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
         self.assertIsNotNone(result.exception, msg=result.output)
         self.assertNotEqual(result.exit_code, 0, msg=result.output)

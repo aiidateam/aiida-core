@@ -8,17 +8,45 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
+from functools import lru_cache
+from importlib import resources
 import os
 import shutil
 import tempfile
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
+
+import jsonschema
 
 from aiida.common import json
+from aiida.common.exceptions import ConfigurationError
 
+from . import schema as schema_module
 from .options import get_option, get_option_names, Option, parse_option, NO_DEFAULT
 from .profile import Profile
 
-__all__ = ('Config',)
+__all__ = ('Config', 'config_schema', 'ConfigValidationError')
+
+SCHEMA_FILE = 'config-v5.schema.json'
+
+
+@lru_cache(1)
+def config_schema() -> Dict[str, Any]:
+    """Return the configuration schema."""
+    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
+
+
+class ConfigValidationError(ConfigurationError):
+    """Configuration error raised when the file contents fails validation."""
+
+    def __init__(self, exc: jsonschema.ValidationError, path: Optional[str] = None):
+        super().__init__(exc.message)
+        self._exc = exc
+        self._path = path
+
+    def __str__(self) -> str:
+        prefix = f'{self._path}:' if self._path else ''
+        path = '/'.join(self._exc.path) + ': ' if self._exc.path else ''
+        return f'{prefix}{path}{self._exc.message}\n  schema:\n  {self._exc.schema}'
 
 
 class Config:  # pylint: disable=too-many-public-methods
@@ -30,6 +58,7 @@ class Config:  # pylint: disable=too-many-public-methods
     KEY_DEFAULT_PROFILE = 'default_profile'
     KEY_PROFILES = 'profiles'
     KEY_OPTIONS = 'options'
+    KEY_SCHEMA = '$schema'
 
     @classmethod
     def from_file(cls, filepath):
@@ -87,26 +116,33 @@ class Config:  # pylint: disable=too-many-public-methods
 
         return filepath_backup
 
-    def __init__(self, filepath: str, config: dict):
+    def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
 
         If an empty dictionary is passed, the constructor will create the skeleton configuration dictionary.
 
         :param filepath: the absolute filepath of the configuration file
         :param config: the content of the configuration file in dictionary form
+        :param validate: validate the dictionary against the schema
         """
         from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 
-        version = config.get(self.KEY_VERSION, {})
-        current_version = version.get(self.KEY_VERSION_CURRENT, CURRENT_CONFIG_VERSION)
-        compatible_version = version.get(self.KEY_VERSION_OLDEST_COMPATIBLE, OLDEST_COMPATIBLE_CONFIG_VERSION)
+        if validate:
+            try:
+                jsonschema.validate(instance=config, schema=config_schema())
+            except jsonschema.ValidationError as error:
+                raise ConfigValidationError(error, filepath)
 
         self._filepath = filepath
-        self._current_version = current_version
-        self._oldest_compatible_version = compatible_version
+        self._schema = config.get(self.KEY_SCHEMA, None)
+        version = config.get(self.KEY_VERSION, {})
+        self._current_version = version.get(self.KEY_VERSION_CURRENT, CURRENT_CONFIG_VERSION)
+        self._oldest_compatible_version = version.get(
+            self.KEY_VERSION_OLDEST_COMPATIBLE, OLDEST_COMPATIBLE_CONFIG_VERSION
+        )
         self._profiles = {}
 
-        known_keys = [self.KEY_VERSION, self.KEY_PROFILES, self.KEY_OPTIONS, self.KEY_DEFAULT_PROFILE]
+        known_keys = [self.KEY_SCHEMA, self.KEY_VERSION, self.KEY_PROFILES, self.KEY_OPTIONS, self.KEY_DEFAULT_PROFILE]
         unknown_keys = set(config.keys()) - set(known_keys)
 
         if unknown_keys:
@@ -149,15 +185,17 @@ class Config:  # pylint: disable=too-many-public-methods
         echo.echo_warning(f'backup of the original config file written to: `{filepath_backup}`')
 
     @property
-    def dictionary(self):
+    def dictionary(self) -> dict:
         """Return the dictionary representation of the config as it would be written to file.
 
         :return: dictionary representation of config as it should be written to file
         """
-        config = {
-            self.KEY_VERSION: self.version_settings,
-            self.KEY_PROFILES: {name: profile.dictionary for name, profile in self._profiles.items()}
-        }
+        config = {}
+        if self._schema:
+            config[self.KEY_SCHEMA] = self._schema
+
+        config[self.KEY_VERSION] = self.version_settings
+        config[self.KEY_PROFILES] = {name: profile.dictionary for name, profile in self._profiles.items()}
 
         if self._default_profile:
             config[self.KEY_DEFAULT_PROFILE] = self._default_profile

@@ -122,7 +122,7 @@ def verdi_config_get(ctx, option):
 @click.pass_context
 def verdi_config_set(ctx, option, value, globally):
     """Unset an AiiDA option."""
-    from aiida.manage.configuration import Config, Profile, ValidationError
+    from aiida.manage.configuration import Config, Profile, ConfigValidationError
 
     config: Config = ctx.obj.config
     profile: Profile = ctx.obj.profile
@@ -137,7 +137,7 @@ def verdi_config_set(ctx, option, value, globally):
     # Set the specified option
     try:
         config.set_option(option.name, value, scope=scope)
-    except ValidationError as error:
+    except ConfigValidationError as error:
         echo.echo_critical(str(error))
     config.store()
     echo.echo_success(f'{option.name} set to {value} {scope_text}')

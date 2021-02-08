@@ -8,18 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
-from functools import lru_cache
-from importlib import resources
-import json
 from typing import Any, Dict, List, Tuple
 
-from jsonschema import validate, ValidationError
+import jsonschema
 
-from . import schema as schema_module
+__all__ = ('get_option', 'get_option_names', 'parse_option', 'Option')
 
-__all__ = ('get_option', 'get_option_names', 'parse_option', 'ValidationError', 'Option')
-
-SCHEMA_FILE = 'config-v5.schema.json'
 NO_DEFAULT = ()
 
 
@@ -64,9 +58,10 @@ class Option:
         :param cast: Attempt to cast the value to the required type
 
         :return: The output value
-        :raise: jsonschema.exceptions.ValidationError
+        :raise: ConfigValidationError
 
         """
+        from .config import ConfigValidationError
         if cast:
             try:
                 if self.valid_type == 'boolean':
@@ -85,19 +80,19 @@ class Option:
                     value = float(value)
             except ValueError:
                 pass
-        validate(instance=value, schema=self.schema)
+
+        try:
+            jsonschema.validate(instance=value, schema=self.schema)
+        except jsonschema.ValidationError as error:
+            raise ConfigValidationError(error)
+
         return value
-
-
-@lru_cache(1)
-def get_schema() -> Dict[str, Any]:
-    """Return the configuration schema."""
-    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
 
 
 def get_schema_options() -> Dict[str, Dict[str, Any]]:
     """Return schema for options."""
-    schema = get_schema()
+    from .config import config_schema
+    schema = config_schema()
     return schema['definitions']['options']['properties']
 
 

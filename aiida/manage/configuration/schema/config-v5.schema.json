@@ -196,15 +196,7 @@
                 "AIIDADB_NAME",
                 "AIIDADB_PASS",
                 "AIIDADB_PORT",
-                "AIIDADB_USER",
-                "broker_host",
-                "broker_password",
-                "broker_port",
-                "broker_protocol",
-                "broker_username",
-                "broker_virtual_host",
-                "default_user_email",
-                "options"
+                "AIIDADB_USER"
             ],
             "properties": {
                 "PROFILE_UUID": {
@@ -215,25 +207,42 @@
                     "type": "string"
                 },
                 "AIIDADB_ENGINE": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "postgresql_psycopg2"
                 },
                 "AIIDADB_BACKEND": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "django",
+                        "sqlalchemy"
+                    ],
+                    "default": "django"
                 },
                 "AIIDADB_NAME": {
                     "type": "string"
                 },
                 "AIIDADB_PORT": {
-                    "type": "integer"
+                    "type": ["integer", "string"],
+                    "minimum": 1,
+                    "pattern": "\\d+",
+                    "default": 5432
                 },
                 "AIIDADB_HOST": {
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null
                 },
                 "AIIDADB_USER": {
                     "type": "string"
                 },
                 "AIIDADB_PASS": {
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null
                 },
                 "broker_protocol": {
                     "description": "the protocol to use when connecting to the RabbitMQ server",
@@ -271,7 +280,11 @@
                     "default": ""
                 },
                 "default_user_email": {
-                    "type": "string"
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": null
                 },
                 "options": {
                     "description": "Profile specific options",
@@ -280,10 +293,7 @@
             }
         }
     },
-    "required": [
-        "CONFIG_VERSION",
-        "profiles"
-    ],
+    "required": [],
     "properties": {
         "CONFIG_VERSION": {
             "description": "The configuration version",

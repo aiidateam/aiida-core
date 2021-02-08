@@ -13,7 +13,7 @@ import os
 import tarfile
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+
 from aiida.common import json
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
@@ -23,9 +23,10 @@ from aiida.tools.importexport.common.exceptions import DanglingLinkError
 
 from tests.utils.configuration import with_temp_dir
 from tests.tools.importexport.utils import get_all_node_links
+from . import AiidaArchiveTestCase
 
 
-class TestLinks(AiidaTestCase):
+class TestLinks(AiidaArchiveTestCase):
     """Test ex-/import cases related to Links"""
 
     def setUp(self):

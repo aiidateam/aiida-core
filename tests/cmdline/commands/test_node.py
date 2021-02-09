@@ -55,7 +55,15 @@ class TestVerdiNode(AiidaTestCase):
 
         cls.node = node
 
-        # Set up a FolderData for the node repo cp tests.
+    def setUp(self):
+        self.cli_runner = CliRunner()
+
+    @classmethod
+    def get_unstored_folder_node(cls):
+        """Get a "default" folder node with some data.
+
+        The node is unstored so one can add more content to it before storing it.
+        """
         folder_node = orm.FolderData()
         cls.content_file1 = 'nobody expects'
         cls.content_file2 = 'the minister of silly walks'
@@ -63,11 +71,7 @@ class TestVerdiNode(AiidaTestCase):
         cls.key_file2 = 'some_other_file.txt'
         folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), cls.key_file1)
         folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
-        folder_node.store()
-        cls.folder_node = folder_node
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
+        return folder_node
 
     def test_node_tree(self):
         """Test `verdi node tree`"""
@@ -187,12 +191,14 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_repo_ls(self):
         """Test 'verdi node repo ls' command."""
-        options = [str(self.folder_node.pk), 'some/nested/folder']
+        folder_node = self.get_unstored_folder_node().store()
+
+        options = [str(folder_node.pk), 'some/nested/folder']
         result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
         self.assertClickResultNoException(result)
         self.assertIn('filename.txt', result.output)
 
-        options = [str(self.folder_node.pk), 'some/non-existing-folder']
+        options = [str(folder_node.pk), 'some/non-existing-folder']
         result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
         self.assertIn('does not exist for the given node', result.output)
@@ -200,19 +206,21 @@ class TestVerdiNode(AiidaTestCase):
     def test_node_repo_cat(self):
         """Test 'verdi node repo cat' command."""
         # Test cat binary files
-        with self.folder_node.open('filename.txt.gz', 'wb') as fh_out:
-            fh_out.write(gzip.compress(b'COMPRESS'))
+        folder_node = self.get_unstored_folder_node()
+        folder_node.put_object_from_filelike(io.BytesIO(gzip.compress(b'COMPRESS')), 'filename.txt.gz', mode='wb')
+        folder_node.store()
 
-        options = [str(self.folder_node.pk), 'filename.txt.gz']
+        options = [str(folder_node.pk), 'filename.txt.gz']
         result = self.cli_runner.invoke(cmd_node.repo_cat, options)
         assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
     def test_node_repo_dump(self):
         """Test 'verdi node repo dump' command."""
+        folder_node = self.get_unstored_folder_node().store()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir'
-            options = [str(self.folder_node.uuid), str(out_path)]
+            options = [str(folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertFalse(res.stdout)
 
@@ -226,10 +234,11 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_repo_dump_to_nested_folder(self):
         """Test 'verdi node repo dump' command, with an output folder whose parent does not exist."""
+        folder_node = self.get_unstored_folder_node().store()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir' / 'nested' / 'path'
-            options = [str(self.folder_node.uuid), str(out_path)]
+            options = [str(folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertFalse(res.stdout)
 
@@ -243,6 +252,7 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_repo_existing_out_dir(self):
         """Test 'verdi node repo dump' command, check that an existing output directory is not overwritten."""
+        folder_node = self.get_unstored_folder_node().store()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir'
@@ -252,7 +262,7 @@ class TestVerdiNode(AiidaTestCase):
             some_file_content = 'ni!'
             with some_file.open('w') as file_handle:
                 file_handle.write(some_file_content)
-            options = [str(self.folder_node.uuid), str(out_path)]
+            options = [str(folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertIn('exists', res.stdout)
             self.assertIn('Critical:', res.stdout)

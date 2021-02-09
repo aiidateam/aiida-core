@@ -1,4 +1,4 @@
-# Molecule System Integration Testing
+# Molecule System Integration/Stress Testing
 
 This folder contains configuration for running automated system integration tests against an isolated AiiDA environment.
 

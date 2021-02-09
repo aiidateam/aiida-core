@@ -9,6 +9,10 @@
 ###########################################################################
 """Serialization tests"""
 
+import types
+
+import numpy as np
+
 from aiida import orm
 from aiida.orm.utils import serialize
 from aiida.backends.testbase import AiidaTestCase
@@ -120,3 +124,25 @@ class TestSerialize(AiidaTestCase):
         deserialized = serialize.deserialize(serialized)
 
         self.assertEqual(attribute_dict, deserialized)
+
+    def test_serialize_numpy(self):  # pylint: disable=no-self-use
+        """Regression test for #3709
+
+        Check that numpy arrays can be serialized.
+        """
+        data = np.array([1, 2, 3])
+
+        serialized = serialize.serialize(data)
+        deserialized = serialize.deserialize(serialized)
+        assert np.all(data == deserialized)
+
+    def test_serialize_simplenamespace(self):  # pylint: disable=no-self-use
+        """Regression test for #3709
+
+        Check that `types.SimpleNamespace` can be serialized.
+        """
+        data = types.SimpleNamespace(a=1, b=2.1)
+
+        serialized = serialize.serialize(data)
+        deserialized = serialize.deserialize(serialized)
+        assert data == deserialized

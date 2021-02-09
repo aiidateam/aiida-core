@@ -19,7 +19,7 @@ import zipfile
 from click.testing import CliRunner
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands import cmd_export
+from aiida.cmdline.commands import cmd_archive
 from aiida.tools.importexport import EXPORT_VERSION, ReaderJsonZip
 
 from tests.utils.archives import get_archive_file
@@ -38,6 +38,14 @@ def delete_temporary_file(filepath):
             raise
         else:
             pass
+
+
+def test_cmd_export_deprecation():
+    """Test that the deprecated `verdi export` commands can still be called."""
+    from aiida.cmdline.commands import cmd_export
+    for command in [cmd_export.inspect, cmd_export.create, cmd_export.migrate]:
+        result = CliRunner().invoke(command, '--help')
+        assert result.exit_code == 0
 
 
 class TestVerdiExport(AiidaTestCase):
@@ -79,7 +87,7 @@ class TestVerdiExport(AiidaTestCase):
         """Test that using a file that already exists, which is the case when using NamedTemporaryFile, will raise."""
         with tempfile.NamedTemporaryFile() as handle:
             options = [handle.name]
-            result = self.cli_runner.invoke(cmd_export.create, options)
+            result = self.cli_runner.invoke(cmd_archive.create, options)
             self.assertIsNotNone(result.exception)
 
     def test_create_force(self):
@@ -89,11 +97,11 @@ class TestVerdiExport(AiidaTestCase):
         """
         with tempfile.NamedTemporaryFile() as handle:
             options = ['-f', handle.name]
-            result = self.cli_runner.invoke(cmd_export.create, options)
+            result = self.cli_runner.invoke(cmd_archive.create, options)
             self.assertIsNone(result.exception, result.output)
 
             options = ['--force', handle.name]
-            result = self.cli_runner.invoke(cmd_export.create, options)
+            result = self.cli_runner.invoke(cmd_archive.create, options)
             self.assertIsNone(result.exception, result.output)
 
     def test_create_zip(self):
@@ -104,7 +112,7 @@ class TestVerdiExport(AiidaTestCase):
                 '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'zip',
                 filename
             ]
-            result = self.cli_runner.invoke(cmd_export.create, options)
+            result = self.cli_runner.invoke(cmd_archive.create, options)
             self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
@@ -119,7 +127,7 @@ class TestVerdiExport(AiidaTestCase):
                 '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F',
                 'zip-uncompressed', filename
             ]
-            result = self.cli_runner.invoke(cmd_export.create, options)
+            result = self.cli_runner.invoke(cmd_archive.create, options)
             self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertFalse(zipfile.ZipFile(filename).testzip(), None)
@@ -134,7 +142,7 @@ class TestVerdiExport(AiidaTestCase):
                 '-X', self.code.pk, '-Y', self.computer.pk, '-G', self.group.pk, '-N', self.node.pk, '-F', 'tar.gz',
                 filename
             ]
-            result = self.cli_runner.invoke(cmd_export.create, options)
+            result = self.cli_runner.invoke(cmd_archive.create, options)
             self.assertIsNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
             self.assertTrue(os.path.isfile(filename))
             self.assertTrue(tarfile.is_tarfile(filename))
@@ -154,7 +162,7 @@ class TestVerdiExport(AiidaTestCase):
 
             try:
                 options = ['--verbosity', 'DEBUG', filename_input, filename_output]
-                result = self.cli_runner.invoke(cmd_export.migrate, options)
+                result = self.cli_runner.invoke(cmd_archive.migrate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
@@ -171,7 +179,7 @@ class TestVerdiExport(AiidaTestCase):
 
         try:
             options = [filename_input, filename_output, '--version', target_version]
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            result = self.cli_runner.invoke(cmd_archive.migrate, options)
             self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename_output))
             self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
@@ -188,7 +196,7 @@ class TestVerdiExport(AiidaTestCase):
         # Using the context manager will create the file and so the command should fail
         with tempfile.NamedTemporaryFile() as file_output:
             options = [filename_input, file_output.name]
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            result = self.cli_runner.invoke(cmd_archive.migrate, options)
             self.assertIsNotNone(result.exception)
 
         for option in ['-f', '--force']:
@@ -196,7 +204,7 @@ class TestVerdiExport(AiidaTestCase):
             with tempfile.NamedTemporaryFile() as file_output:
                 filename_output = file_output.name
                 options = [option, filename_input, filename_output]
-                result = self.cli_runner.invoke(cmd_export.migrate, options)
+                result = self.cli_runner.invoke(cmd_archive.migrate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertEqual(zipfile.ZipFile(filename_output).testzip(), None)
@@ -214,17 +222,17 @@ class TestVerdiExport(AiidaTestCase):
 
             # specifying both output and in-place should except
             options = [filename_tmp, '--in-place', '--output-file', 'test.aiida']
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            result = self.cli_runner.invoke(cmd_archive.migrate, options)
             self.assertIsNotNone(result.exception, result.output)
 
             # specifying neither output nor in-place should except
             options = [filename_tmp]
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            result = self.cli_runner.invoke(cmd_archive.migrate, options)
             self.assertIsNotNone(result.exception, result.output)
 
             # check that in-place migration produces a valid archive in place of the old file
             options = [filename_tmp, '--in-place', '--version', target_version]
-            result = self.cli_runner.invoke(cmd_export.migrate, options)
+            result = self.cli_runner.invoke(cmd_archive.migrate, options)
             self.assertIsNone(result.exception, result.output)
             self.assertTrue(os.path.isfile(filename_tmp))
             # check that files in zip file are ok
@@ -244,7 +252,7 @@ class TestVerdiExport(AiidaTestCase):
         for option in ['--verbosity']:
             try:
                 options = [option, 'WARNING', filename_input, filename_output]
-                result = self.cli_runner.invoke(cmd_export.migrate, options)
+                result = self.cli_runner.invoke(cmd_archive.migrate, options)
                 self.assertEqual(result.output, '')
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
@@ -260,7 +268,7 @@ class TestVerdiExport(AiidaTestCase):
         for option in ['-F', '--archive-format']:
             try:
                 options = [option, 'tar.gz', filename_input, filename_output]
-                result = self.cli_runner.invoke(cmd_export.migrate, options)
+                result = self.cli_runner.invoke(cmd_archive.migrate, options)
                 self.assertIsNone(result.exception, result.output)
                 self.assertTrue(os.path.isfile(filename_output))
                 self.assertTrue(tarfile.is_tarfile(filename_output))
@@ -280,12 +288,12 @@ class TestVerdiExport(AiidaTestCase):
             # Testing the options that will print the meta data and data respectively
             for option in ['-m', '-d']:
                 options = [option, filename_input]
-                result = self.cli_runner.invoke(cmd_export.inspect, options)
+                result = self.cli_runner.invoke(cmd_archive.inspect, options)
                 self.assertIsNone(result.exception, result.output)
 
             # Test the --version option which should print the archive format version
             options = ['--version', filename_input]
-            result = self.cli_runner.invoke(cmd_export.inspect, options)
+            result = self.cli_runner.invoke(cmd_archive.inspect, options)
             self.assertIsNone(result.exception, result.output)
             self.assertEqual(result.output.strip()[-len(version_number):], version_number)
 
@@ -294,6 +302,6 @@ class TestVerdiExport(AiidaTestCase):
         filename_input = get_archive_file('empty.aiida', filepath=self.fixture_archive)
 
         options = [filename_input]
-        result = self.cli_runner.invoke(cmd_export.inspect, options)
+        result = self.cli_runner.invoke(cmd_archive.inspect, options)
         self.assertIsNotNone(result.exception, result.output)
         self.assertIn('corrupt archive', result.output)

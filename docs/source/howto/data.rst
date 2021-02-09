@@ -11,7 +11,7 @@ Importing data
 ==============
 
 AiiDA allows users to export data from their database into an export archive file, which can be imported into any other AiiDA database.
-If you have an AiiDA export archive that you would like to import, you can use the ``verdi import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
+If you have an AiiDA export archive that you would like to import, you can use the ``verdi archive import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
 
 .. note:: For information on exporting and importing data via AiiDA archives, see :ref:`"How to share data"<how-to:share:archives>`.
 

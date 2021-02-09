@@ -10,6 +10,27 @@ Commands
 ========
 Below is a list with all available subcommands.
 
+.. _reference:command-line:verdi-archive:
+
+``verdi archive``
+-----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Create, inspect and import AiiDA archives.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      create   Export subsets of the provenance graph to file for sharing.
+      import   Import data from an AiiDA archive file.
+      inspect  Inspect contents of an archive without importing it.
+      migrate  Migrate an export archive to a more recent format version.
+
+
 .. _reference:command-line:verdi-calcjob:
 
 ``verdi calcjob``
@@ -239,7 +260,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Create and manage export archives.
+      Deprecated, use `verdi archive`.
 
     Options:
       --help  Show this message and exit.
@@ -319,9 +340,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] [--] [ARCHIVES]...
 
-      Import data from an AiiDA archive file.
-
-      The archive can be specified by its relative or absolute file path, or its HTTP URL.
+      Deprecated, use `verdi archive import`.
 
     Options:
       -w, --webpages TEXT...          Discover all URL targets pointing to files with the

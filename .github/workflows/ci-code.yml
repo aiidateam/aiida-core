@@ -49,8 +49,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: ['django', 'sqlalchemy']
         python-version: [3.7, 3.8]
+        backend: ['django', 'sqlalchemy']
 
     services:
       postgres:

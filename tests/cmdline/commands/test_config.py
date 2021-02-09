@@ -228,3 +228,17 @@ class TestVerdiConfig:
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
         self.assertClickSuccess(result)
         assert 'schema' in result.output
+
+    def test_config_caching(self):
+        """Test `verdi config caching`"""
+        options = ['config', 'caching']
+        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+        self.assertClickSuccess(result)
+        assert result.output.strip() == ''
+
+        config = get_config()
+        config.set_option('caching.default', True, scope=config.current_profile.name)
+
+        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+        self.assertClickSuccess(result)
+        assert 'arithmetic.add' in result.output.strip()

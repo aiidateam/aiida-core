@@ -202,6 +202,20 @@ def verdi_config_unset(ctx, option, globally):
     echo.echo_success(f"'{option.name}' unset {scope_text}")
 
 
+@verdi_config.command('caching')
+def verdi_config_caching():
+    """List caching enabled process types for the current profile."""
+    from aiida.plugins.entry_point import get_entry_point_names
+    from aiida.manage.caching import get_use_cache
+
+    for entry_point in get_entry_point_names('aiida.calculations'):
+        if get_use_cache(identifier=entry_point):
+            echo.echo(entry_point)
+    for entry_point in get_entry_point_names('aiida.workflows'):
+        if get_use_cache(identifier=entry_point):
+            echo.echo(entry_point)
+
+
 @verdi_config.command('_deprecated', hidden=True)
 @decorators.deprecated_command("This command has been deprecated. Please use 'verdi config show/set/unset' instead.")
 @click.argument('value', metavar='OPTION_VALUE', required=False)

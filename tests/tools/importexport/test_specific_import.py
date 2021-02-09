@@ -12,11 +12,13 @@
 import os
 import shutil
 import tempfile
+import warnings
 
 import numpy as np
 
 from aiida import orm
 from aiida.common.folders import RepositoryFolder
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport import import_data, export
 from aiida.tools.importexport.common import exceptions
@@ -237,7 +239,9 @@ class TestSpecificImport(AiidaArchiveTestCase):
         node_shard_uuid = export_shard_uuid(node_uuid)
         node_top_folder = node_shard_uuid.split('/')[0]
         with SandboxFolder() as folder:
-            extract_tar(filename, folder, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+                extract_tar(filename, folder, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
             self.assertTrue(
                 node_folder.exists(), msg="The Node's repository folder should still exist in the archive file"
@@ -292,7 +296,9 @@ class TestSpecificImport(AiidaArchiveTestCase):
             'zip archive': os.path.join(temp_dir, 'export.zip')
         }
 
-        export_tree([node], folder=Folder(archive_variants['archive folder']))
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+            export_tree([node], folder=Folder(archive_variants['archive folder']))
         export([node], filename=archive_variants['tar archive'], file_format='tar.gz')
         export([node], filename=archive_variants['zip archive'], file_format='zip')
 
@@ -330,7 +336,9 @@ class TestSpecificImport(AiidaArchiveTestCase):
         archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
 
         with SandboxFolder() as temp_dir:
-            extract_zip(archive, temp_dir)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+                extract_zip(archive, temp_dir)
 
             # Make sure the JSON files and the nodes subfolder was correctly extracted (is present),
             # then try to import it by passing the extracted folder to the import function.

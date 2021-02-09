@@ -15,13 +15,16 @@ import errno
 import pathlib
 import tempfile
 import gzip
+import warnings
 
+import pytest
 from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
 from aiida.common.utils import Capturing
+from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def get_result_lines(result):
@@ -76,9 +79,16 @@ class TestVerdiNode(AiidaTestCase):
     def test_node_tree(self):
         """Test `verdi node tree`"""
         options = [str(self.node.pk)]
-        result = self.cli_runner.invoke(cmd_node.tree, options)
+
+        # This command (and so the test as well) will go away in 2.0
+        # Note: I cannot use simply pytest.mark.filterwarnings as below, as the warning is issued in an invoked command
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+            result = self.cli_runner.invoke(cmd_node.tree, options)
         self.assertClickResultNoException(result)
 
+    # This command (and so this test as well) will go away in 2.0
+    @pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
     def test_node_tree_printer(self):
         """Test the `NodeTreePrinter` utility."""
         from aiida.cmdline.utils.ascii_vis import NodeTreePrinter

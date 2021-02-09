@@ -51,10 +51,14 @@ def verdi_config():
 
 
 @verdi_config.command('list')
+@click.argument('prefix', metavar='PREFIX', required=False, default='')
 @click.option('-d', '--description', is_flag=True, help='Include description of options')
 @click.pass_context
-def verdi_config_list(ctx, description: bool):
-    """List AiiDA options for the current profile."""
+def verdi_config_list(ctx, prefix, description: bool):
+    """List AiiDA options for the current profile.
+
+    Optionally filtered by a prefix.
+    """
     from tabulate import tabulate
 
     from aiida.manage.configuration import Config, Profile
@@ -72,10 +76,13 @@ def verdi_config_list(ctx, description: bool):
 
     if description:
         table = [[name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
-                 for name, (c, source, value) in option_values.items()]
+                 for name, (c, source, value) in option_values.items()
+                 if name.startswith(prefix)]
         headers = ['name', 'source', 'value', 'description']
     else:
-        table = [[name, source, _join(value)] for name, (c, source, value) in option_values.items()]
+        table = [[name, source, _join(value)]
+                 for name, (c, source, value) in option_values.items()
+                 if name.startswith(prefix)]
         headers = ['name', 'source', 'value']
 
     # sort by name
@@ -125,14 +132,19 @@ def verdi_config_get(ctx, option):
 @verdi_config.command('set')
 @arguments.CONFIG_OPTION(metavar='OPTION_NAME')
 @click.argument('value', metavar='OPTION_VALUE')
-@click.option('--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
+@click.option('-g', '--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
+@click.option('-a', '--append', is_flag=True, help='Append the value to an existing array.')
+@click.option('-r', '--remove', is_flag=True, help='Remove the value from an existing array.')
 @click.pass_context
-def verdi_config_set(ctx, option, value, globally):
+def verdi_config_set(ctx, option, value, globally, append, remove):
     """Set an AiiDA option.
 
     Note array values will be split by whitespace, e.g. "a b"
     """
     from aiida.manage.configuration import Config, Profile, ConfigValidationError
+
+    if append and remove:
+        echo.echo_critical('Cannot flag both append and remove')
 
     config: Config = ctx.obj.config
     profile: Profile = ctx.obj.profile
@@ -144,18 +156,31 @@ def verdi_config_set(ctx, option, value, globally):
     scope = profile.name if (not globally and profile) else None
     scope_text = f"for '{profile.name}' profile" if (not globally and profile) else 'globally'
 
+    if append or remove:
+        try:
+            current = config.get_option(option.name, scope=scope)
+        except ConfigValidationError as error:
+            echo.echo_critical(str(error))
+        if not isinstance(current, list):
+            echo.echo_critical(f'cannot append/remove to value: {current}')
+        if append:
+            value = current + [value]
+        else:
+            value = [item for item in current if item != value]
+
     # Set the specified option
     try:
         value = config.set_option(option.name, value, scope=scope)
     except ConfigValidationError as error:
         echo.echo_critical(str(error))
+
     config.store()
     echo.echo_success(f"'{option.name}' set to {value} {scope_text}")
 
 
 @verdi_config.command('unset')
 @arguments.CONFIG_OPTION(metavar='OPTION_NAME')
-@click.option('--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
+@click.option('-g', '--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
 @click.pass_context
 def verdi_config_unset(ctx, option, globally):
     """Unset an AiiDA option."""

@@ -224,7 +224,8 @@
                     "type": "string"
                 },
                 "AIIDADB_REPOSITORY_URI": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "URI to the AiiDA object store"
                 },
                 "AIIDADB_ENGINE": {
                     "type": "string",

@@ -125,6 +125,27 @@ class TestVerdiConfig:
             self.assertClickSuccess(result)
             assert str(config.get_option(option_name, scope=config.current_profile.name)) == option_value
 
+    def test_config_append_option(self):
+        """Test the `verdi config set --append` command when appending an option value."""
+        config = get_config()
+        option_name = 'caching.enabled'
+        for value in ['x', 'y']:
+            options = ['config', 'set', '--append', option_name, value]
+            result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+            self.assertClickSuccess(result)
+        assert config.get_option(option_name, scope=config.current_profile.name) == ['x', 'y']
+
+    def test_config_remove_option(self):
+        """Test the `verdi config set --remove` command when removing an option value."""
+        config = get_config()
+        option_name = 'caching.disabled'
+        config.set_option(option_name, ['x', 'y'], scope=config.current_profile.name)
+
+        options = ['config', 'set', '--remove', option_name, 'x']
+        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+        self.assertClickSuccess(result)
+        assert config.get_option(option_name, scope=config.current_profile.name) == ['y']
+
     def test_config_get_option(self):
         """Test the `verdi config show` command when getting an option."""
         option_name = 'daemon.timeout'

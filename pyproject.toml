@@ -124,4 +124,20 @@ commands =
 description = Run the pre-commit checks
 extras = pre-commit
 commands = pre-commit run {posargs}
+
+[testenv:molecule-{django,sqla}]
+description = Run the molecule containerised tests
+skip_install = true
+parallel_show_output = true
+deps =
+    ansible~=2.10.0
+    docker~=4.2
+    molecule[docker]~=3.1.0
+setenv =
+    MOLECULE_GLOB = .molecule/*/config_local.yml
+    django: AIIDA_TEST_BACKEND = django
+    sqla: AIIDA_TEST_BACKEND = sqlalchemy
+passenv =
+    AIIDA_TEST_WORKERS
+commands = molecule {posargs:test}
 """

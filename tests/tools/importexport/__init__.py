@@ -23,3 +23,12 @@ class AiidaArchiveTestCase(AiidaTestCase):
         # don't want output
         EXPORT_LOGGER.setLevel('CRITICAL')
         IMPORT_LOGGER.setLevel('CRITICAL')
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        """Only run to prepare an archive file"""
+        super().tearDownClass()
+
+        # don't want output
+        EXPORT_LOGGER.setLevel('INFO')
+        IMPORT_LOGGER.setLevel('INFO')

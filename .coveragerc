@@ -2,4 +2,4 @@
 source = aiida
 
 [html]
-directory = .ci/coverage/html
+directory = .coverage_html

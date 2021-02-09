@@ -41,7 +41,7 @@ It can then be imported into the database:
 
 .. code:: ipython
 
-    !verdi import -n graph1.aiida
+    !verdi archive import -n graph1.aiida
 
 .. code:: python
 

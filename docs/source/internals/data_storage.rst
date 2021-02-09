@@ -72,7 +72,7 @@ The corresponding entity names appear nested next to the properties to show this
 
 .. note::
 
-    If you supply an old archive file that the current AiiDA code does not support, ``verdi import`` will automatically try to migrate the archive by calling ``verdi export migrate``.
+    If you supply an old archive file that the current AiiDA code does not support, ``verdi archive import`` will automatically try to migrate the archive by calling ``verdi archive migrate``.
 
 .. _internal_architecture:orm:archive:data-json:
 

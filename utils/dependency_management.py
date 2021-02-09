@@ -188,7 +188,7 @@ def update_pyproject_toml():
     # update the build-system key
     pyproject.setdefault('build-system', {})
     pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0,<50', 'wheel',
+        'requires': ['setuptools>=40.8.0', 'wheel',
                      str(reentry_requirement), 'fastentrypoints~=0.12'],
         'build-backend':
         'setuptools.build_meta:__legacy__',

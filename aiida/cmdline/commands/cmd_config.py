@@ -63,12 +63,19 @@ def verdi_config_list(ctx, description: bool):
     profile: Profile = ctx.obj.profile
 
     option_values = config.get_options(profile.name)
+
+    def _join(val):
+        """split arrays into multiple lines."""
+        if isinstance(val, list):
+            return '\n'.join(str(v) for v in val)
+        return val
+
     if description:
-        table = [[name, source, value, '\n'.join(textwrap.wrap(c.description))]
+        table = [[name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
                  for name, (c, source, value) in option_values.items()]
         headers = ['name', 'source', 'value', 'description']
     else:
-        table = [[name, source, value] for name, (c, source, value) in option_values.items()]
+        table = [[name, source, _join(value)] for name, (c, source, value) in option_values.items()]
         headers = ['name', 'source', 'value']
 
     # sort by name
@@ -121,7 +128,10 @@ def verdi_config_get(ctx, option):
 @click.option('--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
 @click.pass_context
 def verdi_config_set(ctx, option, value, globally):
-    """Unset an AiiDA option."""
+    """Set an AiiDA option.
+
+    Note array values will be split by whitespace, e.g. "a b"
+    """
     from aiida.manage.configuration import Config, Profile, ConfigValidationError
 
     config: Config = ctx.obj.config
@@ -132,15 +142,15 @@ def verdi_config_set(ctx, option, value, globally):
 
     # Define the string that determines the scope: for specific profile or globally
     scope = profile.name if (not globally and profile) else None
-    scope_text = f'for {profile.name}' if (not globally and profile) else 'globally'
+    scope_text = f"for '{profile.name}' profile" if (not globally and profile) else 'globally'
 
     # Set the specified option
     try:
-        config.set_option(option.name, value, scope=scope)
+        value = config.set_option(option.name, value, scope=scope)
     except ConfigValidationError as error:
         echo.echo_critical(str(error))
     config.store()
-    echo.echo_success(f'{option.name} set to {value} {scope_text}')
+    echo.echo_success(f"'{option.name}' set to {value} {scope_text}")
 
 
 @verdi_config.command('unset')
@@ -148,7 +158,7 @@ def verdi_config_set(ctx, option, value, globally):
 @click.option('--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
 @click.pass_context
 def verdi_config_unset(ctx, option, globally):
-    """Set an AiiDA option."""
+    """Unset an AiiDA option."""
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
@@ -159,12 +169,12 @@ def verdi_config_unset(ctx, option, globally):
 
     # Define the string that determines the scope: for specific profile or globally
     scope = profile.name if (not globally and profile) else None
-    scope_text = f'for {profile.name}' if (not globally and profile) else 'globally'
+    scope_text = f"for '{profile.name}' profile" if (not globally and profile) else 'globally'
 
     # Unset the specified option
     config.unset_option(option.name, scope=scope)
     config.store()
-    echo.echo_success(f'{option.name} unset {scope_text}')
+    echo.echo_success(f"'{option.name}' unset {scope_text}")
 
 
 @verdi_config.command('_deprecated', hidden=True)

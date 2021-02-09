@@ -15,16 +15,9 @@ import pytest
 
 from aiida.cmdline.commands import cmd_verdi
 from aiida.manage.configuration import get_config
-from tests.utils.configuration import temporary_config_instance
 
 
-@pytest.fixture
-def create_temporary_config_instance():
-    with temporary_config_instance() as config:
-        yield config
-
-
-@pytest.mark.usefixtures('create_temporary_config_instance')  # pylint: disable=not-callable
+@pytest.mark.usefixtures('temporary_config_instance')  # pylint: disable=not-callable
 class TestVerdiConfigDeprecated:
     """Tests for `verdi config`."""
 
@@ -81,7 +74,7 @@ class TestVerdiConfigDeprecated:
         options = ['config', option_name, '--unset']
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
         self.assertClickSuccess(result)
-        assert f'{option_name} unset' in result.output.strip()
+        assert f"'{option_name}' unset" in result.output.strip()
 
         options = ['config', option_name]
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
@@ -107,7 +100,7 @@ class TestVerdiConfigDeprecated:
         assert config.current_profile.name not in result.output.strip()
 
 
-@pytest.mark.usefixtures('create_temporary_config_instance')  # pylint: disable=not-callable
+@pytest.mark.usefixtures('temporary_config_instance')  # pylint: disable=not-callable
 class TestVerdiConfig:
     """Tests for `verdi config`."""
 
@@ -164,7 +157,7 @@ class TestVerdiConfig:
         options = ['config', 'unset', option_name]
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)
         self.assertClickSuccess(result)
-        assert f'{option_name} unset' in result.output.strip()
+        assert f"'{option_name}' unset" in result.output.strip()
 
         options = ['config', 'get', option_name]
         result = self.cli_runner.invoke(cmd_verdi.verdi, options)

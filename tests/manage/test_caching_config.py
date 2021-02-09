@@ -11,19 +11,18 @@
 
 # pylint: disable=redefined-outer-name
 
-import tempfile
 import contextlib
+import json
 
 import yaml
 import pytest
 
 from aiida.common import exceptions
-from aiida.manage.configuration import get_profile
-from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.manage.caching import get_use_cache, enable_caching, disable_caching
 
 
 @pytest.fixture
-def configure_caching():
+def configure_caching(temporary_config_instance):
     """
     Fixture to set the caching configuration in the test profile to
     a specific dictionary. This is done by creating a temporary
@@ -32,53 +31,80 @@ def configure_caching():
 
     @contextlib.contextmanager
     def inner(config_dict):
-        with tempfile.NamedTemporaryFile() as handle:
-            yaml.dump({get_profile().name: config_dict}, handle, encoding='utf-8')
-            configure(config_file=handle.name)
+        for key, value in config_dict.items():
+            temporary_config_instance.set_option(f'caching.{key}', value)
         yield
         # reset the configuration
-        configure()
+        for key in config_dict.keys():
+            temporary_config_instance.unset_option(f'caching.{key}')
 
     return inner
 
 
-@pytest.fixture
-def use_default_configuration(configure_caching):  # pylint: disable=redefined-outer-name
+def test_merge_deprecated_yaml(tmp_path):
+    """Test that an existing 'cache_config.yml' is correctly merged into the main config.
+
+    An AiidaDeprecationWarning should also be raised.
     """
-    Fixture to load a default caching configuration.
-    """
-    with configure_caching(
-        config_dict={
-            'default': True,
-            'enabled': ['aiida.calculations:arithmetic.add'],
-            'disabled': ['aiida.calculations:templatereplacer']
+    from aiida.common.warnings import AiidaDeprecationWarning
+    from aiida.manage import configuration
+    from aiida.manage.configuration import settings, load_profile, reset_profile, get_config_option
+
+    # Store the current configuration instance and config directory path
+    current_config = configuration.CONFIG
+    current_config_path = current_config.dirpath
+    current_profile_name = configuration.PROFILE.name
+
+    try:
+        reset_profile()
+        configuration.CONFIG = None
+
+        # Create a temporary folder, set it as the current config directory path
+        settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
+        config_dictionary = {
+            'CONFIG_VERSION': {
+                'CURRENT': 5,
+                'OLDEST_COMPATIBLE': 5
+            },
+            'default_profile': 'default',
+            'profiles': {
+                'default': {
+                    'PROFILE_UUID': '00000000000000000000000000000000',
+                    'default_user_email': 'dummy@localhost',
+                    'AIIDADB_ENGINE': 'postgresql_psycopg2',
+                    'AIIDADB_BACKEND': 'django',
+                    'AIIDADB_HOST': 'localhost',
+                    'AIIDADB_PORT': 5432,
+                    'AIIDADB_NAME': 'name',
+                    'AIIDADB_USER': 'user',
+                    'AIIDADB_PASS': 'pass',
+                    'AIIDADB_REPOSITORY_URI': f"file:///{tmp_path/'repo'}",
+                }
+            }
         }
-    ):
-        yield
+        cache_dictionary = {
+            'default': {
+                'default': True,
+                'enabled': ['aiida.calculations:quantumespresso.pw'],
+                'disabled': ['aiida.calculations:templatereplacer']
+            }
+        }
+        tmp_path.joinpath('config.json').write_text(json.dumps(config_dictionary))
+        tmp_path.joinpath('cache_config.yml').write_text(yaml.dump(cache_dictionary))
+        with pytest.warns(AiidaDeprecationWarning, match='cache_config.yml'):
+            configuration.CONFIG = configuration.load_config()
+        load_profile('default')
 
-
-def test_empty_enabled_disabled(configure_caching):
-    """Test that `aiida.manage.caching.configure` does not except when either `enabled` or `disabled` is `None`.
-
-    This will happen when the configuration file specifies either one of the keys but no actual values, e.g.::
-
-        profile_name:
-            default: False
-            enabled:
-
-    In this case, the dictionary parsed by yaml will contain `None` for the `enabled` key.
-    Now this will be unlikely, but the same holds when all values are commented::
-
-        profile_name:
-            default: False
-            enabled:
-                # - aiida.calculations:templatereplacer
-
-    which is not unlikely to occurr in the wild.
-    """
-    with configure_caching(config_dict={'default': True, 'enabled': None, 'disabled': None}):
-        # Check that `get_use_cache` also does not except, and works as expected
-        assert get_use_cache(identifier='aiida.calculations:templatereplacer')
+        assert get_config_option('caching.default') is True
+        assert get_config_option('caching.enabled') == ['aiida.calculations:quantumespresso.pw']
+        assert get_config_option('caching.disabled') == ['aiida.calculations:templatereplacer']
+    finally:
+        # Reset the config folder path and the config instance. Note this will always be executed after the yield no
+        # matter what happened in the test that used this fixture.
+        reset_profile()
+        settings.AIIDA_CONFIG_FOLDER = current_config_path
+        configuration.CONFIG = current_config
+        load_profile(current_profile_name)
 
 
 def test_no_enabled_disabled(configure_caching):
@@ -98,7 +124,7 @@ def test_no_enabled_disabled(configure_caching):
     'config_dict', [{
         'wrong_key': ['foo']
     }, {
-        'default': 2
+        'default': 'x'
     }, {
         'enabled': 4
     }, {
@@ -126,15 +152,17 @@ def test_invalid_configuration_dict(configure_caching, config_dict):
             pass
 
 
-def test_invalid_identifier(use_default_configuration):  # pylint: disable=unused-argument
+def test_invalid_identifier(configure_caching):  # pylint: disable=unused-argument
     """Test `get_use_cache` raises a `TypeError` if identifier is not a string."""
-    with pytest.raises(TypeError):
-        get_use_cache(identifier=int)
+    with configure_caching({}):
+        with pytest.raises(TypeError):
+            get_use_cache(identifier=int)
 
 
-def test_default(use_default_configuration):  # pylint: disable=unused-argument
+def test_default(configure_caching):  # pylint: disable=unused-argument
     """Verify that when not specifying any specific identifier, the `default` is used, which is set to `True`."""
-    assert get_use_cache()
+    with configure_caching({'default': True}):
+        assert get_use_cache()
 
 
 @pytest.mark.parametrize(['config_dict', 'enabled', 'disabled'], [

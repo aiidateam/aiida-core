@@ -14,6 +14,7 @@ import os
 import pytest
 
 from aiida.manage.configuration import Config, Profile, get_config
+from tests.utils.configuration import temporary_config_instance as config_context
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
@@ -149,6 +150,13 @@ def generate_calculation_node():
         return node
 
     return _generate_calculation_node
+
+
+@pytest.fixture
+def temporary_config_instance():
+    """Create a temporary AiiDA instance."""
+    with config_context() as config:
+        yield config
 
 
 @pytest.fixture

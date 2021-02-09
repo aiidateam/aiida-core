@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Tuple
 
 import jsonschema
 
+from aiida.common.exceptions import ConfigurationError
+
 __all__ = ('get_option', 'get_option_names', 'parse_option', 'Option')
 
 NO_DEFAULT = ()
@@ -61,7 +63,10 @@ class Option:
         :raise: ConfigValidationError
 
         """
+        # pylint: disable=too-many-branches
         from .config import ConfigValidationError
+        from aiida.manage.caching import _validate_identifier_pattern
+
         if cast:
             try:
                 if self.valid_type == 'boolean':
@@ -78,13 +83,23 @@ class Option:
                     value = int(value)
                 elif self.valid_type == 'number':
                     value = float(value)
+                elif self.valid_type == 'array' and isinstance(value, str):
+                    value = value.split()
             except ValueError:
                 pass
 
         try:
             jsonschema.validate(instance=value, schema=self.schema)
-        except jsonschema.ValidationError as error:
-            raise ConfigValidationError(message=error.message, keypath=error.path, schema=error.schema)
+        except jsonschema.ValidationError as exc:
+            raise ConfigValidationError(message=exc.message, keypath=[self.name, *(exc.path or [])], schema=exc.schema)
+
+        # special caching validation
+        if self.name in ('caching.enabled', 'caching.disabled'):
+            for i, identifier in enumerate(value):
+                try:
+                    _validate_identifier_pattern(identifier=identifier)
+                except ValueError as exc:
+                    raise ConfigValidationError(message=str(exc), keypath=[self.name, str(i)])
 
         return value
 
@@ -105,7 +120,7 @@ def get_option(name: str) -> Option:
     """Return option."""
     options = get_schema_options()
     if name not in options:
-        raise KeyError(f'the option {name} does not exist')
+        raise ConfigurationError(f'the option {name} does not exist')
     return Option(name, options[name])
 
 

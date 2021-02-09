@@ -39,7 +39,7 @@
                 "verdi.shell.auto_import": {
                     "type": "string",
                     "default": "",
-                    "description": "Additional modules/functions/classes to be automatically loaded in `verdi shell`"
+                    "description": "Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by ':'"
                 },
                 "logging.aiida_loglevel": {
                     "type": "string",
@@ -163,6 +163,27 @@
                     "minimum": 1,
                     "description": "Maximum number of transport task attempts before a Process is Paused."
                 },
+                "caching.default": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable calculation caching by default"
+                },
+                "caching.enabled": {
+                    "description": "Calculation entry points to enable caching on",
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "caching.disabled": {
+                    "description": "Calculation entry points to disable caching on",
+                    "type": "array",
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "autofill.user.email": {
                     "type": "string",
                     "global_only": true,
@@ -188,7 +209,6 @@
         "profile": {
             "type": "object",
             "required": [
-                "PROFILE_UUID",
                 "AIIDADB_REPOSITORY_URI",
                 "AIIDADB_BACKEND",
                 "AIIDADB_ENGINE",

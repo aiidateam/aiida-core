@@ -143,9 +143,9 @@ Below is a list with all available subcommands.
     Commands:
       get    Get the value of an AiiDA option for the current profile.
       list   List AiiDA options for the current profile.
-      set    Unset an AiiDA option.
+      set    Set an AiiDA option.
       show   Show details of an AiiDA option for the current profile.
-      unset  Set an AiiDA option.
+      unset  Unset an AiiDA option.
 
 
 .. _reference:command-line:verdi-daemon:

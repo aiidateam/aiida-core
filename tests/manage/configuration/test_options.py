@@ -10,6 +10,7 @@
 """Tests for the configuration options."""
 
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option
 from aiida.manage.configuration import get_config, get_config_option, ConfigValidationError
 
@@ -22,11 +23,11 @@ class TestConfigurationOptions(AiidaTestCase):
     def test_get_option_names(self):
         """Test `get_option_names` function."""
         self.assertIsInstance(get_option_names(), list)
-        self.assertEqual(len(get_option_names()), 21)
+        self.assertEqual(len(get_option_names()), 24)
 
     def test_get_option(self):
         """Test `get_option` function."""
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ConfigurationError):
             get_option('no_existing_option')
 
         option_name = get_option_names()[0]

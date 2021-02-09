@@ -39,7 +39,7 @@ class ConfigValidationError(ConfigurationError):
     """Configuration error raised when the file contents fails validation."""
 
     def __init__(
-        self, message: str, keypath: Sequence[str] = (), schema: Optional[dict] = None, filepath: Optional[str] = None
+        self, message: str, keypath: Sequence[Any] = (), schema: Optional[dict] = None, filepath: Optional[str] = None
     ):
         super().__init__(message)
         self._message = message
@@ -49,7 +49,7 @@ class ConfigValidationError(ConfigurationError):
 
     def __str__(self) -> str:
         prefix = f'{self._filepath}:' if self._filepath else ''
-        path = '/'.join(self._keypath) + ': ' if self._keypath else ''
+        path = '/' + '/'.join(str(k) for k in self._keypath) + ': ' if self._keypath else ''
         schema = f'\n  schema:\n  {self._schema}' if self._schema else ''
         return f'{prefix}{path}{self._message}{schema}'
 
@@ -121,6 +121,16 @@ class Config:  # pylint: disable=too-many-public-methods
 
         return filepath_backup
 
+    @staticmethod
+    def validate(config: dict, filepath: Optional[str] = None):
+        """Validate a configuration dictionary."""
+        try:
+            jsonschema.validate(instance=config, schema=config_schema())
+        except jsonschema.ValidationError as error:
+            raise ConfigValidationError(
+                message=error.message, keypath=error.path, schema=error.schema, filepath=filepath
+            )
+
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
 
@@ -133,12 +143,7 @@ class Config:  # pylint: disable=too-many-public-methods
         from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 
         if validate:
-            try:
-                jsonschema.validate(instance=config, schema=config_schema())
-            except jsonschema.ValidationError as error:
-                raise ConfigValidationError(
-                    message=error.message, keypath=error.path, schema=error.schema, filepath=filepath
-                )
+            self.validate(config, filepath)
 
         self._filepath = filepath
         self._schema = config.get(self.KEY_SCHEMA, None)
@@ -367,6 +372,8 @@ class Config:  # pylint: disable=too-many-public-methods
         :param option_value: the option value
         :param scope: set the option for this profile or globally if not specified
         :param override: boolean, if False, will not override the option if it already exists
+
+        :returns: the parsed value (potentially cast to a valid type)
         """
         option, parsed_value = parse_option(option_name, option_value)
 
@@ -382,6 +389,8 @@ class Config:  # pylint: disable=too-many-public-methods
         else:
             if option.name not in self.options or override:
                 self.options[option.name] = value
+
+        return value
 
     def unset_option(self, option_name: str, scope=None):
         """Unset a configuration option for a certain scope.

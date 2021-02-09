@@ -231,14 +231,21 @@ class TestVerdiConfig:
 
     def test_config_caching(self):
         """Test `verdi config caching`"""
-        options = ['config', 'caching']
-        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['config', 'caching'])
         self.assertClickSuccess(result)
         assert result.output.strip() == ''
+
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['config', 'caching', '--disabled'])
+        self.assertClickSuccess(result)
+        assert 'arithmetic.add' in result.output.strip()
 
         config = get_config()
         config.set_option('caching.default', True, scope=config.current_profile.name)
 
-        result = self.cli_runner.invoke(cmd_verdi.verdi, options)
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['config', 'caching'])
         self.assertClickSuccess(result)
         assert 'arithmetic.add' in result.output.strip()
+
+        result = self.cli_runner.invoke(cmd_verdi.verdi, ['config', 'caching', '--disabled'])
+        self.assertClickSuccess(result)
+        assert result.output.strip() == ''

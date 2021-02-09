@@ -203,17 +203,20 @@ def verdi_config_unset(ctx, option, globally):
 
 
 @verdi_config.command('caching')
-def verdi_config_caching():
+@click.option('-d', '--disabled', is_flag=True, help='List disabled types instead.')
+def verdi_config_caching(disabled):
     """List caching enabled process types for the current profile."""
-    from aiida.plugins.entry_point import get_entry_point_names
+    from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
     from aiida.manage.caching import get_use_cache
 
-    for entry_point in get_entry_point_names('aiida.calculations'):
-        if get_use_cache(identifier=entry_point):
-            echo.echo(entry_point)
-    for entry_point in get_entry_point_names('aiida.workflows'):
-        if get_use_cache(identifier=entry_point):
-            echo.echo(entry_point)
+    for group in ['aiida.calculations', 'aiida.workflows']:
+        for entry_point in get_entry_point_names(group):
+            identifier = ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point])
+            if get_use_cache(identifier=identifier):
+                if not disabled:
+                    echo.echo(identifier)
+            elif disabled:
+                echo.echo(identifier)
 
 
 @verdi_config.command('_deprecated', hidden=True)

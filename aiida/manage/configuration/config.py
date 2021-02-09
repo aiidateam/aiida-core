@@ -51,7 +51,7 @@ class ConfigValidationError(ConfigurationError):
         prefix = f'{self._filepath}:' if self._filepath else ''
         path = '/' + '/'.join(str(k) for k in self._keypath) + ': ' if self._keypath else ''
         schema = f'\n  schema:\n  {self._schema}' if self._schema else ''
-        return f'{prefix}{path}{self._message}{schema}'
+        return f'Validation Error: {prefix}{path}{self._message}{schema}'
 
 
 class Config:  # pylint: disable=too-many-public-methods

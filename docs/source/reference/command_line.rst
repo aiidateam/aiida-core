@@ -156,7 +156,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Manage AiiDA configuration.
+      Manage the AiiDA configuration.
 
     Options:
       --help  Show this message and exit.

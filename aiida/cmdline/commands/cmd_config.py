@@ -47,7 +47,7 @@ class DeprecatedCommandGroup(click.Group):
 
 @verdi.group('config', cls=DeprecatedCommandGroup)
 def verdi_config():
-    """Manage AiiDA configuration."""
+    """Manage the AiiDA configuration."""
 
 
 @verdi_config.command('list')

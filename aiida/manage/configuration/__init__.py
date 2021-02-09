@@ -10,6 +10,7 @@
 # pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
 import os
+import shutil
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
@@ -107,16 +108,26 @@ def load_config(create=False):
 
 def _merge_deprecated_cache_yaml(config, filepath):
     """Merge the deprecated cache_config.yml into the config."""
+    from aiida.common import timezone
     cache_path = os.path.join(os.path.dirname(filepath), 'cache_config.yml')
     if not os.path.exists(cache_path):
         return
+
+    cache_path_backup = None
+    # Keep generating a new backup filename based on the current time until it does not exist
+    while not cache_path_backup or os.path.isfile(cache_path_backup):
+        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+
     warnings.warn(
-        f'cache_config.yml use is deprecated please remove, merging into: {filepath}', AiidaDeprecationWarning
+        f'cache_config.yml use is deprecated, merging into config.json and moving to: {cache_path_backup}',
+        AiidaDeprecationWarning
     )
     import yaml
     with open(cache_path, 'r', encoding='utf8') as handle:
         cache_config = yaml.safe_load(handle)
     for profile_name, data in cache_config.items():
+        if profile_name not in config.profile_names:
+            continue
         for key, option_name in [('default', 'caching.default'), ('enabled', 'caching.enabled'),
                                  ('disabled', 'caching.disabled')]:
             if key in data:
@@ -125,6 +136,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
                 value = [] if value is None and key != 'default' else value
                 config.set_option(option_name, value, scope=profile_name)
     config.store()
+    shutil.move(cache_path, cache_path_backup)
 
 
 def get_profile():

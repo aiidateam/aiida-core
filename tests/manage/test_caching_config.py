@@ -98,6 +98,8 @@ def test_merge_deprecated_yaml(tmp_path):
         assert get_config_option('caching.default') is True
         assert get_config_option('caching.enabled') == ['aiida.calculations:quantumespresso.pw']
         assert get_config_option('caching.disabled') == ['aiida.calculations:templatereplacer']
+        # should have now been moved to cache_config.yml.<DATETIME>
+        assert not tmp_path.joinpath('cache_config.yml').exists()
     finally:
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.

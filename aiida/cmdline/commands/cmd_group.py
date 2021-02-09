@@ -47,12 +47,30 @@ def group_add_nodes(group, force, nodes):
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
-    if clear:
-        message = f'Do you really want to remove ALL the nodes from Group<{group.label}>?'
-    else:
-        message = f'Do you really want to remove {len(nodes)} nodes from Group<{group.label}>?'
+    from aiida.orm import QueryBuilder, Group, Node
 
     if not force:
+        node_pks = [node.pk for node in nodes]
+
+        query = QueryBuilder()
+        query.append(Group, filters={'id': group.pk}, tag='group')
+        query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+
+        group_node_pks = query.all(flat=True)
+
+        if not group_node_pks:
+            echo.echo_critical(f'None of the specified nodes are in Group<{group.label}>.')
+            return
+
+        if len(node_pks) > len(group_node_pks):
+            node_pks = [node_pk for node_pk in node_pks if node_pk not in group_node_pks]
+            echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in Group<{group.label}>.')
+
+        if clear:
+            message = f'Are you sure you want to remove ALL the nodes from Group<{group.label}>?'
+        else:
+            message = f'Are you sure you want to remove {len(group_node_pks)} nodes from Group<{group.label}>?'
+
         click.confirm(message, abort=True)
 
     if clear:

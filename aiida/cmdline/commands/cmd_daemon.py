@@ -170,7 +170,7 @@ def logshow():
 def stop(no_wait, all_profiles):
     """Stop the daemon.
 
-    Returns exit code 0 if the result is OK, non-zero if there was an error.
+    Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
     """
     from aiida.engine.daemon.client import get_daemon_client
 

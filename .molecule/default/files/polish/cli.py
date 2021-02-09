@@ -99,7 +99,6 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     import importlib
     import sys
     import time
-    import uuid
     from aiida.orm import Code, Int, Str
     from aiida.engine import run_get_node, submit
 
@@ -118,11 +117,10 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
         click.echo(f"the expression '{expression}' is invalid: {error}")
         sys.exit(1)
 
-    filename = f'polish_{str(uuid.uuid4().hex)}.py'
     evaluated = lib_expression.evaluate(expression, modulo)
     outlines, stack = lib_workchain.generate_outlines(expression)
     outlines_string = lib_workchain.format_outlines(outlines, use_calculations, use_calcfunctions)
-    lib_workchain.write_workchain(outlines_string, filename=filename)
+    filename = lib_workchain.write_workchain(outlines_string).name
 
     click.echo(f'Expression: {expression}')
 
@@ -149,6 +147,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
 
                 if workchain.is_terminated:
                     timed_out = False
+                    total_time = time.time() - start_time
                     break
 
             if timed_out:
@@ -166,7 +165,9 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
                 sys.exit(1)
 
         else:
+            start_time = time.time()
             results, workchain = run_get_node(workchains.Polish00WorkChain, **inputs)
+            total_time = time.time() - start_time
             result = results['result']
 
     click.echo(f'Evaluated : {evaluated}')
@@ -180,7 +181,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             sys.exit(1)
         else:
             click.secho('Success: ', fg='green', bold=True, nl=False)
-            click.secho('the workchain accurately reproduced the evaluated value', bold=True)
+            click.secho(f'the workchain accurately reproduced the evaluated value in {total_time:.2f}s', bold=True)
             sys.exit(0)
 
 

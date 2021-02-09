@@ -15,7 +15,7 @@ sed -i "s|PLACEHOLDER_PROFILE|test_${AIIDA_TEST_BACKEND}|" "${CONFIG}/profile.ya
 sed -i "s|PLACEHOLDER_DATABASE_NAME|test_${AIIDA_TEST_BACKEND}|" "${CONFIG}/profile.yaml"
 sed -i "s|PLACEHOLDER_REPOSITORY|/tmp/test_repository_test_${AIIDA_TEST_BACKEND}/|" "${CONFIG}/profile.yaml"
 sed -i "s|PLACEHOLDER_WORK_DIR|${GITHUB_WORKSPACE}|" "${CONFIG}/localhost.yaml"
-sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${GITHUB_WORKSPACE}/.ci/doubler.sh|" "${CONFIG}/doubler.yaml"
+sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${CONFIG}/doubler.sh|" "${CONFIG}/doubler.yaml"
 
 verdi setup --config "${CONFIG}/profile.yaml"
 verdi computer setup --config "${CONFIG}/localhost.yaml"

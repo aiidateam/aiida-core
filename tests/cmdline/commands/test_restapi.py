@@ -9,8 +9,8 @@
 ###########################################################################
 """Tests for `verdi restapi`."""
 
-import pytest
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_restapi import restapi

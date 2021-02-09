@@ -1,7 +1,7 @@
 ---
 label: slurm-ssh
 description: slurm container
-hostname: slurm
+hostname: localhost
 transport: ssh
 scheduler: slurm
 shebang: "#!/bin/bash"

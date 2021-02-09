@@ -17,7 +17,6 @@ import tempfile
 import gzip
 import warnings
 
-import pytest
 from click.testing import CliRunner
 
 from aiida import orm
@@ -88,16 +87,17 @@ class TestVerdiNode(AiidaTestCase):
         self.assertClickResultNoException(result)
 
     # This command (and so this test as well) will go away in 2.0
-    @pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
     def test_node_tree_printer(self):
         """Test the `NodeTreePrinter` utility."""
         from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
 
-        with Capturing():
-            NodeTreePrinter.print_node_tree(self.node, max_depth=1)
+            with Capturing():
+                NodeTreePrinter.print_node_tree(self.node, max_depth=1)
 
-        with Capturing():
-            NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
+            with Capturing():
+                NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
 
     def test_node_show(self):
         """Test `verdi node show`"""

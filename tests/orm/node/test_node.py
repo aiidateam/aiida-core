@@ -845,6 +845,8 @@ def test_store_from_cache():
     assert data.get_hash() == clone.get_hash()
 
 
+# Ignoring the resource errors as we are indeed testing the wrong way of using these (for backward-compatibility)
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
 @pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_open_wrapper():

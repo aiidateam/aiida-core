@@ -154,7 +154,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
                     break
             if output is None:
                 sys.exit(1)
-            result, total_time = output
+            result, workchain, total_time = output
 
         else:
             start_time = time.time()
@@ -206,7 +206,7 @@ def run_via_daemon(workchains, inputs, sleep, timeout):
         click.echo(str(workchain.attributes))
         return None
 
-    return result, total_time
+    return result, workchain, total_time
 
 
 if __name__ == '__main__':

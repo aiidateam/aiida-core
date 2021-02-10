@@ -98,7 +98,7 @@ def aiida_localhost(temp_dir):
     Usage::
 
       def test_1(aiida_localhost):
-          name = aiida_localhost.get_name()
+          label = aiida_localhost.get_label()
           # proceed to set up code or use 'aiida_local_code_factory' instead
 
 

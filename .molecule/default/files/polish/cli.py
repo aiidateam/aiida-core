@@ -9,6 +9,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Command line interface to dynamically create and run a WorkChain that can evaluate a reversed polish expression."""
+import importlib
+import sys
+import time
 
 import click
 
@@ -71,8 +74,16 @@ from aiida.cmdline.utils import decorators
     default=False,
     help='Only evaluate the expression and generate the workchain but do not launch it'
 )
+@click.option(
+    '-r',
+    '--retries',
+    type=click.INT,
+    default=1,
+    show_default=True,
+    help='Number of retries for running via the daemon'
+)
 @decorators.with_dbenv()
-def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon):
+def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon, retries):
     """
     Evaluate the expression in Reverse Polish Notation in both a normal way and by procedurally generating
     a workchain that encodes the sequence of operators and gets the stack of operands as an input. Multiplications
@@ -96,11 +107,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     If no expression is specified, a random one will be generated that adheres to these rules
     """
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
-    import importlib
-    import sys
-    import time
     from aiida.orm import Code, Int, Str
-    from aiida.engine import run_get_node, submit
+    from aiida.engine import run_get_node
 
     lib_expression = importlib.import_module('lib.expression')
     lib_workchain = importlib.import_module('lib.workchain')
@@ -138,31 +146,15 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             inputs['code'] = code
 
         if daemon:
-            workchain = submit(workchains.Polish00WorkChain, **inputs)
-            start_time = time.time()
-            timed_out = True
-
-            while time.time() - start_time < timeout:
-                time.sleep(sleep)
-
-                if workchain.is_terminated:
-                    timed_out = False
-                    total_time = time.time() - start_time
+            # the daemon tests have been known to fail on Jenkins, when the result node cannot be found
+            # to mitigate this, we can retry multiple times
+            for _ in range(retries):
+                output = run_via_daemon(workchains, inputs, sleep, timeout)
+                if output is not None:
                     break
-
-            if timed_out:
-                click.secho('Failed: ', fg='red', bold=True, nl=False)
-                click.secho(
-                    f'the workchain<{workchain.pk}> did not finish in time and the operation timed out', bold=True
-                )
+            if output is None:
                 sys.exit(1)
-
-            try:
-                result = workchain.outputs.result
-            except AttributeError:
-                click.secho('Failed: ', fg='red', bold=True, nl=False)
-                click.secho(f'the workchain<{workchain.pk}> did not return a result output node', bold=True)
-                sys.exit(1)
+            result, workchain, total_time = output
 
         else:
             start_time = time.time()
@@ -183,6 +175,38 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             click.secho('Success: ', fg='green', bold=True, nl=False)
             click.secho(f'the workchain accurately reproduced the evaluated value in {total_time:.2f}s', bold=True)
             sys.exit(0)
+
+
+def run_via_daemon(workchains, inputs, sleep, timeout):
+    """Run via the daemon, polling until it is terminated or timeout."""
+    from aiida.engine import submit
+
+    workchain = submit(workchains.Polish00WorkChain, **inputs)
+    start_time = time.time()
+    timed_out = True
+
+    while time.time() - start_time < timeout:
+        time.sleep(sleep)
+
+        if workchain.is_terminated:
+            timed_out = False
+            total_time = time.time() - start_time
+            break
+
+    if timed_out:
+        click.secho('Failed: ', fg='red', bold=True, nl=False)
+        click.secho(f'the workchain<{workchain.pk}> did not finish in time and the operation timed out', bold=True)
+        return None
+
+    try:
+        result = workchain.outputs.result
+    except AttributeError:
+        click.secho('Failed: ', fg='red', bold=True, nl=False)
+        click.secho(f'the workchain<{workchain.pk}> did not return a result output node', bold=True)
+        click.echo(str(workchain.attributes))
+        return None
+
+    return result, workchain, total_time
 
 
 if __name__ == '__main__':

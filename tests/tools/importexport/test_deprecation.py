@@ -10,6 +10,7 @@
 """Test deprecated parts still work and emit deprecations warnings"""
 # pylint: disable=invalid-name
 import os
+import warnings
 
 import pytest
 
@@ -21,63 +22,68 @@ pytestmark = pytest.mark.usefixtures('clear_database_before_test')
 
 def test_export_functions(temp_dir):
     """Check `what` and `outfile` in export(), export_tar() and export_zip()"""
-    what = []
-    outfile = os.path.join(temp_dir, 'deprecated.aiida')
+    with warnings.catch_warnings():  # To avoid printing them in output (pytest.mark.filterwarnings does not work)
+        warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+        what = []
+        outfile = os.path.join(temp_dir, 'deprecated.aiida')
 
-    for export_function in (dbexport.export, dbexport.export_tar, dbexport.export_zip):
-        if os.path.exists(outfile):
-            os.remove(outfile)
-        with pytest.warns(AiidaDeprecationWarning, match='`what` is deprecated, please use `entities` instead'):
-            export_function(what=what, filename=outfile)
+        for export_function in (dbexport.export, dbexport.export_tar, dbexport.export_zip):
+            if os.path.exists(outfile):
+                os.remove(outfile)
+            with pytest.warns(AiidaDeprecationWarning, match='`what` is deprecated, please use `entities` instead'):
+                export_function(what=what, filename=outfile)
 
-        if os.path.exists(outfile):
-            os.remove(outfile)
-        with pytest.warns(
-            AiidaDeprecationWarning, match='`what` is deprecated, the supplied `entities` input will be used'
-        ):
-            export_function(entities=what, what=what, filename=outfile)
+            if os.path.exists(outfile):
+                os.remove(outfile)
+            with pytest.warns(
+                AiidaDeprecationWarning, match='`what` is deprecated, the supplied `entities` input will be used'
+            ):
+                export_function(entities=what, what=what, filename=outfile)
 
-        if os.path.exists(outfile):
-            os.remove(outfile)
-        with pytest.warns(
-            AiidaDeprecationWarning,
-            match='`outfile` is deprecated, please use `filename` instead',
-        ):
-            export_function(what, outfile=outfile)
+            if os.path.exists(outfile):
+                os.remove(outfile)
+            with pytest.warns(
+                AiidaDeprecationWarning,
+                match='`outfile` is deprecated, please use `filename` instead',
+            ):
+                export_function(what, outfile=outfile)
 
-        if os.path.exists(outfile):
-            os.remove(outfile)
-        with pytest.warns(
-            AiidaDeprecationWarning, match='`outfile` is deprecated, the supplied `filename` input will be used'
-        ):
-            export_function(what, filename=outfile, outfile=outfile)
+            if os.path.exists(outfile):
+                os.remove(outfile)
+            with pytest.warns(
+                AiidaDeprecationWarning, match='`outfile` is deprecated, the supplied `filename` input will be used'
+            ):
+                export_function(what, filename=outfile, outfile=outfile)
 
-        if os.path.exists(outfile):
-            os.remove(outfile)
-        with pytest.raises(TypeError, match='`entities` must be specified'):
-            export_function(filename=outfile)
+            if os.path.exists(outfile):
+                os.remove(outfile)
+            with pytest.raises(TypeError, match='`entities` must be specified'):
+                export_function(filename=outfile)
 
 
 def test_export_tree():
     """Check `what` in export_tree()"""
     from aiida.common.folders import SandboxFolder
 
-    what = []
+    with warnings.catch_warnings():  # To avoid printing them in output (pytest.mark.filterwarnings does not work)
+        warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
 
-    with SandboxFolder() as folder:
-        with pytest.warns(AiidaDeprecationWarning, match='`what` is deprecated, please use `entities` instead'):
-            dbexport.export_tree(what=what, folder=folder)
+        what = []
 
-        folder.erase(create_empty_folder=True)
-        with pytest.warns(
-            AiidaDeprecationWarning, match='`what` is deprecated, the supplied `entities` input will be used'
-        ):
-            dbexport.export_tree(entities=what, what=what, folder=folder)
+        with SandboxFolder() as folder:
+            with pytest.warns(AiidaDeprecationWarning, match='`what` is deprecated, please use `entities` instead'):
+                dbexport.export_tree(what=what, folder=folder)
 
-        folder.erase(create_empty_folder=True)
-        with pytest.raises(TypeError, match='`entities` must be specified'):
-            dbexport.export_tree(folder=folder)
+            folder.erase(create_empty_folder=True)
+            with pytest.warns(
+                AiidaDeprecationWarning, match='`what` is deprecated, the supplied `entities` input will be used'
+            ):
+                dbexport.export_tree(entities=what, what=what, folder=folder)
 
-        folder.erase(create_empty_folder=True)
-        with pytest.raises(TypeError, match='`folder` must be specified'):
-            dbexport.export_tree(entities=what)
+            folder.erase(create_empty_folder=True)
+            with pytest.raises(TypeError, match='`entities` must be specified'):
+                dbexport.export_tree(folder=folder)
+
+            folder.erase(create_empty_folder=True)
+            with pytest.raises(TypeError, match='`folder` must be specified'):
+                dbexport.export_tree(entities=what)

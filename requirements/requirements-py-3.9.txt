@@ -100,6 +100,7 @@ pycparser==2.20
 pydata-sphinx-theme==0.4.3
 Pygments==2.7.4
 pymatgen==2021.2.8.1
+pympler==0.9
 PyMySQL==0.9.3
 PyNaCl==1.4.0
 pyparsing==2.4.7

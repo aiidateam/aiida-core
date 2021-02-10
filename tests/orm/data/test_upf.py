@@ -28,7 +28,7 @@ from tests.static import STATIC_DIR
 def isnumeric(vector):
     """Check if elements of iterable `x` are numbers."""
     # pylint: disable=invalid-name
-    numeric_types = (float, int, numpy.float, numpy.float64, numpy.int64, numpy.int)
+    numeric_types = (float, int, numpy.float64, numpy.int64)
     for xi in vector:
         if isinstance(xi, numeric_types):
             yield True
@@ -327,7 +327,8 @@ class TestUpfParser(AiidaTestCase):
         # pylint: disable=protected-access
         json_string, _ = self.pseudo_carbon._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        reference_dict = json.load(open(os.path.join(filepath_base, 'C.json'), 'r'))
+        with open(os.path.join(filepath_base, 'C.json'), 'r') as fhandle:
+            reference_dict = json.load(fhandle)
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
         pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
@@ -339,7 +340,8 @@ class TestUpfParser(AiidaTestCase):
         # pylint: disable=protected-access
         json_string, _ = self.pseudo_barium._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        reference_dict = json.load(open(os.path.join(filepath_base, 'Ba.json'), 'r'))
+        with open(os.path.join(filepath_base, 'Ba.json'), 'r') as fhandle:
+            reference_dict = json.load(fhandle)
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
         pp_dict['pseudo_potential']['header']['original_upf_file'] = ''

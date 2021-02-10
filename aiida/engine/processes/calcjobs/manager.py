@@ -10,6 +10,7 @@
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
 import asyncio
 import contextlib
+import contextvars
 import logging
 import time
 from typing import Any, Dict, Hashable, Iterator, List, Optional, TYPE_CHECKING
@@ -180,7 +181,10 @@ class JobsList:
             # Any outstanding requests?
             if self._update_requests_outstanding():
                 self._update_handle = self._loop.call_later(
-                    self._get_next_update_delay(), asyncio.ensure_future, updating()
+                    self._get_next_update_delay(),
+                    asyncio.ensure_future,
+                    updating(),
+                    context=contextvars.Context(),  #  type: ignore[call-arg]
                 )
             else:
                 self._update_handle = None
@@ -188,7 +192,10 @@ class JobsList:
         # Check if we're already updating
         if self._update_handle is None:
             self._update_handle = self._loop.call_later(
-                self._get_next_update_delay(), asyncio.ensure_future, updating()
+                self._get_next_update_delay(),
+                asyncio.ensure_future,
+                updating(),
+                context=contextvars.Context(),  #  type: ignore[call-arg]
             )
 
     @staticmethod

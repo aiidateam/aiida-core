@@ -70,7 +70,6 @@ def group_remove_nodes(group, nodes, clear, force):
 
             if not group_node_pks:
                 echo.echo_critical(f'None of the specified nodes are in {klass}<{label}>.')
-                return
 
             if len(node_pks) > len(group_node_pks):
                 node_pks = set(node_pks).difference(set(group_node_pks))

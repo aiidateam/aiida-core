@@ -15,9 +15,9 @@ import asyncio
 from concurrent.futures import Future
 
 from click.testing import CliRunner
+import kiwipy
 import plumpy
 import pytest
-import kiwipy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process

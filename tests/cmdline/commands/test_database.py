@@ -180,3 +180,10 @@ def tests_database_version(run_cli_command, manager):
     result = run_cli_command(cmd_database.database_version)
     assert result.output_lines[0].endswith(backend_manager.get_schema_generation_database())
     assert result.output_lines[1].endswith(backend_manager.get_schema_version_database())
+
+
+@pytest.mark.usefixtures('aiida_profile')
+def tests_database_summary(run_cli_command):
+    from aiida import get_profile
+    result = run_cli_command(cmd_database.database_summary, ['--verbose'])
+    assert get_profile().default_user in result.output

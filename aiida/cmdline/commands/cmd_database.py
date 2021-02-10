@@ -194,3 +194,51 @@ def detect_invalid_nodes():
         echo.echo_success('no integrity violations detected')
     else:
         echo.echo_critical('one or more integrity violations detected')
+
+
+@verdi_database.command('summary')
+@options.VERBOSE()
+def database_summary(verbose):
+    """summarise the entities in the database."""
+    from aiida.orm import QueryBuilder, Node, Group, Computer, Comment, Log, User
+    data = {}
+
+    # User
+    count = QueryBuilder().append(User).count()
+    data['Users'] = {'count': count}
+    if verbose:
+        emails = QueryBuilder().append(User, project=['email']).distinct().all(flat=True)
+        data['Users']['emails'] = emails
+
+    # Computer
+    count = QueryBuilder().append(Computer).count()
+    data['Computers'] = {'count': count}
+    if verbose:
+        names = QueryBuilder().append(Computer, project=['name']).distinct().all(flat=True)
+        data['Computers']['names'] = names
+
+    # Node
+    count = QueryBuilder().append(Node).count()
+    data['Nodes'] = {'count': count}
+    if verbose:
+        node_types = QueryBuilder().append(Node, project=['node_type']).distinct().all(flat=True)
+        data['Nodes']['node_types'] = node_types
+        process_types = QueryBuilder().append(Node, project=['process_type']).distinct().all(flat=True)
+        data['Nodes']['process_types'] = process_types
+
+    # Group
+    count = QueryBuilder().append(Group).count()
+    data['Groups'] = {'count': count}
+    if verbose:
+        type_strings = QueryBuilder().append(Group, project=['type_string']).distinct().all(flat=True)
+        data['Groups']['type_strings'] = type_strings
+
+    # Comment
+    count = QueryBuilder().append(Comment).count()
+    data['Comments'] = {'count': count}
+
+    # Log
+    count = QueryBuilder().append(Log).count()
+    data['Logs'] = {'count': count}
+
+    echo.echo_dictionary(data, sort_keys=False, fmt='yaml')

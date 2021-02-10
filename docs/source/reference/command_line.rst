@@ -220,6 +220,7 @@ Below is a list with all available subcommands.
     Commands:
       integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
+      summary    summarise the entities in the database.
       version    Show the version of the database.
 
 

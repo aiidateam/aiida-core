@@ -204,17 +204,16 @@ def database_summary(verbose):
     data = {}
 
     # User
-    count = QueryBuilder().append(User).count()
-    data['Users'] = {'count': count}
+    query_user = QueryBuilder().append(User, project=['email'])
+    data['Users'] = {'count': query_user.count()}
     if verbose:
-        emails = QueryBuilder().append(User, project=['email']).distinct().all(flat=True)
-        data['Users']['emails'] = emails
+        data['Users']['emails'] = query_user.distinct().all(flat=True)
 
     # Computer
-    count = QueryBuilder().append(Computer).count()
-    data['Computers'] = {'count': count}
+    query_comp = QueryBuilder().append(Computer, project=['name'])
+    data['Computers'] = {'count': query_comp.count()}
     if verbose:
-        names = QueryBuilder().append(Computer, project=['name']).distinct().all(flat=True)
+        names = query_comp.distinct().all(flat=True)
         data['Computers']['names'] = names
 
     # Node
@@ -227,10 +226,10 @@ def database_summary(verbose):
         data['Nodes']['process_types'] = [p for p in process_types if p]
 
     # Group
-    count = QueryBuilder().append(Group).count()
-    data['Groups'] = {'count': count}
+    query_group = QueryBuilder().append(Group, project=['type_string'])
+    data['Groups'] = {'count': query_group.count()}
     if verbose:
-        type_strings = QueryBuilder().append(Group, project=['type_string']).distinct().all(flat=True)
+        type_strings = query_group.distinct().all(flat=True)
         data['Groups']['type_strings'] = type_strings
 
     # Comment

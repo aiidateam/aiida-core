@@ -9,8 +9,11 @@
 ###########################################################################
 """Tests for the `Code` class."""
 # pylint: disable=redefined-outer-name
+import warnings
+
 import pytest
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import Code
 
 
@@ -32,24 +35,27 @@ def create_codes(tmpdir, aiida_localhost):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_get_full_text_info(create_codes):
     """Test the `Code.get_full_text_info` method."""
-    for code in create_codes:
-        full_text_info = code.get_full_text_info()
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
 
-        assert isinstance(full_text_info, list)
-        assert ['PK', code.pk] in full_text_info
-        assert ['UUID', code.uuid] in full_text_info
-        assert ['Label', code.label] in full_text_info
-        assert ['Description', code.description] in full_text_info
+        for code in create_codes:
+            full_text_info = code.get_full_text_info()
 
-        if code.is_local():
-            assert ['Type', 'local'] in full_text_info
-            assert ['Exec name', code.get_execname()] in full_text_info
-            assert ['List of files/folders:', ''] in full_text_info
-        else:
-            assert ['Type', 'remote'] in full_text_info
-            assert ['Remote machine', code.computer.label] in full_text_info
-            assert ['Remote absolute path', code.get_remote_exec_path()] in full_text_info
+            assert isinstance(full_text_info, list)
+            assert ['PK', code.pk] in full_text_info
+            assert ['UUID', code.uuid] in full_text_info
+            assert ['Label', code.label] in full_text_info
+            assert ['Description', code.description] in full_text_info
 
-    for code in create_codes:
-        full_text_info = code.get_full_text_info(verbose=True)
-        assert ['Calculations', 0] in full_text_info
+            if code.is_local():
+                assert ['Type', 'local'] in full_text_info
+                assert ['Exec name', code.get_execname()] in full_text_info
+                assert ['List of files/folders:', ''] in full_text_info
+            else:
+                assert ['Type', 'remote'] in full_text_info
+                assert ['Remote machine', code.computer.label] in full_text_info
+                assert ['Remote absolute path', code.get_remote_exec_path()] in full_text_info
+
+        for code in create_codes:
+            full_text_info = code.get_full_text_info(verbose=True)
+            assert ['Calculations', 0] in full_text_info

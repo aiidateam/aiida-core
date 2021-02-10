@@ -13,13 +13,13 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestAttributes(AiidaTestCase):
+class TestAttributes(AiidaArchiveTestCase):
     """Test ex-/import cases related to Attributes"""
 
     def create_data_with_attr(self):
@@ -30,7 +30,7 @@ class TestAttributes(AiidaTestCase):
 
     def import_attributes(self):
         """Import an AiiDA database"""
-        import_data(self.export_file, silent=True)
+        import_data(self.export_file)
 
         builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
 
@@ -48,7 +48,7 @@ class TestAttributes(AiidaTestCase):
 
         # Export
         self.export_file = os.path.join(temp_dir, 'export.aiida')
-        export([self.data], filename=self.export_file, silent=True)
+        export([self.data], filename=self.export_file)
 
         # Clean db
         self.reset_database()

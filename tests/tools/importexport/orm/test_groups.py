@@ -12,13 +12,14 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestGroups(AiidaTestCase):
+class TestGroups(AiidaArchiveTestCase):
     """Test ex-/import cases related to Groups"""
 
     def setUp(self):
@@ -63,11 +64,11 @@ class TestGroups(AiidaTestCase):
 
         # At this point we export the generated data
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([sd1, jc1, gr1], filename=filename1, silent=True)
+        export([sd1, jc1, gr1], filename=filename1)
         n_uuids = [sd1.uuid, jc1.uuid]
         self.clean_db()
         self.insert_data()
-        import_data(filename1, silent=True)
+        import_data(filename1)
 
         # Check that the imported nodes are correctly imported and that
         # the user assigned to the nodes is the right one
@@ -102,11 +103,11 @@ class TestGroups(AiidaTestCase):
 
         # Export the generated data, clean the database and import it again
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([group], filename=filename, silent=True)
+        export([group], filename=filename)
         n_uuids = [sd1.uuid]
         self.clean_db()
         self.insert_data()
-        import_data(filename, silent=True)
+        import_data(filename)
 
         # Check that the imported nodes are correctly imported and that
         # the user assigned to the nodes is the right one
@@ -146,14 +147,14 @@ class TestGroups(AiidaTestCase):
 
         # At this point we export the generated data
         filename = os.path.join(temp_dir, 'export1.aiida')
-        export([group], filename=filename, silent=True)
+        export([group], filename=filename)
         self.clean_db()
         self.insert_data()
 
         # Creating a group of the same name
         group = orm.Group(label='node_group_existing')
         group.store()
-        import_data(filename, silent=True)
+        import_data(filename)
         # The import should have created a new group with a suffix
         # I check for this:
         builder = orm.QueryBuilder().append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}})
@@ -166,7 +167,7 @@ class TestGroups(AiidaTestCase):
         # I check that the group name was changed:
         self.assertTrue(builder.all()[0][0] != grouplabel)
         # I import another name, the group should not be imported again
-        import_data(filename, silent=True)
+        import_data(filename)
         builder = orm.QueryBuilder()
         builder.append(orm.Group, filters={'label': {'like': f'{grouplabel}%'}})
         self.assertEqual(builder.count(), 2)
@@ -187,7 +188,7 @@ class TestGroups(AiidaTestCase):
 
         # Export Nodes
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([data1, data2], filename=filename, silent=True)
+        export([data1, data2], filename=filename)
         self.reset_database()
 
         # Create Group, do not store
@@ -197,11 +198,11 @@ class TestGroups(AiidaTestCase):
 
         # Try to import to this Group, providing only label - this should fail
         with self.assertRaises(ImportValidationError) as exc:
-            import_data(filename, group=group_label, silent=True)
+            import_data(filename, group=group_label)
         self.assertIn('group must be a Group entity', str(exc.exception))
 
         # Import properly now, providing the Group object
-        import_data(filename, group=group, silent=True)
+        import_data(filename, group=group)
 
         # Check Group for content
         builder = orm.QueryBuilder().append(orm.Group, filters={'label': group_label}, project='uuid')
@@ -226,7 +227,7 @@ class TestGroups(AiidaTestCase):
         group = orm.Group(label=group_label)
         group_uuid = group.uuid
 
-        import_data(filename, group=group, silent=True)
+        import_data(filename, group=group)
 
         imported_group = load_group(label=group_label)
         self.assertEqual(imported_group.uuid, group_uuid)

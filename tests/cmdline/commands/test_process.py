@@ -16,6 +16,7 @@ from concurrent.futures import Future
 
 from click.testing import CliRunner
 import plumpy
+import pytest
 import kiwipy
 
 from aiida.backends.testbase import AiidaTestCase
@@ -63,6 +64,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         os.kill(self.daemon.pid, signal.SIGTERM)
         super().tearDown()
 
+    @pytest.mark.requires_rmq
     def test_pause_play_kill(self):
         """
         Test the pause/play/kill commands

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `run` functions."""
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import run, run_get_node
 from aiida.orm import Int, Str, ProcessNode
@@ -15,6 +17,7 @@ from aiida.orm import Int, Str, ProcessNode
 from tests.utils.processes import DummyProcess
 
 
+@pytest.mark.requires_rmq
 class TestRun(AiidaTestCase):
     """Tests for the `run` functions."""
 

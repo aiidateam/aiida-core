@@ -44,6 +44,7 @@ def the_hans_klok_comeback(loop):
     loop.stop()
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_call_on_process_finish(create_runner):
     """Test call on calculation finish."""

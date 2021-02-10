@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test processess launch."""
+import pytest
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
@@ -62,6 +64,7 @@ class AddWorkChain(WorkChain):
         self.out('result', orm.Int(self.inputs.term_a + self.inputs.term_b).store())
 
 
+@pytest.mark.requires_rmq
 class TestLaunchers(AiidaTestCase):
     """Class to test process launchers."""
 
@@ -142,6 +145,7 @@ class TestLaunchers(AiidaTestCase):
             launch.submit(AddWorkChain, term_a=self.term_a, term_b=self.term_b, metadata={'store_provenance': False})
 
 
+@pytest.mark.requires_rmq
 class TestLaunchersDryRun(AiidaTestCase):
     """Test the launchers when performing a dry-run."""
 

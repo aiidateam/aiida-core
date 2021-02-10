@@ -13,6 +13,7 @@ import textwrap
 import warnings
 
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_run
@@ -25,6 +26,7 @@ class TestVerdiRun(AiidaTestCase):
         super().setUp()
         self.cli_runner = CliRunner()
 
+    @pytest.mark.requires_rmq
     def test_run_workfunction(self):
         """Regression test for #2165
 
@@ -181,6 +183,7 @@ class TestAutoGroups(AiidaTestCase):
             all_auto_groups = queryb.all()
             self.assertEqual(len(all_auto_groups), 0, 'There should be no autogroup generated')
 
+    @pytest.mark.requires_rmq
     def test_autogroup_filter_class(self):  # pylint: disable=too-many-locals
         """Check if the autogroup is properly generated but filtered classes are skipped."""
         from aiida.orm import Code, QueryBuilder, Node, AutoGroup, load_node

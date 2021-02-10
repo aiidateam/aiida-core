@@ -34,6 +34,10 @@ class TestProcessControl(AiidaTestCase):
         manager = get_manager()
         self.runner = manager.get_runner()
 
+    def tearDown(self):
+        self.runner.close()
+        super().tearDown()
+
     def test_submit_simple(self):
         """"Launch the process."""
 

@@ -51,10 +51,11 @@ def server_url():
 def restrict_sqlalchemy_queuepool(aiida_profile):
     """Create special SQLAlchemy engine for use with QueryBuilder - backend-agnostic"""
     from aiida.manage.manager import get_manager
+    from sqlalchemy.pool import QueuePool
 
     backend_manager = get_manager().get_backend_manager()
     backend_manager.reset_backend_environment()
-    backend_manager.load_backend_environment(aiida_profile, pool_timeout=1, max_overflow=0)
+    backend_manager.load_backend_environment(aiida_profile, poolclass=QueuePool, pool_timeout=1, max_overflow=0)
 
 
 @pytest.fixture

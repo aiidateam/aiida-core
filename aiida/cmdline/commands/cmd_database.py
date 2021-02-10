@@ -199,7 +199,7 @@ def detect_invalid_nodes():
 @verdi_database.command('summary')
 @options.VERBOSE()
 def database_summary(verbose):
-    """summarise the entities in the database."""
+    """Summarise the entities in the database."""
     from aiida.orm import QueryBuilder, Node, Group, Computer, Comment, Log, User
     data = {}
 

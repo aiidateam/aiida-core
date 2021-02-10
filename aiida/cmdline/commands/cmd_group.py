@@ -52,6 +52,11 @@ def group_remove_nodes(group, nodes, clear, force):
     label = group.label
     klass = group.__class__.__name__
 
+    if nodes and clear:
+        echo.echo_critical(
+            'Specify either the `--clear` flag to remove all nodes or the identifiers of the nodes you want to remove.'
+        )
+
     if not force:
 
         if nodes:

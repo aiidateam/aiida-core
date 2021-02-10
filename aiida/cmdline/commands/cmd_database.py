@@ -213,8 +213,7 @@ def database_summary(verbose):
     query_comp = QueryBuilder().append(Computer, project=['name'])
     data['Computers'] = {'count': query_comp.count()}
     if verbose:
-        names = query_comp.distinct().all(flat=True)
-        data['Computers']['names'] = names
+        data['Computers']['names'] = query_comp.distinct().all(flat=True)
 
     # Node
     count = QueryBuilder().append(Node).count()
@@ -229,8 +228,7 @@ def database_summary(verbose):
     query_group = QueryBuilder().append(Group, project=['type_string'])
     data['Groups'] = {'count': query_group.count()}
     if verbose:
-        type_strings = query_group.distinct().all(flat=True)
-        data['Groups']['type_strings'] = type_strings
+        data['Groups']['type_strings'] =  query_group.distinct().all(flat=True)
 
     # Comment
     count = QueryBuilder().append(Comment).count()

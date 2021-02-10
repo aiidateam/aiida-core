@@ -184,6 +184,7 @@ def tests_database_version(run_cli_command, manager):
 
 @pytest.mark.usefixtures('aiida_profile')
 def tests_database_summary(run_cli_command):
-    from aiida import get_profile
+    from aiida import orm
+    node = orm.Dict().store()
     result = run_cli_command(cmd_database.database_summary, ['--verbose'])
-    assert get_profile().default_user in result.output
+    assert node.node_type in result.output

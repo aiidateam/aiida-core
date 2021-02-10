@@ -228,7 +228,7 @@ def database_summary(verbose):
     query_group = QueryBuilder().append(Group, project=['type_string'])
     data['Groups'] = {'count': query_group.count()}
     if verbose:
-        data['Groups']['type_strings'] =  query_group.distinct().all(flat=True)
+        data['Groups']['type_strings'] = query_group.distinct().all(flat=True)
 
     # Comment
     count = QueryBuilder().append(Comment).count()

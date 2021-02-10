@@ -858,3 +858,7 @@ def close_session(wrapped, _, args, kwargs):
         return wrapped(*args, **kwargs)
     finally:
         get_manager().get_backend().get_session().close()
+
+        from django.db import connection
+        # Close django connection if open (not needed by REST API)
+        connection.close()

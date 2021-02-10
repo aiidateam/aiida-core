@@ -50,6 +50,16 @@ def put_object_from_string(uuid, name, content):
         handle.write(content)
 
 
+def del_object_from_repository(uuid, name):
+    """Deletes file with the given name in the repository of the given node.
+
+    :param uuid: UUID of the node
+    :param name: name to use for the file
+    """
+    filepath = os.path.join(get_node_repository_sub_folder(uuid), name)
+    os.remove(filepath)
+
+
 def get_object_from_repository(uuid, name):
     """Return the content of a file with the given name in the repository sub folder of the given node.
 

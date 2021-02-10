@@ -857,8 +857,11 @@ def close_session(wrapped, _, args, kwargs):
     try:
         return wrapped(*args, **kwargs)
     finally:
-        get_manager().get_backend().get_session().close()
+        backend = get_manager().get_backend()
+        backend.get_session().close()
 
-        from django.db import connection
         # Close django connection if open (not needed by REST API)
-        connection.close()
+        from aiida.orm.implementation.django.backend import DjangoBackend
+        if isinstance(backend, DjangoBackend):
+            from django.db import connection
+            connection.close()

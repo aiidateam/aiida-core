@@ -13,13 +13,13 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from . import AiidaArchiveTestCase
 
 
-class TestProvenanceRedesign(AiidaTestCase):
+class TestProvenanceRedesign(AiidaArchiveTestCase):
     """ Check changes in database schema after upgrading to v0.4 (Provenance Redesign)
     This includes all migrations from "base_data_plugin_type_string" (django: 0008)
     until "dbgroup_type_string_change_content" (django: 0022), both included.
@@ -59,13 +59,13 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Export nodes
         filename = os.path.join(temp_dir, 'export.aiida')
-        export(export_nodes, filename=filename, silent=True)
+        export(export_nodes, filename=filename)
 
         # Clean the database
         self.reset_database()
 
         # Import nodes again
-        import_data(filename, silent=True)
+        import_data(filename)
 
         # Check whether types are correctly imported
         nlist = orm.load_node(list_node_uuid)  # List
@@ -108,11 +108,11 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Export nodes
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=filename, silent=True)
+        export([node], filename=filename)
 
         # Clean the database and reimport data
         self.reset_database()
-        import_data(filename, silent=True)
+        import_data(filename)
 
         # Retrieve node and check exactly one node is imported
         builder = orm.QueryBuilder()
@@ -151,11 +151,11 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Export node
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([code], filename=filename, silent=True)
+        export([code], filename=filename)
 
         # Clean the database and reimport
         self.reset_database()
-        import_data(filename, silent=True)
+        import_data(filename)
 
         # Retrieve Code node and make sure exactly 1 is retrieved
         builder = orm.QueryBuilder()
@@ -233,11 +233,11 @@ class TestProvenanceRedesign(AiidaTestCase):
 
         # Export node
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([group_user, group_upf], filename=filename, silent=True)
+        export([group_user, group_upf], filename=filename)
 
         # Clean the database and reimport
         self.reset_database()
-        import_data(filename, silent=True)
+        import_data(filename)
 
         # Retrieve Groups and make sure exactly 3 are retrieved (including the "import group")
         builder = orm.QueryBuilder()

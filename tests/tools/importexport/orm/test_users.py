@@ -12,13 +12,13 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestUsers(AiidaTestCase):
+class TestUsers(AiidaArchiveTestCase):
     """Test ex-/import cases related to Users"""
 
     def setUp(self):
@@ -82,10 +82,10 @@ class TestUsers(AiidaTestCase):
 
         filename = os.path.join(temp_dir, 'export.aiida')
 
-        export([sd3], filename=filename, silent=True)
+        export([sd3], filename=filename)
         self.clean_db()
         self.create_user()
-        import_data(filename, silent=True)
+        import_data(filename)
 
         # Check that the imported nodes are correctly imported and that
         # the user assigned to the nodes is the right one
@@ -138,11 +138,11 @@ class TestUsers(AiidaTestCase):
 
         # At this point we export the generated data
         filename1 = os.path.join(temp_dir, 'export1.aiidaz')
-        export([sd2], filename=filename1, silent=True)
+        export([sd2], filename=filename1)
         uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
         self.clean_db()
         self.insert_data()
-        import_data(filename1, silent=True)
+        import_data(filename1)
 
         # Check that the imported nodes are correctly imported and that
         # the user assigned to the nodes is the right one
@@ -171,10 +171,10 @@ class TestUsers(AiidaTestCase):
         uuids2 = [jc2.uuid, sd3.uuid]
 
         filename2 = os.path.join(temp_dir, 'export2.aiida')
-        export([sd3], filename=filename2, silent=True)
+        export([sd3], filename=filename2)
         self.clean_db()
         self.insert_data()
-        import_data(filename2, silent=True)
+        import_data(filename2)
 
         # Check that the imported nodes are correctly imported and that
         # the user assigned to the nodes is the right one

@@ -224,7 +224,7 @@ def database_summary(verbose):
         node_types = QueryBuilder().append(Node, project=['node_type']).distinct().all(flat=True)
         data['Nodes']['node_types'] = node_types
         process_types = QueryBuilder().append(Node, project=['process_type']).distinct().all(flat=True)
-        data['Nodes']['process_types'] = process_types
+        data['Nodes']['process_types'] = [p for p in process_types if p]
 
     # Group
     count = QueryBuilder().append(Group).count()

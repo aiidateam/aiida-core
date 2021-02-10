@@ -113,7 +113,7 @@ def verdi_status(print_traceback, no_rmq):
             with Capturing(capture_stderr=True):
                 with override_log_level():  # temporarily suppress noisy logging
                     comm = manager.create_communicator(with_orm=False)
-                    comm.stop()
+                    comm.close()
         except Exception as exc:
             message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)

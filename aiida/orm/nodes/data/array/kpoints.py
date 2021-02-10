@@ -372,7 +372,7 @@ class KpointsData(ArrayData):
             else:
                 raise ValueError(f'kpoints must be a list of lists in {self._dimension}D case')
 
-        if kpoints.dtype != numpy.dtype(numpy.float):
+        if kpoints.dtype != numpy.dtype(float):
             raise ValueError(f'kpoints must be an array of type floats. Found instead {kpoints.dtype}')
 
         if kpoints.shape[1] < self._dimension:
@@ -385,7 +385,7 @@ class KpointsData(ArrayData):
             weights = numpy.array(weights)
             if weights.shape[0] != kpoints.shape[0]:
                 raise ValueError(f'Found {weights.shape[0]} weights but {kpoints.shape[0]} kpoints')
-            if weights.dtype != numpy.dtype(numpy.float):
+            if weights.dtype != numpy.dtype(float):
                 raise ValueError(f'weights must be an array of type floats. Found instead {weights.dtype}')
 
         return kpoints, weights

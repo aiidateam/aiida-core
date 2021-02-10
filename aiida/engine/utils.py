@@ -14,7 +14,7 @@ import asyncio
 import contextlib
 from datetime import datetime
 import logging
-from typing import Any, Awaitable, Callable, Iterator, List, Optional, Type, Union, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .processes import Process, ProcessBuilder
@@ -160,7 +160,7 @@ async def exponential_backoff_retry(
     initial_interval: Union[int, float] = 10.0,
     max_attempts: int = 5,
     logger: Optional[logging.Logger] = None,
-    ignore_exceptions=None
+    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None
 ) -> Any:
     """
     Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
@@ -173,7 +173,7 @@ async def exponential_backoff_retry(
     :param fct: the function to call, which will be turned into a coroutine first if it is not already
     :param initial_interval: the time to wait after the first caught exception before calling the coroutine again
     :param max_attempts: the maximum number of times to call the coroutine before re-raising the exception
-    :param ignore_exceptions: list or tuple of exceptions to ignore, i.e. when caught do nothing and simply re-raise
+    :param ignore_exceptions: exceptions to ignore, i.e. when caught do nothing and simply re-raise
     :return: result if the ``coro`` call completes within ``max_attempts`` retries without raising
     """
     if logger is None:

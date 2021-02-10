@@ -10,17 +10,23 @@
 """Utilities for testing memory leakage."""
 from tests.utils import processes as test_processes  # pylint: disable=no-name-in-module,import-error
 from tests.utils.memory import get_instances  # pylint: disable=no-name-in-module,import-error
-from aiida.engine import processes, run
+from aiida.engine import processes, run_get_node
 from aiida.plugins import CalculationFactory
 from aiida import orm
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
 
+def run_finished_ok(*args, **kwargs):
+    """Convenience function to check that run worked fine."""
+    _, node = run_get_node(*args, **kwargs)
+    assert node.is_finished_ok, (node.exit_status, node.exit_message)
+
+
 def test_leak_run_process():
     """Test whether running a dummy process leaks memory."""
     inputs = {'a': orm.Int(2), 'b': orm.Str('test')}
-    run(test_processes.DummyProcess, **inputs)
+    run_finished_ok(test_processes.DummyProcess, **inputs)
 
     # check that no reference to the process is left in memory
     # some delay is necessary in order to allow for all callbacks to finish
@@ -31,7 +37,7 @@ def test_leak_run_process():
 def test_leak_local_calcjob(aiida_local_code_factory):
     """Test whether running a local CalcJob leaks memory."""
     inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': aiida_local_code_factory('arithmetic.add', '/usr/bin/diff')}
-    run(ArithmeticAddCalculation, **inputs)
+    run_finished_ok(ArithmeticAddCalculation, **inputs)
 
     # check that no reference to the process is left in memory
     # some delay is necessary in order to allow for all callbacks to finish
@@ -48,7 +54,7 @@ def test_leak_ssh_calcjob():
         input_plugin_name='arithmetic.add', remote_computer_exec=[orm.load_computer('slurm-ssh'), '/usr/bin/diff']
     )
     inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': code}
-    run(ArithmeticAddCalculation, **inputs)
+    run_finished_ok(ArithmeticAddCalculation, **inputs)
 
     # check that no reference to the process is left in memory
     # some delay is necessary in order to allow for all callbacks to finish

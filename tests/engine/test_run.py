@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `run` functions."""
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import run, run_get_node
 from aiida.orm import Int, Str, ProcessNode

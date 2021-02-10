@@ -721,7 +721,8 @@ class Computer(entities.Entity):
 
         config = {}
         try:
-            authinfo = backend.authinfos.get(self, user)
+            # Need to pass the backend entity here, not just self
+            authinfo = backend.authinfos.get(self._backend_entity, user)
             config = authinfo.get_auth_params()
         except exceptions.NotExistent:
             pass

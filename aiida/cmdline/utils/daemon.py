@@ -21,23 +21,29 @@ def print_client_response_status(response):
     Print the response status of a call to the CircusClient through the DaemonClient
 
     :param response: the response object
+    :return: an integer error code; non-zero means there was an error (FAILED, TIMEOUT), zero means OK (OK, RUNNING)
     """
     from aiida.engine.daemon.client import DaemonClient
 
     if 'status' not in response:
-        return
+        return 1
 
     if response['status'] == 'active':
         click.secho('RUNNING', fg='green', bold=True)
-    elif response['status'] == 'ok':
+        return 0
+    if response['status'] == 'ok':
         click.secho('OK', fg='green', bold=True)
-    elif response['status'] == DaemonClient.DAEMON_ERROR_NOT_RUNNING:
+        return 0
+    if response['status'] == DaemonClient.DAEMON_ERROR_NOT_RUNNING:
         click.secho('FAILED', fg='red', bold=True)
         click.echo('Try to run \'verdi daemon start --foreground\' to potentially see the exception')
-    elif response['status'] == DaemonClient.DAEMON_ERROR_TIMEOUT:
+        return 2
+    if response['status'] == DaemonClient.DAEMON_ERROR_TIMEOUT:
         click.secho('TIMEOUT', fg='red', bold=True)
-    else:
-        click.echo(response['status'])
+        return 3
+    # Unknown status, I will consider it as failed
+    click.echo(response['status'])
+    return -1
 
 
 def get_daemon_status(client):

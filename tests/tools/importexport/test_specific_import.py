@@ -12,20 +12,22 @@
 import os
 import shutil
 import tempfile
+import warnings
 
 import numpy as np
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.folders import RepositoryFolder
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport import import_data, export
 from aiida.tools.importexport.common import exceptions
 
 from tests.utils.configuration import with_temp_dir
+from . import AiidaArchiveTestCase
 
 
-class TestSpecificImport(AiidaTestCase):
+class TestSpecificImport(AiidaArchiveTestCase):
     """Test specific ex-/import cases"""
 
     def setUp(self):
@@ -64,7 +66,7 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
             nodes = [parameters]
-            export(nodes, filename=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
@@ -75,7 +77,7 @@ class TestSpecificImport(AiidaTestCase):
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
-            import_data(handle.name, silent=True)
+            import_data(handle.name)
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
     def test_cycle_structure_data(self):
@@ -125,7 +127,7 @@ class TestSpecificImport(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as handle:
 
             nodes = [structure, child_calculation, parent_process, remote_folder]
-            export(nodes, filename=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
@@ -136,7 +138,7 @@ class TestSpecificImport(AiidaTestCase):
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
-            import_data(handle.name, silent=True)
+            import_data(handle.name)
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Verify that orm.CalculationNodes have non-empty attribute dictionaries
@@ -230,14 +232,16 @@ class TestSpecificImport(AiidaTestCase):
 
         # Export and reset db
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=filename, file_format='tar.gz', silent=True)
+        export([node], filename=filename, file_format='tar.gz')
         self.reset_database()
 
         # Untar archive file, remove repository folder, re-tar
         node_shard_uuid = export_shard_uuid(node_uuid)
         node_top_folder = node_shard_uuid.split('/')[0]
         with SandboxFolder() as folder:
-            extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+                extract_tar(filename, folder, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
             node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
             self.assertTrue(
                 node_folder.exists(), msg="The Node's repository folder should still exist in the archive file"
@@ -292,7 +296,9 @@ class TestSpecificImport(AiidaTestCase):
             'zip archive': os.path.join(temp_dir, 'export.zip')
         }
 
-        export_tree([node], folder=Folder(archive_variants['archive folder']))
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+            export_tree([node], folder=Folder(archive_variants['archive folder']))
         export([node], filename=archive_variants['tar archive'], file_format='tar.gz')
         export([node], filename=archive_variants['zip archive'], file_format='zip')
 
@@ -330,7 +336,9 @@ class TestSpecificImport(AiidaTestCase):
         archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
 
         with SandboxFolder() as temp_dir:
-            extract_zip(archive, temp_dir, silent=True)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+                extract_zip(archive, temp_dir)
 
             # Make sure the JSON files and the nodes subfolder was correctly extracted (is present),
             # then try to import it by passing the extracted folder to the import function.
@@ -342,7 +350,7 @@ class TestSpecificImport(AiidaTestCase):
             for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
                 org_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
 
-            import_data(temp_dir.abspath, silent=True)
+            import_data(temp_dir.abspath)
 
             # Check nothing from the source was deleted
             src_folders = []

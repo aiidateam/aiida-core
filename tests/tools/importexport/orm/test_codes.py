@@ -12,15 +12,15 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
 from tests.tools.importexport.utils import get_all_node_links
+from .. import AiidaArchiveTestCase
 
 
-class TestCode(AiidaTestCase):
+class TestCode(AiidaArchiveTestCase):
     """Test ex-/import cases related to Codes"""
 
     def setUp(self):
@@ -47,11 +47,11 @@ class TestCode(AiidaTestCase):
         code_uuid = code.uuid
 
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([code], filename=export_file, silent=True)
+        export([code], filename=export_file)
 
         self.reset_database()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
 
         self.assertEqual(orm.load_node(code_uuid).label, code_label)
 
@@ -83,11 +83,11 @@ class TestCode(AiidaTestCase):
         export_links = get_all_node_links()
 
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([calc], filename=export_file, silent=True)
+        export([calc], filename=export_file)
 
         self.reset_database()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
 
         # Check that the code node is there
         self.assertEqual(orm.load_node(code_uuid).label, code_label)
@@ -120,11 +120,11 @@ class TestCode(AiidaTestCase):
         code_uuid = code.uuid
 
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([code], filename=export_file, silent=True)
+        export([code], filename=export_file)
 
         self.clean_db()
         self.insert_data()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
 
         self.assertEqual(orm.load_node(code_uuid).label, code_label)

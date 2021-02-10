@@ -861,7 +861,6 @@ def close_session(wrapped, _, args, kwargs):
         backend.get_session().close()
 
         # Close django connection if open (not needed by REST API)
-        from aiida.orm.implementation.django.backend import DjangoBackend
-        if isinstance(backend, DjangoBackend):
+        if 'Django' in type(backend).__name__:  # don't want to import the backend class, gives error
             from django.db import connection
             connection.close()

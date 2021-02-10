@@ -8,10 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend-agnostic utility functions"""
+from sqlalchemy.pool import NullPool
 from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
 from aiida.manage import configuration
+from aiida.common import json
 
 AIIDA_ATTRIBUTE_SEP = '.'
+
+SQLALCHEMY_ENGINE_DEFAULTS = dict(
+    json_serializer=json.dumps,
+    json_deserializer=json.loads,
+    encoding='utf-8',
+    poolclass=NullPool,
+    # pool_size=1,
+    # max_overflow=0,
+)
 
 
 def create_sqlalchemy_engine(profile, **kwargs):
@@ -22,7 +33,6 @@ def create_sqlalchemy_engine(profile, **kwargs):
         more info.
     """
     from sqlalchemy import create_engine
-    from aiida.common import json
 
     # The hostname may be `None`, which is a valid value in the case of peer authentication for example. In this case
     # it should be converted to an empty string, because otherwise the `None` will be converted to string literal "None"
@@ -37,9 +47,9 @@ def create_sqlalchemy_engine(profile, **kwargs):
         port=profile.database_port,
         name=profile.database_name
     )
-    return create_engine(
-        engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8', **kwargs
-    )
+    kwargs_new = SQLALCHEMY_ENGINE_DEFAULTS.copy()
+    kwargs_new.update(kwargs)
+    return create_engine(engine_url, **kwargs_new)
 
 
 def create_scoped_session_factory(engine, **kwargs):

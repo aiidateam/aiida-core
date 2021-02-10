@@ -13,8 +13,7 @@ import os
 
 import pytest
 
-from aiida.manage.configuration import Config, Profile, get_config
-from tests.utils.configuration import temporary_config_instance as config_context
+from aiida.manage.configuration import Config, Profile, get_config, load_profile
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
@@ -153,13 +152,6 @@ def generate_calculation_node():
 
 
 @pytest.fixture
-def temporary_config_instance():
-    """Create a temporary AiiDA instance."""
-    with config_context() as config:
-        yield config
-
-
-@pytest.fixture
 def create_empty_config_instance(tmp_path) -> Config:
     """Create a temporary configuration instance.
 
@@ -170,7 +162,7 @@ def create_empty_config_instance(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings, load_profile, reset_profile
+    from aiida.manage.configuration import settings, reset_profile
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
@@ -226,6 +218,44 @@ def create_profile() -> Profile:
         return Profile(name, profile_dictionary)
 
     return _create_profile
+
+
+@pytest.fixture
+def create_config_instance(create_empty_config_instance, create_profile) -> Config:
+    """Create a temporary configuration instance with one profile.
+    This creates a temporary directory with a clean `.aiida` folder and basic configuration file.
+    The currently loaded configuration and profile are stored in memory,
+    and are automatically restored at the end of this context manager.
+    This fixture differs from `create_empty_config_instance` in that here a profile will be created and set as default.
+    The defaults of the profile can be overridden in the callable, as well as whether it should be set as default.
+    This fixture should probably be used for most tests that assume a basically configured setup.
+
+    :return: a config instance with a configured profile.
+    """
+
+    def _create_config_instance(set_as_default=True, load=True, name='default', **kwargs):
+        """Create a temporary configuration instance with one profile.
+
+        :param set_as_default: whether to set the one profile as the default.
+        :param load: whether to load the profile.
+        :param name: the profile name
+        :param kwargs: parameters that are forwarded to the `Profile` constructor.
+        """
+        profile = create_profile(name=name, **kwargs)
+        config = create_empty_config_instance
+        config.add_profile(profile)
+
+        if set_as_default:
+            config.set_default_profile(profile.name, overwrite=True)
+
+        config.store()
+
+        if load:
+            load_profile(profile.name)
+
+        return config
+
+    return _create_config_instance
 
 
 @pytest.fixture

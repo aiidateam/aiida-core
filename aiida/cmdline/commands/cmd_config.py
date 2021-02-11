@@ -17,7 +17,7 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import decorators, echo
 
 
-class DeprecatedCommandGroup(click.Group):
+class _DeprecateConfigCommandsGroup(click.Group):
     """Overloads the get_command with one that identifies deprecated commands."""
 
     def get_command(self, ctx, cmd_name):
@@ -45,7 +45,7 @@ class DeprecatedCommandGroup(click.Group):
         return None
 
 
-@verdi.group('config', cls=DeprecatedCommandGroup)
+@verdi.group('config', cls=_DeprecateConfigCommandsGroup)
 def verdi_config():
     """Manage the AiiDA configuration."""
 
@@ -139,7 +139,7 @@ def verdi_config_get(ctx, option):
 def verdi_config_set(ctx, option, value, globally, append, remove):
     """Set an AiiDA option.
 
-    Note array values will be split by whitespace, e.g. "a b"
+    List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
     from aiida.manage.configuration import Config, Profile, ConfigValidationError
 
@@ -180,7 +180,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
 @verdi_config.command('unset')
 @arguments.CONFIG_OPTION(metavar='OPTION_NAME')
-@click.option('-g', '--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
+@click.option('-g', '--global', 'globally', is_flag=True, help='Unset the option configuration wide.')
 @click.pass_context
 def verdi_config_unset(ctx, option, globally):
     """Unset an AiiDA option."""
@@ -205,7 +205,7 @@ def verdi_config_unset(ctx, option, globally):
 @verdi_config.command('caching')
 @click.option('-d', '--disabled', is_flag=True, help='List disabled types instead.')
 def verdi_config_caching(disabled):
-    """List caching enabled process types for the current profile."""
+    """List caching-enabled process types for the current profile."""
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
     from aiida.manage.caching import get_use_cache
 

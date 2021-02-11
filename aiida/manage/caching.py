@@ -108,6 +108,7 @@ def enable_caching(*, identifier=None):
     .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
     :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
+        If not provided, caching is enabled for all classes.
     :type identifier: str
     """
     type_check(identifier, str, allow_none=True)
@@ -128,6 +129,7 @@ def disable_caching(*, identifier=None):
     .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
     :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
+        If not provided, caching is disabled for all classes.
     :type identifier: str
     """
     type_check(identifier, str, allow_none=True)

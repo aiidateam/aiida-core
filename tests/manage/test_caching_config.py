@@ -155,14 +155,14 @@ def test_invalid_configuration_dict(configure_caching, config_dict):
             pass
 
 
-def test_invalid_identifier(configure_caching):  # pylint: disable=unused-argument
+def test_invalid_identifier(configure_caching):
     """Test `get_use_cache` raises a `TypeError` if identifier is not a string."""
     with configure_caching({}):
         with pytest.raises(TypeError):
             get_use_cache(identifier=int)
 
 
-def test_default(configure_caching):  # pylint: disable=unused-argument
+def test_default(configure_caching):
     """Verify that when not specifying any specific identifier, the `default` is used, which is set to `True`."""
     with configure_caching({'default': True}):
         assert get_use_cache()

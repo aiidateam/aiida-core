@@ -34,7 +34,7 @@
         "graphviz~=0.13",
         "ipython~=7.20",
         "jinja2~=2.10",
-        "kiwipy[rmq]~=0.7.1",
+        "kiwipy[rmq]~=0.7.2",
         "numpy~=1.17",
         "pamqp~=2.3",
         "paramiko~=2.7,>=2.7.2",

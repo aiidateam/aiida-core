@@ -187,6 +187,7 @@ class PotentialFailureWorkChain(WorkChain):
         self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
 
 
+@pytest.mark.requires_rmq
 class TestExitStatus(AiidaTestCase):
     """
     This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
@@ -268,6 +269,7 @@ class IfTest(WorkChain):
         self.ctx.s2 = True
 
 
+@pytest.mark.requires_rmq
 class TestContext(AiidaTestCase):
 
     def test_attributes(self):
@@ -289,6 +291,7 @@ class TestContext(AiidaTestCase):
             wc.ctx['new_attr']  # pylint: disable=pointless-statement
 
 
+@pytest.mark.requires_rmq
 class TestWorkchain(AiidaTestCase):
 
     # pylint: disable=too-many-public-methods
@@ -850,6 +853,7 @@ class TestWorkchain(AiidaTestCase):
         return proc.finished_steps
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainAbort(AiidaTestCase):
     """
     Test the functionality to abort a workchain
@@ -926,6 +930,7 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEqual(process.node.is_killed, True)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainAbortChildren(AiidaTestCase):
     """
     Test the functionality to abort a workchain and verify that children
@@ -1018,6 +1023,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEqual(process.node.is_killed, True)
 
 
+@pytest.mark.requires_rmq
 class TestImmutableInputWorkchain(AiidaTestCase):
     """
     Test that inputs cannot be modified
@@ -1123,6 +1129,7 @@ class SerializeWorkChain(WorkChain):
         assert self.inputs.test == self.inputs.reference
 
 
+@pytest.mark.requires_rmq
 class TestSerializeWorkChain(AiidaTestCase):
     """
     Test workchains with serialized input / output.
@@ -1249,6 +1256,7 @@ class ChildExposeWorkChain(WorkChain):
         self.out('c', self.inputs.c)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainExpose(AiidaTestCase):
     """
     Test the expose inputs / outputs functionality
@@ -1360,6 +1368,7 @@ class TestWorkChainExpose(AiidaTestCase):
         launch.run(Child)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainMisc(AiidaTestCase):
 
     class PointlessWorkChain(WorkChain):
@@ -1396,6 +1405,7 @@ class TestWorkChainMisc(AiidaTestCase):
             launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
 
+@pytest.mark.requires_rmq
 class TestDefaultUniqueness(AiidaTestCase):
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 

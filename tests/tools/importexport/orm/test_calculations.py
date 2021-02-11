@@ -12,6 +12,8 @@
 
 import os
 
+import pytest
+
 from aiida import orm
 from aiida.tools.importexport import import_data, export
 
@@ -30,6 +32,7 @@ class TestCalculations(AiidaArchiveTestCase):
         self.reset_database()
         super().tearDown()
 
+    @pytest.mark.requires_rmq
     @with_temp_dir
     def test_calcfunction(self, temp_dir):
         """Test @calcfunction"""

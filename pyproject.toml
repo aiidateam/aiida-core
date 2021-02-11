@@ -67,6 +67,7 @@ filterwarnings = [
     "default::ResourceWarning",
 ]
 markers = [
+    "requires_rmq: requires a connection (on port 5672) to RabbitMQ",
     "sphinx: set parameters for the sphinx `app` fixture"
 ]
 

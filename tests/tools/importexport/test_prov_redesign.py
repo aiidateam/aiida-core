@@ -12,6 +12,8 @@
 
 import os
 
+import pytest
+
 from aiida import orm
 from aiida.tools.importexport import import_data, export
 
@@ -86,6 +88,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         msg = f"type of node ('{nlist.node_type}') is not updated according to db schema v0.4"
         self.assertEqual(nlist.node_type, 'data.list.List.', msg=msg)
 
+    @pytest.mark.requires_rmq
     @with_temp_dir
     def test_node_process_type(self, temp_dir):
         """ Column `process_type` added to `Node` entity DB table """

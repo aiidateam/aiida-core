@@ -37,6 +37,7 @@ def test_get_rmq_url(args, kwargs, expected):
             rmq.get_rmq_url(*args, **kwargs)
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
 def test_communicator(url):
     """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
@@ -46,11 +47,13 @@ def test_communicator(url):
     RmqThreadCommunicator.connect(connection_params={'url': url})
 
 
+@pytest.mark.requires_rmq
 def test_add_rpc_subscriber(communicator):
     """Test ``add_rpc_subscriber``."""
     communicator.add_rpc_subscriber(None)
 
 
+@pytest.mark.requires_rmq
 def test_add_broadcast_subscriber(communicator):
     """Test ``add_broadcast_subscriber``."""
     communicator.add_broadcast_subscriber(None)

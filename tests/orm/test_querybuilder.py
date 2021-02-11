@@ -135,6 +135,7 @@ class TestQueryBuilder(AiidaTestCase):
 
     # Tracked in issue #4281
     @pytest.mark.flaky(reruns=2)
+    @pytest.mark.requires_rmq
     def test_process_query(self):
         """
         Test querying for a process class.

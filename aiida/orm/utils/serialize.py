@@ -217,10 +217,11 @@ def serialize(data, encoding=None):
     return serialized
 
 
-def deserialize(serialized):
+def deserialize_unsafe(serialized):
     """Deserialize a yaml dump that represents a serialized data structure.
 
-    .. note:: no need to use `yaml.safe_load` here because the `Loader` will ensure that loading is safe.
+    .. note:: This function should not be used on untrusted input, because
+        it is built upon `yaml.UnsafeLoader`.
 
     :param serialized: a yaml serialized string representation
     :return: the deserialized data structure

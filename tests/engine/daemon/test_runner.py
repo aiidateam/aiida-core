@@ -13,6 +13,7 @@ import pytest
 from aiida.engine.daemon.runner import shutdown_runner
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.asyncio
 async def test_shutdown_runner(manager):
     """Test the ``shutdown_runner`` method."""

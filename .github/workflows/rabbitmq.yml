@@ -64,4 +64,4 @@ jobs:
                 pip freeze
 
         -   name: Run tests
-            run: pytest -sv tests/manage/external/test_rmq.py
+            run: pytest -sv -k 'requires_rmq'

@@ -49,6 +49,7 @@ def test_get_process_handler():
     assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()] == ['handler_a', 'handler_b']
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_excepted_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was excepted."""
@@ -58,6 +59,7 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
     assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_killed_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was killed."""
@@ -67,6 +69,7 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
     assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_unhandled_failure(generate_work_chain, generate_calculation_node):
     """Test the unhandled failure mechanism.
@@ -85,6 +88,7 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node):
     ) == engine.BaseRestartWorkChain.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE  # pylint: disable=no-member
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
@@ -99,6 +103,7 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
     assert process.ctx.unhandled_failure is False
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
@@ -120,6 +125,7 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
     assert process.ctx.unhandled_failure is False
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch):
     """Test the `run_process` method."""

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the process_function decorator."""
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -22,6 +23,7 @@ CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
 
+@pytest.mark.requires_rmq
 class TestProcessFunction(AiidaTestCase):
     """
     Note that here we use `@workfunctions` and `@calculations`, the concrete versions of the

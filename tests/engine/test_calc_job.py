@@ -35,6 +35,7 @@ def raise_exception(exception):
     raise exception()
 
 
+@pytest.mark.requires_rmq
 class FileCalcJob(CalcJob):
     """Example `CalcJob` implementation to test the `provenance_exclude_list` functionality.
 
@@ -72,6 +73,7 @@ class FileCalcJob(CalcJob):
         return calcinfo
 
 
+@pytest.mark.requires_rmq
 class TestCalcJob(AiidaTestCase):
     """Test for the `CalcJob` process sub class."""
 
@@ -388,6 +390,7 @@ def generate_process(aiida_local_code_factory):
     return _generate_process
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -418,6 +421,7 @@ def test_parse_insufficient_data(generate_process):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -437,6 +441,7 @@ def test_parse_non_zero_retval(generate_process):
     assert 'could not parse scheduler output: return value of `detailed_job_info` is non-zero' in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -466,6 +471,7 @@ def test_parse_not_implemented(generate_process):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -501,6 +507,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.parametrize(('exit_status_scheduler', 'exit_status_retrieved', 'final'), (
     (None, None, 0),
     (100, None, 100),
@@ -568,6 +575,7 @@ def test_parse_exit_code_priority(
     assert result.status == final
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""

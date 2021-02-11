@@ -13,6 +13,8 @@ import os
 import tempfile
 import unittest
 
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
@@ -188,6 +190,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -225,6 +228,7 @@ O 0.5 0.5 0.5
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_ase(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -270,6 +274,7 @@ O 0.5 0.5 0.5
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
+    @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -530,6 +535,7 @@ _tag   {}
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     @unittest.skipIf(not has_spglib(), 'Unable to import spglib')
+    @pytest.mark.requires_rmq
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -1643,6 +1649,7 @@ class TestStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_get_cif(self):
         """
         Tests the conversion to CifData
@@ -2823,6 +2830,7 @@ class TestTrajectoryData(AiidaTestCase):
             # Step 66 does not exist
             n.get_index_from_stepid(66)
 
+    @pytest.mark.requires_rmq
     def test_conversion_to_structure(self):
         """
         Check the methods to export a given time step to a StructureData node.

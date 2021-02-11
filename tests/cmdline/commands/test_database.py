@@ -180,3 +180,13 @@ def tests_database_version(run_cli_command, manager):
     result = run_cli_command(cmd_database.database_version)
     assert result.output_lines[0].endswith(backend_manager.get_schema_generation_database())
     assert result.output_lines[1].endswith(backend_manager.get_schema_version_database())
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def tests_database_summary(aiida_localhost, run_cli_command):
+    """Test the ``verdi database summary -v`` command."""
+    from aiida import orm
+    node = orm.Dict().store()
+    result = run_cli_command(cmd_database.database_summary, ['--verbose'])
+    assert aiida_localhost.label in result.output
+    assert node.node_type in result.output

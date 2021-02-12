@@ -136,8 +136,7 @@ def _strip_checkpoints(fields: dict) -> dict:
     """
     if fields.get('node_type', '').startswith('process.'):
         fields = copy.copy(fields)
-        try:
-            del fields['attributes'][ProcessNode.CHECKPOINT_KEY]
-        except KeyError:
-            pass
+        fields['attributes'] = {
+            key: value for key, value in fields['attributes'].items() if key != ProcessNode.CHECKPOINT_KEY
+        }
     return fields

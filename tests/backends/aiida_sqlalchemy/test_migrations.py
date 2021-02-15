@@ -1749,7 +1749,7 @@ class TestGroupExtrasMigration(TestMigrationsSQLA):
                 session.close()
 
 
-class TestCalcFunctionAttributesMigration(TestMigrationsSQLA):
+class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
     """Test updates to attributes of InlineFunctions that have been transformed into CalcFunctions."""
 
     migrate_from = '0edcdd5a30f0'  # 0edcdd5a30f0_dbgroup_extras.py
@@ -1826,13 +1826,6 @@ class TestCalcFunctionAttributesMigration(TestMigrationsSQLA):
                 session = Session(connection.engine)
                 calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode_id).one()
 
-                query = session.query(DbNode).filter(
-                    DbNode.node_type == 'process.calculation.calcfunction.CalcFunctionNode.'
-                )
-                for calcnode in query:
-                    print(calcnode.attributes['sealed'])
-                    print(calcnode.node_type)
-
                 # Pre existing and renamed attributes
                 self.assertEqual(calcnode.attributes['sealed'], True)
                 self.assertEqual(calcnode.attributes['function_name'], 'sum_inline')
@@ -1862,16 +1855,6 @@ class TestCalcFunctionAttributesMigration(TestMigrationsSQLA):
                 # Source file in repository:
                 repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
                 self.assertEqual(repo_data, self.get_source_code(full_file=True))
-
-                # TEST TEMP
-                print()
-                result = connection.execute(
-                    """
-                    SELECT uuid,attributes FROM db_dbnode;
-                    """
-                )
-                for data in result:
-                    print(data)
 
             finally:
                 session.close()

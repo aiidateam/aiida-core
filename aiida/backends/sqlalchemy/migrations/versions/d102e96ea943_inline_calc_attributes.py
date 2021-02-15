@@ -49,65 +49,31 @@ def upgrade():
     """Creates the new attributes"""
     conn = op.get_bind()
 
-    # Creates new 'function_namespace' and copies old 'namespace'
+
+    # Creates 'function_namespace' from 'namespace'
+    # Creates 'function_starting_line_number' from 'first_line_source_code'
+    # Creates 'exit_status', 'process_state' and 'process_label'
     conn.execute(text(
         """
         UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{function_namespace}', attributes->'namespace')
+        SET attributes = attributes || '{
+            "exit_status": 0,
+            "process_state": "finished",
+            "process_label": "Legacy InlineCalculation"
+            }'::jsonb ||
+            jsonb_build_object(
+                'function_starting_line_number', attributes->'first_line_source_code',
+                'function_namespace', attributes->'namespace'
+                )
         WHERE
             attributes ? 'namespace' AND
             attributes ? 'first_line_source_code' AND
             node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
         """))
 
-    # Creates new 'function_starting_line_number' and copies old 'first_line_source_code'
-    conn.execute(text(
-        """
-        UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{function_starting_line_number}', attributes->'first_line_source_code')
-        WHERE
-            attributes ? 'namespace' AND
-            attributes ? 'first_line_source_code' AND
-            node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
-        """))
-
-    # Sets new 'exit_status'
-    conn.execute(text(
-        """
-        UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{exit_status}', to_jsonb(:value))
-        WHERE
-            attributes ? 'namespace' AND
-            attributes ? 'first_line_source_code' AND
-            node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
-        """), {'value': 0})
-
-    # Sets new 'process_state'
-    conn.execute(text(
-        """
-        UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{process_state}', to_jsonb('finished'::text))
-        WHERE
-            attributes ? 'namespace' AND
-            attributes ? 'first_line_source_code' AND
-            node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
-        """))
-
-    conn.execute(text(
-        """
-        UPDATE db_dbnode
-        SET attributes = jsonb_set(attributes, '{process_label}', to_jsonb('Legacy InlineCalculation'::text))
-        WHERE
-            attributes ? 'namespace' AND
-            attributes ? 'first_line_source_code' AND
-            node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
-        """))
 
     # Sets new 'function_number_of_lines' with the information on 'source_code'
-    sqlquery_results = conn.execute(text(
-        """
-        SELECT id, attributes -> 'source_code' FROM db_dbnode;
-        """))
+    sqlquery_results = conn.execute(text("SELECT id, attributes -> 'source_code' FROM db_dbnode;"))
 
     for data_pair in sqlquery_results:
         node_pkid = data_pair[0]
@@ -120,22 +86,25 @@ def upgrade():
             WHERE id = :idnum;
             """), {'value': num_lines, 'idnum': node_pkid})
 
+
     # Saves the source file in the repository
-    sqlquery_results = conn.execute(text(
-        """
-        SELECT uuid, attributes -> 'source_file' FROM db_dbnode;
-        """))
+    sqlquery_results = conn.execute(text("SELECT uuid, attributes -> 'source_file' FROM db_dbnode;"))
 
     for data_pair in sqlquery_results:
         node_uuid = data_pair[0]
         node_file = data_pair[1]
         utils.put_object_from_string(node_uuid, 'source_file', node_file)
 
+
     # Removes all the old attributes
     conn.execute(text(
         """
         UPDATE db_dbnode
-        SET attributes = attributes - 'namespace' - 'source_code' - 'source_file' - 'first_line_source_code'
+        SET attributes = attributes
+            - 'namespace'
+            - 'source_code'
+            - 'source_file'
+            - 'first_line_source_code'
         WHERE
             attributes ? 'namespace' AND
             attributes ? 'first_line_source_code' AND

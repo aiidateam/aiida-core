@@ -680,7 +680,8 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(MainWorkChain)
 
     def test_if_block_persistence(self):
-        """
+        """Test a reloaded `If` conditional can be resumed.
+
         This test was created to capture issue #902
         """
         runner = get_manager().get_runner()

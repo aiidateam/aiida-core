@@ -23,6 +23,7 @@ import shutil
 import string
 import time
 import unittest
+import uuid
 
 import psutil
 
@@ -1298,54 +1299,65 @@ class TestDirectScheduler(unittest.TestCase):
         This is a regression test for #3094, where running a long job on the direct scheduler
         (via SSH) would lock the interpreter until the job was done.
         """
-        # Use a unique name, using the current process PID as well, to avoid concurrent tests (or very rapid
+        # Use a unique name, using a UUID, to avoid concurrent tests (or very rapid
         # tests that follow each other) to overwrite the same destination
-        script_fname = f'sleep-submit-{os.getpid()}-{custom_transport.__class__.__name__}.sh'
+        script_fname = f'sleep-submit-{uuid.uuid4().hex}-{custom_transport.__class__.__name__}.sh'
 
         scheduler = SchedulerFactory('direct')()
         scheduler.set_transport(custom_transport)
         with custom_transport as transport:
-            with tempfile.NamedTemporaryFile() as tmpf:
-                # Put a submission script that sleeps 10 seconds
-                tmpf.write(b'#!/bin/bash\nsleep 10\n')
-                tmpf.flush()
+            try:
+                with tempfile.NamedTemporaryFile() as tmpf:
+                    # Put a submission script that sleeps 10 seconds
+                    tmpf.write(b'#!/bin/bash\nsleep 10\n')
+                    tmpf.flush()
 
-                transport.chdir('/tmp')
-                transport.putfile(tmpf.name, script_fname)
+                    transport.chdir('/tmp')
+                    transport.putfile(tmpf.name, script_fname)
 
-            timestamp_before = time.time()
-            job_id_string = scheduler.submit_from_script('/tmp', script_fname)
+                timestamp_before = time.time()
+                job_id_string = scheduler.submit_from_script('/tmp', script_fname)
 
-            elapsed_time = time.time() - timestamp_before
-            # We want to get back control. If it takes < 5 seconds, it means that it is not blocking
-            # as the job is taking at least 10 seconds. I put 5 as the machine could be slow (including the
-            # SSH connection etc.) and I don't want to have false failures.
-            # Actually, if the time is short, it could mean also that the execution failed!
-            # So I double check later that the execution was successful.
-            self.assertTrue(
-                elapsed_time < 5,
-                'Getting back control after remote execution took more than 5 seconds! Probably submission is blocking'
-            )
+                elapsed_time = time.time() - timestamp_before
+                # We want to get back control. If it takes < 5 seconds, it means that it is not blocking
+                # as the job is taking at least 10 seconds. I put 5 as the machine could be slow (including the
+                # SSH connection etc.) and I don't want to have false failures.
+                # Actually, if the time is short, it could mean also that the execution failed!
+                # So I double check later that the execution was successful.
+                self.assertTrue(
+                    elapsed_time < 5, 'Getting back control after remote execution took more than 5 seconds! '
+                    'Probably submission is blocking'
+                )
 
-            # Check that the job is still running
-            # Wait 1 more second, so that I don't do a super-quick check that might return True
-            # even if it's not sleeping
-            time.sleep(1)
-            # Check that the job is still running - IMPORTANT, I'm assuming that all transports actually act
-            # on the *same* local machine, and that the job_id is actually the process PID.
-            # This needs to be adapted if:
-            #    - a new transport plugin is tested and this does not test the same machine
-            #    - a new scheduler is used and does not use the process PID, or the job_id of the 'direct' scheduler
-            #      is not anymore simply the job PID
-            job_id = int(job_id_string)
-            self.assertTrue(
-                psutil.pid_exists(job_id), 'The job is not there after a bit more than 1 second! Probably it failed'
-            )
+                # Check that the job is still running
+                # Wait 0.2 more seconds, so that I don't do a super-quick check that might return True
+                # even if it's not sleeping
+                time.sleep(0.2)
+                # Check that the job is still running - IMPORTANT, I'm assuming that all transports actually act
+                # on the *same* local machine, and that the job_id is actually the process PID.
+                # This needs to be adapted if:
+                #    - a new transport plugin is tested and this does not test the same machine
+                #    - a new scheduler is used and does not use the process PID, or the job_id of the 'direct' scheduler
+                #      is not anymore simply the job PID
+                job_id = int(job_id_string)
+                self.assertTrue(
+                    psutil.pid_exists(job_id), 'The job is not there after a bit more than 1 second! Probably it failed'
+                )
+            finally:
+                # Clean up by killing the remote job.
+                # This assumes it's on the same machine; if we add tests on a different machine,
+                # we need to call 'kill' via the transport instead.
+                # In reality it's not critical to remove it since it will end after 10 seconds of
+                # sleeping, but this might avoid warnings (e.g. ResourceWarning)
+                try:
+                    os.kill(job_id, signal.SIGTERM)
+                except ProcessLookupError:
+                    # If the process is already dead (or has never run), I just ignore the error
+                    pass
 
-            # Clean up by killing the remote job.
-            # If the test does not reach this point, it's not a big deal anyway 
-            # the job is a sleep that will die in < 10 seconds
-            os.kill(job_id, signal.SIGTERM)
-
-            # Also remove the script
-            os.remove(f'/tmp/{script_fname}')
+                # Also remove the script
+                try:
+                    transport.remove(f'/tmp/{script_fname}')
+                except FileNotFoundError:
+                    # If the file wasn't even created, I just ignore this error
+                    pass

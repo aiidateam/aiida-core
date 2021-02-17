@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,no-self-use
 """Tests for the Node ORM class."""
 import io
 import os
@@ -822,6 +822,51 @@ class TestNodeDelete:
 
         with pytest.raises(exceptions.InvalidOperation):
             Node.objects.delete(calculation.pk)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+class TestNodeComments:
+    """Tests for creating comments on nodes."""
+
+    def test_add_comment(self):
+        """Test comment addition."""
+        data = Data().store()
+        content = 'whatever Trevor'
+        comment = data.add_comment(content)
+        assert comment.content == content
+        assert comment.node.pk == data.pk
+
+    def test_get_comment(self):
+        """Test retrieve single comment."""
+        data = Data().store()
+        content = 'something something dark side'
+        add_comment = data.add_comment(content)
+        get_comment = data.get_comment(add_comment.pk)
+        assert get_comment.content == content
+        assert get_comment.pk == add_comment.pk
+
+    def test_get_comments(self):
+        """Test retrieve multiple comments."""
+        data = Data().store()
+        data.add_comment('one')
+        data.add_comment('two')
+        comments = data.get_comments()
+        assert {c.content for c in comments} == {'one', 'two'}
+
+    def test_update_comment(self):
+        """Test update a comment."""
+        data = Data().store()
+        comment = data.add_comment('original')
+        data.update_comment(comment.pk, 'new')
+        assert comment.content == 'new'
+
+    def test_remove_comment(self):
+        """Test remove a comment."""
+        data = Data().store()
+        comment = data.add_comment('original')
+        assert len(data.get_comments()) == 1
+        data.remove_comment(comment.pk)
+        assert len(data.get_comments()) == 0
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

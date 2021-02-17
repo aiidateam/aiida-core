@@ -1,7 +1,7 @@
 .. _how-to:restart_workchain:
 
 **************************************
-How to write error resistant workflows
+How to write error-resistant workflows
 **************************************
 
 .. admonition:: Overview
@@ -25,7 +25,7 @@ Take as an example a workflow that computes the phonons of a crystal structure u
 
 If all calculations run without problems, the workflow itself will of course also run fine and produce the desired final result.
 But, now imagine the third calculation actually fails.
-If the workflow does not explicitly check for this case, but instead blindly assumes that the calculation will have produced the required results, it will fail itself, losing the progress it made with the first two calculations
+If the workflow does not explicitly check for this failure, but instead blindly assumes that the calculation have produced the required results, it will fail itself, losing the progress it made with the first two calculations.
 
 .. figure:: include/images/workflow_error_handling_basic_failed.png
 
@@ -35,12 +35,12 @@ The solution seems simple then.
 After each calculation, we simply add a check to verify that it finished successfully and produced the required outputs before continuing with the next calculation.
 What do we do, though, when the calculation failed?
 Depending on the cause of the failure, we might actually be able to fix the problem, and re-run the calculation, potentially with corrected inputs.
-A common example is that the calculation ran out of wall-time (requested time from the job scheduler) and was cancelled by the job scheduler.
-In this case, simply restarting the calculation (if the code supports restarts), and optionally giving the job more wall-time or resources, may fix the problem.
+A common example is that the calculation ran out of wall time (requested time from the job scheduler) and was cancelled by the job scheduler.
+In this case, simply restarting the calculation (if the code supports restarts), and optionally giving the job more wall time or resources, may fix the problem.
 
 You might be tempted to add this error handling directly into the workflow.
-However, you will find yourself implementing the same error-handling code many times in other workflows that just happen to have to run the same codes.
-For example, we could add the error-handling for the ``pw.x`` code directly in our phonon workflow, but a structure optimization workflow will also have to run ``pw.x`` and will have to implement the same error-handling logic.
+However, this requires implementing the same error-handling code many times in other workflows that just happen to run the same codes.
+For example, we could add the error handling for the ``pw.x`` code directly in our phonon workflow, but a structure optimization workflow will also have to run ``pw.x`` and will have to implement the same error-handling logic.
 Is there a way that we can implement this once and easily reuse it in various workflows?
 
 Yes! Instead of directly running a calculation in a workflow, one should rather run a work chain that is explicitly designed to run the calculation to completion.

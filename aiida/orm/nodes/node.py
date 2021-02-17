@@ -12,6 +12,7 @@
 import importlib
 import warnings
 import traceback
+from typing import List, Optional
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -671,7 +672,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         self._repository.delete_object(path, force)
 
-    def add_comment(self, content, user=None):
+    def add_comment(self, content: str, user: Optional[User] = None) -> Comment:
         """Add a new comment.
 
         :param content: string with comment
@@ -681,7 +682,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         user = user or User.objects.get_default()
         return Comment(node=self, user=user, content=content).store()
 
-    def get_comment(self, identifier):
+    def get_comment(self, identifier: int) -> Comment:
         """Return a comment corresponding to the given identifier.
 
         :param identifier: the comment ID
@@ -691,14 +692,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """
         return Comment.objects.get(dbnode_id=self.pk, id=identifier)
 
-    def get_comments(self):
+    def get_comments(self) -> List[Comment]:
         """Return a sorted list of comments for this node.
 
         :return: the list of comments, sorted by pk
         """
         return Comment.objects.find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
 
-    def update_comment(self, identifier, content):
+    def update_comment(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.
 
         :param identifier: the comment ID
@@ -709,12 +710,12 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         comment = Comment.objects.get(dbnode_id=self.pk, id=identifier)
         comment.set_content(content)
 
-    def remove_comment(self, identifier):
+    def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
         """Delete an existing comment.
 
         :param identifier: the comment ID
         """
-        Comment.objects.delete(dbnode_id=self.pk, id=identifier)
+        Comment.objects.delete(identifier)
 
     def add_incoming(self, source, link_type, link_label):
         """Add a link of the given type from a given node to ourself.

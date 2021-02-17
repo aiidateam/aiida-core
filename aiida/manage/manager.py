@@ -258,6 +258,7 @@ class Manager:
             task_exchange=rmq.get_task_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
             task_prefetch_count=task_prefetch_count,
+            async_task_timeout=self.get_config().get_option('rmq.task_timeout', profile.name),
             # This is needed because the verdi commands will call this function and when called in unit tests the
             # testing_mode cannot be set.
             testing_mode=profile.is_test_profile,

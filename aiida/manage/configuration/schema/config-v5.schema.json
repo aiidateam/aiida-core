@@ -163,6 +163,12 @@
                     "minimum": 1,
                     "description": "Maximum number of transport task attempts before a Process is Paused."
                 },
+                "rmq.task_timeout": {
+                    "type": "integer",
+                    "default": 10,
+                    "minimum": 1,
+                    "description": "Timeout in seconds for communications with RabbitMQ"
+                },
                 "caching.default": {
                     "type": "boolean",
                     "default": false,

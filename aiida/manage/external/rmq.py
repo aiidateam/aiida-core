@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Components to communicate tasks to RabbitMQ."""
-import collections
+from collections.abc import Mapping
 import logging
 
 from kiwipy import communications, Future
@@ -126,7 +126,7 @@ def _store_inputs(inputs):
         try:
             node.store()
         except AttributeError:
-            if isinstance(node, collections.Mapping):
+            if isinstance(node, Mapping):
                 _store_inputs(node)
 
 

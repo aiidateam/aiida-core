@@ -197,7 +197,7 @@ def format_nested_links(links, headers):
     :param headers: headers to use
     :return: nested formatted string
     """
-    import collections
+    from collections.abc import Mapping
     import tabulate as tb
 
     tb.PRESERVE_WHITESPACE = True
@@ -208,7 +208,7 @@ def format_nested_links(links, headers):
         """Recursively format a dictionary of nodes into indented strings."""
         rows = []
         for label, value in links.items():
-            if isinstance(value, collections.Mapping):
+            if isinstance(value, Mapping):
                 rows.append([depth, label, '', ''])
                 rows.extend(format_recursive(value, depth=depth + 1))
             else:

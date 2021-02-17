@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
-import collections
+from collections.abc import Mapping
 import re
 from typing import Any, Callable, Dict, Optional, Sequence
 import warnings
@@ -206,7 +206,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
 
         breadcrumbs = (*breadcrumbs, self.name)
 
-        if not isinstance(mapping, collections.Mapping):
+        if not isinstance(mapping, Mapping):
             port_name = breadcrumbs_to_port(breadcrumbs)
             raise TypeError(f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary')
 

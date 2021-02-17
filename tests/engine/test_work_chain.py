@@ -680,7 +680,8 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(MainWorkChain)
 
     def test_if_block_persistence(self):
-        """
+        """Test a reloaded `If` conditional can be resumed.
+
         This test was created to capture issue #902
         """
         runner = get_manager().get_runner()
@@ -688,11 +689,13 @@ class TestWorkchain(AiidaTestCase):
         runner.schedule(wc)
 
         async def run_async(workchain):
+
+            # run the original workchain until paused
             await run_until_paused(workchain)
             self.assertTrue(workchain.ctx.s1)
             self.assertFalse(workchain.ctx.s2)
 
-            # Now bundle the thing
+            # Now bundle the workchain
             bundle = plumpy.Bundle(workchain)
             # Need to close the process before recreating a new instance
             workchain.close()
@@ -702,13 +705,20 @@ class TestWorkchain(AiidaTestCase):
             self.assertTrue(workchain2.ctx.s1)
             self.assertFalse(workchain2.ctx.s2)
 
+            # check bundling again creates the same saved state
             bundle2 = plumpy.Bundle(workchain2)
             self.assertDictEqual(bundle, bundle2)
 
-            workchain.play()
-            await workchain.future()
-            self.assertTrue(workchain.ctx.s1)
-            self.assertTrue(workchain.ctx.s2)
+            # run the loaded workchain to completion
+            runner.schedule(workchain2)
+            workchain2.play()
+            await workchain2.future()
+            self.assertTrue(workchain2.ctx.s1)
+            self.assertTrue(workchain2.ctx.s2)
+
+            # ensure the original paused workchain future is finalised
+            # to avoid warnings
+            workchain.future().set_result(None)
 
         runner.loop.run_until_complete(run_async(wc))
 

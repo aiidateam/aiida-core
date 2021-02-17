@@ -831,7 +831,7 @@ class TestNodeComments:
     def test_add_comment(self):
         """Test comment addition."""
         data = Data().store()
-        content = 'sasha is lazy'
+        content = 'whatever Trevor'
         comment = data.add_comment(content)
         assert comment.content == content
         assert comment.node.pk == data.pk

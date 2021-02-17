@@ -17,7 +17,7 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
     """Test the migration for the attributes of InlineFunctions that have been transformed into CalcFunctions."""
 
     migrate_from = '0045_dbgroup_extras'
-    migrate_to = '0046_inline_attributes'
+    migrate_to = '0046_inline_calc_attributes'
 
     @staticmethod
     def get_source_code(full_file=False):

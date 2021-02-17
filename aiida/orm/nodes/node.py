@@ -685,7 +685,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     def get_comment(self, identifier: int) -> Comment:
         """Return a comment corresponding to the given identifier.
 
-        :param identifier: the comment ID
+        :param identifier: the comment pk
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
@@ -702,7 +702,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     def update_comment(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.
 
-        :param identifier: the comment ID
+        :param identifier: the comment pk
         :param content: the new comment content
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
@@ -713,7 +713,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
         """Delete an existing comment.
 
-        :param identifier: the comment ID
+        :param identifier: the comment pk
         """
         Comment.objects.delete(identifier)
 

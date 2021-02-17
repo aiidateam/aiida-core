@@ -47,12 +47,41 @@ def group_add_nodes(group, force, nodes):
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
-    if clear:
-        message = f'Do you really want to remove ALL the nodes from Group<{group.label}>?'
-    else:
-        message = f'Do you really want to remove {len(nodes)} nodes from Group<{group.label}>?'
+    from aiida.orm import QueryBuilder, Group, Node
+
+    label = group.label
+    klass = group.__class__.__name__
+
+    if nodes and clear:
+        echo.echo_critical(
+            'Specify either the `--clear` flag to remove all nodes or the identifiers of the nodes you want to remove.'
+        )
 
     if not force:
+
+        if nodes:
+            node_pks = [node.pk for node in nodes]
+
+            query = QueryBuilder()
+            query.append(Group, filters={'id': group.pk}, tag='group')
+            query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+
+            group_node_pks = query.all(flat=True)
+
+            if not group_node_pks:
+                echo.echo_critical(f'None of the specified nodes are in {klass}<{label}>.')
+
+            if len(node_pks) > len(group_node_pks):
+                node_pks = set(node_pks).difference(set(group_node_pks))
+                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {klass}<{label}>.')
+
+            message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {klass}<{label}>?'
+
+        elif clear:
+            message = f'Are you sure you want to remove ALL the nodes from {klass}<{label}>?'
+        else:
+            echo.echo_critical(f'No nodes were provided for removal from {klass}<{label}>.')
+
         click.confirm(message, abort=True)
 
     if clear:

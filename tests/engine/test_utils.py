@@ -171,7 +171,7 @@ class TestInterruptable(AiidaTestCase):
 
 
 @pytest.mark.requires_rmq
-class TestInterruptableTask(AiidaTestCase):
+class TestInterruptableTask():
     """ Tests for InterruptableFuture and interruptable_task."""
 
     @pytest.mark.asyncio
@@ -189,9 +189,9 @@ class TestInterruptableTask(AiidaTestCase):
 
         task_fut = interruptable_task(task_fn)
         result = await task_fut
-        self.assertTrue(isinstance(task_fut, InterruptableFuture))
-        self.assertTrue(task_fut.done())
-        self.assertEqual(result, 'I am done')
+        assert isinstance(task_fut, InterruptableFuture)
+        assert task_fut.done()
+        assert result == 'I am done'
 
     @pytest.mark.asyncio
     async def test_interrupted(self):
@@ -204,9 +204,9 @@ class TestInterruptableTask(AiidaTestCase):
         try:
             await task_fut
         except RuntimeError as err:
-            self.assertEqual(str(err), 'STOP')
+            assert str(err) == 'STOP'
         else:
-            self.fail('ExpectedException not raised')
+            raise AssertionError('ExpectedException not raised')
 
     @pytest.mark.asyncio
     async def test_future_already_set(self):
@@ -225,4 +225,4 @@ class TestInterruptableTask(AiidaTestCase):
         task_fut = interruptable_task(task_fn)
 
         result = await task_fut
-        self.assertEqual(result, 'NOT ME!!!')
+        assert result == 'NOT ME!!!'

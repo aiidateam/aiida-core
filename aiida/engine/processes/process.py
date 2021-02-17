@@ -10,6 +10,7 @@
 """The AiiDA process class"""
 import asyncio
 import collections
+from collections.abc import Mapping
 import enum
 import inspect
 import logging
@@ -755,7 +756,7 @@ class Process(plumpy.processes.Process):
         if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace):
+        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
 
@@ -796,7 +797,7 @@ class Process(plumpy.processes.Process):
         if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
 
-        if (port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace)):
+        if (port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace)):
             items = []
             for name, value in port_value.items():
 

@@ -84,6 +84,8 @@ deps =
     py39: -rrequirements/requirements-py-3.9.txt
 
 [testenv:py{36,37,38,39}-{django,sqla}]
+passenv =
+    PYTHONASYNCIODEBUG
 setenv =
     django: AIIDA_TEST_BACKEND = django
     sqla: AIIDA_TEST_BACKEND = sqlalchemy

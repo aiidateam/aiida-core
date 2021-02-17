@@ -1,4 +1,4 @@
-FROM aiidateam/aiida-prerequisites:0.2.1
+FROM aiidateam/aiida-prerequisites:0.3.0
 
 # to run the tests
 RUN pip install ansible~=2.10.0 molecule~=3.1.0

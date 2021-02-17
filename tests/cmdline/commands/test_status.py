@@ -14,6 +14,7 @@ from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 
 
+@pytest.mark.requires_rmq
 def test_status(run_cli_command):
     """Test `verdi status`."""
     options = []

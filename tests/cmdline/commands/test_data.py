@@ -17,9 +17,10 @@ import shutil
 import unittest
 import tempfile
 import subprocess as sp
-import numpy as np
 
 from click.testing import CliRunner
+import numpy as np
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -229,6 +230,7 @@ class TestVerdiDataArray(AiidaTestCase):
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
+@pytest.mark.requires_rmq
 class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
     """Testing verdi data bands."""
 

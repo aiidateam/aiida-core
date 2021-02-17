@@ -13,6 +13,7 @@ import threading
 
 import plumpy
 from plumpy.utils import AttributesFrozendict
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -36,6 +37,7 @@ class NameSpacedProcess(Process):
         spec.input('some.name.space.a', valid_type=orm.Int)
 
 
+@pytest.mark.requires_rmq
 class TestProcessNamespace(AiidaTestCase):
     """Test process namespace"""
 
@@ -91,6 +93,7 @@ class ProcessStackTest(Process):
         assert self._thread_id is threading.current_thread().ident
 
 
+@pytest.mark.requires_rmq
 class TestProcess(AiidaTestCase):
     """Test AiiDA process."""
 

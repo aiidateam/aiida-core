@@ -11,6 +11,7 @@
 import asyncio
 
 import plumpy
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ProcessState
@@ -20,6 +21,7 @@ from aiida.orm import Int
 from tests.utils import processes as test_processes
 
 
+@pytest.mark.requires_rmq
 class TestProcessControl(AiidaTestCase):
     """Test AiiDA's RabbitMQ functionalities."""
 

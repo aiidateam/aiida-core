@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the calcfunction decorator and CalcFunctionNode."""
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
@@ -37,6 +38,7 @@ def execution_counter_calcfunction(data):
     return Int(data.value + 1)
 
 
+@pytest.mark.requires_rmq
 class TestCalcFunction(AiidaTestCase):
     """Tests for calcfunctions.
 

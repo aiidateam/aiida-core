@@ -13,6 +13,7 @@
 
 import contextlib
 import json
+from pathlib import Path
 
 import yaml
 import pytest
@@ -62,27 +63,10 @@ def test_merge_deprecated_yaml(tmp_path):
 
         # Create a temporary folder, set it as the current config directory path
         settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
-        config_dictionary = {
-            'CONFIG_VERSION': {
-                'CURRENT': 5,
-                'OLDEST_COMPATIBLE': 5
-            },
-            'default_profile': 'default',
-            'profiles': {
-                'default': {
-                    'PROFILE_UUID': '00000000000000000000000000000000',
-                    'default_user_email': 'dummy@localhost',
-                    'AIIDADB_ENGINE': 'postgresql_psycopg2',
-                    'AIIDADB_BACKEND': 'django',
-                    'AIIDADB_HOST': 'localhost',
-                    'AIIDADB_PORT': 5432,
-                    'AIIDADB_NAME': 'name',
-                    'AIIDADB_USER': 'user',
-                    'AIIDADB_PASS': 'pass',
-                    'AIIDADB_REPOSITORY_URI': f"file:///{tmp_path/'repo'}",
-                }
-            }
-        }
+        config_dictionary = json.loads(
+            Path(__file__).parent.joinpath('configuration/migrations/test_samples/reference/5.json').read_text()
+        )
+        config_dictionary['profiles']['default']['AIIDADB_REPOSITORY_URI'] = f"file:///{tmp_path/'repo'}"
         cache_dictionary = {
             'default': {
                 'default': True,

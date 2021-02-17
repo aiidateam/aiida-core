@@ -589,7 +589,7 @@ Again, the ``namespace`` and ``agglomerate`` options can be used to select which
 
 .. seealso::
 
-    For further practical examples of creating workflows, see the :ref:`how to run multi-step workflows<how-to:workflows>` and :ref:`how to write error resistant workflows <how-to:restart_workchain>` sections.
+    For further practical examples of creating workflows, see the :ref:`how to write workflows<how-to:write-workflows>` and :ref:`how to write error resistant workflows <how-to:restart-workchain>` sections.
 
 
 .. rubric:: Footnotes

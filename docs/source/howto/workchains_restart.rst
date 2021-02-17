@@ -1,4 +1,4 @@
-.. _how-to:restart_workchain:
+.. _how-to:restart-workchain:
 
 **************************************
 How to write error-resistant workflows
@@ -8,7 +8,7 @@ How to write error-resistant workflows
 
     This how-to introduces the :py:class:`~aiida.engine.processes.workchains.restart.BaseRestartWorkChain`, and how it can be sub-classed to handle known failure modes of processes and calculations.
 
-In the :ref:`multi-step workflows how-to <how-to:workflows>` we discussed how to write a simple multi-step workflow using work chains.
+In the :ref:`how-to on writing workflows <how-to:write-workflows>` we discussed how to write a simple multi-step workflow using work chains.
 However, there is one thing that we did not consider there:
 
     What if a calculation step fails?

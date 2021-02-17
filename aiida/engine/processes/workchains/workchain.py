@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Components for the WorkChain concept of the workflow engine."""
-import collections
+import collections.abc
 import functools
 import logging
 from typing import Any, List, Optional, Sequence, Union, TYPE_CHECKING
@@ -239,10 +239,10 @@ class WorkChain(Process):
         """
         if isinstance(data, Node) and not data.is_stored:
             data.store()
-        elif isinstance(data, collections.Mapping):
+        elif isinstance(data, collections.abc.Mapping):
             for _, value in data.items():
                 self._store_nodes(value)
-        elif isinstance(data, collections.Sequence) and not isinstance(data, str):
+        elif isinstance(data, collections.abc.Sequence) and not isinstance(data, str):
             for value in data:
                 self._store_nodes(value)
 

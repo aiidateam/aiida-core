@@ -684,12 +684,12 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     def get_comment(self, identifier):
         """Return a comment corresponding to the given identifier.
 
-        :param identifier: the comment pk
+        :param identifier: the comment ID
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
-        return Comment.objects.get(dbnode_id=self.pk, pk=identifier)
+        return Comment.objects.get(dbnode_id=self.pk, id=identifier)
 
     def get_comments(self):
         """Return a sorted list of comments for this node.
@@ -701,20 +701,20 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     def update_comment(self, identifier, content):
         """Update the content of an existing comment.
 
-        :param identifier: the comment pk
+        :param identifier: the comment ID
         :param content: the new comment content
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
-        comment = Comment.objects.get(dbnode_id=self.pk, pk=identifier)
+        comment = Comment.objects.get(dbnode_id=self.pk, id=identifier)
         comment.set_content(content)
 
     def remove_comment(self, identifier):
         """Delete an existing comment.
 
-        :param identifier: the comment pk
+        :param identifier: the comment ID
         """
-        Comment.objects.delete(dbnode_id=self.pk, comment=identifier)
+        Comment.objects.delete(dbnode_id=self.pk, id=identifier)
 
     def add_incoming(self, source, link_type, link_label):
         """Add a link of the given type from a given node to ourself.

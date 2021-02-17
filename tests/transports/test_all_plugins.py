@@ -1342,9 +1342,9 @@ class TestDirectScheduler(unittest.TestCase):
                 psutil.pid_exists(job_id), 'The job is not there after a bit more than 1 second! Probably it failed'
             )
 
-            # Clean up by killing the remote job (if the job succeeds, to avoid
-            # leaving arount it; if it doesn't, it's not a big deal anyway, it's a
-            # sleep that will die in < 10 seconds
+            # Clean up by killing the remote job.
+            # If the test does not reach this point, it's not a big deal anyway 
+            # the job is a sleep that will die in < 10 seconds
             os.kill(job_id, signal.SIGTERM)
 
             # Also remove the script

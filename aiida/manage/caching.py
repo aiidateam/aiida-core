@@ -35,6 +35,7 @@ class _ContextCache:
     """Cache options, accounting for when in enable_caching or disable_caching contexts."""
 
     def __init__(self):
+        self._default_all = None
         self._enable_all = False
         self._disable_all = False
         self._enable = []
@@ -45,12 +46,10 @@ class _ContextCache:
         self.__init__()
 
     def enable_all(self):
-        self._enable_all = True
-        self._disable_all = False
+        self._default_all = 'enable'
 
     def disable_all(self):
-        self._enable_all = False
-        self._disable_all = True
+        self._default_all = 'disable'
 
     def enable(self, identifier):
         self._enable.append(identifier)
@@ -65,10 +64,10 @@ class _ContextCache:
     def get_options(self):
         """Return the options, applying any context overrides."""
 
-        if self._disable_all:
+        if self._default_all == 'disable':
             return False, [], []
 
-        if self._enable_all:
+        if self._default_all == 'enable':
             return True, [], []
 
         default = get_config_option(ConfigKeys.DEFAULT.value)

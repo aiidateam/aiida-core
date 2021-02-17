@@ -1340,6 +1340,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if 'key_filename' in self._connect_args and self._connect_args['key_filename']:
             further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
 
+        if 'proxy_command' in self._connect_args and self._connect_args['proxy_command']:
+            further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
+
         further_params_str = ' '.join(further_params)
 
         connect_string = self._gotocomputer_string(remotedir)

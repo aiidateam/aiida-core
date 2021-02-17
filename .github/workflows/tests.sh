@@ -18,6 +18,7 @@ export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-config=${GITHUB_WORKSPACE}/.cover
 export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-report xml"
 export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov-append"
 export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --cov=aiida"
+export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --verbose"
 
 # daemon tests
 verdi daemon start 4

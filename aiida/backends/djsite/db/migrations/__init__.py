@@ -21,7 +21,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0045_dbgroup_extras'
+LATEST_MIGRATION = '0046_inline_calc_attributes'
 
 
 def _update_schema_version(version, apps, _):

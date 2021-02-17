@@ -64,6 +64,7 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         os.kill(self.daemon.pid, signal.SIGTERM)
         super().tearDown()
 
+    @pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
     @pytest.mark.requires_rmq
     def test_pause_play_kill(self):
         """

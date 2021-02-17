@@ -127,6 +127,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
         cache_config = yaml.safe_load(handle)
     for profile_name, data in cache_config.items():
         if profile_name not in config.profile_names:
+            warnings.warn(f"Profile '{profile_name}' from cache_config.yml not in config.json, skipping", UserWarning)
             continue
         for key, option_name in [('default', 'caching.default'), ('enabled', 'caching.enabled'),
                                  ('disabled', 'caching.disabled')]:

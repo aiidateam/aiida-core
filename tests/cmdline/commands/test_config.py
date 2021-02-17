@@ -182,7 +182,7 @@ class TestVerdiConfig:
         result = run_cli_command(cmd_verdi.verdi, options)
 
         assert 'daemon.timeout' in result.output
-        assert 'The timeout in seconds' not in result.output
+        assert 'Timeout in seconds' not in result.output
 
     def test_config_list_description(self, run_cli_command):
         """Test `verdi config list --description`"""
@@ -191,7 +191,7 @@ class TestVerdiConfig:
             result = run_cli_command(cmd_verdi.verdi, options)
 
             assert 'daemon.timeout' in result.output
-            assert 'The timeout in seconds' in result.output
+            assert 'Timeout in seconds' in result.output
 
     def test_config_show(self, run_cli_command):
         """Test `verdi config show`"""

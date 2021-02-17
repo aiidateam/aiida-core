@@ -42,10 +42,7 @@ class _ContextCache:
 
     def clear(self):
         """Clear caching overrides."""
-        self._enable_all = False
-        self._disable_all = False
-        self._enable = []
-        self._disable = []
+        self.__init__()
 
     def enable_all(self):
         self._enable_all = True

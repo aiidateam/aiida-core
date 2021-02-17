@@ -25,11 +25,11 @@ Multi-value options
 Some ``verdi`` commands provide *options* that can take multiple values.
 This allows to avoid repetition and e.g. write::
 
-    verdi export create -N 10 11 12 -- archive.aiida
+    verdi archive create -N 10 11 12 -- archive.aiida
 
 instead of the more lengthy::
 
-    verdi export create -N 10 -N 11 -N 12 archive.aiida
+    verdi archive create -N 10 -N 11 -N 12 archive.aiida
 
 Note the use of the so-called 'endopts' marker ``--`` that is necessary to mark the end of the ``-N`` option and distinguish it from the ``archive.aiida`` argument.
 
@@ -68,7 +68,7 @@ The ``Usage:`` line encodes information on the command's parameters, e.g.:
 Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contain the 'endopts' marker.
 For example::
 
-    Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
+    Usage: verdi archive create [OPTIONS] [--] OUTPUT_FILE
 
         Export various entities, such as Codes, Computers, Groups and Nodes, to an
         archive file for backup or sharing purposes.

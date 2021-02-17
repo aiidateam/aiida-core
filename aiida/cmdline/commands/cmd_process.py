@@ -305,7 +305,7 @@ def process_watch(processes):
         echo.echo('')  # add a new line after the interrupt character
         echo.echo_info('received interrupt, exiting...')
         try:
-            communicator.stop()
+            communicator.close()
         except RuntimeError:
             pass
 

@@ -342,7 +342,13 @@ class TestGroupsSubclasses(AiidaTestCase):
 
         assert isinstance(loaded, orm.Group)
 
+        # Removing it as other methods might get a warning instead
+        group_pk = group.pk
+        del group
+        orm.Group.objects.delete(id=group_pk)
+
     @staticmethod
+    @pytest.mark.filterwarnings('ignore::UserWarning')
     def test_explicit_type_string():
         """Test that passing explicit `type_string` to `Group` constructor is still possible despite being deprecated.
 
@@ -369,6 +375,11 @@ class TestGroupsSubclasses(AiidaTestCase):
         assert queried.pk == group.pk
         assert queried.type_string == group.type_string
 
+        # Removing it as other methods might get a warning instead
+        group_pk = group.pk
+        del group
+        orm.Group.objects.delete(id=group_pk)
+
     @staticmethod
     def test_querying():
         """Test querying for groups with and without subclassing."""
@@ -385,6 +396,11 @@ class TestGroupsSubclasses(AiidaTestCase):
         assert orm.QueryBuilder().append(orm.Group, subclassing=False).count() == 1
         assert orm.QueryBuilder().append(orm.Group).count() == 3
         assert orm.QueryBuilder().append(orm.Group, filters={'type_string': 'custom.group'}).count() == 1
+
+        # Removing it as other methods might get a warning instead
+        group_pk = group.pk
+        del group
+        orm.Group.objects.delete(id=group_pk)
 
     @staticmethod
     def test_querying_node_subclasses():
@@ -407,7 +423,7 @@ class TestGroupsSubclasses(AiidaTestCase):
 
     @staticmethod
     def test_query_with_group():
-        """Docs."""
+        """Test that querying a data node in a group works."""
         group = orm.Group(label='group').store()
         data = orm.Data().store()
 

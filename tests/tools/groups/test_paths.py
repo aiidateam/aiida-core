@@ -116,6 +116,7 @@ def test_walk(setup_groups):
     assert [c.path for c in sorted(group_path.walk())] == ['a', 'a/b', 'a/c', 'a/c/d', 'a/c/e', 'a/c/e/g', 'a/f']
 
 
+@pytest.mark.filterwarnings('ignore::UserWarning')
 def test_walk_with_invalid_path(clear_database_before_test):
     """Test the ``GroupPath.walk`` method with invalid paths."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad//group', 'bad/other']:

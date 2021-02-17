@@ -12,14 +12,16 @@
 
 import os
 
+import pytest
+
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestCalculations(AiidaTestCase):
+class TestCalculations(AiidaArchiveTestCase):
     """Test ex-/import cases related to Calculations"""
 
     def setUp(self):
@@ -30,6 +32,7 @@ class TestCalculations(AiidaTestCase):
         self.reset_database()
         super().tearDown()
 
+    @pytest.mark.requires_rmq
     @with_temp_dir
     def test_calcfunction(self, temp_dir):
         """Test @calcfunction"""
@@ -56,10 +59,10 @@ class TestCalculations(AiidaTestCase):
         not_wanted_uuids = [v.uuid for v in (b, c, d)]
         # At this point we export the generated data
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([res], filename=filename1, silent=True, return_backward=True)
+        export([res], filename=filename1, return_backward=True)
         self.clean_db()
         self.insert_data()
-        import_data(filename1, silent=True)
+        import_data(filename1)
         # Check that the imported nodes are correctly imported and that the value is preserved
         for uuid, value in uuids_values:
             self.assertEqual(orm.load_node(uuid).value, value)
@@ -93,10 +96,10 @@ class TestCalculations(AiidaTestCase):
 
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([output_1], filename=filename1, silent=True)
+        export([output_1], filename=filename1)
         self.clean_db()
         self.insert_data()
-        import_data(filename1, silent=True)
+        import_data(filename1)
 
         for uuid, value in uuids_values:
             self.assertEqual(orm.load_node(uuid).value, value)

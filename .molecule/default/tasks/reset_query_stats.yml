@@ -1,0 +1,7 @@
+- name: Reset database query statistics
+  postgresql_query:
+    login_host: localhost
+    login_user: "{{ aiida_user | default('aiida') }}"
+    login_password: ''
+    db: "{{ aiida_backend }}"
+    query: SELECT pg_stat_statements_reset();

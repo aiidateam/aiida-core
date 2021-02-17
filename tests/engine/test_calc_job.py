@@ -11,6 +11,7 @@
 """Test for the `CalcJob` process sub class."""
 from copy import deepcopy
 from functools import partial
+import io
 import os
 from unittest.mock import patch
 
@@ -34,6 +35,7 @@ def raise_exception(exception):
     raise exception()
 
 
+@pytest.mark.requires_rmq
 class FileCalcJob(CalcJob):
     """Example `CalcJob` implementation to test the `provenance_exclude_list` functionality.
 
@@ -71,6 +73,7 @@ class FileCalcJob(CalcJob):
         return calcinfo
 
 
+@pytest.mark.requires_rmq
 class TestCalcJob(AiidaTestCase):
     """Test for the `CalcJob` process sub class."""
 
@@ -387,6 +390,7 @@ def generate_process(aiida_local_code_factory):
     return _generate_process
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -417,6 +421,7 @@ def test_parse_insufficient_data(generate_process):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -436,6 +441,7 @@ def test_parse_non_zero_retval(generate_process):
     assert 'could not parse scheduler output: return value of `detailed_job_info` is non-zero' in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -443,20 +449,16 @@ def test_parse_not_implemented(generate_process):
     Here we check explicitly that the parsing does not except even if the scheduler does not implement the method.
     """
     process = generate_process()
-
-    retrieved = orm.FolderData().store()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
-
-    process.node.set_attribute('detailed_job_info', {})
-
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    with retrieved.open(filename_stderr, 'w') as handle:
-        handle.write('\n')
+    retrieved = orm.FolderData()
+    retrieved.put_object_from_filelike(io.StringIO('\n'), filename_stderr, mode='w')
+    retrieved.put_object_from_filelike(io.StringIO('\n'), filename_stdout, mode='w')
+    retrieved.store()
+    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    with retrieved.open(filename_stdout, 'w') as handle:
-        handle.write('\n')
+    process.node.set_attribute('detailed_job_info', {})
 
     process.parse()
 
@@ -469,6 +471,7 @@ def test_parse_not_implemented(generate_process):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -478,20 +481,16 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     from aiida.schedulers.plugins.direct import DirectScheduler
 
     process = generate_process()
-
-    retrieved = orm.FolderData().store()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
-
-    process.node.set_attribute('detailed_job_info', {})
-
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    with retrieved.open(filename_stderr, 'w') as handle:
-        handle.write('\n')
+    retrieved = orm.FolderData()
+    retrieved.put_object_from_filelike(io.StringIO('\n'), filename_stderr, mode='w')
+    retrieved.put_object_from_filelike(io.StringIO('\n'), filename_stdout, mode='w')
+    retrieved.store()
+    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    with retrieved.open(filename_stdout, 'w') as handle:
-        handle.write('\n')
+    process.node.set_attribute('detailed_job_info', {})
 
     msg = 'crash'
 
@@ -508,6 +507,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.parametrize(('exit_status_scheduler', 'exit_status_retrieved', 'final'), (
     (None, None, 0),
     (100, None, 100),
@@ -575,6 +575,7 @@ def test_parse_exit_code_priority(
     assert result.status == final
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""

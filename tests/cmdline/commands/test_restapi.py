@@ -10,6 +10,7 @@
 """Tests for `verdi restapi`."""
 
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_restapi import restapi
@@ -22,8 +23,12 @@ class TestVerdiRestapiCommand(AiidaTestCase):
         super().setUp()
         self.cli_runner = CliRunner()
 
+    @pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
     def test_run_restapi(self):
-        """Test `verdi restapi`."""
+        """Test `verdi restapi`.
+
+        Note: This test will need to be changed/removed once the hookup parameter is dropped from the CLI.
+        """
 
         options = ['--no-hookup', '--hostname', 'localhost', '--port', '6000', '--debug', '--wsgi-profile']
 

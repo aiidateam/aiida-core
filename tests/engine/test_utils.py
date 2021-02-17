@@ -170,6 +170,7 @@ class TestInterruptable(AiidaTestCase):
         self.assertTrue(interruptable.done())
 
 
+@pytest.mark.requires_rmq
 class TestInterruptableTask(AiidaTestCase):
     """ Tests for InterruptableFuture and interruptable_task."""
 

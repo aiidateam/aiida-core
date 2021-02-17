@@ -188,7 +188,7 @@ def update_pyproject_toml():
     # update the build-system key
     pyproject.setdefault('build-system', {})
     pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0,<50', 'wheel',
+        'requires': ['setuptools>=40.8.0', 'wheel',
                      str(reentry_requirement), 'fastentrypoints~=0.12'],
         'build-backend':
         'setuptools.build_meta:__legacy__',
@@ -247,7 +247,8 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
         # The Python version should be specified as supported in 'setup.json'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
             raise DependencySpecificationError(
-                "Required Python version between 'setup.json' and 'environment.yml' not consistent."
+                f"Required Python version {spec.version} from 'environment.yaml' is not consistent with " +
+                "required version in 'setup.json'."
             )
 
         break

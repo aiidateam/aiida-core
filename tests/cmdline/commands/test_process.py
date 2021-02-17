@@ -15,8 +15,9 @@ import asyncio
 from concurrent.futures import Future
 
 from click.testing import CliRunner
-import plumpy
 import kiwipy
+import plumpy
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
@@ -50,9 +51,9 @@ class TestVerdiProcessDaemon(AiidaTestCase):
 
         profile = get_config().current_profile
         self.daemon_client = DaemonClient(profile)
-        self.daemon_pid = subprocess.Popen(
+        self.daemon = subprocess.Popen(
             self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout, env=env
-        ).pid
+        )
         self.runner = get_manager().create_runner(rmq_submit=True)
         self.cli_runner = CliRunner()
 
@@ -60,9 +61,11 @@ class TestVerdiProcessDaemon(AiidaTestCase):
         import os
         import signal
 
-        os.kill(self.daemon_pid, signal.SIGTERM)
+        os.kill(self.daemon.pid, signal.SIGTERM)
         super().tearDown()
 
+    @pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
+    @pytest.mark.requires_rmq
     def test_pause_play_kill(self):
         """
         Test the pause/play/kill commands

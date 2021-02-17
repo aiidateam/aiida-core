@@ -67,9 +67,7 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
         if self._dbmodel.dbnode.id is None or self._dbmodel.user.id is None:
             raise exceptions.ModificationNotAllowed('The corresponding node and/or user are not stored')
 
-        # `contextlib.suppress` provides empty context and can be replaced with `contextlib.nullcontext` after we drop
-        # support for python 3.6
-        with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else contextlib.suppress():
+        with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else contextlib.nullcontext():
             super().store()
 
     @property

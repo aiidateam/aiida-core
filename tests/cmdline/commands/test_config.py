@@ -111,7 +111,7 @@ class TestVerdiConfig:
     def test_config_append_option(self, run_cli_command):
         """Test the `verdi config set --append` command when appending an option value."""
         config = get_config()
-        option_name = 'caching.enabled'
+        option_name = 'caching.enabled_for'
         for value in ['x', 'y']:
             options = ['config', 'set', '--append', option_name, value]
             run_cli_command(cmd_verdi.verdi, options)
@@ -121,7 +121,7 @@ class TestVerdiConfig:
         """Test the `verdi config set --remove` command when removing an option value."""
         config = get_config()
 
-        option_name = 'caching.disabled'
+        option_name = 'caching.disabled_for'
         config.set_option(option_name, ['x', 'y'], scope=config.current_profile.name)
 
         options = ['config', 'set', '--remove', option_name, 'x']
@@ -208,7 +208,7 @@ class TestVerdiConfig:
         assert 'arithmetic.add' in result.output.strip()
 
         config = get_config()
-        config.set_option('caching.default', True, scope=config.current_profile.name)
+        config.set_option('caching.default_enabled', True, scope=config.current_profile.name)
 
         result = run_cli_command(cmd_verdi.verdi, ['config', 'caching'])
         assert 'arithmetic.add' in result.output.strip()

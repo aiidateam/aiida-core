@@ -129,8 +129,8 @@ def _merge_deprecated_cache_yaml(config, filepath):
         if profile_name not in config.profile_names:
             warnings.warn(f"Profile '{profile_name}' from cache_config.yml not in config.json, skipping", UserWarning)
             continue
-        for key, option_name in [('default', 'caching.default'), ('enabled', 'caching.enabled'),
-                                 ('disabled', 'caching.disabled')]:
+        for key, option_name in [('default', 'caching.default_enabled'), ('enabled', 'caching.enabled_for'),
+                                 ('disabled', 'caching.disabled_for')]:
             if key in data:
                 value = data[key]
                 # in case of empty key

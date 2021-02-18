@@ -26,9 +26,9 @@ __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 class ConfigKeys(Enum):
     """Valid keys for caching configuration."""
 
-    DEFAULT = 'caching.default'
-    ENABLED = 'caching.enabled'
-    DISABLED = 'caching.disabled'
+    DEFAULT = 'caching.default_enabled'
+    ENABLED = 'caching.enabled_for'
+    DISABLED = 'caching.disabled_for'
 
 
 class _ContextCache:

@@ -94,7 +94,7 @@ class Option:
             raise ConfigValidationError(message=exc.message, keypath=[self.name, *(exc.path or [])], schema=exc.schema)
 
         # special caching validation
-        if self.name in ('caching.enabled', 'caching.disabled'):
+        if self.name in ('caching.enabled_for', 'caching.disabled_for'):
             for i, identifier in enumerate(value):
                 try:
                     _validate_identifier_pattern(identifier=identifier)

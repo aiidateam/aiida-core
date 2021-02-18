@@ -169,12 +169,12 @@
                     "minimum": 1,
                     "description": "Timeout in seconds for communications with RabbitMQ"
                 },
-                "caching.default": {
+                "caching.default_enabled": {
                     "type": "boolean",
                     "default": false,
                     "description": "Enable calculation caching by default"
                 },
-                "caching.enabled": {
+                "caching.enabled_for": {
                     "description": "Calculation entry points to enable caching on",
                     "type": "array",
                     "default": [],
@@ -182,7 +182,7 @@
                         "type": "string"
                     }
                 },
-                "caching.disabled": {
+                "caching.disabled_for": {
                     "description": "Calculation entry points to disable caching on",
                     "type": "array",
                     "default": [],

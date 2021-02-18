@@ -432,11 +432,11 @@ You can view and alter your current caching configuration through the command-li
 .. code-block:: console
 
     $ verdi config list caching
-    name              source    value
-    ----------------  --------  -------
-    caching.default   default   False
-    caching.disabled  default
-    caching.enabled   default
+    name                     source    value
+    -----------------------  --------  -------
+    caching.default_enabled  default   False
+    caching.disabled_for     default
+    caching.enabled_for      default
 
 .. seealso:: :ref:`how-to:installation:configure:options`
 
@@ -444,16 +444,16 @@ You can enable caching for your current profile or globally (for all profiles) b
 
 .. code-block:: console
 
-    $ verdi config set caching.default True
-    Success: 'caching.default' set to True for 'quicksetup' profile
-    $ verdi config set -g caching.default True
-    Success: 'caching.default' set to True globally
+    $ verdi config set caching.default_enabled True
+    Success: 'caching.default_enabled' set to True for 'quicksetup' profile
+    $ verdi config set -g caching.default_enabled True
+    Success: 'caching.default_enabled' set to True globally
     $ verdi config list caching
-    name              source    value
-    ----------------  --------  -------
-    caching.default   profile   True
-    caching.disabled  default
-    caching.enabled   default
+    name                     source    value
+    -----------------------  --------  -------
+    caching.default_enabled  profile   True
+    caching.disabled_for     default
+    caching.enabled_for      default
 
 From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
 If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
@@ -482,23 +482,23 @@ The caching mechanism can be configured on a process class level, meaning the ru
 Class level
 ...........
 
-Besides the on/off switch set by ``caching.default``, caching can be controlled at the level of specific calculations using their corresponding entry point strings (see the output of ``verdi plugin list aiida.calculations``):
+Besides the on/off switch set by ``caching.default_enabled``, caching can be controlled at the level of specific calculations using their corresponding entry point strings (see the output of ``verdi plugin list aiida.calculations``):
 
 .. code-block:: console
 
-    $ verdi config set caching.disabled aiida.calculations:templatereplacer
-    Success: 'caching.disabled' set to ['aiida.calculations:templatereplacer'] for 'quicksetup' profile
-    $ verdi config set caching.enabled aiida.calculations:quantumespresso.pw
-    Success: 'caching.enabled' set to ['aiida.calculations:quantumespresso.pw'] for 'quicksetup' profile
-    $ verdi config set --append caching.enabled aiida.calculations:other
-    Success: 'caching.enabled' set to ['aiida.calculations:quantumespresso.pw', 'aiida.calculations:other'] for 'quicksetup' profile
+    $ verdi config set caching.disabled_for aiida.calculations:templatereplacer
+    Success: 'caching.disabled_for' set to ['aiida.calculations:templatereplacer'] for 'quicksetup' profile
+    $ verdi config set caching.enabled_for aiida.calculations:quantumespresso.pw
+    Success: 'caching.enabled_for' set to ['aiida.calculations:quantumespresso.pw'] for 'quicksetup' profile
+    $ verdi config set --append caching.enabled_for aiida.calculations:other
+    Success: 'caching.enabled_for' set to ['aiida.calculations:quantumespresso.pw', 'aiida.calculations:other'] for 'quicksetup' profile
     $ verdi config list caching
-    name              source    value
-    ----------------  --------  -------
-    caching.default   profile   True
-    caching.disabled  profile   aiida.calculations:templatereplacer
-    caching.enabled   profile   aiida.calculations:quantumespresso.pw
-                                aiida.calculations:other
+    name                     source    value
+    -----------------------  --------  -------------------------------------
+    caching.default_enabled  profile   True
+    caching.disabled_for     profile   aiida.calculations:templatereplacer
+    caching.enabled_for      profile   aiida.calculations:quantumespresso.pw
+                                    aiida.calculations:other
 
 In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:templatereplacer`` entry point string.
 It also shows how to enable caching for particular calculations (which has no effect here due to the profile-wide default).
@@ -526,8 +526,8 @@ For example, the following configuration disables caching for all calculation en
 
 .. code-block:: console
 
-    $ verdi config set caching.disabled 'aiida.calculations:*'
-    Success: 'caching.disabled' set to ['aiida.calculations:*'] for 'quicksetup' profile
+    $ verdi config set caching.disabled_for 'aiida.calculations:*'
+    Success: 'caching.disabled_for' set to ['aiida.calculations:*'] for 'quicksetup' profile
     $ verdi config caching
     aiida.workflows:arithmetic.add_multiply
     aiida.workflows:arithmetic.multiply_add
@@ -541,14 +541,14 @@ The following configuration disables caching for all ``aiida.calculation`` entry
 
 .. code-block:: console
 
-    $ verdi config set caching.enabled 'aiida.calculations:arithmetic.*'
-    Success: 'caching.enabled' set to ['aiida.calculations:arithmetic.*'] for 'quicksetup' profile
+    $ verdi config set caching.enabled_for 'aiida.calculations:arithmetic.*'
+    Success: 'caching.enabled_for' set to ['aiida.calculations:arithmetic.*'] for 'quicksetup' profile
     $ verdi config list caching
-    name              source    value
-    ----------------  --------  -------------------------------
-    caching.default   profile   True
-    caching.disabled  profile   aiida.calculations:*
-    caching.enabled   profile   aiida.calculations:arithmetic.*
+    name                     source    value
+    -----------------------  --------  -------------------------------
+    caching.default_enabled  profile   True
+    caching.disabled_for     profile   aiida.calculations:*
+    caching.enabled_for      profile   aiida.calculations:arithmetic.*
     $ verdi config caching
     aiida.calculations:arithmetic.add
     aiida.workflows:arithmetic.add_multiply

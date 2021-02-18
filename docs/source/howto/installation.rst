@@ -116,9 +116,9 @@ To view all configuration options set for the current profile:
     autofill.user.first_name               global    chris
     autofill.user.institution              global    epfl
     autofill.user.last_name                global    sewell
-    caching.default                        default   False
-    caching.disabled                       default
-    caching.enabled                        default
+    caching.default_enabled                default   False
+    caching.disabled_for                   default
+    caching.enabled_for                    default
     daemon.default_workers                 default   1
     daemon.timeout                         profile   20
     daemon.worker_process_slots            default   200

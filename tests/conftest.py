@@ -223,14 +223,22 @@ def profile_factory() -> Profile:
 @pytest.fixture
 def config_with_profile_factory(empty_config, profile_factory) -> Config:
     """Create a temporary configuration instance with one profile.
-    This creates a temporary directory with a clean `.aiida` folder and basic configuration file.
-    The currently loaded configuration and profile are stored in memory,
-    and are automatically restored at the end of this context manager.
-    This fixture differs from `empty_config` in that here a profile will be created and set as default.
-    The defaults of the profile can be overridden in the callable, as well as whether it should be set as default.
-    This fixture should probably be used for most tests that assume a basically configured setup.
 
-    :return: a config instance with a configured profile.
+    This fixture builds on the `empty_config` fixture, to add a single profile.
+
+    The defaults of the profile can be overridden in the callable, as well as whether it should be set as default.
+
+    Example::
+
+        def test_config_with_profile(config_with_profile_factory):
+            config = config_with_profile_factory(set_as_default=True, name='default', database_backend='django')
+            assert config.current_profile.name == 'default'
+
+    As with `empty_config`, the currently loaded configuration and profile are stored in memory,
+    and are automatically restored at the end of this context manager.
+
+    This fixture should be used by tests that modify aspects of the AiiDA configuration or profile
+    and require a preconfigured profile, but do not require an actual configured database.
     """
 
     def _config_with_profile_factory(set_as_default=True, load=True, name='default', **kwargs):
@@ -240,6 +248,8 @@ def config_with_profile_factory(empty_config, profile_factory) -> Config:
         :param load: whether to load the profile.
         :param name: the profile name
         :param kwargs: parameters that are forwarded to the `Profile` constructor.
+
+        :return: a config instance with a configured profile.
         """
         profile = profile_factory(name=name, **kwargs)
         config = empty_config

@@ -269,6 +269,12 @@ def config_with_profile_factory(empty_config, profile_factory) -> Config:
 
 
 @pytest.fixture
+def config_with_profile(config_with_profile_factory):
+    """Create a temporary configuration instance with one default, loaded profile."""
+    yield config_with_profile_factory()
+
+
+@pytest.fixture
 def manager(aiida_profile):  # pylint: disable=unused-argument
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage.manager import get_manager

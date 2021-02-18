@@ -9,7 +9,7 @@
 ###########################################################################
 """SQLA groups"""
 
-import collections
+from collections.abc import Iterable
 import logging
 
 from aiida.backends import sqlalchemy as sa
@@ -317,7 +317,7 @@ class SqlaGroupCollection(BackendGroupCollection):
         if past_days is not None:
             filters.append(DbGroup.time >= past_days)
         if nodes:
-            if not isinstance(nodes, collections.Iterable):
+            if not isinstance(nodes, Iterable):
                 nodes = [nodes]
 
             if not all(isinstance(n, (SqlaNode, DbNode)) for n in nodes):

@@ -11,6 +11,7 @@ How-To Guides
    ssh
    plugin_codes
    workflows
+   workchains_restart
    data
    exploring
    share_data

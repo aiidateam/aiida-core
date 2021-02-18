@@ -225,7 +225,7 @@ To clearly communicate to the caller what went wrong, the ``Process`` supports s
 This ``exit_status``, a positive integer, is an attribute of the process node and by convention, when it is zero means the process was successful, whereas any other value indicates failure.
 This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://shapeshed.com/unix-exit-codes/>`_ and a standard way for programs to communicate the result of their execution.
 
-Potential exit codes for the ``Process`` can be defined through the ``ProcessSpec``, just like inputs and ouputs.
+Potential exit codes for the ``Process`` can be defined through the ``ProcessSpec``, just like inputs and outputs.
 Any exit code consists of a positive non-zero integer, a string label to reference it and a more detailed description of the problem that triggers the exit code.
 Consider the following example:
 
@@ -252,6 +252,16 @@ This is useful, because the caller can now programmatically, based on the ``exit
 This is an infinitely more robust way of communicating specific errors to a non-human than parsing text-based logs or reports.
 Additionally, the exit codes make it very easy to query for failed processes with specific error codes.
 
+.. seealso::
+
+    Additional documentation, specific to certain process types, can be found in the following sections:
+
+    - :ref:`Process functions<topics:processes:functions:exit_codes>`
+    - :ref:`Work functions<topics:workflows:usage:workfunctions:exit_codes>`
+    - :ref:`CalcJob parsers<topics:calculations:usage:calcjobs:parsers>`
+    - :ref:`Workchain exit code specification<topics:workflows:usage:workchains:define_exit_codes>`
+    - :ref:`External code plugins<how-to:plugin-codes:parsing:errors>`
+    - :ref:`Restart workchains<how-to:restart_workchain>`
 
 .. _topics:processes:usage:exit_code_conventions:
 

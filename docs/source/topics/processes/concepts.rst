@@ -105,6 +105,7 @@ When you load a calculation node from the database, you can use these property m
 
 Process exit codes
 ==================
+
 The previous section about the process state showed that a process that is ``Finished`` does not say anything about whether the result is 'successful' or 'failed'.
 The ``Finished`` state means nothing more than that the engine succeeded in running the process to the end of execution, without it encountering exceptions or being killed.
 To distinguish between a 'successful' and 'failed' process, an 'exit status' can be defined.
@@ -112,8 +113,10 @@ The `exit status is a common concept in programming <https://en.wikipedia.org/wi
 By default a process that terminates nominally will get a ``0`` (zero) exit status.
 To mark a process as failed, one can return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple, which allows to set an integer ``exit_status`` and a string message as ``exit_message``.
 When the engine receives such an ``ExitCode`` as the return value from a process, it will set the exit status and message on the corresponding attributes of the process node representing the process in the provenance graph.
-How exit codes can be defined and returned depends on the process type and will be documented in detail in the respective :ref:`calculation<topics:calculations:usage>` and :ref:`workflow<topics:workflows:usage>` development sections.
 
+.. seealso::
+
+    For how exit codes can be defined and returned see the :ref:`exit code usage section <topics:processes:usage:exit_codes>`.
 
 .. _topics:processes:concepts:lifetime:
 

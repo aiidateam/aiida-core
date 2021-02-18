@@ -272,7 +272,7 @@ Converting the resulting flow diagram in a one-to-one fashion into an outline, o
 Exit codes
 ----------
 There is one more property of a work chain that is specified through its process specification, in addition to its inputs, outputs and outline.
-Any work chain may have one to multiple failure modes, which are modeled by :ref:`exit codes<topics:processes:usage:exit_codes>`.
+Any work chain may have one to multiple failure modes, which are modelled by :ref:`exit codes<topics:processes:usage:exit_codes>`.
 A work chain can be stopped at any time, simply by returning an exit code from an outline method.
 To retrieve an exit code that is defined on the spec, one can use the :py:meth:`~aiida.engine.processes.process.Process.exit_codes` property.
 This returns an attribute dictionary where the exit code labels map to their corresponding exit code.
@@ -587,6 +587,9 @@ Of course, we then need to explicitly pass the input ``a``.
 Finally, we use :meth:`~aiida.engine.processes.process.Process.exposed_outputs` and :meth:`~aiida.engine.processes.process.Process.out_many` to forward the outputs of the children to the outputs of the parent.
 Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method.
 
+.. seealso::
+
+    For further practical examples of creating workflows, see the :ref:`how to run multi-step workflows<how-to:workflows>` and :ref:`how to write error resistant workflows <how-to:restart_workchain>` sections.
 
 
 .. rubric:: Footnotes

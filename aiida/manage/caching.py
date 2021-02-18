@@ -36,8 +36,6 @@ class _ContextCache:
 
     def __init__(self):
         self._default_all = None
-        self._enable_all = False
-        self._disable_all = False
         self._enable = []
         self._disable = []
 

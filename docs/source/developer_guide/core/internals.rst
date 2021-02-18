@@ -405,7 +405,7 @@ In case a method is renamed or removed, this is the procedure to follow:
    - Our ``AiidaDeprecationWarning`` does not inherit from ``DeprecationWarning``, so it will not be "hidden" by python
    - User can disable our warnings (and only those) by using AiiDA properties with::
 
-       verdi config warnings.showdeprecations False
+       verdi config set warnings.showdeprecations False
 
 Changing the config.json structure
 ++++++++++++++++++++++++++++++++++

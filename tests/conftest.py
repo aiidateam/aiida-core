@@ -13,7 +13,7 @@ import os
 
 import pytest
 
-from aiida.manage.configuration import Config, Profile, get_config
+from aiida.manage.configuration import Config, Profile, get_config, load_profile
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
@@ -152,7 +152,7 @@ def generate_calculation_node():
 
 
 @pytest.fixture
-def create_empty_config_instance(tmp_path) -> Config:
+def empty_config(tmp_path) -> Config:
     """Create a temporary configuration instance.
 
     This creates a temporary directory with a clean `.aiida` folder and basic configuration file. The currently loaded
@@ -162,7 +162,7 @@ def create_empty_config_instance(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings, load_profile, reset_profile
+    from aiida.manage.configuration import settings, reset_profile
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
@@ -193,7 +193,7 @@ def create_empty_config_instance(tmp_path) -> Config:
 
 
 @pytest.fixture
-def create_profile() -> Profile:
+def profile_factory() -> Profile:
     """Create a new profile instance.
 
     :return: the profile instance.
@@ -218,6 +218,54 @@ def create_profile() -> Profile:
         return Profile(name, profile_dictionary)
 
     return _create_profile
+
+
+@pytest.fixture
+def config_with_profile_factory(empty_config, profile_factory) -> Config:
+    """Create a temporary configuration instance with one profile.
+
+    This fixture builds on the `empty_config` fixture, to add a single profile.
+
+    The defaults of the profile can be overridden in the callable, as well as whether it should be set as default.
+
+    Example::
+
+        def test_config_with_profile(config_with_profile_factory):
+            config = config_with_profile_factory(set_as_default=True, name='default', database_backend='django')
+            assert config.current_profile.name == 'default'
+
+    As with `empty_config`, the currently loaded configuration and profile are stored in memory,
+    and are automatically restored at the end of this context manager.
+
+    This fixture should be used by tests that modify aspects of the AiiDA configuration or profile
+    and require a preconfigured profile, but do not require an actual configured database.
+    """
+
+    def _config_with_profile_factory(set_as_default=True, load=True, name='default', **kwargs):
+        """Create a temporary configuration instance with one profile.
+
+        :param set_as_default: whether to set the one profile as the default.
+        :param load: whether to load the profile.
+        :param name: the profile name
+        :param kwargs: parameters that are forwarded to the `Profile` constructor.
+
+        :return: a config instance with a configured profile.
+        """
+        profile = profile_factory(name=name, **kwargs)
+        config = empty_config
+        config.add_profile(profile)
+
+        if set_as_default:
+            config.set_default_profile(profile.name, overwrite=True)
+
+        config.store()
+
+        if load:
+            load_profile(profile.name)
+
+        return config
+
+    return _config_with_profile_factory
 
 
 @pytest.fixture

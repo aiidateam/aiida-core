@@ -12,6 +12,8 @@ import collections
 import os
 
 from aiida.common import exceptions
+
+from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 __all__ = ('Profile',)
@@ -270,8 +272,9 @@ class Profile:  # pylint: disable=too-many-public-methods
         :param option_value: the option value
         :param override: boolean, if False, will not override the option if it already exists
         """
+        _, parsed_value = parse_option(option_key, value)  # ensure the value is validated
         if option_key not in self.options or override:
-            self.options[option_key] = value
+            self.options[option_key] = parsed_value
 
     def unset_option(self, option_key):
         self.options.pop(option_key, None)

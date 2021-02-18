@@ -162,7 +162,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      caching  List caching enabled process types for the current profile.
+      caching  List caching-enabled process types for the current profile.
       get      Get the value of an AiiDA option for the current profile.
       list     List AiiDA options for the current profile.
       set      Set an AiiDA option.

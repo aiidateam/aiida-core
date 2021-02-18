@@ -102,52 +102,131 @@ This file is shell specific, but likely one of the following:
 
 Configuring profile options
 ---------------------------
+
 AiiDA provides various configurational options for profiles, which can be controlled with the :ref:`verdi config<reference:command-line:verdi-config>` command.
-To set a configurational option, simply pass the name of the option and the value to set ``verdi config OPTION_NAME OPTION_VALUE``.
-The available options are tab-completed, so simply type ``verdi config`` and thit <TAB> twice to list them.
 
-For example, if you want to change the default number of workers that are created when you start the daemon, you can run:
+To view all configuration options set for the current profile:
 
-.. code:: bash
+.. code:: console
 
-    $ verdi config daemon.default_workers 5
-    Success: daemon.default_workers set to 5 for profile-one
+    $ verdi config list
+    name                                   source    value
+    -------------------------------------  --------  ------------
+    autofill.user.email                    global    abc@test.com
+    autofill.user.first_name               global    chris
+    autofill.user.institution              global    epfl
+    autofill.user.last_name                global    sewell
+    caching.default                        default   False
+    caching.disabled                       default
+    caching.enabled                        default
+    daemon.default_workers                 default   1
+    daemon.timeout                         profile   20
+    daemon.worker_process_slots            default   200
+    db.batch_size                          default   100000
+    logging.aiida_loglevel                 default   REPORT
+    logging.alembic_loglevel               default   WARNING
+    logging.circus_loglevel                default   INFO
+    logging.db_loglevel                    default   REPORT
+    logging.kiwipy_loglevel                default   WARNING
+    logging.paramiko_loglevel              default   WARNING
+    logging.plumpy_loglevel                default   WARNING
+    logging.sqlalchemy_loglevel            default   WARNING
+    rmq.task_timeout                       default   10
+    runner.poll.interval                   profile   50
+    transport.task_maximum_attempts        global    6
+    transport.task_retry_initial_interval  default   20
+    verdi.shell.auto_import                default
+    warnings.showdeprecations              default   True
 
-You can check the currently defined value of any option by simply calling the command without specifying a value, for example:
+Configuration option values are taken, in order of priority, from either the profile specific setting, the global setting (applies to all profiles), or the default value.
 
-.. code:: bash
+You can also filter by a prefix:
 
-    $ verdi config daemon.default_workers
+.. code:: console
+
+    $ verdi config list transport
+    name                                   source    value
+    -------------------------------------  --------  ------------
+    transport.task_maximum_attempts        global    6
+    transport.task_retry_initial_interval  default   20
+
+To show the full information for a configuration option or get its current value:
+
+.. code:: console
+
+    $ verdi config show transport.task_maximum_attempts
+    schema:
+        default: 5
+        description: Maximum number of transport task attempts before a Process is Paused.
+        minimum: 1
+        type: integer
+    values:
+        default: 5
+        global: 6
+        profile: <NOTSET>
+    $ verdi config get transport.task_maximum_attempts
+    6
+
+You can also retrieve the value *via* the API:
+
+.. code-block:: ipython
+
+    In [1]: from aiida import get_config_option
+    In [2]: get_config_option('transport.task_maximum_attempts')
+    Out[2]: 6
+
+To set a value, at the profile or global level:
+
+.. code-block:: console
+
+    $ verdi config set transport.task_maximum_attempts 10
+    Success: 'transport.task_maximum_attempts' set to 10 for 'quicksetup' profile
+    $ verdi config set --global transport.task_maximum_attempts 20
+    Success: 'transport.task_maximum_attempts' set to 20 globally
+    $ verdi config show transport.task_maximum_attempts
+    schema:
+        type: integer
+        default: 5
+        minimum: 1
+        description: Maximum number of transport task attempts before a Process is Paused.
+    values:
+        default: 5
+        global: 20
+        profile: 10
+    $ verdi config get transport.task_maximum_attempts
+    10
+
+.. tip::
+
+    By default any option set through ``verdi config`` will be applied to the current default profile.
+    To change the profile you can use the :ref:`profile option<topics:cli:profile>`.
+
+Similarly to unset a value:
+
+.. code-block:: console
+
+    $ verdi config unset transport.task_maximum_attempts
+    Success: 'transport.task_maximum_attempts' unset for 'quicksetup' profile
+    $ verdi config unset --global transport.task_maximum_attempts
+    Success: 'transport.task_maximum_attempts' unset globally
+    $ verdi config show transport.task_maximum_attempts
+    schema:
+        type: integer
+        default: 5
+        minimum: 1
+        description: Maximum number of transport task attempts before a Process is Paused.
+    values:
+        default: 5
+        global: <NOTSET>
+        profile: <NOTSET>
+    $ verdi config get transport.task_maximum_attempts
     5
-
-If no value is displayed, it means that no value has ever explicitly been set for this particular option and the default will always be used.
-By default any option set through ``verdi config`` will be applied to the current default profile.
-To change the profile you can use the :ref:`profile option<topics:cli:profile>`.
-
-To undo the configuration of a particular option and reset it so the default value is used, you can use the ``--unset`` option:
-
-.. code:: bash
-
-    $ verdi config daemon.default_workers --unset
-    Success: daemon.default_workers unset for profile-one
-
-If you want to set a particular option that should be applied to all profiles, you can use the ``--global`` flag:
-
-.. code:: bash
-
-    $ verdi config daemon.default_workers 5 --global
-    Success: daemon.default_workers set to 5 globally
-
-and just as on a per-profile basis, this can be undone with the ``--unset`` flag:
-
-.. code:: bash
-
-    $ verdi config daemon.default_workers --unset --global
-    Success: daemon.default_workers unset globally
 
 .. important::
 
     Changes that affect the daemon (e.g. ``logging.aiida_loglevel``) will only take affect after restarting the daemon.
+
+.. seealso:: :ref:`How-to configure caching <how-to:run-codes:caching>`
 
 
 .. _how-to:installation:configure:instance-isolation:

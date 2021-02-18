@@ -403,30 +403,57 @@ How to save computational resources using caching
 =================================================
 
 There are numerous reasons why you might need to re-run calculations you have already run before.
-Maybe you run a great number of complex workflows in high-throughput that each may repeat the same calculation, or you may have to restart an entire workflow that failed somewhere half-way through.
+
+    If you run a great number of complex workflows in high-throughput, that each may repeat the same calculation, or you have to restart an entire workflow that failed somewhere half-way through.
+
 Since AiiDA stores the full provenance of each calculation, it can detect whether a calculation has been run before and, instead of running it again, simply reuse its outputs, thereby saving valuable computational resources.
 This is what we mean by **caching** in AiiDA.
+
+.. versionchanged:: 1.6.0
+
+    Caching configuration has moved from ``cache_config.yml`` to ``config.json`` (this will be migrated automatically).
+    To manipulate the caching configuration it is now advised to use the ``verdi config`` CLI, rather than directly changing the file.
 
 .. _how-to:run-codes:caching:enable:
 
 How to enable caching
 ---------------------
 
-Caching is **not enabled by default**.
-The reason is that it is designed to work in an unobtrusive way and simply save time and valuable computational resources.
+.. important:: Caching is **not** enabled by default.
+
+Caching is designed to work in an unobtrusive way and simply save time and valuable computational resources.
 However, this design is a double-egded sword, in that a user that might not be aware of this functionality, can be caught off guard by the results of their calculations.
 
-.. important::
+The caching mechanism comes with some limitations and caveats that are important to understand.
+Refer to the :ref:`topics:provenance:caching:limitations` section for more details.
 
-    The caching mechanism comes with some limitations and caveats that are important to understand.
-    Refer to the :ref:`topics:provenance:caching:limitations` section for more details.
+You can view and alter your current caching configuration through the command-line:
 
-In order to enable caching for your profile (here called ``aiida_profile``), place the following ``cache_config.yml`` file in your ``.aiida`` configuration folder:
+.. code-block:: console
 
-.. code-block:: yaml
+    $ verdi config list caching
+    name              source    value
+    ----------------  --------  -------
+    caching.default   default   False
+    caching.disabled  default
+    caching.enabled   default
 
-    aiida_profile:
-        default: True
+.. seealso:: :ref:`how-to:installation:configure:options`
+
+You can enable caching for your current profile or globally (for all profiles) by:
+
+.. code-block:: console
+
+    $ verdi config set caching.default True
+    Success: 'caching.default' set to True for 'quicksetup' profile
+    $ verdi config set -g caching.default True
+    Success: 'caching.default' set to True globally
+    $ verdi config list caching
+    name              source    value
+    ----------------  --------  -------
+    caching.default   profile   True
+    caching.disabled  default
+    caching.enabled   default
 
 From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
 If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
@@ -455,48 +482,80 @@ The caching mechanism can be configured on a process class level, meaning the ru
 Class level
 ...........
 
-Besides an on/off switch per profile, the ``.aiida/cache_config.yml`` provides control over caching at the level of specific calculations using their corresponding entry point strings (see the output of ``verdi plugin list aiida.calculations``):
+Besides the on/off switch set by ``caching.default``, caching can be controlled at the level of specific calculations using their corresponding entry point strings (see the output of ``verdi plugin list aiida.calculations``):
 
-.. code-block:: yaml
+.. code-block:: console
 
-    aiida_profile:
-        default: False
-        enabled:
-            - aiida.calculations:quantumespresso.pw
-        disabled:
-            - aiida.calculations:templatereplacer
+    $ verdi config set caching.disabled aiida.calculations:templatereplacer
+    Success: 'caching.disabled' set to ['aiida.calculations:templatereplacer'] for 'quicksetup' profile
+    $ verdi config set caching.enabled aiida.calculations:quantumespresso.pw
+    Success: 'caching.enabled' set to ['aiida.calculations:quantumespresso.pw'] for 'quicksetup' profile
+    $ verdi config set --append caching.enabled aiida.calculations:other
+    Success: 'caching.enabled' set to ['aiida.calculations:quantumespresso.pw', 'aiida.calculations:other'] for 'quicksetup' profile
+    $ verdi config list caching
+    name              source    value
+    ----------------  --------  -------
+    caching.default   profile   True
+    caching.disabled  profile   aiida.calculations:templatereplacer
+    caching.enabled   profile   aiida.calculations:quantumespresso.pw
+                                aiida.calculations:other
 
-In this example, where ``aiida_profile`` is the name of the profile, caching is disabled by default, but explicitly enabled for calculaions of the ``PwCalculation`` class, identified by its corresponding ``aiida.calculations:quantumespresso.pw`` entry point string.
-It also shows how to disable caching for particular calculations (which has no effect here due to the profile-wide default).
+In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:templatereplacer`` entry point string.
+It also shows how to enable caching for particular calculations (which has no effect here due to the profile-wide default).
+
+.. tip:: To set multiple entry-points at once, use a ``,`` delimiter.
+
+For the available entry-points in your environment, you can list which are enabled/disabled using:
+
+.. code-block:: console
+
+    $ verdi config caching
+    aiida.calculations:arithmetic.add
+    aiida.calculations:core.transfer
+    aiida.workflows:arithmetic.add_multiply
+    aiida.workflows:arithmetic.multiply_add
+    $ verdi config caching --disabled
+    aiida.calculations:templatereplacer
 
 For calculations which do not have an entry point, you need to specify the fully qualified Python name instead.
-For example, the ``seekpath_structure_analysis`` calcfunction defined in ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis`` is labeled as ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis.seekpath_structure_analysis``.
+For example, the ``seekpath_structure_analysis`` calcfunction defined in ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis`` is labelled as ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis.seekpath_structure_analysis``.
 From an existing :class:`~aiida.orm.nodes.process.calculation.CalculationNode`, you can get the identifier string through the ``process_type`` attribute.
 
 The caching configuration also accepts ``*`` wildcards.
-For example, the following configuration enables caching for all calculation entry points defined by ``aiida-quantumespresso``, and the ``seekpath_structure_analysis`` calcfunction.
-Note that the ``*.seekpath_structure_analysis`` entry needs to be quoted, because it starts with ``*`` which is a special character in YAML.
+For example, the following configuration disables caching for all calculation entry points.
 
-.. code-block:: yaml
+.. code-block:: console
 
-    aiida_profile:
-        default: False
-        enabled:
-            - aiida.calculations:quantumespresso.*
-            - '*.seekpath_structure_analysis'
+    $ verdi config set caching.disabled 'aiida.calculations:*'
+    Success: 'caching.disabled' set to ['aiida.calculations:*'] for 'quicksetup' profile
+    $ verdi config caching
+    aiida.workflows:arithmetic.add_multiply
+    aiida.workflows:arithmetic.multiply_add
+    $ verdi config caching --disabled
+    aiida.calculations:arithmetic.add
+    aiida.calculations:core.transfer
+    aiida.calculations:templatereplacer
 
 Any entry with a wildcard is overridden by a more specific entry.
-The following configuration enables caching for all ``aiida.calculation`` entry points, except those of ``aiida-quantumespresso``:
+The following configuration disables caching for all ``aiida.calculation`` entry points, except those of ``arithmetic``:
 
-.. code-block:: yaml
+.. code-block:: console
 
-    aiida_profile:
-        default: False
-        enabled:
-            - aiida.calculations:*
-        disabled:
-            - aiida.calculations:quantumespresso.*
-
+    $ verdi config set caching.enabled 'aiida.calculations:arithmetic.*'
+    Success: 'caching.enabled' set to ['aiida.calculations:arithmetic.*'] for 'quicksetup' profile
+    $ verdi config list caching
+    name              source    value
+    ----------------  --------  -------------------------------
+    caching.default   profile   True
+    caching.disabled  profile   aiida.calculations:*
+    caching.enabled   profile   aiida.calculations:arithmetic.*
+    $ verdi config caching
+    aiida.calculations:arithmetic.add
+    aiida.workflows:arithmetic.add_multiply
+    aiida.workflows:arithmetic.multiply_add
+    $ verdi config caching --disabled
+    aiida.calculations:core.transfer
+    aiida.calculations:templatereplacer
 
 Instance level
 ..............

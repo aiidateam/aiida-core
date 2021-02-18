@@ -71,7 +71,7 @@ To determine exactly what might be going wrong, first :ref:`set the loglevel <in
 
 .. code-block:: console
 
-    $ verdi config logging.aiida_loglevel DEBUG
+    $ verdi config set logging.aiida_loglevel DEBUG
 
 Then restart the daemon with ``verdi daemon restart`` for the changes to take effect.
 Run the command ``verdi daemon logshow`` in a separate terminal to see the logging output of the daemon and then submit the problematic calculation or workflow again.

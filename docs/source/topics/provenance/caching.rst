@@ -80,11 +80,11 @@ The only way in which these can be influenced by plugin designers is indirectly 
 Controlling Caching
 -------------------
 
-Although you can't directly controll the hashing mechanism of the process node when implementing a plugin, there are ways in which you can control its caching:
+Although you can't directly control the hashing mechanism of the process node when implementing a plugin, there are ways in which you can control its caching:
 
 * The :meth:`spec.exit_code <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` has a keyword argument ``invalidates_cache``.
   If this is set to ``True``, that means that a calculation with this exit code will not be used as a cache source for another one, even if their hashes match.
-* The :class:`Process <aiida.engine.processes.process.Process>` parent class from which calcjobs inherit has an :meth:`is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>` method, which can be overriden in the plugin to implement custom ways of invalidating the cache.
+* The :class:`Process <aiida.engine.processes.process.Process>` parent class from which calcjobs inherit has an :meth:`is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>` method, which can be overridden in the plugin to implement custom ways of invalidating the cache.
   When doing this, make sure to call :meth:`super().is_valid_cache(node)<aiida.engine.processes.process.Process.is_valid_cache>` and respect its output: if it is `False`, your implementation should also return `False`.
   If you do not comply with this, the 'invalidates_cache' keyword on exit codes will not work.
 

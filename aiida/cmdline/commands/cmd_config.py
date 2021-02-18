@@ -96,36 +96,30 @@ def verdi_config_list(ctx, prefix, description: bool):
 def verdi_config_show(ctx, option):
     """Show details of an AiiDA option for the current profile."""
     from aiida.manage.configuration import Config, Profile
+    from aiida.manage.configuration.options import NO_DEFAULT
 
     config: Config = ctx.obj.config
     profile: Profile = ctx.obj.profile
 
     dct = {
-        'value': {
-            'profile': config.get_option(option.name, scope=profile.name),
-            'global': config.get_option(option.name),
-        },
-        'schema': option.schema
+        'schema': option.schema,
+        'values': {
+            'default': '<NOTSET>' if option.default is NO_DEFAULT else option.default,
+            'global': config.options.get(option.name, '<NOTSET>'),
+            'profile': profile.options.get(option.name, '<NOTSET>'),
+        }
     }
 
-    echo.echo_dictionary(dct, fmt='yaml')
+    echo.echo_dictionary(dct, fmt='yaml', sort_keys=False)
 
 
 @verdi_config.command('get')
 @arguments.CONFIG_OPTION(metavar='OPTION_NAME')
-@click.pass_context
-def verdi_config_get(ctx, option):
+def verdi_config_get(option):
     """Get the value of an AiiDA option for the current profile."""
-    from aiida.manage.configuration import Config, Profile
+    from aiida import get_config_option
 
-    config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
-
-    if option.global_only:
-        value = config.get_option(option.name)
-    else:
-        value = config.get_option(option.name, scope=profile.name)
-
+    value = get_config_option(option.name)
     echo.echo(str(value))
 
 

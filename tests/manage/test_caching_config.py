@@ -23,13 +23,13 @@ from aiida.manage.caching import get_use_cache, enable_caching, disable_caching
 
 
 @pytest.fixture
-def configure_caching(create_config_instance):
+def configure_caching(config_with_profile_factory):
     """
     Fixture to set the caching configuration in the test profile to
     a specific dictionary. This is done by creating a temporary
     caching configuration file.
     """
-    config = create_config_instance()
+    config = config_with_profile_factory()
 
     @contextlib.contextmanager
     def inner(config_dict):

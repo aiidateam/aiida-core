@@ -152,7 +152,7 @@ def generate_calculation_node():
 
 
 @pytest.fixture
-def create_empty_config_instance(tmp_path) -> Config:
+def empty_config(tmp_path) -> Config:
     """Create a temporary configuration instance.
 
     This creates a temporary directory with a clean `.aiida` folder and basic configuration file. The currently loaded
@@ -193,7 +193,7 @@ def create_empty_config_instance(tmp_path) -> Config:
 
 
 @pytest.fixture
-def create_profile() -> Profile:
+def profile_factory() -> Profile:
     """Create a new profile instance.
 
     :return: the profile instance.
@@ -221,19 +221,19 @@ def create_profile() -> Profile:
 
 
 @pytest.fixture
-def create_config_instance(create_empty_config_instance, create_profile) -> Config:
+def config_with_profile_factory(empty_config, profile_factory) -> Config:
     """Create a temporary configuration instance with one profile.
     This creates a temporary directory with a clean `.aiida` folder and basic configuration file.
     The currently loaded configuration and profile are stored in memory,
     and are automatically restored at the end of this context manager.
-    This fixture differs from `create_empty_config_instance` in that here a profile will be created and set as default.
+    This fixture differs from `empty_config` in that here a profile will be created and set as default.
     The defaults of the profile can be overridden in the callable, as well as whether it should be set as default.
     This fixture should probably be used for most tests that assume a basically configured setup.
 
     :return: a config instance with a configured profile.
     """
 
-    def _create_config_instance(set_as_default=True, load=True, name='default', **kwargs):
+    def _config_with_profile_factory(set_as_default=True, load=True, name='default', **kwargs):
         """Create a temporary configuration instance with one profile.
 
         :param set_as_default: whether to set the one profile as the default.
@@ -241,8 +241,8 @@ def create_config_instance(create_empty_config_instance, create_profile) -> Conf
         :param name: the profile name
         :param kwargs: parameters that are forwarded to the `Profile` constructor.
         """
-        profile = create_profile(name=name, **kwargs)
-        config = create_empty_config_instance
+        profile = profile_factory(name=name, **kwargs)
+        config = empty_config
         config.add_profile(profile)
 
         if set_as_default:
@@ -255,7 +255,7 @@ def create_config_instance(create_empty_config_instance, create_profile) -> Conf
 
         return config
 
-    return _create_config_instance
+    return _config_with_profile_factory
 
 
 @pytest.fixture

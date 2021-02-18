@@ -19,8 +19,8 @@ class TestVerdiConfigDeprecated:
     """Tests for deprecated `verdi config <OPTION_NAME>`."""
 
     @pytest.fixture(autouse=True)
-    def setup_fixture(self, create_config_instance):
-        create_config_instance()
+    def setup_fixture(self, config_with_profile_factory):
+        config_with_profile_factory()
 
     def test_config_set_option(self, run_cli_command):
         """Test the `verdi config` command when setting an option."""
@@ -93,8 +93,8 @@ class TestVerdiConfig:
     """Tests for `verdi config`."""
 
     @pytest.fixture(autouse=True)
-    def setup_fixture(self, create_config_instance):
-        create_config_instance()
+    def setup_fixture(self, config_with_profile_factory):
+        config_with_profile_factory()
 
     def test_config_set_option(self, run_cli_command):
         """Test the `verdi config set` command when setting an option."""

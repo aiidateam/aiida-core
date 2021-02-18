@@ -434,7 +434,7 @@ class Config:  # pylint: disable=too-many-public-methods
         output = {}
         for name in get_option_names():
             option = get_option(name)
-            if name in profile.options:
+            if profile and name in profile.options:
                 value = profile.options.get(name)
                 source = 'profile'
             elif name in self.options:

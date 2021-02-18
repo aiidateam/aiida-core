@@ -66,7 +66,10 @@ def verdi_config_list(ctx, prefix, description: bool):
     config: Config = ctx.obj.config
     profile: Profile = ctx.obj.profile
 
-    option_values = config.get_options(profile.name)
+    if not profile:
+        echo.echo_warning('no profiles configured: run `verdi setup` to create one')
+
+    option_values = config.get_options(profile.name if profile else None)
 
     def _join(val):
         """split arrays into multiple lines."""
@@ -106,9 +109,13 @@ def verdi_config_show(ctx, option):
         'values': {
             'default': '<NOTSET>' if option.default is NO_DEFAULT else option.default,
             'global': config.options.get(option.name, '<NOTSET>'),
-            'profile': profile.options.get(option.name, '<NOTSET>'),
         }
     }
+
+    if not profile:
+        echo.echo_warning('no profiles configured: run `verdi setup` to create one')
+    else:
+        dct['values']['profile'] = profile.options.get(option.name, '<NOTSET>')
 
     echo.echo_dictionary(dct, fmt='yaml', sort_keys=False)
 

@@ -226,6 +226,6 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         await asyncio.sleep(0)  # allow other async tasks to complete first
         del node
         del result
-        gc.collect() 
+        gc.collect()
 
         return serialized

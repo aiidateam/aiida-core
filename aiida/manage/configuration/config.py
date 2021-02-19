@@ -425,16 +425,17 @@ class Config:  # pylint: disable=too-many-public-methods
 
         return value
 
-    def get_options(self, scope=None) -> Dict[str, Tuple[Option, str, Any]]:
+    def get_options(self, scope: Optional[str] = None) -> Dict[str, Tuple[Option, str, Any]]:
         """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
 
+        :param scope: the profile name or globally if not specified
         :returns: (option, source, value)
         """
         profile = self.get_profile(scope) if scope else None
         output = {}
         for name in get_option_names():
             option = get_option(name)
-            if name in profile.options:
+            if profile and name in profile.options:
                 value = profile.options.get(name)
                 source = 'profile'
             elif name in self.options:

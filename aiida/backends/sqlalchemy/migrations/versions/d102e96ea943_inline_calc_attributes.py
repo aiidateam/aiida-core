@@ -49,7 +49,6 @@ def upgrade():
     """Creates the new attributes"""
     conn = op.get_bind()
 
-
     # Creates 'function_namespace' from 'namespace'
     # Creates 'function_starting_line_number' from 'first_line_source_code'
     # Creates 'exit_status', 'process_state' and 'process_label'
@@ -72,19 +71,31 @@ def upgrade():
         """))
 
 
-    # Sets new 'function_number_of_lines' with the information on 'source_code'
-    sqlquery_results = conn.execute(text("SELECT id, attributes -> 'source_code' FROM db_dbnode;"))
+    # Sets new 'function_number_of_lines' with the number of lines in 'source_code'
+    # What counts as a newline (SOURCE https://stackoverflow.com/a/10805292)
+    # Why is it done as a difference + division (https://stackoverflow.com/a/36376548)
+    replace_dicts = [
+        {'symbol': '\\r\\n', 'symlike': '%\\r\\n%', 'count': 6},  # WinDOS
+        {'symbol': '\\r', 'symlike': '%\\r%', 'count': 3},  # older Macs
+        {'symbol': '\\n', 'symlike': '%\\n%', 'count': 3},  # Unices
+    ]
 
-    for data_pair in sqlquery_results:
-        node_pkid = data_pair[0]
-        source_code = data_pair[1]
-        num_lines = len(source_code.splitlines())
+    for replace_dict in replace_dicts:
         conn.execute(text(
             """
             UPDATE db_dbnode
-            SET attributes = jsonb_set(attributes, '{function_number_of_lines}', to_jsonb(:value))
-            WHERE id = :idnum;
-            """), {'value': num_lines, 'idnum': node_pkid})
+            SET attributes = attributes || jsonb_build_object(
+                'function_number_of_lines',
+                ( CHAR_LENGTH((attributes -> 'source_code')::TEXT)
+                - CHAR_LENGTH( REPLACE((attributes -> 'source_code')::TEXT, :symbol, '' )))
+                / :count + 1
+                )
+            WHERE
+                attributes ? 'namespace' AND
+                attributes ? 'first_line_source_code' AND
+                node_type = 'process.calculation.calcfunction.CalcFunctionNode.' AND
+                (attributes -> 'source_code')::TEXT LIKE :symlike;
+            """), replace_dict)
 
 
     # Saves the source file in the repository

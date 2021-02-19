@@ -223,7 +223,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             raise
 
         # before returning we ensure the garbage collection runs, to clear any memory used by the task
-        await asyncio.sleep(0)  # allow other async tasks to complete first
+        await asyncio.sleep(1)  # allow other async tasks to complete first
         del node
         del result
         gc.collect()

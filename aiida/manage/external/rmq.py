@@ -9,7 +9,9 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Components to communicate tasks to RabbitMQ."""
+import asyncio
 from collections.abc import Mapping
+import gc
 import logging
 
 from kiwipy import communications, Future
@@ -219,5 +221,11 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         except Exception:
             LOGGER.exception('failed to serialize the result for process<%d>', pid)
             raise
+
+        # before returning we ensure the garbage collection runs, to clear any memory used by the task
+        await asyncio.sleep(0)  # allow other async tasks to complete first
+        del node
+        del result
+        gc.collect() 
 
         return serialized

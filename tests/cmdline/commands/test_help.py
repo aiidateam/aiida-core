@@ -8,15 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi help`."""
-
 from click.testing import CliRunner
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_verdi
 
-from tests.utils.configuration import with_temporary_config_instance
 
-
+@pytest.mark.usefixtures('config_with_profile')
 class TestVerdiHelpCommand(AiidaTestCase):
     """Tests for `verdi help`."""
 
@@ -24,7 +23,6 @@ class TestVerdiHelpCommand(AiidaTestCase):
         super().setUp()
         self.cli_runner = CliRunner()
 
-    @with_temporary_config_instance
     def test_without_arg(self):
         """
         Ensure we get the same help for `verdi` (which gives the same as `verdi --help`)
@@ -36,7 +34,6 @@ class TestVerdiHelpCommand(AiidaTestCase):
         result_verdi = self.cli_runner.invoke(cmd_verdi.verdi, [], catch_exceptions=False)
         self.assertEqual(result_help.output, result_verdi.output)
 
-    @with_temporary_config_instance
     def test_cmd_help(self):
         """Ensure we get the same help for `verdi user --help` and `verdi help user`"""
         result_help = self.cli_runner.invoke(cmd_verdi.verdi, ['help', 'user'], catch_exceptions=False)

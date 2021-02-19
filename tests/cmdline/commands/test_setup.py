@@ -20,9 +20,8 @@ from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 
-from tests.utils.configuration import with_temporary_config_instance
 
-
+@pytest.mark.usefixtures('config_with_profile')
 class TestVerdiSetup(AiidaPostgresTestCase):
     """Tests for `verdi setup` and `verdi quicksetup`."""
 
@@ -34,7 +33,6 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.backend = configuration.PROFILE.database_backend
         self.cli_runner = CliRunner()
 
-    @with_temporary_config_instance
     def test_help(self):
         """Check that the `--help` option is eager, is not overruled and will properly display the help message.
 
@@ -44,7 +42,6 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.cli_runner.invoke(cmd_setup.setup, ['--help'], catch_exceptions=False)
         self.cli_runner.invoke(cmd_setup.quicksetup, ['--help'], catch_exceptions=False)
 
-    @with_temporary_config_instance
     def test_quicksetup(self):
         """Test `verdi quicksetup`."""
         configuration.reset_profile()
@@ -79,7 +76,6 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertEqual(user.last_name, user_last_name)
         self.assertEqual(user.institution, user_institution)
 
-    @with_temporary_config_instance
     def test_quicksetup_from_config_file(self):
         """Test `verdi quicksetup` from configuration file."""
         import tempfile
@@ -99,7 +95,6 @@ email: 123@234.de"""
             result = self.cli_runner.invoke(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
         self.assertClickResultNoException(result)
 
-    @with_temporary_config_instance
     def test_quicksetup_wrong_port(self):
         """Test `verdi quicksetup` exits if port is wrong."""
         configuration.reset_profile()
@@ -119,7 +114,6 @@ email: 123@234.de"""
         result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
         self.assertIsNotNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
 
-    @with_temporary_config_instance
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""
         postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)

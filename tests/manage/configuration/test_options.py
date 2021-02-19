@@ -8,13 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration options."""
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option
 from aiida.manage.configuration import get_config, get_config_option, ConfigValidationError
-
-from tests.utils.configuration import with_temporary_config_instance
 
 
 class TestConfigurationOptions(AiidaTestCase):
@@ -53,7 +52,7 @@ class TestConfigurationOptions(AiidaTestCase):
             option.valid_type  # pylint: disable=pointless-statement
             option.default  # pylint: disable=pointless-statement
 
-    @with_temporary_config_instance
+    @pytest.mark.usefixtures('config_with_profile')
     def test_get_config_option_default(self):
         """Tests that `get_option` return option default if not specified globally or for current profile."""
         option_name = 'logging.aiida_loglevel'
@@ -63,7 +62,7 @@ class TestConfigurationOptions(AiidaTestCase):
         option_value = get_config_option(option_name)
         self.assertEqual(option_value, option.default)
 
-    @with_temporary_config_instance
+    @pytest.mark.usefixtures('config_with_profile')
     def test_get_config_option_profile_specific(self):
         """Tests that `get_option` correctly gets a configuration option if specified for the current profile."""
         config = get_config()
@@ -77,7 +76,7 @@ class TestConfigurationOptions(AiidaTestCase):
         option_value = get_config_option(option_name)
         self.assertEqual(option_value, option_value_profile)
 
-    @with_temporary_config_instance
+    @pytest.mark.usefixtures('config_with_profile')
     def test_get_config_option_global(self):
         """Tests that `get_option` correctly agglomerates upwards and so retrieves globally set config options."""
         config = get_config()

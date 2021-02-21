@@ -103,6 +103,11 @@ LOGGING = {
             'level': lambda: get_config_option('logging.alembic_loglevel'),
             'propagate': False,
         },
+        'aio_pika': {
+            'handlers': ['console'],
+            'level': lambda: get_config_option('logging.aiopika_loglevel'),
+            'propagate': False,
+        },
         'sqlalchemy': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),

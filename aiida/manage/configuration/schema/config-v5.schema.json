@@ -146,6 +146,19 @@
                     "default": "INFO",
                     "description": "Minimum level to log to daemon log and the `DbLog` table for the `circus` logger"
                 },
+                "logging.aiopika_loglevel": {
+                    "type": "string",
+                    "enum": [
+                        "CRITICAL",
+                        "ERROR",
+                        "WARNING",
+                        "REPORT",
+                        "INFO",
+                        "DEBUG"
+                    ],
+                    "default": "WARNING",
+                    "description": "Minimum level to log to daemon log and the `DbLog` table for the `aio_pika` logger"
+                },
                 "warnings.showdeprecations": {
                     "type": "boolean",
                     "default": true,

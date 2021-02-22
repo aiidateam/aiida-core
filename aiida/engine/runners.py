@@ -14,7 +14,7 @@ import functools
 import logging
 import signal
 import threading
-from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, NamedTuple, Optional, Set, Tuple, Type, Union
 import uuid
 
 import kiwipy
@@ -88,6 +88,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
+        self.continued_processes: Set[int] = set()
 
         if communicator is not None:
             self._communicator = wrap_communicator(communicator, self._loop)

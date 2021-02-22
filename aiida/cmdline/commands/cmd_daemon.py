@@ -87,7 +87,8 @@ def start(foreground, number):
 
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
-def status(all_profiles):
+@click.option('-w', '--fail-on-worker', is_flag=True, help='Return non-zero exit code on unresponsive worker.')
+def status(all_profiles, fail_on_worker):
     """Print the status of the current daemon or all daemons.
 
     Returns exit code 0 if all requested daemons are running, else exit code 3.
@@ -102,17 +103,22 @@ def status(all_profiles):
         profiles = [config.current_profile]
 
     daemons_running = []
+    workers_responded = []
     for profile in profiles:
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
         click.secho('Profile: ', fg='red', bold=True, nl=False)
         click.secho(f'{profile.name}', bold=True)
-        result = get_daemon_status(client)
+        workers_running, result = get_daemon_status(client)
         echo.echo(result)
+        workers_responded.append(workers_running)
         daemons_running.append(client.is_daemon_running)
 
     if not all(daemons_running):
         sys.exit(3)
+
+    if fail_on_worker and not all(workers_responded):
+        sys.exit(4)
 
 
 @verdi_daemon.command()

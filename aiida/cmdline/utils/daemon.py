@@ -53,33 +53,44 @@ def get_daemon_status(client):
     :param client: the DaemonClient
     """
     from aiida.cmdline.utils.common import format_local_time
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
 
     if not client.is_daemon_running:
-        return 'The daemon is not running'
+        return (False, 'The daemon is not running')
 
     status_response = client.get_status()
 
     if status_response['status'] == 'stopped':
-        return 'The daemon is paused'
+        return (False, 'The daemon is paused')
 
     if status_response['status'] == 'error':
-        return 'The daemon is in an unexpected state, try verdi daemon restart --reset'
+        return (False, 'The daemon is in an unexpected state, try verdi daemon restart --reset')
 
     if status_response['status'] == 'timeout':
-        return 'The daemon is running but the call to the circus controller timed out'
+        return (False, 'The daemon is running but the call to the circus controller timed out')
 
     worker_response = client.get_worker_info()
     daemon_response = client.get_daemon_info()
 
     if 'info' not in worker_response or 'info' not in daemon_response:
-        return 'Call to the circus controller timed out'
+        return (False, 'Call to the circus controller timed out')
 
-    workers = [['PID', 'MEM %', 'CPU %', 'started']]
+    workers = [['PID', 'MEM %', 'CPU %', 'started', 'status']]
+    bad_worker = False
     for worker_pid, worker_info in worker_response['info'].items():
+        status_ok, status_msg = manager.get_daemon_runner_status(worker_pid)
+        if not status_ok:
+            bad_worker = True
+        status_msg = str(status_msg)
         if isinstance(worker_info, dict):
-            row = [worker_pid, worker_info['mem'], worker_info['cpu'], format_local_time(worker_info['create_time'])]
+            row = [
+                worker_pid, worker_info['mem'], worker_info['cpu'],
+                format_local_time(worker_info['create_time']), status_msg
+            ]
         else:
-            row = [worker_pid, '-', '-', '-']
+            row = [worker_pid, '-', '-', '-', status_msg]
 
         workers.append(row)
 
@@ -100,7 +111,7 @@ def get_daemon_status(client):
         'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'
     )
 
-    return template.format(**info)
+    return (not bad_worker, template.format(**info))
 
 
 def delete_stale_pid_file(client):

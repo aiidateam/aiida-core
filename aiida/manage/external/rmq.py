@@ -137,6 +137,10 @@ class ProcessLauncher(plumpy.ProcessLauncher):
     that if it is already marked as terminated, it is not continued but the future is reconstructed and returned
     """
 
+    def __init__(self, *, loop, persister, load_context, loader, runner) -> None:
+        self._runner = runner
+        super().__init__(loop=loop, persister=persister, load_context=load_context, loader=loader)
+
     @staticmethod
     def handle_continue_exception(node, exception, message):
         """Handle exception raised in `_continue` call.
@@ -202,6 +206,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
             return future.result()
 
+        self._runner.continued_processes.add(pid)
         try:
             result = await super()._continue(communicator, pid, nowait, tag)
         except ImportError as exception:
@@ -212,6 +217,8 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             message = 'failed to recreate the process instance in order to continue it.'
             self.handle_continue_exception(node, exception, message)
             raise
+        finally:
+            self._runner.continued_processes.remove(pid)
 
         # Ensure that the result is serialized such that communication thread won't have to do database operations
         try:

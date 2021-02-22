@@ -11,7 +11,8 @@
 """AiiDA manager for global settings"""
 import asyncio
 import functools
-from typing import Any, Optional, TYPE_CHECKING
+import os
+from typing import Any, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -355,6 +356,7 @@ class Manager:
 
         """
         from plumpy.persistence import LoadSaveContext
+        from aiida.manage.configuration import get_config
         from aiida.engine import persistence
         from aiida.manage.external import rmq
 
@@ -366,13 +368,46 @@ class Manager:
             loop=runner_loop,
             persister=self.get_persister(),
             load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader()
+            loader=persistence.get_object_loader(),
+            runner=runner,
         )
 
         assert runner.communicator is not None, 'communicator not set for runner'
         runner.communicator.add_task_subscriber(task_receiver)
 
+        # add a subscriber for returning information about the runner
+        max_slots = get_config().get_option('daemon.worker_process_slots')
+
+        def _reply(_comm, message):
+            return f'{len(runner.continued_processes)}/{max_slots} processes'
+
+        runner.communicator.add_rpc_subscriber(_reply, identifier=f'runner-status-{os.getpid()}')
+
         return runner
+
+    def get_daemon_runner_status(self, pid: int, timeout: int = 5) -> Tuple[bool, str]:
+        """Attempt to communicate with a daemon runner, to test it is running.
+
+        :param pid: the daemon process pid
+        :return: (<connected_ok>, <message>)
+        """
+        from plumpy.futures import unwrap_kiwi_future
+        import kiwipy
+
+        communicator = self.get_communicator()
+        try:
+            future = communicator.rpc_send(f'runner-status-{pid}', None)
+        except ConnectionError:
+            return (False, 'No RMQ connection')
+        except kiwipy.TimeoutError:
+            return (False, 'RMQ timeout')
+        except kiwipy.UnroutableError:
+            return (False, 'Not responding')
+        try:
+            result = unwrap_kiwi_future(future).result(timeout)
+        except kiwipy.TimeoutError:
+            return (False, 'Response timeout')
+        return (True, result)
 
 
 MANAGER: Optional[Manager] = None

@@ -413,6 +413,10 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
     """
     job_id = calculation.get_job_id()
 
+    if job_id is None:
+        # the calculation has not yet been submitted to the scheduler
+        return True
+
     # Get the scheduler plugin class and initialize it with the correct transport
     scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)

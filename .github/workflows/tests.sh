@@ -33,7 +33,7 @@ python ${SYSTEM_TESTS}/test_plugin_testcase.py  # uses custom unittest test runn
 
 # Until the `${SYSTEM_TESTS}/pytest` tests are moved within `tests` we have to run them separately and pass in the path to the
 # `conftest.py` explicitly, because otherwise it won't be able to find the fixtures it provides
-AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests/conftest.py ${SYSTEM_TESTS}/pytest
+#AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests/conftest.py ${SYSTEM_TESTS}/pytest
 
 # main aiida-core tests
 AIIDA_TEST_PROFILE=test_$AIIDA_TEST_BACKEND pytest tests

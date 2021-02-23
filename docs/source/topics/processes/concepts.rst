@@ -159,6 +159,10 @@ Processes, whose task is in the queue and not with any runner, though technicall
 While a process is not actually being run, i.e. it is not in memory with a runner, one cannot interact with it.
 Similarly, as soon as the task disappears, either because the process was intentionally terminated (or unintentionally), the process will never continue running again.
 
+.. figure:: include/images/submit_sysml.png
+
+    A systems modelling representation of submitting a process.
+
 
 .. _topics:processes:concepts:checkpoints:
 

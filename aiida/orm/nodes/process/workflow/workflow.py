@@ -8,12 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workflow processes."""
+from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType
-from aiida.orm import Node
 from aiida.orm.utils.managers import NodeLinksManager
 
 from ..process import ProcessNode
+
+if TYPE_CHECKING:
+    from aiida.orm import Node
 
 __all__ = ('WorkflowNode',)
 
@@ -49,7 +52,7 @@ class WorkflowNode(ProcessNode):
         """
         return NodeLinksManager(node=self, link_type=LinkType.RETURN, incoming=False)
 
-    def validate_outgoing(self, target: Node, link_type: LinkType, link_label: str) -> None:
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from ourself to a given node.
 
         A workflow cannot 'create' Data, so if we receive an outgoing link to an unstored Data node, that means

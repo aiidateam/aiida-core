@@ -839,7 +839,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
         type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
 
-    def _add_incoming_cache(self, source: Node, link_type: LinkType, link_label: str) -> None:
+    def _add_incoming_cache(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add an incoming link to the cache.
 
         .. note: the proposed link is not validated in this function, so this should not be called directly

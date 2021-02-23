@@ -236,7 +236,7 @@ class Runner:  # pylint: disable=too-many-public-methods
             def kill_process(_num, _frame):
                 """Send the kill signal to the process in the current scope."""
                 if process_inited.is_killing:
-                    LOGGER.critical('runner received interrupt, process %s already being killed', process_inited.pid)
+                    LOGGER.warning('runner received interrupt, process %s already being killed', process_inited.pid)
                     return
                 LOGGER.critical('runner received interrupt, killing process %s', process_inited.pid)
                 process_inited.kill(msg='Process was killed because the runner received an interrupt')

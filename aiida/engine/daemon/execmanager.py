@@ -32,7 +32,7 @@ from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
-execlogger = AIIDA_LOGGER.getChild('execmanager')
+EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
 def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
@@ -77,7 +77,7 @@ def upload_calculation(
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
     link_label = 'remote_folder'
     if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
-        execlogger.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
+        EXEC_LOGGER.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
         return calc_info
 
     computer = node.computer
@@ -87,7 +87,7 @@ def upload_calculation(
 
     logger_extra = get_dblogger_extra(node)
     transport.set_logger_extra(logger_extra)
-    logger = LoggerAdapter(logger=execlogger, extra=logger_extra)
+    logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
     if not dry_run and node.has_cached_links():
         raise ValueError(
@@ -346,15 +346,15 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     logger_extra = get_dblogger_extra(calculation)
     workdir = calculation.get_remote_workdir()
 
-    execlogger.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
-    execlogger.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
+    EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
+    EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
 
     # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
     link_label = calculation.link_label_retrieved
     if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
-        execlogger.warning(
+        EXEC_LOGGER.warning(
             f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping retrieval'
         )
         return
@@ -387,13 +387,13 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
-                execlogger.debug(
+                EXEC_LOGGER.debug(
                     f"[retrieval of calc {calculation.pk}] Retrieved temporary file or folder '{filename}'",
                     extra=logger_extra
                 )
 
         # Store everything
-        execlogger.debug(
+        EXEC_LOGGER.debug(
             f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
         )
         retrieved_files.store()
@@ -411,14 +411,16 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     :param calculation: the instance of CalcJobNode to kill.
     :param transport: an already opened transport to use to address the scheduler
     """
+    from aiida.schedulers.scheduler import Scheduler
+
     job_id = calculation.get_job_id()
 
-    if job_id is None:
-        # the calculation has not yet been submitted to the scheduler
-        return
+    # if job_id is None:
+    #     # the calculation has not yet been submitted to the scheduler
+    #     return
 
     # Get the scheduler plugin class and initialize it with the correct transport
-    scheduler = calculation.computer.get_scheduler()
+    scheduler: Scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
     # Call the proper kill method for the job ID of this calculation
@@ -434,7 +436,9 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
         if job is not None and job.job_state != JobState.DONE:
             raise exceptions.RemoteOperationError(f'scheduler.kill({job_id}) was unsuccessful')
         else:
-            execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
+            EXEC_LOGGER.warning(
+                'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
+            )
 
 
 def _retrieve_singlefiles(
@@ -447,7 +451,7 @@ def _retrieve_singlefiles(
     """Retrieve files specified through the singlefile list mechanism."""
     singlefile_list = []
     for (linkname, subclassname, filename) in retrieve_file_list:
-        execlogger.debug(
+        EXEC_LOGGER.debug(
             '[retrieval of calc {}] Trying '
             "to retrieve remote singlefile '{}'".format(job.pk, filename),
             extra=logger_extra
@@ -468,7 +472,7 @@ def _retrieve_singlefiles(
         singlefiles.append(singlefile)
 
     for fil in singlefiles:
-        execlogger.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
+        EXEC_LOGGER.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
         fil.store()
 
 

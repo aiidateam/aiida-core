@@ -11,6 +11,7 @@
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
+from aiida.common.datastructures import CalcJobState
 from aiida.orm import CalculationNode, CalcJobNode
 
 
@@ -117,7 +118,9 @@ class TestProcessNode(AiidaTestCase):
             node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
     def test_get_description(self):
-        self.assertEqual(self.calcjob.get_description(), self.calcjob.get_state())
+        self.assertEqual(self.calcjob.get_description(), '')
+        self.calcjob.set_state(CalcJobState.PARSING)
+        self.assertEqual(self.calcjob.get_description(), CalcJobState.PARSING.value)
 
     def test_get_authinfo(self):
         """Test that we can get the AuthInfo object from the calculation instance."""

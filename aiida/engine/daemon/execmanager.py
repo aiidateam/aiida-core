@@ -411,8 +411,6 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     :param calculation: the instance of CalcJobNode to kill.
     :param transport: an already opened transport to use to address the scheduler
     """
-    from aiida.schedulers.scheduler import Scheduler
-
     job_id = calculation.get_job_id()
 
     if job_id is None:
@@ -420,7 +418,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
         return
 
     # Get the scheduler plugin class and initialize it with the correct transport
-    scheduler: Scheduler = calculation.computer.get_scheduler()
+    scheduler = calculation.computer.get_scheduler()
     scheduler.set_transport(transport)
 
     # Call the proper kill method for the job ID of this calculation

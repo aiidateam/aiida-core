@@ -23,6 +23,7 @@ import tempfile
 import pytest
 
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+from aiida.manage import manager
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -51,6 +52,17 @@ def clear_database_after_test(aiida_profile):
     """Clear the database after the test."""
     yield
     aiida_profile.reset_db()
+
+
+@pytest.fixture(scope='function', autouse=True)
+def reset_manager():
+    """Close the AiiDA manager after a test.
+
+    Clean up after a test by closing the AiiDA manager.
+    """
+    yield
+
+    manager.reset_manager()
 
 
 @pytest.fixture(scope='function')

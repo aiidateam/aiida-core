@@ -404,7 +404,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
-def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
+def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """
     Kill the calculation through the scheduler
 
@@ -415,7 +415,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
 
     if job_id is None:
         # the calculation has not yet been submitted to the scheduler
-        return True
+        return
 
     # Get the scheduler plugin class and initialize it with the correct transport
     scheduler = calculation.computer.get_scheduler()
@@ -435,8 +435,6 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
             raise exceptions.RemoteOperationError(f'scheduler.kill({job_id}) was unsuccessful')
         else:
             execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
-
-    return True
 
 
 def _retrieve_singlefiles(

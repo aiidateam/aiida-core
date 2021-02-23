@@ -182,9 +182,9 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
     def __eq__(self, other):
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""
-        if isinstance(other, Node):
-            return self.uuid == other.uuid
-        return False
+        if isinstance(other, Node) and self.uuid == other.uuid:
+            return True
+        return super().__eq__(other)
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {str(self)}>'

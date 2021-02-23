@@ -151,11 +151,6 @@ class WorkChain(Process):
         """
         self._awaitables.remove(awaitable)
 
-        if self.has_terminated:
-            # this can occur, for example, if the process was killed or excepted
-            # then we should not try to update it
-            return
-
         if awaitable.action == AwaitableAction.ASSIGN:
             self.ctx[awaitable.key] = value
         elif awaitable.action == AwaitableAction.APPEND:
@@ -171,6 +166,11 @@ class WorkChain(Process):
             assert f'Unknown awaitable action: {awaitable.action}'
 
         awaitable.resolved = True
+
+        if self.has_terminated:
+            # this can occur, for example, if the process was killed or excepted
+            # then we should not try to update it
+            return
 
         self._update_process_status()
 

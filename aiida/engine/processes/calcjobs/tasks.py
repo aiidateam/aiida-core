@@ -71,7 +71,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
 
     async def do_upload():
         with transport_queue.request_transport(authinfo) as request:

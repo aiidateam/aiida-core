@@ -1146,14 +1146,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()
 
-    def get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> str:
+    def get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
         """Return the hash for this node based on its attributes."""
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
 
         return self._get_hash(ignore_errors=ignore_errors, **kwargs)
 
-    def _get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> str:
+    def _get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
         """
         Return the hash for this node based on its attributes.
 
@@ -1164,6 +1164,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         except Exception:  # pylint: disable=broad-except
             if not ignore_errors:
                 raise
+            return None
 
     def _get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash."""

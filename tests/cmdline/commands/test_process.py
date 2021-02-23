@@ -397,15 +397,23 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
 
 
+#@pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
+@pytest.mark.requires_rmq
 @pytest.mark.parametrize('cmd_try_all', (True, False))
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_pause_play_kill(run_cli_command, cmd_try_all):
+def test_pause_play_kill(cmd_try_all):
     """
     Test the pause/play/kill commands
     """
     # pylint: disable=no-member, too-many-locals
+    import os
+    import signal
+    import subprocess
+
     from aiida.cmdline.commands.cmd_process import process_pause, process_play, process_kill
     from aiida.cmdline.utils.common import get_env_with_venv_bin
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.manage.configuration import get_config
     from aiida.orm import load_node
 
     # Add the current python path to the environment that will be used for the daemon sub process. This is necessary
@@ -413,7 +421,15 @@ def test_pause_play_kill(run_cli_command, cmd_try_all):
     env = get_env_with_venv_bin()
     env['PYTHONPATH'] = ':'.join(sys.path)
 
+    profile = get_config().current_profile
+    daemon = subprocess.Popen(
+        DaemonClient(profile).cmd_string.split(),
+        stderr=sys.stderr,
+        stdout=sys.stdout,
+        env=env,
+    )
     runner = get_manager().create_runner(rmq_submit=True)
+    cli_runner = CliRunner()
 
     test_daemon_timeout = 5.
     calc = runner.submit(test_processes.WaitProcess)
@@ -429,13 +445,13 @@ def test_pause_play_kill(run_cli_command, cmd_try_all):
     orphaned_node = WorkFunctionNode().store()
     non_existing_process_id = str(orphaned_node.pk)
     for command in [process_pause, process_play, process_kill]:
-        result = run_cli_command(command, [non_existing_process_id])
+        result = cli_runner.invoke(command, [non_existing_process_id])
         import traceback
         assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
         assert 'Error:' in result.output
 
     assert not calc.paused
-    result = run_cli_command(process_pause, [str(calc.pk)])
+    result = cli_runner.invoke(process_pause, [str(calc.pk)])
     assert result.exception is None, result.output
 
     # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
@@ -457,8 +473,7 @@ def test_pause_play_kill(run_cli_command, cmd_try_all):
 
     # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
     # the `verdi process` commands that we want to test
-    #result = cli_runner.invoke(cmd_process.process_pause, ['--wait', str(calc.pk)])
-    result = run_cli_command(process_pause, ['--wait', str(calc.pk)])
+    result = cli_runner.invoke(process_pause, ['--wait', str(calc.pk)])
     assert result.exception is None, result.output
     assert calc.paused
 
@@ -467,11 +482,13 @@ def test_pause_play_kill(run_cli_command, cmd_try_all):
     else:
         cmd_option = str(calc.pk)
 
-    result = run_cli_command(process_play, ['--wait', cmd_option])
+    result = cli_runner.invoke(process_play, ['--wait', cmd_option])
     assert result.exception is None, result.output
     assert not calc.paused
 
-    result = run_cli_command(process_kill, ['--wait', str(calc.pk)])
+    result = cli_runner.invoke(process_kill, ['--wait', str(calc.pk)])
     assert result.exception is None, result.output
     assert calc.is_terminated
     assert calc.is_killed
+
+    os.kill(daemon.pid, signal.SIGTERM)

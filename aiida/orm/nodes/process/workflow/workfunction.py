@@ -10,6 +10,7 @@
 """Module with `Node` sub class for workflow function processes."""
 
 from aiida.common.links import LinkType
+from aiida.orm import Node
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .workflow import WorkflowNode
@@ -20,7 +21,7 @@ __all__ = ('WorkFunctionNode',)
 class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
     """ORM class for all nodes representing the execution of a workfunction."""
 
-    def validate_outgoing(self, target, link_type, link_label):
+    def validate_outgoing(self, target: Node, link_type: LinkType, link_label: str) -> None:
         """
         Validate adding a link of the given type from ourself to a given node.
 

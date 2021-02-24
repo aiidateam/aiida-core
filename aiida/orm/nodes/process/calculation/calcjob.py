@@ -480,8 +480,6 @@ class CalcJobNode(CalculationNode):
 
         :return: `AuthInfo`
         """
-        from aiida.orm.authinfos import AuthInfo
-
         computer = self.computer
 
         if computer is None:

@@ -1169,7 +1169,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         except exceptions.HashingError:
             if not ignore_errors:
                 raise
-            self.logger.exception('Node hashing failed')
+            if self.logger:
+                self.logger.exception('Node hashing failed')
             return None
 
     def _get_objects_to_hash(self) -> List[Any]:

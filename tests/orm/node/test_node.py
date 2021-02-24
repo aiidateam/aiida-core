@@ -10,6 +10,7 @@
 # pylint: disable=too-many-public-methods,no-self-use
 """Tests for the Node ORM class."""
 import io
+import logging
 import os
 import tempfile
 
@@ -888,6 +889,20 @@ def test_store_from_cache():
     assert clone.is_stored
     assert clone.get_cache_source() == data.uuid
     assert data.get_hash() == clone.get_hash()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_hashing_errors(aiida_caplog):
+    """Tests that ``get_hash`` fails in an expected manner."""
+    node = Data().store()
+    node.__module__ = 'unknown'  # this will inhibit package version determination
+    result = node.get_hash(ignore_errors=True)
+    assert result is None
+    assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
+
+    with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
+        result = node.get_hash(ignore_errors=False)
+    assert result is None
 
 
 # Ignoring the resource errors as we are indeed testing the wrong way of using these (for backward-compatibility)

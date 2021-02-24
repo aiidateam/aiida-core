@@ -22,6 +22,8 @@ from operator import itemgetter
 import pytz
 
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
+from aiida.common.exceptions import HashingError
+
 from .folders import Folder
 
 # The prefix of the hashed using pbkdf2_sha256 algorithm in Django
@@ -101,7 +103,6 @@ def make_hash(object_to_hash, **kwargs):
     hashing iteratively. Uses python's sorted function to sort unsorted
     sets and dictionaries by sorting the hashed keys.
     """
-
     hashes = _make_hash(object_to_hash, **kwargs)  # pylint: disable=assignment-from-no-return
 
     # use the Unlimited fanout hashing protocol outlined in
@@ -123,7 +124,7 @@ def _make_hash(object_to_hash, **_):
     Implementation of the ``make_hash`` function. The hash is created as a
     28 byte integer, and only later converted to a string.
     """
-    raise ValueError(f'Value of type {type(object_to_hash)} cannot be hashed')
+    raise HashingError(f'Value of type {type(object_to_hash)} cannot be hashed')
 
 
 def _single_digest(obj_type, obj_bytes=b''):

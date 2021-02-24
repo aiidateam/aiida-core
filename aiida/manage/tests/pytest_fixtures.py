@@ -22,7 +22,17 @@ import shutil
 import tempfile
 import pytest
 
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+
+
+@pytest.fixture(scope='function')
+def aiida_caplog(caplog):
+    """A copy of pytest's caplog fixture, which allows ``AIIDA_LOGGER`` to propagate."""
+    propogate = AIIDA_LOGGER.propagate
+    AIIDA_LOGGER.propagate = True
+    yield caplog
+    AIIDA_LOGGER.propagate = propogate
 
 
 @pytest.fixture(scope='session', autouse=True)

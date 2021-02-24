@@ -26,10 +26,10 @@ class TestCalculations(AiidaArchiveTestCase):
 
     def setUp(self):
         super().setUp()
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
-        self.reset_database()
+        self.clean_db()
         super().tearDown()
 
     @pytest.mark.requires_rmq

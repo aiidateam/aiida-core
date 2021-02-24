@@ -23,11 +23,11 @@ class TestVisGraph(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
         super().tearDown()
-        self.reset_database()
+        self.clean_db()
 
     def create_provenance(self):
         """create an example provenance graph

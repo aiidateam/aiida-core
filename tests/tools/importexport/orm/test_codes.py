@@ -25,11 +25,11 @@ class TestCode(AiidaArchiveTestCase):
 
     def setUp(self):
         super().setUp()
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
         super().tearDown()
-        self.reset_database()
+        self.clean_db()
 
     @with_temp_dir
     def test_that_solo_code_is_exported_correctly(self, temp_dir):
@@ -49,7 +49,7 @@ class TestCode(AiidaArchiveTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([code], filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
         import_data(export_file)
 
@@ -85,7 +85,7 @@ class TestCode(AiidaArchiveTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([calc], filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
         import_data(export_file)
 

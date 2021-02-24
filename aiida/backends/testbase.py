@@ -77,8 +77,7 @@ class AiidaTestCase(unittest.TestCase):
         cls.__backend_instance = cls.get_backend_class()()
         cls._class_was_setup = True
 
-        cls.clean_db()
-        cls.insert_data()
+        cls.refurbish_db()
 
     @classmethod
     def tearDownClass(cls):
@@ -97,14 +96,6 @@ class AiidaTestCase(unittest.TestCase):
 
     ### Database/repository-related methods
 
-    def reset_database(self):
-        """Reset the database to the default state deleting any content currently stored"""
-
-        self.clean_db()
-        if orm.autogroup.CURRENT_AUTOGROUP is not None:
-            orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()
-        self.insert_data()
-
     @classmethod
     def insert_data(cls):
         """
@@ -112,9 +103,8 @@ class AiidaTestCase(unittest.TestCase):
         inserts default data into the database (which is for the moment a
         default computer).
         """
-
         add_default_user()
-        orm.User.objects.reset()
+        orm.User.objects.reset()  # clear default user cache
 
     @classmethod
     def clean_db(cls):
@@ -134,7 +124,19 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance.clean_db()
 
+        if orm.autogroup.CURRENT_AUTOGROUP is not None:
+            orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()
+
         reset_manager()
+
+    @classmethod
+    def refurbish_db(cls):
+        """Clean up database and repopulate with initial data.
+
+        Combines clean_db and insert_data.
+        """
+        cls.clean_db()
+        cls.insert_data()
 
     @classmethod
     def clean_repository(cls):

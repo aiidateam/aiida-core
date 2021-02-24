@@ -23,10 +23,10 @@ class TestComputer(AiidaArchiveTestCase):
     """Test ex-/import cases related to Computers"""
 
     def setUp(self):
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
-        self.reset_database()
+        self.clean_db()
 
     @with_temp_dir
     def test_same_computer_import(self, temp_dir):
@@ -72,8 +72,7 @@ class TestComputer(AiidaArchiveTestCase):
         export([calc2], filename=filename2)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -169,8 +168,7 @@ class TestComputer(AiidaArchiveTestCase):
         export([calc2], filename=filename2)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -273,8 +271,7 @@ class TestComputer(AiidaArchiveTestCase):
         export([calc3], filename=filename3)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -330,8 +327,7 @@ class TestComputer(AiidaArchiveTestCase):
         export([calc1], filename=filename1)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Import the data
         import_data(filename1)
@@ -349,7 +345,7 @@ class TestComputer(AiidaArchiveTestCase):
 
         for archive in ['django.aiida', 'sqlalchemy.aiida']:
             # Clean the database
-            self.reset_database()
+            self.clean_db()
 
             # Import the needed data
             import_archive(archive, filepath='export/compare')

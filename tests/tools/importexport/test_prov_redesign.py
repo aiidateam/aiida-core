@@ -64,7 +64,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         export(export_nodes, filename=filename)
 
         # Clean the database
-        self.reset_database()
+        self.clean_db()
 
         # Import nodes again
         import_data(filename)
@@ -114,7 +114,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         export([node], filename=filename)
 
         # Clean the database and reimport data
-        self.reset_database()
+        self.clean_db()
         import_data(filename)
 
         # Retrieve node and check exactly one node is imported
@@ -157,7 +157,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         export([code], filename=filename)
 
         # Clean the database and reimport
-        self.reset_database()
+        self.clean_db()
         import_data(filename)
 
         # Retrieve Code node and make sure exactly 1 is retrieved
@@ -239,7 +239,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         export([group_user, group_upf], filename=filename)
 
         # Clean the database and reimport
-        self.reset_database()
+        self.clean_db()
         import_data(filename)
 
         # Retrieve Groups and make sure exactly 3 are retrieved (including the "import group")

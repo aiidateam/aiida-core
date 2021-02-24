@@ -32,10 +32,10 @@ class TestSpecificImport(AiidaArchiveTestCase):
 
     def setUp(self):
         super().setUp()
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
-        self.reset_database()
+        self.clean_db()
 
     def test_simple_import(self):
         """
@@ -72,8 +72,7 @@ class TestSpecificImport(AiidaArchiveTestCase):
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Clean the database and verify there are no nodes left
-            self.clean_db()
-            self.create_user()
+            self.refurbish_db()
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
@@ -133,8 +132,7 @@ class TestSpecificImport(AiidaArchiveTestCase):
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Clean the database and verify there are no nodes left
-            self.clean_db()
-            self.create_user()
+            self.refurbish_db()
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
@@ -233,7 +231,7 @@ class TestSpecificImport(AiidaArchiveTestCase):
         # Export and reset db
         filename = os.path.join(temp_dir, 'export.aiida')
         export([node], filename=filename, file_format='tar.gz')
-        self.reset_database()
+        self.clean_db()
 
         # Untar archive file, remove repository folder, re-tar
         node_shard_uuid = export_shard_uuid(node_uuid)
@@ -303,7 +301,7 @@ class TestSpecificImport(AiidaArchiveTestCase):
         export([node], filename=archive_variants['zip archive'], file_format='zip')
 
         for variant, filename in archive_variants.items():
-            self.reset_database()
+            self.clean_db()
             node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
             self.assertEqual(node_count, 0, msg=f'After DB reset {node_count} Dict Nodes was (wrongly) found')
 

@@ -22,10 +22,10 @@ class TestUsers(AiidaArchiveTestCase):
     """Test ex-/import cases related to Users"""
 
     def setUp(self):
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
-        self.reset_database()
+        self.clean_db()
 
     @with_temp_dir
     def test_nodes_belonging_to_different_users(self, temp_dir):
@@ -84,7 +84,7 @@ class TestUsers(AiidaArchiveTestCase):
 
         export([sd3], filename=filename)
         self.clean_db()
-        self.create_user()
+        self.insert_data()
         import_data(filename)
 
         # Check that the imported nodes are correctly imported and that

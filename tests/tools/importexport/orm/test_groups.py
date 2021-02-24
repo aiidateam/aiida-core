@@ -23,10 +23,10 @@ class TestGroups(AiidaArchiveTestCase):
     """Test ex-/import cases related to Groups"""
 
     def setUp(self):
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
-        self.reset_database()
+        self.clean_db()
 
     @with_temp_dir
     def test_nodes_in_group(self, temp_dir):
@@ -189,7 +189,7 @@ class TestGroups(AiidaArchiveTestCase):
         # Export Nodes
         filename = os.path.join(temp_dir, 'export.aiida')
         export([data1, data2], filename=filename)
-        self.reset_database()
+        self.clean_db()
 
         # Create Group, do not store
         group_label = 'import_madness'

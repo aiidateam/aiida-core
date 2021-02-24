@@ -26,7 +26,7 @@ class TestLogs(AiidaArchiveTestCase):
     def setUp(self):
         """Reset database prior to all tests"""
         super().setUp()
-        self.reset_database()
+        self.clean_db()
 
     def tearDown(self):
         """
@@ -57,7 +57,7 @@ class TestLogs(AiidaArchiveTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([calc], filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
         import_data(export_file)
 
@@ -89,7 +89,7 @@ class TestLogs(AiidaArchiveTestCase):
         export([calc], filename=export_file, include_logs=False)
 
         # Clean database and reimport exported data
-        self.reset_database()
+        self.clean_db()
         import_data(export_file)
 
         # Finding all the log messages
@@ -126,7 +126,7 @@ class TestLogs(AiidaArchiveTestCase):
         export([calc], filename=export_file)
 
         # Clean database and reimport exported data
-        self.reset_database()
+        self.clean_db()
         import_data(export_file)
 
         # Finding all the log messages
@@ -147,7 +147,7 @@ class TestLogs(AiidaArchiveTestCase):
         export([calc], filename=re_export_file)
 
         # Clean database and reimport exported data
-        self.reset_database()
+        self.clean_db()
         import_data(re_export_file)
 
         # Finding all the log messages
@@ -190,7 +190,7 @@ class TestLogs(AiidaArchiveTestCase):
         export([node], filename=export_file_full)
 
         # Clean database and reimport "EXISTING" DB
-        self.reset_database()
+        self.clean_db()
         import_data(export_file_existing)
 
         # Check correct import
@@ -314,7 +314,7 @@ class TestLogs(AiidaArchiveTestCase):
         export([calc], filename=export_file_full)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part II
         # Reimport "EXISTING" DB
@@ -352,7 +352,7 @@ class TestLogs(AiidaArchiveTestCase):
         export([calc], filename=export_file_new)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part III
         # Reimport "EXISTING" DB

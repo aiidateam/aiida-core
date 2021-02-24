@@ -30,13 +30,6 @@ from . import AiidaArchiveTestCase
 class TestSpecificImport(AiidaArchiveTestCase):
     """Test specific ex-/import cases"""
 
-    def setUp(self):
-        super().setUp()
-        self.clean_db()
-
-    def tearDown(self):
-        self.clean_db()
-
     def test_simple_import(self):
         """
         This is a very simple test which checks that an archive file with nodes

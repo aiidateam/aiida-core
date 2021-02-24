@@ -29,14 +29,6 @@ from .. import AiidaArchiveTestCase
 class TestLinks(AiidaArchiveTestCase):
     """Test ex-/import cases related to Links"""
 
-    def setUp(self):
-        self.clean_db()
-        super().setUp()
-
-    def tearDown(self):
-        self.clean_db()
-        super().tearDown()
-
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):
         """Test importing of nodes, that have links to unknown nodes."""

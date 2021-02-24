@@ -22,12 +22,6 @@ from .. import AiidaArchiveTestCase
 class TestComputer(AiidaArchiveTestCase):
     """Test ex-/import cases related to Computers"""
 
-    def setUp(self):
-        self.clean_db()
-
-    def tearDown(self):
-        self.clean_db()
-
     @with_temp_dir
     def test_same_computer_import(self, temp_dir):
         """
@@ -231,8 +225,7 @@ class TestComputer(AiidaArchiveTestCase):
         export([calc1], filename=filename1)
 
         # Reset the database
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
         # Set the computer name to the same name as before
         self.computer.label = comp1_name
@@ -251,8 +244,7 @@ class TestComputer(AiidaArchiveTestCase):
         export([calc2], filename=filename2)
 
         # Reset the database
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
         # Set the computer name to the same name as before
         self.computer.label = comp1_name

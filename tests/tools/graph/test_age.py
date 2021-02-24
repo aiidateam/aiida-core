@@ -87,7 +87,7 @@ class TestAiidaGraphExplorer(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.clean_db()
+        self.refurbish_db()
 
     @staticmethod
     def _create_basic_graph():
@@ -670,7 +670,7 @@ class TestAiidaEntitySet(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.clean_db()
+        self.refurbish_db()
 
     def test_class_mismatch(self):
         """

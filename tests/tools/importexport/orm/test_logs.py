@@ -23,18 +23,6 @@ from .. import AiidaArchiveTestCase
 class TestLogs(AiidaArchiveTestCase):
     """Test ex-/import cases related to Logs"""
 
-    def setUp(self):
-        """Reset database prior to all tests"""
-        super().setUp()
-        self.clean_db()
-
-    def tearDown(self):
-        """
-        Delete all the created log entries
-        """
-        super().tearDown()
-        orm.Log.objects.delete_all()
-
     @with_temp_dir
     def test_critical_log_msg_and_metadata(self, temp_dir):
         """ Testing logging of critical message """

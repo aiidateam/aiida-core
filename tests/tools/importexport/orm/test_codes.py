@@ -23,14 +23,6 @@ from .. import AiidaArchiveTestCase
 class TestCode(AiidaArchiveTestCase):
     """Test ex-/import cases related to Codes"""
 
-    def setUp(self):
-        super().setUp()
-        self.clean_db()
-
-    def tearDown(self):
-        super().tearDown()
-        self.clean_db()
-
     @with_temp_dir
     def test_that_solo_code_is_exported_correctly(self, temp_dir):
         """
@@ -122,8 +114,7 @@ class TestCode(AiidaArchiveTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([code], filename=export_file)
 
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
         import_data(export_file)
 

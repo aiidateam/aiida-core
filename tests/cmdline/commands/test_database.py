@@ -49,10 +49,8 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         data_output.add_incoming(workflow_parent, link_label='output', link_type=LinkType.RETURN)
 
     def setUp(self):
+        self.refurbish_db()
         self.cli_runner = CliRunner()
-
-    def tearDown(self):
-        self.clean_db()
 
     def test_detect_invalid_links_workflow_create(self):
         """Test `verdi database integrity detect-invalid-links` outgoing `create` from `workflow`."""

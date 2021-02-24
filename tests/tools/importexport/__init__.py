@@ -15,6 +15,10 @@ from aiida.tools.importexport import EXPORT_LOGGER, IMPORT_LOGGER
 class AiidaArchiveTestCase(AiidaTestCase):
     """Testcase for tests of archive-related functionality (import, export)."""
 
+    def setUp(self):
+        super().setUp()
+        self.refurbish_db()
+
     @classmethod
     def setUpClass(cls):
         """Only run to prepare an archive file"""

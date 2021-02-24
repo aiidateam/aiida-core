@@ -24,14 +24,6 @@ from .. import AiidaArchiveTestCase
 class TestCalculations(AiidaArchiveTestCase):
     """Test ex-/import cases related to Calculations"""
 
-    def setUp(self):
-        super().setUp()
-        self.refurbish_db()
-
-    def tearDown(self):
-        super().tearDown()
-        self.refurbish_db()
-
     @pytest.mark.requires_rmq
     @with_temp_dir
     def test_calcfunction(self, temp_dir):

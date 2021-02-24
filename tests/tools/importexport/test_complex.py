@@ -23,12 +23,6 @@ from . import AiidaArchiveTestCase
 class TestComplex(AiidaArchiveTestCase):
     """Test complex ex-/import cases"""
 
-    def setUp(self):
-        self.clean_db()
-
-    def tearDown(self):
-        self.clean_db()
-
     @with_temp_dir
     def test_complex_graph_import_export(self, temp_dir):
         """

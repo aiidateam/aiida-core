@@ -21,12 +21,6 @@ from .. import AiidaArchiveTestCase
 class TestUsers(AiidaArchiveTestCase):
     """Test ex-/import cases related to Users"""
 
-    def setUp(self):
-        self.clean_db()
-
-    def tearDown(self):
-        self.clean_db()
-
     @with_temp_dir
     def test_nodes_belonging_to_different_users(self, temp_dir):
         """
@@ -83,8 +77,7 @@ class TestUsers(AiidaArchiveTestCase):
         filename = os.path.join(temp_dir, 'export.aiida')
 
         export([sd3], filename=filename)
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename)
 
         # Check that the imported nodes are correctly imported and that
@@ -140,8 +133,7 @@ class TestUsers(AiidaArchiveTestCase):
         filename1 = os.path.join(temp_dir, 'export1.aiidaz')
         export([sd2], filename=filename1)
         uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename1)
 
         # Check that the imported nodes are correctly imported and that
@@ -172,8 +164,7 @@ class TestUsers(AiidaArchiveTestCase):
 
         filename2 = os.path.join(temp_dir, 'export2.aiida')
         export([sd3], filename=filename2)
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename2)
 
         # Check that the imported nodes are correctly imported and that

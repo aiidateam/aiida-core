@@ -24,15 +24,10 @@ class TestComments(AiidaArchiveTestCase):
 
     def setUp(self):
         super().setUp()
-        self.clean_db()
         self.comments = [
             "We're no strangers to love", 'You know the rules and so do I', "A full commitment's what I'm thinking of",
             "You wouldn't get this from any other guy"
         ]
-
-    def tearDown(self):
-        super().tearDown()
-        self.clean_db()
 
     @with_temp_dir
     def test_multiple_imports_for_single_node(self, temp_dir):

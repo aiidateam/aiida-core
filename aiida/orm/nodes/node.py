@@ -1056,7 +1056,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     def get_hash(self, ignore_errors=True, **kwargs):
         """Return the hash for this node based on its attributes.
 
-        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError``s (logging the exception)
+        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
         """
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
@@ -1069,7 +1069,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         This will always work, even before storing.
 
-        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError``s (logging the exception)
+        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
         """
         try:
             return make_hash(self._get_objects_to_hash(), **kwargs)

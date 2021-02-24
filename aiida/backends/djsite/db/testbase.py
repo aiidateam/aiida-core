@@ -12,12 +12,6 @@ Base class for AiiDA tests
 """
 
 from aiida.backends.testimplbase import AiidaTestImplementation
-from aiida.orm.implementation.django.backend import DjangoBackend
-
-# Add a new entry here if you add a file with tests under aiida.backends.djsite.db.subtests
-# The key is the name to use in the 'verdi test' command (e.g., a key 'generic'
-# can be run using 'verdi test db.generic')
-# The value must be the module name containing the subclasses of unittest.TestCase
 
 
 # This contains the codebase for the setUpClass and tearDown methods used internally by the AiidaTestCase
@@ -28,13 +22,6 @@ class DjangoTests(AiidaTestImplementation):
     """
     Automatically takes care of the setUpClass and TearDownClass, when needed.
     """
-
-    # pylint: disable=attribute-defined-outside-init
-
-    # Note this is has to be a normal method, not a class method
-    def setUpClass_method(self):
-        self.clean_db()
-        self.backend = DjangoBackend()
 
     def clean_db(self):
         from aiida.backends.djsite.db import models
@@ -49,8 +36,3 @@ class DjangoTests(AiidaTestImplementation):
         models.DbUser.objects.all().delete()  # pylint: disable=no-member
         models.DbComputer.objects.all().delete()
         models.DbGroup.objects.all().delete()
-
-    def tearDownClass_method(self):
-        """
-        Backend-specific tasks for tearing down the test environment.
-        """

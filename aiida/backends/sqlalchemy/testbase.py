@@ -20,22 +20,6 @@ from aiida.backends.testimplbase import AiidaTestImplementation
 class SqlAlchemyTests(AiidaTestImplementation):
     """Base class to test SQLA-related functionalities."""
     connection = None
-    _backend = None
-
-    def setUpClass_method(self):
-        self.clean_db()
-
-    def tearDownClass_method(self):
-        """Backend-specific tasks for tearing down the test environment."""
-
-    @property
-    def backend(self):
-        """Get the backend."""
-        if self._backend is None:
-            from aiida.manage.manager import get_manager
-            self._backend = get_manager().get_backend()
-
-        return self._backend
 
     def clean_db(self):
         from sqlalchemy.sql import table

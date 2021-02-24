@@ -13,7 +13,6 @@ import unittest
 
 from aiida.schedulers.plugins.direct import DirectScheduler
 from aiida.schedulers import SchedulerError
-from aiida.common.log import AIIDA_LOGGER
 
 # This was executed with ps -o pid,stat,user,time | tail -n +2
 mac_ps_output_str = """21259 S+   broeder   0:00.04
@@ -89,21 +88,15 @@ class TestParserGetJobList(unittest.TestCase):
         self.assertIn('11383', job_ids)
 
 
-def test_submit_script_rerunnable(caplog):
+def test_submit_script_rerunnable(aiida_caplog):
     """Test that setting the `rerunnable` option gives a warning."""
     from aiida.schedulers.datastructures import JobTemplate
 
     direct = DirectScheduler()
     job_tmpl = JobTemplate()
 
-    # caplog needs the logs to be propagated
-    original_propagate_value = AIIDA_LOGGER.propagate
-    AIIDA_LOGGER.propagate = True
-
     job_tmpl.rerunnable = True
     direct._get_submit_script_header(job_tmpl)
 
-    assert 'rerunnable' in caplog.text
-    assert 'has no effect' in caplog.text
-
-    AIIDA_LOGGER.propagate = original_propagate_value
+    assert 'rerunnable' in aiida_caplog.text
+    assert 'has no effect' in aiida_caplog.text

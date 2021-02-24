@@ -138,6 +138,7 @@ def test_submit_script():
     assert '#BSUB -G account_id' in submit_script_text
     assert "'mpirun' '-np' '2' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text
 
+
 def test_submit_script_rerunnable():
     """Test the `rerunnable` option of the submit script."""
     from aiida.schedulers.datastructures import JobTemplate

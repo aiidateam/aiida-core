@@ -30,7 +30,7 @@ class RESTApiTestCase(AiidaTestCase):
     _LIMIT_DEFAULT = 400
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):  # pylint: disable=too-many-locals, too-many-statements
+    def setUpClass(cls):  # pylint: disable=too-many-locals, too-many-statements
         """
         Add objects to the database for different requests/filters/orderings etc.
         """

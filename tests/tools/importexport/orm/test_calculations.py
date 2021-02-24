@@ -26,11 +26,11 @@ class TestCalculations(AiidaArchiveTestCase):
 
     def setUp(self):
         super().setUp()
-        self.clean_db()
+        self.refurbish_db()
 
     def tearDown(self):
-        self.clean_db()
         super().tearDown()
+        self.refurbish_db()
 
     @pytest.mark.requires_rmq
     @with_temp_dir
@@ -60,8 +60,7 @@ class TestCalculations(AiidaArchiveTestCase):
         # At this point we export the generated data
         filename1 = os.path.join(temp_dir, 'export1.aiida')
         export([res], filename=filename1, return_backward=True)
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename1)
         # Check that the imported nodes are correctly imported and that the value is preserved
         for uuid, value in uuids_values:
@@ -97,8 +96,7 @@ class TestCalculations(AiidaArchiveTestCase):
         uuids_values = [(v.uuid, v.value) for v in (output_1,)]
         filename1 = os.path.join(temp_dir, 'export1.aiida')
         export([output_1], filename=filename1)
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename1)
 
         for uuid, value in uuids_values:

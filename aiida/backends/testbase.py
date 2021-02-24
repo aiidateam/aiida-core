@@ -16,6 +16,7 @@ from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, In
 from aiida.manage import configuration
 from aiida.manage.manager import get_manager, reset_manager
 from aiida import orm
+from aiida.common.lang import classproperty
 
 TEST_KEYWORD = 'test_'
 
@@ -162,32 +163,32 @@ class AiidaTestCase(unittest.TestCase):
         shutil.rmtree(dirpath_repository, ignore_errors=True)
         os.makedirs(dirpath_repository)
 
-    @property
-    def computer(self):  # pylint: disable=no-self-argument
+    @classproperty
+    def computer(cls):  # pylint: disable=no-self-argument
         """Get the default computer for this test
 
         :return: the test computer
         :rtype: :class:`aiida.orm.Computer`"""
-        if self._computer is None:
-            self._computer = orm.Computer(
+        if cls._computer is None:
+            cls._computer = orm.Computer(
                 label='localhost',
                 hostname='localhost',
                 transport_type='local',
                 scheduler_type='direct',
                 workdir='/tmp/aiida',
-                backend=self.backend
+                backend=cls.backend
             ).store()
-        return self._computer
+        return cls._computer
 
-    @property
-    def user(self):  # pylint: disable=no-self-argument
-        if self._user is None:
-            self._user = add_default_user()
-        return self._user
+    @classproperty
+    def user(cls):  # pylint: disable=no-self-argument
+        if cls._user is None:
+            cls._user = add_default_user()
+        return cls._user
 
-    @property
-    def user_email(self):  # pylint: disable=no-self-argument
-        return self.user.email
+    @classproperty
+    def user_email(cls):  # pylint: disable=no-self-argument
+        return cls.user.email  # pylint: disable=no-member
 
     ### Usability methods
 

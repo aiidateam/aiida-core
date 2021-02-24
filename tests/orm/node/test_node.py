@@ -923,3 +923,21 @@ def test_open_wrapper():
     iter(node.open(filename))
     node.open(filename).__next__()
     node.open(filename).__iter__()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_uuid_equality_fallback():
+    """Tests the fallback mechanism of checking equality by comparing uuids and hash."""
+    node_0 = Data().store()
+
+    nodepk = Data().store().pk
+    node_a = load_node(pk=nodepk)
+    node_b = load_node(pk=nodepk)
+
+    assert node_a == node_b
+    assert node_a != node_0
+    assert node_b != node_0
+
+    assert hash(node_a) == hash(node_b)
+    assert hash(node_a) != hash(node_0)
+    assert hash(node_b) != hash(node_0)

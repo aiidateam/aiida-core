@@ -92,7 +92,7 @@ class TestPortNamespace(AiidaTestCase):
         port_namespace.create_port_namespace(nested_namespace)
 
         with self.assertRaisesRegex(TypeError, f'.*{base_namespace}.*{nested_namespace}.*'):
-            port_namespace.serialize({'some': {'nested': {'namespace': {Dict()}}}})
+            port_namespace.serialize({'some': {'nested': {'namespace': Dict()}}})
 
     def test_lambda_default(self):
         """Test that an input port can specify a lambda as a default."""

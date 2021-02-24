@@ -12,6 +12,7 @@
 import importlib
 import warnings
 import traceback
+from uuid import UUID
 from typing import List, Optional
 
 from aiida.common import exceptions
@@ -179,6 +180,16 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
         )
         super().__init__(backend_entity)
+
+    def __eq__(self, other):
+        """Fallback equality comparison by uuid (can be overwritten by specific types)"""
+        if isinstance(other, Node) and self.uuid == other.uuid:
+            return True
+        return super().__eq__(other)
+
+    def __hash__(self):
+        """Python-Hash: Implementation that is compatible with __eq__"""
+        return UUID(self.uuid).int
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {str(self)}>'

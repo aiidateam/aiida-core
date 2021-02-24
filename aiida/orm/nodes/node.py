@@ -186,6 +186,11 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             return True
         return super().__eq__(other)
 
+    def __hash__(self):
+        """Python-Hash: Implementation that is compatible with __eq__"""
+        from uuid import UUID
+        return UUID(self.uuid).int
+
     def __repr__(self):
         return f'<{self.__class__.__name__}: {str(self)}>'
 

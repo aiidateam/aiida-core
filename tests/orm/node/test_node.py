@@ -937,3 +937,6 @@ def test_uuid_equality_fallback():
     assert node_a == node_b
     assert node_a != node_0
     assert node_b != node_0
+
+    # Also test the hashing
+    assert {node_0, node_a, node_b} == {node_0, node_a}

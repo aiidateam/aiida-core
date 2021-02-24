@@ -12,6 +12,7 @@
 import importlib
 import warnings
 import traceback
+from uuid import UUID
 from typing import List, Optional
 
 from aiida.common import exceptions
@@ -188,7 +189,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
     def __hash__(self):
         """Python-Hash: Implementation that is compatible with __eq__"""
-        from uuid import UUID
         return UUID(self.uuid).int
 
     def __repr__(self):

@@ -927,7 +927,7 @@ def test_open_wrapper():
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_uuid_equality_fallback():
-    """Tests the fallback mechanism of checking equality by comparing uuids."""
+    """Tests the fallback mechanism of checking equality by comparing uuids and hash."""
     node_0 = Data().store()
 
     nodepk = Data().store().pk
@@ -938,5 +938,6 @@ def test_uuid_equality_fallback():
     assert node_a != node_0
     assert node_b != node_0
 
-    # Also test the hashing
-    assert {node_0, node_a, node_b} == {node_0, node_a}
+    assert hash(node_a) == hash(node_b)
+    assert hash(node_a) != hash(node_0)
+    assert hash(node_b) != hash(node_0)

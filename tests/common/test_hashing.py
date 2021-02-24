@@ -24,6 +24,7 @@ try:
 except ImportError:
     import unittest
 
+from aiida.common.exceptions import HashingError
 from aiida.common.hashing import make_hash, float_to_text
 from aiida.common.folders import SandboxFolder
 from aiida.backends.testbase import AiidaTestCase
@@ -178,7 +179,7 @@ class MakeHashTest(unittest.TestCase):
         class MadeupClass:
             pass
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HashingError):
             make_hash(MadeupClass())
 
     def test_folder(self):

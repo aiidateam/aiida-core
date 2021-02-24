@@ -104,8 +104,9 @@ class AiidaTestCase(unittest.TestCase):
         inserts default data into the database (which is for the moment a
         default computer).
         """
-        add_default_user()
-        orm.User.objects.reset()  # clear default user cache
+        orm.User.objects.reset()  # clear Aiida's cache of the default user
+        # populate user cache of test clases
+        cls.user  # pylint: disable=pointless-statement
 
     @classmethod
     def clean_db(cls):
@@ -124,6 +125,8 @@ class AiidaTestCase(unittest.TestCase):
             raise InvalidOperation('You cannot call clean_db before running the setUpClass')
 
         cls.__backend_instance.clean_db()
+        cls._computer = None
+        cls._user = None
 
         if orm.autogroup.CURRENT_AUTOGROUP is not None:
             orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()

@@ -167,7 +167,10 @@ class WorkChain(Process):
 
         awaitable.resolved = True
 
-        self._update_process_status()
+        if not self.has_terminated:
+            # the process may be terminated, for example, if the process was killed or excepted
+            # then we should not try to update it
+            self._update_process_status()
 
     def to_context(self, **kwargs: Union[Awaitable, ProcessNode]) -> None:
         """Add a dictionary of awaitables to the context.

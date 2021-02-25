@@ -39,7 +39,7 @@ class TestVerdiGraph(AiidaTestCase):
     """Tests for verdi graph"""
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUpClass(cls):
         super().setUpClass()
         from aiida.orm import Data
 
@@ -52,7 +52,7 @@ class TestVerdiGraph(AiidaTestCase):
         os.chdir(cls.cwd)
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls):
         os.chdir(cls.old_cwd)
         os.rmdir(cls.cwd)
 

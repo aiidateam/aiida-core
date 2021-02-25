@@ -24,15 +24,10 @@ class TestComments(AiidaArchiveTestCase):
 
     def setUp(self):
         super().setUp()
-        self.reset_database()
         self.comments = [
             "We're no strangers to love", 'You know the rules and so do I', "A full commitment's what I'm thinking of",
             "You wouldn't get this from any other guy"
         ]
-
-    def tearDown(self):
-        super().tearDown()
-        self.reset_database()
 
     @with_temp_dir
     def test_multiple_imports_for_single_node(self, temp_dir):
@@ -61,7 +56,7 @@ class TestComments(AiidaArchiveTestCase):
         export([node], filename=export_file_full)
 
         # Clean database and reimport "EXISTING" DB
-        self.reset_database()
+        self.clean_db()
         import_data(export_file_existing)
 
         # Check correct import
@@ -128,7 +123,7 @@ class TestComments(AiidaArchiveTestCase):
         export([node], filename=export_file, include_comments=False)
 
         # Clean database and reimport exported file
-        self.reset_database()
+        self.clean_db()
         import_data(export_file)
 
         # Get node, users, and comments
@@ -172,7 +167,7 @@ class TestComments(AiidaArchiveTestCase):
         export([calc_node, data_node], filename=export_file)
 
         # Clean database and reimport exported file
-        self.reset_database()
+        self.clean_db()
         import_data(export_file)
 
         # Get nodes and comments
@@ -223,7 +218,7 @@ class TestComments(AiidaArchiveTestCase):
         export([node], filename=export_file)
 
         # Clean database and reimport exported file
-        self.reset_database()
+        self.clean_db()
         import_data(export_file)
 
         # Get node, users, and comments
@@ -309,7 +304,7 @@ class TestComments(AiidaArchiveTestCase):
         # Export, reset database and reimport
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([calc], filename=export_file)
-        self.reset_database()
+        self.clean_db()
         import_data(export_file)
 
         # Retrieve node and comment
@@ -497,7 +492,7 @@ class TestComments(AiidaArchiveTestCase):
         export([calc], filename=export_file_full)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part II
         # Reimport "EXISTING" DB
@@ -536,7 +531,7 @@ class TestComments(AiidaArchiveTestCase):
         export([calc], filename=export_file_new)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part III
         # Reimport "EXISTING" DB

@@ -314,7 +314,7 @@ class TestLinks(AiidaArchiveTestCase):
 
         for calcs in high_level_calc_nodes:
             for works in high_level_work_nodes:
-                self.clean_db()
+                self.refurbish_db()
 
                 graph_nodes, _ = self.construct_complex_graph(calc_nodes=calcs, work_nodes=works)
 
@@ -344,7 +344,7 @@ class TestLinks(AiidaArchiveTestCase):
                 export_file = os.path.join(temp_dir, 'export.aiida')
                 export(graph_nodes, filename=export_file, overwrite=True)
 
-                self.clean_db()
+                self.refurbish_db()
 
                 import_data(export_file)
                 import_links = get_all_node_links()

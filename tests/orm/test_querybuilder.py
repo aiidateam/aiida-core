@@ -735,6 +735,8 @@ class TestQueryHelp(AiidaTestCase):
         qb = orm.QueryBuilder().append((orm.Group,), filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
+        # populate computer
+        self.computer  # pylint:disable=pointless-statement
         qb = orm.QueryBuilder().append(orm.Computer,)
         self.assertEqual(qb.count(), 1)
 

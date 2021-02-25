@@ -180,7 +180,7 @@ class TestGroups(AiidaArchiveTestCase):
         # Export Nodes
         filename = os.path.join(temp_dir, 'export.aiida')
         export([data1, data2], filename=filename)
-        self.clean_db()
+        self.refurbish_db()
 
         # Create Group, do not store
         group_label = 'import_madness'

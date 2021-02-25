@@ -337,7 +337,7 @@ class TestComputer(AiidaArchiveTestCase):
 
         for archive in ['django.aiida', 'sqlalchemy.aiida']:
             # Clean the database
-            self.clean_db()
+            self.refurbish_db()
 
             # Import the needed data
             import_archive(archive, filepath='export/compare')

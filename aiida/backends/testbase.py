@@ -192,7 +192,7 @@ class AiidaTestCase(unittest.TestCase):
     @classproperty
     def user(cls):  # pylint: disable=no-self-argument
         if cls._user is None:
-            cls._user = add_default_user()
+            cls._user = get_default_user()
         return cls._user
 
     @classproperty
@@ -226,7 +226,7 @@ class AiidaPostgresTestCase(AiidaTestCase):
         cls.pg_test.close()
 
 
-def add_default_user(**kwargs):
+def get_default_user(**kwargs):
     """Creates and stores the default user in the database.
 
     Default user email is taken from current profile.

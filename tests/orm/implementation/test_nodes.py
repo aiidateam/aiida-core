@@ -26,6 +26,7 @@ class TestBackendNode(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
         cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
+        cls.user = cls.backend.users.create(email='tester@localhost').store()
 
     def setUp(self):
         super().setUp()
@@ -170,7 +171,7 @@ class TestBackendNode(AiidaTestCase):
     def test_user_methods(self):
         """Test the user methods of a BackendNode."""
         new_user = self.backend.users.create(email='newuser@localhost').store()
-        self.assertEqual(self.node.user.id, self.user.id)  # pylint: disable=no-member
+        self.assertEqual(self.node.user.id, self.user.id)
         self.node.user = new_user
         self.assertEqual(self.node.user.id, new_user.id)
 

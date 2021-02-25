@@ -14,6 +14,7 @@ import warnings
 from aiida.common import exceptions
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
+from aiida.manage.configuration import get_profile
 
 from . import entities
 
@@ -35,14 +36,12 @@ class User(entities.Entity):
 
         def get_or_create(self, email, **kwargs):
             """
-                Get the existing user with a given email address or create an unstored one
+            Get the existing user with a given email address or create an unstored one
 
-                :param kwargs: The properties of the user to get or create
-                :return: The corresponding user object
-                :rtype: :class:`aiida.orm.User`
-                :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
-                    :class:`aiida.common.exceptions.NotExistent`
-                """
+            :param kwargs: The properties of the user to get or create
+            :return: created, user object
+            :rtype: bool, :class:`aiida.orm.User`
+            """
             try:
                 return False, self.get(email=email)
             except exceptions.NotExistent:
@@ -52,22 +51,57 @@ class User(entities.Entity):
             """
             Get the current default user
 
+            Note: Since the default user is required by many operations,
+            once a user is found, the return value is cached.
+
             :return: The default user
             :rtype: :class:`aiida.orm.User`
             """
             if self._default_user is self.UNDEFINED:
-                from aiida.manage.configuration import get_profile
-                profile = get_profile()
-                email = profile.default_user
-                if not email:
-                    self._default_user = None
+                default_user_email = get_profile().default_user
+                if not default_user_email:
+                    raise ValueError(f'No default user specified for profile {get_profile()}.')
 
                 try:
-                    self._default_user = self.get(email=email)
+                    self._default_user = self.get(email=default_user_email)
                 except (exceptions.MultipleObjectsError, exceptions.NotExistent):
                     self._default_user = None
 
             return self._default_user
+
+        def get_or_create_default(self, email=None, **kwargs):
+            """
+            Get the default user or create it
+
+            :param email: The email of the default user (required only, if the profile has no default user)
+            :param kwargs: Remaining properties of the default user to get or create (optional)
+            :return: created, user object
+            :rtype: bool, :class:`aiida.orm.User`
+
+            """
+            if self._default_user is not self.UNDEFINED:
+                if email and self._default_user.email != email:
+                    raise ValueError(
+                        f'Specified email {email} does not match default user email {self._default_user.email}.'
+                    )
+                return False, self._default_user
+
+            current_profile = get_profile()
+            email = email or current_profile.default_user
+            if not email:
+                raise ValueError(
+                    f'Profile {current_profile} does not define a default user.' +
+                    'Please specify email to create default user.'
+                )
+            if email != current_profile.default_user:
+                raise ValueError(
+                    f'Specified email {email} does not match default user email {current_profile.default_user} ' +
+                    f'of profile {current_profile}.'
+                )
+
+            created, default_user = self.get_or_create(email=email, **kwargs)
+            self._default_user = default_user
+            return created, default_user
 
         def reset(self):
             """

@@ -148,10 +148,7 @@ class ProfileManager:
             self._test_case = DjangoTests()
         elif backend == BACKEND_SQLA:
             from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
-            from aiida.backends.sqlalchemy import get_scoped_session
-
             self._test_case = SqlAlchemyTests()
-            self._test_case.test_session = get_scoped_session()
 
     def reset_db(self):
         self._test_case.clean_db()  # will drop all users

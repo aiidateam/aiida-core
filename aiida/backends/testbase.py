@@ -90,8 +90,6 @@ class AiidaTestCase(unittest.TestCase):
         # if this is not a test profile
 
         check_if_tests_can_run()
-        if orm.autogroup.CURRENT_AUTOGROUP is not None:
-            orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()
         cls.clean_db()
         cls.clean_repository()
 
@@ -99,17 +97,6 @@ class AiidaTestCase(unittest.TestCase):
         reset_manager()
 
     ### Database/repository-related methods
-
-    @classmethod
-    def insert_data(cls):
-        """
-        This method setups the database (by creating a default user) and
-        inserts default data into the database (which is for the moment a
-        default computer).
-        """
-        orm.User.objects.reset()  # clear Aiida's cache of the default user
-        # populate user cache of test clases
-        cls.user  # pylint: disable=pointless-statement
 
     @classmethod
     def clean_db(cls):
@@ -131,6 +118,8 @@ class AiidaTestCase(unittest.TestCase):
         cls._computer = None
         cls._user = None
 
+        orm.User.objects.reset()  # clear Aiida's cache of the default user
+
         if orm.autogroup.CURRENT_AUTOGROUP is not None:
             orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()
 
@@ -138,12 +127,13 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def refurbish_db(cls):
-        """Clean up database and repopulate with initial data.
+        """Clean up database and create default user.
 
-        Combines clean_db and insert_data.
+        Combines clean_db and database initialization.
         """
         cls.clean_db()
-        cls.insert_data()
+        # populate user cache of test clases
+        cls.user  # pylint: disable=pointless-statement
 
     @classmethod
     def clean_repository(cls):
@@ -192,7 +182,7 @@ class AiidaTestCase(unittest.TestCase):
     @classproperty
     def user(cls):  # pylint: disable=no-self-argument
         if cls._user is None:
-            cls._user = get_default_user()
+            cls._user = orm.User.objects.get_or_create_default()
         return cls._user
 
     @classproperty
@@ -224,27 +214,3 @@ class AiidaPostgresTestCase(AiidaTestCase):
         """Close the PGTest postgres test cluster."""
         super().tearDownClass(*args, **kwargs)
         cls.pg_test.close()
-
-
-def get_default_user(**kwargs):
-    """Creates and stores the default user in the database.
-
-    Default user email is taken from current profile.
-    No-op if user already exists.
-    The same is done in `verdi setup`.
-
-    :param kwargs: Additional information to use for new user, i.e. 'first_name', 'last_name' or 'institution'.
-    :returns: the :py:class:`~aiida.orm.User`
-    """
-    from aiida.manage.configuration import get_config
-    email = get_config().current_profile.default_user
-
-    if kwargs.pop('email', None):
-        raise ValueError('Do not specify the user email (must coincide with default user email of profile).')
-
-    # Create the AiiDA user if it does not yet exist
-    created, user = orm.User.objects.get_or_create(email=email, **kwargs)
-    if created:
-        user.store()
-
-    return user

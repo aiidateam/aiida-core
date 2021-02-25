@@ -7,30 +7,33 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for AiiDA base data classes."""
 import operator
 
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import load_node, List, Bool, Float, Int, Str, NumericType
 from aiida.orm.nodes.data.bool import get_true_node, get_false_node
 
 
-class TestList(AiidaTestCase):
+@pytest.mark.usefixtures('clear_database_before_test_class')
+class TestList:
     """Test AiiDA List class."""
 
     def test_creation(self):
         node = List()
-        self.assertEqual(len(node), 0)
-        with self.assertRaises(IndexError):
+        assert len(node) == 0
+        with pytest.raises(IndexError):
             node[0]  # pylint: disable=pointless-statement
 
     def test_append(self):
         """Test append() member function."""
 
         def do_checks(node):
-            self.assertEqual(len(node), 1)
-            self.assertEqual(node[0], 4)
+            assert len(node) == 1
+            assert node[0] == 4
 
         node = List()
         node.append(4)
@@ -47,22 +50,22 @@ class TestList(AiidaTestCase):
         lst = [1, 2, 3]
 
         def do_checks(node):
-            self.assertEqual(len(node), len(lst))
+            assert len(node) == len(lst)
             # Do an element wise comparison
             for lst_, node_ in zip(lst, node):
-                self.assertEqual(lst_, node_)
+                assert lst_ == node_
 
         node = List()
         node.extend(lst)
         do_checks(node)
         # Further extend
         node.extend(lst)
-        self.assertEqual(len(node), len(lst) * 2)
+        assert len(node) == len(lst) * 2
 
         # Do an element wise comparison
         for i, _ in enumerate(lst):
-            self.assertEqual(lst[i], node[i])
-            self.assertEqual(lst[i], node[i % len(lst)])
+            assert lst[i] == node[i]
+            assert lst[i] == node[i % len(lst)]
 
         # Now try after storing
         node = List()
@@ -77,19 +80,19 @@ class TestList(AiidaTestCase):
         node.store()
 
         # Test all mutable calls are now disallowed
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.append(5)
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.extend([5])
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.insert(0, 2)
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.remove(0)
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.pop()
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.sort()
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.reverse()
 
     @staticmethod
@@ -102,11 +105,12 @@ class TestList(AiidaTestCase):
         assert node.get_list() == node_loaded.get_list()
 
 
-class TestFloat(AiidaTestCase):
+@pytest.mark.usefixtures('clear_database_before_test_class')
+class TestFloat:
     """Test Float class."""
 
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        # pylint: disable=attribute-defined-outside-init
         self.value = Float()
         self.all_types = [Int, Float, Bool, Str]
 
@@ -114,31 +118,31 @@ class TestFloat(AiidaTestCase):
         """Creating basic data objects."""
         term_a = Float()
         # Check that initial value is zero
-        self.assertAlmostEqual(term_a.value, 0.0)
+        assert round(abs(term_a.value - 0.0), 7) == 0
 
         float_ = Float(6.0)
-        self.assertAlmostEqual(float_.value, 6.)
-        self.assertAlmostEqual(float_, Float(6.0))
+        assert round(abs(float_.value - 6.), 7) == 0
+        assert round(abs(float_ - Float(6.0)), 7) == 0
 
         int_ = Int()
-        self.assertAlmostEqual(int_.value, 0)
+        assert round(abs(int_.value - 0), 7) == 0
         int_ = Int(6)
-        self.assertAlmostEqual(int_.value, 6)
-        self.assertAlmostEqual(float_, int_)
+        assert round(abs(int_.value - 6), 7) == 0
+        assert round(abs(float_ - int_), 7) == 0
 
         bool_ = Bool()
-        self.assertAlmostEqual(bool_.value, False)
+        assert round(abs(bool_.value - False), 7) == 0
         bool_ = Bool(False)
-        self.assertAlmostEqual(bool_.value, False)
-        self.assertAlmostEqual(bool_.value, get_false_node())
+        assert bool_.value is False
+        assert bool_.value == get_false_node()
         bool_ = Bool(True)
-        self.assertAlmostEqual(bool_.value, True)
-        self.assertAlmostEqual(bool_.value, get_true_node())
+        assert bool_.value is True
+        assert bool_.value == get_true_node()
 
         str_ = Str()
-        self.assertAlmostEqual(str_.value, '')
+        assert str_.value == ''
         str_ = Str('Hello')
-        self.assertAlmostEqual(str_.value, 'Hello')
+        assert str_.value == 'Hello'
 
     def test_load(self):
         """Test object loading."""
@@ -146,7 +150,7 @@ class TestFloat(AiidaTestCase):
             node = typ()
             node.store()
             loaded = load_node(node.pk)
-            self.assertAlmostEqual(node, loaded)
+            assert node == loaded
 
     def test_add(self):
         """Test addition."""
@@ -154,26 +158,26 @@ class TestFloat(AiidaTestCase):
         term_b = Float(5)
         # Check adding two db Floats
         res = term_a + term_b
-        self.assertIsInstance(res, NumericType)
-        self.assertAlmostEqual(res, 9.0)
+        assert isinstance(res, NumericType)
+        assert round(abs(res - 9.0), 7) == 0
 
         # Check adding db Float and native (both ways)
         res = term_a + 5.0
-        self.assertIsInstance(res, NumericType)
-        self.assertAlmostEqual(res, 9.0)
+        assert isinstance(res, NumericType)
+        assert round(abs(res - 9.0), 7) == 0
 
         res = 5.0 + term_a
-        self.assertIsInstance(res, NumericType)
-        self.assertAlmostEqual(res, 9.0)
+        assert isinstance(res, NumericType)
+        assert round(abs(res - 9.0), 7) == 0
 
         # Inplace
         term_a = Float(4)
         term_a += term_b
-        self.assertAlmostEqual(term_a, 9.0)
+        assert round(abs(term_a - 9.0), 7) == 0
 
         term_a = Float(4)
         term_a += 5
-        self.assertAlmostEqual(term_a, 9.0)
+        assert round(abs(term_a - 9.0), 7) == 0
 
     def test_mul(self):
         """Test floats multiplication."""
@@ -181,26 +185,26 @@ class TestFloat(AiidaTestCase):
         term_b = Float(5)
         # Check adding two db Floats
         res = term_a * term_b
-        self.assertIsInstance(res, NumericType)
-        self.assertAlmostEqual(res, 20.0)
+        assert isinstance(res, NumericType)
+        assert round(abs(res - 20.0), 7) == 0
 
         # Check adding db Float and native (both ways)
         res = term_a * 5.0
-        self.assertIsInstance(res, NumericType)
-        self.assertAlmostEqual(res, 20)
+        assert isinstance(res, NumericType)
+        assert round(abs(res - 20), 7) == 0
 
         res = 5.0 * term_a
-        self.assertIsInstance(res, NumericType)
-        self.assertAlmostEqual(res, 20.0)
+        assert isinstance(res, NumericType)
+        assert round(abs(res - 20.0), 7) == 0
 
         # Inplace
         term_a = Float(4)
         term_a *= term_b
-        self.assertAlmostEqual(term_a, 20)
+        assert round(abs(term_a - 20), 7) == 0
 
         term_a = Float(4)
         term_a *= 5
-        self.assertAlmostEqual(term_a, 20)
+        assert round(abs(term_a - 20), 7) == 0
 
     def test_power(self):
         """Test power operator."""
@@ -208,38 +212,39 @@ class TestFloat(AiidaTestCase):
         term_b = Float(2)
 
         res = term_a**term_b
-        self.assertAlmostEqual(res.value, 16.)
+        assert round(abs(res.value - 16.), 7) == 0
 
     def test_division(self):
         """Test the normal division operator."""
         term_a = Float(3)
         term_b = Float(2)
 
-        self.assertAlmostEqual(term_a / term_b, 1.5)
-        self.assertIsInstance(term_a / term_b, Float)
+        assert round(abs(term_a / term_b - 1.5), 7) == 0
+        assert isinstance(term_a / term_b, Float)
 
     def test_division_integer(self):
         """Test the integer division operator."""
         term_a = Float(3)
         term_b = Float(2)
 
-        self.assertAlmostEqual(term_a // term_b, 1.0)
-        self.assertIsInstance(term_a // term_b, Float)
+        assert round(abs(term_a // term_b - 1.0), 7) == 0
+        assert isinstance(term_a // term_b, Float)
 
     def test_modulus(self):
         """Test modulus operator."""
         term_a = Float(12.0)
         term_b = Float(10.0)
 
-        self.assertAlmostEqual(term_a % term_b, 2.0)
-        self.assertIsInstance(term_a % term_b, NumericType)
-        self.assertAlmostEqual(term_a % 10.0, 2.0)
-        self.assertIsInstance(term_a % 10.0, NumericType)
-        self.assertAlmostEqual(12.0 % term_b, 2.0)
-        self.assertIsInstance(12.0 % term_b, NumericType)
+        assert round(abs(term_a % term_b - 2.0), 7) == 0
+        assert isinstance(term_a % term_b, NumericType)
+        assert round(abs(term_a % 10.0 - 2.0), 7) == 0
+        assert isinstance(term_a % 10.0, NumericType)
+        assert round(abs(12.0 % term_b - 2.0), 7) == 0
+        assert isinstance(12.0 % term_b, NumericType)
 
 
-class TestFloatIntMix(AiidaTestCase):
+@pytest.mark.usefixtures('clear_database_before_test_class')
+class TestFloatIntMix:
     """Test operations between Int and Float objects."""
 
     def test_operator(self):
@@ -254,11 +259,12 @@ class TestFloatIntMix(AiidaTestCase):
             for term_x, term_y in [(term_a, term_b), (term_b, term_a)]:
                 res = oper(term_x, term_y)
                 c_val = oper(term_x.value, term_y.value)
-                self.assertEqual(res._type, type(c_val))  # pylint: disable=protected-access
-                self.assertEqual(res, oper(term_x.value, term_y.value))
+                assert res._type == type(c_val)  # pylint: disable=protected-access
+                assert res == oper(term_x.value, term_y.value)
 
 
-class TestInt(AiidaTestCase):
+@pytest.mark.usefixtures('clear_database_before_test_class')
+class TestInt:
     """Test Int class."""
 
     def test_division(self):
@@ -266,25 +272,25 @@ class TestInt(AiidaTestCase):
         term_a = Int(3)
         term_b = Int(2)
 
-        self.assertAlmostEqual(term_a / term_b, 1.5)
-        self.assertIsInstance(term_a / term_b, Float)
+        assert round(abs(term_a / term_b - 1.5), 7) == 0
+        assert isinstance(term_a / term_b, Float)
 
     def test_division_integer(self):
         """Test the integer division operator."""
         term_a = Int(3)
         term_b = Int(2)
 
-        self.assertAlmostEqual(term_a // term_b, 1)
-        self.assertIsInstance(term_a // term_b, Int)
+        assert round(abs(term_a // term_b - 1), 7) == 0
+        assert isinstance(term_a // term_b, Int)
 
     def test_modulo(self):
         """Test modulus operation."""
         term_a = Int(12)
         term_b = Int(10)
 
-        self.assertEqual(term_a % term_b, 2)
-        self.assertIsInstance(term_a % term_b, NumericType)
-        self.assertEqual(term_a % 10, 2)
-        self.assertIsInstance(term_a % 10, NumericType)
-        self.assertEqual(12 % term_b, 2)
-        self.assertIsInstance(12 % term_b, NumericType)
+        assert term_a % term_b == 2
+        assert isinstance(term_a % term_b, NumericType)
+        assert term_a % 10 == 2
+        assert isinstance(term_a % 10, NumericType)
+        assert 12 % term_b == 2
+        assert isinstance(12 % term_b, NumericType)

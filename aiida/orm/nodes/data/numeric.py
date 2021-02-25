@@ -124,3 +124,6 @@ class NumericType(BaseType):
 
     def __int__(self):
         return int(self.value)
+
+    def __abs__(self):
+        return abs(self.value)

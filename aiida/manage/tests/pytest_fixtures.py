@@ -70,6 +70,13 @@ def clear_database_before_test(aiida_profile):
     yield
 
 
+@pytest.fixture(scope='class')
+def clear_database_before_test_class(aiida_profile):
+    """Clear the database before a test class."""
+    aiida_profile.reset_db()
+    yield
+
+
 @pytest.fixture(scope='function')
 def temporary_event_loop():
     """Create a temporary loop for independent test case"""

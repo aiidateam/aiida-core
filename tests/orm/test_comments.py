@@ -21,7 +21,6 @@ class TestComment(AiidaTestCase):
     def setUp(self):
         super().setUp()
         self.node = orm.Data().store()
-        self.user = orm.User.objects.get_default()
         self.content = 'Sometimes when I am freestyling, I lose confidence'
         self.comment = Comment(self.node, self.user, self.content).store()
 
@@ -48,7 +47,7 @@ class TestComment(AiidaTestCase):
 
     def test_comment_user(self):
         """Test getting the user of a Comment."""
-        self.assertEqual(self.comment.user.uuid, self.user.uuid)
+        self.assertEqual(self.comment.user.uuid, self.user.uuid)  # pylint: disable=no-member
 
     def test_comment_collection_get(self):
         """Test retrieving a Comment through the collection."""
@@ -163,7 +162,7 @@ class TestComment(AiidaTestCase):
 
         # Retrieve a comment by joining on a specific user
         builder = orm.QueryBuilder()
-        builder.append(orm.User, tag='user', filters={'email': user_one.email})
+        builder.append(orm.User, tag='user', filters={'email': user_one.email})  # pylint: disable=no-member
         builder.append(Comment, with_user='user', project=['uuid'])
         comments = builder.all()
 
@@ -189,7 +188,7 @@ class TestComment(AiidaTestCase):
             user_email = str(entry[1])
 
             self.assertIn(comment_uuid, [comment_five.uuid, comment_six.uuid])
-            self.assertIn(user_email, [user_one.email, user_two.email])
+            self.assertIn(user_email, [user_one.email, user_two.email])  # pylint: disable=no-member
 
     def test_objects_get(self):
         """Test getting a comment from the collection"""

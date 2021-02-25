@@ -27,7 +27,6 @@ class TestBackendLog(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
         cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        cls.user = cls.backend.users.create(email='tester@localhost').store()
 
     def setUp(self):
         super().setUp()

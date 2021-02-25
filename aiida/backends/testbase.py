@@ -33,7 +33,6 @@ class AiidaTestCase(unittest.TestCase):
 
     Internally it loads the AiidaTestImplementation subclass according to the current backend."""
     _computer = None  # type: aiida.orm.Computer
-    _user = None  # type: aiida.orm.User
     _class_was_setup = False
     __backend_instance = None
     backend = None  # type: aiida.orm.implementation.Backend
@@ -116,7 +115,6 @@ class AiidaTestCase(unittest.TestCase):
 
         cls.__backend_instance.clean_db()
         cls._computer = None
-        cls._user = None
 
         orm.User.objects.reset()  # clear Aiida's cache of the default user
 
@@ -132,8 +130,9 @@ class AiidaTestCase(unittest.TestCase):
         Combines clean_db and database initialization.
         """
         cls.clean_db()
-        # populate user cache of test clases
-        cls.user  # pylint: disable=pointless-statement
+        created, user = orm.User.objects.get_or_create_default()  # create default user
+        if created:
+            user.store()
 
     @classmethod
     def clean_repository(cls):
@@ -180,10 +179,12 @@ class AiidaTestCase(unittest.TestCase):
         return cls._computer
 
     @classproperty
-    def user(cls):  # pylint: disable=no-self-argument
-        if cls._user is None:
-            cls._user = orm.User.objects.get_or_create_default()
-        return cls._user
+    def user(cls):  # pylint: disable=no-self-argument,no-self-use
+        """Return default user.
+
+        Since the default user is already cached at the orm level, we just return it.
+        """
+        return orm.User.objects.get_default()
 
     @classproperty
     def user_email(cls):  # pylint: disable=no-self-argument

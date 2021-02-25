@@ -12,7 +12,7 @@
 import time
 import asyncio
 
-from aiida.orm import AuthInfo, User
+from aiida.orm import AuthInfo
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
 from aiida.engine.transports import TransportQueue
@@ -25,7 +25,6 @@ class TestJobManager(AiidaTestCase):
         super().setUp()
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
-        self.user = User.objects.get_default()
         self.auth_info = AuthInfo(self.computer, self.user).store()
         self.manager = JobManager(self.transport_queue)
 
@@ -54,7 +53,6 @@ class TestJobsList(AiidaTestCase):
         super().setUp()
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
-        self.user = User.objects.get_default()
         self.auth_info = AuthInfo(self.computer, self.user).store()
         self.jobs_list = JobsList(self.auth_info, self.transport_queue)
 

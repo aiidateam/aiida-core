@@ -73,7 +73,7 @@ class User(entities.Entity):
 
         def get_or_create_default(self, email=None, **kwargs):
             """
-            Get the default user or create it
+            Get the default user or create an unstored one
 
             :param email: The email of the default user (required only, if the profile has no default user)
             :param kwargs: Remaining properties of the default user to get or create (optional)

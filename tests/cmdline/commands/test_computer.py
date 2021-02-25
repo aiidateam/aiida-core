@@ -308,7 +308,6 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         """Prepare computer builder with common properties."""
         from aiida.orm.utils.builders.computer import ComputerBuilder
         self.cli_runner = CliRunner()
-        self.user = orm.User.objects.get_default()
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
         self.comp_builder.hostname = 'localhost'
         self.comp_builder.description = 'Test Computer'
@@ -483,7 +482,7 @@ safe_interval: {interval}
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
         self.assertEqual(
-            orm.AuthInfo.objects.get(dbcomputer_id=comp.id, aiidauser_id=self.user.id).get_auth_params()['username'],
+            orm.AuthInfo.objects.get(dbcomputer_id=comp.id, aiidauser_id=self.user.id).get_auth_params()['username'],  # pylint: disable=no-member
             username
         )
 
@@ -544,7 +543,6 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         Prepare the computer and user
         """
-        self.user = orm.User.objects.get_default()
 
         # I need to configure the computer here; being 'local',
         # there should not be any options asked here

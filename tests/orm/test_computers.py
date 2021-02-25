@@ -72,7 +72,6 @@ class TestComputerConfigure(AiidaTestCase):
         self.comp_builder.mpiprocs_per_machine = 8
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
-        self.user = orm.User.objects.get_default()
 
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""

@@ -18,16 +18,12 @@ import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType
-from aiida.orm import Data, Log, Node, User, CalculationNode, WorkflowNode, load_node
+from aiida.orm import Data, Log, Node, CalculationNode, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
 class TestNode(AiidaTestCase):
     """Tests for generic node functionality."""
-
-    def setUp(self):
-        super().setUp()
-        self.user = User.objects.get_default()
 
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""

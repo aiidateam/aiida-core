@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-import sys
 import time
 import asyncio
 from concurrent.futures import Future
@@ -22,7 +21,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.manage.manager import get_manager
 from aiida.orm import CalcJobNode, WorkflowNode, WorkFunctionNode, WorkChainNode
 
 from tests.utils import processes as test_processes
@@ -397,37 +395,21 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
 
 
-#@pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
+@pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
 @pytest.mark.requires_rmq
-@pytest.mark.parametrize('cmd_try_all', (True, False))
+@pytest.mark.usefixtures('with_daemon')
 @pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('cmd_try_all', (True, False))
 def test_pause_play_kill(cmd_try_all):
     """
     Test the pause/play/kill commands
     """
     # pylint: disable=no-member, too-many-locals
-    import os
-    import signal
-    import subprocess
-
     from aiida.cmdline.commands.cmd_process import process_pause, process_play, process_kill
-    from aiida.cmdline.utils.common import get_env_with_venv_bin
-    from aiida.engine.daemon.client import DaemonClient
-    from aiida.manage.configuration import get_config
+    from aiida.manage.manager import get_manager
+    from aiida.engine import ProcessState
     from aiida.orm import load_node
 
-    # Add the current python path to the environment that will be used for the daemon sub process. This is necessary
-    # to guarantee the daemon can also import all the classes that are defined in this `tests` module.
-    env = get_env_with_venv_bin()
-    env['PYTHONPATH'] = ':'.join(sys.path)
-
-    profile = get_config().current_profile
-    daemon = subprocess.Popen(
-        DaemonClient(profile).cmd_string.split(),
-        stderr=sys.stderr,
-        stdout=sys.stdout,
-        env=env,
-    )
     runner = get_manager().create_runner(rmq_submit=True)
     cli_runner = CliRunner()
 
@@ -440,9 +422,11 @@ def test_pause_play_kill(cmd_try_all):
 
     # Make sure that calling any command on a non-existing process id will not except but print an error
     # To simulate a process without a corresponding task, we simply create a node and store it. This node will not
-    # have an associated task at RabbitMQ, but it will be a valid `ProcessNode` so it will pass the initial
-    # filtering of the `verdi process` commands
-    orphaned_node = WorkFunctionNode().store()
+    # have an associated task at RabbitMQ, but it will be a valid `ProcessNode` with and active state, so it will
+    # pass the initial filtering of the `verdi process` commands
+    orphaned_node = WorkFunctionNode()
+    orphaned_node.set_process_state(ProcessState.RUNNING)
+    orphaned_node.store()
     non_existing_process_id = str(orphaned_node.pk)
     for command in [process_pause, process_play, process_kill]:
         result = cli_runner.invoke(command, [non_existing_process_id])
@@ -490,5 +474,3 @@ def test_pause_play_kill(cmd_try_all):
     assert result.exception is None, result.output
     assert calc.is_terminated
     assert calc.is_killed
-
-    os.kill(daemon.pid, signal.SIGTERM)

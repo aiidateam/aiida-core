@@ -82,7 +82,10 @@ class AiidaTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        """Tear down test class."""
+        """Tear down test class.
+
+        Note: Also cleans file repository.
+        """
         # Double check for double security to avoid to run the tearDown
         # if this is not a test profile
 
@@ -173,14 +176,17 @@ class AiidaTestCase(unittest.TestCase):
         :return: the test computer
         :rtype: :class:`aiida.orm.Computer`"""
         if cls._computer is None:
-            cls._computer = orm.Computer(
+            created, computer = orm.Computer.objects.get_or_create(
                 label='localhost',
                 hostname='localhost',
                 transport_type='local',
                 scheduler_type='direct',
                 workdir='/tmp/aiida',
-                backend=cls.backend
-            ).store()
+            )
+            if created:
+                computer.store()
+            cls._computer = computer
+
         return cls._computer
 
     @classproperty

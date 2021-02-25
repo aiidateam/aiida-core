@@ -137,43 +137,22 @@ class ProfileManager:
             raise TestManagerError('Unable to load test profile \'{}\'.'.format(profile_name))
         check_if_tests_can_run()
 
-        self._select_db_test_case(backend=self._profile.database_backend)
-
-    def _select_db_test_case(self, backend):
-        """
-        Selects tests case for the correct database backend.
-        """
-        if backend == BACKEND_DJANGO:
-            from aiida.backends.djsite.db.testbase import DjangoTests
-            self._test_case = DjangoTests()
-        elif backend == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
-            self._test_case = SqlAlchemyTests()
-
     def reset_db(self):
-        self._test_case.clean_db()  # will drop all users
+        self._profile.database_backend._clean_db()  # pylint: disable=protected-access
         manager.reset_manager()
         self.init_db()
 
-    def init_db(self):
+    def init_db(self):  # pylint: disable=no-self-use
         """Initialise the database state for running of tests.
 
         Adds default user if necessary.
         """
         from aiida.orm import User
-        from aiida.cmdline.commands.cmd_user import set_default_user
 
         if not User.objects.get_default():
-            user_dict = get_user_dict(_DEFAULT_PROFILE_INFO)
-            try:
-                user = User(**user_dict)
-                user.store()
-            except exceptions.IntegrityError:
-                # The user already exists, no problem
-                user = User.objects.get(**user_dict)
-
-            set_default_user(self._profile, user)
             User.objects.reset()  # necessary to pick up new default user
+            _created, _user = User.objects.get_or_create_default(**get_user_dict(_DEFAULT_PROFILE_INFO))
+            _user.store()
 
     def has_profile_open(self):
         return self._profile is not None
@@ -227,8 +206,6 @@ class TemporaryProfileManager(ProfileManager):
         # everything cleaned up
 
     """
-
-    _test_case = None
 
     def __init__(self, backend=BACKEND_DJANGO, pgtest=None):  # pylint: disable=super-init-not-called
         """Construct a TemporaryProfileManager
@@ -337,7 +314,6 @@ class TemporaryProfileManager(ProfileManager):
         backend = manager.get_manager()._load_backend(schema_check=False)
         backend.migrate()
 
-        self._select_db_test_case(backend=self._profile.database_backend)
         self.init_db()
 
     def repo_ok(self):

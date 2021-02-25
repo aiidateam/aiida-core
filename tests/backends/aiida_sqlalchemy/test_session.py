@@ -35,7 +35,7 @@ class TestSessionSqla(AiidaTestCase):
         # way of managing connections and sessions in SQLA...
         # For instance, we should use probably a scopedsession wrapper
         session = sessionmaker(expire_on_commit=expire_on_commit)
-        aiida.backends.sqlalchemy.sessionfactory = session(bind=self._AiidaTestCase__backend_instance.connection)
+        aiida.backends.sqlalchemy.sessionfactory = session(bind=None)
 
         # Cleaning the database
         self.clean_db()

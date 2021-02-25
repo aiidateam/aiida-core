@@ -12,7 +12,7 @@ import os
 import unittest
 import traceback
 
-from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
+from aiida.common.exceptions import TestsNotAllowedError
 from aiida.manage import configuration
 from aiida.manage.manager import get_manager, reset_manager
 from aiida import orm
@@ -34,47 +34,16 @@ class AiidaTestCase(unittest.TestCase):
     Internally it loads the AiidaTestImplementation subclass according to the current backend."""
     _computer = None  # type: aiida.orm.Computer
     _class_was_setup = False
-    __backend_instance = None
     backend = None  # type: aiida.orm.implementation.Backend
-
-    @classmethod
-    def get_backend_class(cls):
-        """Get backend class."""
-        from aiida.backends.testimplbase import AiidaTestImplementation
-        from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
-        from aiida.manage.configuration import PROFILE
-
-        # Freeze the __impl_class after the first run
-        if not hasattr(cls, '__impl_class'):
-            if PROFILE.database_backend == BACKEND_SQLA:
-                from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
-                cls.__impl_class = SqlAlchemyTests
-            elif PROFILE.database_backend == BACKEND_DJANGO:
-                from aiida.backends.djsite.db.testbase import DjangoTests
-                cls.__impl_class = DjangoTests
-            else:
-                raise ConfigurationError('Unknown backend type')
-
-            # Check that it is of the right class
-            if not issubclass(cls.__impl_class, AiidaTestImplementation):
-                raise InternalError(
-                    'The AiiDA test implementation is not of type '
-                    '{}, that is not a subclass of AiidaTestImplementation'.format(cls.__impl_class.__name__)
-                )
-
-        return cls.__impl_class
 
     @classmethod
     def setUpClass(cls):
         """Set up test class."""
-        # Note: this will raise an exception, that will be seen as a test
-        # failure. To be safe, you should do the same check also in the tearDownClass
-        # to avoid that it is run
+        # Note: this will raise an exception, that will be seen as a test failure.
         check_if_tests_can_run()
 
         # Force the loading of the backend which will load the required database environment
         cls.backend = get_manager().get_backend()
-        cls.__backend_instance = cls.get_backend_class()()
         cls._class_was_setup = True
 
         cls.refurbish_db()
@@ -83,17 +52,10 @@ class AiidaTestCase(unittest.TestCase):
     def tearDownClass(cls):
         """Tear down test class.
 
-        Note: Also cleans file repository.
+        Note: Cleans database and also the file repository.
         """
-        # Double check for double security to avoid to run the tearDown
-        # if this is not a test profile
-
-        check_if_tests_can_run()
         cls.clean_db()
         cls.clean_repository()
-
-    def tearDown(self):
-        reset_manager()
 
     ### Database/repository-related methods
 
@@ -105,15 +67,14 @@ class AiidaTestCase(unittest.TestCase):
         """
         from aiida.common.exceptions import InvalidOperation
 
-        # Note: this will raise an exception, that will be seen as a test
-        # failure. To be safe, you should do the same check also in the tearDownClass
-        # to avoid that it is run
+        # Note: this will raise an exception, that will be seen as a test failure.
+        # Just another safety check to prevent deleting production databases
         check_if_tests_can_run()
 
         if not cls._class_was_setup:
             raise InvalidOperation('You cannot call clean_db before running the setUpClass')
 
-        cls.__backend_instance.clean_db()
+        cls.backend._clean_db()  # pylint: disable=protected-access
         cls._computer = None
 
         orm.User.objects.reset()  # clear Aiida's cache of the default user

@@ -142,3 +142,16 @@ class DjangoBackend(SqlBackend[models.Model]):
         # For now we just return the global but if we ever support multiple Django backends
         # being loaded this should be specific to this backend
         return connection
+
+    def _clean_db(self):
+        from aiida.backends.djsite.db import models as dbmodels
+        # I first need to delete the links, because in principle I could not delete input nodes, only outputs.
+        # For simplicity, since I am deleting everything, I delete the links first
+        dbmodels.DbLink.objects.all().delete()
+
+        # Then I delete the nodes, otherwise I cannot delete computers and users
+        dbmodels.DbLog.objects.all().delete()
+        dbmodels.DbNode.objects.all().delete()  # pylint: disable=no-member
+        dbmodels.DbUser.objects.all().delete()  # pylint: disable=no-member
+        dbmodels.DbComputer.objects.all().delete()
+        dbmodels.DbGroup.objects.all().delete()

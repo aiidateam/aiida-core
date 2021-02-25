@@ -75,7 +75,10 @@ class User(entities.Entity):
             """
             Get the default user or create an unstored one
 
-            :param email: The email of the default user (required only, if the profile has no default user)
+            Returns the default user and populates the `aiida.orm.User.objects._default_user` cache.
+            Does *not* update the default user email stored in the AiiDA profile.
+
+            :param email: The email of the default user. Will take defalt user email from profile if not supplied
             :param kwargs: Remaining properties of the default user to get or create (optional)
             :return: created, user object
             :rtype: bool, :class:`aiida.orm.User`
@@ -88,21 +91,13 @@ class User(entities.Entity):
                     )
                 return False, self._default_user
 
-            current_profile = get_profile()
-            email = email or current_profile.default_user
             if not email:
-                raise ValueError(
-                    f'Profile {current_profile} does not define a default user.' +
-                    'Please specify email to create default user.'
-                )
-            if email != current_profile.default_user:
-                raise ValueError(
-                    f'Specified email {email} does not match default user email {current_profile.default_user} ' +
-                    f'of profile {current_profile}.'
-                )
+                # Note: this can be `None` as well (storing a user with email `None` is valid).
+                email = get_profile().default_user
 
             created, default_user = self.get_or_create(email=email, **kwargs)
             self._default_user = default_user
+
             return created, default_user
 
         def reset(self):

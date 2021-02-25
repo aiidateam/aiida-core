@@ -74,3 +74,10 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
                 results.append(row)
 
         return results
+
+    @abc.abstractmethod
+    def _clean_db(self):
+        """Cleans entire database (used in tests).
+
+        .. warning:: this will lead to catastrophic data loss!
+        """

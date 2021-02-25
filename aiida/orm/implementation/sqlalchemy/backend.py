@@ -157,3 +157,26 @@ class SqlaBackend(SqlBackend[base.Base]):
         """
         from aiida.backends import sqlalchemy as sa
         return sa.ENGINE.raw_connection()
+
+    def _clean_db(self):
+        from sqlalchemy.sql import table
+        # pylint: disable=invalid-name
+        DbGroupNodes = table('db_dbgroup_dbnodes')
+        DbGroup = table('db_dbgroup')
+        DbLink = table('db_dblink')
+        DbNode = table('db_dbnode')
+        DbLog = table('db_dblog')
+        DbAuthInfo = table('db_dbauthinfo')
+        DbUser = table('db_dbuser')
+        DbComputer = table('db_dbcomputer')
+
+        with self.transaction() as session:
+            session.execute(DbGroupNodes.delete())
+            session.execute(DbGroup.delete())
+            session.execute(DbLog.delete())
+            session.execute(DbLink.delete())
+            session.execute(DbNode.delete())
+            session.execute(DbAuthInfo.delete())
+            session.execute(DbComputer.delete())
+            session.execute(DbUser.delete())
+            session.commit()

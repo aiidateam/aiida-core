@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migrate attributes from old InlineCalculation that have been transformed into CalcFunctions:
+"""Migrate attributes from legacy `InlineCalculation` nodes that were migrated to `CalcFunctionNode`s.
+The node type migration was performed in `0020_provenance_redesign.py` but the attributes were forgotten.
 
-* OLD `sealed` and `function_name` remain the same
+* OLD `function_name` remain the same
 * OLD `namespace` becomes `function_namespace`
 * OLD `first_line_source_code` becomes `function_starting_line_number`
 * OLD `source_file` is moved to repository and dropped from DB
@@ -18,10 +19,7 @@
 * NEW `process_state` is initialized at "finished"
 * NEW `process_label` is set as `Legacy InlineCalculation`
 
-Note 1: old InlineCalculation can be identified by the old keywords, and after migration they will be
-identified by having `function_number_of_lines` but no `version`.
-
-Note 2: `exit_status` and `process_state` are initialized to 0 and "finished" respectively because the
+Note: `exit_status` and `process_state` are initialized to 0 and "finished" respectively because the
 CalcFunctions affected are old InlineCalculation, which were only stored if they succeeded. You can check
 the relevant code here (line 60 has the execution call, it is stored after that):
 
@@ -75,20 +73,6 @@ def delete_old_attributes(apps, _):
             inline_node.save()
 
 
-#def delete_new_attributes(apps, _):
-#"""Deletes the new attributes"""
-#utils.del_object_from_repository(uuid, 'source_file')
-
-#def create_old_attributes(apps, _):
-#"""Re-creates the old attributes"""
-#content_start = modifier.get_value_for_node(pk, 'function_starting_line_number')
-#content_end = content_start + modifier.get_value_for_node(pk, 'function_number_of_lines')
-#content0_text = utils.get_object_from_repository(uuid, 'source_file')
-#content0_list = content0_text.splitlines()
-#content_list = content0_list[content_start:content_end]
-#content_text = "\n".join(content_list)
-
-
 class Migration(migrations.Migration):
     """Migrate attributes from old InlineCalculation that have been transformed into CalcFunctions."""
     dependencies = [('db', '0045_dbgroup_extras')]
@@ -97,6 +81,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(create_new_attributes, reverse_code=migrations.RunPython.noop),
         # 2. We delete the old attributes
         migrations.RunPython(delete_old_attributes, reverse_code=migrations.RunPython.noop),
-        # 2. Finish migration
+        # 3. Finish migration
         upgrade_schema_version(REVISION, DOWN_REVISION),
     ]

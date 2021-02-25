@@ -44,55 +44,69 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
         return text_t
 
     def setUpBeforeMigration(self):
-        calcnode = self.DbNode(
+        calcnode_old = self.DbNode(
             node_type='process.calculation.calcfunction.CalcFunctionNode.',
             user_id=self.default_user.id,
             attributes={
                 'sealed': True,
+                'function_name': 'sum_inline',
                 'namespace': '__main__',
+                'first_line_source_code': 4,
                 'source_code': self.get_source_code(full_file=False),
                 'source_file': self.get_source_code(full_file=True),
-                'function_name': 'sum_inline',
-                'first_line_source_code': 4,
             },
         )
-        calcnode.save()
-        self.calcnode_id = calcnode.id
-        #print(self.load_node(self.calcnode_id).attributes)
-        #calcnode.attributes['function_namespace'] = calcnode.attributes['namespace']
-        #calcnode.save()
-        #print(self.load_node(self.calcnode_id).attributes)
+        calcnode_old.save()
+        self.calcnode_old_id = calcnode_old.id
+
+        self.attributes_new = {
+            'sealed': True,
+            'function_name': 'sum_inline',
+            'function_namespace': '__main__',
+            'function_starting_line_number': 20,
+            'process_label': 'sum_inline',
+            'process_state': 'excepted',
+            'exit_status': 1,
+        }
+        calcnode_new = self.DbNode(
+            node_type='process.calculation.calcfunction.CalcFunctionNode.',
+            user_id=self.default_user.id,
+            attributes=self.attributes_new,
+        )
+        calcnode_new.save()
+        self.calcnode_new_id = calcnode_new.id
 
     def test_data_migrated(self):
-        """Test that the model now has an extras column with empty dictionary as default."""
-        calcnode = self.load_node(self.calcnode_id)
+        """Test that the attributes were correctly migrated."""
+        calcnode = self.load_node(self.calcnode_old_id)
 
-        # Pre existing and renamed attributes
-        self.assertEqual(calcnode.attributes['sealed'], True)
-        self.assertEqual(calcnode.attributes['function_name'], 'sum_inline')
-        self.assertEqual(calcnode.attributes['function_namespace'], '__main__')
-        self.assertEqual(calcnode.attributes['function_starting_line_number'], 4)
+        # Check that new/renamed attributes have the correct value:
+        updated_attributes = {
+            # Pre existing and renamed attributes
+            'sealed': True,
+            'function_name': 'sum_inline',
+            'function_namespace': '__main__',
+            'function_starting_line_number': 4,
+            # Newly determined attributes
+            'exit_status': 0,
+            'process_state': 'finished',
+            'process_label': 'Legacy InlineCalculation',
+            'function_number_of_lines': 3,
+        }
+        for key, val in updated_attributes.items():
+            self.assertEqual(calcnode.attributes[key], val)
 
-        # Newly determined attributes
-        self.assertEqual(calcnode.attributes['exit_status'], 0)
-        self.assertEqual(calcnode.attributes['process_state'], 'finished')  #USE ENUM?
-        self.assertEqual(calcnode.attributes['process_label'], 'Legacy InlineCalculation')
-        self.assertEqual(calcnode.attributes['function_number_of_lines'], 3)
+        # Check that removed attributes (and 'version') are no longer there:
+        abscent_attributes = ['namespace', 'source_code', 'source_file', 'first_line_source_code', 'version']
+        for abscent_attribute in abscent_attributes:
+            self.assertFalse(abscent_attribute in calcnode.attributes)
 
-        # Old attributes that got renamed or removed
-        with self.assertRaises(KeyError):
-            _ = calcnode.attributes['namespace']
-        with self.assertRaises(KeyError):
-            _ = calcnode.attributes['source_code']
-        with self.assertRaises(KeyError):
-            _ = calcnode.attributes['source_file']
-        with self.assertRaises(KeyError):
-            _ = calcnode.attributes['first_line_source_code']
-
-        # New attributes that are not set
-        with self.assertRaises(KeyError):
-            _ = calcnode.attributes['version']
-
-        # Source file in repository:
+        # Check that the source file is in the repository:
         repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
         self.assertEqual(repo_data, self.get_source_code(full_file=True))
+
+        # Check that the bystander node was not modified:
+        calcnode = self.load_node(self.calcnode_new_id)
+        self.assertFalse('function_number_of_lines' in calcnode.attributes)
+        for key, val in self.attributes_new.items():
+            self.assertEqual(calcnode.attributes[key], val)

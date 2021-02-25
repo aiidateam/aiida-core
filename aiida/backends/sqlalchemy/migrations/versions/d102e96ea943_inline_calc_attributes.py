@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migrate attributes from old InlineCalculation that have been transformed into CalcFunctions:
+"""Migrate attributes from legacy `InlineCalculation` nodes that were migrated to `CalcFunctionNode`s.
+The node type migration was performed in `0020_provenance_redesign.py` but the attributes were forgotten.
 
-* OLD `sealed` and `function_name` remain the same
+* OLD `function_name` remain the same
 * OLD `namespace` becomes `function_namespace`
 * OLD `first_line_source_code` becomes `function_starting_line_number`
 * OLD `source_file` is moved to repository and dropped from DB
@@ -18,10 +19,7 @@
 * NEW `process_state` is initialized at "finished"
 * NEW `process_label` is set as `Legacy InlineCalculation`
 
-Note 1: old InlineCalculation can be identified by the old keywords, and after migration they will be
-identified by having `function_number_of_lines` but no `version`.
-
-Note 2: `exit_status` and `process_state` are initialized to 0 and "finished" respectively because the
+Note: `exit_status` and `process_state` are initialized to 0 and "finished" respectively because the
 CalcFunctions affected are old InlineCalculation, which were only stored if they succeeded. You can check
 the relevant code here (line 60 has the execution call, it is stored after that):
 
@@ -55,17 +53,17 @@ def upgrade():
     conn.execute(text(
         """
         UPDATE db_dbnode
-        SET attributes = attributes || '{
-            "exit_status": 0,
-            "process_state": "finished",
-            "process_label": "Legacy InlineCalculation"
-            }'::jsonb ||
-            jsonb_build_object(
+        SET attributes = attributes || jsonb_build_object(
+                'exit_status', 0,
+                'process_state', 'finished',
+                'process_label', 'Legacy InlineCalculation',
                 'function_starting_line_number', attributes->'first_line_source_code',
                 'function_namespace', attributes->'namespace'
                 )
         WHERE
             attributes ? 'namespace' AND
+            attributes ? 'source_code' AND
+            attributes ? 'source_file' AND
             attributes ? 'first_line_source_code' AND
             node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
         """))
@@ -92,6 +90,7 @@ def upgrade():
                 )
             WHERE
                 attributes ? 'namespace' AND
+                attributes ? 'source_file' AND
                 attributes ? 'first_line_source_code' AND
                 node_type = 'process.calculation.calcfunction.CalcFunctionNode.' AND
                 (attributes -> 'source_code')::TEXT LIKE :symlike;
@@ -99,7 +98,18 @@ def upgrade():
 
 
     # Saves the source file in the repository
-    sqlquery_results = conn.execute(text("SELECT uuid, attributes -> 'source_file' FROM db_dbnode;"))
+    sqlquery_results = conn.execute(text(
+        """
+        SELECT uuid, attributes -> 'source_file'
+        FROM db_dbnode
+        WHERE
+            attributes ? 'namespace' AND
+            attributes ? 'source_code' AND
+            attributes ? 'source_file' AND
+            attributes ? 'first_line_source_code' AND
+            node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
+        """
+        ))
 
     for data_pair in sqlquery_results:
         node_uuid = data_pair[0]
@@ -118,6 +128,8 @@ def upgrade():
             - 'first_line_source_code'
         WHERE
             attributes ? 'namespace' AND
+            attributes ? 'source_code' AND
+            attributes ? 'source_file' AND
             attributes ? 'first_line_source_code' AND
             node_type = 'process.calculation.calcfunction.CalcFunctionNode.';
         """))

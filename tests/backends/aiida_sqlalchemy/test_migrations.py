@@ -1791,7 +1791,7 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
                 session.add(user)
                 session.commit()
 
-                calcnode = DbNode(
+                calcnode_old = DbNode(
                     node_type='process.calculation.calcfunction.CalcFunctionNode.',
                     user_id=user.id,
                     attributes={
@@ -1804,9 +1804,26 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
                     },
                 )
 
-                session.add(calcnode)
+                self.attributes_new = {
+                        'sealed': True,
+                        'function_name': 'sum_inline',
+                        'function_namespace': '__main__',
+                        'function_starting_line_number': 20,
+                        'process_label': 'sum_inline',
+                        'process_state': 'excepted',
+                        'exit_status': 1,
+                    }
+                calcnode_new = DbNode(
+                    node_type='process.calculation.calcfunction.CalcFunctionNode.',
+                    user_id=user.id,
+                    attributes=self.attributes_new,
+                )
+
+                session.add(calcnode_old)
+                session.add(calcnode_new)
                 session.commit()
-                self.calcnode_id = calcnode.id
+                self.calcnode_old_id = calcnode_old.id
+                self.calcnode_new_id = calcnode_new.id
 
             except Exception:
                 session.rollback()
@@ -1816,7 +1833,7 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
 
 
     def test_data_migrated(self):
-        """Test that the model now has an extras column with empty dictionary as default."""
+        """Test that the attributes were correctly migrated."""
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
@@ -1824,37 +1841,38 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
         with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
-                calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode_id).one()
+                calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode_old_id).one()
 
-                # Pre existing and renamed attributes
-                self.assertEqual(calcnode.attributes['sealed'], True)
-                self.assertEqual(calcnode.attributes['function_name'], 'sum_inline')
-                self.assertEqual(calcnode.attributes['function_namespace'], '__main__')
-                self.assertEqual(calcnode.attributes['function_starting_line_number'], 4)
+                # Check that new/renamed attributes have the correct value:
+                updated_attributes = {
+                    # Pre existing and renamed attributes
+                    'sealed': True,
+                    'function_name': 'sum_inline',
+                    'function_namespace': '__main__',
+                    'function_starting_line_number': 4,
+                    # Newly determined attributes
+                    'exit_status': 0,
+                    'process_state': 'finished',
+                    'process_label': 'Legacy InlineCalculation',
+                    'function_number_of_lines': 3,
+                }
+                for key, val in updated_attributes.items():
+                    self.assertEqual(calcnode.attributes[key], val)
 
-                # Newly determined attributes
-                self.assertEqual(calcnode.attributes['exit_status'], 0)
-                self.assertEqual(calcnode.attributes['process_state'], 'finished')  #USE ENUM?
-                self.assertEqual(calcnode.attributes['process_label'], 'Legacy InlineCalculation')
-                self.assertEqual(calcnode.attributes['function_number_of_lines'], 3)
+                # Check that removed attributes (and 'version') are no longer there:
+                abscent_attributes = ['namespace', 'source_code', 'source_file', 'first_line_source_code', 'version']
+                for abscent_attribute in abscent_attributes:
+                    self.assertFalse(abscent_attribute in calcnode.attributes)
 
-                # Old attributes that got renamed or removed
-                with self.assertRaises(KeyError):
-                    _ = calcnode.attributes['namespace']
-                with self.assertRaises(KeyError):
-                    _ = calcnode.attributes['source_code']
-                with self.assertRaises(KeyError):
-                    _ = calcnode.attributes['source_file']
-                with self.assertRaises(KeyError):
-                    _ = calcnode.attributes['first_line_source_code']
-
-                # New attributes that are not set
-                with self.assertRaises(KeyError):
-                    _ = calcnode.attributes['version']
-
-                # Source file in repository:
+                # Check that the source file is in the repository:
                 repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
                 self.assertEqual(repo_data, self.get_source_code(full_file=True))
+
+                # Check that the bystander node was not modified:
+                calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode_new_id).one()
+                self.assertFalse('function_number_of_lines' in calcnode.attributes)
+                for key, val in self.attributes_new.items():
+                    self.assertEqual(calcnode.attributes[key], val)
 
             finally:
                 session.close()

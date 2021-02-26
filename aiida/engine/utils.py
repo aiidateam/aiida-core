@@ -15,6 +15,7 @@ import contextlib
 from datetime import datetime
 import logging
 from typing import Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union, TYPE_CHECKING
+import uuid
 
 if TYPE_CHECKING:
     from .processes import Process, ProcessBuilder
@@ -132,7 +133,8 @@ def interruptable_task(
             if not future.done():
                 future.set_result(result)
 
-    loop.create_task(execute_coroutine())
+    task = loop.create_task(execute_coroutine())
+    task.set_name(f'interruptable-{uuid.uuid4()}')
 
     return future
 

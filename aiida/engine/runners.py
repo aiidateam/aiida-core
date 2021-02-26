@@ -275,10 +275,12 @@ class Runner:  # pylint: disable=too-many-public-methods
                 process_inited.kill(msg='Process was killed because the runner received an interrupt')
 
                 # gather all running processes and wait for all of them to finish, before finalising the run future
+                # we also want to capture interruptable tasks, so their exceptions are retrieved
                 process_tasks = [
-                    t for t in asyncio.all_tasks(loop=self.loop) if t.get_name().startswith('aiida-process')
+                    t for t in asyncio.all_tasks(loop=self.loop)
+                    if (t.get_name().startswith('aiida-process') and t.get_name().startswith('interruptable'))
                 ]
-                processes_future = asyncio.gather(*process_tasks, return_exceptions=True)  # capture kill exceptions
+                processes_future = asyncio.gather(*process_tasks, return_exceptions=True)  # capture kill interruption
                 processes_future.add_done_callback(_callback)
 
             original_handler_int = signal.getsignal(signal.SIGINT)

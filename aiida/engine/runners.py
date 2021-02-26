@@ -36,6 +36,8 @@ __all__ = ('Runner',)
 
 LOGGER = logging.getLogger(__name__)
 
+PROCESS_TASK_TEMPLATE = 'aiida-process-{pid}'
+
 
 class ResultAndNode(NamedTuple):
     result: Dict[str, Any]
@@ -189,14 +191,15 @@ class Runner:  # pylint: disable=too-many-public-methods
         if process_inited.metadata.get('dry_run', False):
             raise exceptions.InvalidOperation('cannot submit a process from within another with `dry_run=True`')
 
-        if self._rmq_submit:
+        if self.is_daemon_runner:
             assert self.persister is not None, 'runner does not have a persister'
             assert self.controller is not None, 'runner does not have a controller'
             self.persister.save_checkpoint(process_inited)
             process_inited.close()
             self.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
         else:
-            self.loop.create_task(process_inited.step_until_terminated())
+            task = self.loop.create_task(process_inited.step_until_terminated())
+            task.set_name(PROCESS_TASK_TEMPLATE.format(pid=process_inited.pid))
 
         return process_inited.node
 
@@ -212,7 +215,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not self._closed
 
         process_inited = self.instantiate_process(process, *args, **inputs)
-        self.loop.create_task(process_inited.step_until_terminated())
+        task = self.loop.create_task(process_inited.step_until_terminated())
+        task.set_name(PROCESS_TASK_TEMPLATE.format(pid=process_inited.pid))
         return process_inited.node
 
     def _run(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[Dict[str, Any], ProcessNode]:
@@ -231,23 +235,64 @@ class Runner:  # pylint: disable=too-many-public-methods
             return result, node
 
         with utils.loop_scope(self.loop):
+
+            # initiate the process
             process_inited = self.instantiate_process(process, *args, **inputs)
 
-            def kill_process(_num, _frame):
+            # create a future that will be finished when the process finishes
+            run_future = self.loop.create_future()
+
+            def _callback(_future):
+                if not run_future.done():
+                    run_future.set_result(True)
+
+            process_inited.future().add_done_callback(_callback)
+
+            # create a coroutine to await the future
+            async def _run():
+                await run_future
+
+            # create an object to track the number of kill signals received
+            # (a simple int cannot be updated in _kill_process )
+            class _SignalCount:
+                value = 0
+
+            # create a callback to handle killing the process
+            def _kill_process(_num, _frame):
                 """Send the kill signal to the process in the current scope."""
-                if process_inited.is_killing:
-                    LOGGER.warning('runner received interrupt, process %s already being killed', process_inited.pid)
-                    return
-                LOGGER.critical('runner received interrupt, killing process %s', process_inited.pid)
+
+                _SignalCount.value += 1
+                if _SignalCount.value > 1:
+                    LOGGER.critical('runner received second interrupt, terminating')
+                    if not run_future.done():
+                        run_future.set_result('kill process terminated')
+                    raise RuntimeError('kill process terminated')
+
+                LOGGER.critical('runner received interrupt, killing process and children %s', process_inited.pid)
+
+                # child processes are killed after the parent, so we also need to wait for them
+                process_inited.future().remove_done_callback(_callback)
                 process_inited.kill(msg='Process was killed because the runner received an interrupt')
+
+                # gather all running processes and wait for all of them to finish, before finalising the run future
+                process_tasks = [
+                    t for t in asyncio.all_tasks(loop=self.loop) if t.get_name().startswith('aiida-process')
+                ]
+                processes_future = asyncio.gather(*process_tasks, return_exceptions=True)  # capture kill exceptions
+                processes_future.add_done_callback(_callback)
 
             original_handler_int = signal.getsignal(signal.SIGINT)
             original_handler_term = signal.getsignal(signal.SIGTERM)
 
             try:
-                signal.signal(signal.SIGINT, kill_process)
-                signal.signal(signal.SIGTERM, kill_process)
-                process_inited.execute()
+                # setup signals
+                signal.signal(signal.SIGINT, _kill_process)
+                signal.signal(signal.SIGTERM, _kill_process)
+                # start process running
+                task = process_inited.loop.create_task(process_inited.step_until_terminated())
+                task.set_name(PROCESS_TASK_TEMPLATE.format(pid=process_inited.pid))
+                # wait for process to finish
+                self.loop.run_until_complete(_run())
             finally:
                 signal.signal(signal.SIGINT, original_handler_int)
                 signal.signal(signal.SIGTERM, original_handler_term)

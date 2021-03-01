@@ -397,10 +397,9 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
 
 @pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('with_daemon')
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('with_daemon', 'clear_database_before_test')
 @pytest.mark.parametrize('cmd_try_all', (True, False))
-def test_pause_play_kill(cmd_try_all):
+def test_pause_play_kill(cmd_try_all, run_cli_command):
     """
     Test the pause/play/kill commands
     """
@@ -411,10 +410,9 @@ def test_pause_play_kill(cmd_try_all):
     from aiida.orm import load_node
 
     runner = get_manager().create_runner(rmq_submit=True)
-    cli_runner = CliRunner()
+    calc = runner.submit(test_processes.WaitProcess)
 
     test_daemon_timeout = 5.
-    calc = runner.submit(test_processes.WaitProcess)
     start_time = time.time()
     while calc.process_state is not plumpy.ProcessState.WAITING:
         if time.time() - start_time >= test_daemon_timeout:
@@ -429,14 +427,11 @@ def test_pause_play_kill(cmd_try_all):
     orphaned_node.store()
     non_existing_process_id = str(orphaned_node.pk)
     for command in [process_pause, process_play, process_kill]:
-        result = cli_runner.invoke(command, [non_existing_process_id])
-        import traceback
-        assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
+        result = run_cli_command(command, [non_existing_process_id])
         assert 'Error:' in result.output
 
     assert not calc.paused
-    result = cli_runner.invoke(process_pause, [str(calc.pk)])
-    assert result.exception is None, result.output
+    result = run_cli_command(process_pause, [str(calc.pk)])
 
     # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
     # running the CLI commands, so we add a broadcast subscriber for the state change, which when hit will set the
@@ -457,8 +452,7 @@ def test_pause_play_kill(cmd_try_all):
 
     # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
     # the `verdi process` commands that we want to test
-    result = cli_runner.invoke(process_pause, ['--wait', str(calc.pk)])
-    assert result.exception is None, result.output
+    result = run_cli_command(process_pause, ['--wait', str(calc.pk)])
     assert calc.paused
 
     if cmd_try_all:
@@ -466,11 +460,9 @@ def test_pause_play_kill(cmd_try_all):
     else:
         cmd_option = str(calc.pk)
 
-    result = cli_runner.invoke(process_play, ['--wait', cmd_option])
-    assert result.exception is None, result.output
+    result = run_cli_command(process_play, ['--wait', cmd_option])
     assert not calc.paused
 
-    result = cli_runner.invoke(process_kill, ['--wait', str(calc.pk)])
-    assert result.exception is None, result.output
+    result = run_cli_command(process_kill, ['--wait', str(calc.pk)])
     assert calc.is_terminated
     assert calc.is_killed

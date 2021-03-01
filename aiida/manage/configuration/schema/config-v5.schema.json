@@ -319,6 +319,21 @@
                     "type": "string",
                     "default": ""
                 },
+                "broker_parameters": {
+                    "description": "RabbitMQ arguments that will be encoded as query parameters",
+                    "type": "object",
+                    "default": {
+                        "heartbeat": 600
+                    },
+                    "properties": {
+                        "heartbeat": {
+                            "description": "After how many seconds the peer TCP connection should be considered unreachable",
+                            "type": "integer",
+                            "default": 600,
+                            "minimum": 0
+                        }
+                    }
+                },
                 "default_user_email": {
                     "type": [
                         "string",

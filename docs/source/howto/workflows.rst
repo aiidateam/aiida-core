@@ -20,7 +20,12 @@ Here we present a brief introduction on how to write both workflow types.
 .. note::
 
     For more details on the concept of a workflow, and the difference between a work function and a work chain, please see the corresponding :ref:`topics section<topics:workflows:concepts>`.
+    
 
+.. note::
+
+   Developing workflows may involve running several lengthy calculations. You should consider enabling *caching* to help avoid repeating long steps in your workchain. <PROPER LINK TO CACHING HERE> https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/run_codes.html#how-to-run-codes-caching
+    
 Work function
 -------------
 

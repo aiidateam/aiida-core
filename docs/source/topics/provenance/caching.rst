@@ -58,29 +58,36 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
     ]
 
 
-.. _topics:provenance:caching:control:
+.. _topics:provenance:caching:control-hashing:
 
 Controlling hashing
 -------------------
 
-There are a couple of ways in which you can customized what properties are being considered when calculating the hash for a new instance of a data node.
-Most of this are established at the time of creating the data plugin extension:
+Data nodes
+..........
 
-* If you wish to ignore specific attributes, a :py:class:`~aiida.orm.nodes.Node` subclass can have a ``_hash_ignored_attributes`` attribute.
-  This is a list of attribute names, which are ignored when creating the hash.
-* To add things which should be considered in the hash, you can override the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method.
-  Note that doing so also overrides the behavior described above, so make sure to use the ``super()`` method in order to prevent this.
-* You can pass a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`.
-  These are, in turn, passed on to :meth:`~aiida.common.hashing.make_hash`.
+The hashing of *Data nodes* can be customized both when implementing a new data node class and during runtime.
 
-The process nodes have a fixed behavior that is internal to AiiDA and are not subclassable, so they can't be customized in a direct way.
-To know more about the specifics of these internals you can visit the :ref:`corresponding section <internal_architecture:engine:caching>`.
-The only way in which these can be influenced by plugin designers is indirectly via the hash criteria for the associated data types of their inputs.
+In the :py:class:`~aiida.orm.nodes.Node` subclass:
+
+* Use the ``_hash_ignored_attributes`` to exclude a list of node attributes ``['attr1', 'attr2']`` from computing the hash.
+* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method.
+  Use the ``super()`` method, and then append to the list of objects to hash.
+
+You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.
+
+Process nodes
+.............
+
+The hashing of *Process nodes* is fixed and can only be influenced indirectly via the hashes of their inputs.
+For implementation details of the hashing mechanism for process nodes, see :ref:`here <internal_architecture:engine:caching>`.
+
+.. _topics:provenance:caching:control-caching:
 
 Controlling Caching
 -------------------
 
-Although you can't directly control the hashing mechanism of the process node when implementing a plugin, there are ways in which you can control its caching:
+Caching can be configured at runtime (see :ref:`how-to:run-codes:caching:configure`) and when implementing a new process class:
 
 * The :meth:`spec.exit_code <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` has a keyword argument ``invalidates_cache``.
   If this is set to ``True``, that means that a calculation with this exit code will not be used as a cache source for another one, even if their hashes match.

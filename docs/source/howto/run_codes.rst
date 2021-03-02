@@ -402,7 +402,7 @@ See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:mon
 How to save compute time with caching
 =====================================
 
-In practice, one often ends up re-running calculations one has already run before - be it because two workflows include the same calculation or because one needs to restart a workflow that failed due to some infrastructure problem.
+Over the course of a project, you may end up re-running the same calculations multiple times - be it because two workflows include the same calculation or because one needs to restart a workflow that failed due to some infrastructure problem.
 
 Since AiiDA stores the full provenance of each calculation, it can detect whether a calculation has been run before and, instead of running it again, simply reuse its outputs, thereby saving valuable computational resources.
 This is what we mean by **caching** in AiiDA.
@@ -463,7 +463,7 @@ Enable caching for your current profile or globally (for all profiles):
     Existing ``cache_config.yml`` files will be migrated to the central ``config.json`` file automatically.
 
 
-From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
+From this point onwards, when you launch a new calculation, AiiDA will compare its hash (a fixed size string, unique for a calulation's type and inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
 If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
 
 .. note::

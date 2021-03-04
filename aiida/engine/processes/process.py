@@ -414,7 +414,7 @@ class Process(plumpy.processes.Process):
         :param exc_info: the sys.exc_info() object (type, value, traceback)
         """
         super().on_except(exc_info)
-        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
+        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)).rstrip())
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override

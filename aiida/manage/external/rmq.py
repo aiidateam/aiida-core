@@ -11,6 +11,7 @@
 """Components to communicate tasks to RabbitMQ."""
 from collections.abc import Mapping
 import logging
+import traceback
 
 from kiwipy import communications, Future
 import pamqp.encode
@@ -154,7 +155,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         if not node.is_excepted and not node.is_sealed:
             node.logger.exception(message)
-            node.set_exception(str(exception))
+            node.set_exception(''.join(traceback.format_exception(type(exception), exception, None)).rstrip())
             node.set_process_state(ProcessState.EXCEPTED)
             node.seal()
 

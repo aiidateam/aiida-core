@@ -24,7 +24,7 @@ Here we present a brief introduction on how to write both workflow types.
 
 .. note::
 
-   Developing workflows may involve running several lengthy calculations. You should consider enabling *caching* to help avoid repeating long steps in your workchain. <PROPER LINK TO CACHING HERE> https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/run_codes.html#how-to-run-codes-caching
+   Developing workflows may involve running several lengthy calculations. Consider :ref:`enabling caching <how-to:run-codes:caching>` to help avoid repeating long workflow steps.
     
 Work function
 -------------

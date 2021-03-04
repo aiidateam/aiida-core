@@ -399,35 +399,38 @@ See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:mon
 
 .. _how-to:run-codes:caching:
 
-How to save computational resources using caching
-=================================================
+How to save compute time with caching
+=====================================
 
-There are numerous reasons why you might need to re-run calculations you have already run before.
-
-    If you run a great number of complex workflows in high-throughput, that each may repeat the same calculation, or you have to restart an entire workflow that failed somewhere half-way through.
+Over the course of a project, you may end up re-running the same calculations multiple times - be it because two workflows include the same calculation or because one needs to restart a workflow that failed due to some infrastructure problem.
 
 Since AiiDA stores the full provenance of each calculation, it can detect whether a calculation has been run before and, instead of running it again, simply reuse its outputs, thereby saving valuable computational resources.
 This is what we mean by **caching** in AiiDA.
 
-.. versionchanged:: 1.6.0
+With caching enabled, AiiDA searches the database for a calculation of the same :ref:`hash<topics:provenance:caching:hashing>`.
+If found, AiiDA creates a copy of the calculation node and its results, thus ensuring that the resulting provenance graph is independent of whether caching is enabled or not (see :numref:`fig_caching`).
 
-    Caching configuration has moved from ``cache_config.yml`` to ``config.json`` (this will be migrated automatically).
-    To manipulate the caching configuration it is now advised to use the ``verdi config`` CLI, rather than directly changing the file.
+.. _fig_caching:
+.. figure:: include/images/caching.png
+    :align: center
+    :height: 350px
+
+    When reusing the results of a calculation **C** for a new calculation **C'**, AiiDA simply makes a copy of the result nodes and links them up as usual.
+    This diagram depicts the same input node **D1** being used for both calculations, but an input node **D1'** with the same *hash* as **D1** would trigger the cache as well.
+
+Caching happens on the *calculation* level (no caching at the workflow level, see :ref:`topics:provenance:caching:limitations`).
+By default, both successful and failed calculations enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
 
 .. _how-to:run-codes:caching:enable:
 
 How to enable caching
 ---------------------
 
-.. important:: Caching is **not** enabled by default.
+.. important:: Caching is **not** enabled by default, see :ref:`the faq <how-to:faq:caching-not-enabled>`.
 
-Caching is designed to work in an unobtrusive way and simply save time and valuable computational resources.
-However, this design is a double-egded sword, in that a user that might not be aware of this functionality, can be caught off guard by the results of their calculations.
+Caching is controlled on a per-profile level via the :ref:`verdi config cli <how-to:installation:configure:options>`.
 
-The caching mechanism comes with some limitations and caveats that are important to understand.
-Refer to the :ref:`topics:provenance:caching:limitations` section for more details.
-
-You can view and alter your current caching configuration through the command-line:
+View your current caching configuration:
 
 .. code-block:: console
 
@@ -438,16 +441,16 @@ You can view and alter your current caching configuration through the command-li
     caching.disabled_for     default
     caching.enabled_for      default
 
-.. seealso:: :ref:`how-to:installation:configure:options`
-
-You can enable caching for your current profile or globally (for all profiles) by:
+Enable caching for your current profile or globally (for all profiles):
 
 .. code-block:: console
 
     $ verdi config set caching.default_enabled True
     Success: 'caching.default_enabled' set to True for 'quicksetup' profile
+
     $ verdi config set -g caching.default_enabled True
     Success: 'caching.default_enabled' set to True globally
+
     $ verdi config list caching
     name                     source    value
     -----------------------  --------  -------
@@ -455,22 +458,18 @@ You can enable caching for your current profile or globally (for all profiles) b
     caching.disabled_for     default
     caching.enabled_for      default
 
-From this point onwards, when you launch a new calculation, AiiDA will compare its hash (depending both on the type of calculation and its inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
+.. versionchanged:: 1.6.0
+
+    Configuring caching via the ``cache_config.yml`` is deprecated as of AiiDA 1.6.0.
+    Existing ``cache_config.yml`` files will be migrated to the central ``config.json`` file automatically.
+
+
+From this point onwards, when you launch a new calculation, AiiDA will compare its hash (a fixed size string, unique for a calulation's type and inputs, see :ref:`topics:provenance:caching:hashing`) against other calculations already present in your database.
 If another calculation with the same hash is found, AiiDA will reuse its results without repeating the actual calculation.
-
-In order to ensure that the provenance graph with and without caching is the same, AiiDA creates both a new calculation node and a copy of the output data nodes as shown in :numref:`fig_caching`.
-
-.. _fig_caching:
-.. figure:: include/images/caching.png
-    :align: center
-    :height: 350px
-
-    When reusing the results of a calculation **C** for a new calculation **C'**, AiiDA simply makes a copy of the result nodes and links them up as usual.
 
 .. note::
 
-    AiiDA uses the *hashes* of the input nodes **D1** and **D2** when searching the calculation cache.
-    That is to say, if the input of **C'** were new nodes **D1'** and **D2'** with the same content (hash) as **D1**, **D2**, the cache would trigger as well.
+    In contrast to caching, hashing **is** enabled by default, i.e. hashes for all your calculations will already have been computed.
 
 .. _how-to:run-codes:caching:configure:
 

@@ -20,12 +20,11 @@ Here we present a brief introduction on how to write both workflow types.
 .. note::
 
     For more details on the concept of a workflow, and the difference between a work function and a work chain, please see the corresponding :ref:`topics section<topics:workflows:concepts>`.
-    
 
 .. note::
 
    Developing workflows may involve running several lengthy calculations. Consider :ref:`enabling caching <how-to:run-codes:caching>` to help avoid repeating long workflow steps.
-    
+
 Work function
 -------------
 

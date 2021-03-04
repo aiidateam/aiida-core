@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport tasks for calculation jobs."""
+import asyncio
 import functools
 import logging
 import tempfile
@@ -406,7 +407,7 @@ class Waiting(plumpy.process_states.Waiting):
             else:
                 logger.warning(f'killed CalcJob<{node.pk}> but async future was None')
             raise
-        except (plumpy.process_states.Interruption, plumpy.futures.CancelledError):
+        except (plumpy.process_states.Interruption, plumpy.futures.CancelledError, asyncio.CancelledError):
             node.set_process_status(f'Transport task {command} was interrupted')
             raise
         else:

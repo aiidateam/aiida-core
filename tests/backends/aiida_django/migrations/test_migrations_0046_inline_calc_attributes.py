@@ -20,7 +20,7 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
     migrate_to = '0046_inline_calc_attributes'
 
     @staticmethod
-    def get_source_code(full_file=False):
+    def get_source_code(full_file=False, include_newline=True):
         """Returns a string containing the source code for the calcfunction"""
 
         # yapf: disable
@@ -29,7 +29,7 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
         )
         text_t = ('@calcfunction\n'
                   'def sum_inline( int1, int2 ):\n'
-                  '    return int1 + int2\n'
+                  '    return int1 + int2'
         )
         text_f = ('num1 = orm.Int(2)\n'
                   'num2 = orm.Int(3)\n'
@@ -39,27 +39,18 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
         # yapf: enable
 
         if full_file:
-            text_t = text_i + '\n' + text_t + '\n' + text_f
+            return text_i + '\n' + text_t + '\n\n' + text_f
+
+        if include_newline:
+            return text_t + '\n'
 
         return text_t
 
     def setUpBeforeMigration(self):
-        calcnode_old = self.DbNode(
-            node_type='process.calculation.calcfunction.CalcFunctionNode.',
-            user_id=self.default_user.id,
-            attributes={
-                'sealed': True,
-                'function_name': 'sum_inline',
-                'namespace': '__main__',
-                'first_line_source_code': 4,
-                'source_code': self.get_source_code(full_file=False),
-                'source_file': self.get_source_code(full_file=True),
-            },
-        )
-        calcnode_old.save()
-        self.calcnode_old_id = calcnode_old.id
+        """Create the process nodes."""
 
-        self.attributes_new = {
+        # Setup bystander node with the new attributes
+        self.attributes0_new = {
             'sealed': True,
             'function_name': 'sum_inline',
             'function_namespace': '__main__',
@@ -68,18 +59,49 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
             'process_state': 'excepted',
             'exit_status': 1,
         }
-        calcnode_new = self.DbNode(
+        calcnode0_new = self.DbNode(
             node_type='process.calculation.calcfunction.CalcFunctionNode.',
             user_id=self.default_user.id,
-            attributes=self.attributes_new,
+            attributes=self.attributes0_new,
         )
-        calcnode_new.save()
-        self.calcnode_new_id = calcnode_new.id
+
+        # Setup old inline node with end newline in code
+        calcnode1_old = self.DbNode(
+            node_type='process.calculation.calcfunction.CalcFunctionNode.',
+            user_id=self.default_user.id,
+            attributes={
+                'sealed': True,
+                'function_name': 'sum_inline',
+                'namespace': '__main__',
+                'first_line_source_code': 4,
+                'source_code': self.get_source_code(full_file=False, include_newline=True),
+                'source_file': self.get_source_code(full_file=True),
+            },
+        )
+
+        # Setup old inline node without end newline in code
+        calcnode2_old = self.DbNode(
+            node_type='process.calculation.calcfunction.CalcFunctionNode.',
+            user_id=self.default_user.id,
+            attributes={
+                'sealed': True,
+                'function_name': 'sum_inline',
+                'namespace': '__main__',
+                'first_line_source_code': 4,
+                'source_code': self.get_source_code(full_file=False, include_newline=False),
+                'source_file': self.get_source_code(full_file=True),
+            },
+        )
+
+        calcnode0_new.save()
+        calcnode1_old.save()
+        calcnode2_old.save()
+        self.calcnode0_new_id = calcnode0_new.id
+        self.calcnode1_old_id = calcnode1_old.id
+        self.calcnode2_old_id = calcnode2_old.id
 
     def test_data_migrated(self):
         """Test that the attributes were correctly migrated."""
-        calcnode = self.load_node(self.calcnode_old_id)
-
         # Check that new/renamed attributes have the correct value:
         updated_attributes = {
             # Pre existing and renamed attributes
@@ -91,22 +113,30 @@ class TestCalcFunctionAttributesMigration(TestMigrations):
             'exit_status': 0,
             'process_state': 'finished',
             'process_label': 'Legacy InlineCalculation',
-            'function_number_of_lines': 3,
+            'function_number_of_lines': 2,
         }
-        for key, val in updated_attributes.items():
-            self.assertEqual(calcnode.attributes[key], val)
 
-        # Check that removed attributes (and 'version') are no longer there:
-        abscent_attributes = ['namespace', 'source_code', 'source_file', 'first_line_source_code', 'version']
-        for abscent_attribute in abscent_attributes:
-            self.assertFalse(abscent_attribute in calcnode.attributes)
+        calcnode_list = [
+            self.load_node(self.calcnode1_old_id),
+            self.load_node(self.calcnode2_old_id),
+        ]
 
-        # Check that the source file is in the repository:
-        repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
-        self.assertEqual(repo_data, self.get_source_code(full_file=True))
+        for calcnode in calcnode_list:
+
+            for key, val in updated_attributes.items():
+                self.assertEqual(calcnode.attributes[key], val)
+
+            # Check that removed attributes (and 'version') are no longer there:
+            abscent_attributes = ['namespace', 'source_code', 'source_file', 'first_line_source_code', 'version']
+            for abscent_attribute in abscent_attributes:
+                self.assertFalse(abscent_attribute in calcnode.attributes)
+
+            # Check that the source file is in the repository:
+            repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
+            self.assertEqual(repo_data, self.get_source_code(full_file=True))
 
         # Check that the bystander node was not modified:
-        calcnode = self.load_node(self.calcnode_new_id)
+        calcnode = self.load_node(self.calcnode0_new_id)
         self.assertFalse('function_number_of_lines' in calcnode.attributes)
-        for key, val in self.attributes_new.items():
+        for key, val in self.attributes0_new.items():
             self.assertEqual(calcnode.attributes[key], val)

@@ -1756,7 +1756,7 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
     migrate_to = 'd102e96ea943'  # d102e96ea943_calcfunction_attributes.py
 
     @staticmethod
-    def get_source_code(full_file=False):
+    def get_source_code(full_file=False, include_newline=True):
         """Returns a string containing the source code for the calcfunction"""
 
         text_i = ('from aiida import orm\n'
@@ -1764,7 +1764,7 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
         )
         text_t = ('@calcfunction\n'
                   'def sum_inline( int1, int2 ):\n'
-                  '    return int1 + int2\n'
+                  '    return int1 + int2'
         )
         text_f = ('num1 = orm.Int(2)\n'
                   'num2 = orm.Int(3)\n'
@@ -1773,12 +1773,15 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
         )
 
         if full_file:
-            text_t = text_i + '\n' + text_t + '\n' + text_f
+            return text_i + '\n' + text_t + '\n\n' + text_f
+
+        if include_newline:
+            return text_t + '\n'
 
         return text_t
 
     def setUpBeforeMigration(self):
-        """Create the process."""
+        """Create the process nodes."""
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
@@ -1791,20 +1794,8 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
                 session.add(user)
                 session.commit()
 
-                calcnode_old = DbNode(
-                    node_type='process.calculation.calcfunction.CalcFunctionNode.',
-                    user_id=user.id,
-                    attributes={
-                        'sealed': True,
-                        'namespace': '__main__',
-                        'source_code': self.get_source_code(full_file=False),
-                        'source_file': self.get_source_code(full_file=True),
-                        'function_name': 'sum_inline',
-                        'first_line_source_code': 4,
-                    },
-                )
-
-                self.attributes_new = {
+                # Setup bystander node with the new attributes
+                self.attributes0_new = {
                         'sealed': True,
                         'function_name': 'sum_inline',
                         'function_namespace': '__main__',
@@ -1813,17 +1804,47 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
                         'process_state': 'excepted',
                         'exit_status': 1,
                     }
-                calcnode_new = DbNode(
+                calcnode0_new = DbNode(
                     node_type='process.calculation.calcfunction.CalcFunctionNode.',
                     user_id=user.id,
-                    attributes=self.attributes_new,
+                    attributes=self.attributes0_new,
                 )
 
-                session.add(calcnode_old)
-                session.add(calcnode_new)
+                # Setup old inline node with end newline in code
+                calcnode1_old = DbNode(
+                    node_type='process.calculation.calcfunction.CalcFunctionNode.',
+                    user_id=user.id,
+                    attributes={
+                        'sealed': True,
+                        'namespace': '__main__',
+                        'source_code': self.get_source_code(full_file=False, include_newline=True),
+                        'source_file': self.get_source_code(full_file=True),
+                        'function_name': 'sum_inline',
+                        'first_line_source_code': 4,
+                    },
+                )
+
+                # Setup old inline node without end newline in code
+                calcnode2_old = DbNode(
+                    node_type='process.calculation.calcfunction.CalcFunctionNode.',
+                    user_id=user.id,
+                    attributes={
+                        'sealed': True,
+                        'namespace': '__main__',
+                        'source_code': self.get_source_code(full_file=False, include_newline=False),
+                        'source_file': self.get_source_code(full_file=True),
+                        'function_name': 'sum_inline',
+                        'first_line_source_code': 4,
+                    },
+                )
+
+                session.add(calcnode0_new)
+                session.add(calcnode1_old)
+                session.add(calcnode2_old)
                 session.commit()
-                self.calcnode_old_id = calcnode_old.id
-                self.calcnode_new_id = calcnode_new.id
+                self.calcnode0_new_id = calcnode0_new.id
+                self.calcnode1_old_id = calcnode1_old.id
+                self.calcnode2_old_id = calcnode1_old.id
 
             except Exception:
                 session.rollback()
@@ -1837,41 +1858,51 @@ class TestInlineCalculationAttributesMigration(TestMigrationsSQLA):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
 
         DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        updated_attributes = {
+            # Pre existing and renamed attributes
+            'sealed': True,
+            'function_name': 'sum_inline',
+            'function_namespace': '__main__',
+            'function_starting_line_number': 4,
+            # Newly determined attributes
+            'exit_status': 0,
+            'process_state': 'finished',
+            'process_label': 'Legacy InlineCalculation',
+            'function_number_of_lines': 2,
+        }
 
         with sa.ENGINE.begin() as connection:
             try:
                 session = Session(connection.engine)
-                calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode_old_id).one()
+                calcnode_list = [
+                    session.query(DbNode).filter(DbNode.id == self.calcnode1_old_id).one(),
+                    session.query(DbNode).filter(DbNode.id == self.calcnode2_old_id).one(),
+                ]
 
-                # Check that new/renamed attributes have the correct value:
-                updated_attributes = {
-                    # Pre existing and renamed attributes
-                    'sealed': True,
-                    'function_name': 'sum_inline',
-                    'function_namespace': '__main__',
-                    'function_starting_line_number': 4,
-                    # Newly determined attributes
-                    'exit_status': 0,
-                    'process_state': 'finished',
-                    'process_label': 'Legacy InlineCalculation',
-                    'function_number_of_lines': 3,
-                }
-                for key, val in updated_attributes.items():
-                    self.assertEqual(calcnode.attributes[key], val)
+                for calcnode in calcnode_list:
+                    # Check that new/renamed attributes have the correct value:
+                    for key, val in updated_attributes.items():
+                        self.assertEqual(calcnode.attributes[key], val)
 
-                # Check that removed attributes (and 'version') are no longer there:
-                abscent_attributes = ['namespace', 'source_code', 'source_file', 'first_line_source_code', 'version']
-                for abscent_attribute in abscent_attributes:
-                    self.assertFalse(abscent_attribute in calcnode.attributes)
+                    # Check that removed attributes (and 'version') are no longer there:
+                    abscent_attributes = [
+                        'namespace',
+                        'source_code',
+                        'source_file',
+                        'first_line_source_code',
+                        'version',
+                        ]
+                    for abscent_attribute in abscent_attributes:
+                        self.assertFalse(abscent_attribute in calcnode.attributes)
 
-                # Check that the source file is in the repository:
-                repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
-                self.assertEqual(repo_data, self.get_source_code(full_file=True))
+                    # Check that the source file is in the repository:
+                    repo_data = utils.get_object_from_repository(calcnode.uuid, 'source_file')
+                    self.assertEqual(repo_data, self.get_source_code(full_file=True))
 
                 # Check that the bystander node was not modified:
-                calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode_new_id).one()
+                calcnode = session.query(DbNode).filter(DbNode.id == self.calcnode0_new_id).one()
                 self.assertFalse('function_number_of_lines' in calcnode.attributes)
-                for key, val in self.attributes_new.items():
+                for key, val in self.attributes0_new.items():
                     self.assertEqual(calcnode.attributes[key], val)
 
             finally:

@@ -46,7 +46,12 @@ def create_new_attributes(apps, _):
         for inline_node in inline_nodes:
             inline_node.attributes['function_namespace'] = inline_node.attributes['namespace']
             inline_node.attributes['function_starting_line_number'] = inline_node.attributes['first_line_source_code']
-            inline_node.attributes['function_number_of_lines'] = len(inline_node.attributes['source_code'].splitlines())
+            # Note: splitlines will `ignore` the last trailing newline (only the last one) in the sense that
+            # both these string will return a list of 3 elements (but should be counted as 2 lines of code):
+            #   `  @decorator\n  def funct()\n    return None\n`
+            #   `  @decorator\n  def funct()\n    return None`
+            numlines = len(inline_node.attributes['source_code'].splitlines()) - 1
+            inline_node.attributes['function_number_of_lines'] = numlines
             inline_node.attributes['process_label'] = 'Legacy InlineCalculation'
             inline_node.attributes['process_state'] = 'finished'
             inline_node.attributes['exit_status'] = 0

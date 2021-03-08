@@ -73,9 +73,12 @@ def upgrade():
     # What counts as a newline (SOURCE https://stackoverflow.com/a/10805292)
     # Why is it done as a difference + division (https://stackoverflow.com/a/36376548)
     replace_dicts = [
-        {'symbol': '\\r\\n', 'symlike': '%\\r\\n%', 'count': 6},  # WinDOS
-        {'symbol': '\\r', 'symlike': '%\\r%', 'count': 3},  # older Macs
-        {'symbol': '\\n', 'symlike': '%\\n%', 'count': 3},  # Unices
+        {'symbol': '\\r\\n', 'symlike': '%\\r\\n', 'count': 6, 'count_sum': -1},  # WinDOS
+        {'symbol': '\\r', 'symlike': '%\\r', 'count': 3, 'count_sum': -1},  # older Macs
+        {'symbol': '\\n', 'symlike': '%\\n', 'count': 3, 'count_sum': -1},  # Unices
+        {'symbol': '\\r\\n', 'symlike': '%\\r\\n%', 'count': 6, 'count_sum': 0},  # WinDOS
+        {'symbol': '\\r', 'symlike': '%\\r%', 'count': 3, 'count_sum': 0},  # older Macs
+        {'symbol': '\\n', 'symlike': '%\\n%', 'count': 3, 'count_sum': 0},  # Unices
     ]
 
     for replace_dict in replace_dicts:
@@ -86,7 +89,7 @@ def upgrade():
                 'function_number_of_lines',
                 ( CHAR_LENGTH((attributes -> 'source_code')::TEXT)
                 - CHAR_LENGTH( REPLACE((attributes -> 'source_code')::TEXT, :symbol, '' )))
-                / :count + 1
+                / :count + :count_sum
                 )
             WHERE
                 attributes ? 'namespace' AND

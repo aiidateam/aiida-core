@@ -12,7 +12,7 @@ import datetime
 import os
 import requests
 
-from pymatgen import MPRester
+from pymatgen.ext.matproj import MPRester
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 

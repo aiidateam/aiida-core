@@ -2227,15 +2227,17 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests pymatgen -> StructureData, with partial occupancies and spins.
         This should raise a ValueError.
         """
-        import pymatgen
+        from pymatgen.core.periodic_table import Specie
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        Fe_spin_up = pymatgen.Specie('Fe', 0, properties={'spin': 1})
-        Mn_spin_up = pymatgen.Specie('Mn', 0, properties={'spin': 1})
-        Fe_spin_down = pymatgen.Specie('Fe', 0, properties={'spin': -1})
-        Mn_spin_down = pymatgen.Specie('Mn', 0, properties={'spin': -1})
-        FeMn1 = pymatgen.Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
-        FeMn2 = pymatgen.Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
-        a = pymatgen.Structure(
+        Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})
+        Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})
+        Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})
+        Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})
+        FeMn1 = Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
+        FeMn2 = Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[FeMn1, FeMn2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2243,9 +2245,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             StructureData(pymatgen=a)
 
         # same, with vacancies
-        Fe1 = pymatgen.Composition({Fe_spin_up: 0.5})
-        Fe2 = pymatgen.Composition({Fe_spin_down: 0.5})
-        a = pymatgen.Structure(
+        Fe1 = Composition({Fe_spin_up: 0.5})
+        Fe2 = Composition({Fe_spin_down: 0.5})
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Fe1, Fe2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2257,12 +2259,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     def test_multiple_kinds_partial_occupancies():
         """Tests that a structure with multiple sites with the same element but different
         partial occupancies, get their own unique kind name."""
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        Mg1 = pymatgen.Composition({'Mg': 0.50})
-        Mg2 = pymatgen.Composition({'Mg': 0.25})
+        Mg1 = Composition({'Mg': 0.50})
+        Mg2 = Composition({'Mg': 0.25})
 
-        a = pymatgen.Structure(
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Mg1, Mg2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2275,12 +2278,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests that a structure with multiple sites with the same alloy symbols but different
         weights, get their own unique kind name
         """
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        alloy_one = pymatgen.Composition({'Mg': 0.25, 'Al': 0.75})
-        alloy_two = pymatgen.Composition({'Mg': 0.45, 'Al': 0.55})
+        alloy_one = Composition({'Mg': 0.25, 'Al': 0.75})
+        alloy_two = Composition({'Mg': 0.45, 'Al': 0.55})
 
-        a = pymatgen.Structure(
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
             species=[alloy_one, alloy_two],
             coords=[[0, 0, 0], [0.5, 0.5, 0.5]]

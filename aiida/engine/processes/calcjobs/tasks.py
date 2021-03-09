@@ -72,7 +72,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
 
     async def do_upload():
         with transport_queue.request_transport(authinfo) as request:
@@ -131,7 +131,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
 
     async def do_submit():
         with transport_queue.request_transport(authinfo) as request:
@@ -178,7 +178,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
     job_id = node.get_job_id()
 
     async def do_update():
@@ -241,7 +241,7 @@ async def task_retrieve_job(
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
 
     async def do_retrieve():
         with transport_queue.request_transport(authinfo) as request:
@@ -250,7 +250,7 @@ async def task_retrieve_job(
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
             # accounting was called but could not be set.
-            scheduler = node.computer.get_scheduler()
+            scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
             scheduler.set_transport(transport)
 
             try:
@@ -301,7 +301,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
         logger.warning(f'CalcJob<{node.pk}> killed, it was in the {node.get_state()} state')
         return True
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
 
     async def do_kill():
         with transport_queue.request_transport(authinfo) as request:

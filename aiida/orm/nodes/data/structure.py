@@ -115,8 +115,12 @@ def get_pymatgen_version():
     """
     if not has_pymatgen():
         return None
-    import pymatgen
-    return pymatgen.__version__
+    try:
+        from pymatgen import __version__
+    except ImportError:
+        # this was changed in version 2022.0.3
+        from pymatgen.core import __version__
+    return __version__
 
 
 def has_spglib():

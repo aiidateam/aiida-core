@@ -407,7 +407,10 @@ class Waiting(plumpy.process_states.Waiting):
             else:
                 logger.warning(f'killed CalcJob<{node.pk}> but async future was None')
             raise
-        except (plumpy.process_states.Interruption, plumpy.futures.CancelledError, asyncio.CancelledError):
+        except (plumpy.futures.CancelledError, asyncio.CancelledError):
+            node.set_process_status(f'Transport task {command} was cancelled')
+            raise
+        except plumpy.process_states.Interruption:
             node.set_process_status(f'Transport task {command} was interrupted')
             raise
         else:

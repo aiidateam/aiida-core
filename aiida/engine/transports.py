@@ -111,6 +111,7 @@ class TransportQueue:
         except asyncio.CancelledError:  # pylint: disable=try-except-raise
             # note this is only required in python<=3.7,
             # where asyncio.CancelledError inherits from Exception
+            _LOGGER.debug('Transport task cancelled')
             raise
         except Exception:
             _LOGGER.error('Exception whilst using transport:\n%s', traceback.format_exc())

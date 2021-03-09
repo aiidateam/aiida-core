@@ -51,7 +51,7 @@ class TestAttributes(AiidaArchiveTestCase):
         export([self.data], filename=self.export_file)
 
         # Clean db
-        self.reset_database()
+        self.clean_db()
 
         self.import_attributes()
 

@@ -22,12 +22,6 @@ from .. import AiidaArchiveTestCase
 class TestGroups(AiidaArchiveTestCase):
     """Test ex-/import cases related to Groups"""
 
-    def setUp(self):
-        self.reset_database()
-
-    def tearDown(self):
-        self.reset_database()
-
     @with_temp_dir
     def test_nodes_in_group(self, temp_dir):
         """
@@ -66,8 +60,7 @@ class TestGroups(AiidaArchiveTestCase):
         filename1 = os.path.join(temp_dir, 'export1.aiida')
         export([sd1, jc1, gr1], filename=filename1)
         n_uuids = [sd1.uuid, jc1.uuid]
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename1)
 
         # Check that the imported nodes are correctly imported and that
@@ -105,8 +98,7 @@ class TestGroups(AiidaArchiveTestCase):
         filename = os.path.join(temp_dir, 'export.aiida')
         export([group], filename=filename)
         n_uuids = [sd1.uuid]
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
         import_data(filename)
 
         # Check that the imported nodes are correctly imported and that
@@ -148,8 +140,7 @@ class TestGroups(AiidaArchiveTestCase):
         # At this point we export the generated data
         filename = os.path.join(temp_dir, 'export1.aiida')
         export([group], filename=filename)
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
         # Creating a group of the same name
         group = orm.Group(label='node_group_existing')
@@ -189,7 +180,7 @@ class TestGroups(AiidaArchiveTestCase):
         # Export Nodes
         filename = os.path.join(temp_dir, 'export.aiida')
         export([data1, data2], filename=filename)
-        self.reset_database()
+        self.refurbish_db()
 
         # Create Group, do not store
         group_label = 'import_madness'

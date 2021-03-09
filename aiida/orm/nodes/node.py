@@ -16,6 +16,7 @@ import warnings
 import traceback
 from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -197,6 +198,16 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     @property
     def backend_entity(self) -> 'BackendNode':
         return super().backend_entity
+
+    def __eq__(self, other: Any) -> bool:
+        """Fallback equality comparison by uuid (can be overwritten by specific types)"""
+        if isinstance(other, Node) and self.uuid == other.uuid:
+            return True
+        return super().__eq__(other)
+
+    def __hash__(self) -> int:
+        """Python-Hash: Implementation that is compatible with __eq__"""
+        return UUID(self.uuid).int
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {str(self)}>'

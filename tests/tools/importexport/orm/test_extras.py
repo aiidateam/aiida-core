@@ -23,7 +23,7 @@ class TestExtras(AiidaArchiveTestCase):
     """Test ex-/import cases related to Extras"""
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUpClass(cls):
         """Only run to prepare an archive file"""
         super().setUpClass()
 
@@ -36,16 +36,11 @@ class TestExtras(AiidaArchiveTestCase):
         export([data], filename=cls.export_file)
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls):
         """Remove tmp_folder"""
         super().tearDownClass()
 
         shutil.rmtree(cls.tmp_folder, ignore_errors=True)
-
-    def setUp(self):
-        """This function runs before every test execution"""
-        self.clean_db()
-        self.insert_data()
 
     def import_extras(self, mode_new='import'):
         """Import an aiida database"""
@@ -68,9 +63,6 @@ class TestExtras(AiidaArchiveTestCase):
         builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
         self.assertEqual(builder.count(), 1)
         return builder.all()[0][0]
-
-    def tearDown(self):
-        pass
 
     def test_import_of_extras(self):
         """Check if extras are properly imported"""

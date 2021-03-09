@@ -34,7 +34,7 @@ class TestFolderData(AiidaTestCase):
                 handle.write(content)
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls):
         shutil.rmtree(cls.tempdir)
 
     def test_constructor_tree(self):

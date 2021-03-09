@@ -22,8 +22,7 @@ class TestQueryBuilder(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
@@ -736,6 +735,8 @@ class TestQueryHelp(AiidaTestCase):
         qb = orm.QueryBuilder().append((orm.Group,), filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
+        # populate computer
+        self.computer  # pylint:disable=pointless-statement
         qb = orm.QueryBuilder().append(orm.Computer,)
         self.assertEqual(qb.count(), 1)
 

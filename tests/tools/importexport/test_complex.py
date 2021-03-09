@@ -23,12 +23,6 @@ from . import AiidaArchiveTestCase
 class TestComplex(AiidaArchiveTestCase):
     """Test complex ex-/import cases"""
 
-    def setUp(self):
-        self.reset_database()
-
-    def tearDown(self):
-        self.reset_database()
-
     @with_temp_dir
     def test_complex_graph_import_export(self, temp_dir):
         """
@@ -91,8 +85,7 @@ class TestComplex(AiidaArchiveTestCase):
         filename = os.path.join(temp_dir, 'export.aiida')
         export([fd1], filename=filename)
 
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         import_data(filename, ignore_unknown_nodes=True)
 
@@ -203,8 +196,7 @@ class TestComplex(AiidaArchiveTestCase):
             # this also checks if group memberships are preserved!
             export([group] + list(group.nodes), filename=filename)
             # cleaning the DB!
-            self.clean_db()
-            self.create_user()
+            self.refurbish_db()
             # reimporting the data from the file
             import_data(filename, ignore_unknown_nodes=True)
             # creating the hash from db content

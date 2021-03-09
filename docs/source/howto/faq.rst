@@ -78,3 +78,14 @@ Run the command ``verdi daemon logshow`` in a separate terminal to see the loggi
 If the root cause is indeed due to an import problem, it will probably appear as an ``ImportError`` exception in the daemon log.
 To solve these issues, make sure that all the Python code that is being run is properly importable, which means that it is part of the `PYTHONPATH <https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH>`_.
 Make sure that the PYTHONPATH is correctly defined automatically when starting your shell, so for example if you are using bash, add it to your ``.bashrc``.
+
+.. _how-to:faq:caching-not-enabled:
+
+Why is caching not enabled by default?
+======================================
+
+Caching is designed to work in an unobtrusive way and simply save time and valuable computational resources.
+However, this design is a double-egded sword, in that a user that might not be aware of this functionality, can be caught off guard by the results of their calculations.
+
+The caching mechanism comes with some limitations and caveats that are important to understand.
+Refer to the :ref:`topics:provenance:caching:limitations` section for more details.

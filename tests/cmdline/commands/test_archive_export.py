@@ -52,8 +52,8 @@ class TestVerdiExport(AiidaTestCase):
     """Tests for `verdi export`."""
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    def setUpClass(cls):
+        super().setUpClass()
         from aiida import orm
 
         cls.computer = orm.Computer(
@@ -76,7 +76,7 @@ class TestVerdiExport(AiidaTestCase):
         cls.penultimate_archive = 'export_v0.6_simple.aiida'
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls):
         os.chdir(cls.old_cwd)
         shutil.rmtree(cls.cwd, ignore_errors=True)
 

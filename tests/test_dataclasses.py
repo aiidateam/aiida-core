@@ -20,6 +20,9 @@ from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
 from aiida.orm import load_node
 from aiida.orm import CifData, StructureData, KpointsData, BandsData, ArrayData, TrajectoryData, Dict
+from aiida.orm.nodes.data.structure import (
+    ase_refine_cell, get_formula, get_pymatgen_version, has_ase, has_pymatgen, has_spglib
+)
 from aiida.orm.nodes.data.structure import Kind, Site
 
 
@@ -51,11 +54,15 @@ def simplify(string):
     return '\n'.join(s.strip() for s in string.split())
 
 
+@pytest.mark.skipif(not has_pymatgen(), reason='pymatgen not installed')
+def test_get_pymatgen_version():
+    assert isinstance(get_pymatgen_version(), str)
+
+
 class TestCifData(AiidaTestCase):
     """Tests for CifData class."""
     from distutils.version import StrictVersion
     from aiida.orm.nodes.data.cif import has_pycifrw
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, has_spglib, get_pymatgen_version
 
     valid_sample_cif_str = '''
         data_test
@@ -1038,7 +1045,6 @@ class TestStructureData(AiidaTestCase):
     Tests the creation of StructureData objects (cell and pbc).
     """
     # pylint: disable=too-many-public-methods
-    from aiida.orm.nodes.data.structure import has_ase, has_spglib
     from aiida.orm.nodes.data.cif import has_pycifrw
 
     def test_cell_ok_and_atoms(self):
@@ -1512,7 +1518,6 @@ class TestStructureData(AiidaTestCase):
         Test the ase_refine_cell() function
         """
         # pylint: disable=too-many-statements
-        from aiida.orm.nodes.data.structure import ase_refine_cell
         import ase
         import math
         import numpy
@@ -1593,8 +1598,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the generation of formula
         """
-        from aiida.orm.nodes.data.structure import get_formula
-
         self.assertEqual(get_formula(['Ba', 'Ti'] + ['O'] * 3), 'BaO3Ti')
         self.assertEqual(get_formula(['Ba', 'Ti', 'C'] + ['O'] * 3, separator=' '), 'C Ba O3 Ti')
         self.assertEqual(get_formula(['H'] * 6 + ['C'] * 6), 'C6H6')
@@ -1622,8 +1625,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the generation of formula, including unknown entry.
         """
-        from aiida.orm.nodes.data.structure import get_formula
-
         self.assertEqual(get_formula(['Ba', 'Ti'] + ['X'] * 3), 'BaTiX3')
         self.assertEqual(get_formula(['Ba', 'Ti', 'C'] + ['X'] * 3, separator=' '), 'C Ba Ti X3')
         self.assertEqual(get_formula(['X'] * 6 + ['C'] * 6), 'C6X6')
@@ -1916,7 +1917,6 @@ class TestStructureDataReload(AiidaTestCase):
 
 class TestStructureDataFromAse(AiidaTestCase):
     """Tests the creation of Sites from/to a ASE object."""
-    from aiida.orm.nodes.data.structure import has_ase
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     def test_ase(self):
@@ -2103,7 +2103,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
     """
-    from aiida.orm.nodes.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_1(self):
@@ -2296,7 +2295,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 class TestPymatgenFromStructureData(AiidaTestCase):
     """Tests the creation of pymatgen Structure and Molecule objects from
     StructureData."""
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_1(self):

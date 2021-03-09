@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workchain processes."""
+from typing import Optional, Tuple
 
 from aiida.common.lang import classproperty
 
@@ -22,12 +23,12 @@ class WorkChainNode(WorkflowNode):
     STEPPER_STATE_INFO_KEY = 'stepper_state_info'
 
     @classproperty
-    def _updatable_attributes(cls):
+    def _updatable_attributes(cls) -> Tuple[str, ...]:
         # pylint: disable=no-self-argument
         return super()._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property
-    def stepper_state_info(self):
+    def stepper_state_info(self) -> Optional[str]:
         """
         Return the stepper state info
 
@@ -35,7 +36,7 @@ class WorkChainNode(WorkflowNode):
         """
         return self.get_attribute(self.STEPPER_STATE_INFO_KEY, None)
 
-    def set_stepper_state_info(self, stepper_state_info):
+    def set_stepper_state_info(self, stepper_state_info: str) -> None:
         """
         Set the stepper state info
 

@@ -1159,7 +1159,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
     def get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
         """Return the hash for this node based on its attributes.
-        
+
         :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
         """
         if not self.is_stored:
@@ -1189,7 +1189,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         assert self._repository is not None, 'repository not initialised'
         top_level_module = self.__module__.split('.', 1)[0]
         try:
-            version = importlib.import_module(top_level_module).__version__
+            version = importlib.import_module(top_level_module).__version__  # type: ignore[attr-defined]
         except (ImportError, AttributeError) as exc:
             raise exceptions.HashingError("The node's package version could not be determined") from exc
         objects = [

@@ -167,7 +167,7 @@ class WorkChain(Process):
 
         awaitable.resolved = True
 
-        if not self.has_terminated:
+        if not self.has_terminated():
             # the process may be terminated, for example, if the process was killed or excepted
             # then we should not try to update it
             self._update_process_status()

@@ -8,11 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for workflow processes."""
+from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType
 from aiida.orm.utils.managers import NodeLinksManager
 
 from ..process import ProcessNode
+
+if TYPE_CHECKING:
+    from aiida.orm import Node
 
 __all__ = ('WorkflowNode',)
 
@@ -25,7 +29,7 @@ class WorkflowNode(ProcessNode):
     _unstorable_message = 'storing for this node has been disabled'
 
     @property
-    def inputs(self):
+    def inputs(self) -> NodeLinksManager:
         """Return an instance of `NodeLinksManager` to manage incoming INPUT_WORK links
 
         The returned Manager allows you to easily explore the nodes connected to this node
@@ -37,7 +41,7 @@ class WorkflowNode(ProcessNode):
         return NodeLinksManager(node=self, link_type=LinkType.INPUT_WORK, incoming=True)
 
     @property
-    def outputs(self):
+    def outputs(self) -> NodeLinksManager:
         """Return an instance of `NodeLinksManager` to manage outgoing RETURN links
 
         The returned Manager allows you to easily explore the nodes connected to this node
@@ -48,7 +52,7 @@ class WorkflowNode(ProcessNode):
         """
         return NodeLinksManager(node=self, link_type=LinkType.RETURN, incoming=False)
 
-    def validate_outgoing(self, target, link_type, link_label):
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from ourself to a given node.
 
         A workflow cannot 'create' Data, so if we receive an outgoing link to an unstored Data node, that means

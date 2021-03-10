@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Components to communicate tasks to RabbitMQ."""
+import asyncio
 from collections.abc import Mapping
 import logging
 import traceback
@@ -208,6 +209,10 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         except ImportError as exception:
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)
+            raise
+        except asyncio.CancelledError:  # pylint: disable=try-except-raise
+            # note this is only required in python<=3.7,
+            # where asyncio.CancelledError inherits from Exception
             raise
         except Exception as exception:
             message = 'failed to recreate the process instance in order to continue it.'

@@ -30,7 +30,6 @@ class CalcJobState(Enum):
     STASHING = 'stashing'
     RETRIEVING = 'retrieving'
     PARSING = 'parsing'
-    DONE = 'done'
 
 
 class CalcInfo(DefaultFieldsAttributeDict):

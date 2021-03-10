@@ -10,6 +10,7 @@
 # pylint: disable=no-name-in-module
 """Tests to run with a running daemon."""
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -420,6 +421,10 @@ def launch_all():
     # Testing the stashing functionality
     process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
     with tempfile.TemporaryDirectory() as tmpdir:
+
+        # Delete the temporary directory to test that the stashing functionality will create it if necessary
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
         source_list = ['output.txt', 'triple_value.tmp']
         inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
         _, node = run.get_node(process, **inputs)

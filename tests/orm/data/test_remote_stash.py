@@ -25,8 +25,9 @@ def test_base_class():
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_constructor():
-    """Test the constructor."""
+@pytest.mark.parametrize('store', (False, True))
+def test_constructor(store):
+    """Test the constructor and storing functionality."""
     stash_mode = StashMode.COPY
     target_basepath = '/absolute/path'
     source_list = ['relative/folder', 'relative/file']
@@ -37,21 +38,12 @@ def test_constructor():
     assert data.target_basepath == target_basepath
     assert data.source_list == source_list
 
-
-@pytest.mark.usefixtures('clear_database_before_test')
-def test_store():
-    """Test that the subclass can be stored."""
-    stash_mode = StashMode.COPY
-    target_basepath = '/absolute/path'
-    source_list = ['relative/folder', 'relative/file']
-
-    data = RemoteStashFolderData(stash_mode, target_basepath, source_list)
-    data.store()
-
-    assert data.is_stored
-    assert data.stash_mode == stash_mode
-    assert data.target_basepath == target_basepath
-    assert data.source_list == source_list
+    if store:
+        data.store()
+        assert data.is_stored
+        assert data.stash_mode == stash_mode
+        assert data.target_basepath == target_basepath
+        assert data.source_list == source_list
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -72,11 +64,5 @@ def test_constructor_invalid(argument, value):
     }
 
     with pytest.raises(TypeError):
-        if argument == 'stash_mode':
-            kwargs['stash_mode'] = value
-        elif argument == 'target_basepath':
-            kwargs['target_basepath'] = value
-        elif argument == 'source_list':
-            kwargs['source_list'] = value
-
+        kwargs[argument] = value
         RemoteStashFolderData(**kwargs)

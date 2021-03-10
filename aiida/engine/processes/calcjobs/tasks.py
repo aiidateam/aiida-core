@@ -237,8 +237,8 @@ async def task_retrieve_job(
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
-    if node.get_state() == CalcJobState.DONE:
-        logger.warning(f'CalcJob<{node.pk}> already marked as DONE, skipping task_retrieve_job')
+    if node.get_state() == CalcJobState.PARSING:
+        logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
         return
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
@@ -278,7 +278,7 @@ async def task_retrieve_job(
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
         raise TransportTaskException(f'retrieve_calculation failed {max_attempts} times consecutively') from exception
     else:
-        node.set_state(CalcJobState.DONE)
+        node.set_state(CalcJobState.PARSING)
         logger.info(f'retrieving CalcJob<{node.pk}> successful')
         return result
 
@@ -305,7 +305,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
-    authinfo = node.computer.get_authinfo(node.user)
+    authinfo = node.get_authinfo()
 
     async def do_stash():
         with transport_queue.request_transport(authinfo) as request:

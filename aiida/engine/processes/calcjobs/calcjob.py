@@ -108,13 +108,18 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     if not isinstance(target_base, str) or not os.path.isabs(target_base):
         return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
 
-    if not isinstance(source_list, list) or any(not isinstance(src, str) or os.path.isabs(src) for src in source_list):
-        return f'`metadata.options.stash.source_list` should be a list of relative filepaths, got: {source_list}'
+    if (
+        not isinstance(source_list, (list, tuple)) or
+        any(not isinstance(src, str) or os.path.isabs(src) for src in source_list)
+    ):
+        port = 'metadata.options.stash.source_list'
+        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
 
     try:
         StashMode(stash_mode)
     except ValueError:
-        return f'`metadata.options.stash.mode` should be a member of StashMode, got: {stash_mode}'
+        port = 'metadata.options.stash.mode'
+        return f'`{port}` should be a member of aiida.common.datastructures.StashMode, got: {stash_mode}'
 
     return None
 

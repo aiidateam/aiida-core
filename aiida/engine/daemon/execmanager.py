@@ -332,6 +332,65 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
     return job_id
 
 
+def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+    """Stash files from the working directory of a completed calculation to a permanent remote folder.
+
+    After a calculation has been completed, optionally stash files from the work directory to a storage location on the
+    same remote machine. This is useful if one wants to keep certain files from a completed calculation to be removed
+    from the scratch directory, because they are necessary for restarts, but that are too heavy to retrieve.
+    Instructions of which files to copy where are retrieved from the `stash.source_list` option.
+
+    :param calculation: the calculation job node.
+    :param transport: an already opened transport.
+    """
+    from aiida.common.datastructures import StashMode
+    from aiida.orm import RemoteStashFolderData
+
+    logger_extra = get_dblogger_extra(calculation)
+
+    stash_options = calculation.get_option('stash')
+    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    source_list = stash_options.get('source_list', [])
+
+    if not source_list:
+        return
+
+    if stash_mode != StashMode.COPY.value:
+        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not implemented yet.')
+        return
+
+    cls = RemoteStashFolderData
+
+    EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
+
+    uuid = calculation.uuid
+    target_basepath = os.path.join(stash_options['target_base'], uuid[:2], uuid[2:4], uuid[4:])
+
+    for source_filename in source_list:
+
+        source_filepath = os.path.join(calculation.get_remote_workdir(), source_filename)
+        target_filepath = os.path.join(target_basepath, source_filename)
+
+        # If the source file is in a (nested) directory, create those directories first in the target directory
+        target_dirname = os.path.dirname(target_filepath)
+        transport.makedirs(target_dirname, ignore_existing=True)
+
+        try:
+            transport.copy(source_filepath, target_filepath)
+        except (IOError, ValueError) as exception:
+            EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        else:
+            EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+
+    remote_stash = cls(
+        computer=calculation.computer,
+        target_basepath=target_basepath,
+        stash_mode=StashMode(stash_mode),
+        source_list=source_list,
+    ).store()
+    remote_stash.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+
+
 def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
@@ -402,65 +461,6 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     # of making this method idempotent. That is to say, if a runner gets interrupted during this action, it will simply
     # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
     retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
-
-
-def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
-    """Stash files from the working directory of a completed calculation to a permanent remote folder.
-
-    After a calculation has been completed, optionally stash files from the work directory to a storage location on the
-    same remote machine. This is useful if one wants to keep certain files from a completed calculation to be removed
-    from the scratch directory, because they are necessary for restarts, but that are too heavy to retrieve.
-    Instructions of which files to copy where are retrieved from the `stash.source_list` option.
-
-    :param calculation: the calculation job node.
-    :param transport: an already opened transport.
-    """
-    from aiida.common.datastructures import StashMode
-    from aiida.orm import RemoteStashFolderData
-
-    logger_extra = get_dblogger_extra(calculation)
-
-    stash_options = calculation.get_option('stash')
-    stash_mode = stash_options.get('mode', StashMode.COPY.value)
-    source_list = stash_options.get('source_list', [])
-
-    if not source_list:
-        return
-
-    if stash_mode != StashMode.COPY.value:
-        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not implemented yet.')
-        return
-
-    cls = RemoteStashFolderData
-
-    EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
-
-    uuid = calculation.uuid
-    target_basepath = os.path.join(stash_options['target_base'], uuid[:2], uuid[2:4], uuid[4:])
-
-    for source_filename in source_list:
-
-        source_filepath = os.path.join(calculation.get_remote_workdir(), source_filename)
-        target_filepath = os.path.join(target_basepath, source_filename)
-
-        # If the source file is in a (nested) directory, create those directories first in the target directory
-        target_dirname = os.path.dirname(target_filepath)
-        transport.makedirs(target_dirname, ignore_existing=True)
-
-        try:
-            transport.copy(source_filepath, target_filepath)
-        except (IOError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
-        else:
-            EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
-
-    remote_stash = cls(
-        computer=calculation.computer,
-        target_basepath=target_basepath,
-        stash_mode=StashMode(stash_mode),
-        source_list=source_list,
-    ).store()
-    remote_stash.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
 def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:

@@ -27,7 +27,7 @@ from aiida.common import exceptions
 from aiida.orm import load_node, ProcessNode
 from aiida.plugins.utils import PluginVersionProvider
 
-from .processes import futures, Process, ProcessBuilder, ProcessState
+from .processes import Process, ProcessBuilder, ProcessState
 from .processes.calcjobs import manager
 from . import transports
 from . import utils
@@ -328,15 +328,6 @@ class Runner:  # pylint: disable=too-many-public-methods
         LOGGER.info('adding subscriber for broadcasts of %d', pk)
         self.communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
-
-    def get_process_future(self, pk: int) -> futures.ProcessFuture:
-        """Return a future for a process.
-
-        The future will have the process node as the result when finished.
-
-        :return: A future representing the completion of the process node
-        """
-        return futures.ProcessFuture(pk, self._loop, self._poll_interval, self._communicator)
 
     def _poll_process(self, node, callback):
         """Check whether the process state of the node is terminated and call the callback or reschedule it.

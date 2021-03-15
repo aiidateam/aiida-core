@@ -19,9 +19,10 @@ import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions, LinkType, CalcJobState
+from aiida.common import exceptions, LinkType, CalcJobState, StashMode
 from aiida.engine import launch, CalcJob, Process, ExitCode
 from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
@@ -616,3 +617,41 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
 
     with pytest.raises(ValueError, match=r'`additional_retrieve_list` should only contain relative filepaths.*'):
         process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize(('stash_options', 'expected'), (
+    ({
+        'target_base': None
+    }, '`metadata.options.stash.target_base` should be'),
+    ({
+        'target_base': 'relative/path'
+    }, '`metadata.options.stash.target_base` should be'),
+    ({
+        'target_base': '/path'
+    }, '`metadata.options.stash.source_list` should be'),
+    ({
+        'target_base': '/path',
+        'source_list': ['/abspath']
+    }, '`metadata.options.stash.source_list` should be'),
+    ({
+        'target_base': '/path',
+        'source_list': ['rel/path'],
+        'mode': 'test'
+    }, '`metadata.options.stash.mode` should be'),
+    ({
+        'target_base': '/path',
+        'source_list': ['rel/path']
+    }, None),
+    ({
+        'target_base': '/path',
+        'source_list': ['rel/path'],
+        'mode': StashMode.COPY.value
+    }, None),
+))
+def test_validate_stash_options(stash_options, expected):
+    """Test the ``validate_stash_options`` function."""
+    if expected is None:
+        assert validate_stash_options(stash_options, None) is expected
+    else:
+        assert expected in validate_stash_options(stash_options, None)

@@ -28,29 +28,29 @@ def test_access_methods():
     builder = ProcessBuilder(ArithmeticAddCalculation)
 
     builder['x'] = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
     del builder['x']
-    assert dict(builder) == {'metadata': {'options': {}}}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}}
 
     with pytest.raises(ValueError):
         builder['x'] = node_dict
 
     builder['x'] = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
     # AS ATTRIBUTES
     del builder
     builder = ProcessBuilder(ArithmeticAddCalculation)
 
     builder.x = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
     del builder.x
-    assert dict(builder) == {'metadata': {'options': {}}}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}}
 
     with pytest.raises(ValueError):
         builder.x = node_dict
 
     builder.x = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}

@@ -9,11 +9,14 @@
 ###########################################################################
 # pylint: disable=no-name-in-module
 """Tests to run with a running daemon."""
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
-from aiida.common import exceptions
+from aiida.common import exceptions, StashMode
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
@@ -414,6 +417,24 @@ def launch_all():
     # Run the `MultiplyAddWorkChain`
     print('Running the `MultiplyAddWorkChain`')
     run_multiply_add_workchain()
+
+    # Testing the stashing functionality
+    process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
+    with tempfile.TemporaryDirectory() as tmpdir:
+
+        # Delete the temporary directory to test that the stashing functionality will create it if necessary
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+        source_list = ['output.txt', 'triple_value.tmp']
+        inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
+        _, node = run.get_node(process, **inputs)
+        assert node.is_finished_ok
+        assert 'remote_stash' in node.outputs
+        remote_stash = node.outputs.remote_stash
+        assert remote_stash.stash_mode == StashMode.COPY
+        assert remote_stash.target_basepath.startswith(tmpdir)
+        assert sorted(remote_stash.source_list) == sorted(source_list)
+        assert sorted(p for p in os.listdir(remote_stash.target_basepath)) == sorted(source_list)
 
     # Submitting the calcfunction through the launchers
     print('Submitting calcfunction to the daemon')

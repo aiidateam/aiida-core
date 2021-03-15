@@ -14,6 +14,7 @@ import datetime
 import sys
 
 import dateutil
+import click
 
 
 def ask_question(question, reply_type, allow_none_as_answer=True):
@@ -106,21 +107,6 @@ def query_string(question, default):
     :return: The returned reply.
     """
 
-    if default is None or not default:
-        prompt = ''
-    else:
-        prompt = f' [{default}]'
+    reply = click.prompt(text=question, default=default)
 
-    while True:
-        reply = input(question + prompt)
-        if default is not None and not reply:
-            # If the default answer is an empty string.
-            if not default:
-                return None
-
-            return default
-
-        if reply:
-            return reply
-
-        sys.stdout.write('Please provide a non empty answer.\n')
+    return reply

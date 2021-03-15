@@ -69,25 +69,12 @@ def query_yes_no(question, default='yes'):
 
     The "answer" return value is True for "yes" or False for "no".
     """
-    valid = {'yes': True, 'y': True, 'ye': True, 'no': False, 'n': False}
-    if default is None:
-        prompt = ' [y/n] '
-    elif default == 'yes':
-        prompt = ' [Y/n] '
-    elif default == 'no':
-        prompt = ' [y/N] '
+    if default:
+        answer = click.confirm(question, default=default)
     else:
-        raise ValueError(f"invalid default answer: '{default}'")
+        answer = click.prompt(question, type=bool, prompt_suffix=' [y/n]:')
 
-    while True:
-        choice = input(question + prompt).lower()
-        if default is not None and not choice:
-            return valid[default]
-
-        if choice in valid:
-            return valid[choice]
-
-        sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+    return answer
 
 
 def query_string(question, default):

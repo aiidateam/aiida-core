@@ -14,7 +14,7 @@ A substantial effort has been made to test and debug the new implementation, and
 
 This release also drops support for Python 3.6 (testing is carried out against `3.7`, `3.8` and `3.9`).
 
-NOTE: this release is tentatively intended to be the final minor `v1.x` release before `v2.0.0`;
+NOTE: `v1.6` is tentatively intended to be the final minor `v1.x` release before `v2.0.0`;
 introducing a new (back-incompatible) file repository and removing all deprecated code.
 
 ### New calculation features ✨

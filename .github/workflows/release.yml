@@ -1,7 +1,7 @@
 name: release
 
-# Automate deployment to PyPi when creating a release tag vX.Y.Z
-# will only be published to PyPi if the git tag matches the release version
+# Automate deployment to PyPI when creating a release tag vX.Y.Z
+# will only be published to PyPI if the git tag matches the release version
 # and the pre-commit and tests pass
 
 on:
@@ -86,7 +86,7 @@ jobs:
 
   publish:
 
-    name: Publish to PyPi
+    name: Publish to PyPI
 
     needs: [check-release-tag, pre-commit, tests]
 
@@ -103,7 +103,7 @@ jobs:
       run: |
         pip install wheel
         python setup.py sdist bdist_wheel
-    - name: Publish ot PyPi
+    - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.1.0
       with:
         user: __token__

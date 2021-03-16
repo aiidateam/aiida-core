@@ -13,4 +13,4 @@ if __name__ == '__main__':
     with open(args.SETUP_PATH) as handle:
         data = json.load(handle)
     pypi_version = data['version']
-    assert tag_version == pypi_version, f'{tag_version} != {pypi_version}'
+    assert tag_version == pypi_version, f'The tag version {tag_version} != {pypi_version} specified in `setup.json`'

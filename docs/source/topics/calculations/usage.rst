@@ -505,7 +505,25 @@ This can be useful if those files need to be stored for a longer time than the s
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
 
 The files that are to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
-The target path defines another location (on the same filesystem as the calculation) to copy these files to, and is set through the ``stash.target_base`` option.
+Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy these files to, and is set through the ``stash.target_base`` option, for example:
+
+.. code-block:: python
+
+   from aiida.common.datastructures import StashMode
+
+   inputs = {
+       'code': ....,
+       ...
+       'metadata': {
+           'options': {
+               'stash': {
+                   'source_list': ['aiida.out', 'output.txt'],
+                   'target_base': '/storage/project/stash_folder',
+                   'stash_mode': StashMode.COPY.value,
+               }
+           }
+       }
+   }
 
 .. note::
 

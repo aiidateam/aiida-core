@@ -56,40 +56,40 @@ See the [Configuring profile options](https://aiida.readthedocs.io/projects/aiid
 
 ### Command-line additions and improvements 👌
 
-In adition to `verdi config`, numerous other new commands and options have been added to `verdi`:
+In addition to `verdi config`, numerous other new commands and options have been added to `verdi`:
 
-- **Deprecate** `verdi export` and `verdi import` commands and merge into `verdi archive` (#4710)
-- Add `verdi group delete --delete-nodes`, to also delete the nodes in a group during its removal (#4578).
-- Improve `verdi group remove-nodes` command, to warn when requested nodes are not in the specified group (#4728).
-- Add `verdi database summary` (#4737):
+- **Deprecate** `verdi export` and `verdi import` commands and merge into `verdi archive` ([#4710](https://github.com/aiidateam/aiida-core/pull/4710))
+- Add `verdi group delete --delete-nodes`, to also delete the nodes in a group during its removal ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)).
+- Improve `verdi group remove-nodes` command, to warn when requested nodes are not in the specified group ([#4728](https://github.com/aiidateam/aiida-core/pull/4728)).
+- Add `verdi database summary` ([#4737](https://github.com/aiidateam/aiida-core/pull/4737)):
   This prints a summary of the count of each entity and (optionally) the list of unique identifiers for some entities.
-- Improve `verdi process play` performance, by only querying for active processes with the `--all` flag (#4671)
-- Add the `verdi database version` command (#4613):
+- Improve `verdi process play` performance, by only querying for active processes with the `--all` flag ([#4671](https://github.com/aiidateam/aiida-core/pull/4671))
+- Add the `verdi database version` command ([#4613](https://github.com/aiidateam/aiida-core/pull/4613)):
   This shows the schema generation and version of the database of the given profile, useful mostly for developers when debugging.
-- Improve `verdi node delete` performance (#4575):
+- Improve `verdi node delete` performance ([#4575](https://github.com/aiidateam/aiida-core/pull/4575)):
   The logic has been re-written to greatly reduce the time to delete large amounts of nodes.
-- Fix `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts (#4573)
-- Fix `verdi --version` when used in editable mode (#4576)
+- Fix `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts ([#4573](https://github.com/aiidateam/aiida-core/pull/4573))
+- Fix `verdi --version` when used in editable mode ([#4576](https://github.com/aiidateam/aiida-core/pull/4576))
 
 ### API additions and improvements 👌
 
-Base `Node` `__eq__` and `__hash__` methods are now based on a node's UUID (#4753).
+Base `Node` `__eq__` and `__hash__` methods are now based on a node's UUID ([#4753](https://github.com/aiidateam/aiida-core/pull/4753)).
 For example, loading the same node twice will always resolve as equivalent: `load_node(1) == load_node(1)`, and nodes can be correctly added to sets: `len({load_node(1), load_node(1)}) == 1`.
 Note that existing, class specific, equality relationships will still override the base class behaviour, for example: `Int(99) == Int(99)`, even if the nodes have different UUIDs.
 
-When hashing nodes for use with the caching features, `-0.` is now converted to `0.`, to reduce issues with differing hashes before/after node storage (#4648).
-Known failure modes for hashing are now also raised with the `HashingError` exception (#4778).
+When hashing nodes for use with the caching features, `-0.` is now converted to `0.`, to reduce issues with differing hashes before/after node storage ([#4648](https://github.com/aiidateam/aiida-core/pull/4648)).
+Known failure modes for hashing are now also raised with the `HashingError` exception ([#4778](https://github.com/aiidateam/aiida-core/pull/4778)).
 
-Both `aiida.tools.delete_nodes` (#4578) and `aiida.orm.to_aiida_type` (#4672) have been exposed for use in the public API.
+Both `aiida.tools.delete_nodes` ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)) and `aiida.orm.to_aiida_type` ([#4672](https://github.com/aiidateam/aiida-core/pull/4672)) have been exposed for use in the public API.
 
-A `pathlib.Path` instance can now be used for the `file` argument of `SinglefileData` (#3614)
+A `pathlib.Path` instance can now be used for the `file` argument of `SinglefileData` ([#3614](https://github.com/aiidateam/aiida-core/pull/3614))
 
-Type annotations have been added to all inputs/outputs of functions and methods in `aiida.engine` (#4669) and `aiida/orm/nodes/processes` (#4772).
+Type annotations have been added to all inputs/outputs of functions and methods in `aiida.engine` ([#4669](https://github.com/aiidateam/aiida-core/pull/4669)) and `aiida/orm/nodes/processes` ([#4772](https://github.com/aiidateam/aiida-core/pull/4772)).
 As outlined in [PEP 484](https://www.python.org/dev/peps/pep-0484/), this improves static code analysis and, for example, allows for better auto-completion and type checking in many code editors.
 
 ## New REST API Query endpoint ✨
 
-The `/querybuilder` endpoint is the first POST method available for AiiDA's RESTful API (#4337)
+The `/querybuilder` endpoint is the first POST method available for AiiDA's RESTful API ([#4337](https://github.com/aiidateam/aiida-core/pull/4337))
 
 The POST endpoint returns what the QueryBuilder would return, when providing it with a proper queryhelp dictionary ([see the documentation here](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/database.html#the-queryhelp)).
 Furthermore, it returns the entities/results in the "standard" REST API format - with the exception of `link_type` and `link_label` keys for links (these particular keys are still present as `type` and
@@ -102,10 +102,10 @@ See [AiiDA REST API documentation](https://aiida.readthedocs.io/projects/aiida-c
 
 ### Additional Changes
 
-- Fix direct scheduler, in combination with `SshTransport`, hanging on submit command (#4735).
+- Fix direct scheduler, in combination with `SshTransport`, hanging on submit command ([#4735](https://github.com/aiidateam/aiida-core/pull/4735)).
   In the ssh transport, to emulate 'chdir', the current directory is now kept in memory, and every command prepended with `cd FOLDER_NAME && ACTUALCOMMAND`.
 
-- Refactor `.ci/` folder, tests more portable and easier to understand (#4565)
+- Refactor `.ci/` folder, tests more portable and easier to understand ([#4565](https://github.com/aiidateam/aiida-core/pull/4565))
   The `ci/` folder had become cluttered, containing configuration and scripts for both the GitHub Actions and Jenkins CI.
   This change moved the GH actions specific scripts to `.github/system_tests`, and refactored the Jenkins setup/tests to use [molecule](molecule.readthedocs.io) in the `.molecule/` folder.
 

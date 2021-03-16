@@ -1,49 +1,110 @@
 name: release
 
+# Automate deployment to PyPI when creating a release tag vX.Y.Z
+# will only be published to PyPI if the git tag matches the release version
+# and the pre-commit and tests pass
+
 on:
-  release:
-    types: [published, edited]
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
 
 jobs:
 
-  upload-transifex:
-    # Every time when a new version is released,
-    # upload the latest pot files to transifex services for team transilation.
-    # https://www.transifex.com/aiidateam/aiida-core/dashboard/
+  check-release-tag:
 
-    name: Upload pot files to transifex
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - run: python .github/workflows/check_release_tag.py $GITHUB_REF setup.json
+
+  pre-commit:
+
+    needs: [check-release-tag]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    # Build doc to pot files and register them to `.tx/config` file
-    # Installation steps are modeled after the docs job in `ci.yml`
     steps:
     - uses: actions/checkout@v2
-
-    - name: Set up Python 3.7
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.7
-
+        python-version: 3.8
     - name: Install python dependencies
-      run: |
-        pip install transifex-client sphinx-intl
-        pip install -e .[docs,tests]
+      run: pip install -e .[all]
+    - name: Run pre-commit
+      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
-    - name: Build pot files
-      env:
-        READTHEDOCS: 'True'
-        RUN_APIDOC: 'False'
-      run:
-        sphinx-build -b gettext docs/source locale
+  tests:
 
-    - name: Setting transifex configuration and upload pot files
-      env:
-        PROJECT_NAME: aiida-core
-        USER: ${{ secrets.TRANSIFEX_USER }}
-        PASSWD: ${{ secrets.TRANSIFEX_PASSWORD }}
+    needs: [check-release-tag]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_django
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+          - 5672:5672
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install system dependencies
       run: |
-        tx init --no-interactive
-        sphinx-intl update-txconfig-resources --pot-dir locale --transifex-project-name ${PROJECT_NAME}
-        echo $'[https://www.transifex.com]\nhostname = https://www.transifex.com\nusername = '"${USER}"$'\npassword = '"${PASSWD}"$'\n' > ~/.transifexrc
-        tx push -s
+        sudo apt update
+        sudo apt install postgresql-10 graphviz
+    - name: Install aiida-core
+      run: |
+        pip install --upgrade pip setuptools
+        pip install -r requirements/requirements-py-3.8.txt
+        pip install --no-deps -e .
+        reentry scan
+    - name: Run sub-set of test suite
+      run: pytest -sv -k 'requires_rmq'
+
+  publish:
+
+    name: Publish to PyPI
+
+    needs: [check-release-tag, pre-commit, tests]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Build package
+      run: |
+        pip install wheel
+        python setup.py sdist bdist_wheel
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@v1.1.0
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_KEY }}

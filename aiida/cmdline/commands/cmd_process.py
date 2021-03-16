@@ -247,7 +247,8 @@ def process_play(processes, all_entries, timeout, wait):
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
     if not processes and all_entries:
-        builder = QueryBuilder().append(ProcessNode, filters={'attributes.paused': True})
+        filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=True)
+        builder = QueryBuilder().append(ProcessNode, filters=filters)
         processes = builder.all(flat=True)
 
     futures = {}

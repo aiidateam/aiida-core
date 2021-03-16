@@ -334,3 +334,33 @@ def override_logging():
         config.unset_option('logging.aiida_loglevel')
         config.unset_option('logging.db_loglevel')
         configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def with_daemon():
+    """Starts the daemon process and then makes sure to kill it once the test is done."""
+    import sys
+    import signal
+    import subprocess
+
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.cmdline.utils.common import get_env_with_venv_bin
+
+    # Add the current python path to the environment that will be used for the daemon sub process.
+    # This is necessary to guarantee the daemon can also import all the classes that are defined
+    # in this `tests` module.
+    env = get_env_with_venv_bin()
+    env['PYTHONPATH'] = ':'.join(sys.path)
+
+    profile = get_config().current_profile
+    daemon = subprocess.Popen(
+        DaemonClient(profile).cmd_string.split(),
+        stderr=sys.stderr,
+        stdout=sys.stdout,
+        env=env,
+    )
+
+    yield
+
+    # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
+    os.kill(daemon.pid, signal.SIGTERM)

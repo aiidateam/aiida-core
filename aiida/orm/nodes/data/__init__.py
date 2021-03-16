@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub classes for data structures."""
-
 from .array import ArrayData, BandsData, KpointsData, ProjectionData, TrajectoryData, XyData
 from .base import BaseType, to_aiida_type
 from .bool import Bool
@@ -22,7 +21,7 @@ from .int import Int
 from .list import List
 from .numeric import NumericType
 from .orbital import OrbitalData
-from .remote import RemoteData
+from .remote import RemoteData, RemoteStashData, RemoteStashFolderData
 from .singlefile import SinglefileData
 from .str import Str
 from .structure import StructureData
@@ -30,6 +29,6 @@ from .upf import UpfData
 
 __all__ = (
     'Data', 'BaseType', 'ArrayData', 'BandsData', 'KpointsData', 'ProjectionData', 'TrajectoryData', 'XyData', 'Bool',
-    'CifData', 'Code', 'Float', 'FolderData', 'Int', 'List', 'OrbitalData', 'Dict', 'RemoteData', 'SinglefileData',
-    'Str', 'StructureData', 'UpfData', 'NumericType', 'to_aiida_type'
+    'CifData', 'Code', 'Float', 'FolderData', 'Int', 'List', 'OrbitalData', 'Dict', 'RemoteData', 'RemoteStashData',
+    'RemoteStashFolderData', 'SinglefileData', 'Str', 'StructureData', 'UpfData', 'NumericType', 'to_aiida_type'
 )

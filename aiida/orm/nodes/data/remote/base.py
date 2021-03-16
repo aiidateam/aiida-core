@@ -11,7 +11,7 @@
 import os
 
 from aiida.orm import AuthInfo
-from .data import Data
+from ..data import Data
 
 __all__ = ('RemoteData',)
 
@@ -79,7 +79,7 @@ class RemoteData(Data):
                             full_path,
                             self.computer.label  # pylint: disable=no-member
                         )
-                    )
+                    ) from exception
                 raise
 
     def listdir(self, relpath='.'):
@@ -102,7 +102,7 @@ class RemoteData(Data):
                         format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
-                    raise exc
+                    raise exc from exception
                 else:
                     raise
 
@@ -115,7 +115,7 @@ class RemoteData(Data):
                         format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
-                    raise exc
+                    raise exc from exception
                 else:
                     raise
 
@@ -139,7 +139,7 @@ class RemoteData(Data):
                         format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
-                    raise exc
+                    raise exc from exception
                 else:
                     raise
 
@@ -152,7 +152,7 @@ class RemoteData(Data):
                         format(full_path, self.computer.label)  # pylint: disable=no-member
                     )
                     exc.errno = exception.errno
-                    raise exc
+                    raise exc from exception
                 else:
                     raise
 
@@ -176,8 +176,8 @@ class RemoteData(Data):
 
         try:
             self.get_remote_path()
-        except AttributeError:
-            raise ValidationError("attribute 'remote_path' not set.")
+        except AttributeError as exception:
+            raise ValidationError("attribute 'remote_path' not set.") from exception
 
         computer = self.computer
         if computer is None:

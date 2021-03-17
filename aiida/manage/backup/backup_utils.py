@@ -29,33 +29,26 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
     """
     final_answer = None
 
-    while True:
-        answer = query_string(question, '')
+    if allow_none_as_answer:
+        default = 'No Answer'
+    else:
+        default = None
 
-        # If the reply is empty
-        if not answer:
-            if not allow_none_as_answer:
-                continue
-        # Otherwise, try to parse it
-        else:
+    if reply_type == datetime.datetime:
+        while final_answer is None:
             try:
-                if reply_type == int:
-                    final_answer = int(answer)
-                elif reply_type == float:
-                    final_answer = float(answer)
-                elif reply_type == datetime.datetime:
-                    final_answer = dateutil.parser.parse(answer)
-                else:
-                    raise ValueError
-            # If it is not parsable...
+                final_answer = click.prompt(
+                    question, default=default, value_proc=dateutil.parser.parse, confirmation_prompt=True
+                )
             except ValueError:
-                sys.stdout.write(f'The given value could not be parsed. Type expected: {reply_type}\n')
-                # If the timestamp could not have been parsed,
-                # ask again the same question.
+                sys.stdout.write(f'The given value could not be parsed. pType expected: {reply_type}\n')
                 continue
 
-        if query_yes_no(f'{final_answer} was parsed. Is it correct?', default='yes'):
-            break
+    else:
+        final_answer = click.prompt(question, default=default, type=reply_type, confirmation_prompt=True)
+
+    if final_answer == 'No Answer':
+        return None
     return final_answer
 
 

@@ -52,7 +52,7 @@ def ask_question(question, reply_type, allow_none_as_answer=True):
     return final_answer
 
 
-def query_yes_no(question, default='yes'):
+def query_yes_no(question, default='yes') -> bool:
     """Ask a yes/no question via input() and return their answer.
 
     "question" is a string that is presented to the user.
@@ -70,7 +70,7 @@ def query_yes_no(question, default='yes'):
     return answer
 
 
-def query_string(question, default):
+def query_string(question, default) -> str:
     """
     Asks a question (with the option to have a default, predefined answer,
     and depending on the default answer and the answer of the user the

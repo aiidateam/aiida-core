@@ -4,34 +4,28 @@
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.5.2...v1.6.0) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2020-12-07&to=2021-03-15&type=c)
 
-As well as introducing a number of improvements and new features listed below,
-this release marks the "under-the-hood" migration from the `tornado` package to the Python built-in module `asyncio`,
-for handling asynchronous processing within the AiiDA engine.
-This removes a number of blocking dependency version clashes with other tools,
-in particular with the newest Jupyter shell and notebook environments.
+As well as introducing a number of improvements and new features listed below, this release marks the "under-the-hood" migration from the `tornado` package to the Python built-in module `asyncio`, for handling asynchronous processing within the AiiDA engine.
+This removes a number of blocking dependency version clashes with other tools, in particular with the newest Jupyter shell and notebook environments.
 The migration does not present any backward incompatible changes to AiiDA's public API.
 A substantial effort has been made to test and debug the new implementation, and ensure it performs at least equivalent to the previous code (or improves it!), but please let us know if you uncover any additional issues.
 
 This release also drops support for Python 3.6 (testing is carried out against `3.7`, `3.8` and `3.9`).
 
-NOTE: `v1.6` is tentatively intended to be the final minor `v1.x` release before `v2.0.0`;
-introducing a new (back-incompatible) file repository and removing all deprecated code.
+NOTE: `v1.6` is tentatively intended to be the final minor `v1.x` release before `v2.0.0`, that will introduce a new (back-incompatible) file repository and remove all deprecated code.
 
 ### New calculation features ✨
 
 Add the `additional_retrieve_list` metadata option ([#4437](https://github.com/aiidateam/aiida-core/pull/4437)).
 This new option allows one to specify additional files to be retrieved on a per-instance basis, in addition to the files that are already defined by the plugin to be retrieved.
 
-A **new namespace `stash`** is added to the `metadata.options` input
-namespace of the `CalcJob` process ([#4424](https://github.com/aiidateam/aiida-core/pull/4424)).
+A **new namespace `stash`** is added to the `metadata.options` input namespace of the `CalcJob` process ([#4424](https://github.com/aiidateam/aiida-core/pull/4424)).
 This option namespace allows a user to specify certain files that are created by the calculation job to be stashed somewhere on the remote.
 This can be useful if those files need to be stored for a longer time than the scratch space where the job was run is typically not cleaned for, but need to be kept on the remote machine and not retrieved.
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
 
 See [Stashing files on the remote](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/topics/calculations/usage.html#stashing-files-on-the-remote) for more details.
 
-The **new `TransferCalcjob` plugin** ([#4194](https://github.com/aiidateam/aiida-core/pull/4194))
-allows the user to copy files between a remote machine and the local machine running AiiDA.
+The **new `TransferCalcjob` plugin** ([#4194](https://github.com/aiidateam/aiida-core/pull/4194)) allows the user to copy files between a remote machine and the local machine running AiiDA.
 More specifically, it can do any of the following:
 
 - Take any number of files from any number of `RemoteData` folders in
@@ -91,11 +85,10 @@ As outlined in [PEP 484](https://www.python.org/dev/peps/pep-0484/), this improv
 
 The `/querybuilder` endpoint is the first POST method available for AiiDA's RESTful API ([#4337](https://github.com/aiidateam/aiida-core/pull/4337))
 
-The POST endpoint returns what the QueryBuilder would return, when providing it with a proper queryhelp dictionary ([see the documentation here](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/database.html#the-queryhelp)).
-Furthermore, it returns the entities/results in the "standard" REST API format - with the exception of `link_type` and `link_label` keys for links (these particular keys are still present as `type` and
-`label`, respectively).
+The POST endpoint returns what the QueryBuilder would return, when providing it with a proper `queryhelp` dictionary ([see the documentation here](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/database.html#the-queryhelp)).
+Furthermore, it returns the entities/results in the "standard" REST API format - with the exception of `link_type` and `link_label` keys for links (these particular keys are still present as `type` and `label`, respectively).
 
-For security, POST methods can be toggled on/off with the `verdi restapi --posting/--no-posting` options.
+For security, POST methods can be toggled on/off with the `verdi restapi --posting/--no-posting` options (it is on by default).
 Although note that this option is not yet strictly public, since its naming may be changed in the future!
 
 See [AiiDA REST API documentation](https://aiida.readthedocs.io/projects/aiida-core/en/latest/reference/rest_api.html) for more details.

@@ -52,9 +52,9 @@ See the [Configuring profile options](https://aiida.readthedocs.io/projects/aiid
 
 In addition to `verdi config`, numerous other new commands and options have been added to `verdi`:
 
-- **Deprecate** `verdi export` and `verdi import` commands and merge into `verdi archive` ([#4710](https://github.com/aiidateam/aiida-core/pull/4710))
+- **Deprecated** `verdi export` and `verdi import` commands (replaced by new `verdi archive`) ([#4710](https://github.com/aiidateam/aiida-core/pull/4710))
 - Added `verdi group delete --delete-nodes`, to also delete the nodes in a group during its removal ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)).
-- Improve `verdi group remove-nodes` command, to warn when requested nodes are not in the specified group ([#4728](https://github.com/aiidateam/aiida-core/pull/4728)).
+- Improved `verdi group remove-nodes` command to warn when requested nodes are not in the specified group ([#4728](https://github.com/aiidateam/aiida-core/pull/4728)).
 - Added `exception` to the projection mapping of `verdi process list`, for example to use in debugging as: `verdi process list -S excepted -P ctime pk exception` ([#4786](https://github.com/aiidateam/aiida-core/pull/4786)).
 - Added `verdi database summary` ([#4737](https://github.com/aiidateam/aiida-core/pull/4737)):
   This prints a summary of the count of each entity and (optionally) the list of unique identifiers for some entities.
@@ -62,7 +62,8 @@ In addition to `verdi config`, numerous other new commands and options have been
 - Added the `verdi database version` command ([#4613](https://github.com/aiidateam/aiida-core/pull/4613)):
   This shows the schema generation and version of the database of the given profile, useful mostly for developers when debugging.
 - Improved `verdi node delete` performance ([#4575](https://github.com/aiidateam/aiida-core/pull/4575)):
-  Theed `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts ([#4573](https://github.com/aiidateam/aiida-core/pull/4573))
+  The logic has been re-written to greatly reduce the time to delete large amounts of nodes.
+- Fixed `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts ([#4573](https://github.com/aiidateam/aiida-core/pull/4573))
 - Fixed `verdi --version` when used in editable mode ([#4576](https://github.com/aiidateam/aiida-core/pull/4576))
 
 ### API additions and improvements 👌
@@ -96,12 +97,12 @@ See [AiiDA REST API documentation](https://aiida.readthedocs.io/projects/aiida-c
 
 ### Additional Changes
 
-- Fix direct scheduler, in combination with `SshTransport`, hanging on submit command ([#4735](https://github.com/aiidateam/aiida-core/pull/4735)).
+- Fixed the direct scheduler which, in combination with `SshTransport`, was hanging on submit command ([#4735](https://github.com/aiidateam/aiida-core/pull/4735)).
   In the ssh transport, to emulate 'chdir', the current directory is now kept in memory, and every command prepended with `cd FOLDER_NAME && ACTUALCOMMAND`.
 
-- In `aiida.tools.ipython.ipython_magics`, `load_ipython_extension` is deprecated in favour of `register_ipython_extension` ([#4548](https://github.com/aiidateam/aiida-core/pull/4548)).
+- In `aiida.tools.ipython.ipython_magics`, `load_ipython_extension` has been **deprecated** in favour of `register_ipython_extension` ([#4548](https://github.com/aiidateam/aiida-core/pull/4548)).
 
-- Refactor `.ci/` folder, tests more portable and easier to understand ([#4565](https://github.com/aiidateam/aiida-core/pull/4565))
+- Refactored `.ci/` folder to make tests more portable and easier to understand ([#4565](https://github.com/aiidateam/aiida-core/pull/4565))
   The `ci/` folder had become cluttered, containing configuration and scripts for both the GitHub Actions and Jenkins CI.
   This change moved the GH actions specific scripts to `.github/system_tests`, and refactored the Jenkins setup/tests to use [molecule](molecule.readthedocs.io) in the `.molecule/` folder.
 

@@ -22,6 +22,7 @@ jobs:
         python-version: 3.8
 
     - name: Install system dependencies
+      # note libkrb5-dev is required as a dependency for the gssapi pip install
       run: |
         sudo apt update
         sudo apt install libkrb5-dev ruby ruby-dev

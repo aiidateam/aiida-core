@@ -35,6 +35,11 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: 3.8
+    - name: Install system dependencies
+      # note libkrb5-dev is required as a dependency for the gssapi pip install
+      run: |
+        sudo apt update
+        sudo apt install libkrb5-dev ruby ruby-dev
     - name: Install python dependencies
       run: pip install -e .[all]
     - name: Run pre-commit

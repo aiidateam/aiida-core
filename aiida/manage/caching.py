@@ -8,19 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
-import os
 import re
-import copy
 import keyword
 from enum import Enum
 from collections import namedtuple
 from contextlib import contextmanager, suppress
 
-import yaml
-from wrapt import decorator
-
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.manage.configuration import get_config_option
 
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
@@ -30,91 +26,117 @@ __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 class ConfigKeys(Enum):
     """Valid keys for caching configuration."""
 
-    DEFAULT = 'default'
-    ENABLED = 'enabled'
-    DISABLED = 'disabled'
+    DEFAULT = 'caching.default_enabled'
+    ENABLED = 'caching.enabled_for'
+    DISABLED = 'caching.disabled_for'
 
 
-DEFAULT_CONFIG = {
-    ConfigKeys.DEFAULT.value: False,
-    ConfigKeys.ENABLED.value: [],
-    ConfigKeys.DISABLED.value: [],
-}
+class _ContextCache:
+    """Cache options, accounting for when in enable_caching or disable_caching contexts."""
+
+    def __init__(self):
+        self._default_all = None
+        self._enable = []
+        self._disable = []
+
+    def clear(self):
+        """Clear caching overrides."""
+        self.__init__()
+
+    def enable_all(self):
+        self._default_all = 'enable'
+
+    def disable_all(self):
+        self._default_all = 'disable'
+
+    def enable(self, identifier):
+        self._enable.append(identifier)
+        with suppress(ValueError):
+            self._disable.remove(identifier)
+
+    def disable(self, identifier):
+        self._disable.append(identifier)
+        with suppress(ValueError):
+            self._enable.remove(identifier)
+
+    def get_options(self):
+        """Return the options, applying any context overrides."""
+
+        if self._default_all == 'disable':
+            return False, [], []
+
+        if self._default_all == 'enable':
+            return True, [], []
+
+        default = get_config_option(ConfigKeys.DEFAULT.value)
+        enabled = get_config_option(ConfigKeys.ENABLED.value)[:]
+        disabled = get_config_option(ConfigKeys.DISABLED.value)[:]
+
+        for ident in self._disable:
+            disabled.append(ident)
+            with suppress(ValueError):
+                enabled.remove(ident)
+
+        for ident in self._enable:
+            enabled.append(ident)
+            with suppress(ValueError):
+                disabled.remove(ident)
+
+        # Check validity of enabled and disabled entries
+        try:
+            for identifier in enabled + disabled:
+                _validate_identifier_pattern(identifier=identifier)
+        except ValueError as exc:
+            raise exceptions.ConfigurationError('Invalid identifier pattern in enable or disable list.') from exc
+
+        return default, enabled, disabled
 
 
-def _get_config(config_file):
-    """Return the caching configuration.
+_CONTEXT_CACHE = _ContextCache()
 
-    :param config_file: the absolute path to the caching configuration file
-    :return: the configuration dictionary
+
+@contextmanager
+def enable_caching(*, identifier=None):
+    """Context manager to enable caching, either for a specific node class, or globally.
+
+    .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
+
+    :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
+        If not provided, caching is enabled for all classes.
+    :type identifier: str
     """
-    from aiida.manage.configuration import get_profile
+    type_check(identifier, str, allow_none=True)
 
-    profile = get_profile()
-
-    if profile is None:
-        exceptions.ConfigurationError('no profile has been loaded')
-
-    try:
-        with open(config_file, 'r', encoding='utf8') as handle:
-            config = yaml.safe_load(handle)[profile.name]
-    except (OSError, IOError, KeyError):
-        # No config file, or no config for this profile
-        return DEFAULT_CONFIG
-
-    # Validate configuration
-    for key in config:
-        if key not in DEFAULT_CONFIG:
-            raise exceptions.ConfigurationError(f"Configuration error: Invalid key '{key}' in cache_config.yml")
-
-    # Add defaults where key is either completely missing or specifies no values in which case it will be `None`
-    for key, default_config in DEFAULT_CONFIG.items():
-        if key not in config or config[key] is None:
-            config[key] = default_config
-
-    try:
-        type_check(config[ConfigKeys.DEFAULT.value], bool)
-        type_check(config[ConfigKeys.ENABLED.value], list)
-        type_check(config[ConfigKeys.DISABLED.value], list)
-    except TypeError as exc:
-        raise exceptions.ConfigurationError('Invalid type in caching configuration file.') from exc
-
-    # Check validity of enabled and disabled entries
-    try:
-        for identifier in config[ConfigKeys.ENABLED.value] + config[ConfigKeys.DISABLED.value]:
-            _validate_identifier_pattern(identifier=identifier)
-    except ValueError as exc:
-        raise exceptions.ConfigurationError('Invalid identifier pattern in enable or disable list.') from exc
-
-    return config
+    if identifier is None:
+        _CONTEXT_CACHE.enable_all()
+    else:
+        _validate_identifier_pattern(identifier=identifier)
+        _CONTEXT_CACHE.enable(identifier)
+    yield
+    _CONTEXT_CACHE.clear()
 
 
-_CONFIG = {}
+@contextmanager
+def disable_caching(*, identifier=None):
+    """Context manager to disable caching, either for a specific node class, or globally.
+
+    .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
+
+    :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
+        If not provided, caching is disabled for all classes.
+    :type identifier: str
+    """
+    type_check(identifier, str, allow_none=True)
+
+    if identifier is None:
+        _CONTEXT_CACHE.disable_all()
+    else:
+        _validate_identifier_pattern(identifier=identifier)
+        _CONTEXT_CACHE.disable(identifier)
+    yield
+    _CONTEXT_CACHE.clear()
 
 
-def configure(config_file=None):
-    """Reads the caching configuration file and sets the _CONFIG variable."""
-    # pylint: disable=global-statement
-    if config_file is None:
-        from aiida.manage.configuration import get_config
-
-        config = get_config()
-        config_file = os.path.join(config.dirpath, 'cache_config.yml')
-
-    global _CONFIG
-    _CONFIG.clear()
-    _CONFIG.update(_get_config(config_file=config_file))
-
-
-@decorator
-def _with_config(wrapped, _, args, kwargs):
-    """Function decorator to load the caching configuration for the scope of the wrapped function."""
-    if not _CONFIG:
-        configure()
-    return wrapped(*args, **kwargs)
-
-
-@_with_config
 def get_use_cache(*, identifier=None):
     """Return whether the caching mechanism should be used for the given process type according to the configuration.
 
@@ -126,17 +148,13 @@ def get_use_cache(*, identifier=None):
     """
     type_check(identifier, str, allow_none=True)
 
+    default, enabled, disabled = _CONTEXT_CACHE.get_options()
+
     if identifier is not None:
         type_check(identifier, str)
 
-        enable_matches = [
-            pattern for pattern in _CONFIG[ConfigKeys.ENABLED.value]
-            if _match_wildcard(string=identifier, pattern=pattern)
-        ]
-        disable_matches = [
-            pattern for pattern in _CONFIG[ConfigKeys.DISABLED.value]
-            if _match_wildcard(string=identifier, pattern=pattern)
-        ]
+        enable_matches = [pattern for pattern in enabled if _match_wildcard(string=identifier, pattern=pattern)]
+        disable_matches = [pattern for pattern in disabled if _match_wildcard(string=identifier, pattern=pattern)]
 
         if enable_matches and disable_matches:
             # If both enable and disable have matching identifier, we search for
@@ -172,65 +190,7 @@ def get_use_cache(*, identifier=None):
             return True
         if disable_matches:
             return False
-    return _CONFIG[ConfigKeys.DEFAULT.value]
-
-
-@contextmanager
-@_with_config
-def _reset_config():
-    """Reset the configuration by clearing the contents of the global config variable."""
-    # pylint: disable=global-statement
-    global _CONFIG
-    config_copy = copy.deepcopy(_CONFIG)
-    yield
-    _CONFIG.clear()
-    _CONFIG.update(config_copy)
-
-
-@contextmanager
-def enable_caching(*, identifier=None):
-    """Context manager to enable caching, either for a specific node class, or globally.
-
-    .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
-
-    :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
-    :type identifier: str
-    """
-
-    type_check(identifier, str, allow_none=True)
-    with _reset_config():
-        if identifier is None:
-            _CONFIG[ConfigKeys.DEFAULT.value] = True
-            _CONFIG[ConfigKeys.DISABLED.value] = []
-        else:
-            _validate_identifier_pattern(identifier=identifier)
-            _CONFIG[ConfigKeys.ENABLED.value].append(identifier)
-            with suppress(ValueError):
-                _CONFIG[ConfigKeys.DISABLED.value].remove(identifier)
-        yield
-
-
-@contextmanager
-def disable_caching(*, identifier=None):
-    """Context manager to disable caching, either for a specific node class, or globally.
-
-    .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
-
-    :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
-    :type identifier: str
-    """
-    type_check(identifier, str, allow_none=True)
-
-    with _reset_config():
-        if identifier is None:
-            _CONFIG[ConfigKeys.DEFAULT.value] = False
-            _CONFIG[ConfigKeys.ENABLED.value] = []
-        else:
-            _validate_identifier_pattern(identifier=identifier)
-            _CONFIG[ConfigKeys.DISABLED.value].append(identifier)
-            with suppress(ValueError):
-                _CONFIG[ConfigKeys.ENABLED.value].remove(identifier)
-        yield
+    return default
 
 
 def _match_wildcard(*, string, pattern):

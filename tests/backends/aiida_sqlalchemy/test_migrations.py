@@ -120,7 +120,7 @@ class TestMigrationsSQLA(AiidaTestCase):
         It is important to also reset the database content to avoid hanging
         of tests.
         """
-        self.reset_database()
+        self.clean_db()
         self.migrate_db_up('head')
 
     @property

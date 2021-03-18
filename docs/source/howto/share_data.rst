@@ -24,13 +24,13 @@ Exporting those results together with their provenance is as easy as:
 
 .. code-block:: console
 
-    $ verdi export create my-calculations.aiida --nodes 12 123 1234
+    $ verdi archive create my-calculations.aiida --nodes 12 123 1234
 
 As usual, you can use any identifier (label, PK or UUID) to specify the nodes to be exported.
 
 The resulting archive file ``my-calculations.aiida`` contains all information pertaining to the exported nodes.
 The default traversal rules make sure to include the complete provenance of any node specified and should be sufficient for most cases.
-See ``verdi export create --help`` for ways to modify the traversal rules.
+See ``verdi archive create --help`` for ways to modify the traversal rules.
 
 .. tip::
 
@@ -53,7 +53,7 @@ Then export the group:
 
 .. code-block:: console
 
-    $ verdi export create my-calculations.aiida --groups my-results
+    $ verdi archive create my-calculations.aiida --groups my-results
 
 Publishing AiiDA archive files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -69,27 +69,27 @@ When publishing AiiDA archives on the `Materials Cloud Archive`_, you also get a
 Importing an archive
 ^^^^^^^^^^^^^^^^^^^^
 
-Use ``verdi import`` to import AiiDA archives into your current AiiDA profile.
-``verdi import`` accepts URLs, e.g.:
+Use ``verdi archive import`` to import AiiDA archives into your current AiiDA profile.
+``verdi archive import`` accepts URLs, e.g.:
 
 .. code-block:: console
 
-    $ verdi import "https://archive.materialscloud.org/record/file?file_id=2a59c9e7-9752-47a8-8f0e-79bcdb06842c&filename=SSSP_1.1_PBE_efficiency.aiida&record_id=23"
+    $ verdi archive import "https://archive.materialscloud.org/record/file?file_id=2a59c9e7-9752-47a8-8f0e-79bcdb06842c&filename=SSSP_1.1_PBE_efficiency.aiida&record_id=23"
 
 During import, AiiDA will avoid identifier collisions and node duplication based on UUIDs (and email comparisons for :py:class:`~aiida.orm.users.User` entries).
 By default, existing entities will be updated with the most recent changes.
-Node extras and comments have special modes for determining how to import them - for more details, see ``verdi import --help``.
+Node extras and comments have special modes for determining how to import them - for more details, see ``verdi archive import --help``.
 
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
     If an outdated archive version is detected during import, the archive file will be automatically migrated to the newest version (within a temporary folder) and the import retried.
 
-    You can also use ``verdi export migrate`` to create updated archive files from existing archive files (or update them in place).
+    You can also use ``verdi archive migrate`` to create updated archive files from existing archive files (or update them in place).
 
-.. tip:: In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi export inspect``:
+.. tip:: In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive inspect``:
 
     .. code-block:: console
 
-        $ verdi export inspect sssp-efficiency.aiida
+        $ verdi archive inspect sssp-efficiency.aiida
         --------------  -----
         Version aiida   1.2.1
         Version format  0.9

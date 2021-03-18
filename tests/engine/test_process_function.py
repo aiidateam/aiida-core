@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the process_function decorator."""
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -22,6 +23,7 @@ CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
 
+@pytest.mark.requires_rmq
 class TestProcessFunction(AiidaTestCase):
     """
     Note that here we use `@workfunctions` and `@calculations`, the concrete versions of the
@@ -352,7 +354,7 @@ class TestProcessFunction(AiidaTestCase):
         self.assertTrue(isinstance(node, orm.CalcFunctionNode))
 
         # Process function can be submitted and will be run by a daemon worker as long as the function is importable
-        # Note that the actual running is not tested here but is done so in `.ci/test_daemon.py`.
+        # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
         node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
         assert isinstance(node, orm.WorkFunctionNode)
 

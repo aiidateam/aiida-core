@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=no-self-use,unused-argument,unused-variable,function-redefined,missing-class-docstring,missing-function-docstring
 """Tests for `aiida.engine.processes.workchains.utils` module."""
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
@@ -19,6 +21,7 @@ from aiida.plugins import CalculationFactory
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
 
 
+@pytest.mark.requires_rmq
 class TestRegisterProcessHandler(AiidaTestCase):
     """Tests for the `process_handler` decorator."""
 

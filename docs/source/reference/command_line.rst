@@ -10,6 +10,27 @@ Commands
 ========
 Below is a list with all available subcommands.
 
+.. _reference:command-line:verdi-archive:
+
+``verdi archive``
+-----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Create, inspect and import AiiDA archives.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      create   Export subsets of the provenance graph to file for sharing.
+      import   Import data from an AiiDA archive file.
+      inspect  Inspect contents of an archive without importing it.
+      migrate  Migrate an export archive to a more recent format version.
+
+
 .. _reference:command-line:verdi-calcjob:
 
 ``verdi calcjob``
@@ -133,14 +154,20 @@ Below is a list with all available subcommands.
 
 .. code:: console
 
-    Usage:  [OPTIONS] OPTION_NAME OPTION_VALUE
+    Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Configure profile-specific or global AiiDA options.
+      Manage the AiiDA configuration.
 
     Options:
-      --global  Apply the option configuration wide.
-      --unset   Remove the line matching the option name from the config file.
-      --help    Show this message and exit.
+      --help  Show this message and exit.
+
+    Commands:
+      caching  List caching-enabled process types for the current profile.
+      get      Get the value of an AiiDA option for the current profile.
+      list     List AiiDA options for the current profile.
+      set      Set an AiiDA option.
+      show     Show details of an AiiDA option for the current profile.
+      unset    Unset an AiiDA option.
 
 
 .. _reference:command-line:verdi-daemon:
@@ -199,6 +226,8 @@ Below is a list with all available subcommands.
     Commands:
       integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
+      summary    Summarise the entities in the database.
+      version    Show the version of the database.
 
 
 .. _reference:command-line:verdi-devel:
@@ -233,7 +262,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Create and manage export archives.
+      Deprecated, use `verdi archive`.
 
     Options:
       --help  Show this message and exit.
@@ -277,10 +306,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      add-nodes     Add nodes to the a group.
+      add-nodes     Add nodes to a group.
       copy          Duplicate a group.
       create        Create an empty group with a given name.
-      delete        Delete a group.
+      delete        Delete a group and (optionally) the nodes it contains.
       description   Change the description of a group.
       list          Show a list of existing groups.
       path          Inspect groups of nodes, with delimited label paths.
@@ -313,9 +342,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] [--] [ARCHIVES]...
 
-      Import data from an AiiDA archive file.
-
-      The archive can be specified by its relative or absolute file path, or its HTTP URL.
+      Deprecated, use `verdi archive import`.
 
     Options:
       -w, --webpages TEXT...          Discover all URL targets pointing to files with the

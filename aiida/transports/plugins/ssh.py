@@ -36,7 +36,8 @@ def parse_sshconfig(computername):
     import paramiko
     config = paramiko.SSHConfig()
     try:
-        config.parse(open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
+        with open(os.path.expanduser('~/.ssh/config'), encoding='utf8') as fhandle:
+            config.parse(fhandle)
     except IOError:
         # No file found, so empty configuration
         pass
@@ -1264,7 +1265,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = (f'cd {escaped_folder} && {command}')
+            command_to_execute = (f'cd {escaped_folder} && ( {command} )')
         else:
             command_to_execute = command
 

@@ -13,7 +13,7 @@ import os
 import tarfile
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+
 from aiida.common import json
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
@@ -23,18 +23,11 @@ from aiida.tools.importexport.common.exceptions import DanglingLinkError
 
 from tests.utils.configuration import with_temp_dir
 from tests.tools.importexport.utils import get_all_node_links
+from .. import AiidaArchiveTestCase
 
 
-class TestLinks(AiidaTestCase):
+class TestLinks(AiidaArchiveTestCase):
     """Test ex-/import cases related to Links"""
-
-    def setUp(self):
-        self.reset_database()
-        super().setUp()
-
-    def tearDown(self):
-        self.reset_database()
-        super().tearDown()
 
     @with_temp_dir
     def test_links_to_unknown_nodes(self, temp_dir):
@@ -68,7 +61,7 @@ class TestLinks(AiidaTestCase):
         with tarfile.open(filename, 'w:gz', format=tarfile.PAX_FORMAT) as tar:
             tar.add(unpack.abspath, arcname='')
 
-        self.reset_database()
+        self.clean_db()
 
         with self.assertRaises(DanglingLinkError):
             import_data(filename)
@@ -96,7 +89,7 @@ class TestLinks(AiidaTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([node_output], filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
         import_data(export_file)
         import_links = get_all_node_links()
@@ -267,7 +260,7 @@ class TestLinks(AiidaTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export(graph_nodes, filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
         import_data(export_file)
         import_links = get_all_node_links()
@@ -289,7 +282,7 @@ class TestLinks(AiidaTestCase):
             export([export_node], filename=export_file, overwrite=True)
             export_node_str = str(export_node)
 
-            self.reset_database()
+            self.clean_db()
 
             import_data(export_file)
 
@@ -321,7 +314,7 @@ class TestLinks(AiidaTestCase):
 
         for calcs in high_level_calc_nodes:
             for works in high_level_work_nodes:
-                self.reset_database()
+                self.refurbish_db()
 
                 graph_nodes, _ = self.construct_complex_graph(calc_nodes=calcs, work_nodes=works)
 
@@ -351,7 +344,7 @@ class TestLinks(AiidaTestCase):
                 export_file = os.path.join(temp_dir, 'export.aiida')
                 export(graph_nodes, filename=export_file, overwrite=True)
 
-                self.reset_database()
+                self.refurbish_db()
 
                 import_data(export_file)
                 import_links = get_all_node_links()
@@ -386,7 +379,7 @@ class TestLinks(AiidaTestCase):
     def link_flags_import_helper(self, test_data):
         """Helper function"""
         for test, (export_file, _, expected_nodes) in test_data.items():
-            self.reset_database()
+            self.clean_db()
 
             import_data(export_file)
 
@@ -594,7 +587,7 @@ class TestLinks(AiidaTestCase):
         export_file = os.path.join(temp_dir, 'export.aiida')
         export([data_out, work1, work2, data_in], filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
         import_data(export_file)
 
@@ -688,7 +681,7 @@ class TestLinks(AiidaTestCase):
         export([data], filename=data_provenance, return_backward=False)
         export([data], filename=all_provenance, return_backward=True)
 
-        self.reset_database()
+        self.clean_db()
 
         # import data provenance
         import_data(data_provenance)

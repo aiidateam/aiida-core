@@ -23,6 +23,24 @@ def verdi_database():
     """Inspect and manage the database."""
 
 
+@verdi_database.command('version')
+def database_version():
+    """Show the version of the database.
+
+    The database version is defined by the tuple of the schema generation and schema revision.
+    """
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    backend_manager = manager.get_backend_manager()
+
+    echo.echo('Generation: ', bold=True, nl=False)
+    echo.echo(backend_manager.get_schema_generation_database())
+    echo.echo('Revision:   ', bold=True, nl=False)
+    echo.echo(backend_manager.get_schema_version_database())
+
+
 @verdi_database.command('migrate')
 @options.FORCE()
 def database_migrate(force):
@@ -176,3 +194,48 @@ def detect_invalid_nodes():
         echo.echo_success('no integrity violations detected')
     else:
         echo.echo_critical('one or more integrity violations detected')
+
+
+@verdi_database.command('summary')
+@options.VERBOSE()
+def database_summary(verbose):
+    """Summarise the entities in the database."""
+    from aiida.orm import QueryBuilder, Node, Group, Computer, Comment, Log, User
+    data = {}
+
+    # User
+    query_user = QueryBuilder().append(User, project=['email'])
+    data['Users'] = {'count': query_user.count()}
+    if verbose:
+        data['Users']['emails'] = query_user.distinct().all(flat=True)
+
+    # Computer
+    query_comp = QueryBuilder().append(Computer, project=['name'])
+    data['Computers'] = {'count': query_comp.count()}
+    if verbose:
+        data['Computers']['names'] = query_comp.distinct().all(flat=True)
+
+    # Node
+    count = QueryBuilder().append(Node).count()
+    data['Nodes'] = {'count': count}
+    if verbose:
+        node_types = QueryBuilder().append(Node, project=['node_type']).distinct().all(flat=True)
+        data['Nodes']['node_types'] = node_types
+        process_types = QueryBuilder().append(Node, project=['process_type']).distinct().all(flat=True)
+        data['Nodes']['process_types'] = [p for p in process_types if p]
+
+    # Group
+    query_group = QueryBuilder().append(Group, project=['type_string'])
+    data['Groups'] = {'count': query_group.count()}
+    if verbose:
+        data['Groups']['type_strings'] = query_group.distinct().all(flat=True)
+
+    # Comment
+    count = QueryBuilder().append(Comment).count()
+    data['Comments'] = {'count': count}
+
+    # Log
+    count = QueryBuilder().append(Log).count()
+    data['Logs'] = {'count': count}
+
+    echo.echo_dictionary(data, sort_keys=False, fmt='yaml')

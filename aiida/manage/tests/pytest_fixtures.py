@@ -17,11 +17,22 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_local_code_factory
 
 """
+import asyncio
 import shutil
 import tempfile
 import pytest
 
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+
+
+@pytest.fixture(scope='function')
+def aiida_caplog(caplog):
+    """A copy of pytest's caplog fixture, which allows ``AIIDA_LOGGER`` to propagate."""
+    propogate = AIIDA_LOGGER.propagate
+    AIIDA_LOGGER.propagate = True
+    yield caplog
+    AIIDA_LOGGER.propagate = propogate
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -60,6 +71,19 @@ def clear_database_before_test(aiida_profile):
 
 
 @pytest.fixture(scope='function')
+def temporary_event_loop():
+    """Create a temporary loop for independent test case"""
+    current = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield
+    finally:
+        loop.close()
+        asyncio.set_event_loop(current)
+
+
+@pytest.fixture(scope='function')
 def temp_dir():
     """Get a temporary directory.
 
@@ -84,7 +108,7 @@ def aiida_localhost(temp_dir):
     Usage::
 
       def test_1(aiida_localhost):
-          name = aiida_localhost.get_name()
+          label = aiida_localhost.get_label()
           # proceed to set up code or use 'aiida_local_code_factory' instead
 
 

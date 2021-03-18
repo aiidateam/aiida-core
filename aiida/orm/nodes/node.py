@@ -9,9 +9,14 @@
 ###########################################################################
 # pylint: disable=too-many-lines,too-many-arguments
 """Package for node ORM classes."""
+import datetime
 import importlib
+from logging import Logger
 import warnings
 import traceback
+from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import TYPE_CHECKING
+from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -32,20 +37,25 @@ from ..entities import Collection as EntityCollection
 from ..querybuilder import QueryBuilder
 from ..users import User
 
+if TYPE_CHECKING:
+    from aiida.repository import File
+    from ..implementation import Backend
+    from ..implementation.nodes import BackendNode
+
 __all__ = ('Node',)
 
-_NO_DEFAULT = tuple()
+_NO_DEFAULT = tuple()  # type: ignore[var-annotated]
 
 
 class WarnWhenNotEntered:
     """Temporary wrapper to warn when `Node.open` is called outside of a context manager."""
 
-    def __init__(self, fileobj, name):
-        self._fileobj = fileobj
+    def __init__(self, fileobj: Union[IO[str], IO[bytes]], name: str) -> None:
+        self._fileobj: Union[IO[str], IO[bytes]] = fileobj
         self._name = name
         self._was_entered = False
 
-    def _warn_if_not_entered(self, method):
+    def _warn_if_not_entered(self, method) -> None:
         """Fire a warning if the object wrapper has not yet been entered."""
         if not self._was_entered:
             msg = f'\nThe method `{method}` was called on the return value of `{self._name}.open()`' + \
@@ -62,34 +72,34 @@ class WarnWhenNotEntered:
 
             warnings.warn(msg, AiidaDeprecationWarning)  # pylint: disable=no-member
 
-    def __enter__(self):
+    def __enter__(self) -> Union[IO[str], IO[bytes]]:
         self._was_entered = True
         return self._fileobj.__enter__()
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         self._fileobj.__exit__(*args)
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str):
         if key == '_fileobj':
             return self._fileobj
         return getattr(self._fileobj, key)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self._warn_if_not_entered('del')
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Union[str, bytes]]:
         return self._fileobj.__iter__()
 
-    def __next__(self):
+    def __next__(self) -> Union[str, bytes]:
         return self._fileobj.__next__()
 
-    def read(self, *args, **kwargs):
+    def read(self, *args: Any, **kwargs: Any) -> Union[str, bytes]:
         self._warn_if_not_entered('read')
         return self._fileobj.read(*args, **kwargs)
 
-    def close(self, *args, **kwargs):
+    def close(self, *args: Any, **kwargs: Any) -> None:
         self._warn_if_not_entered('close')
-        return self._fileobj.close(*args, **kwargs)
+        return self._fileobj.close(*args, **kwargs)  # type: ignore[call-arg]
 
 
 class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
@@ -113,7 +123,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     class Collection(EntityCollection):
         """The collection of nodes."""
 
-        def delete(self, node_id):
+        def delete(self, node_id: int) -> None:
             """Delete a `Node` from the collection with the given id
 
             :param node_id: the node id
@@ -134,14 +144,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             repository.erase(force=True)
 
     # This will be set by the metaclass call
-    _logger = None
+    _logger: Optional[Logger] = None
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
-    _updatable_attributes = tuple()
+    _updatable_attributes: Tuple[str, ...] = tuple()
 
     # A tuple of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes = tuple()
+    _hash_ignored_attributes: Tuple[str, ...] = tuple()
 
     # Flag that determines whether the class can be cached.
     _cachable = False
@@ -154,15 +164,21 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     # These are to be initialized in the `initialization` method
-    _incoming_cache = None
-    _repository = None
+    _incoming_cache: Optional[List[LinkTriple]] = None
+    _repository: Optional[Repository] = None
 
     @classmethod
-    def from_backend_entity(cls, backend_entity):
+    def from_backend_entity(cls, backend_entity: 'BackendNode') -> 'Node':
         entity = super().from_backend_entity(backend_entity)
         return entity
 
-    def __init__(self, backend=None, user=None, computer=None, **kwargs):
+    def __init__(
+        self,
+        backend: Optional['Backend'] = None,
+        user: Optional[User] = None,
+        computer: Optional[Computer] = None,
+        **kwargs: Any
+    ) -> None:
         backend = backend or get_manager().get_backend()
 
         if computer and not computer.is_stored:
@@ -179,10 +195,24 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         )
         super().__init__(backend_entity)
 
-    def __repr__(self):
+    @property
+    def backend_entity(self) -> 'BackendNode':
+        return super().backend_entity
+
+    def __eq__(self, other: Any) -> bool:
+        """Fallback equality comparison by uuid (can be overwritten by specific types)"""
+        if isinstance(other, Node) and self.uuid == other.uuid:
+            return True
+        return super().__eq__(other)
+
+    def __hash__(self) -> int:
+        """Python-Hash: Implementation that is compatible with __eq__"""
+        return UUID(self.uuid).int
+
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {str(self)}>'
 
-    def __str__(self):
+    def __str__(self) -> str:
         if not self.is_stored:
             return f'uuid: {self.uuid} (unstored)'
 
@@ -196,7 +226,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """Deep copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('deep copying a base Node is not supported')
 
-    def initialize(self):
+    def initialize(self) -> None:
         """
         Initialize internal variables for the backend node
 
@@ -210,7 +240,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         # Calls the initialisation from the RepositoryMixin
         self._repository = Repository(uuid=self.uuid, is_stored=self.is_stored, base_path=self._repository_base_path)
 
-    def _validate(self):
+    def _validate(self) -> bool:
         """Check if the attributes and files retrieved from the database are valid.
 
         Must be able to work even before storing: therefore, use the `get_attr` and similar methods that automatically
@@ -222,7 +252,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         # pylint: disable=no-self-use
         return True
 
-    def validate_storability(self):
+    def validate_storability(self) -> None:
         """Verify that the current node is allowed to be stored.
 
         :raises `aiida.common.exceptions.StoringNotAllowed`: if the node does not match all requirements for storing
@@ -237,13 +267,13 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             raise exceptions.StoringNotAllowed(msg)
 
     @classproperty
-    def class_node_type(cls):
+    def class_node_type(cls) -> str:
         """Returns the node type of this node (sub) class."""
         # pylint: disable=no-self-argument,no-member
         return cls._plugin_type_string
 
     @property
-    def logger(self):
+    def logger(self) -> Optional[Logger]:
         """Return the logger configured for this Node.
 
         :return: Logger object
@@ -251,16 +281,16 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self._logger
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """Return the node UUID.
 
         :return: the string representation of the UUID
-        :rtype: str
+
         """
         return self.backend_entity.uuid
 
     @property
-    def node_type(self):
+    def node_type(self) -> str:
         """Return the node type.
 
         :return: the node type
@@ -268,7 +298,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self.backend_entity.node_type
 
     @property
-    def process_type(self):
+    def process_type(self) -> Optional[str]:
         """Return the node process type.
 
         :return: the process type
@@ -276,7 +306,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self.backend_entity.process_type
 
     @process_type.setter
-    def process_type(self, value):
+    def process_type(self, value: str) -> None:
         """Set the node process type.
 
         :param value: the new value to set
@@ -284,7 +314,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.process_type = value
 
     @property
-    def label(self):
+    def label(self) -> str:
         """Return the node label.
 
         :return: the label
@@ -292,7 +322,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self.backend_entity.label
 
     @label.setter
-    def label(self, value):
+    def label(self, value: str) -> None:
         """Set the label.
 
         :param value: the new value to set
@@ -300,7 +330,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.label = value
 
     @property
-    def description(self):
+    def description(self) -> str:
         """Return the node description.
 
         :return: the description
@@ -308,7 +338,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self.backend_entity.description
 
     @description.setter
-    def description(self, value):
+    def description(self, value: str) -> None:
         """Set the description.
 
         :param value: the new value to set
@@ -316,7 +346,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.description = value
 
     @property
-    def computer(self):
+    def computer(self) -> Optional[Computer]:
         """Return the computer of this node.
 
         :return: the computer or None
@@ -328,7 +358,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return None
 
     @computer.setter
-    def computer(self, computer):
+    def computer(self, computer: Optional[Computer]) -> None:
         """Set the computer of this node.
 
         :param computer: a `Computer`
@@ -344,7 +374,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.computer = computer
 
     @property
-    def user(self):
+    def user(self) -> User:
         """Return the user of this node.
 
         :return: the user
@@ -353,7 +383,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return User.from_backend_entity(self.backend_entity.user)
 
     @user.setter
-    def user(self, user):
+    def user(self, user: User) -> None:
         """Set the user of this node.
 
         :param user: a `User`
@@ -365,7 +395,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.user = user.backend_entity
 
     @property
-    def ctime(self):
+    def ctime(self) -> datetime.datetime:
         """Return the node ctime.
 
         :return: the ctime
@@ -373,14 +403,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self.backend_entity.ctime
 
     @property
-    def mtime(self):
+    def mtime(self) -> datetime.datetime:
         """Return the node mtime.
 
         :return: the mtime
         """
         return self.backend_entity.mtime
 
-    def list_objects(self, path=None, key=None):
+    def list_objects(self, path: Optional[str] = None, key: Optional[str] = None) -> List['File']:
         """Return a list of the objects contained in this repository, optionally in the given sub directory.
 
         .. deprecated:: 1.4.0
@@ -391,6 +421,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :return: a list of `File` named tuples representing the objects present in directory with the given path
         :raises FileNotFoundError: if the `path` does not exist in the repository of this node
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if key is not None:
             if path is not None:
                 raise ValueError('cannot specify both `path` and `key`.')
@@ -402,7 +434,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self._repository.list_objects(path)
 
-    def list_object_names(self, path=None, key=None):
+    def list_object_names(self, path: Optional[str] = None, key: Optional[str] = None) -> List[str]:
         """Return a list of the object names contained in this repository, optionally in the given sub directory.
 
         .. deprecated:: 1.4.0
@@ -410,8 +442,10 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
-        :return: a list of `File` named tuples representing the objects present in directory with the given path
+
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if key is not None:
             if path is not None:
                 raise ValueError('cannot specify both `path` and `key`.')
@@ -423,7 +457,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self._repository.list_object_names(path)
 
-    def open(self, path=None, mode='r', key=None):
+    def open(self, path: Optional[str] = None, mode: str = 'r', key: Optional[str] = None) -> WarnWhenNotEntered:
         """Open a file handle to the object with the given path.
 
         .. deprecated:: 1.4.0
@@ -436,6 +470,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param key: fully qualified identifier for the object within the repository
         :param mode: the mode under which to open the handle
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if key is not None:
             if path is not None:
                 raise ValueError('cannot specify both `path` and `key`.')
@@ -453,7 +489,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return WarnWhenNotEntered(self._repository.open(path, mode), repr(self))
 
-    def get_object(self, path=None, key=None):
+    def get_object(self, path: Optional[str] = None, key: Optional[str] = None) -> 'File':
         """Return the object with the given path.
 
         .. deprecated:: 1.4.0
@@ -463,6 +499,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param key: fully qualified identifier for the object within the repository
         :return: a `File` named tuple
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if key is not None:
             if path is not None:
                 raise ValueError('cannot specify both `path` and `key`.')
@@ -477,7 +515,10 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self._repository.get_object(path)
 
-    def get_object_content(self, path=None, mode='r', key=None):
+    def get_object_content(self,
+                           path: Optional[str] = None,
+                           mode: str = 'r',
+                           key: Optional[str] = None) -> Union[str, bytes]:
         """Return the content of a object with the given path.
 
         .. deprecated:: 1.4.0
@@ -486,6 +527,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param path: the relative path of the object within the repository.
         :param key: fully qualified identifier for the object within the repository
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if key is not None:
             if path is not None:
                 raise ValueError('cannot specify both `path` and `key`.')
@@ -503,7 +546,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self._repository.get_object_content(path, mode)
 
-    def put_object_from_tree(self, filepath, path=None, contents_only=True, force=False, key=None):
+    def put_object_from_tree(
+        self,
+        filepath: str,
+        path: Optional[str] = None,
+        contents_only: bool = True,
+        force: bool = False,
+        key: Optional[str] = None
+    ) -> None:
         """Store a new object under `path` with the contents of the directory located at `filepath` on this file system.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
@@ -528,6 +578,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if force:
             warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
@@ -547,7 +599,15 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         self._repository.put_object_from_tree(filepath, path, contents_only, force)
 
-    def put_object_from_file(self, filepath, path=None, mode=None, encoding=None, force=False, key=None):
+    def put_object_from_file(
+        self,
+        filepath: str,
+        path: Optional[str] = None,
+        mode: Optional[str] = None,
+        encoding: Optional[str] = None,
+        force: bool = False,
+        key: Optional[str] = None
+    ) -> None:
         """Store a new object under `path` with contents of the file located at `filepath` on this file system.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
@@ -572,6 +632,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
+        assert self._repository is not None, 'repository not initialised'
+
         # Note that the defaults of `mode` and `encoding` had to be change to `None` from `w` and `utf-8` resptively, in
         # order to detect when they were being passed such that the deprecation warning can be emitted. The defaults did
         # not make sense and so ignoring them is justified, since the side-effect of this function, a file being copied,
@@ -601,7 +663,15 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         self._repository.put_object_from_file(filepath, path, mode, encoding, force)
 
-    def put_object_from_filelike(self, handle, path=None, mode='w', encoding='utf8', force=False, key=None):
+    def put_object_from_filelike(
+        self,
+        handle: IO[Any],
+        path: Optional[str] = None,
+        mode: str = 'w',
+        encoding: str = 'utf8',
+        force: bool = False,
+        key: Optional[str] = None
+    ) -> None:
         """Store a new object under `path` with contents of filelike object `handle`.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
@@ -621,6 +691,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if force:
             warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
@@ -638,7 +710,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         self._repository.put_object_from_filelike(handle, path, mode, encoding, force)
 
-    def delete_object(self, path=None, force=False, key=None):
+    def delete_object(self, path: Optional[str] = None, force: bool = False, key: Optional[str] = None) -> None:
         """Delete the object from the repository.
 
         .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
@@ -654,6 +726,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param force: boolean, if True, will skip the mutability check
         :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
         """
+        assert self._repository is not None, 'repository not initialised'
+
         if force:
             warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
@@ -671,7 +745,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         self._repository.delete_object(path, force)
 
-    def add_comment(self, content, user=None):
+    def add_comment(self, content: str, user: Optional[User] = None) -> Comment:
         """Add a new comment.
 
         :param content: string with comment
@@ -681,7 +755,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         user = user or User.objects.get_default()
         return Comment(node=self, user=user, content=content).store()
 
-    def get_comment(self, identifier):
+    def get_comment(self, identifier: int) -> Comment:
         """Return a comment corresponding to the given identifier.
 
         :param identifier: the comment pk
@@ -689,16 +763,16 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
-        return Comment.objects.get(dbnode_id=self.pk, pk=identifier)
+        return Comment.objects.get(dbnode_id=self.pk, id=identifier)
 
-    def get_comments(self):
+    def get_comments(self) -> List[Comment]:
         """Return a sorted list of comments for this node.
 
         :return: the list of comments, sorted by pk
         """
         return Comment.objects.find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
 
-    def update_comment(self, identifier, content):
+    def update_comment(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.
 
         :param identifier: the comment pk
@@ -706,17 +780,17 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
-        comment = Comment.objects.get(dbnode_id=self.pk, pk=identifier)
+        comment = Comment.objects.get(dbnode_id=self.pk, id=identifier)
         comment.set_content(content)
 
-    def remove_comment(self, identifier):
+    def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
         """Delete an existing comment.
 
         :param identifier: the comment pk
         """
-        Comment.objects.delete(dbnode_id=self.pk, comment=identifier)
+        Comment.objects.delete(identifier)
 
-    def add_incoming(self, source, link_type, link_label):
+    def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
 
         :param source: the node from which the link is coming
@@ -733,7 +807,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         else:
             self._add_incoming_cache(source, link_type, link_label)
 
-    def validate_incoming(self, source, link_type, link_label):
+    def validate_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from a given node to ourself.
 
         This function will first validate the types of the inputs, followed by the node and link types and validate
@@ -760,7 +834,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             if builder.count() > 0:
                 raise ValueError('the link you are attempting to create would generate a cycle in the graph')
 
-    def validate_outgoing(self, target, link_type, link_label):  # pylint: disable=unused-argument,no-self-use
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:  # pylint: disable=unused-argument,no-self-use
         """Validate adding a link of the given type from ourself to a given node.
 
         The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
@@ -776,7 +850,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
         type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
 
-    def _add_incoming_cache(self, source, link_type, link_label):
+    def _add_incoming_cache(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add an incoming link to the cache.
 
         .. note: the proposed link is not validated in this function, so this should not be called directly
@@ -787,6 +861,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param link_label: the link label
         :raise aiida.common.UniquenessError: if the given link triple already exists in the cache
         """
+        assert self._incoming_cache is not None, 'incoming_cache not initialised'
+
         link_triple = LinkTriple(source, link_type, link_label)
 
         if link_triple in self._incoming_cache:
@@ -795,8 +871,13 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self._incoming_cache.append(link_triple)
 
     def get_stored_link_triples(
-        self, node_class=None, link_type=(), link_label_filter=None, link_direction='incoming', only_uuid=False
-    ):
+        self,
+        node_class: Type['Node'] = None,
+        link_type: Union[LinkType, Sequence[LinkType]] = (),
+        link_label_filter: Optional[str] = None,
+        link_direction: str = 'incoming',
+        only_uuid: bool = False
+    ) -> List[LinkTriple]:
         """Return the list of stored link triples directly incoming to or outgoing of this node.
 
         Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
@@ -804,7 +885,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param node_class: If specified, should be a class, and it filters only elements of that (subclass of) type
         :param link_type: Only get inputs of this link type, if empty tuple then returns all inputs of all link types.
         :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
-            one would pass directly to a QuerBuilder filter statement with the 'like' operation.
+            one would pass directly to a QueryBuilder filter statement with the 'like' operation.
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
@@ -815,8 +896,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node
-        node_filters = {'id': {'==': self.id}}
-        edge_filters = {}
+        node_filters: Dict[str, Any] = {'id': {'==': self.id}}
+        edge_filters: Dict[str, Any] = {}
 
         if link_type:
             edge_filters['type'] = {'in': [t.value for t in link_type]}
@@ -847,7 +928,13 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return [LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
 
-    def get_incoming(self, node_class=None, link_type=(), link_label_filter=None, only_uuid=False):
+    def get_incoming(
+        self,
+        node_class: Type['Node'] = None,
+        link_type: Union[LinkType, Sequence[LinkType]] = (),
+        link_label_filter: Optional[str] = None,
+        only_uuid: bool = False
+    ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
 
         :param node_class: If specified, should be a class or tuple of classes, and it filters only
@@ -858,6 +945,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
+        assert self._incoming_cache is not None, 'incoming_cache not initialised'
+
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
 
@@ -888,7 +977,13 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return LinkManager(link_triples)
 
-    def get_outgoing(self, node_class=None, link_type=(), link_label_filter=None, only_uuid=False):
+    def get_outgoing(
+        self,
+        node_class: Type['Node'] = None,
+        link_type: Union[LinkType, Sequence[LinkType]] = (),
+        link_label_filter: Optional[str] = None,
+        only_uuid: bool = False
+    ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.
 
         :param node_class: If specified, should be a class or tuple of classes, and it filters only
@@ -902,20 +997,23 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing', only_uuid)
         return LinkManager(link_triples)
 
-    def has_cached_links(self):
+    def has_cached_links(self) -> bool:
         """Feturn whether there are unstored incoming links in the cache.
 
         :return: boolean, True when there are links in the incoming cache, False otherwise
         """
+        assert self._incoming_cache is not None, 'incoming_cache not initialised'
         return bool(self._incoming_cache)
 
-    def store_all(self, with_transaction=True, use_cache=None):
+    def store_all(self, with_transaction: bool = True, use_cache=None) -> 'Node':
         """Store the node, together with all input links.
 
         Unstored nodes from cached incoming linkswill also be stored.
 
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
+        assert self._incoming_cache is not None, 'incoming_cache not initialised'
+
         if use_cache is not None:
             warnings.warn(  # pylint: disable=no-member
                 'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
@@ -934,7 +1032,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self.store(with_transaction)
 
-    def store(self, with_transaction=True, use_cache=None):  # pylint: disable=arguments-differ
+    def store(self, with_transaction: bool = True, use_cache=None) -> 'Node':  # pylint: disable=arguments-differ
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -983,12 +1081,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self
 
-    def _store(self, with_transaction=True, clean=True):
+    def _store(self, with_transaction: bool = True, clean: bool = True) -> 'Node':
         """Store the node in the database while saving its attributes and repository directory.
 
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
+        assert self._repository is not None, 'repository not initialised'
+
         # First store the repository folder such that if this fails, there won't be an incomplete node in the database.
         # On the flipside, in the case that storing the node does fail, the repository will now have an orphaned node
         # directory which will have to be cleaned manually sometime.
@@ -1007,19 +1107,24 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self
 
-    def verify_are_parents_stored(self):
+    def verify_are_parents_stored(self) -> None:
         """Verify that all `parent` nodes are already stored.
 
         :raise aiida.common.ModificationNotAllowed: if one of the source nodes of incoming links is not stored.
         """
+        assert self._incoming_cache is not None, 'incoming_cache not initialised'
+
         for link_triple in self._incoming_cache:
             if not link_triple.node.is_stored:
                 raise exceptions.ModificationNotAllowed(
                     f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
-    def _store_from_cache(self, cache_node, with_transaction):
+    def _store_from_cache(self, cache_node: 'Node', with_transaction: bool) -> None:
         """Store this node from an existing cache node."""
+        assert self._repository is not None, 'repository not initialised'
+        assert cache_node._repository is not None, 'cache repository not initialised'  # pylint: disable=protected-access
+
         from aiida.orm.utils.mixins import Sealable
         assert self.node_type == cache_node.node_type
 
@@ -1045,36 +1150,50 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self._add_outputs_from_cache(cache_node)
         self.set_extra('_aiida_cached_from', cache_node.uuid)
 
-    def _add_outputs_from_cache(self, cache_node):
+    def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
         for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone()
             new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()
 
-    def get_hash(self, ignore_errors=True, **kwargs):
-        """Return the hash for this node based on its attributes."""
+    def get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
+        """Return the hash for this node based on its attributes.
+
+        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
+        """
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
 
         return self._get_hash(ignore_errors=ignore_errors, **kwargs)
 
-    def _get_hash(self, ignore_errors=True, **kwargs):
+    def _get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
         """
         Return the hash for this node based on its attributes.
 
         This will always work, even before storing.
+
+        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
         """
         try:
             return make_hash(self._get_objects_to_hash(), **kwargs)
-        except Exception:  # pylint: disable=broad-except
+        except exceptions.HashingError:
             if not ignore_errors:
                 raise
+            if self.logger:
+                self.logger.exception('Node hashing failed')
+            return None
 
-    def _get_objects_to_hash(self):
+    def _get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash."""
+        assert self._repository is not None, 'repository not initialised'
+        top_level_module = self.__module__.split('.', 1)[0]
+        try:
+            version = importlib.import_module(top_level_module).__version__  # type: ignore[attr-defined]
+        except (ImportError, AttributeError) as exc:
+            raise exceptions.HashingError("The node's package version could not be determined") from exc
         objects = [
-            importlib.import_module(self.__module__.split('.', 1)[0]).__version__,
+            version,
             {
                 key: val
                 for key, val in self.attributes_items()
@@ -1085,15 +1204,15 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         ]
         return objects
 
-    def rehash(self):
+    def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""
         self.set_extra(_HASH_EXTRA_KEY, self.get_hash())
 
-    def clear_hash(self):
+    def clear_hash(self) -> None:
         """Sets the stored hash of the Node to None."""
         self.set_extra(_HASH_EXTRA_KEY, None)
 
-    def get_cache_source(self):
+    def get_cache_source(self) -> Optional[str]:
         """Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached.
 
         :return: source node UUID or None
@@ -1101,14 +1220,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return self.get_extra('_aiida_cached_from', None)
 
     @property
-    def is_created_from_cache(self):
+    def is_created_from_cache(self) -> bool:
         """Return whether this node was created from a cached node.
 
         :return: boolean, True if the node was created by cloning a cached node, False otherwise
         """
         return self.get_cache_source() is not None
 
-    def _get_same_node(self):
+    def _get_same_node(self) -> Optional['Node']:
         """Returns a stored node from which the current Node can be cached or None if it does not exist
 
         If a node is returned it is a valid cache, meaning its `_aiida_hash` extra matches `self.get_hash()`.
@@ -1125,7 +1244,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         except StopIteration:
             return None
 
-    def get_all_same_nodes(self):
+    def get_all_same_nodes(self) -> List['Node']:
         """Return a list of stored nodes which match the type and hash of the current node.
 
         All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.get_hash()`.
@@ -1135,7 +1254,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """
         return list(self._iter_all_same_nodes())
 
-    def _iter_all_same_nodes(self, allow_before_store=False):
+    def _iter_all_same_nodes(self, allow_before_store=False) -> Iterator['Node']:
         """
         Returns an iterator of all same nodes.
 
@@ -1156,22 +1275,21 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         return (node for node in nodes_identical if node.is_valid_cache)
 
     @property
-    def is_valid_cache(self):
+    def is_valid_cache(self) -> bool:
         """Hook to exclude certain `Node` instances from being considered a valid cache."""
         # pylint: disable=no-self-use
         return True
 
-    def get_description(self):
+    def get_description(self) -> str:
         """Return a string with a description of the node.
 
         :return: a description string
-        :rtype: str
         """
         # pylint: disable=no-self-use
         return ''
 
     @staticmethod
-    def get_schema():
+    def get_schema() -> Dict[str, Any]:
         """
         Every node property contains:
             - display_name: display name of the property

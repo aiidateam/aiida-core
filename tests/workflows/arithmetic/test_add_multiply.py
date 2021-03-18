@@ -21,7 +21,8 @@ def test_factory():
     assert loaded.is_process_function
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'temporary_event_loop')
 def test_run():
     """Test running the work function."""
     x = Int(1)

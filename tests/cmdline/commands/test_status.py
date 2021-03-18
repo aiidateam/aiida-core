@@ -14,6 +14,7 @@ from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 
 
+@pytest.mark.requires_rmq
 def test_status(run_cli_command):
     """Test `verdi status`."""
     options = []
@@ -27,7 +28,7 @@ def test_status(run_cli_command):
         assert string in result.output
 
 
-@pytest.mark.usefixtures('create_empty_config_instance')
+@pytest.mark.usefixtures('empty_config')
 def test_status_no_profile(run_cli_command):
     """Test `verdi status` when there is no profile."""
     options = []

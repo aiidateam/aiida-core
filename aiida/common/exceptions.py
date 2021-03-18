@@ -17,7 +17,7 @@ __all__ = (
     'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
     'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
     'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError'
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError'
 )
 
 
@@ -249,4 +249,10 @@ class OutputParsingError(ParsingError):
 class CircusCallError(AiidaException):
     """
     Raised when an attempt to contact Circus returns an error in the response
+    """
+
+
+class HashingError(AiidaException):
+    """
+    Raised when an attempt to hash an object fails via a known failure mode
     """

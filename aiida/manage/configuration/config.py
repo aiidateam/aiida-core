@@ -8,16 +8,50 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
+from functools import lru_cache
+from importlib import resources
 import os
 import shutil
 import tempfile
+from typing import Any, Dict, Optional, Sequence, Tuple
+
+import jsonschema
 
 from aiida.common import json
+from aiida.common.exceptions import ConfigurationError
 
-from .options import get_option, parse_option, NO_DEFAULT
+from . import schema as schema_module
+from .options import get_option, get_option_names, Option, parse_option, NO_DEFAULT
 from .profile import Profile
 
-__all__ = ('Config',)
+__all__ = ('Config', 'config_schema', 'ConfigValidationError')
+
+SCHEMA_FILE = 'config-v5.schema.json'
+
+
+@lru_cache(1)
+def config_schema() -> Dict[str, Any]:
+    """Return the configuration schema."""
+    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
+
+
+class ConfigValidationError(ConfigurationError):
+    """Configuration error raised when the file contents fails validation."""
+
+    def __init__(
+        self, message: str, keypath: Sequence[Any] = (), schema: Optional[dict] = None, filepath: Optional[str] = None
+    ):
+        super().__init__(message)
+        self._message = message
+        self._keypath = keypath
+        self._filepath = filepath
+        self._schema = schema
+
+    def __str__(self) -> str:
+        prefix = f'{self._filepath}:' if self._filepath else ''
+        path = '/' + '/'.join(str(k) for k in self._keypath) + ': ' if self._keypath else ''
+        schema = f'\n  schema:\n  {self._schema}' if self._schema else ''
+        return f'Validation Error: {prefix}{path}{self._message}{schema}'
 
 
 class Config:  # pylint: disable=too-many-public-methods
@@ -29,6 +63,7 @@ class Config:  # pylint: disable=too-many-public-methods
     KEY_DEFAULT_PROFILE = 'default_profile'
     KEY_PROFILES = 'profiles'
     KEY_OPTIONS = 'options'
+    KEY_SCHEMA = '$schema'
 
     @classmethod
     def from_file(cls, filepath):
@@ -86,26 +121,40 @@ class Config:  # pylint: disable=too-many-public-methods
 
         return filepath_backup
 
-    def __init__(self, filepath, config):
+    @staticmethod
+    def validate(config: dict, filepath: Optional[str] = None):
+        """Validate a configuration dictionary."""
+        try:
+            jsonschema.validate(instance=config, schema=config_schema())
+        except jsonschema.ValidationError as error:
+            raise ConfigValidationError(
+                message=error.message, keypath=error.path, schema=error.schema, filepath=filepath
+            )
+
+    def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
 
         If an empty dictionary is passed, the constructor will create the skeleton configuration dictionary.
 
         :param filepath: the absolute filepath of the configuration file
         :param config: the content of the configuration file in dictionary form
+        :param validate: validate the dictionary against the schema
         """
         from .migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 
-        version = config.get(self.KEY_VERSION, {})
-        current_version = version.get(self.KEY_VERSION_CURRENT, CURRENT_CONFIG_VERSION)
-        compatible_version = version.get(self.KEY_VERSION_OLDEST_COMPATIBLE, OLDEST_COMPATIBLE_CONFIG_VERSION)
+        if validate:
+            self.validate(config, filepath)
 
         self._filepath = filepath
-        self._current_version = current_version
-        self._oldest_compatible_version = compatible_version
+        self._schema = config.get(self.KEY_SCHEMA, None)
+        version = config.get(self.KEY_VERSION, {})
+        self._current_version = version.get(self.KEY_VERSION_CURRENT, CURRENT_CONFIG_VERSION)
+        self._oldest_compatible_version = version.get(
+            self.KEY_VERSION_OLDEST_COMPATIBLE, OLDEST_COMPATIBLE_CONFIG_VERSION
+        )
         self._profiles = {}
 
-        known_keys = [self.KEY_VERSION, self.KEY_PROFILES, self.KEY_OPTIONS, self.KEY_DEFAULT_PROFILE]
+        known_keys = [self.KEY_SCHEMA, self.KEY_VERSION, self.KEY_PROFILES, self.KEY_OPTIONS, self.KEY_DEFAULT_PROFILE]
         unknown_keys = set(config.keys()) - set(known_keys)
 
         if unknown_keys:
@@ -148,15 +197,17 @@ class Config:  # pylint: disable=too-many-public-methods
         echo.echo_warning(f'backup of the original config file written to: `{filepath_backup}`')
 
     @property
-    def dictionary(self):
+    def dictionary(self) -> dict:
         """Return the dictionary representation of the config as it would be written to file.
 
         :return: dictionary representation of config as it should be written to file
         """
-        config = {
-            self.KEY_VERSION: self.version_settings,
-            self.KEY_PROFILES: {name: profile.dictionary for name, profile in self._profiles.items()}
-        }
+        config = {}
+        if self._schema:
+            config[self.KEY_SCHEMA] = self._schema
+
+        config[self.KEY_VERSION] = self.version_settings
+        config[self.KEY_PROFILES] = {name: profile.dictionary for name, profile in self._profiles.items()}
 
         if self._default_profile:
             config[self.KEY_DEFAULT_PROFILE] = self._default_profile
@@ -321,6 +372,8 @@ class Config:  # pylint: disable=too-many-public-methods
         :param option_value: the option value
         :param scope: set the option for this profile or globally if not specified
         :param override: boolean, if False, will not override the option if it already exists
+
+        :returns: the parsed value (potentially cast to a valid type)
         """
         option, parsed_value = parse_option(option_name, option_value)
 
@@ -332,12 +385,14 @@ class Config:  # pylint: disable=too-many-public-methods
             return
 
         if not option.global_only and scope is not None:
-            self.get_profile(scope).set_option(option.key, value, override=override)
+            self.get_profile(scope).set_option(option.name, value, override=override)
         else:
-            if option.key not in self.options or override:
-                self.options[option.key] = value
+            if option.name not in self.options or override:
+                self.options[option.name] = value
 
-    def unset_option(self, option_name, scope=None):
+        return value
+
+    def unset_option(self, option_name: str, scope=None):
         """Unset a configuration option for a certain scope.
 
         :param option_name: the name of the configuration option
@@ -346,9 +401,9 @@ class Config:  # pylint: disable=too-many-public-methods
         option = get_option(option_name)
 
         if scope is not None:
-            self.get_profile(scope).unset_option(option.key)
+            self.get_profile(scope).unset_option(option.name)
         else:
-            self.options.pop(option.key, None)
+            self.options.pop(option.name, None)
 
     def get_option(self, option_name, scope=None, default=True):
         """Get a configuration option for a certain scope.
@@ -364,11 +419,35 @@ class Config:  # pylint: disable=too-many-public-methods
         default_value = option.default if default and option.default is not NO_DEFAULT else None
 
         if scope is not None:
-            value = self.get_profile(scope).get_option(option.key, default_value)
+            value = self.get_profile(scope).get_option(option.name, default_value)
         else:
-            value = self.options.get(option.key, default_value)
+            value = self.options.get(option.name, default_value)
 
         return value
+
+    def get_options(self, scope: Optional[str] = None) -> Dict[str, Tuple[Option, str, Any]]:
+        """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
+
+        :param scope: the profile name or globally if not specified
+        :returns: (option, source, value)
+        """
+        profile = self.get_profile(scope) if scope else None
+        output = {}
+        for name in get_option_names():
+            option = get_option(name)
+            if profile and name in profile.options:
+                value = profile.options.get(name)
+                source = 'profile'
+            elif name in self.options:
+                value = self.options.get(name)
+                source = 'global'
+            elif 'default' in option.schema:
+                value = option.default
+                source = 'default'
+            else:
+                continue
+            output[name] = (option, source, value)
+        return output
 
     def store(self):
         """Write the current config to file.

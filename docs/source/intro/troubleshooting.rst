@@ -326,9 +326,9 @@ Use in ipython/jupyter
 ----------------------
 
 In order to use the AiiDA objects and functions in Jupyter, this latter has to be instructed to use the iPython kernel installed in the AiiDA virtual environment.
-This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option and run Jupyter from the AiiDA virtual environment.
+This happens by default if you install AiiDA with ``pip`` including the ``notebook`` option, and run Jupyter from the AiiDA virtual environment.
 
-If, for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done:
+If for any reason, you do not want to install Jupyter in the virtual environment, you might consider to install it out of the virtual environment, if not already done:
 
 .. code-block:: console
 

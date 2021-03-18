@@ -13,21 +13,15 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from . import AiidaArchiveTestCase
 
 
-class TestComplex(AiidaTestCase):
+class TestComplex(AiidaArchiveTestCase):
     """Test complex ex-/import cases"""
-
-    def setUp(self):
-        self.reset_database()
-
-    def tearDown(self):
-        self.reset_database()
 
     @with_temp_dir
     def test_complex_graph_import_export(self, temp_dir):
@@ -89,12 +83,11 @@ class TestComplex(AiidaTestCase):
         }
 
         filename = os.path.join(temp_dir, 'export.aiida')
-        export([fd1], filename=filename, silent=True)
+        export([fd1], filename=filename)
 
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
-        import_data(filename, silent=True, ignore_unknown_nodes=True)
+        import_data(filename, ignore_unknown_nodes=True)
 
         for uuid, label in node_uuids_labels.items():
             try:
@@ -201,12 +194,11 @@ class TestComplex(AiidaTestCase):
             group = orm.Group.get(label=grouplabel)
             # exporting based on all members of the group
             # this also checks if group memberships are preserved!
-            export([group] + list(group.nodes), filename=filename, silent=True)
+            export([group] + list(group.nodes), filename=filename)
             # cleaning the DB!
-            self.clean_db()
-            self.create_user()
+            self.refurbish_db()
             # reimporting the data from the file
-            import_data(filename, silent=True, ignore_unknown_nodes=True)
+            import_data(filename, ignore_unknown_nodes=True)
             # creating the hash from db content
             new_hash = get_hash_from_db_content(grouplabel)
             # I check for equality against the first hash created, which implies that hashes

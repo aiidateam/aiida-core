@@ -187,7 +187,7 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
             click.secho(template.format(symbol=' ', *values))
 
 
-def _format_dictionary_json_date(dictionary):
+def _format_dictionary_json_date(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
     from aiida.common import json
 
@@ -201,19 +201,31 @@ def _format_dictionary_json_date(dictionary):
 
         raise TypeError(f'{repr(data)} is not JSON serializable')
 
-    return json.dumps(dictionary, indent=4, sort_keys=True, default=default_jsondump)
+    return json.dumps(dictionary, indent=4, sort_keys=sort_keys, default=default_jsondump)
 
 
-VALID_DICT_FORMATS_MAPPING = OrderedDict((('json+date', _format_dictionary_json_date), ('yaml', yaml.dump),
-                                          ('yaml_expanded', lambda d: yaml.dump(d, default_flow_style=False))))
+def _format_yaml(dictionary, sort_keys=True):
+    """Return a dictionary formatted as a string using the YAML format."""
+    return yaml.dump(dictionary, sort_keys=sort_keys)
 
 
-def echo_dictionary(dictionary, fmt='json+date'):
+def _format_yaml_expanded(dictionary, sort_keys=True):
+    """Return a dictionary formatted as a string using the expanded YAML format."""
+    return yaml.dump(dictionary, sort_keys=sort_keys, default_flow_style=False)
+
+
+VALID_DICT_FORMATS_MAPPING = OrderedDict(
+    (('json+date', _format_dictionary_json_date), ('yaml', _format_yaml), ('yaml_expanded', _format_yaml_expanded))
+)
+
+
+def echo_dictionary(dictionary, fmt='json+date', sort_keys=True):
     """
     Print the given dictionary to stdout in the given format
 
     :param dictionary: the dictionary
     :param fmt: the format to use for printing
+    :param sort_keys: Whether to automatically sort keys
     """
     try:
         format_function = VALID_DICT_FORMATS_MAPPING[fmt]
@@ -221,7 +233,7 @@ def echo_dictionary(dictionary, fmt='json+date'):
         formats = ', '.join(VALID_DICT_FORMATS_MAPPING.keys())
         raise ValueError(f'Unrecognised printing format. Valid formats are: {formats}')
 
-    echo(format_function(dictionary))
+    echo(format_function(dictionary, sort_keys=sort_keys))
 
 
 def is_stdout_redirected():

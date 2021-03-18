@@ -21,7 +21,8 @@ class CalculationQueryBuilder:
     _default_projections = ('pk', 'ctime', 'process_label', 'state', 'process_status')
     _valid_projections = (
         'pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status', 'sealed',
-        'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state', 'scheduler_state'
+        'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state', 'scheduler_state',
+        'exception'
     )
 
     def __init__(self, mapper=None):

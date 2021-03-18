@@ -11,9 +11,9 @@
 """Tests for the `WorkChain` class."""
 import inspect
 import unittest
+import asyncio
 
 import plumpy
-from tornado import gen
 import pytest
 
 from aiida import orm
@@ -28,7 +28,7 @@ from aiida.orm import load_node, Bool, Float, Int, Str
 
 
 def run_until_paused(proc):
-    """ Set up a future that will be resolved on entering the WAITING state """
+    """ Set up a future that will be resolved when process is paused"""
     listener = plumpy.ProcessListener()
     paused = plumpy.Future()
 
@@ -95,7 +95,7 @@ class Wf(WorkChain):
         spec.outputs.dynamic = True
         spec.outline(
             cls.step1,
-            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4),
+            if_(cls.is_a)(cls.step2).elif_(cls.is_b)(cls.step3).else_(cls.step4), # pylint: disable=no-member
             cls.step5,
             while_(cls.larger_then_n)(cls.step6,),
         )
@@ -111,37 +111,37 @@ class Wf(WorkChain):
         }
 
     def step1(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step2(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step3(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step4(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step5(self):
         self.ctx.counter = 0
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def step6(self):
         self.ctx.counter = self.ctx.counter + 1
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
 
     def is_a(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
         return self.inputs.value.value == 'A'
 
     def is_b(self):
-        self._set_finished(inspect.stack()[0][3])
+        self._set_finished(inspect.stack()[0].function)
         return self.inputs.value.value == 'B'
 
     def larger_then_n(self):
         keep_looping = self.ctx.counter < self.inputs.n.value
         if not keep_looping:
-            self._set_finished(inspect.stack()[0][3])
+            self._set_finished(inspect.stack()[0].function)
         return keep_looping
 
     def _set_finished(self, function_name):
@@ -187,6 +187,7 @@ class PotentialFailureWorkChain(WorkChain):
         self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
 
 
+@pytest.mark.requires_rmq
 class TestExitStatus(AiidaTestCase):
     """
     This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
@@ -252,8 +253,8 @@ class IfTest(WorkChain):
         super().define(spec)
         spec.outline(if_(cls.condition)(cls.step1, cls.step2))
 
-    def on_create(self, *args, **kwargs):
-        super().on_create(*args, **kwargs)
+    def on_create(self):
+        super().on_create()
         self.ctx.s1 = False
         self.ctx.s2 = False
 
@@ -268,6 +269,7 @@ class IfTest(WorkChain):
         self.ctx.s2 = True
 
 
+@pytest.mark.requires_rmq
 class TestContext(AiidaTestCase):
 
     def test_attributes(self):
@@ -289,6 +291,7 @@ class TestContext(AiidaTestCase):
             wc.ctx['new_attr']  # pylint: disable=pointless-statement
 
 
+@pytest.mark.requires_rmq
 class TestWorkchain(AiidaTestCase):
 
     # pylint: disable=too-many-public-methods
@@ -677,20 +680,22 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(MainWorkChain)
 
     def test_if_block_persistence(self):
-        """
+        """Test a reloaded `If` conditional can be resumed.
+
         This test was created to capture issue #902
         """
         runner = get_manager().get_runner()
         wc = IfTest()
         runner.schedule(wc)
 
-        @gen.coroutine
-        def run_async(workchain):
-            yield run_until_paused(workchain)
+        async def run_async(workchain):
+
+            # run the original workchain until paused
+            await run_until_paused(workchain)
             self.assertTrue(workchain.ctx.s1)
             self.assertFalse(workchain.ctx.s2)
 
-            # Now bundle the thing
+            # Now bundle the workchain
             bundle = plumpy.Bundle(workchain)
             # Need to close the process before recreating a new instance
             workchain.close()
@@ -700,15 +705,22 @@ class TestWorkchain(AiidaTestCase):
             self.assertTrue(workchain2.ctx.s1)
             self.assertFalse(workchain2.ctx.s2)
 
+            # check bundling again creates the same saved state
             bundle2 = plumpy.Bundle(workchain2)
             self.assertDictEqual(bundle, bundle2)
 
-            workchain.play()
-            yield workchain.future()
-            self.assertTrue(workchain.ctx.s1)
-            self.assertTrue(workchain.ctx.s2)
+            # run the loaded workchain to completion
+            runner.schedule(workchain2)
+            workchain2.play()
+            await workchain2.future()
+            self.assertTrue(workchain2.ctx.s1)
+            self.assertTrue(workchain2.ctx.s2)
 
-        runner.loop.run_sync(lambda: run_async(wc))  # pylint: disable=unnecessary-lambda
+            # ensure the original paused workchain future is finalised
+            # to avoid warnings
+            workchain.future().set_result(None)
+
+        runner.loop.run_until_complete(run_async(wc))
 
     def test_report_dbloghandler(self):
         """
@@ -851,6 +863,7 @@ class TestWorkchain(AiidaTestCase):
         return proc.finished_steps
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainAbort(AiidaTestCase):
     """
     Test the functionality to abort a workchain
@@ -885,18 +898,17 @@ class TestWorkChainAbort(AiidaTestCase):
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        @gen.coroutine
-        def run_async():
-            yield run_until_paused(process)
+        async def run_async():
+            await run_until_paused(process)
 
             process.play()
 
             with Capturing():
                 with self.assertRaises(RuntimeError):
-                    yield process.future()
+                    await process.future()
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())  # pylint: disable=unnecessary-lambda
+        runner.loop.run_until_complete(run_async())
 
         self.assertEqual(process.node.is_finished_ok, False)
         self.assertEqual(process.node.is_excepted, True)
@@ -911,9 +923,8 @@ class TestWorkChainAbort(AiidaTestCase):
         runner = get_manager().get_runner()
         process = TestWorkChainAbort.AbortableWorkChain()
 
-        @gen.coroutine
-        def run_async():
-            yield run_until_paused(process)
+        async def run_async():
+            await run_until_paused(process)
 
             self.assertTrue(process.paused)
             process.kill()
@@ -922,13 +933,14 @@ class TestWorkChainAbort(AiidaTestCase):
                 launch.run(process)
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())  # pylint: disable=unnecessary-lambda
+        runner.loop.run_until_complete(run_async())
 
         self.assertEqual(process.node.is_finished_ok, False)
         self.assertEqual(process.node.is_excepted, False)
         self.assertEqual(process.node.is_killed, True)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainAbortChildren(AiidaTestCase):
     """
     Test the functionality to abort a workchain and verify that children
@@ -998,17 +1010,18 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         runner = get_manager().get_runner()
         process = TestWorkChainAbortChildren.MainWorkChain(inputs={'kill': Bool(True)})
 
-        @gen.coroutine
-        def run_async():
-            yield run_until_waiting(process)
+        async def run_async():
+            await run_until_waiting(process)
 
-            process.kill()
+            result = process.kill()
+            if asyncio.isfuture(result):
+                await result
 
             with self.assertRaises(plumpy.KilledError):
-                yield process.future()
+                await process.future()
 
         runner.schedule(process)
-        runner.loop.run_sync(lambda: run_async())  # pylint: disable=unnecessary-lambda
+        runner.loop.run_until_complete(run_async())
 
         child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         self.assertEqual(child.is_finished_ok, False)
@@ -1020,6 +1033,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEqual(process.node.is_killed, True)
 
 
+@pytest.mark.requires_rmq
 class TestImmutableInputWorkchain(AiidaTestCase):
     """
     Test that inputs cannot be modified
@@ -1125,6 +1139,7 @@ class SerializeWorkChain(WorkChain):
         assert self.inputs.test == self.inputs.reference
 
 
+@pytest.mark.requires_rmq
 class TestSerializeWorkChain(AiidaTestCase):
     """
     Test workchains with serialized input / output.
@@ -1251,6 +1266,7 @@ class ChildExposeWorkChain(WorkChain):
         self.out('c', self.inputs.c)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainExpose(AiidaTestCase):
     """
     Test the expose inputs / outputs functionality
@@ -1362,6 +1378,7 @@ class TestWorkChainExpose(AiidaTestCase):
         launch.run(Child)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainMisc(AiidaTestCase):
 
     class PointlessWorkChain(WorkChain):
@@ -1398,6 +1415,7 @@ class TestWorkChainMisc(AiidaTestCase):
             launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
 
+@pytest.mark.requires_rmq
 class TestDefaultUniqueness(AiidaTestCase):
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 

@@ -42,11 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
     strategy:
       fail-fast: false
       matrix:
-        pip-feature-flag: [ '', '--use-feature=2020-resolver' ]
         extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
 
     steps:
@@ -61,10 +59,9 @@ jobs:
 
     - name: Pip install
       id: pip_install
-      continue-on-error: ${{ contains(matrix.pip-feature-flag, '2020-resolver') }}
       run: |
         python -m pip --version
-        python -m pip install -e .${{ matrix.extras }} ${{ matrix.pip-feature-flag }}
+        python -m pip install -e .${{ matrix.extras }}
         python -m pip freeze
 
     - name: Test importing aiida
@@ -72,10 +69,13 @@ jobs:
       run:
         python -c "import aiida"
 
-    - name: Warn about pip 2020 resolver issues.
-      if: steps.pip_install.outcome == 'failure' && contains(matrix.pip-feature-flag, '2020-resolver')
-      run: |
-        echo "::warning ::Encountered issues with the pip 2020-resolver."
+    - name: Send Slack notification
+      if: ${{ failure() && github.event_name == 'schedule' }}
+      uses: kpritam/slack-job-status-action@v1
+      with:
+        job-status: ${{ job.status }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel: dev-aiida-core
 
   install-with-conda:
 
@@ -109,6 +109,14 @@ jobs:
         source activate test-environment
         python -c "import aiida"
 
+    - name: Send Slack notification
+      if: ${{ failure() && github.event_name == 'schedule' }}
+      uses: kpritam/slack-job-status-action@v1
+      with:
+        job-status: ${{ job.status }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel: dev-aiida-core
+
   tests:
 
     needs: [install-with-pip, install-with-conda]
@@ -118,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -139,6 +147,10 @@ jobs:
         image: rabbitmq:latest
         ports:
           - 5672:5672
+      slurm:
+        image: xenonmiddleware/slurm:17
+        ports:
+          - 5001:22
 
     steps:
     - uses: actions/checkout@v2
@@ -150,18 +162,14 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
         sudo apt install postgresql-10 graphviz
 
-    - run: pip install --upgrade pip
-
-    # Work-around issue caused by pymatgen's setup process, which will install the latest
-    # numpy version (including release candidates) regardless of our actual specification
-    # By installing the version from the requirements file, we should get a compatible version
-    - name: Install numpy
+    - name: Upgrade pip and setuptools
+      # It is crucial to update `setuptools` or the installation of `pymatgen` can break
       run: |
-        pip install `grep 'numpy==' requirements/requirements-py-${{ matrix.python-version }}.txt`
+        pip install --upgrade pip setuptools
+        pip --version
 
     - name: Install aiida-core
       run: |
@@ -181,6 +189,14 @@ jobs:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:
         .github/workflows/tests.sh
+
+    - name: Send Slack notification
+      if: ${{ failure() && github.event_name == 'schedule' }}
+      uses: kpritam/slack-job-status-action@v1
+      with:
+        job-status: ${{ job.status }}
+        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel: dev-aiida-core
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt

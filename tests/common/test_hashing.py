@@ -24,6 +24,7 @@ try:
 except ImportError:
     import unittest
 
+from aiida.common.exceptions import HashingError
 from aiida.common.hashing import make_hash, float_to_text
 from aiida.common.folders import SandboxFolder
 from aiida.backends.testbase import AiidaTestCase
@@ -36,6 +37,7 @@ class FloatToTextTest(unittest.TestCase):
     """
 
     def test_subnormal(self):
+        self.assertEqual(float_to_text(-0.00, sig=2), '0')  # 0 is always printed as '0'
         self.assertEqual(float_to_text(3.555, sig=2), '3.6')
         self.assertEqual(float_to_text(3.555, sig=3), '3.56')
         self.assertEqual(float_to_text(3.141592653589793238462643383279502884197, sig=14), '3.1415926535898')
@@ -177,7 +179,7 @@ class MakeHashTest(unittest.TestCase):
         class MadeupClass:
             pass
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HashingError):
             make_hash(MadeupClass())
 
     def test_folder(self):

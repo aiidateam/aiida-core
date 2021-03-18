@@ -21,6 +21,10 @@ Here we present a brief introduction on how to write both workflow types.
 
     For more details on the concept of a workflow, and the difference between a work function and a work chain, please see the corresponding :ref:`topics section<topics:workflows:concepts>`.
 
+.. note::
+
+   Developing workflows may involve running several lengthy calculations. Consider :ref:`enabling caching <how-to:run-codes:caching>` to help avoid repeating long workflow steps.
+
 Work function
 -------------
 
@@ -242,9 +246,9 @@ So, it is advisable to *submit* more complex or longer work chains to the daemon
 
     workchain_node = submit(MultiplyAddWorkChain, **inputs)
 
-Note that when using ``submit`` the work chain is not run in the local interpreter but is sent off to the daemon and you get back control instantly.
+Note that when using ``submit`` the work chain is not run in the local interpreter but is sent off to the daemon, and you get back control instantly.
 This allows you to submit multiple work chains at the same time and the daemon will start working on them in parallel.
-Once the ``submit`` call returns, you will not get the result as with ``run``, but you will get the **node** that represents the work chain.
+Once the ``submit`` call returns, you will not get the result as with ``run``, but you will get the **node** representing the work chain.
 Submitting a work chain instead of directly running it not only makes it easier to execute multiple work chains in parallel, but also ensures that the progress of a workchain is not lost when you restart your computer.
 
 .. important::

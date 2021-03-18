@@ -8,35 +8,45 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for `WorkChain` implementations."""
-from collections import namedtuple
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType  # pylint: disable=no-name-in-module
+from typing import List, Optional, Union, NamedTuple
 from wrapt import decorator
 
 from ..exit_code import ExitCode
 
 __all__ = ('ProcessHandlerReport', 'process_handler')
 
-ProcessHandlerReport = namedtuple('ProcessHandlerReport', 'do_break exit_code')
-ProcessHandlerReport.__new__.__defaults__ = (False, ExitCode())
-"""A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
-This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was
-met by the completed process. If no further handling should be performed after this method the `do_break` field should
-be set to `True`. If the handler encountered a fatal error and the work chain needs to be terminated, an `ExitCode` with
-non-zero exit status can be set. This exit code is what will be set on the work chain itself. This works because the
-value of the `exit_code` field returned by the handler, will in turn be returned by the `inspect_process` step and
-returning a non-zero exit code from any work chain step will instruct the engine to abort the work chain.
+class ProcessHandlerReport(NamedTuple):
+    """A namedtuple to define a process handler report for a :class:`aiida.engine.BaseRestartWorkChain`.
 
-:param do_break: boolean, set to `True` if no further process handlers should be called, default is `False`
-:param exit_code: an instance of the :class:`~aiida.engine.processes.exit_code.ExitCode` tuple. If not explicitly set,
-    the default `ExitCode` will be instantiated which has status `0` meaning that the work chain step will be considered
-    successful and the work chain will continue to the next step.
-"""
+    This namedtuple should be returned by a process handler of a work chain instance if the condition of the handler was
+    met by the completed process. If no further handling should be performed after this method the `do_break` field
+    should be set to `True`.
+    If the handler encountered a fatal error and the work chain needs to be terminated, an `ExitCode` with
+    non-zero exit status can be set. This exit code is what will be set on the work chain itself. This works because the
+    value of the `exit_code` field returned by the handler, will in turn be returned by the `inspect_process` step and
+    returning a non-zero exit code from any work chain step will instruct the engine to abort the work chain.
+
+    :param do_break: boolean, set to `True` if no further process handlers should be called, default is `False`
+    :param exit_code: an instance of the :class:`~aiida.engine.processes.exit_code.ExitCode` tuple.
+        If not explicitly set, the default `ExitCode` will be instantiated,
+        which has status `0` meaning that the work chain step will be considered
+        successful and the work chain will continue to the next step.
+    """
+    do_break: bool = False
+    exit_code: ExitCode = ExitCode()
 
 
-def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
+def process_handler(
+    wrapped: Optional[FunctionType] = None,
+    *,
+    priority: int = 0,
+    exit_codes: Union[None, ExitCode, List[ExitCode]] = None,
+    enabled: bool = True
+) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
 
     The decorator will validate the `priority` and `exit_codes` optional keyword arguments and then add itself as an
@@ -55,7 +65,7 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     `do_break` attribute should be set to `True`. If the work chain is to be aborted entirely, the `exit_code` of the
     report can be set to an `ExitCode` instance with a non-zero status.
 
-    :param cls: the work chain class to register the process handler with
+    :param wrapped: the work chain method to register the process handler with
     :param priority: optional integer that defines the order in which registered handlers will be called during the
         handling of a finished process. Higher priorities will be handled first. Default value is `0`. Multiple handlers
         with the same priority is allowed, but the order of those is not well defined.
@@ -67,7 +77,9 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
         basis through the input `handler_overrides`.
     """
     if wrapped is None:
-        return partial(process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled)
+        return partial(
+            process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled
+        )  # type: ignore[return-value]
 
     if not isinstance(wrapped, FunctionType):
         raise TypeError('first argument can only be an instance method, use keywords for decorator arguments.')
@@ -89,9 +101,9 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
     if len(handler_args) != 2:
         raise TypeError(f'process handler `{wrapped.__name__}` has invalid signature: should be (self, node)')
 
-    wrapped.decorator = process_handler
-    wrapped.priority = priority
-    wrapped.enabled = enabled
+    wrapped.decorator = process_handler  # type: ignore[attr-defined]
+    wrapped.priority = priority  # type: ignore[attr-defined]
+    wrapped.enabled = enabled  # type: ignore[attr-defined]
 
     @decorator
     def wrapper(wrapped, instance, args, kwargs):
@@ -99,7 +111,9 @@ def process_handler(wrapped=None, *, priority=0, exit_codes=None, enabled=True):
         # When the handler will be called by the `BaseRestartWorkChain` it will pass the node as the only argument
         node = args[0]
 
-        if exit_codes is not None and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
+        if exit_codes is not None and node.exit_status not in [
+            exit_code.status for exit_code in exit_codes  # type: ignore[union-attr]
+        ]:
             result = None
         else:
             result = wrapped(*args, **kwargs)

@@ -11,7 +11,7 @@
 AiiDA class to deal with crystal structure trajectories.
 """
 
-import collections
+import collections.abc
 
 from .array import ArrayData
 
@@ -35,7 +35,7 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        if not isinstance(symbols, collections.Iterable):
+        if not isinstance(symbols, collections.abc.Iterable):
             raise TypeError('TrajectoryData.symbols must be of type list')
         if any([not isinstance(i, str) for i in symbols]):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')

@@ -1,0 +1,13 @@
+.benchmarks
+.cache
+.coverage
+.mypy_cache
+.pytest_cache
+.tox
+.vscode
+aiida_core.egg-info
+docs/build
+pip-wheel-metadata
+**/.DS_Store
+**/*.pyc
+**/__pycache__

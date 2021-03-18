@@ -12,12 +12,11 @@ import os
 import unittest
 import traceback
 
-from tornado import ioloop
-
 from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
-from aiida.common.lang import classproperty
 from aiida.manage import configuration
 from aiida.manage.manager import get_manager, reset_manager
+from aiida import orm
+from aiida.common.lang import classproperty
 
 TEST_KEYWORD = 'test_'
 
@@ -33,6 +32,8 @@ class AiidaTestCase(unittest.TestCase):
     """This is the base class for AiiDA tests, independent of the backend.
 
     Internally it loads the AiidaTestImplementation subclass according to the current backend."""
+    _computer = None  # type: aiida.orm.Computer
+    _user = None  # type: aiida.orm.User
     _class_was_setup = False
     __backend_instance = None
     backend = None  # type: aiida.orm.implementation.Backend
@@ -65,46 +66,39 @@ class AiidaTestCase(unittest.TestCase):
         return cls.__impl_class
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):  # pylint: disable=arguments-differ
+    def setUpClass(cls):
+        """Set up test class."""
         # Note: this will raise an exception, that will be seen as a test
         # failure. To be safe, you should do the same check also in the tearDownClass
         # to avoid that it is run
         check_if_tests_can_run()
 
         # Force the loading of the backend which will load the required database environment
-        get_manager().get_backend()
-
+        cls.backend = get_manager().get_backend()
         cls.__backend_instance = cls.get_backend_class()()
-        cls.__backend_instance.setUpClass_method(*args, **kwargs)
-        cls.backend = cls.__backend_instance.backend
-
         cls._class_was_setup = True
 
-        cls.clean_db()
-        cls.insert_data()
+        cls.refurbish_db()
 
-    def setUp(self):
-        # Install a new IOLoop so that any messing up of the state of the loop is not propagated
-        # to subsequent tests.
-        # This call should come before the backend instance setup call just in case it uses the loop
-        ioloop.IOLoop().make_current()
+    @classmethod
+    def tearDownClass(cls):
+        """Tear down test class.
+
+        Note: Also cleans file repository.
+        """
+        # Double check for double security to avoid to run the tearDown
+        # if this is not a test profile
+
+        check_if_tests_can_run()
+        if orm.autogroup.CURRENT_AUTOGROUP is not None:
+            orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()
+        cls.clean_db()
+        cls.clean_repository()
 
     def tearDown(self):
-        # Clean up the loop we created in set up.
-        # Call this after the instance tear down just in case it uses the loop
         reset_manager()
-        loop = ioloop.IOLoop.current()
-        if not loop._closing:  # pylint: disable=protected-access,no-member
-            loop.close()
 
-    def reset_database(self):
-        """Reset the database to the default state deleting any content currently stored"""
-        from aiida.orm import autogroup
-
-        self.clean_db()
-        if autogroup.CURRENT_AUTOGROUP is not None:
-            autogroup.CURRENT_AUTOGROUP.clear_group_cache()
-        self.insert_data()
+    ### Database/repository-related methods
 
     @classmethod
     def insert_data(cls):
@@ -113,19 +107,9 @@ class AiidaTestCase(unittest.TestCase):
         inserts default data into the database (which is for the moment a
         default computer).
         """
-        from aiida.orm import User
-
-        cls.create_user()
-        User.objects.reset()
-        cls.create_computer()
-
-    @classmethod
-    def create_user(cls):
-        cls.__backend_instance.create_user()
-
-    @classmethod
-    def create_computer(cls):
-        cls.__backend_instance.create_computer()
+        orm.User.objects.reset()  # clear Aiida's cache of the default user
+        # populate user cache of test clases
+        cls.user  # pylint: disable=pointless-statement
 
     @classmethod
     def clean_db(cls):
@@ -144,8 +128,22 @@ class AiidaTestCase(unittest.TestCase):
             raise InvalidOperation('You cannot call clean_db before running the setUpClass')
 
         cls.__backend_instance.clean_db()
+        cls._computer = None
+        cls._user = None
+
+        if orm.autogroup.CURRENT_AUTOGROUP is not None:
+            orm.autogroup.CURRENT_AUTOGROUP.clear_group_cache()
 
         reset_manager()
+
+    @classmethod
+    def refurbish_db(cls):
+        """Clean up database and repopulate with initial data.
+
+        Combines clean_db and insert_data.
+        """
+        cls.clean_db()
+        cls.insert_data()
 
     @classmethod
     def clean_repository(cls):
@@ -177,24 +175,31 @@ class AiidaTestCase(unittest.TestCase):
 
         :return: the test computer
         :rtype: :class:`aiida.orm.Computer`"""
-        return cls.__backend_instance.get_computer()
+        if cls._computer is None:
+            created, computer = orm.Computer.objects.get_or_create(
+                label='localhost',
+                hostname='localhost',
+                transport_type='local',
+                scheduler_type='direct',
+                workdir='/tmp/aiida',
+            )
+            if created:
+                computer.store()
+            cls._computer = computer
+
+        return cls._computer
+
+    @classproperty
+    def user(cls):  # pylint: disable=no-self-argument
+        if cls._user is None:
+            cls._user = get_default_user()
+        return cls._user
 
     @classproperty
     def user_email(cls):  # pylint: disable=no-self-argument
-        return cls.__backend_instance.get_user_email()
+        return cls.user.email  # pylint: disable=no-member
 
-    @classmethod
-    def tearDownClass(cls, *args, **kwargs):  # pylint: disable=arguments-differ
-        # Double check for double security to avoid to run the tearDown
-        # if this is not a test profile
-        from aiida.orm import autogroup
-
-        check_if_tests_can_run()
-        if autogroup.CURRENT_AUTOGROUP is not None:
-            autogroup.CURRENT_AUTOGROUP.clear_group_cache()
-        cls.clean_db()
-        cls.clean_repository()
-        cls.__backend_instance.tearDownClass_method(*args, **kwargs)
+    ### Usability methods
 
     def assertClickSuccess(self, cli_result):  # pylint: disable=invalid-name
         self.assertEqual(cli_result.exit_code, 0, cli_result.output)
@@ -219,3 +224,27 @@ class AiidaPostgresTestCase(AiidaTestCase):
         """Close the PGTest postgres test cluster."""
         super().tearDownClass(*args, **kwargs)
         cls.pg_test.close()
+
+
+def get_default_user(**kwargs):
+    """Creates and stores the default user in the database.
+
+    Default user email is taken from current profile.
+    No-op if user already exists.
+    The same is done in `verdi setup`.
+
+    :param kwargs: Additional information to use for new user, i.e. 'first_name', 'last_name' or 'institution'.
+    :returns: the :py:class:`~aiida.orm.User`
+    """
+    from aiida.manage.configuration import get_config
+    email = get_config().current_profile.default_user
+
+    if kwargs.pop('email', None):
+        raise ValueError('Do not specify the user email (must coincide with default user email of profile).')
+
+    # Create the AiiDA user if it does not yet exist
+    created, user = orm.User.objects.get_or_create(email=email, **kwargs)
+    if created:
+        user.store()
+
+    return user

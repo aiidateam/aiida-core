@@ -563,10 +563,10 @@ class NodeTranslator(BaseTranslator):
 
         for node_entry in results[result_name]:
             # construct full_type and add it to every node
-            try:
-                node_entry['full_type'] = construct_full_type(node_entry['node_type'], node_entry['process_type'])
-            except KeyError:
-                node_entry['full_type'] = None
+            node_entry['full_type'] = (
+                construct_full_type(node_entry.get('node_type'), node_entry.get('process_type'))
+                if node_entry.get('node_type') or node_entry.get('process_type') else None
+            )
 
         return results
 

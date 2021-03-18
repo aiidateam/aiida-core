@@ -19,6 +19,6 @@ from .process_spec import *
 from .workchains import *
 
 __all__ = (
-    builder.__all__ + calcjobs.__all__ + exit_code.__all__ + functions.__all__ + ports.__all__ + process.__all__ +
-    process_spec.__all__ + workchains.__all__
+    builder.__all__ + calcjobs.__all__ + exit_code.__all__ + functions.__all__ +  # type: ignore[name-defined]
+    ports.__all__ + process.__all__ + process_spec.__all__ + workchains.__all__  # type: ignore[name-defined]
 )

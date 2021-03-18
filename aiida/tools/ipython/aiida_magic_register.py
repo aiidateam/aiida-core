@@ -15,20 +15,15 @@ magic available at startup.
 The start up folder is usually at ``.ipython/profile_default/startup/``
 """
 
+# DOCUMENTATION MARKER
 if __name__ == '__main__':
 
     try:
         import aiida
         del aiida
     except ImportError:
+        # AiiDA is not installed in this Python environment
         pass
     else:
-        import IPython
-        # pylint: disable=ungrouped-imports
-        from aiida.tools.ipython.ipython_magics import load_ipython_extension
-
-        # Get the current Ipython session
-        IPYSESSION = IPython.get_ipython()
-
-        # Register the line magic
-        load_ipython_extension(IPYSESSION)
+        from aiida.tools.ipython.ipython_magics import register_ipython_extension
+        register_ipython_extension()

@@ -15,7 +15,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    **Install prerequisite services**
 
-      AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires a `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ shell, and Python >= 3.6.
+      AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires a `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ shell, and Python >= 3.7.
 
    .. tabbed:: Ubuntu
 
@@ -216,6 +216,23 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    ---
 
+   **Setup profile**
+
+   Next, set up an AiiDA configuration profile and related data storage, with the ``verdi quicksetup`` command.
+
+   .. code-block:: console
+
+       (aiida) $ verdi quicksetup
+       Info: enter "?" for help
+       Info: enter "!" to ignore the default and set no value
+       Profile name: me
+       Email Address (for sharing data): me@user.com
+       First name: my
+       Last name: name
+       Institution: where-i-work
+
+   ---
+
    **Start verdi daemons**
 
    Start the verdi daemon(s) that are used to run AiiDA workflows.
@@ -231,23 +248,6 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
    .. tip::
 
        Do not start more daemons then there are physical processors on your system.
-
-   ---
-
-   **Setup profile**
-
-   Next, set up an AiiDA configuration profile and related data storage, with the ``verdi quicksetup`` command.
-
-   .. code-block:: console
-
-       (aiida) $ verdi quicksetup
-       Info: enter "?" for help
-       Info: enter "!" to ignore the default and set no value
-       Profile name: me
-       Email Address (for sharing data): me@user.com
-       First name: my
-       Last name: name
-       Institution: where-i-work
 
    ---
 

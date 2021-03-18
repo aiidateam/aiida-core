@@ -26,17 +26,7 @@ __all__ = ('Computer',)
 
 class Computer(entities.Entity):
     """
-    Base class to map a node in the DB + its permanent repository counterpart.
-
-    Stores attributes starting with an underscore.
-
-    Caches files and attributes before the first save, and saves everything only on store().
-    After the call to store(), attributes cannot be changed.
-
-    Only after storing (or upon loading from uuid) metadata can be modified
-    and in this case they are directly set on the db.
-
-    In the plugin, also set the _plugin_type_string, to be set in the DB in the 'type' field.
+    Computer entity.
     """
     # pylint: disable=too-many-public-methods
 
@@ -67,6 +57,26 @@ class Computer(entities.Entity):
                 filters['name'] = filters.pop('label')
 
             return super().get(**filters)
+
+        def get_or_create(self, label=None, **kwargs):
+            """
+            Try to retrieve a Computer from the DB with the given arguments;
+            create (and store) a new Computer if such a Computer was not present yet.
+
+            :param label: computer label
+            :type label: str
+
+            :return: (computer, created) where computer is the computer (new or existing,
+              in any case already stored) and created is a boolean saying
+            :rtype: (:class:`aiida.orm.Computer`, bool)
+            """
+            if not label:
+                raise ValueError('Computer label must be provided')
+
+            try:
+                return False, self.get(label=label)
+            except exceptions.NotExistent:
+                return True, Computer(backend=self.backend, label=label, **kwargs)
 
         def list_names(self):
             """Return a list with all the names of the computers in the DB.
@@ -721,7 +731,8 @@ class Computer(entities.Entity):
 
         config = {}
         try:
-            authinfo = backend.authinfos.get(self, user)
+            # Need to pass the backend entity here, not just self
+            authinfo = backend.authinfos.get(self._backend_entity, user)
             config = authinfo.get_auth_params()
         except exceptions.NotExistent:
             pass

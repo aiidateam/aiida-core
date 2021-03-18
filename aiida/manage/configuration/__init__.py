@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
+import os
+import shutil
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
@@ -68,7 +70,6 @@ def load_profile(profile=None):
 
 def get_config_path():
     """Returns path to .aiida configuration directory."""
-    import os
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
 
     return os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
@@ -87,7 +88,6 @@ def load_config(create=False):
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
-    import os
     from aiida.common import exceptions
     from .config import Config
 
@@ -101,7 +101,43 @@ def load_config(create=False):
     except ValueError:
         raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON')
 
+    _merge_deprecated_cache_yaml(config, filepath)
+
     return config
+
+
+def _merge_deprecated_cache_yaml(config, filepath):
+    """Merge the deprecated cache_config.yml into the config."""
+    from aiida.common import timezone
+    cache_path = os.path.join(os.path.dirname(filepath), 'cache_config.yml')
+    if not os.path.exists(cache_path):
+        return
+
+    cache_path_backup = None
+    # Keep generating a new backup filename based on the current time until it does not exist
+    while not cache_path_backup or os.path.isfile(cache_path_backup):
+        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+
+    warnings.warn(
+        f'cache_config.yml use is deprecated, merging into config.json and moving to: {cache_path_backup}',
+        AiidaDeprecationWarning
+    )
+    import yaml
+    with open(cache_path, 'r', encoding='utf8') as handle:
+        cache_config = yaml.safe_load(handle)
+    for profile_name, data in cache_config.items():
+        if profile_name not in config.profile_names:
+            warnings.warn(f"Profile '{profile_name}' from cache_config.yml not in config.json, skipping", UserWarning)
+            continue
+        for key, option_name in [('default', 'caching.default_enabled'), ('enabled', 'caching.enabled_for'),
+                                 ('disabled', 'caching.disabled_for')]:
+            if key in data:
+                value = data[key]
+                # in case of empty key
+                value = [] if value is None and key != 'default' else value
+                config.set_option(option_name, value, scope=profile_name)
+    config.store()
+    shutil.move(cache_path, cache_path_backup)
 
 
 def get_profile():

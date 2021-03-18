@@ -12,7 +12,13 @@ from enum import Enum, IntEnum
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
+__all__ = ('StashMode', 'CalcJobState', 'CalcInfo', 'CodeInfo', 'CodeRunMode')
+
+
+class StashMode(Enum):
+    """Mode to use when stashing files from the working directory of a completed calculation job for safekeeping."""
+
+    COPY = 'copy'
 
 
 class CalcJobState(Enum):
@@ -21,6 +27,7 @@ class CalcJobState(Enum):
     UPLOADING = 'uploading'
     SUBMITTING = 'submitting'
     WITHSCHEDULER = 'withscheduler'
+    STASHING = 'stashing'
     RETRIEVING = 'retrieving'
     PARSING = 'parsing'
 
@@ -32,25 +39,32 @@ class CalcInfo(DefaultFieldsAttributeDict):
 
     In the following descriptions all paths have to be considered relative
 
-    * retrieve_list: a list of strings or tuples that indicate files that are to be retrieved from the remote
-        after the calculation has finished and stored in the repository in a FolderData.
-        If the entry in the list is just a string, it is assumed to be the filepath on the remote and it will
-        be copied to '.' of the repository with name os.path.split(item)[1]
-        If the entry is a tuple it is expected to have the following format
+    * retrieve_list: a list of strings or tuples that indicate files that are to be retrieved from the remote after the
+        calculation has finished and stored in the ``retrieved_folder`` output node of type ``FolderData``. If the entry
+        in the list is just a string, it is assumed to be the filepath on the remote and it will be copied to the base
+        directory of the retrieved folder, where the name corresponds to the basename of the remote relative path. This
+        means that any remote folder hierarchy is ignored entirely.
 
-            ('remotepath', 'localpath', depth)
+        Remote folder hierarchy can be (partially) maintained by using a tuple instead, with the following format
 
-        If the 'remotepath' is a file or folder, it will be copied in the repository to 'localpath'.
-        However, if the 'remotepath' contains file patterns with wildcards, the 'localpath' should be set to '.'
-        and the depth parameter should be an integer that decides the localname. The 'remotepath' will be split on
-        file separators and the local filename will be determined by joining the N last elements, where N is
-        given by the depth variable.
+            (source, target, depth)
 
-        Example: ('some/remote/path/files/pattern*[0-9].xml', '.', 2)
+        The ``source`` and ``target`` elements are relative filepaths in the remote and retrieved folder. The contents
+        of ``source`` (whether it is a file or folder) are copied in its entirety to the ``target`` subdirectory in the
+        retrieved folder. If no subdirectory should be created, ``'.'`` should be specified for ``target``.
 
-        Will result in all files that match the pattern to be copied to the local repository with path
+        The ``source`` filepaths support glob patterns ``*`` in case the exact name of the files that are to be
+        retrieved are not know a priori.
 
-            'files/pattern*[0-9].xml'
+        The ``depth`` element can be used to control what level of nesting of the source folder hierarchy should be
+        maintained. If ``depth`` equals ``0`` or ``1`` (they are equivalent), only the basename of the ``source``
+        filepath is kept. For each additional level, another subdirectory of the remote hierarchy is kept. For example:
+
+            ('path/sub/file.txt', '.', 2)
+
+        will retrieve the ``file.txt`` and store it under the path:
+
+            sub/file.txt
 
     * retrieve_temporary_list: a list of strings or tuples that indicate files that will be retrieved
         and stored temporarily in a FolderData, that will be available only during the parsing call.
@@ -74,6 +88,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         already indirectly present in the repository through one of the data nodes passed as input to the calculation.
     * codes_info: a list of dictionaries used to pass the info of the execution of a code
     * codes_run_mode: a string used to specify the order in which multi codes can be executed
+    * skip_submit: a flag that, when set to True, orders the engine to skip the submit/update steps (so no code will
+        run, it will only upload the files and then retrieve/parse).
     """
 
     _default_fields = (
@@ -98,7 +114,8 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'remote_symlink_list',
         'provenance_exclude_list',
         'codes_info',
-        'codes_run_mode'
+        'codes_run_mode',
+        'skip_submit'
     )
 
 

@@ -10,8 +10,8 @@ How to work with data
 Importing data
 ==============
 
-AiiDA allows users to export data from their database into an export archive file, which can be imported in any other AiiDA database.
-If you have an AiiDA export archive that you would like to import, you can use the ``verdi import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
+AiiDA allows users to export data from their database into an export archive file, which can be imported into any other AiiDA database.
+If you have an AiiDA export archive that you would like to import, you can use the ``verdi archive import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
 
 .. note:: For information on exporting and importing data via AiiDA archives, see :ref:`"How to share data"<how-to:share:archives>`.
 
@@ -71,7 +71,7 @@ Then we just construct an instance of that class, passing the file of interest a
 Note that after construction, you will get an *unstored* node.
 This means that at this point your data is not yet stored in the database and you can first inspect it and optionally modify it.
 If you are happy with the results, you can store the new data permanently by calling the :py:meth:`~aiida.orm.nodes.node.Node.store` method.
-Every node is assigned a Universal Unique Identifer (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
+Every node is assigned a Universal Unique Identifier (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
 You can use these identifiers to reference and or retrieve a node.
 Ways to find and retrieve data that have previously been imported are described in section :ref:`"How to find data"<how-to:data:find>`.
 
@@ -129,7 +129,7 @@ However, they have to be of the same ORM-type (e.g. all have to be subclasses of
 .. code-block:: python
 
     qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
+    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertices of path, either WorkChainNode or Job.
 
 .. note::
 
@@ -148,7 +148,7 @@ There are several ways to obtain data from a query:
 .. code-block:: python
 
     qb = QueryBuilder()                 # Instantiating instance
-    qb.append(CalcJobNode)              # Setting first vertice of path
+    qb.append(CalcJobNode)              # Setting first vertices of path
 
     first_row = qb.first()              # Returns a list (!) of the results of the first row
 
@@ -507,10 +507,15 @@ From the command line interface:
       Are you sure to delete Group<another_group>? [y/N]: y
       Success: Group<another_group> deleted.
 
-.. important::
-    Any deletion operation related to groups won't affect the nodes themselves.
-    For example if you delete a group, the nodes that belonged to the group will remain in the database.
-    The same happens if you remove nodes from the group -- they will remain in the database but won't belong to the group anymore.
+Any deletion operation related to groups, by default, will not affect the nodes themselves.
+For example if you delete a group, the nodes that belonged to the group will remain in the database.
+The same happens if you remove nodes from the group -- they will remain in the database but won't belong to the group anymore.
+
+If you also wish to delete the nodes, when deleting the group, use the ``--delete-nodes`` option:
+
+.. code-block:: console
+
+      $ verdi group delete another_group --delete-nodes
 
 Copy one group into another
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -764,7 +769,7 @@ Deleting data
 
 By default, every time you run or submit a new calculation, AiiDA will create for you new nodes in the database, and will never replace or delete data.
 There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
-For this case, AiiDA provides the ``verdi node delete`` command to remove the nodes from the provenance graph.
+For this case, AiiDA provides the ``verdi node delete`` command and the :py:func:`~aiida.tools.graph.deletions.delete_nodes` function, to remove the nodes from the provenance graph.
 
 .. caution::
    Once the data is deleted, there is no way to recover it (unless you made a backup).
@@ -779,6 +784,13 @@ You can also use the ``--dry-run`` flag of ``verdi node delete`` to see what the
 In addition, there are a number of additional rules that are not mandatory to ensure consistency, but can be toggled by the user.
 For instance, you can set ``--create-forward`` if, when deleting a calculation, you want to delete also the data it produced (using instead ``--no-create-forward`` will delete the calculation only, keeping the output data: note that this effectively strips out the provenance information of the output data).
 The full list of these flags is available from the help command ``verdi node delete -h``.
+
+.. code-block:: python
+
+    from aiida.tools import delete_nodes
+    pks_to_be_deleted = delete_nodes(
+        [1, 2, 3], dry_run=True, create_forward=True, call_calc_forward=True, call_work_forward=True
+    )
 
 Deleting computers
 ------------------
@@ -805,3 +817,79 @@ This command will delete both the file repository and the database.
 .. danger::
 
   It is not possible to restore a deleted profile unless it was previously backed up!
+
+.. _how-to:data:transfer:
+
+Transferring data
+=================
+
+.. versionadded:: 1.6.0
+
+.. danger::
+
+    This feature is still in beta version and its API might change in the near future.
+    It is therefore not recommended that you rely on it for your public/production workflows.
+
+    Moreover, feedback on its implementation is much appreciated (at https://github.com/aiidateam/aiida-core/issues/4811).
+
+When a calculation job is launched, AiiDA will create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node that is attached as an output node to the calculation node with the label ``remote_folder``.
+The input files generated by the ``CalcJob`` plugin are copied to this remote folder and, since the job is executed there as well, the code will produce its output files in that same remote folder also.
+Since the :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node only explicitly stores the filepath on the remote computer, and not its actual contents, it functions more or less like a symbolic link.
+That means that if the remote folder gets deleted, there will be no way to retrieve its contents.
+The ``CalcJob`` plugin can for that reason specify some files that should be :ref:`retrieved<topics:calculations:usage:calcjobs:file_lists_retrieve>` and stored locally in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node for safekeeing, which is attached to the calculation node as an output with the label ``retrieved_folder``.
+
+Although the :ref:`retrieve_list<topics:calculations:usage:calcjobs:file_lists_retrieve>` allows to specify what output files are to be retrieved locally, this has to be done *before* the calculation is submitted.
+In order to provide more flexibility in deciding what files of completed calculation jobs are to be stored locally, even after it has terminated, AiiDA ships with a the :py:class:`~aiida.calculations.transfer.TransferCalculation` plugin.
+This calculation plugin enables to retrieve files from a remote machine and save them in a local :py:class:`~aiida.orm.nodes.data.folder.FolderData`.
+The specifications of what to copy are provided through an input of type
+
+.. code-block:: ipython
+
+    In [1]: instructions_cont = {}
+        ... instructions_cont['retrieve_files'] = True
+        ... instructions_cont['symlink_files'] = [
+        ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
+        ... ]
+        ... instructions_node = orm.Dict(dict=instructions_cont)
+
+The ``'source/path/filename'`` and ``'target/path/filename'`` are both relative paths (to their respective folders).
+The ``node_keyname`` is a string that will be used when providing the source :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node to the calculation.
+You also need to provide the computer between which the transfer will occur:
+
+.. code-block:: ipython
+
+    In [2]: transfer_builder = CalculationFactory('core.transfer').get_builder()
+        ... transfer_builder.instructions = instructions_node
+        ... transfer_builder.source_nodes = {'node_keyname': source_node}
+        ... transfer_builder.metadata.computer = source_node.computer
+
+The variable ``source_node`` here corresponds to the ``RemoteData`` node whose contents need to be retrieved.
+Finally, you just run or submit the calculation as you would do with any other:
+
+.. code-block:: ipython
+
+    In [2]: from aiida.engine import submit
+        ... submit(transfer_builder)
+
+You can also use this to copy local files into a new :py:class:`~aiida.orm.nodes.data.remote.RemoteData` folder.
+For this you first have to adapt the instructions to set ``'retrieve_files'`` to ``False`` and use a ``'local_files'`` list instead of the ``'symlink_files'``:
+
+.. code-block:: ipython
+
+    In [1]: instructions_cont = {}
+        ... instructions_cont['retrieve_files'] = False
+        ... instructions_cont['local_files'] = [
+        ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
+        ... ]
+        ... instructions_node = orm.Dict(dict=instructions_cont)
+
+It is also relevant to note that, in this case, the ``source_node`` will be of type :py:class:`~aiida.orm.nodes.data.folder.FolderData` so you will have to manually select the computer to where you want to copy the files.
+You can do this by looking at your available computers running ``verdi computer list`` and using the label shown to load it with :py:func:`~aiida.orm.utils.load_computer`:
+
+.. code-block:: ipython
+
+    In [2]: transfer_builder.metadata.computer = load_computer('some-computer-label')
+
+Both when uploading or retrieving, you can copy multiple files by appending them to the list of the ``local_files`` or ``symlink_files`` keys in the instructions input, respectively.
+It is also possible to copy files from any number of nodes by providing several ``source_node`` s, each with a different ``'node_keyname'``.
+The target node will always be one (so you can *"gather"* files in a single call, but not *"distribute"* them).

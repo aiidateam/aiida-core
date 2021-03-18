@@ -191,26 +191,6 @@ This section explains how to use the ``proxy_command`` feature of ``ssh`` in ord
 
   This method can also be used to automatically tunnel into virtual private networks, if you have an account on a proxy/jumphost server with access to the network.
 
-Requirements
-^^^^^^^^^^^^
-
-The ``netcat`` tool needs to be present on the *PROXY* server (executable may be named ``netcat`` or ``nc``).
-``netcat`` simply takes the standard input and redirects it to a given TCP port.
-
-.. dropdown:: Installing netcat
-
-    If neither ``netcat`` or ``nc`` are available, you will need to install it on your own.
-    You can download a `netcat distribution <http://netcat.sourceforge.net/download.php>`_, unzip the downloaded package, ``cd`` into the folder and execute something like:
-
-    .. code-block:: console
-
-       $ ./configure --prefix=.
-       $ make
-       $ make install
-
-    This usually creates a subfolder ``bin``, containing the ``netcat`` and ``nc`` executables.
-    Write down the full path to ``nc`` which we will need later.
-
 
 
 SSH configuration
@@ -222,14 +202,9 @@ Edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or
       Hostname FULLHOSTNAME_TARGET
       User USER_TARGET
       IdentityFile ~/.ssh/aiida
-      ProxyCommand ssh USER_PROXY@FULLHOSTNAME_PROXY ABSPATH_NETCAT %h %p
+      ProxyCommand ssh -W %h:%p USER_PROXY@FULLHOSTNAME_PROXY
 
-replacing the ``..._TARGET`` and ``..._PROXY`` variables with the host/user names of the respective servers, and replacing ``ABSPATH_NETCAT`` with the result of ``which netcat`` (or ``which nc``).
-
-.. note::
-
-    If desired/necessary for your netcat implementation, hide warnings and errors  that may occur during the proxying/tunneling by redirecting stdout and stderr, e.g. by appending ``2> /dev/null`` to the ``ProxyCommand``.
-
+replacing the ``..._TARGET`` and ``..._PROXY`` variables with the host/user names of the respective servers.
 
 This should allow you to directly connect to the *TARGET* server using
 
@@ -239,15 +214,6 @@ This should allow you to directly connect to the *TARGET* server using
 
 For a *passwordless* connection, you need to follow the instructions :ref:`how-to:ssh:passwordless` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server.
 
-
-.. warning::
-
-   There are occasionally ``netcat`` implementations, which keep running after you close your SSH connection, resulting in a growing number of open SSH connections between the *PROXY* server and the *TARGET* server.
-   If you suspect an issue, it may be worth connecting to the *PROXY* server and checking how many ``netcat`` processes are running, e.g. via:
-
-   .. code-block:: console
-
-      $ ps -aux | grep netcat
 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^

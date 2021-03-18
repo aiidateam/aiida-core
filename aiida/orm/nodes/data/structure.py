@@ -115,8 +115,12 @@ def get_pymatgen_version():
     """
     if not has_pymatgen():
         return None
-    import pymatgen
-    return pymatgen.__version__
+    try:
+        from pymatgen import __version__
+    except ImportError:
+        # this was changed in version 2022.0.3
+        from pymatgen.core import __version__
+    return __version__
 
 
 def has_spglib():
@@ -1852,7 +1856,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        from pymatgen import Structure
+        from pymatgen.core.structure import Structure
 
         if self.pbc != (True, True, True):
             raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
@@ -1862,7 +1866,7 @@ class StructureData(Data):
 
         if (kwargs.pop('add_spin', False) and any([n.endswith('1') or n.endswith('2') for n in self.get_kind_names()])):
             # case when spins are defined -> no partial occupancy allowed
-            from pymatgen import Specie
+            from pymatgen.core.periodic_table import Specie
             oxidation_state = 0  # now I always set the oxidation_state to zero
             for site in self.sites:
                 kind = self.get_kind(site.kind_name)
@@ -1907,7 +1911,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        from pymatgen import Molecule
+        from pymatgen.core.structure import Molecule
 
         if kwargs:
             raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')

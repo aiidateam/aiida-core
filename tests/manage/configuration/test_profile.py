@@ -68,9 +68,9 @@ class TestProfile(AiidaTestCase):
 
     def test_set_option(self):
         """Test the `set_option` method."""
-        option_key = 'user_email'
-        option_value_one = 'first@email.com'
-        option_value_two = 'second@email.com'
+        option_key = 'daemon.timeout'
+        option_value_one = 999
+        option_value_two = 666
 
         # Setting an option if it does not exist should work
         self.profile.set_option(option_key, option_value_one)

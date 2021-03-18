@@ -83,11 +83,6 @@ LOGGING = {
             'level': lambda: get_config_option('logging.aiida_loglevel'),
             'propagate': False,
         },
-        'tornado': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.tornado_loglevel'),
-            'propagate': False,
-        },
         'plumpy': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.plumpy_loglevel'),
@@ -106,6 +101,11 @@ LOGGING = {
         'alembic': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.alembic_loglevel'),
+            'propagate': False,
+        },
+        'aio_pika': {
+            'handlers': ['console'],
+            'level': lambda: get_config_option('logging.aiopika_loglevel'),
             'propagate': False,
         },
         'sqlalchemy': {

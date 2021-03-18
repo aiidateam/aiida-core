@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,no-self-use
 """Tests for the Node ORM class."""
 import io
+import logging
 import os
 import tempfile
 
@@ -825,6 +826,51 @@ class TestNodeDelete:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
+class TestNodeComments:
+    """Tests for creating comments on nodes."""
+
+    def test_add_comment(self):
+        """Test comment addition."""
+        data = Data().store()
+        content = 'whatever Trevor'
+        comment = data.add_comment(content)
+        assert comment.content == content
+        assert comment.node.pk == data.pk
+
+    def test_get_comment(self):
+        """Test retrieve single comment."""
+        data = Data().store()
+        content = 'something something dark side'
+        add_comment = data.add_comment(content)
+        get_comment = data.get_comment(add_comment.pk)
+        assert get_comment.content == content
+        assert get_comment.pk == add_comment.pk
+
+    def test_get_comments(self):
+        """Test retrieve multiple comments."""
+        data = Data().store()
+        data.add_comment('one')
+        data.add_comment('two')
+        comments = data.get_comments()
+        assert {c.content for c in comments} == {'one', 'two'}
+
+    def test_update_comment(self):
+        """Test update a comment."""
+        data = Data().store()
+        comment = data.add_comment('original')
+        data.update_comment(comment.pk, 'new')
+        assert comment.content == 'new'
+
+    def test_remove_comment(self):
+        """Test remove a comment."""
+        data = Data().store()
+        comment = data.add_comment('original')
+        assert len(data.get_comments()) == 1
+        data.remove_comment(comment.pk)
+        assert len(data.get_comments()) == 0
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
 def test_store_from_cache():
     """Regression test for storing a Node with (nested) repository content with caching."""
     data = Data()
@@ -846,6 +892,23 @@ def test_store_from_cache():
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
+def test_hashing_errors(aiida_caplog):
+    """Tests that ``get_hash`` fails in an expected manner."""
+    node = Data().store()
+    node.__module__ = 'unknown'  # this will inhibit package version determination
+    result = node.get_hash(ignore_errors=True)
+    assert result is None
+    assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
+
+    with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
+        result = node.get_hash(ignore_errors=False)
+    assert result is None
+
+
+# Ignoring the resource errors as we are indeed testing the wrong way of using these (for backward-compatibility)
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+@pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
+@pytest.mark.usefixtures('clear_database_before_test')
 def test_open_wrapper():
     """Test the wrapper around the return value of ``Node.open``.
 
@@ -860,3 +923,21 @@ def test_open_wrapper():
     iter(node.open(filename))
     node.open(filename).__next__()
     node.open(filename).__iter__()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_uuid_equality_fallback():
+    """Tests the fallback mechanism of checking equality by comparing uuids and hash."""
+    node_0 = Data().store()
+
+    nodepk = Data().store().pk
+    node_a = load_node(pk=nodepk)
+    node_b = load_node(pk=nodepk)
+
+    assert node_a == node_b
+    assert node_a != node_0
+    assert node_b != node_0
+
+    assert hash(node_a) == hash(node_b)
+    assert hash(node_a) != hash(node_0)
+    assert hash(node_b) != hash(node_0)

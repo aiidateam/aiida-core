@@ -10,15 +10,17 @@
 # pylint: disable=no-member, too-many-lines
 """Test data-related verdi commands."""
 
+import asyncio
 import io
 import os
 import shutil
 import unittest
 import tempfile
 import subprocess as sp
-import numpy as np
 
 from click.testing import CliRunner
+import numpy as np
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -228,6 +230,7 @@ class TestVerdiDataArray(AiidaTestCase):
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
+@pytest.mark.requires_rmq
 class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
     """Testing verdi data bands."""
 
@@ -298,7 +301,16 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
     @classmethod
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
+
+        # create a new event loop since the privious one is closed by other test case
+        cls.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(cls.loop)
         cls.ids = cls.create_structure_bands()
+
+    @classmethod
+    def tearDownClass(cls):  # pylint: disable=arguments-differ
+        cls.loop.close()
+        super().tearDownClass()
 
     def setUp(self):
         self.cli_runner = CliRunner()

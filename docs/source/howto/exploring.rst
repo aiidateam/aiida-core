@@ -10,11 +10,11 @@ Incoming and outgoing links
 ===========================
 
 The provenance graph in AiiDA is a :ref:`directed graph <topics:provenance:concepts>`.
-The vertices of the graph are the *nodes* and the edges that connect them are called *links*.
+The vertices of the graph are the *nodes*, and the edges that connect them are called *links*.
 Since the graph is directed, any node can have *incoming* and *outgoing* links that connect it to neighboring nodes.
 
 To discover the neighbors of a given node, you can use the methods :meth:`~aiida.orm.nodes.node.Node.get_incoming` and :meth:`~aiida.orm.nodes.node.Node.get_outgoing`.
-They have the exact same interface but will return the neighbors connected to the current node with link coming into it, or with links going out of it, respectively.
+They have the exact same interface but will return the neighbors connected to the current node with a link coming into it or with links going out of it, respectively.
 For example, for a given ``node``, to inspect all the neighboring nodes from which a link is incoming to the ``node``:
 
 .. code-block:: python
@@ -22,7 +22,7 @@ For example, for a given ``node``, to inspect all the neighboring nodes from whi
     node.get_incoming()
 
 This will return an instance of the :class:`~aiida.orm.utils.links.LinkManager`.
-From that manager you can request the results in a specific format.
+From that manager, you can request the results in a specific format.
 If you are only interested in the neighboring nodes themselves, you can call the :class:`~aiida.orm.utils.links.LinkManager.all_nodes` method:
 
 .. code-block:: python

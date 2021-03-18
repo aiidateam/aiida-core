@@ -401,8 +401,8 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         # TODO: check if this is the memory per node  # pylint: disable=fixme
         if job_tmpl.max_memory_kb:
             try:
-                virtual_memory_kb = int(job_tmpl.max_memory_kb)
-                if virtual_memory_kb <= 0:
+                physical_memory_kb = int(job_tmpl.max_memory_kb)
+                if physical_memory_kb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
@@ -412,7 +412,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                 )
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
-            lines.append(f'#BSUB -M {virtual_memory_kb}')
+            lines.append(f'#BSUB -M {physical_memory_kb}')
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)

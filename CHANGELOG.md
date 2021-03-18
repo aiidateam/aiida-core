@@ -28,10 +28,8 @@ See [Stashing files on the remote](https://aiida.readthedocs.io/projects/aiida-c
 The **new `TransferCalcjob` plugin** ([#4194](https://github.com/aiidateam/aiida-core/pull/4194)) allows the user to copy files between a remote machine and the local machine running AiiDA.
 More specifically, it can do any of the following:
 
-- Take any number of files from any number of `RemoteData` folders in
-  a remote machine and copy them in the local repository of a single newly created `FolderData` node.
-- Take any number of files from any number of `FolderData` nodes in the local machine
-  and copy them in a single newly created `RemoteData` folder in a given remote machine.
+- Take any number of files from any number of `RemoteData` folders in a remote machine and copy them in the local repository of a single newly created `FolderData` node.
+- Take any number of files from any number of `FolderData` nodes in the local machine and copy them in a single newly created `RemoteData` folder in a given remote machine.
 
 See the [Transferring data](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/howto/data.html#transferring-data) how-to for more details.
 

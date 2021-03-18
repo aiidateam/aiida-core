@@ -11,16 +11,16 @@ A substantial effort has been made to test and debug the new implementation, and
 
 This release also drops support for Python 3.6 (testing is carried out against `3.7`, `3.8` and `3.9`).
 
-NOTE: `v1.6` is tentatively intended to be the final minor `v1.x` release before `v2.0.0`, that will introduce a new (back-incompatible) file repository and remove all deprecated code.
+NOTE: `v1.6` is tentatively intended to be the final minor `v1.x` release before `v2.x`, that will include a new file repository implementation and remove all deprecated code.
 
 ### New calculation features ✨
 
-Add the `additional_retrieve_list` metadata option ([#4437](https://github.com/aiidateam/aiida-core/pull/4437)).
+The `additional_retrieve_list` metadata option has been added to `CalcJob` ([#4437](https://github.com/aiidateam/aiida-core/pull/4437)).
 This new option allows one to specify additional files to be retrieved on a per-instance basis, in addition to the files that are already defined by the plugin to be retrieved.
 
-A **new namespace `stash`** is added to the `metadata.options` input namespace of the `CalcJob` process ([#4424](https://github.com/aiidateam/aiida-core/pull/4424)).
+A **new namespace `stash`** has bee added to the `metadata.options` input namespace of the `CalcJob` process ([#4424](https://github.com/aiidateam/aiida-core/pull/4424)).
 This option namespace allows a user to specify certain files that are created by the calculation job to be stashed somewhere on the remote.
-This can be useful if those files need to be stored for a longer time than the scratch space where the job was run is typically not cleaned for, but need to be kept on the remote machine and not retrieved.
+This can be useful if those files need to be stored for a longer time than the scratch space (where the job was run) is available for, but need to be kept on the remote machine and not retrieved.
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
 
 See [Stashing files on the remote](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/topics/calculations/usage.html#stashing-files-on-the-remote) for more details.
@@ -53,23 +53,24 @@ See the [Configuring profile options](https://aiida.readthedocs.io/projects/aiid
 In addition to `verdi config`, numerous other new commands and options have been added to `verdi`:
 
 - **Deprecate** `verdi export` and `verdi import` commands and merge into `verdi archive` ([#4710](https://github.com/aiidateam/aiida-core/pull/4710))
-- Add `verdi group delete --delete-nodes`, to also delete the nodes in a group during its removal ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)).
+- Added `verdi group delete --delete-nodes`, to also delete the nodes in a group during its removal ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)).
 - Improve `verdi group remove-nodes` command, to warn when requested nodes are not in the specified group ([#4728](https://github.com/aiidateam/aiida-core/pull/4728)).
-- Add `verdi database summary` ([#4737](https://github.com/aiidateam/aiida-core/pull/4737)):
+- Added `exception` to the projection mapping of `verdi process list`, for example to use in debugging as: `verdi process list -S excepted -P ctime pk exception` ([#4786](https://github.com/aiidateam/aiida-core/pull/4786)).
+- Added `verdi database summary` ([#4737](https://github.com/aiidateam/aiida-core/pull/4737)):
   This prints a summary of the count of each entity and (optionally) the list of unique identifiers for some entities.
-- Improve `verdi process play` performance, by only querying for active processes with the `--all` flag ([#4671](https://github.com/aiidateam/aiida-core/pull/4671))
-- Add the `verdi database version` command ([#4613](https://github.com/aiidateam/aiida-core/pull/4613)):
+- Improved `verdi process play` performance, by only querying for active processes with the `--all` flag ([#4671](https://github.com/aiidateam/aiida-core/pull/4671))
+- Added the `verdi database version` command ([#4613](https://github.com/aiidateam/aiida-core/pull/4613)):
   This shows the schema generation and version of the database of the given profile, useful mostly for developers when debugging.
-- Improve `verdi node delete` performance ([#4575](https://github.com/aiidateam/aiida-core/pull/4575)):
-  The logic has been re-written to greatly reduce the time to delete large amounts of nodes.
-- Fix `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts ([#4573](https://github.com/aiidateam/aiida-core/pull/4573))
-- Fix `verdi --version` when used in editable mode ([#4576](https://github.com/aiidateam/aiida-core/pull/4576))
+- Improved `verdi node delete` performance ([#4575](https://github.com/aiidateam/aiida-core/pull/4575)):
+  Theed `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts ([#4573](https://github.com/aiidateam/aiida-core/pull/4573))
+- Fixed `verdi --version` when used in editable mode ([#4576](https://github.com/aiidateam/aiida-core/pull/4576))
 
 ### API additions and improvements 👌
 
-Base `Node` `__eq__` and `__hash__` methods are now based on a node's UUID ([#4753](https://github.com/aiidateam/aiida-core/pull/4753)).
-For example, loading the same node twice will always resolve as equivalent: `load_node(1) == load_node(1)`, and nodes can be correctly added to sets: `len({load_node(1), load_node(1)}) == 1`.
+The base `Node` class now evaluates equality based on the node's UUID ([#4753](https://github.com/aiidateam/aiida-core/pull/4753)).
+For example, loading the same node twice will always resolve as equivalent: `load_node(1) == load_node(1)`.
 Note that existing, class specific, equality relationships will still override the base class behaviour, for example: `Int(99) == Int(99)`, even if the nodes have different UUIDs.
+This behaviour for subclasses is still under discussion at: <https://github.com/aiidateam/aiida-core/issues/1917>
 
 When hashing nodes for use with the caching features, `-0.` is now converted to `0.`, to reduce issues with differing hashes before/after node storage ([#4648](https://github.com/aiidateam/aiida-core/pull/4648)).
 Known failure modes for hashing are now also raised with the `HashingError` exception ([#4778](https://github.com/aiidateam/aiida-core/pull/4778)).
@@ -98,9 +99,13 @@ See [AiiDA REST API documentation](https://aiida.readthedocs.io/projects/aiida-c
 - Fix direct scheduler, in combination with `SshTransport`, hanging on submit command ([#4735](https://github.com/aiidateam/aiida-core/pull/4735)).
   In the ssh transport, to emulate 'chdir', the current directory is now kept in memory, and every command prepended with `cd FOLDER_NAME && ACTUALCOMMAND`.
 
+- In `aiida.tools.ipython.ipython_magics`, `load_ipython_extension` is deprecated in favour of `register_ipython_extension` ([#4548](https://github.com/aiidateam/aiida-core/pull/4548)).
+
 - Refactor `.ci/` folder, tests more portable and easier to understand ([#4565](https://github.com/aiidateam/aiida-core/pull/4565))
   The `ci/` folder had become cluttered, containing configuration and scripts for both the GitHub Actions and Jenkins CI.
   This change moved the GH actions specific scripts to `.github/system_tests`, and refactored the Jenkins setup/tests to use [molecule](molecule.readthedocs.io) in the `.molecule/` folder.
+
+- For aiida-core development, the pytest `requires_rmq` marker and `config_with_profile` fixture have been added ([#4739](https://github.com/aiidateam/aiida-core/pull/4739) and [#4764](https://github.com/aiidateam/aiida-core/pull/4764))
 
 ## v1.5.2 - 2020-12-07
 

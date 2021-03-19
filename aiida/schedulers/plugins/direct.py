@@ -142,7 +142,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 lines.append('exec 2>&1')
 
         if job_tmpl.max_memory_kb:
-            self.logger.info('Physical memory limiting is not supported by the direct scheduler.')
+            self.logger.warning('Physical memory limiting is not supported by the direct scheduler.')
 
         if not job_tmpl.import_sys_environment:
             lines.append('env --ignore-environment \\')

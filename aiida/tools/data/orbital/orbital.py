@@ -112,6 +112,14 @@ class Orbital:
     def __repr__(self):
         return f'<{self.__class__.__name__}: {str(self)}>'
 
+    def __str__(self) -> str:
+        orb_dict = self.get_orbital_dict()
+
+        position_string = f"{orb_dict['position'][0]:.4f},{orb_dict['position'][1]:.4f},{orb_dict['position'][2]:.4f}"
+        out_string = f' orbital @ {position_string}'
+
+        return out_string
+
     def _validate_keys(self, input_dict):
         """
         Checks all the input_dict and tries to validate them, to ensure

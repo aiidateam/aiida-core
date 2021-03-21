@@ -389,7 +389,7 @@ class SlurmScheduler(Scheduler):
                 raise ValueError(
                     'max_memory_kb must be '
                     "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.MaxMemoryKb))
+                    ''.format((job_tmpl.max_memory_kb))
                 )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.

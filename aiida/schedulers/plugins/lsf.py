@@ -408,7 +408,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                 raise ValueError(
                     'max_memory_kb must be '
                     "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.MaxMemoryKb))
+                    ''.format((job_tmpl.max_memory_kb))
                 )
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job

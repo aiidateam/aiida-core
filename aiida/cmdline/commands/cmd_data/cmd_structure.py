@@ -180,9 +180,11 @@ def structure_import():
     default=[0, 0, 0],
     help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic.'
 )
+@click.option('--label', type=click.STRING, show_default=False, help='Set the structure node label (empty by default)')
+@options.GROUP()
 @options.DRY_RUN()
 @decorators.with_dbenv()
-def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
+def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group, dry_run):
     """
     Import structure in XYZ format using AiiDA's internal importer
     """
@@ -211,14 +213,22 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, dry_run):
     except (ValueError, TypeError) as err:
         echo.echo_critical(str(err))
 
+    if label:
+        new_structure.label = label
+
     _store_structure(new_structure, dry_run)
+
+    if group:
+        group.add_nodes(new_structure)
 
 
 @structure_import.command('ase')
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
+@click.option('--label', type=click.STRING, show_default=False, help='Set the structure node label (empty by default)')
+@options.GROUP()
 @options.DRY_RUN()
 @decorators.with_dbenv()
-def import_ase(filename, dry_run):
+def import_ase(filename, label, group, dry_run):
     """
     Import structure with the ase library that supports a number of different formats
     """
@@ -235,4 +245,10 @@ def import_ase(filename, dry_run):
     except ValueError as err:
         echo.echo_critical(str(err))
 
+    if label:
+        new_structure.label = label
+
     _store_structure(new_structure, dry_run)
+
+    if group:
+        group.add_nodes(new_structure)

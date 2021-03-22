@@ -382,18 +382,18 @@ class SlurmScheduler(Scheduler):
         # It is the memory per node, not per cpu!
         if job_tmpl.max_memory_kb:
             try:
-                virtual_memory_kb = int(job_tmpl.max_memory_kb)
-                if virtual_memory_kb <= 0:
+                physical_memory_kb = int(job_tmpl.max_memory_kb)
+                if physical_memory_kb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
                     'max_memory_kb must be '
                     "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.MaxMemoryKb))
+                    ''.format((job_tmpl.max_memory_kb))
                 )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
-            lines.append(f'#SBATCH --mem={virtual_memory_kb // 1024}')
+            lines.append(f'#SBATCH --mem={physical_memory_kb // 1024}')
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)

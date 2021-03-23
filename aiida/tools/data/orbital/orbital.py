@@ -116,9 +116,7 @@ class Orbital:
         orb_dict = self.get_orbital_dict()
 
         position_string = f"{orb_dict['position'][0]:.4f},{orb_dict['position'][1]:.4f},{orb_dict['position'][2]:.4f}"
-        out_string = f' orbital @ {position_string}'
-
-        return out_string
+        return f'Orbital @ {position_string}'
 
     def _validate_keys(self, input_dict):
         """

@@ -420,8 +420,8 @@ class Utils:
 
         ## Type checks
         # mandatory parameters
-        if not isinstance(data, dict):
-            raise InputValidationError('data must be a dictionary')
+        if not isinstance(data, (dict, list)):
+            raise InputValidationError('data must be a dictionary or a list')
 
         # non-mandatory parameters
         if status is not None:

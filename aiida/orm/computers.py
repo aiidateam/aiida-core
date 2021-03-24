@@ -602,11 +602,11 @@ class Computer(entities.Entity):
 
         try:
             authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.id, aiidauser_id=user.id)
-        except exceptions.NotExistent:
+        except exceptions.NotExistent as exc:
             raise exceptions.NotExistent(
                 f'Computer `{self.label}` (ID={self.id}) not configured for user `{user.get_short_name()}` '
-                f'(ID={user.id}) - use `verdi computer configure ` first'
-            )
+                f'(ID={user.id}) - use `verdi computer configure` first'
+            ) from exc
 
         return authinfo
 

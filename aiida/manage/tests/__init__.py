@@ -39,6 +39,12 @@ _DEFAULT_PROFILE_INFO = {
     'repo_dir': 'test_repo',
     'config_dir': '.aiida',
     'root_path': '',
+    'broker_protocol': 'amqp',
+    'broker_username': 'guest',
+    'broker_password': 'guest',
+    'broker_host': '127.0.0.1',
+    'broker_port': 5672,
+    'broker_virtual_host': ''
 }
 
 

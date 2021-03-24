@@ -626,3 +626,33 @@ class CalcJobNode(ProcessNode):
         )
 
         return self.utils.build_response(status=200, headers=headers, data=data)
+
+
+class Grafana(BaseResource):
+    """Resource to expose information for Grafana."""
+
+    def get(self):  # pylint: disable=arguments-differ
+        """The GET / for Grafana just needs to return a 200 ok response."""
+        data = {}
+        headers = self.utils.build_headers(url=request.url, total_count=0)
+        return self.utils.build_response(status=200, headers=headers, data=data)
+
+    def post(self):  # pylint: disable=arguments-differ
+        """
+        Descript.
+        """
+        from aiida.restapi.grafana import process_grafana_request
+
+        ## Decode url parts to get the specific entry_point name
+        path_char = unquote(request.path)
+        path_list = self.utils.split_path(self.utils.strip_api_prefix(path_char))
+        entry_point = path_list.pop()
+
+        # Extra verifications?
+        # print(path_list) == ['grafana']
+        # entry_point in ['search', 'query', 'annotations']
+
+        request_dict = request.get_json(force=True)
+        data = process_grafana_request(entry_point, request_dict)
+        headers = self.utils.build_headers(url=request.url, total_count=0)
+        return self.utils.build_response(status=200, headers=headers, data=data)

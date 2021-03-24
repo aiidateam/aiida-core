@@ -209,7 +209,7 @@ class Utils:
 
         if path[0] in [
             'projectable_properties', 'statistics', 'full_types', 'full_types_count', 'download', 'download_formats',
-            'report', 'status', 'input_files', 'output_files'
+            'report', 'status', 'input_files', 'output_files', 'search', 'query', 'annotations'
         ]:
             query_type = path.pop(0)
             if path:

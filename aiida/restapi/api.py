@@ -92,7 +92,7 @@ class AiidaApi(Api):
 
         from aiida.restapi.common.config import CLI_DEFAULTS
         from aiida.restapi.resources import (
-            ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo, QueryBuilder
+            ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo, QueryBuilder, Grafana
         )
 
         self.app = app
@@ -116,6 +116,17 @@ class AiidaApi(Api):
                 QueryBuilder,
                 '/querybuilder/',
                 endpoint='querybuilder',
+                strict_slashes=False,
+                resource_class_kwargs=kwargs,
+            )
+
+            self.add_resource(
+                Grafana,
+                '/grafana/',
+                '/grafana/search/',
+                '/grafana/query/',
+                '/grafana/annotations/',
+                endpoint='grafana',
                 strict_slashes=False,
                 resource_class_kwargs=kwargs,
             )

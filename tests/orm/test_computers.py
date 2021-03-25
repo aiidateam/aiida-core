@@ -103,3 +103,19 @@ class TestComputerConfigure(AiidaTestCase):
 
         with self.assertRaises(ValueError):
             comp.configure(username='radames', invalid_auth_param='TEST')
+
+    def test_non_configure_error(self):
+        """Configure a computer for local transport and check it is configured."""
+        self.comp_builder.label = 'test_non_configure_error'
+        self.comp_builder.transport = 'local'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        with self.assertRaises(exceptions.NotExistent) as exc:
+            comp.get_authinfo(self.user)
+
+        self.assertIn(str(comp.id), str(exc.exception))
+        self.assertIn(comp.label, str(exc.exception))
+        self.assertIn(self.user.get_short_name(), str(exc.exception))
+        self.assertIn(str(self.user.id), str(exc.exception))
+        self.assertIn('verdi computer configure', str(exc.exception))

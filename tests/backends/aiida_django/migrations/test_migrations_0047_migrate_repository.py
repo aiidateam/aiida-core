@@ -14,6 +14,8 @@ import hashlib
 from aiida.backends.general.migrations import utils
 from .test_migrations_common import TestMigrations
 
+REPOSITORY_UUID_KEY = 'repository|uuid'
+
 
 class TestRepositoryMigration(TestMigrations):
     """Test migration of the old file repository to the disk object store."""
@@ -23,12 +25,15 @@ class TestRepositoryMigration(TestMigrations):
 
     def setUpBeforeMigration(self):
         DbNode = self.apps.get_model('db', 'DbNode')
+        DbSetting = self.apps.get_model('db', 'DbSetting')
+
         dbnode_01 = DbNode(user_id=self.default_user.id)
         dbnode_01.save()
         dbnode_02 = DbNode(user_id=self.default_user.id)
         dbnode_02.save()
         dbnode_03 = DbNode(user_id=self.default_user.id)
         dbnode_03.save()
+
         self.node_01_pk = dbnode_01.pk
         self.node_02_pk = dbnode_02.pk
         self.node_03_pk = dbnode_03.pk
@@ -37,9 +42,17 @@ class TestRepositoryMigration(TestMigrations):
         utils.put_object_from_string(dbnode_01.uuid, 'sub/file_a.txt', 'a')
         utils.put_object_from_string(dbnode_02.uuid, 'output.txt', 'output')
 
+        # When multiple migrations are ran, it is possible that migration 0047 is run at a point where the repository
+        # container does not have a UUID (at that point in the migration) and so the setting gets set to `None`. This
+        # should only happen during testing, and in this case we delete it first so the actual migration gets to set it.
+        if DbSetting.objects.filter(key=REPOSITORY_UUID_KEY).exists():
+            DbSetting.objects.get(key=REPOSITORY_UUID_KEY).delete()
+
     def test_migration(self):
         """Test that the files are correctly migrated."""
         DbNode = self.apps.get_model('db', 'DbNode')
+        DbSetting = self.apps.get_model('db', 'DbSetting')
+
         node_01 = DbNode.objects.get(pk=self.node_01_pk)
         node_02 = DbNode.objects.get(pk=self.node_02_pk)
         node_03 = DbNode.objects.get(pk=self.node_03_pk)
@@ -77,3 +90,7 @@ class TestRepositoryMigration(TestMigrations):
             (node_02.repository_metadata['o']['output.txt']['k'], b'output'),
         ):
             assert utils.get_repository_object(hashkey) == content
+
+        repository_uuid = DbSetting.objects.get(key=REPOSITORY_UUID_KEY)
+        assert repository_uuid is not None
+        assert isinstance(repository_uuid.val, str)

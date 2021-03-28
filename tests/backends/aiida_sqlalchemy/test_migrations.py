@@ -1849,6 +1849,9 @@ class TestRepositoryMigration(TestMigrationsSQLA):
         """Test that the files are correctly migrated."""
         import hashlib
         DbNode = self.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+        DbSetting = self.get_current_table('db_dbsetting')  # pylint: disable=invalid-name
+
+        repository_uuid_key = 'repository|uuid'
 
         with self.get_session() as session:
             try:
@@ -1889,5 +1892,9 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                     (node_02.repository_metadata['o']['output.txt']['k'], b'output'),
                 ):
                     assert utils.get_repository_object(hashkey) == content
+
+                repository_uuid = session.query(DbSetting).filter(DbSetting.key == repository_uuid_key).one()
+                assert repository_uuid is not None
+                assert isinstance(repository_uuid.val, str)
             finally:
                 session.close()

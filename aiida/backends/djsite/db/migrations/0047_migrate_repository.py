@@ -20,8 +20,10 @@ from aiida.cmdline.utils import echo
 REVISION = '1.0.47'
 DOWN_REVISION = '1.0.46'
 
+REPOSITORY_UUID_KEY = 'repository|uuid'
 
-def migrate_repository(apps, _):
+
+def migrate_repository(apps, schema_editor):
     """Migrate the repository."""
     # pylint: disable=too-many-locals
     import json
@@ -75,33 +77,46 @@ def migrate_repository(apps, _):
             del mapping_node_repository_metadata
             progress.update()
 
-        if not profile.is_test_profile:
+    # Store the UUID of the repository container in the `DbSetting` table. Note that for new databases, the profile
+    # setup will already have stored the UUID and so it should be skipped, or an exception for a duplicate key will be
+    # raised. This migration step is only necessary for existing databases that are migrated.
+    container_id = profile.get_repository_container().container_id
+    with schema_editor.connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            INSERT INTO db_dbsetting (key, val, description, time)
+            VALUES ('repository|uuid', to_json('{container_id}'::text), 'Repository UUID', current_timestamp)
+            ON CONFLICT (key) DO NOTHING;
+            """
+        )
 
-            if missing_node_uuids:
-                prefix = 'migration-repository-missing-nodes-'
-                with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:
-                    json.dump(missing_node_uuids, handle)
-                    echo.echo_warning(
-                        '\nDetected node repository folders for nodes that do not exist in the database. The UUIDs of '
-                        f'those nodes have been written to a log file: {handle.name}'
-                    )
+    if not profile.is_test_profile:
 
-            if missing_repo_folder:
-                prefix = 'migration-repository-missing-subfolder-'
-                with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:
-                    json.dump(missing_repo_folder, handle)
-                    echo.echo_warning(
-                        '\nDetected repository folders that were missing the required subfolder `path` or `raw_input`.'
-                        f' The paths of those nodes repository folders have been written to a log file: {handle.name}'
-                    )
-
-            # If there were no nodes, most likely a new profile, there is not need to print the warning
-            if node_count:
-                import pathlib
+        if missing_node_uuids:
+            prefix = 'migration-repository-missing-nodes-'
+            with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:
+                json.dump(missing_node_uuids, handle)
                 echo.echo_warning(
-                    '\nMigrated file repository to the new disk object store. The old repository has not been deleted '
-                    f'out of safety and can be found at {pathlib.Path(profile.repository_path, "repository")}.'
+                    '\nDetected node repository folders for nodes that do not exist in the database. The UUIDs of '
+                    f'those nodes have been written to a log file: {handle.name}'
                 )
+
+        if missing_repo_folder:
+            prefix = 'migration-repository-missing-subfolder-'
+            with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:
+                json.dump(missing_repo_folder, handle)
+                echo.echo_warning(
+                    '\nDetected repository folders that were missing the required subfolder `path` or `raw_input`.'
+                    f' The paths of those nodes repository folders have been written to a log file: {handle.name}'
+                )
+
+        # If there were no nodes, most likely a new profile, there is not need to print the warning
+        if node_count:
+            import pathlib
+            echo.echo_warning(
+                '\nMigrated file repository to the new disk object store. The old repository has not been deleted '
+                f'out of safety and can be found at {pathlib.Path(profile.repository_path, "repository")}.'
+            )
 
 
 class Migration(migrations.Migration):

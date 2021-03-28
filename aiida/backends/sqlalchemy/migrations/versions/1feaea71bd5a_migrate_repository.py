@@ -10,7 +10,7 @@ Create Date: 2020-10-01 15:05:49.271958
 from alembic import op
 from sqlalchemy import Integer, cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.sql import table, column, select, func
+from sqlalchemy.sql import table, column, select, func, text
 
 from aiida.backends.general.migrations import utils
 from aiida.cmdline.utils import echo
@@ -75,24 +75,37 @@ def upgrade():
             del mapping_node_repository_metadata
             progress.update()
 
-        if not profile.is_test_profile:
+    # Store the UUID of the repository container in the `DbSetting` table. Note that for new databases, the profile
+    # setup will already have stored the UUID and so it should be skipped, or an exception for a duplicate key will be
+    # raised. This migration step is only necessary for existing databases that are migrated.
+    container_id = profile.get_repository_container().container_id
+    statement = text(
+        f"""
+        INSERT INTO db_dbsetting (key, val, description)
+        VALUES ('repository|uuid', to_json('{container_id}'::text), 'Repository UUID')
+        ON CONFLICT (key) DO NOTHING;
+        """
+    )
+    connection.execute(statement)
 
-            if missing_repo_folder:
-                prefix = 'migration-repository-missing-subfolder-'
-                with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:
-                    json.dump(missing_repo_folder, handle)
-                    echo.echo_warning(
-                        'Detected repository folders that were missing the required subfolder `path` or `raw_input`. '
-                        f'The paths of those nodes repository folders have been written to a log file: {handle.name}'
-                    )
+    if not profile.is_test_profile:
 
-            # If there were no nodes, most likely a new profile, there is not need to print the warning
-            if node_count:
-                import pathlib
+        if missing_repo_folder:
+            prefix = 'migration-repository-missing-subfolder-'
+            with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:
+                json.dump(missing_repo_folder, handle)
                 echo.echo_warning(
-                    'Migrated file repository to the new disk object store. The old repository has not been deleted out'
-                    f' of safety and can be found at {pathlib.Path(get_profile().repository_path, "repository")}.'
+                    'Detected repository folders that were missing the required subfolder `path` or `raw_input`. '
+                    f'The paths of those nodes repository folders have been written to a log file: {handle.name}'
                 )
+
+        # If there were no nodes, most likely a new profile, there is not need to print the warning
+        if node_count:
+            import pathlib
+            echo.echo_warning(
+                'Migrated file repository to the new disk object store. The old repository has not been deleted out'
+                f' of safety and can be found at {pathlib.Path(get_profile().repository_path, "repository")}.'
+            )
 
 
 def downgrade():

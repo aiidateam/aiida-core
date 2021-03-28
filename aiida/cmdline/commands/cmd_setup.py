@@ -78,7 +78,8 @@ def setup(
 
     # Migrate the database
     echo.echo_info('migrating the database.')
-    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+    manager = get_manager()
+    backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
 
     try:
         backend.migrate()
@@ -88,6 +89,27 @@ def setup(
         )
     else:
         echo.echo_success('database migration completed.')
+
+    # Retrieve the repository UUID from the database. If set, this means this database is associated with the repository
+    # with that UUID and we have to make sure that the provided repository corresponds to it.
+    backend_manager = manager.get_backend_manager()
+    repository_uuid_database = backend_manager.get_repository_uuid()
+    repository_uuid_profile = profile.get_repository_container().container_id
+
+    # If database contains no repository UUID, it should be a clean database so associate it with the repository
+    if repository_uuid_database is None:
+        backend_manager.set_repository_uuid(repository_uuid_profile)
+
+    # Otherwise, if the database UUID does not match that of the repository, it means they do not belong together. Note
+    # that if a new repository path was specified, which does not yet contain a container, the call to retrieve the
+    # repo by `get_repository_container` will initialize the container and generate a UUID. This guarantees that if a
+    # non-empty database is configured with an empty repository path, this check will hit.
+    elif repository_uuid_database != repository_uuid_profile:
+        echo.echo_critical(
+            f'incompatible database and repository configured:\n'
+            f'Database `{db_name}` is associated with the repository with UUID `{repository_uuid_database}`\n'
+            f'However, the configured repository `{repository}` has UUID `{repository_uuid_profile}`.'
+        )
 
     # Optionally setting configuration default user settings
     config.set_option('autofill.user.email', email, override=False)

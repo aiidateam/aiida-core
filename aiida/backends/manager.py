@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for settings and utilities to determine and set the database schema versions."""
-
 import abc
 import collections
 
@@ -60,6 +59,8 @@ The current database version is `{schema_version_database}` but `{schema_version
 First install `aiida-core~={aiida_core_version_reset}` and migrate the database to the latest version.
 After the database schema is migrated to version `{schema_version_reset}` you can reinstall this version of `aiida-core` and migrate the schema generation.
 """
+
+REPOSITORY_UUID_KEY = 'repository|uuid'
 
 Setting = collections.namedtuple('Setting', ['key', 'value', 'description', 'time'])
 
@@ -220,6 +221,24 @@ class BackendManager:
         :param generation: string with schema generation to set
         """
         self.get_settings_manager().set(SCHEMA_GENERATION_KEY, generation)
+
+    def set_repository_uuid(self, uuid):
+        """Set the UUID of the repository that is associated with this database.
+
+        :param uuid: the UUID of the repository associated with this database.
+        """
+        self.get_settings_manager().set(REPOSITORY_UUID_KEY, uuid, description='Repository UUID')
+
+    def get_repository_uuid(self):
+        """Return the UUID of the repository that is associated with this database.
+
+        :return: the UUID of the repository associated with this database or None if it doesn't exist.
+        """
+        try:
+            setting = self.get_settings_manager().get(REPOSITORY_UUID_KEY)
+            return setting.value
+        except exceptions.NotExistent:
+            return None
 
     def validate_schema(self, profile):
         """Validate that the current database generation and schema are up-to-date with that of the code.

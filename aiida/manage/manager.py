@@ -99,17 +99,18 @@ class Manager:
         manager.reset_backend_environment()
         self._backend = None
 
-    def _load_backend(self, schema_check: bool = True) -> 'Backend':
+    def _load_backend(self, schema_check: bool = True, repository_check: bool = True) -> 'Backend':
         """Load the backend for the currently configured profile and return it.
 
         .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
             backend is to call `get_backend` which will create it only when not yet instantiated.
 
-        :param schema_check: force a database schema check if the database environment has not yet been loaded
-        :return: the database backend
-
+        :param schema_check: force a database schema check if the database environment has not yet been loaded.
+        :param repository_check: force a check that the database is associated with the repository that is configured
+            for the current profile.
+        :return: the database backend.
         """
-        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA, get_backend_manager
         from aiida.common import ConfigurationError, InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage import configuration
@@ -124,12 +125,29 @@ class Manager:
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
+        backend_manager = get_backend_manager(profile.database_backend)
+
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            from aiida.backends import get_backend_manager
-            backend_manager = get_backend_manager(profile.database_backend)
             backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
+
+        # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
+        # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
+        # then become an exception once we have verified that it is working reliably.
+        if repository_check and not profile.is_test_profile:
+            repository_uuid_config = profile.get_repository_container().container_id
+            repository_uuid_database = backend_manager.get_repository_uuid()
+
+            from aiida.cmdline.utils import echo
+            if repository_uuid_config != repository_uuid_database:
+                echo.echo_warning(
+                    f'the database and repository configured for profile `{profile.name}` are incompatible:\n\n'
+                    f'Repository UUID in profile:  {repository_uuid_config}\n'
+                    f'Repository UUID in database: {repository_uuid_database}\n\n'
+                    'Using a database with an incompatible repository will prevent AiiDA from functioning properly.\n'
+                    'Please make sure that the configuration of your profile is correct.\n'
+                )
 
         backend_type = profile.database_backend
 

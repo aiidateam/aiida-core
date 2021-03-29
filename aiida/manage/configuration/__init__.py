@@ -94,8 +94,8 @@ def load_config(create=False):
 
     try:
         config = Config.from_file(filepath)
-    except ValueError:
-        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON')
+    except ValueError as exc:
+        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON') from exc
 
     _merge_deprecated_cache_yaml(config, filepath)
 
@@ -270,4 +270,4 @@ def load_documentation_profile():
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile}}
         PROFILE = Profile(profile_name, profile, from_config=True)
         CONFIG = Config(handle.name, config)
-        get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+        get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access

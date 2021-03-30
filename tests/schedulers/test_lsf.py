@@ -218,8 +218,8 @@ def test_parsing_errors():
 
     with pytest.raises(SchedulerParsingError) as exc:
         scheduler._parse_submit_output(0, 'Bad-Output-String', '')
-    assert 'Bad-Output-String' in str(exc.value)
+    assert '`Bad-Output-String`' in str(exc.value)
 
     with pytest.raises(ValueError) as exc:
         scheduler._parse_time_string('Bad-Time-String')
-    #assert 'Bad-Time-String' in str(exc.value)
+    assert '`Bad-Time-String`' in str(exc.value)

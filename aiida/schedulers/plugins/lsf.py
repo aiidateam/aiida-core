@@ -676,7 +676,7 @@ fi
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
         except IndexError as exc:
-            raise SchedulerParsingError(f'Cannot parse submission output: {stdout}') from exc
+            raise SchedulerParsingError(f'Cannot parse submission output: `{stdout}`') from exc
 
     def _parse_time_string(self, string, fmt='%b %d %H:%M'):
         """
@@ -701,7 +701,7 @@ fi
                 thetime = datetime.datetime.strptime(actual_string, f'{actual_fmt} L')
         except Exception as exc:
             self.logger.debug(f'Unable to parse time string {string}, the message was {exc}')
-            raise ValueError('Problem parsing the time string.') from exc
+            raise ValueError(f'Problem parsing the time string: `{string}`') from exc
 
         return thetime
 

@@ -81,8 +81,8 @@ class TorqueScheduler(PbsBaseClass):
 
         if max_memory_kb:
             try:
-                virtual_memory_kb = int(max_memory_kb)
-                if virtual_memory_kb <= 0:
+                physical_memory_kb = int(max_memory_kb)
+                if physical_memory_kb <= 0:
                     raise ValueError
             except ValueError:
                 raise ValueError(
@@ -92,7 +92,7 @@ class TorqueScheduler(PbsBaseClass):
                 )
             # There is always something before, at least the total #
             # of nodes
-            select_string += f',mem={virtual_memory_kb}kb'
+            select_string += f',mem={physical_memory_kb}kb'
 
         return_lines.append(f'#PBS -l {select_string}')
         return return_lines

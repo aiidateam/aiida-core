@@ -1,6 +1,112 @@
 # Changelog
 
-## v1.5.2
+## v1.6.0 - 2021-03-15
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.5.2...v1.6.0) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2020-12-07&to=2021-03-15&type=c)
+
+As well as introducing a number of improvements and new features listed below, this release marks the "under-the-hood" migration from the `tornado` package to the Python built-in module `asyncio`, for handling asynchronous processing within the AiiDA engine.
+This removes a number of blocking dependency version clashes with other tools, in particular with the newest Jupyter shell and notebook environments.
+The migration does not present any backward incompatible changes to AiiDA's public API.
+A substantial effort has been made to test and debug the new implementation, and ensure it performs at least equivalent to the previous code (or improves it!), but please let us know if you uncover any additional issues.
+
+This release also drops support for Python 3.6 (testing is carried out against `3.7`, `3.8` and `3.9`).
+
+NOTE: `v1.6` is tentatively intended to be the final minor `v1.x` release before `v2.x`, that will include a new file repository implementation and remove all deprecated code.
+
+### New calculation features ✨
+
+The `additional_retrieve_list` metadata option has been added to `CalcJob` ([#4437](https://github.com/aiidateam/aiida-core/pull/4437)).
+This new option allows one to specify additional files to be retrieved on a per-instance basis, in addition to the files that are already defined by the plugin to be retrieved.
+
+A **new namespace `stash`** has bee added to the `metadata.options` input namespace of the `CalcJob` process ([#4424](https://github.com/aiidateam/aiida-core/pull/4424)).
+This option namespace allows a user to specify certain files that are created by the calculation job to be stashed somewhere on the remote.
+This can be useful if those files need to be stored for a longer time than the scratch space (where the job was run) is available for, but need to be kept on the remote machine and not retrieved.
+Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
+
+See [Stashing files on the remote](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/topics/calculations/usage.html#stashing-files-on-the-remote) for more details.
+
+The **new `TransferCalcjob` plugin** ([#4194](https://github.com/aiidateam/aiida-core/pull/4194)) allows the user to copy files between a remote machine and the local machine running AiiDA.
+More specifically, it can do any of the following:
+
+- Take any number of files from any number of `RemoteData` folders in a remote machine and copy them in the local repository of a single newly created `FolderData` node.
+- Take any number of files from any number of `FolderData` nodes in the local machine and copy them in a single newly created `RemoteData` folder in a given remote machine.
+
+See the [Transferring data](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/howto/data.html#transferring-data) how-to for more details.
+
+### Profile configuration improvements 👌
+
+The way the global/profile configuration is accessed has undergone a number of distinct changes ([#4712](https://github.com/aiidateam/aiida-core/pull/4712)):
+
+- When loaded, the `config.json` (found in the `.aiida` folder) is now validated against a [JSON Schema](https://json-schema.org/) that can be found in [`aiida/manage/configuration/schema`](https://github.com/aiidateam/aiida-core/tree/develop/aiida/manage/configuration/schema).
+- The schema includes a number of new global/profile options, including: `transport.task_retry_initial_interval`, `transport.task_maximum_attempts`, `rmq.task_timeout` and `logging.aiopika_loglevel` ([#4583](https://github.com/aiidateam/aiida-core/pull/4583)).
+- The `cache_config.yml` has now also been **deprecated** and merged into the `config.json`, as part of the profile options.
+  This merge will be handled automatically, upon first load of the `config.json` using the new AiiDA version.
+
+In-line with these changes, the `verdi config` command has been refactored into separate commands, including `verdi config list`, `verdi config set`, `verdi config unset` and `verdi config caching`.
+
+See the [Configuring profile options](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/howto/installation.html#configuring-profile-options) and [Configuring caching](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.0/howto/run_codes.html#how-to-save-compute-time-with-caching) how-tos for more details.
+
+### Command-line additions and improvements 👌
+
+In addition to `verdi config`, numerous other new commands and options have been added to `verdi`:
+
+- **Deprecated** `verdi export` and `verdi import` commands (replaced by new `verdi archive`) ([#4710](https://github.com/aiidateam/aiida-core/pull/4710))
+- Added `verdi group delete --delete-nodes`, to also delete the nodes in a group during its removal ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)).
+- Improved `verdi group remove-nodes` command to warn when requested nodes are not in the specified group ([#4728](https://github.com/aiidateam/aiida-core/pull/4728)).
+- Added `exception` to the projection mapping of `verdi process list`, for example to use in debugging as: `verdi process list -S excepted -P ctime pk exception` ([#4786](https://github.com/aiidateam/aiida-core/pull/4786)).
+- Added `verdi database summary` ([#4737](https://github.com/aiidateam/aiida-core/pull/4737)):
+  This prints a summary of the count of each entity and (optionally) the list of unique identifiers for some entities.
+- Improved `verdi process play` performance, by only querying for active processes with the `--all` flag ([#4671](https://github.com/aiidateam/aiida-core/pull/4671))
+- Added the `verdi database version` command ([#4613](https://github.com/aiidateam/aiida-core/pull/4613)):
+  This shows the schema generation and version of the database of the given profile, useful mostly for developers when debugging.
+- Improved `verdi node delete` performance ([#4575](https://github.com/aiidateam/aiida-core/pull/4575)):
+  The logic has been re-written to greatly reduce the time to delete large amounts of nodes.
+- Fixed `verdi quicksetup --non-interactive`, to ensure it does not include any user prompts ([#4573](https://github.com/aiidateam/aiida-core/pull/4573))
+- Fixed `verdi --version` when used in editable mode ([#4576](https://github.com/aiidateam/aiida-core/pull/4576))
+
+### API additions and improvements 👌
+
+The base `Node` class now evaluates equality based on the node's UUID ([#4753](https://github.com/aiidateam/aiida-core/pull/4753)).
+For example, loading the same node twice will always resolve as equivalent: `load_node(1) == load_node(1)`.
+Note that existing, class specific, equality relationships will still override the base class behaviour, for example: `Int(99) == Int(99)`, even if the nodes have different UUIDs.
+This behaviour for subclasses is still under discussion at: <https://github.com/aiidateam/aiida-core/issues/1917>
+
+When hashing nodes for use with the caching features, `-0.` is now converted to `0.`, to reduce issues with differing hashes before/after node storage ([#4648](https://github.com/aiidateam/aiida-core/pull/4648)).
+Known failure modes for hashing are now also raised with the `HashingError` exception ([#4778](https://github.com/aiidateam/aiida-core/pull/4778)).
+
+Both `aiida.tools.delete_nodes` ([#4578](https://github.com/aiidateam/aiida-core/pull/4578)) and `aiida.orm.to_aiida_type` ([#4672](https://github.com/aiidateam/aiida-core/pull/4672)) have been exposed for use in the public API.
+
+A `pathlib.Path` instance can now be used for the `file` argument of `SinglefileData` ([#3614](https://github.com/aiidateam/aiida-core/pull/3614))
+
+Type annotations have been added to all inputs/outputs of functions and methods in `aiida.engine` ([#4669](https://github.com/aiidateam/aiida-core/pull/4669)) and `aiida/orm/nodes/processes` ([#4772](https://github.com/aiidateam/aiida-core/pull/4772)).
+As outlined in [PEP 484](https://www.python.org/dev/peps/pep-0484/), this improves static code analysis and, for example, allows for better auto-completion and type checking in many code editors.
+
+### New REST API Query endpoint ✨
+
+The `/querybuilder` endpoint is the first POST method available for AiiDA's RESTful API ([#4337](https://github.com/aiidateam/aiida-core/pull/4337))
+
+The POST endpoint returns what the QueryBuilder would return, when providing it with a proper `queryhelp` dictionary ([see the documentation here](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/database.html#the-queryhelp)).
+Furthermore, it returns the entities/results in the "standard" REST API format - with the exception of `link_type` and `link_label` keys for links (these particular keys are still present as `type` and `label`, respectively).
+
+For security, POST methods can be toggled on/off with the `verdi restapi --posting/--no-posting` options (it is on by default).
+Although note that this option is not yet strictly public, since its naming may be changed in the future!
+
+See [AiiDA REST API documentation](https://aiida.readthedocs.io/projects/aiida-core/en/latest/reference/rest_api.html) for more details.
+
+### Additional Changes
+
+- Fixed the direct scheduler which, in combination with `SshTransport`, was hanging on submit command ([#4735](https://github.com/aiidateam/aiida-core/pull/4735)).
+  In the ssh transport, to emulate 'chdir', the current directory is now kept in memory, and every command prepended with `cd FOLDER_NAME && ACTUALCOMMAND`.
+
+- In `aiida.tools.ipython.ipython_magics`, `load_ipython_extension` has been **deprecated** in favour of `register_ipython_extension` ([#4548](https://github.com/aiidateam/aiida-core/pull/4548)).
+
+- Refactored `.ci/` folder to make tests more portable and easier to understand ([#4565](https://github.com/aiidateam/aiida-core/pull/4565))
+  The `ci/` folder had become cluttered, containing configuration and scripts for both the GitHub Actions and Jenkins CI.
+  This change moved the GH actions specific scripts to `.github/system_tests`, and refactored the Jenkins setup/tests to use [molecule](molecule.readthedocs.io) in the `.molecule/` folder.
+
+- For aiida-core development, the pytest `requires_rmq` marker and `config_with_profile` fixture have been added ([#4739](https://github.com/aiidateam/aiida-core/pull/4739) and [#4764](https://github.com/aiidateam/aiida-core/pull/4764))
+
+## v1.5.2 - 2020-12-07
 
 Note: release `v1.5.1` was skipped due to a problem with the uploaded files to PyPI.
 
@@ -16,7 +122,7 @@ Note: release `v1.5.1` was skipped due to a problem with the uploaded files to P
 - CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
 
 
-## v1.5.0
+## v1.5.0 - 2020-11-13
 
 In this minor version release, support for Python 3.9 is added [[#4301]](https://github.com/aiidateam/aiida-core/pull/4301), while support for Python 3.5 is dropped [[#4386]](https://github.com/aiidateam/aiida-core/pull/4386).
 This version is compatible with all current Python versions that are not end-of-life:
@@ -59,7 +165,7 @@ This version is compatible with all current Python versions that are not end-of-
 ### Dependencies
 - Update requirement `pytest~=6.0` and use `pyproject.toml` [[#4410]](https://github.com/aiidateam/aiida-core/pull/4410)
 
-### Archive (import/export) refactor:
+### Archive (import/export) refactor
 - The refactoring goal was to pave the way for the implementation of a new archive format in v2.0.0 ([ aiidateamAEP005](https://github.com/aiidateam/AEP/pull/21))
 - Three abstract+concrete interface classes are defined; writer, reader, migrator, which are **independent of theinternal structure of the archive**. These classes are used within the export/import code.
 - The code in `aiida/tools/importexport` has been largely re-written, in particular adding `aiida/toolsimportexport/archive`, which contains this code for interfacing with an archive, and **does not require connectionto an AiiDA profile**.

@@ -231,6 +231,12 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
        Last name: name
        Institution: where-i-work
 
+   .. admonition:: Having problems auto-detecting the PostgreSQL setup?
+       :class: attention title-icon-troubleshoot
+
+       Sometimes the local configuration of postgres may be difficult to auto-detect for AiiDA.
+       If that is your case, you can try to do the process manually by first :ref:`creating the database yourself<intro:install:database>` and then :ref:`running the full setup command<intro:install:verdi_setup>`.
+
    ---
 
    **Start verdi daemons**

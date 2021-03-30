@@ -17,6 +17,7 @@ from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_optio
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.pluginable import Pluginable
 
 LIST_PROJECT_HEADERS = ['Id', 'Label', 'Formula']
 EXPORT_FORMATS = ['cif', 'xsf', 'xyz']
@@ -151,7 +152,7 @@ def structure_export(**kwargs):
     data_export(node, output, fmt, other_args=kwargs, overwrite=force)
 
 
-@structure.group('import')
+@structure.group('import', entry_point_group='aiida.cmdline.data.structure.import', cls=Pluginable)
 def structure_import():
     """Import a crystal structure from file into a StructureData object."""
 

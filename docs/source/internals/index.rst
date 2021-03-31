@@ -9,6 +9,7 @@ Internal architecture
    plugin_system
    engine
    rest_api
+   database
 
 .. todo::
 

@@ -20,6 +20,13 @@ from aiida.plugins import OrbitalFactory
 class TestOrbital(AiidaTestCase):
     """Test the Orbital base class"""
 
+    def test_orbital_str(self):
+        """"Test the output of __str__ method"""
+        orbital = Orbital(position=(1, 2, 3))
+        expected_output = 'Orbital @ 1.0000,2.0000,3.0000'
+
+        self.assertEqual(str(orbital), expected_output)
+
     def test_required_fields(self):
         """Verify that required fields are validated."""
         # position is required

@@ -84,11 +84,7 @@ This is the recommended method for users on shared systems and systems where the
        Last name: name
        Institution: where-i-work
 
-   .. admonition:: Having problems auto-detecting the PostgreSQL setup?
-       :class: attention title-icon-troubleshoot
-
-       Sometimes the local configuration of postgres may be difficult to auto-detect for AiiDA.
-       If that is your case, you can try to do the process manually by first :ref:`creating the database yourself<intro:install:database>` and then :ref:`running the full setup command<intro:install:verdi_setup>`.
+   If AiiDA has any trouble autodetecting the PostgreSQL setup, you can check the optional manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:quicksetup>`.
 
    ---
 

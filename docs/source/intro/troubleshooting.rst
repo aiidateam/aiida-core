@@ -89,7 +89,7 @@ Sometimes AiiDA fails to autodetect the local configuration of PostgreSQL when r
 In that case try to:
 
     1. Create the database manually in PostgreSQL (see :ref:`here<intro:install:database>`)
-    2. Run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`)
+    2. Then run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`)
 
 
 RabbitMQ Installation (Unix)

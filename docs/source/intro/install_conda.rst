@@ -87,7 +87,7 @@ This is the recommended method for users on shared systems and systems where the
    .. admonition:: \ \
        :class: attention title-icon-troubleshoot
 
-       If AiiDA has any trouble autodetecting the PostgreSQL setup, you can check the optional manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:quicksetup>`.
+       If AiiDA has any trouble autodetecting the PostgreSQL setup, you can check the optional manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
 
    ---
 

@@ -80,7 +80,7 @@ A way to do it is to add a line similar to the following to the ``~/.bashrc`` an
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
 
 
-.. _intro:troubleshooting:installation:quicksetup:
+.. _intro:troubleshooting:installation:postgresql-autodetect-issues:
 
 Autodetection of the PostgreSQL setup
 .....................................

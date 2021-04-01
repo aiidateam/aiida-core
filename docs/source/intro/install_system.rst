@@ -234,7 +234,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
    .. admonition:: \ \
        :class: attention title-icon-troubleshoot
 
-       If AiiDA has any trouble autodetecting the PostgreSQL setup, you can check the optional manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:quicksetup>`.
+       If AiiDA has any trouble autodetecting the PostgreSQL setup, you can check the optional manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
 
    ---
 

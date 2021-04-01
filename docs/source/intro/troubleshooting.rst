@@ -85,10 +85,10 @@ A way to do it is to add a line similar to the following to the ``~/.bashrc`` an
 Autodetection of the PostgreSQL setup
 .....................................
 
-Sometimes the local configuration of PostgreSQL may be difficult to autodetect for AiiDA when running ``verdi quicksetup``.
-In that case try the following:
+Sometimes AiiDA fails to autodetect the local configuration of PostgreSQL when running ``verdi quicksetup``.
+In that case try to:
 
-    1. Create the database in PostgreSQL (see :ref:`here<intro:install:database>`)
+    1. Create the database manually in PostgreSQL (see :ref:`here<intro:install:database>`)
     2. Run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`)
 
 

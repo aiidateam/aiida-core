@@ -141,7 +141,10 @@ def test_submit_script():
 
 def test_create_job_resource():
     """
-    Test to verify that script fails if we specify only num_machines or wrong tot_num_mpiprocs
+    Test to verify that script fails in the following cases:
+        * if we specify only num_machines
+        * if tot_num_mpiprocs is not an int (and can't be casted to one)
+        * if parallel_env is not a str
     """
     from aiida.schedulers.datastructures import JobTemplate
 
@@ -157,15 +160,10 @@ def test_create_job_resource():
             num_mpiprocs_per_machine=1,
         )
 
-    class StrCastRaiser:
-
-        def __str__(self):
-            raise TypeError('This type cannot be casted to str')
-
     with pytest.raises(TypeError):
         job_tmpl.job_resource = scheduler.create_job_resource(
             tot_num_mpiprocs=2,
-            parallel_env=StrCastRaiser(),
+            parallel_env=0,
         )
 
 

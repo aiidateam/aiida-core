@@ -117,12 +117,9 @@ class LsfJobResource(JobResource):
         from aiida.common.exceptions import ConfigurationError
         super().__init__()
 
-        # This next try-catch seems unnecessary (str cast don't fail),
-        # but we didn't want to remove it and risk introducing a bug
-        try:
-            self.parallel_env = str(kwargs.pop('parallel_env', ''))
-        except (TypeError, ValueError) as exc:
-            raise TypeError("When specified, 'parallel_env' must be a string") from exc
+        self.parallel_env = kwargs.pop('parallel_env', '')
+        if not isinstance(self.parallel_env, str):
+            raise TypeError("When specified, 'parallel_env' must be a string")
 
         try:
             self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))

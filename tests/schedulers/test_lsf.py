@@ -157,6 +157,17 @@ def test_create_job_resource():
             num_mpiprocs_per_machine=1,
         )
 
+    class StrCastRaiser:
+
+        def __str__(self):
+            raise TypeError('This type cannot be casted to str')
+
+    with pytest.raises(TypeError):
+        job_tmpl.job_resource = scheduler.create_job_resource(
+            tot_num_mpiprocs=2,
+            parallel_env=StrCastRaiser(),
+        )
+
 
 def test_submit_output():
     """Test the parsing of the submit response"""
@@ -208,6 +219,7 @@ def test_job_tmpl_errors():
         scheduler.get_submit_script(job_tmpl)
     job_tmpl.pop('max_memory_kb')
 
+    # Verify minimal working parameters don't raise
     scheduler.get_submit_script(job_tmpl)
 
 

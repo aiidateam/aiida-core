@@ -117,6 +117,8 @@ class LsfJobResource(JobResource):
         from aiida.common.exceptions import ConfigurationError
         super().__init__()
 
+        # This next try-catch seems unnecessary (str cast don't fail),
+        # but we didn't want to remove it and risk introducing a bug
         try:
             self.parallel_env = str(kwargs.pop('parallel_env', ''))
         except (TypeError, ValueError) as exc:

@@ -9,7 +9,8 @@
 ###########################################################################
 """Translator for node"""
 import pkgutil
-import imp
+import importlib
+import sys
 import inspect
 import os
 
@@ -346,12 +347,15 @@ class NodeTranslator(BaseTranslator):
             full_path_base = os.path.join(package_path, name)
 
             if is_pkg:
-                app_module = imp.load_package(full_path_base, full_path_base)
+                spec = importlib.util.spec_from_file_location(name, full_path_base)
+                app_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(app_module)
             else:
                 full_path = f'{full_path_base}.py'
-                # I could use load_module but it takes lots of arguments,
-                # then I use load_source
-                app_module = imp.load_source(f'rst{name}', full_path)
+                spec = importlib.util.spec_from_file_location(f'rst{name}', full_path)
+                app_module = importlib.util.module_from_spec(spec)
+                sys.modules[f'rst{name}'] = app_module
+                spec.loader.exec_module(app_module)
 
             # Go through the content of the module
             if not is_pkg:

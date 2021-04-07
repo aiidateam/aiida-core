@@ -18,8 +18,10 @@ from pathlib import Path
 from collections import OrderedDict, defaultdict
 from pkg_resources import Requirement, parse_requirements
 from packaging.utils import canonicalize_name
+from packaging.version import parse
 
 import click
+import requests
 import yaml
 import tomlkit as toml
 
@@ -450,6 +452,47 @@ def pip_install_extras(extras):
 
     cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
     subprocess.run(cmd, check=True)
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
+@click.option('--pre-releases', is_flag=True, help='Include pre-releases.')
+def identify_outdated(extras, pre_releases):
+    """Identify outdated dependencies.
+
+    For example:
+
+        identify-outdated all
+
+    This command will analyze the current dependencies and compare them against
+    the latest versions released on PyPI. It then lists all dependencies where
+    the latest release is not compatible with the dependency specification.
+    This function can thus be used to identify dependencies where the
+    specification must be loosened.
+    """
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+
+    if 'all' in extras:
+        extras = list(setup_cfg['extras_require'])
+
+    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in extras:
+        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+
+    def get_package_data(name):
+        req = requests.get(f'https://pypi.python.org/pypi/{name}/json')
+        req.raise_for_status()
+        return req.json()
+
+    release_data = {requirement: get_package_data(requirement.name)['releases'] for requirement in to_install}
+    for requirement, releases in release_data.items():
+        releases_ = list(sorted(map(parse, releases)))
+        latest_release = [r for r in releases_ if pre_releases or not r.is_prerelease][-1]
+
+        if str(latest_release) not in requirement.specifier:
+            print(requirement, latest_release)
 
 
 if __name__ == '__main__':

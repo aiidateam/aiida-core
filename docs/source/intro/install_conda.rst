@@ -84,10 +84,10 @@ This is the recommended method for users on shared systems and systems where the
        Last name: name
        Institution: where-i-work
 
-   .. admonition:: \ \
+   .. admonition:: Is AiiDA unable to auto-detect the PostgreSQL setup?
        :class: attention title-icon-troubleshoot
 
-       If AiiDA has any trouble autodetecting the PostgreSQL setup, you can check the optional manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
+       If you get an error saying that AiiDA has trouble autodetecting the PostgreSQL setup, you will need to do the manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
 
    ---
 

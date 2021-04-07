@@ -88,8 +88,8 @@ Autodetection of the PostgreSQL setup
 Sometimes AiiDA fails to autodetect the local configuration of PostgreSQL when running ``verdi quicksetup``.
 In that case try to:
 
-    1. Create the database manually in PostgreSQL (see :ref:`here<intro:install:database>`)
-    2. Then run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`)
+    1. Create the database manually in PostgreSQL (see :ref:`here<intro:install:database>`).
+    2. Then run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`).
 
 
 RabbitMQ Installation (Unix)

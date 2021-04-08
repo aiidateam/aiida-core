@@ -162,7 +162,7 @@ However, this would lead to a lot of code duplication, and longer workflows cons
         We've removed the ``result`` step from the outline, as well as the ``result`` output.
         For this work chain, we're assuming that for now we are only interested in whether or not the result is even.
 
-We can avoid some code duplication by simply submitting the ``MultiplyAddWorkChain`` within one of the steps of a new work chain which would then call `is_even` in a second step:
+We can avoid some code duplication by simply submitting the ``MultiplyAddWorkChain`` within one of the steps of a new work chain which would then call ``is_even`` in a second step:
 
 .. literalinclude:: include/snippets/extend_workflows.py
     :language: python
@@ -270,7 +270,7 @@ Say we want to add the ``result`` of the ``MultiplyAddWorkChain`` as one of the 
 Since there is not one output port that is shared by all process classes, it is less critical to use the ``namespace`` argument when exposing outputs.
 However, take care not to override the outputs of the parent work chain in case they do have outputs with the same port name.
 We still need to pass the ``result`` of the ``MultiplyAddWorkChain`` to the outputs of the parent work chain.
-For example, we could do this in the ``is_even`` step by using the ``self.out`` method:
+For example, we could do this in the ``is_even`` step by using the :meth:`~aiida.engine.processes.process.Process.out` method:
 
 .. code-block:: python
 

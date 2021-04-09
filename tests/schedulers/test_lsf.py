@@ -10,8 +10,8 @@
 # pylint: disable=invalid-name,protected-access
 """Tests for the `LsfScheduler` plugin."""
 import logging
-import unittest
 import uuid
+import pytest
 
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.scheduler import SchedulerError
@@ -32,162 +32,204 @@ SUBMIT_STDOUT_TO_TEST = 'Job <764254593> is submitted to queue <test>.'
 BKILL_STDOUT_TO_TEST = 'Job <764254593> is being terminated'
 
 
-class TestParserBjobs(unittest.TestCase):
+def test_parse_common_joblist_output():
     """
-    Tests to verify if the function _parse_joblist_output behave correctly
+    Tests to verify if the function _parse_joblist_output can parse the bjobs output.
     The tests is done parsing a string defined above, to be used offline
     """
+    # pylint: disable=too-many-locals,too-many-statements
+    import datetime
+    scheduler = LsfScheduler()
 
-    def test_parse_common_joblist_output(self):
-        """
-        Test whether _parse_joblist can parse the bjobs output
-        """
-        # pylint: disable=too-many-locals,too-many-statements
-        import datetime
-        scheduler = LsfScheduler()
+    # Disable logging to avoid excessive output during test
+    logging.disable(logging.ERROR)
 
-        # Disable logging to avoid excessive output during test
-        logging.disable(logging.ERROR)
+    retval = 255
+    stdout = BJOBS_STDOUT_TO_TEST
+    stderr = BJOBS_STDERR_TO_TEST
 
-        retval = 255
-        stdout = BJOBS_STDOUT_TO_TEST
-        stderr = BJOBS_STDERR_TO_TEST
-
-        with self.assertRaises(SchedulerError):
-            job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
-
-        retval = 0
-        stdout = BJOBS_STDOUT_TO_TEST
-        stderr = ''
+    with pytest.raises(SchedulerError):
         job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
 
-        # The parameters are hard coded in the text to parse
-        job_on_cluster = 7
-        job_parsed = len(job_list)
-        self.assertEqual(job_parsed, job_on_cluster)
+    retval = 0
+    stdout = BJOBS_STDOUT_TO_TEST
+    stderr = ''
+    job_list = scheduler._parse_joblist_output(retval, stdout, stderr)
 
-        job_queued = 2
-        job_queue_name = ['8nm', 'test']
-        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
-        job_queue_name_parsed = [j.queue_name for j in job_list if j.job_state and j.job_state == JobState.QUEUED]
-        self.assertEqual(job_queued, job_queued_parsed)
-        self.assertEqual(job_queue_name, job_queue_name_parsed)
+    # The parameters are hard coded in the text to parse
+    job_on_cluster = 7
+    job_parsed = len(job_list)
+    assert job_parsed == job_on_cluster
 
-        job_done = 2
-        job_done_title = ['aiida-1033269', 'test']
-        job_done_annotation = ['TERM_RUNLIMIT: job killed after reaching LSF run time limit', '-']
-        job_done_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.DONE])
-        job_done_title_parsed = [j.title for j in job_list if j.job_state and j.job_state == JobState.DONE]
-        job_done_annotation_parsed = [j.annotation for j in job_list if j.job_state and j.job_state == JobState.DONE]
-        self.assertEqual(job_done, job_done_parsed)
-        self.assertEqual(job_done_title, job_done_title_parsed)
-        self.assertEqual(job_done_annotation, job_done_annotation_parsed)
+    job_queued = 2
+    job_queue_name = ['8nm', 'test']
+    job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
+    job_queue_name_parsed = [j.queue_name for j in job_list if j.job_state and j.job_state == JobState.QUEUED]
+    assert job_queued == job_queued_parsed
+    assert job_queue_name == job_queue_name_parsed
 
-        job_running = 3
-        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
-        self.assertEqual(job_running, job_running_parsed)
+    job_done = 2
+    job_done_title = ['aiida-1033269', 'test']
+    job_done_annotation = ['TERM_RUNLIMIT: job killed after reaching LSF run time limit', '-']
+    job_done_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.DONE])
+    job_done_title_parsed = [j.title for j in job_list if j.job_state and j.job_state == JobState.DONE]
+    job_done_annotation_parsed = [j.annotation for j in job_list if j.job_state and j.job_state == JobState.DONE]
+    assert job_done == job_done_parsed
+    assert job_done_title == job_done_title_parsed
+    assert job_done_annotation == job_done_annotation_parsed
 
-        running_users = ['inewton', 'inewton', 'dbowie']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        self.assertEqual(running_users, parsed_running_users)
+    job_running = 3
+    job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
+    assert job_running == job_running_parsed
 
-        running_jobs = ['764254593', '764255172', '764245175']
-        num_machines = [1, 1, 1]
-        allocated_machines = ['lxbsu2710', 'b68ac74822', 'b68ac74822']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        parsed_num_machines = [j.num_machines for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
-        parsed_allocated_machines = [
-            j.allocated_machines_raw for j in job_list if j.job_state and j.job_state == JobState.RUNNING
-        ]
-        self.assertEqual(running_jobs, parsed_running_jobs)
-        self.assertEqual(num_machines, parsed_num_machines)
-        self.assertEqual(allocated_machines, parsed_allocated_machines)
+    running_users = ['inewton', 'inewton', 'dbowie']
+    parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
+    assert running_users == parsed_running_users
 
-        self.assertEqual([j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0], 60)  # pylint: disable=invalid-name
-        self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764255172'][0], 9)
-        self.assertEqual([j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0], 4785)
-        current_year = datetime.datetime.now().year
-        self.assertEqual([j.submission_time for j in job_list if j.job_id == '764245175'][0],
-                         datetime.datetime(current_year, 12, 31, 23, 40))
+    running_jobs = ['764254593', '764255172', '764245175']
+    num_machines = [1, 1, 1]
+    allocated_machines = ['lxbsu2710', 'b68ac74822', 'b68ac74822']
+    parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
+    parsed_num_machines = [j.num_machines for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
+    parsed_allocated_machines = [
+        j.allocated_machines_raw for j in job_list if j.job_state and j.job_state == JobState.RUNNING
+    ]
+    assert running_jobs == parsed_running_jobs
+    assert num_machines == parsed_num_machines
+    assert allocated_machines == parsed_allocated_machines
 
-        # Important to enable again logs!
-        logging.disable(logging.NOTSET)
+    assert [j.requested_wallclock_time_seconds for j in job_list if j.job_id == '764254593'][0] == 60  # pylint: disable=invalid-name
+    assert [j.wallclock_time_seconds for j in job_list if j.job_id == '764255172'][0] == 9
+    assert [j.wallclock_time_seconds for j in job_list if j.job_id == '764245175'][0] == 4785
+    current_year = datetime.datetime.now().year
+    assert [j.submission_time for j in job_list if j.job_id == '764245175'
+            ][0] == datetime.datetime(current_year, 12, 31, 23, 40)
 
-
-class TestSubmitScript(unittest.TestCase):
-    """Tests for the submit script."""
-
-    def test_submit_script(self):
-        """
-        Test the creation of a simple submission script.
-        """
-        from aiida.schedulers.datastructures import JobTemplate
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-
-        scheduler = LsfScheduler()
-
-        job_tmpl = JobTemplate()
-        job_tmpl.shebang = '#!/bin/bash'
-        job_tmpl.uuid = str(uuid.uuid4())
-        job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
-        job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '2', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
-        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
-
-        submit_script_text = scheduler.get_submit_script(job_tmpl)
-
-        self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-
-        self.assertTrue('#BSUB -rn' in submit_script_text)
-        self.assertTrue('#BSUB -W 24:00' in submit_script_text)
-        self.assertTrue('#BSUB -n 2' in submit_script_text)
-
-        self.assertTrue("'mpirun' '-np' '2' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
-
-    def test_submit_script_with_num_machines(self):
-        """
-        Test to verify that script fails if we specify only
-        num_machines.
-        """
-        from aiida.schedulers.datastructures import JobTemplate
-
-        scheduler = LsfScheduler()
-        job_tmpl = JobTemplate()
-        with self.assertRaises(TypeError):
-            job_tmpl.job_resource = scheduler.create_job_resource(
-                num_machines=1,
-                num_mpiprocs_per_machine=1,
-            )
+    # Important to enable again logs!
+    logging.disable(logging.NOTSET)
 
 
-class TestParserSubmit(unittest.TestCase):
-    """Test the parsing of the submit response."""
+def test_submit_script():
+    """Test the creation of a simple submission script"""
+    from aiida.schedulers.datastructures import JobTemplate
+    from aiida.common.datastructures import CodeInfo, CodeRunMode
 
-    def test_submit_output(self):
-        """
-        Test the parsing of the output of the submission command
-        """
-        scheduler = LsfScheduler()
-        retval = 0
-        stdout = SUBMIT_STDOUT_TO_TEST
-        stderr = ''
+    scheduler = LsfScheduler()
 
-        self.assertEqual(scheduler._parse_submit_output(retval, stdout, stderr), '764254593')
+    job_tmpl = JobTemplate()
+    job_tmpl.shebang = '#!/bin/bash'
+    job_tmpl.uuid = str(uuid.uuid4())
+    job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
+    job_tmpl.max_wallclock_seconds = 24 * 3600
+    code_info = CodeInfo()
+    code_info.cmdline_params = ['mpirun', '-np', '2', 'pw.x', '-npool', '1']
+    code_info.stdin_name = 'aiida.in'
+    job_tmpl.codes_info = [code_info]
+    job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+    job_tmpl.account = 'account_id'
+
+    submit_script_text = scheduler.get_submit_script(job_tmpl)
+
+    assert submit_script_text.startswith('#!/bin/bash')
+
+    assert '#BSUB -rn' in submit_script_text
+    assert '#BSUB -n 2' in submit_script_text
+    assert '#BSUB -W 24:00' in submit_script_text
+    assert '#BSUB -G account_id' in submit_script_text
+    assert "'mpirun' '-np' '2' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text
 
 
-class TestParserBkill(unittest.TestCase):
-    """Test the parsing of the kill response."""
+def test_create_job_resource():
+    """
+    Test to verify that script fails in the following cases:
+        * if we specify only num_machines
+        * if tot_num_mpiprocs is not an int (and can't be casted to one)
+        * if parallel_env is not a str
+    """
+    from aiida.schedulers.datastructures import JobTemplate
 
-    def test_kill_output(self):
-        """
-        Test the parsing of the output of the submission command
-        """
-        scheduler = LsfScheduler()
-        retval = 0
-        stdout = BKILL_STDOUT_TO_TEST
-        stderr = ''
+    scheduler = LsfScheduler()
+    job_tmpl = JobTemplate()
 
-        self.assertTrue(scheduler._parse_kill_output(retval, stdout, stderr))
+    with pytest.raises(TypeError):
+        job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs='Not-a-Number')
+
+    with pytest.raises(TypeError):
+        job_tmpl.job_resource = scheduler.create_job_resource(
+            num_machines=1,
+            num_mpiprocs_per_machine=1,
+        )
+
+    with pytest.raises(TypeError):
+        job_tmpl.job_resource = scheduler.create_job_resource(
+            tot_num_mpiprocs=2,
+            parallel_env=0,
+        )
+
+
+def test_submit_output():
+    """Test the parsing of the submit response"""
+    scheduler = LsfScheduler()
+    retval = 0
+    stdout = SUBMIT_STDOUT_TO_TEST
+    stderr = ''
+
+    assert scheduler._parse_submit_output(retval, stdout, stderr) == '764254593'
+
+
+def test_kill_output():
+    """Test the parsing of the kill response"""
+    scheduler = LsfScheduler()
+    retval = 0
+    stdout = BKILL_STDOUT_TO_TEST
+    stderr = ''
+
+    assert scheduler._parse_kill_output(retval, stdout, stderr)
+
+
+def test_job_tmpl_errors():
+    """Test the raising of the appropriate errors"""
+    from aiida.schedulers.datastructures import JobTemplate
+    from aiida.common.datastructures import CodeRunMode
+
+    scheduler = LsfScheduler()
+    job_tmpl = JobTemplate()
+
+    # Raises for missing resources with tot_num_mpiprocs
+    with pytest.raises(ValueError):
+        scheduler.get_submit_script(job_tmpl)
+    job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2)
+    job_tmpl.codes_info = []
+
+    # Raises for missing codes_run_mode
+    with pytest.raises(NotImplementedError):
+        scheduler.get_submit_script(job_tmpl)
+    job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+    # Incorrect setups
+    job_tmpl.max_wallclock_seconds = 'Not-a-Number'
+    with pytest.raises(ValueError):
+        scheduler.get_submit_script(job_tmpl)
+    job_tmpl.pop('max_wallclock_seconds')
+
+    job_tmpl.max_memory_kb = 'Not-a-Number'
+    with pytest.raises(ValueError):
+        scheduler.get_submit_script(job_tmpl)
+    job_tmpl.pop('max_memory_kb')
+
+    # Verify minimal working parameters don't raise
+    scheduler.get_submit_script(job_tmpl)
+
+
+def test_parsing_errors():
+    """Test the raising of the appropriate errors"""
+    from aiida.schedulers import SchedulerParsingError
+    scheduler = LsfScheduler()
+
+    with pytest.raises(SchedulerParsingError) as exc:
+        scheduler._parse_submit_output(0, 'Bad-Output-String', '')
+    assert '`Bad-Output-String`' in str(exc.value)
+
+    with pytest.raises(ValueError) as exc:
+        scheduler._parse_time_string('Bad-Time-String')
+    assert '`Bad-Time-String`' in str(exc.value)

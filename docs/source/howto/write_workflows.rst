@@ -1,10 +1,8 @@
-.. _how-to:workflows:
+.. _how-to:write-workflows:
 
-*******************************
-How to run multi-step workflows
-*******************************
-
-.. _how-to:workflows:write:
+*********************************
+How to write and extend workflows
+*********************************
 
 Writing workflows
 =================
@@ -139,171 +137,171 @@ The second argument is the result of the work chain, extracted from the ``Int`` 
 
 For a more complete discussion on workflows and their usage, please read :ref:`the corresponding topics section<topics:workflows:usage>`.
 
-.. _how-to:workflows:run:
+.. _how-to:write-workflows:extend:
 
-Launching a predefined workflow
-===============================
+Extending workflows
+===================
 
-The first step to launching a predefined workflow is loading the work function or work chain class that defines the workflow you want to run.
-The recommended method for loading a workflow is using the ``WorkflowFactory``, for example:
+When designing workflows, there are many cases where you want to reuse an existing process.
+This section explains how to extend workflows by wrapping them around other processes or linking them together.
 
-.. code-block:: python
+As an example, let's say you want to extend the ``MultiplyAddWorkChain`` by adding another step of analysis that checks whether the result is an even number or not.
+This final step can be written as a simple ``calcfunction``:
 
-    from aiida.plugins import WorkflowFactory
-    add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: is_even
 
-This is essentially the same as importing the workflow from its respective module, but using the ``WorkflowFactory`` has the advantage that the so called *entry point* (e.g. ``'arithmetic.multiply_add'``) will not change when the packages or plugins are reorganised.
-This means your code is less likely to break when updating AiiDA or the plugin that supplies the workflow.
+We could simply write a new workflow based off ``MultiplyAddWorkChain`` that includes an extra step in the outline which runs the ``is_even`` calculation function.
+However, this would lead to a lot of code duplication, and longer workflows consisting of multiple work chains would become very cumbersome to deal with (see the dropdown panel below).
 
-The list of installed plugins can be easily accessed via the verdi CLI:
+.. dropdown:: ``BadMultiplyAddIsEvenWorkChain``
 
-.. code-block:: console
+    .. literalinclude:: include/snippets/extend_workflows.py
+        :language: python
+        :pyobject: BadMultiplyAddIsEvenWorkChain
 
-    $ verdi plugin list
+    .. note::
 
-To see the list of workflow entry points, simply use:
+        We've removed the ``result`` step from the outline, as well as the ``result`` output.
+        For this work chain, we're assuming that for now we are only interested in whether or not the result is even.
 
-.. code-block:: console
+We can avoid some code duplication by simply submitting the ``MultiplyAddWorkChain`` within one of the steps of a new work chain which would then call ``is_even`` in a second step:
 
-    $ verdi plugin list aiida.workflows
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: BetterMultiplyAddIsEvenWorkChain
 
-By further specifying the entry point of the workflow, you can see its description, inputs, outputs and exit codes:
+This already simplifies the extended work chain, and avoids duplicating the steps of the ``MultiplyAddWorkChain`` in the outline.
+However, we still had to copy all of the input definitions of the ``MultiplyAddWorkChain``, and manually extract them from the inputs before passing them to the ``self.submit`` method.
+Fortunately, there is a better way of *exposing* the inputs and outputs of subprocesses of the work chain.
 
-.. code-block:: console
+Exposing inputs and outputs
+---------------------------
 
-    $ verdi plugin list aiida.workflows arithmetic.multiply_add
+In many cases it is convenient for work chains to expose the inputs of the subprocesses it wraps so users can specify these inputs directly, as well as exposing some of the outputs produced as one of the results of the parent work chain.
+For the simple example presented in the previous section, simply copy-pasting the input and output port definitions of the subprocess ``MultiplyAddWorkChain`` was not too troublesome.
+However, this quickly becomes tedious and error-prone once you start to wrap processes with quite a few more inputs.
 
-Work functions
---------------
-
-Running a work function is as simple as calling a typical Python function: simply call it with the required input arguments:
-
-.. code-block:: python
-
-    from aiida.plugins import WorkflowFactory, DataFactory
-    add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
-    Int = DataFactory('int')
-
-    result = add_and_multiply(Int(2), Int(3), Int(5))
-
-Here, the ``add_and_multiply`` work function returns the output ``Int`` node and we assign it to the variable ``result``.
-Note that the input arguments of a work function must be an instance of ``Data`` node, or any of its subclasses.
-Just calling the ``add_and_multiply`` function with regular integers will result in a ``ValueError``, as these cannot be stored in the provenance graph.
-
-.. note::
-
-    Although the example above shows the most straightforward way to run the ``add_and_multiply`` work function, there are several other ways of running processes that can return more than just the result.
-    For example, the ``run_get_node`` function from the AiiDA engine returns both the result of the workflow and the work function node.
-    See the :ref:`corresponding topics section for more details <topics:processes:usage:launching>`.
-
-Work chains
------------
-
-To launch a work chain, you can either use the ``run`` or ``submit`` functions.
-For either function, you need to provide the class of the work chain as the first argument, followed by the inputs as keyword arguments.
-Using the ``run`` function, or "running", a work chain means it is executed in the same system process as the interpreter in which it is launched:
+To prevent the copy-pasting of input and output specifications, the :class:`~aiida.engine.processes.process_spec.ProcessSpec` class provides the :meth:`~plumpy.ProcessSpec.expose_inputs` and :meth:`~plumpy.ProcessSpec.expose_outputs` methods.
+Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` class, will automatically copy the inputs of the class into the inputs namespace of the process specification:
 
 .. code-block:: python
 
-    from aiida.engine import run
-    from aiida.plugins import WorkflowFactory, DataFactory
-    Int = DataFactory('int')
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    @classmethod
+    def define(cls, spec):
+        """Specify inputs and outputs."""
+        super().define(spec)
+        spec.expose_inputs(MultiplyAddWorkChain)  # Expose the inputs instead of copying their definition
+        spec.outline(
+            cls.multiply_add,
+            cls.is_even,
+        )
+        spec.output('is_even', valid_type=Bool)
+
+Be aware that any inputs that already exist in the namespace will be overridden.
+To prevent this, the method accepts the ``namespace`` argument, which will cause the inputs to be copied into that namespace instead of the top-level namespace.
+This is especially useful for exposing inputs since *all* processes have the ``metadata`` input.
+If you expose the inputs without a namespace, the ``metadata`` input port of the exposed class will override the one of the host, which is often not desirable.
+Let's copy the inputs of the ``MultiplyAddWorkChain`` into the ``multiply_add`` namespace:
+
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: MultiplyAddIsEvenWorkChain.define
+    :dedent: 4
+
+That takes care of exposing the port specification of the wrapped process class in a very efficient way.
+To easily retrieve the inputs that have been passed to the process, one can use the :meth:`~aiida.engine.processes.process.Process.exposed_inputs` method.
+Note the past tense of the method name.
+The method takes a process class and an optional namespace as arguments, and will return the inputs that have been passed into that namespace when it was launched.
+This utility now allows us to simplify the ``multiply_add`` step in the outline:
+
+.. literalinclude:: include/snippets/extend_workflows.py
+    :language: python
+    :pyobject: MultiplyAddIsEvenWorkChain.multiply_add
+    :dedent: 4
+
+This way we don't have to manually fish out all the individual inputs from the ``self.inputs`` but have to just call this single method, saving time and lines of code.
+The final ``MultiplyAddIsEvenWorkChain`` can be found in the dropdown panel below.
+
+.. dropdown:: ``MultiplyAddIsEvenWorkChain``
+
+    .. literalinclude:: include/snippets/extend_workflows.py
+        :language: python
+        :pyobject: MultiplyAddIsEvenWorkChain
+
+When submitting or running the work chain using namespaced inputs (``multiply_add`` in the example above), it is important to use the namespace when providing the inputs:
+
+.. code-block:: python
 
     add_code = load_code(label='add')
-
-    results = run(MultiplyAddWorkChain, x=Int(2), y=Int(3), z=Int(5), code=add_code)
-
-Alternatively, you can first construct a dictionary of the inputs, and pass it to the ``run`` function by taking advantage of `Python's automatic keyword expansion <https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists>`_:
-
-.. code-block:: python
-
-    inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
-    results = run(MultiplyAddWorkChain, **inputs)
-
-This is particularly useful in case you have a workflow with a lot of inputs.
-In both cases, running the ``MultiplyAddWorkChain`` workflow returns the **results** of the workflow, i.e. a dictionary of the nodes that are produced as outputs, where the keys of the dictionary correspond to the labels of each respective output.
-
-.. note::
-
-    Similar to other processes, there are multiple functions for launching a work chain.
-    See the section on :ref:`launching processes for more details<topics:processes:usage:launching>`.
-
-Since *running* a workflow will block the interpreter, you will have to wait until the workflow is finished before you get back control.
-Moreover, you won't be able to turn your computer or even your terminal off until the workflow has fully terminated, and it is difficult to run multiple workflows in parallel.
-So, it is advisable to *submit* more complex or longer work chains to the daemon:
-
-.. code-block:: python
-
-    from aiida.engine import submit
-    from aiida.plugins import WorkflowFactory, DataFactory
-    Int = DataFactory('int')
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
-
-    add_code = load_code(label='add')
-    inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
+    inputs = {
+        'multiply_add': {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
+    }
 
     workchain_node = submit(MultiplyAddWorkChain, **inputs)
 
-Note that when using ``submit`` the work chain is not run in the local interpreter but is sent off to the daemon, and you get back control instantly.
-This allows you to submit multiple work chains at the same time and the daemon will start working on them in parallel.
-Once the ``submit`` call returns, you will not get the result as with ``run``, but you will get the **node** representing the work chain.
-Submitting a work chain instead of directly running it not only makes it easier to execute multiple work chains in parallel, but also ensures that the progress of a workchain is not lost when you restart your computer.
+After running the ``MultiplyAddIsEvenWorkChain``, you can see a hierarchical overview of the processes called by the work chain using the ``verdi process status`` command:
+
+.. code-block:: console
+
+    $ verdi process status 164
+    MultiplyAddIsEvenWorkChain<164> Finished [0] [1:is_even]
+        ├── MultiplyAddWorkChain<165> Finished [0] [3:result]
+        │   ├── multiply<166> Finished [0]
+        │   └── ArithmeticAddCalculation<168> Finished [0]
+        └── is_even<172> Finished [0]
+
+Note that this command also recursively shows the processes called by the subprocesses of the ``MultiplyAddIsEvenWorkChain`` work chain.
+
+As mentioned earlier, you can also expose the outputs of the ``MultiplyAddWorkChain`` using the :meth:`~plumpy.ProcessSpec.expose_outputs` method.
+Say we want to add the ``result`` of the ``MultiplyAddWorkChain`` as one of the outputs of the extended work chain:
+
+.. code-block:: python
+
+    @classmethod
+    def define(cls, spec):
+        """Specify inputs and outputs."""
+        super().define(spec)
+        spec.expose_inputs(MultiplyAddWorkChain, namespace='multiply_add')
+        spec.outline(
+            cls.multiply_add,
+            cls.is_even,
+        )
+        spec.expose_outputs(MultiplyAddWorkChain)
+        spec.output('is_even', valid_type=Bool)
+
+Since there is not one output port that is shared by all process classes, it is less critical to use the ``namespace`` argument when exposing outputs.
+However, take care not to override the outputs of the parent work chain in case they do have outputs with the same port name.
+We still need to pass the ``result`` of the ``MultiplyAddWorkChain`` to the outputs of the parent work chain.
+For example, we could do this in the ``is_even`` step by using the :meth:`~aiida.engine.processes.process.Process.out` method:
+
+.. code-block:: python
+
+    def is_even(self):
+        """Check if the result is even."""
+        result = self.ctx.multi_addition.outputs.result
+        result_is_even = is_even(result)
+
+        self.out('result', result)
+        self.out('is_even', result_is_even)
+
+This works fine if we want to pass a single output to the parent work chain, but once again becomes tedious and error-prone when passing multiple outputs.
+Instead we can use the :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method in combination with the :meth:`~aiida.engine.processes.process.Process.out_many` method:
+
+.. code-block:: python
+
+    def is_even(self):
+        """Check if the result is even."""
+        result_is_even = is_even(self.ctx.multi_addition.outputs.result)
+
+        self.out_many(self.exposed_outputs(self.ctx.multi_addition, MultiplyAddWorkChain))
+        self.out('is_even', result_is_even)
+
+The :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method returns a dictionary of the exposed outputs of the ``MultiplyAddWorkChain``, extracted from the workchain node stored in the ``multi_addition`` key of the context.
+The :meth:`~aiida.engine.processes.process.Process.out_many` method takes this dictionary and assigns its values to the output ports with names equal to the corresponding keys.
 
 .. important::
 
-    In contrast to work chains, work *functions* cannot be submitted to the daemon, and hence can only be *run*.
-
-If you are unfamiliar with the inputs of a particular ``WorkChain``, a convenient tool for setting up the work chain is the :ref:`process builder<topics:processes:usage:builder>`.
-This can be obtained by using the ``get_builder()`` method, which is implemented for every ``CalcJob`` and ``WorkChain``:
-
-.. code-block:: ipython
-
-    In [1]: from aiida.plugins import WorkflowFactory, DataFactory
-       ...: Int = DataFactory('int')
-       ...: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
-       ...: builder = MultiplyAddWorkChain.get_builder()
-
-To explore the inputs of the work chain, you can use tab autocompletion by typing ``builder.`` and then hitting ``TAB``.
-If you want to get more details on a specific input, you can simply add a ``?`` and press enter:
-
-.. code-block:: ipython
-
-    In [2]: builder.x?
-    Type:        property
-    String form: <property object at 0x119ad2dd0>
-    Docstring:   {"name": "x", "required": "True", "valid_type": "<class 'aiida.orm.nodes.data.int.Int'>", "non_db": "False"}
-
-Here you can see that the ``x`` input is required, needs to be of the ``Int`` type and is stored in the database (``"non_db": "False"``).
-
-Using the builder, the inputs of the ``WorkChain`` can be provided one by one:
-
-.. code-block:: ipython
-
-    In [3]: builder.code = load_code(label='add')
-       ...: builder.x = Int(2)
-       ...: builder.y = Int(3)
-       ...: builder.z = Int(5)
-
-Once the *required* inputs of the workflow have been provided to the builder, you can either run the work chain or submit it to the daemon:
-
-.. code-block:: ipython
-
-    In [4]: from aiida.engine import submit
-       ...: workchain_node = submit(builder)
-
-.. note::
-
-    For more detail on the process builder, see the :ref:`corresponding topics section<topics:processes:usage:builder>`.
-
-
-.. todo::
-
-    .. _how-to:workflows:extend:
-
-    title: Extending workflows
-
-    `#3993`_
-
-.. _#3993: https://github.com/aiidateam/aiida-core/issues/3993
+    Besides avoiding code duplication and errors, using the methods for exposing inputs and outputs also has the advantage that our parent work chain doesn't have to be adjusted in case the inputs or outputs of the child work chain change.
+    This makes the code much easier to maintain.

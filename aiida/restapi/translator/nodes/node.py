@@ -344,7 +344,7 @@ class NodeTranslator(BaseTranslator):
         results = {}
 
         for _, name, is_pkg in pkgutil.walk_packages([package_path]):
-            # N.B. pkgutil.walk_package requires a LIST of path
+            # N.B. pkgutil.walk_packages requires a LIST of paths
 
             full_path_base = os.path.join(package_path, name)
             if is_pkg:

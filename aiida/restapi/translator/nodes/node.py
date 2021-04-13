@@ -368,6 +368,7 @@ class NodeTranslator(BaseTranslator):
                     app_module = _load(spec)
             else:
                 full_path = f'{full_path_base}.py'
+                # reimplementation of deprecated `imp.load_source`
                 spec = importlib.util.spec_from_file_location(name, full_path)
                 app_module = importlib.util.module_from_spec(spec)
                 sys.modules[name] = app_module

@@ -348,6 +348,7 @@ class NodeTranslator(BaseTranslator):
 
             full_path_base = os.path.join(package_path, name)
             if is_pkg:
+                # re-implementation of deprecated `imp.load_package`
                 if os.path.isdir(full_path_base):
                     #Adds an extension to check for __init__ file in the package directory
                     extensions = (importlib.machinery.SOURCE_SUFFIXES[:] + importlib.machinery.BYTECODE_SUFFIXES[:])

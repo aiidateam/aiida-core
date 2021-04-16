@@ -426,7 +426,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if self._is_open:
             raise InvalidOperation('Cannot open the transport twice')
         # Open a SSHClient
-        connection_arguments = self._connect_args
+        connection_arguments = self._connect_args.copy()
         if 'key_filename' in connection_arguments and not connection_arguments['key_filename']:
             connection_arguments.pop('key_filename')
         proxystring = connection_arguments.pop('proxy_command', None)

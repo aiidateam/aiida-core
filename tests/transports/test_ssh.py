@@ -64,12 +64,12 @@ def test_gotocomputer():
         timeout=30,
         use_login_shell=False,
         key_policy='AutoAddPolicy',
-        proxy_command='ssh -W localhost:22 localhost'
+        proxy_command='ssh -W localhost:22 localhost',
     ) as transport:
         cmd_str = transport.gotocomputer_command('/remote_dir/')
 
         expected_str = (
-            """ssh -t localhost -o ProxyCommand="ssh -W localhost:22 localhost" "if [ -d '/remote_dir/' ] ;"""
+            """ssh -t localhost -o ProxyCommand='ssh -W localhost:22 localhost'  "if [ -d '/remote_dir/' ] ;"""
             """ then cd '/remote_dir/' ; bash  ; else echo '  ** The directory' ; """
             """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
         )

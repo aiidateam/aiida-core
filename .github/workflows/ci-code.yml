@@ -86,7 +86,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install postgresql-12 graphviz
+        sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break

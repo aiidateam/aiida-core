@@ -79,7 +79,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt install postgresql-12 graphviz
     - name: Install aiida-core
       run: |
         pip install --upgrade pip setuptools

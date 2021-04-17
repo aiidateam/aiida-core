@@ -61,3 +61,12 @@ def test_gotocomputer():
             """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
         )
         assert cmd_str == expected_str
+
+        cmd_str = transport.gotocomputer_command('/remote_dir/', "-c 'echo Hello World'")
+
+        expected_str = (
+            """bash -c  "if [ -d '/remote_dir/' ] ;"""
+            """ then cd '/remote_dir/' ; bash -l  -c 'echo Hello World'; else echo '  ** The directory' ; """
+            """echo '  ** /remote_dir/' ; echo '  ** seems to have been deleted, I logout...' ; fi" """
+        )
+        assert cmd_str == expected_str

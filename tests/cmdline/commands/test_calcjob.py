@@ -10,6 +10,7 @@
 # pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
 import io
+import pathlib
 
 from click.testing import CliRunner
 import pytest
@@ -51,10 +52,13 @@ class TestVerdiCalculation:
 
             calc = orm.CalcJobNode(computer=self.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+            calc.set_option('output_filename', 'fileA.txt')
             calc.set_remote_workdir('/tmp/aiida/work')
             remote = RemoteData(remote_path='/tmp/aiida/work')
             remote.computer = calc.computer
             remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+            (pathlib.Path('/tmp/aiida/work') / 'fileA.txt').write_text('test stringA')
+            (pathlib.Path('/tmp/aiida/work') / 'fileB.txt').write_text('test stringB')
             calc.store()
             remote.store()
 
@@ -325,3 +329,27 @@ class TestVerdiCalculation:
         assert result.exception is None, result.output
         assert len(get_result_lines(result)) == 1
         assert get_result_lines(result)[0] == '5'
+
+    def test_calcjob_remotecat(self):
+        """Test the remotecat command that prints the remote file for a given calcjob"""
+        # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
+        options = []
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.exception is not None, result.output
+
+        # This should be the failed calc without remote data - exception raised
+        options = [str(self.calcs[-1].uuid), 'fileB.txt']
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.exception is not None, result.output
+
+        options = [str(self.result_job.uuid), 'fileB.txt']
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.stdout == 'test stringB'
+
+        options = [str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.stdout == 'test stringA'
+
+        options = [str(self.result_job.uuid), 'fileA.txt']
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.stdout == 'test stringA'

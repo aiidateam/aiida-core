@@ -9,9 +9,8 @@
 ###########################################################################
 # pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use
 """Tests for the `WorkChain` class."""
-import inspect
-import unittest
 import asyncio
+import inspect
 
 import plumpy
 import pytest
@@ -1303,7 +1302,6 @@ class TestWorkChainExpose(AiidaTestCase):
             }
         )
 
-    @unittest.skip('Functionality of `Process.exposed_outputs` is broken for nested namespaces, see issue #3533.')
     def test_nested_expose(self):
         res = launch.run(
             GrandParentExposeWorkChain,

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
+# pylint: disable=no-member,too-many-public-methods
 """Module to test AiiDA processes."""
 import threading
 
@@ -343,3 +343,52 @@ class TestProcess(AiidaTestCase):
         self.assertTrue(node.is_finished)
         self.assertTrue(node.is_finished_ok)
         self.assertEqual(node.exit_status, 0)
+
+    def test_exposed_outputs(self):
+        """Test the ``Process.exposed_outputs`` method."""
+        from aiida.common import AttributeDict
+        from aiida.common.links import LinkType
+        from aiida.engine.utils import instantiate_process
+        from aiida.manage.manager import get_manager
+
+        runner = get_manager().get_runner()
+
+        class ChildProcess(Process):
+            """Dummy process with normal output and output namespace."""
+
+            _node_class = orm.WorkflowNode
+
+            @classmethod
+            def define(cls, spec):
+                super(ChildProcess, cls).define(spec)
+                spec.input('input', valid_type=orm.Int)
+                spec.output('output', valid_type=orm.Int)
+                spec.output('name.space', valid_type=orm.Int)
+
+        class ParentProcess(Process):
+            """Dummy process that exposes the outputs of ``ChildProcess``."""
+
+            _node_class = orm.WorkflowNode
+
+            @classmethod
+            def define(cls, spec):
+                super(ParentProcess, cls).define(spec)
+                spec.input('input', valid_type=orm.Int)
+                spec.expose_outputs(ChildProcess)
+
+        node_child = orm.WorkflowNode().store()
+        node_output = orm.Int(1).store()
+        node_output.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
+        node_name_space = orm.Int(1).store()
+        node_name_space.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
+
+        process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
+        exposed_outputs = process.exposed_outputs(node_child, ChildProcess)
+
+        expected = AttributeDict({
+            'name': {
+                'space': node_name_space,
+            },
+            'output': node_output,
+        })
+        self.assertEqual(exposed_outputs, expected)

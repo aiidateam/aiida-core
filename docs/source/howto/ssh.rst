@@ -214,6 +214,11 @@ This should allow you to directly connect to the *TARGET* server using
 
 For a *passwordless* connection, you need to follow the instructions :ref:`how-to:ssh:passwordless` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server.
 
+.. dropdown:: Specifying an SSH key for the proxy
+
+   If you need to specify a separate SSH key for the proxy, provide it *after* the ``-W`` directive, e.g.::
+
+        ssh -W fidis.epfl.ch:22 -i /home/ubuntu/.ssh/proxy user@proxy.epfl.ch
 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
@@ -222,10 +227,8 @@ When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configur
 
 .. dropdown:: Specifying the proxy_command manually
 
-    If, for any reason, you need to specify the ``proxy_command`` option of ``verdi computer configure ssh`` manually, please note the following:
-
-      1. Don't use placeholders ``%h`` and ``%p`` (AiiDA replaces them only when parsing from the ``~/.ssh/config`` file) but provide the actual hostname and port.
-      2. Don't include stdout/stderr redirection (AiiDA strips it automatically, but only when parsing from the ``~/.ssh/config`` file).
+    When specifying or updating the ``proxy_command`` option via ``verdi computer configure ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
+    AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.
 
 
 Using kerberos tokens

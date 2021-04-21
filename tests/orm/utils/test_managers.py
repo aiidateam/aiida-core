@@ -57,6 +57,8 @@ def test_link_manager(clear_database_before_test):
     inp1.store()
     inp2 = orm.Data()
     inp2.store()
+    inp3 = orm.Data()
+    inp3.store()
 
     # Create calc with inputs
     calc = orm.CalculationNode()
@@ -135,3 +137,33 @@ def test_link_manager(clear_database_before_test):
     # Must raise a KeyError
     with pytest.raises(KeyError):
         _ = calc.outputs['NotExistentLabel']
+
+
+def test_link_manager_with_double_underscore(clear_database_before_test):
+    """Test the LinkManager working with double underscore label
+    via .inputs and .outputs  from a ProcessNode.
+    """
+    # Create inputs
+    inp1 = orm.Data()
+    inp1.store()
+
+    # Create calc with inputs
+    calc = orm.CalculationNode()
+    calc.add_incoming(inp1, link_type=LinkType.INPUT_CALC, link_label='inp1label__more')
+    calc.store()
+
+    # Attach outputs
+    out1 = orm.Data()
+    out1.add_incoming(calc, link_type=LinkType.CREATE, link_label='out1label__more')
+    out1.store()
+
+    assert calc.inputs.inp1label.more.uuid == inp1.uuid
+    assert calc.outputs.out1label.more.uuid == out1.uuid
+
+    # Must raise a AttributeError, otherwise tab competion will not work
+    with pytest.raises(AttributeError):
+        getattr(calc.outputs.out1label, 'NotExistentLabel')
+
+    # Must raise a KeyError
+    with pytest.raises(KeyError):
+        _ = calc.outputs.out1label['NotExistentLabel']

@@ -13,6 +13,7 @@ to access members of other classes via TAB-completable attributes
 (e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
 
+from aiida.common import AttributeDict
 from aiida.common.links import LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 
@@ -45,13 +46,24 @@ class NodeLinksManager:
         self._link_type = link_type
         self._incoming = incoming
 
+    def _construct_attribute_dict(self, incoming):
+        """
+        Construct an attribute dict to support nest namespace
+        :param incoming: if True, inspect incoming links, otherwise inspect
+            outgoing links
+        """
+        if incoming:
+            links = self._node.get_incoming(link_type=self._link_type)
+        else:
+            links = self._node.get_outgoing(link_type=self._link_type)
+
+        return AttributeDict(links.nested())
+
     def _get_keys(self):
         """Return the valid link labels, used e.g. to make getattr() work"""
-        if self._incoming:
-            node_attributes = self._node.get_incoming(link_type=self._link_type).all_link_labels()
-        else:
-            node_attributes = self._node.get_outgoing(link_type=self._link_type).all_link_labels()
-        return node_attributes
+        attribute_dict = self._construct_attribute_dict(self._incoming)
+
+        return attribute_dict.keys()
 
     def _get_node_by_link_label(self, label):
         """
@@ -59,9 +71,13 @@ class NodeLinksManager:
 
         :param label: the link label connecting the current node to the node to get
         """
-        if self._incoming:
-            return self._node.get_incoming(link_type=self._link_type).get_node_by_label(label)
-        return self._node.get_outgoing(link_type=self._link_type).get_node_by_label(label)
+        attribute_dict = self._construct_attribute_dict(self._incoming)
+        try:
+            node = attribute_dict[label]
+        except KeyError:
+            raise NotExistent
+
+        return node
 
     def __dir__(self):
         """

@@ -614,7 +614,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
         :container:
 
         Designing a workflow
-            After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`multi-step workflows how-to <how-to:workflows>`.
+            After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`writing workflows how-to <how-to:write-workflows>`.
 
         Reusable data types
             If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <topics:data_types:plugin>`.

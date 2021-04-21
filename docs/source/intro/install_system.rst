@@ -231,6 +231,11 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
        Last name: name
        Institution: where-i-work
 
+   .. admonition:: Is AiiDA unable to auto-detect the PostgreSQL setup?
+       :class: attention title-icon-troubleshoot
+
+       If you get an error saying that AiiDA has trouble autodetecting the PostgreSQL setup, you will need to do the manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
+
    ---
 
    **Start verdi daemons**

@@ -10,14 +10,16 @@
 """AiiDA profile related code"""
 import collections
 import os
-
-from disk_objectstore import Container
+from typing import TYPE_CHECKING
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 
 from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+
+if TYPE_CHECKING:
+    from disk_objectstore import Container
 
 __all__ = ('Profile',)
 
@@ -125,11 +127,13 @@ class Profile:  # pylint: disable=too-many-public-methods
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))
 
-    def get_repository_container(self) -> Container:
+    def get_repository_container(self) -> 'Container':
         """Return the container of the profile's file repository.
 
         :return: the profile's file repository container.
         """
+        from disk_objectstore import Container
+
         filepath = os.path.join(self.repository_path, 'container')
         container = Container(filepath)
 

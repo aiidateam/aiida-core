@@ -780,6 +780,39 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(Workchain)
 
+    def test_nested_to_context(self):
+        val = Int(5).store()
+
+        test_case = self
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'sub1.sub2.result_a': self.submit(SimpleWc)})
+                return ToContext(**{'sub1.sub2.result_b': self.submit(SimpleWc)})
+
+            def result(self):
+                test_case.assertEqual(self.ctx.sub1.sub2.result_a.outputs.result, val)
+                test_case.assertEqual(self.ctx.sub1.sub2.result_b.outputs.result, val)
+
+        run_and_check_success(Workchain)
+
     def test_namespace_nondb_mapping(self):
         """
         Regression test for a bug in _flatten_inputs

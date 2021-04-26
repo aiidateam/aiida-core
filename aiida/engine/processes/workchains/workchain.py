@@ -11,7 +11,7 @@
 import collections.abc
 import functools
 import logging
-from typing import Any, List, Optional, Sequence, Union, TYPE_CHECKING
+from typing import Any, List, Optional, Sequence, Union, Tuple, TYPE_CHECKING
 
 from plumpy.persistence import auto_persist
 from plumpy.process_states import Wait, Continue
@@ -121,6 +121,29 @@ class WorkChain(Process):
         super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
 
+    def _resolve_nested_context(self, key: str) -> Tuple[AttributeDict, str]:
+        """
+        Returns a reference to a sub-dictionary of the context and the last key,
+        after resolving a potentially segmented key where required sub-dictionaries are created as needed.
+
+        :param key: A key into the context, where words before a dot are interpreted as a key for a sub-dictionary
+        """
+        ctx = self.ctx
+        ctx_path = key.split('.')
+
+        for path in ctx_path[:-1]:
+            try:
+                ctx = ctx[path]
+            except TypeError:
+                raise AssertionError(
+                    f'The sub-dictionary part `{path}` of the given nested key path `{key}` is already set'
+                )
+            except KeyError:
+                ctx[path] = AttributeDict()  # create the sub-dict and update the context
+                ctx = ctx[path]
+
+        return ctx, ctx_path[-1]
+
     def insert_awaitable(self, awaitable: Awaitable) -> None:
         """Insert an awaitable that should be terminated before before continuing to the next step.
 
@@ -128,17 +151,18 @@ class WorkChain(Process):
         :type awaitable: :class:`aiida.engine.processes.workchains.awaitable.Awaitable`
         """
         self._awaitables.append(awaitable)
+        ctx, key = self._resolve_nested_context(awaitable.key)
 
         # Already assign the awaitable itself to the location in the context container where it is supposed to end up
         # once it is resolved. This is especially important for the `APPEND` action, since it needs to maintain the
         # order, but the awaitables will not necessarily be resolved in the order in which they are added. By using the
         # awaitable as a placeholder, in the `resolve_awaitable`, it can be found and replaced by the resolved value.
         if awaitable.action == AwaitableAction.ASSIGN:
-            self.ctx[awaitable.key] = awaitable
+            ctx[key] = awaitable
         elif awaitable.action == AwaitableAction.APPEND:
-            self.ctx.setdefault(awaitable.key, []).append(awaitable)
+            ctx.setdefault(key, []).append(awaitable)
         else:
-            assert f'Unknown awaitable action: {awaitable.action}'
+            raise AssertionError(f'Unknown awaitable action: {awaitable.action}')
 
         self._update_process_status()
 
@@ -150,20 +174,21 @@ class WorkChain(Process):
         :param awaitable: the awaitable to resolve
         """
         self._awaitables.remove(awaitable)
+        ctx, key = self._resolve_nested_context(awaitable.key)
 
         if awaitable.action == AwaitableAction.ASSIGN:
-            self.ctx[awaitable.key] = value
+            ctx[key] = value
         elif awaitable.action == AwaitableAction.APPEND:
             # Find the same awaitable inserted in the context
-            container = self.ctx[awaitable.key]
+            container = ctx[key]
             for index, placeholder in enumerate(container):
                 if placeholder.pk == awaitable.pk and isinstance(placeholder, Awaitable):
                     container[index] = value
                     break
             else:
-                assert f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.pk}`'
+                raise AssertionError(f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`')
         else:
-            assert f'Unknown awaitable action: {awaitable.action}'
+            raise AssertionError(f'Unknown awaitable action: {awaitable.action}')
 
         awaitable.resolved = True
 

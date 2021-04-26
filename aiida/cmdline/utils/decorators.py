@@ -34,11 +34,13 @@ __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 def load_backend_if_not_loaded():
     """Load the current profile if necessary while running the spinner to show command hasn't crashed."""
-    from aiida.manage.configuration import load_profile
+    from aiida.manage.configuration import load_profile, PROFILE
     from aiida.manage.manager import get_manager
-    with spinner():
-        load_profile()
-        get_manager().get_backend()
+
+    if PROFILE is None:
+        with spinner():
+            load_profile()
+            get_manager().get_backend()
 
 
 def with_dbenv():

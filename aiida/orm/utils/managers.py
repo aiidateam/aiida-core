@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """
-Contain utility classes for "managers", i.e., classes that act allow
+Contain utility classes for "managers", i.e., classes that allow
 to access members of other classes via TAB-completable attributes
 (e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
-
+from aiida.common import AttributeDict
 from aiida.common.links import LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 
@@ -45,23 +45,63 @@ class NodeLinksManager:
         self._link_type = link_type
         self._incoming = incoming
 
+    def _construct_attribute_dict(self, incoming):
+        """Construct an attribute dict from all links of the node, recreating nested namespaces from flat link labels.
+
+        :param incoming: if True, inspect incoming links, otherwise inspect outgoing links.
+        """
+        if incoming:
+            links = self._node.get_incoming(link_type=self._link_type)
+        else:
+            links = self._node.get_outgoing(link_type=self._link_type)
+
+        return AttributeDict(links.nested())
+
     def _get_keys(self):
         """Return the valid link labels, used e.g. to make getattr() work"""
-        if self._incoming:
-            node_attributes = self._node.get_incoming(link_type=self._link_type).all_link_labels()
-        else:
-            node_attributes = self._node.get_outgoing(link_type=self._link_type).all_link_labels()
-        return node_attributes
+        attribute_dict = self._construct_attribute_dict(self._incoming)
+
+        return attribute_dict.keys()
 
     def _get_node_by_link_label(self, label):
-        """
-        Return the linked node with a given link label
+        """Return the linked node with a given link label.
 
-        :param label: the link label connecting the current node to the node to get
+        Nested namespaces in link labels get represented by double underscores in the database. Up until now, the link
+        manager didn't automatically unroll these again into nested namespaces and so a user was forced to pass the link
+        with double underscores to dereference the corresponding node. For example, when used with the ``inputs``
+        attribute of a ``ProcessNode`` one had to do:
+
+            node.inputs.nested__sub__namespace
+
+        Now it is possible to do
+
+            node.inputs.nested.sub.namespace
+
+        which is more intuitive since the double underscore replacement is just for the database and the user shouldn't
+        even have to know about it. For compatibility we support the old version a bit longer and it will emit a
+        deprecation warning.
+
+        :param label: the link label connecting the current node to the node to get.
         """
-        if self._incoming:
-            return self._node.get_incoming(link_type=self._link_type).get_node_by_label(label)
-        return self._node.get_outgoing(link_type=self._link_type).get_node_by_label(label)
+        attribute_dict = self._construct_attribute_dict(self._incoming)
+        try:
+            node = attribute_dict[label]
+        except KeyError as exception:
+            if '__' in label:
+                import functools
+                import warnings
+                from aiida.common.warnings import AiidaDeprecationWarning
+                warnings.warn(
+                    'dereferencing nodes with links containing double underscores is deprecated, simply replace '
+                    'the double underscores with a single dot instead. For example: \n'
+                    '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n'
+                    'Support for double underscores will be removed in the future.', AiidaDeprecationWarning
+                )  # pylint: disable=no-member
+                namespaces = label.split('__')
+                return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)
+            raise NotExistent from exception
+
+        return node
 
     def __dir__(self):
         """
@@ -81,12 +121,14 @@ class NodeLinksManager:
         """
         try:
             return self._get_node_by_link_label(label=name)
-        except NotExistent:
+        except NotExistent as exception:
             # Note: in order for TAB-completion to work, we need to raise an exception that also inherits from
             # `AttributeError`, so that `getattr(node.inputs, 'some_label', some_default)` returns `some_default`.
             # Otherwise, the exception is not caught by `getattr` and is propagated, instead of returning the default.
             prefix = 'input' if self._incoming else 'output'
-            raise NotExistentAttributeError(f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'")
+            raise NotExistentAttributeError(
+                f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
+            ) from exception
 
     def __getitem__(self, name):
         """
@@ -96,12 +138,14 @@ class NodeLinksManager:
         """
         try:
             return self._get_node_by_link_label(label=name)
-        except NotExistent:
+        except NotExistent as exception:
             # Note: in order for this class to behave as a dictionary, we raise an exception that also inherits from
             # `KeyError` - in this way, users can use the standard construct `try/except KeyError` and this will behave
             # like a standard dictionary.
             prefix = 'input' if self._incoming else 'output'
-            raise NotExistentKeyError(f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'")
+            raise NotExistentKeyError(
+                f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
+            ) from exception
 
     def __str__(self):
         """Return a string representation of the manager"""
@@ -173,5 +217,5 @@ class AttributeManager:
         """
         try:
             return self._node.get_attribute(name)
-        except AttributeError as err:
-            raise KeyError(str(err))
+        except AttributeError as exception:
+            raise KeyError(str(exception)) from exception

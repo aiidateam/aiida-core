@@ -9,12 +9,11 @@
 ###########################################################################
 """Tests for the various node managers (.inputs, .outputs, .dict, ...)."""
 # pylint: disable=unused-argument
-
 import pytest
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
-from aiida.common import LinkType
+from aiida.common import LinkType, AttributeDict
 
 
 def test_dot_dict_manager(clear_database_before_test):
@@ -57,6 +56,8 @@ def test_link_manager(clear_database_before_test):
     inp1.store()
     inp2 = orm.Data()
     inp2.store()
+    inp3 = orm.Data()
+    inp3.store()
 
     # Create calc with inputs
     calc = orm.CalculationNode()
@@ -135,3 +136,38 @@ def test_link_manager(clear_database_before_test):
     # Must raise a KeyError
     with pytest.raises(KeyError):
         _ = calc.outputs['NotExistentLabel']
+
+
+def test_link_manager_with_nested_namespaces(clear_database_before_test):
+    """Test the ``LinkManager`` works with nested namespaces."""
+    inp1 = orm.Data()
+    inp1.store()
+
+    calc = orm.CalculationNode()
+    calc.add_incoming(inp1, link_type=LinkType.INPUT_CALC, link_label='nested__sub__namespace')
+    calc.store()
+
+    # Attach outputs
+    out1 = orm.Data()
+    out1.add_incoming(calc, link_type=LinkType.CREATE, link_label='nested__sub__namespace')
+    out1.store()
+
+    # Check that the recommended way of dereferencing works
+    assert calc.inputs.nested.sub.namespace.uuid == inp1.uuid
+    assert calc.outputs.nested.sub.namespace.uuid == out1.uuid
+
+    # Leafs will return an ``AttributeDict`` instance
+    assert isinstance(calc.outputs.nested.sub, AttributeDict)
+
+    # Check the legacy way still works
+    with pytest.warns(Warning):
+        assert calc.inputs.nested__sub__namespace.uuid == inp1.uuid
+        assert calc.outputs.nested__sub__namespace.uuid == out1.uuid
+
+    # Must raise a AttributeError, otherwise tab competion will not work
+    with pytest.raises(AttributeError):
+        _ = calc.outputs.nested.not_existent
+
+    # Must raise a KeyError
+    with pytest.raises(KeyError):
+        _ = calc.outputs.nested['not_existent']

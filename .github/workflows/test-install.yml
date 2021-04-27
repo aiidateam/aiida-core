@@ -69,14 +69,6 @@ jobs:
       run:
         python -c "import aiida"
 
-    - name: Send Slack notification
-      if: ${{ failure() && github.event_name == 'schedule' }}
-      uses: kpritam/slack-job-status-action@v1
-      with:
-        job-status: ${{ job.status }}
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        channel: dev-aiida-core
-
   install-with-conda:
 
     if: github.repository == 'aiidateam/aiida-core'
@@ -108,14 +100,6 @@ jobs:
       run: |
         source activate test-environment
         python -c "import aiida"
-
-    - name: Send Slack notification
-      if: ${{ failure() && github.event_name == 'schedule' }}
-      uses: kpritam/slack-job-status-action@v1
-      with:
-        job-status: ${{ job.status }}
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        channel: dev-aiida-core
 
   tests:
 
@@ -163,7 +147,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break
@@ -189,14 +173,6 @@ jobs:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:
         .github/workflows/tests.sh
-
-    - name: Send Slack notification
-      if: ${{ failure() && github.event_name == 'schedule' }}
-      uses: kpritam/slack-job-status-action@v1
-      with:
-        job-status: ${{ job.status }}
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        channel: dev-aiida-core
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt

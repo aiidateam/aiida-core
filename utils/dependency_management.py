@@ -401,6 +401,37 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
 
 @cli.command()
 @click.argument('extras', nargs=-1)
+@click.option('--format', 'fmt', type=click.Choice(['pip', 'pipfile']), default='pip')
+def show_requirements(extras, fmt):
+    """Show the installation requirements.
+
+    For example:
+
+        show-requirements --format=pipfile all
+
+    This will show all reqiurements including *all* extras in Pipfile format.
+    """
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+
+    if 'all' in extras:
+        extras = list(setup_cfg['extras_require'])
+
+    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in extras:
+        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+
+    if fmt == 'pip':
+        click.echo('\n'.join(sorted(map(str, to_install))))
+    elif fmt == 'pipfile':
+        click.echo('[packages]')
+        for requirement in sorted(to_install, key=str):
+            click.echo(f'{requirement.name} = "{requirement.specifier}"')
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
 def pip_install_extras(extras):
     """Install extra requirements.
 

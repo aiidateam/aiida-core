@@ -223,7 +223,7 @@ Handling parsing errors
 
 So far, we have not spent much attention on dealing with potential errors that can arise when running external codes.
 However, there are lots of ways in which codes can fail to execute nominally.
-A |Parser| can play an important role in detecting and communicating such errors, where :ref:`workflows <how-to:workflows>` can then decide how to proceed, e.g., by modifying input parameters and resubmitting the calculation.
+A |Parser| can play an important role in detecting and communicating such errors, where :ref:`workflows <how-to:run-workflows>` can then decide how to proceed, e.g., by modifying input parameters and resubmitting the calculation.
 
 Parsers communicate errors through :ref:`exit codes<topics:processes:concepts:exit_codes>`, which are defined in the |spec| of the |CalcJob| they parse.
 The :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` example, defines the following exit codes:

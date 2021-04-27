@@ -1,6 +1,6 @@
 {
     "name": "aiida-core",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "url": "http://www.aiida.net/",
     "license": "MIT License",
     "author": "The AiiDA team",
@@ -89,6 +89,7 @@
             "spglib~=1.14"
         ],
         "notebook": [
+            "jupyter-client~=6.1,<6.1.13",
             "jupyter~=1.0",
             "notebook~=6.1,>=6.1.5"
         ],
@@ -108,7 +109,7 @@
             "pytest~=6.0",
             "pytest-asyncio~=0.12",
             "pytest-timeout~=1.3",
-            "pytest-cov~=2.7",
+            "pytest-cov~=2.7,<2.11",
             "pytest-rerunfailures~=9.1,>=9.1.1",
             "pytest-benchmark~=3.2",
             "pympler~=0.9",

@@ -19,7 +19,6 @@ Provides:
     code branch gets visited and possibly avoiding the overhead if not
 
 """
-
 from contextlib import contextmanager
 
 from click_spinner import spinner
@@ -33,18 +32,26 @@ __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 
 def load_backend_if_not_loaded():
-    """Load the current profile if necessary while running the spinner to show command hasn't crashed."""
-    from aiida.manage.configuration import load_profile, PROFILE
+    """Load the database backend environment for the currently loaded profile.
+
+    If no profile has been loaded yet, the default profile will be loaded first. A spinner will be shown during both
+    actions to indicate that the function is working and has not crashed, since loading can take a second.
+    """
+    from aiida.manage.configuration import get_profile, load_profile
     from aiida.manage.manager import get_manager
 
-    if PROFILE is None:
+    manager = get_manager()
+
+    if get_profile() is None or not manager.backend_loaded:
         with spinner():
-            load_profile()
-            get_manager().get_backend()
+            load_profile()  # This will load the default profile if no profile has already been loaded
+            manager.get_backend()  # This will load the backend of the loaded profile, if not already loaded
 
 
 def with_dbenv():
-    """Function decorator that will load the database environment only when the function is called.
+    """Function decorator that will load the database environment for the currently loaded profile.
+
+    .. note:: if no profile has been loaded yet, the default profile will be loaded first.
 
     Example::
 

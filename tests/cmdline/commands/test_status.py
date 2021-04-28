@@ -10,8 +10,10 @@
 """Tests for `verdi status`."""
 import pytest
 
+from aiida import __version__
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.manage.configuration import get_profile
 
 
 @pytest.mark.requires_rmq
@@ -26,6 +28,12 @@ def test_status(run_cli_command):
 
     for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
         assert string in result.output
+
+    profile = get_profile()
+    container = profile.get_repository_container()
+
+    assert __version__ in result.output
+    assert container.get_folder() in result.output
 
 
 @pytest.mark.usefixtures('empty_config')

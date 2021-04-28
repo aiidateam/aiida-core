@@ -11,12 +11,10 @@
 """ Django-specific import of AiiDA entities """
 from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
-import warnings
 
 from aiida.common.links import LinkType, validate_link_label
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.utils import get_object_from_string, validate_uuid
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config_option
 from aiida.orm import Group
 
@@ -45,7 +43,6 @@ def import_data_dj(
     extras_mode_existing: str = 'kcl',
     extras_mode_new: str = 'import',
     comment_mode: str = 'newest',
-    silent: Optional[bool] = None,
     **kwargs: Any
 ):  # pylint: disable=unused-argument
     """Import exported AiiDA archive to the AiiDA database and repository.
@@ -101,12 +98,6 @@ def import_data_dj(
         created.
     """
     # Initial check(s)
-    if silent is not None:
-        warnings.warn(
-            'silent keyword is deprecated and will be removed in AiiDA v2.0.0, set the logger level explicitly instead',
-            AiidaDeprecationWarning
-        )  # pylint: disable=no-member
-
     if extras_mode_new not in ['import', 'none']:
         raise exceptions.ImportValidationError(
             f"Unknown extras_mode_new value: {extras_mode_new}, should be either 'import' or 'none'"

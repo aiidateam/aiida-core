@@ -12,7 +12,6 @@
 from contextlib import contextmanager
 from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
-import warnings
 
 from sqlalchemy.orm import Session
 
@@ -20,7 +19,6 @@ from aiida.common import json
 from aiida.common.links import LinkType
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.utils import get_object_from_string, validate_uuid
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import QueryBuilder, Node, Group
 from aiida.orm.utils.links import link_triple_exists, validate_link
 
@@ -51,7 +49,6 @@ def import_data_sqla(
     extras_mode_existing: str = 'kcl',
     extras_mode_new: str = 'import',
     comment_mode: str = 'newest',
-    silent: Optional[bool] = None,
     **kwargs: Any
 ):  # pylint: disable=unused-argument
     """Import exported AiiDA archive to the AiiDA database and repository.
@@ -110,12 +107,6 @@ def import_data_sqla(
         created.
     """
     # Initial check(s)
-    if silent is not None:
-        warnings.warn(
-            'silent keyword is deprecated and will be removed in AiiDA v2.0.0, set the logger level explicitly instead',
-            AiidaDeprecationWarning
-        )  # pylint: disable=no-member
-
     if extras_mode_new not in ['import', 'none']:
         raise exceptions.ImportValidationError(
             f"Unknown extras_mode_new value: {extras_mode_new}, should be either 'import' or 'none'"

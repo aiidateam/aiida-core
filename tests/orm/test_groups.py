@@ -348,39 +348,6 @@ class TestGroupsSubclasses(AiidaTestCase):
         orm.Group.objects.delete(id=group_pk)
 
     @staticmethod
-    @pytest.mark.filterwarnings('ignore::UserWarning')
-    def test_explicit_type_string():
-        """Test that passing explicit `type_string` to `Group` constructor is still possible despite being deprecated.
-
-        Both constructing a group while passing explicit `type_string` as well as loading a group with unregistered
-        type string should emit a warning, but it should be possible.
-        """
-        type_string = 'data.potcar'  # An unregistered custom type string
-
-        with pytest.warns(UserWarning):
-            group = orm.Group(label='group', type_string=type_string)
-
-        group.store()
-        assert group.type_string == type_string
-
-        with pytest.warns(UserWarning):
-            loaded = orm.Group.get(label=group.label, type_string=type_string)
-
-        assert isinstance(loaded, orm.Group)
-        assert loaded.pk == group.pk
-        assert loaded.type_string == group.type_string
-
-        queried = orm.QueryBuilder().append(orm.Group, filters={'id': group.pk, 'type_string': type_string}).one()[0]
-        assert isinstance(queried, orm.Group)
-        assert queried.pk == group.pk
-        assert queried.type_string == group.type_string
-
-        # Removing it as other methods might get a warning instead
-        group_pk = group.pk
-        del group
-        orm.Group.objects.delete(id=group_pk)
-
-    @staticmethod
     def test_querying():
         """Test querying for groups with and without subclassing."""
         orm.Group(label='group').store()

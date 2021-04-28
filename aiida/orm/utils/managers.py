@@ -95,7 +95,7 @@ class NodeLinksManager:
                     'dereferencing nodes with links containing double underscores is deprecated, simply replace '
                     'the double underscores with a single dot instead. For example: \n'
                     '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n'
-                    'Support for double underscores will be removed in the future.', AiidaDeprecationWarning
+                    'Support for double underscores will be removed in `v3.0`.', AiidaDeprecationWarning
                 )  # pylint: disable=no-member
                 namespaces = label.split('__')
                 return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)

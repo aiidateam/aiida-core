@@ -9,13 +9,10 @@
 ###########################################################################
 """Data class that can be used to store a single file in its repository."""
 import contextlib
-import inspect
 import os
-import warnings
 import pathlib
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
 from .data import Data
 
 __all__ = ('SinglefileData',)
@@ -36,19 +33,8 @@ class SinglefileData(Data):
         # pylint: disable=redefined-builtin
         super().__init__(**kwargs)
 
-        # 'filename' argument was added to 'set_file' after 1.0.0.
-        if 'filename' not in inspect.getfullargspec(self.set_file)[0]:
-            warnings.warn(  # pylint: disable=no-member
-                f"Method '{type(self).__name__}.set_file' does not support the 'filename' argument. " +
-                'This will raise an exception in AiiDA 2.0.', AiidaDeprecationWarning
-            )
-
         if file is not None:
-            if filename is None:
-                # don't assume that set_file has a 'filename' argument (remove guard in 2.0.0)
-                self.set_file(file)
-            else:
-                self.set_file(file, filename=filename)
+            self.set_file(file, filename=filename)
 
     @property
     def filename(self):

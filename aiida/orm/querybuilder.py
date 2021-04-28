@@ -34,7 +34,6 @@ from aiida.common.exceptions import InputValidationError
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
 from aiida.common.exceptions import ConfigurationError
-from aiida.common.warnings import AiidaDeprecationWarning
 
 from . import authinfos
 from . import comments
@@ -1811,33 +1810,6 @@ class QueryBuilder:
                         '{}'.format(self._get_tag_from_specification(joining_value), self.tag_to_alias_map.keys())
                     )
         return returnval
-
-    def get_json_compatible_queryhelp(self):
-        """
-        Makes the queryhelp a json-compatible dictionary.
-
-        In this way,the queryhelp can be stored
-        in the database or a json-object, retrieved or shared and used later.
-        See this usage::
-
-            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
-            queryhelp  = qb.get_json_compatible_queryhelp()
-
-            # Now I could save this dictionary somewhere and use it later:
-
-            qb2=QueryBuilder(**queryhelp)
-
-            # This is True if no change has been made to the database.
-            # Note that such a comparison can only be True if the order of results is enforced
-            qb.all()==qb2.all()
-
-        :returns: the json-compatible queryhelp
-
-        .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use the :meth:`aiida.orm.querybuilder.QueryBuilder.queryhelp` property instead.
-        """
-        warnings.warn('method is deprecated, use the `queryhelp` property instead', AiidaDeprecationWarning)
-        return self.queryhelp
 
     @property
     def queryhelp(self):

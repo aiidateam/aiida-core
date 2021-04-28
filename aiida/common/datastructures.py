@@ -70,13 +70,6 @@ class CalcInfo(DefaultFieldsAttributeDict):
         and stored temporarily in a FolderData, that will be available only during the parsing call.
         The format of the list is the same as that of 'retrieve_list'
 
-    * retrieve_singlefile_list: a list of tuples with format
-        ('linkname_from calc to singlefile', 'subclass of singlefile', 'filename')
-        Each tuple represents a file that will be retrieved from cluster and saved in SinglefileData nodes
-
-        .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
-
     * local_copy_list: a list of tuples with format ('node_uuid', 'filename', relativedestpath')
     * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
@@ -93,29 +86,10 @@ class CalcInfo(DefaultFieldsAttributeDict):
     """
 
     _default_fields = (
-        'job_environment',
-        'email',
-        'email_on_started',
-        'email_on_terminated',
-        'uuid',
-        'prepend_text',
-        'append_text',
-        'num_machines',
-        'num_mpiprocs_per_machine',
-        'priority',
-        'max_wallclock_seconds',
-        'max_memory_kb',
-        'rerunnable',
-        'retrieve_list',
-        'retrieve_temporary_list',
-        'retrieve_singlefile_list',  # Deprecated as of 1.0.0, use instead `retrieve_temporary_list`
-        'local_copy_list',
-        'remote_copy_list',
-        'remote_symlink_list',
-        'provenance_exclude_list',
-        'codes_info',
-        'codes_run_mode',
-        'skip_submit'
+        'job_environment', 'email', 'email_on_started', 'email_on_terminated', 'uuid', 'prepend_text', 'append_text',
+        'num_machines', 'num_mpiprocs_per_machine', 'priority', 'max_wallclock_seconds', 'max_memory_kb', 'rerunnable',
+        'retrieve_list', 'retrieve_temporary_list', 'local_copy_list', 'remote_copy_list', 'remote_symlink_list',
+        'provenance_exclude_list', 'codes_info', 'codes_run_mode', 'skip_submit'
     )
 
 

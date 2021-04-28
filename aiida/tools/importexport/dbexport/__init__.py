@@ -26,14 +26,11 @@ from typing import (
     Union,
     cast,
 )
-import warnings
 
 from aiida import get_version, orm
-from aiida.common.folders import Folder
 from aiida.common.links import GraphTraversalRules
 from aiida.common.lang import type_check
 from aiida.common.progress_reporter import get_progress_reporter, create_callback
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
     COMMENT_ENTITY_NAME,
@@ -53,7 +50,6 @@ from aiida.tools.importexport.archive.writers import ArchiveMetadata, ArchiveWri
 from aiida.tools.importexport.dbexport.utils import (
     EXPORT_LOGGER,
     check_licenses,
-    deprecated_parameters,
     fill_in_query,
     serialize_dict,
     summary,
@@ -67,8 +63,6 @@ def export(
     filename: Optional[str] = None,
     file_format: Union[str, Type[ArchiveWriterAbstract]] = ExportFileFormat.ZIP,
     overwrite: bool = False,
-    silent: Optional[bool] = None,
-    use_compression: Optional[bool] = None,
     include_comments: bool = True,
     include_logs: bool = True,
     allowed_licenses: Optional[Union[list, Callable]] = None,
@@ -86,18 +80,6 @@ def export(
         EXPORT_LOGGER.setLevel('DEBUG')
         set_progress_bar_tqdm(leave=True)
         export(...)
-
-    .. deprecated:: 1.5.0
-        Support for the parameter `silent` will be removed in `v2.0.0`.
-        Please set the log level and progress bar implementation independently.
-
-    .. deprecated:: 1.5.0
-        Support for the parameter `use_compression` will be removed in `v2.0.0`.
-        Please use `writer_init={'use_compression': True}`.
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
 
     :param entities: a list of entity instances;
         they can belong to different models/entities.
@@ -145,37 +127,8 @@ def export(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     # Backwards-compatibility
-    entities = cast(
-        Iterable[Any],
-        deprecated_parameters(
-            old={
-                'name': 'what',
-                'value': traversal_rules.pop('what', None)
-            },
-            new={
-                'name': 'entities',
-                'value': entities
-            },
-        ),
-    )
-    filename = cast(
-        str,
-        deprecated_parameters(
-            old={
-                'name': 'outfile',
-                'value': traversal_rules.pop('outfile', None)
-            },
-            new={
-                'name': 'filename',
-                'value': filename
-            },
-        ),
-    )
-    if silent is not None:
-        warnings.warn(
-            'silent keyword is deprecated and will be removed in AiiDA v2.0.0, set the logger level explicitly instead',
-            AiidaDeprecationWarning
-        )  # pylint: disable=no-member
+    entities = cast(Iterable[Any], entities)
+    filename = cast(str, filename)
 
     type_check(
         entities,
@@ -197,12 +150,6 @@ def export(
 
     # setup the archive writer
     writer_init = writer_init or {}
-    if use_compression is not None:
-        warnings.warn(
-            'use_compression argument is deprecated and will be removed in AiiDA v2.0.0 (which will always compress)',
-            AiidaDeprecationWarning
-        )  # pylint: disable=no-member
-        writer_init['use_compression'] = use_compression
     if isinstance(file_format, str):
         writer = get_writer(file_format)(filepath=filename, **writer_init)
     elif issubclass(file_format, ArchiveWriterAbstract):
@@ -664,133 +611,3 @@ def _write_node_repositories(
             callback = create_callback(progress)
             container_profile.export(set(hashkeys), container_export, compress=False, callback=callback)
             writer.write_repository_container(container_export)
-
-
-# THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY
-
-
-def export_tree(
-    entities: Optional[Iterable[Any]] = None,
-    folder: Optional[Folder] = None,
-    allowed_licenses: Optional[Union[list, Callable]] = None,
-    forbidden_licenses: Optional[Union[list, Callable]] = None,
-    silent: Optional[bool] = None,
-    include_comments: bool = True,
-    include_logs: bool = True,
-    **traversal_rules: bool,
-) -> None:
-    """Export the entries passed in the 'entities' list to a file tree.
-    .. deprecated:: 1.2.1
-        Support for the parameter `what` will be removed in `v2.0.0`. Please use `entities` instead.
-    :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param folder: a temporary folder to build the archive in.
-
-    :param allowed_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
-        otherwise.
-
-    :param forbidden_licenses: List or function. If a list, then checks whether all licenses of Data nodes are in the
-        list. If a function, then calls function for licenses of Data nodes expecting True if license is allowed, False
-        otherwise.
-
-    :param silent: suppress console prints and progress bar.
-
-    :param include_comments: In-/exclude export of comments for given node(s) in ``entities``.
-        Default: True, *include* comments in export (as well as relevant users).
-
-    :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
-        Default: True, *include* logs in export.
-
-    :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules` what rule names
-        are toggleable and what the defaults are.
-
-    :raises `~aiida.tools.importexport.common.exceptions.ArchiveExportError`: if there are any internal errors when
-        exporting.
-    :raises `~aiida.common.exceptions.LicensingException`: if any node is licensed under forbidden license.
-    """
-    warnings.warn(
-        'export_tree function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
-        AiidaDeprecationWarning
-    )  # pylint: disable=no-member
-    export(
-        entities=entities,
-        filename='none',
-        overwrite=True,
-        file_format='folder',
-        allowed_licenses=allowed_licenses,
-        forbidden_licenses=forbidden_licenses,
-        silent=silent,
-        include_comments=include_comments,
-        include_logs=include_logs,
-        writer_init={'folder': folder},
-        **traversal_rules,
-    )
-
-
-def export_zip(
-    entities: Optional[Iterable[Any]] = None,
-    filename: Optional[str] = None,
-    use_compression: bool = True,
-    **kwargs: Any,
-) -> Tuple[float, float]:
-    """Export in a zipped folder
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param filename: the filename
-        (possibly including the absolute path) of the file on which to export.
-
-    :param use_compression: Whether or not to compress the zip file.
-
-    """
-    warnings.warn(
-        'export_zip function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
-        AiidaDeprecationWarning
-    )  # pylint: disable=no-member
-    writer = export(
-        entities=entities,
-        filename=filename,
-        file_format=ExportFileFormat.ZIP,
-        use_compression=use_compression,
-        **kwargs,
-    )
-    return writer.export_info['writer_entered'], writer.export_info['writer_exited']
-
-
-def export_tar(
-    entities: Optional[Iterable[Any]] = None,
-    filename: Optional[str] = None,
-    **kwargs: Any,
-) -> Tuple[float, float, float, float]:
-    """Export the entries passed in the 'entities' list to a gzipped tar file.
-
-    .. deprecated:: 1.2.1
-        Support for the parameters `what` and `outfile` will be removed in `v2.0.0`.
-        Please use `entities` and `filename` instead, respectively.
-
-    :param entities: a list of entity instances; they can belong to different models/entities.
-
-    :param filename: the filename (possibly including the absolute path)
-        of the file on which to export.
-    """
-    warnings.warn(
-        'export_tar function is deprecated and will be removed in AiiDA v2.0.0, use `export` instead',
-        AiidaDeprecationWarning
-    )  # pylint: disable=no-member
-    writer = export(
-        entities=entities,
-        filename=filename,
-        file_format=ExportFileFormat.TAR_GZIPPED,
-        **kwargs,
-    )
-
-    # the tar is now directly written to, so no compression start/stop time!
-    return (
-        writer.export_info['writer_entered'], writer.export_info['writer_exited'], writer.export_info['writer_exited'],
-        writer.export_info['writer_exited']
-    )

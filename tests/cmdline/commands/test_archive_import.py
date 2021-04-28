@@ -21,13 +21,6 @@ from aiida.tools.importexport import EXPORT_VERSION
 from tests.utils.archives import get_archive_file
 
 
-def test_cmd_import_deprecation():
-    """Test that the deprecated `verdi import` command can still be called."""
-    from aiida.cmdline.commands import cmd_import
-    result = CliRunner().invoke(cmd_import.cmd_import, '--help')
-    assert result.exit_code == 0
-
-
 class TestVerdiImport(AiidaTestCase):
     """Tests for `verdi import`."""
 

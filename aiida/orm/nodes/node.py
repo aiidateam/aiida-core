@@ -14,7 +14,6 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-import warnings
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -24,7 +23,6 @@ from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash, _HASH_EXTRA_KEY
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
@@ -623,7 +621,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         assert self._incoming_cache is not None, 'incoming_cache not initialised'
         return bool(self._incoming_cache)
 
-    def store_all(self, with_transaction: bool = True, use_cache=None) -> 'Node':
+    def store_all(self, with_transaction: bool = True) -> 'Node':
         """Store the node, together with all input links.
 
         Unstored nodes from cached incoming linkswill also be stored.
@@ -631,11 +629,6 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         assert self._incoming_cache is not None, 'incoming_cache not initialised'
-
-        if use_cache is not None:
-            warnings.warn(  # pylint: disable=no-member
-                'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
-            )
 
         if self.is_stored:
             raise exceptions.ModificationNotAllowed(f'Node<{self.id}> is already stored')
@@ -650,7 +643,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
         return self.store(with_transaction)
 
-    def store(self, with_transaction: bool = True, use_cache=None) -> 'Node':  # pylint: disable=arguments-differ
+    def store(self, with_transaction: bool = True) -> 'Node':  # pylint: disable=arguments-differ
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -662,11 +655,6 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         from aiida.manage.caching import get_use_cache
-
-        if use_cache is not None:
-            warnings.warn(  # pylint: disable=no-member
-                'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
-            )
 
         if not self.is_stored:
 
@@ -911,95 +899,3 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         """
         # pylint: disable=no-self-use
         return ''
-
-    @staticmethod
-    def get_schema() -> Dict[str, Any]:
-        """
-        Every node property contains:
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the node
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
-
-        """
-        message = 'method is deprecated, use' \
-            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return {
-            'attributes': {
-                'display_name': 'Attributes',
-                'help_text': 'Attributes of the node',
-                'is_foreign_key': False,
-                'type': 'dict'
-            },
-            'attributes.state': {
-                'display_name': 'State',
-                'help_text': 'AiiDA state of the calculation',
-                'is_foreign_key': False,
-                'type': ''
-            },
-            'ctime': {
-                'display_name': 'Creation time',
-                'help_text': 'Creation time of the node',
-                'is_foreign_key': False,
-                'type': 'datetime.datetime'
-            },
-            'extras': {
-                'display_name': 'Extras',
-                'help_text': 'Extras of the node',
-                'is_foreign_key': False,
-                'type': 'dict'
-            },
-            'id': {
-                'display_name': 'Id',
-                'help_text': 'Id of the object',
-                'is_foreign_key': False,
-                'type': 'int'
-            },
-            'label': {
-                'display_name': 'Label',
-                'help_text': 'User-assigned label',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'mtime': {
-                'display_name': 'Last Modification time',
-                'help_text': 'Last modification time',
-                'is_foreign_key': False,
-                'type': 'datetime.datetime'
-            },
-            'node_type': {
-                'display_name': 'Type',
-                'help_text': 'Node type',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'user_id': {
-                'display_name': 'Id of creator',
-                'help_text': 'Id of the user that created the node',
-                'is_foreign_key': True,
-                'related_column': 'id',
-                'related_resource': '_dbusers',
-                'type': 'int'
-            },
-            'uuid': {
-                'display_name': 'Unique ID',
-                'help_text': 'Universally Unique Identifier',
-                'is_foreign_key': False,
-                'type': 'unicode'
-            },
-            'process_type': {
-                'display_name': 'Process type',
-                'help_text': 'Process type',
-                'is_foreign_key': False,
-                'type': 'str'
-            }
-        }

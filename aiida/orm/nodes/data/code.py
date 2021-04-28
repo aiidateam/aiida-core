@@ -93,7 +93,7 @@ class Code(Data):
         for filename in files:
             if os.path.isfile(filename):
                 with open(filename, 'rb') as handle:
-                    self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
+                    self.put_object_from_filelike(handle, os.path.split(filename)[1])
 
     def __str__(self):
         local_str = 'Local' if self.is_local() else 'Remote'

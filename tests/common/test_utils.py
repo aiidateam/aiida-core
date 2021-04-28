@@ -8,10 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the aiida.common.utils functionality."""
-import datetime
 import unittest
-
-from dateutil.parser import parse
 
 from aiida.common import escaping
 from aiida.common import utils
@@ -53,105 +50,6 @@ class UniqueTest(unittest.TestCase):
     def array_counter(self):
         self.seq += 1
         return self.seq
-
-    def test_query_yes_no(self):
-        """
-        This method tests the query_yes_no method behaves as expected. To
-        perform this, a lambda function is used to simulate the user input.
-        """
-        from aiida.common.utils import Capturing
-        from aiida.manage.backup import backup_utils
-
-        # Capture the sysout for the following code
-        with Capturing():
-            # Check the yes
-            backup_utils.input = lambda _: 'y'
-            self.assertTrue(backup_utils.query_yes_no('', 'yes'))
-
-            backup_utils.input = lambda _: 'yes'
-            self.assertTrue(backup_utils.query_yes_no('', 'yes'))
-
-            # Check the no
-            backup_utils.input = lambda _: 'no'
-            self.assertFalse(backup_utils.query_yes_no('', 'yes'))
-
-            backup_utils.input = lambda _: 'n'
-            self.assertFalse(backup_utils.query_yes_no('', 'yes'))
-
-            # Check the empty default value that should
-            # lead to an error
-            with self.assertRaises(ValueError):
-                backup_utils.query_yes_no('', '')
-
-            # Check that a None default value and no answer from
-            # the user should lead to the repetition of the query until
-            # it is answered properly
-            self.seq = -1
-            answers = ['', '', '', 'yes']
-            backup_utils.input = lambda _: answers[self.array_counter()]
-            self.assertTrue(backup_utils.query_yes_no('', None))
-            self.assertEqual(self.seq, len(answers) - 1)
-
-            # Check that the default answer is returned
-            # when the user doesn't give an answer
-            backup_utils.input = lambda _: ''
-            self.assertTrue(backup_utils.query_yes_no('', 'yes'))
-
-            backup_utils.input = lambda _: ''
-            self.assertFalse(backup_utils.query_yes_no('', 'no'))
-
-    def test_query_string(self):
-        """
-        This method tests that the query_string method behaves as expected.
-        """
-        from aiida.manage.backup import backup_utils
-
-        # None should be returned when empty answer and empty default
-        # answer is given
-        backup_utils.input = lambda _: ''
-        self.assertIsNone(backup_utils.query_string('', ''))
-
-        # If no answer is given then the default answer should be returned
-        backup_utils.input = lambda _: ''
-        self.assertEqual(backup_utils.query_string('', 'Def_answer'), 'Def_answer')
-
-        # The answer should be returned when the an answer is given by
-        # the user
-        backup_utils.input = lambda _: 'Usr_answer'
-        self.assertEqual(backup_utils.query_string('', 'Def_answer'), 'Usr_answer')
-
-    def test_ask_backup_question(self):
-        """
-        This method checks that the combined use of query_string and
-        query_yes_no by the ask_backup_question is done as expected.
-        """
-        from aiida.common.utils import Capturing
-        from aiida.manage.backup import backup_utils
-
-        # Capture the sysout for the following code
-        with Capturing():
-            # Test that a question that asks for an integer is working
-            # The given answers are in order:
-            # - a non-accepted empty answer
-            # - an answer that can not be parsed based on the given type
-            # - the final expected answer
-            self.seq = -1
-            answers = ['', '3fd43', '1', 'yes']
-            backup_utils.input = lambda _: answers[self.array_counter()]
-            self.assertEqual(backup_utils.ask_question('', int, False), int(answers[2]))
-
-            # Test that a question that asks for a date is working correctly.
-            # The behavior is similar to the above test.
-            self.seq = -1
-            answers = ['', '3fd43', '2015-07-28 20:48:53.197537+02:00', 'yes']
-            backup_utils.input = lambda _: answers[self.array_counter()]
-            self.assertEqual(backup_utils.ask_question('', datetime.datetime, False), parse(answers[2]))
-
-            # Check that None is not allowed as answer
-            question = ''
-            answer = ''
-            backup_utils.input = lambda x: answer if x == question else 'y'
-            self.assertEqual(backup_utils.ask_question(question, int, True), None)
 
 
 class PrettifierTest(unittest.TestCase):

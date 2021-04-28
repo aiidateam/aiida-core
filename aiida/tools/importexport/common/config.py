@@ -15,7 +15,7 @@ from aiida.orm import Computer, Group, Node, User, Log, Comment
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
-EXPORT_VERSION = '0.10'
+EXPORT_VERSION = '0.11'
 
 
 class ExportFileFormat(str, Enum):
@@ -25,9 +25,6 @@ class ExportFileFormat(str, Enum):
 
 
 DUPL_SUFFIX = ' (Imported #{})'
-
-# The name of the subfolder in which the node files are stored
-NODES_EXPORT_SUBFOLDER = 'nodes'
 
 # Giving names to the various entities. Attributes and links are not AiiDA
 # entities but we will refer to them as entities in the file (to simplify
@@ -177,6 +174,7 @@ def get_all_fields_info():
             'requires': COMPUTER_ENTITY_NAME,
             'related_name': 'dbnodes'
         },
+        'repository_metadata': {},
         'description': {},
         'process_type': {},
         'extras': {

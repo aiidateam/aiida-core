@@ -21,7 +21,7 @@ class DeserializationException(AiidaException):
     pass
 
 
-LATEST_MIGRATION = '0045_dbgroup_extras'
+LATEST_MIGRATION = '0047_migrate_repository'
 
 
 def _update_schema_version(version, apps, _):

@@ -9,13 +9,11 @@
 ###########################################################################
 """Common import functions for both database backend"""
 import copy
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from aiida.common import timezone
-from aiida.common.folders import RepositoryFolder
 from aiida.common.progress_reporter import get_progress_reporter, create_callback
 from aiida.orm import Group, ImportGroup, Node, QueryBuilder
-from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
@@ -24,27 +22,48 @@ MAX_COMPUTERS = 100
 MAX_GROUPS = 100
 
 
-def _copy_node_repositories(*, uuids_to_create: List[str], reader: ArchiveReaderAbstract):
+def _copy_node_repositories(*, repository_metadatas: List[Dict], reader: ArchiveReaderAbstract):
     """Copy repositories of new nodes from the archive to the AiiDa profile.
 
-    :param uuids_to_create: the node UUIDs to copy
+    :param repository_metadatas: list of repository metadatas
     :param reader: the archive reader
-
     """
-    if not uuids_to_create:
+    from aiida.manage.manager import get_manager
+
+    if not repository_metadatas:
         return
+
     IMPORT_LOGGER.debug('CREATING NEW NODE REPOSITORIES...')
-    with get_progress_reporter()(total=1, desc='Creating new node repos') as progress:
 
-        _callback = create_callback(progress)
+    # Copy the contents of the repository container. Note that this should really be done within the
+    # database transaction and if that fails, the written files should be deleted, or at least
+    # soft-deleted. This is to be done later. This is first working example
+    container_export = reader.get_repository_container()
 
-        for import_entry_uuid, subfolder in zip(
-            uuids_to_create, reader.iter_node_repos(uuids_to_create, callback=_callback)
-        ):
-            destdir = RepositoryFolder(section=Repository._section_name, uuid=import_entry_uuid)  # pylint: disable=protected-access
-            # Replace the folder, possibly destroying existing previous folders, and move the files
-            # (faster if we are on the same filesystem, and in any case the source is a SandboxFolder)
-            destdir.replace_with_folder(subfolder.abspath, move=True, overwrite=True)
+    if not container_export.is_initialised:
+        container_export.init_container()
+
+    profile = get_manager().get_profile()
+    assert profile is not None, 'profile not loaded'
+    container_profile = profile.get_repository_container()
+
+    def collect_hashkeys(objects, hashkeys):
+        for obj in objects.values():
+            hashkey = obj.get('k', None)
+            if hashkey is not None:
+                hashkeys.append(hashkey)
+            subobjects = obj.get('o', None)
+            if subobjects:
+                collect_hashkeys(subobjects, hashkeys)
+
+    hashkeys: List[str] = []
+
+    for repository_metadata in repository_metadatas:
+        collect_hashkeys(repository_metadata.get('o', {}), hashkeys)
+
+    with get_progress_reporter()(total=len(hashkeys), desc='Importing repository files') as progress:
+        callback = create_callback(progress)
+        container_export.export(set(hashkeys), container_profile, compress=True, callback=callback)
 
 
 def _make_import_group(*, group: Optional[ImportGroup], node_pks: List[int]) -> ImportGroup:

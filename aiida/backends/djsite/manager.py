@@ -84,7 +84,7 @@ class DjangoBackendManager(BackendManager):
         from django.db.utils import ProgrammingError
         from aiida.manage.manager import get_manager
 
-        backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
         try:
             result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'schema_generation';""")
@@ -104,7 +104,7 @@ class DjangoBackendManager(BackendManager):
         from django.db.utils import ProgrammingError
         from aiida.manage.manager import get_manager
 
-        backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
         try:
             result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
@@ -129,7 +129,7 @@ class DjangoBackendManager(BackendManager):
         from aiida.manage.manager import get_manager
         super()._migrate_database_generation()
 
-        backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
         backend.execute_raw(r"""DELETE FROM django_migrations WHERE app = 'db';""")
         backend.execute_raw(
             r"""INSERT INTO django_migrations (app, name, applied) VALUES ('db', '0001_initial', NOW());"""

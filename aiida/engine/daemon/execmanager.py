@@ -291,7 +291,12 @@ def upload_calculation(
             relpath = os.path.normpath(os.path.relpath(filepath, folder.abspath))
             if relpath not in provenance_exclude_list:
                 with open(filepath, 'rb') as handle:
-                    node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access
+                    node._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
+
+    # Since the node is already stored, we cannot use the normal repository interface since it will raise a
+    # `ModificationNotAllowed` error. To bypass it, we go straight to the underlying repository instance to store the
+    # files, however, this means we have to manually update the node's repository metadata.
+    node._update_repository_metadata()  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest

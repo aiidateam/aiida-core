@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods,no-self-use
 """Tests for the Node ORM class."""
-import io
 import logging
 import os
 import tempfile
@@ -32,7 +31,7 @@ class TestNode(AiidaTestCase):
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
         node = Data()
-        dirpath = node._repository._get_temp_folder().abspath  # pylint: disable=protected-access
+        dirpath = node._repository.backend.sandbox.abspath  # pylint: disable=protected-access
 
         self.assertTrue(os.path.isdir(dirpath))
         del node
@@ -47,6 +46,24 @@ class TestNode(AiidaTestCase):
 
         with self.assertRaises(exceptions.ModificationNotAllowed):
             node.user = self.user
+
+    @staticmethod
+    def test_repository_metadata():
+        """Test the basic properties for `repository_metadata`."""
+        node = Data()
+        assert node.repository_metadata == {}
+
+        # Even after storing the metadata should be empty, since it contains no files
+        node.store()
+        assert node.repository_metadata == {}
+
+        node = Data()
+        repository_metadata = {'key': 'value'}
+        node.repository_metadata = repository_metadata
+        assert node.repository_metadata == repository_metadata
+
+        node.store()
+        assert node.repository_metadata != repository_metadata
 
 
 class TestNodeAttributesExtras(AiidaTestCase):
@@ -903,26 +920,6 @@ def test_hashing_errors(aiida_caplog):
     with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
         result = node.get_hash(ignore_errors=False)
     assert result is None
-
-
-# Ignoring the resource errors as we are indeed testing the wrong way of using these (for backward-compatibility)
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
-@pytest.mark.filterwarnings('ignore::aiida.common.warnings.AiidaDeprecationWarning')
-@pytest.mark.usefixtures('clear_database_before_test')
-def test_open_wrapper():
-    """Test the wrapper around the return value of ``Node.open``.
-
-    This should be remove in v2.0.0 because the wrapper should be removed.
-    """
-    filename = 'test'
-    node = Node()
-    node.put_object_from_filelike(io.StringIO('test'), filename)
-
-    # Both `iter` and `next` should not raise
-    next(node.open(filename))
-    iter(node.open(filename))
-    node.open(filename).__next__()
-    node.open(filename).__iter__()
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi profile`."""
-
 import traceback
 from click.testing import CliRunner
 import pytest
@@ -18,6 +17,7 @@ from aiida.backends import BACKEND_DJANGO
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
+from aiida.manage.manager import get_manager
 from aiida.manage.external.postgres import Postgres
 
 
@@ -75,6 +75,12 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertEqual(user.first_name, user_first_name)
         self.assertEqual(user.last_name, user_last_name)
         self.assertEqual(user.institution, user_institution)
+
+        # Check that the repository UUID was stored in the database
+        manager = get_manager()
+        backend_manager = manager.get_backend_manager()
+        repository = profile.get_repository_container()
+        self.assertEqual(backend_manager.get_repository_uuid(), repository.container_id)
 
     def test_quicksetup_from_config_file(self):
         """Test `verdi quicksetup` from configuration file."""
@@ -157,3 +163,9 @@ email: 123@234.de"""
         self.assertEqual(user.first_name, user_first_name)
         self.assertEqual(user.last_name, user_last_name)
         self.assertEqual(user.institution, user_institution)
+
+        # Check that the repository UUID was stored in the database
+        manager = get_manager()
+        backend_manager = manager.get_backend_manager()
+        repository = profile.get_repository_container()
+        self.assertEqual(backend_manager.get_repository_uuid(), repository.container_id)

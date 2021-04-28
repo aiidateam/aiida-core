@@ -17,7 +17,6 @@ from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.common.folders import Folder
 from aiida.common.warnings import AiidaDeprecationWarning
 
 from .calculation import CalculationNode
@@ -50,9 +49,6 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
-
-    # Base path within the repository where to put objects by default
-    _repository_base_path = 'raw_input'
 
     # An optional entry point for a CalculationTools instance
     _tools = None
@@ -155,24 +151,6 @@ class CalcJobNode(CalculationNode):
         builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
 
         return builder
-
-    @property
-    def _raw_input_folder(self) -> Folder:
-        """
-        Get the input folder object.
-
-        :return: the input folder object.
-        :raise: NotExistent: if the raw folder hasn't been created yet
-        """
-        from aiida.common.exceptions import NotExistent
-
-        assert self._repository is not None, 'repository not initialised'
-
-        return_folder = self._repository._get_base_folder()  # pylint: disable=protected-access
-        if return_folder.exists():
-            return return_folder
-
-        raise NotExistent('the `_raw_input_folder` has not yet been created')
 
     def get_option(self, name: str) -> Optional[Any]:
         """

@@ -9,16 +9,12 @@
 ###########################################################################
 # pylint: disable=fixme,too-many-lines
 """Provides export functionalities."""
-from abc import ABC, abstractmethod
 from collections import defaultdict
-import logging
 import os
-import tarfile
-import time
+import tempfile
 from typing import (
     Any,
     Callable,
-    ContextManager,
     DefaultDict,
     Dict,
     Iterable,
@@ -33,18 +29,12 @@ from typing import (
 import warnings
 
 from aiida import get_version, orm
-from aiida.common import json
-from aiida.common.exceptions import LicensingException
-from aiida.common.folders import Folder, RepositoryFolder, SandboxFolder
+from aiida.common.folders import Folder
 from aiida.common.links import GraphTraversalRules
 from aiida.common.lang import type_check
-from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.progress_reporter import get_progress_reporter, create_callback
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm.utils._repository import Repository
-from aiida.tools.importexport.common import (
-    exceptions,
-)
+from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
     COMMENT_ENTITY_NAME,
     COMPUTER_ENTITY_NAME,
@@ -52,7 +42,7 @@ from aiida.tools.importexport.common.config import (
     GROUP_ENTITY_NAME,
     LOG_ENTITY_NAME,
     NODE_ENTITY_NAME,
-    NODES_EXPORT_SUBFOLDER,
+    ExportFileFormat,
     entity_names_to_entities,
     file_fields_to_model_fields,
     get_all_fields_info,
@@ -60,12 +50,9 @@ from aiida.tools.importexport.common.config import (
 )
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
 from aiida.tools.importexport.archive.writers import ArchiveMetadata, ArchiveWriterAbstract, get_writer
-from aiida.tools.importexport.common.config import ExportFileFormat
-from aiida.tools.importexport.common.utils import export_shard_uuid
 from aiida.tools.importexport.dbexport.utils import (
     EXPORT_LOGGER,
     check_licenses,
-    check_process_nodes_sealed,
     deprecated_parameters,
     fill_in_query,
     serialize_dict,
@@ -266,15 +253,19 @@ def export(
 
         # Create a mapping of node PK to UUID.
         node_pk_2_uuid_mapping: Dict[int, str] = {}
+        repository_metadata_mapping: Dict[int, dict] = {}
+
         if node_ids_to_be_exported:
             qbuilder = orm.QueryBuilder().append(
                 orm.Node,
-                project=('id', 'uuid'),
+                project=('id', 'uuid', 'repository_metadata'),
                 filters={'id': {
                     'in': node_ids_to_be_exported
                 }},
             )
-            node_pk_2_uuid_mapping = dict(qbuilder.all(batch_size=batch_size))
+            for pk, uuid, repository_metadata in qbuilder.iterall(batch_size=batch_size):
+                node_pk_2_uuid_mapping[pk] = uuid
+                repository_metadata_mapping[pk] = repository_metadata
 
         # check that no nodes are being exported with incorrect licensing
         _check_node_licenses(node_ids_to_be_exported, allowed_licenses, forbidden_licenses)
@@ -328,7 +319,7 @@ def export(
 
             _write_node_repositories(
                 node_pks=exported_entity_pks[NODE_ENTITY_NAME],
-                node_pk_2_uuid_mapping=node_pk_2_uuid_mapping,
+                repository_metadata_mapping=repository_metadata_mapping,
                 writer=writer_context
             )
 
@@ -633,25 +624,46 @@ def _write_group_mappings(*, group_pks: Set[int], batch_size: int, writer: Archi
 
 
 def _write_node_repositories(
-    *, node_pks: Set[int], node_pk_2_uuid_mapping: Dict[int, str], writer: ArchiveWriterAbstract
+    *, node_pks: Set[int], repository_metadata_mapping: Dict[int, dict], writer: ArchiveWriterAbstract
 ):
     """Write all exported node repositories to the archive file."""
     with get_progress_reporter()(total=len(node_pks), desc='Exporting node repositories: ') as progress:
 
-        for pk in node_pks:
+        with tempfile.TemporaryDirectory() as temp:
+            from disk_objectstore import Container
+            from aiida.manage.manager import get_manager
 
-            uuid = node_pk_2_uuid_mapping[pk]
+            dirpath = os.path.join(temp, 'container')
+            container_export = Container(dirpath)
+            container_export.init_container()
 
-            progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
-            progress.update()
+            profile = get_manager().get_profile()
+            assert profile is not None, 'profile not loaded'
+            container_profile = profile.get_repository_container()
 
-            src = RepositoryFolder(section=Repository._section_name, uuid=uuid)  # pylint: disable=protected-access
-            if not src.exists():
-                raise exceptions.ArchiveExportError(
-                    f'Unable to find the repository folder for Node with UUID={uuid} '
-                    'in the local repository'
-                )
-            writer.write_node_repo_folder(uuid, src._abspath)  # pylint: disable=protected-access
+            # This should be done more effectively, starting by not having to load the node. Either the repository
+            # metadata should be collected earlier when the nodes themselves are already exported or a single separate
+            # query should be done.
+            hashkeys = []
+
+            def collect_hashkeys(objects):
+                for obj in objects.values():
+                    hashkey = obj.get('k', None)
+                    if hashkey is not None:
+                        hashkeys.append(hashkey)
+                    subobjects = obj.get('o', None)
+                    if subobjects:
+                        collect_hashkeys(subobjects)
+
+            for pk in node_pks:
+                progress.set_description_str(f'Exporting node repositories: {pk}', refresh=False)
+                progress.update()
+                repository_metadata = repository_metadata_mapping[pk]
+                collect_hashkeys(repository_metadata.get('o', {}))
+
+            callback = create_callback(progress)
+            container_profile.export(set(hashkeys), container_export, compress=False, callback=callback)
+            writer.write_repository_container(container_export)
 
 
 # THESE FUNCTIONS ARE ONLY ADDED FOR BACK-COMPATIBILITY

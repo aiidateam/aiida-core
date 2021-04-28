@@ -9,12 +9,13 @@
 ###########################################################################
 # pylint: disable=too-many-lines,too-many-arguments
 """Package for node ORM classes."""
+import copy
 import datetime
 import importlib
 from logging import Logger
+import typing
 import warnings
-import traceback
-from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -26,7 +27,6 @@ from aiida.common.links import LinkType
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
-from aiida.orm.utils._repository import Repository
 from aiida.orm.utils.node import AbstractNodeMeta
 from aiida.orm import autogroup
 
@@ -36,6 +36,7 @@ from ..entities import Entity, EntityExtrasMixin, EntityAttributesMixin
 from ..entities import Collection as EntityCollection
 from ..querybuilder import QueryBuilder
 from ..users import User
+from .repository import NodeRepositoryMixin
 
 if TYPE_CHECKING:
     from aiida.repository import File
@@ -47,62 +48,7 @@ __all__ = ('Node',)
 _NO_DEFAULT = tuple()  # type: ignore[var-annotated]
 
 
-class WarnWhenNotEntered:
-    """Temporary wrapper to warn when `Node.open` is called outside of a context manager."""
-
-    def __init__(self, fileobj: Union[IO[str], IO[bytes]], name: str) -> None:
-        self._fileobj: Union[IO[str], IO[bytes]] = fileobj
-        self._name = name
-        self._was_entered = False
-
-    def _warn_if_not_entered(self, method) -> None:
-        """Fire a warning if the object wrapper has not yet been entered."""
-        if not self._was_entered:
-            msg = f'\nThe method `{method}` was called on the return value of `{self._name}.open()`' + \
-                    ' outside of a context manager.\n' + \
-                  'Please wrap this call inside `with <node instance>.open(): ...` to silence this warning. ' + \
-                  'This will raise an exception, starting from `aiida-core==2.0.0`.\n'
-
-            try:
-                caller = traceback.format_stack()[-3]
-            except Exception:  # pylint: disable=broad-except
-                msg += 'Could not determine the line of code responsible for triggering this warning.'
-            else:
-                msg += f'The offending call comes from:\n{caller}'
-
-            warnings.warn(msg, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-    def __enter__(self) -> Union[IO[str], IO[bytes]]:
-        self._was_entered = True
-        return self._fileobj.__enter__()
-
-    def __exit__(self, *args: Any) -> None:
-        self._fileobj.__exit__(*args)
-
-    def __getattr__(self, key: str):
-        if key == '_fileobj':
-            return self._fileobj
-        return getattr(self._fileobj, key)
-
-    def __del__(self) -> None:
-        self._warn_if_not_entered('del')
-
-    def __iter__(self) -> Iterator[Union[str, bytes]]:
-        return self._fileobj.__iter__()
-
-    def __next__(self) -> Union[str, bytes]:
-        return self._fileobj.__next__()
-
-    def read(self, *args: Any, **kwargs: Any) -> Union[str, bytes]:
-        self._warn_if_not_entered('read')
-        return self._fileobj.read(*args, **kwargs)
-
-    def close(self, *args: Any, **kwargs: Any) -> None:
-        self._warn_if_not_entered('close')
-        return self._fileobj.close(*args, **kwargs)  # type: ignore[call-arg]
-
-
-class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
+class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -139,9 +85,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             if node.get_outgoing().all():
                 raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
 
-            repository = node._repository  # pylint: disable=protected-access
             self._backend.nodes.delete(node_id)
-            repository.erase(force=True)
 
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None
@@ -156,16 +100,12 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     # Flag that determines whether the class can be cached.
     _cachable = False
 
-    # Base path within the repository where to put objects by default
-    _repository_base_path = 'path'
-
     # Flag that determines whether the class can be stored.
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     # These are to be initialized in the `initialization` method
     _incoming_cache: Optional[List[LinkTriple]] = None
-    _repository: Optional[Repository] = None
 
     @classmethod
     def from_backend_entity(cls, backend_entity: 'BackendNode') -> 'Node':
@@ -236,9 +176,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         # A cache of incoming links represented as a list of LinkTriples instances
         self._incoming_cache = list()
-
-        # Calls the initialisation from the RepositoryMixin
-        self._repository = Repository(uuid=self.uuid, is_stored=self.is_stored, base_path=self._repository_base_path)
 
     def _validate(self) -> bool:
         """Check if the attributes and files retrieved from the database are valid.
@@ -346,6 +283,22 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.description = value
 
     @property
+    def repository_metadata(self) -> typing.Dict:
+        """Return the node repository metadata.
+
+        :return: the repository metadata
+        """
+        return self.backend_entity.repository_metadata or {}
+
+    @repository_metadata.setter
+    def repository_metadata(self, value):
+        """Set the repository metadata.
+
+        :param value: the new value to set
+        """
+        self.backend_entity.repository_metadata = value
+
+    @property
     def computer(self) -> Optional[Computer]:
         """Return the computer of this node.
 
@@ -409,341 +362,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :return: the mtime
         """
         return self.backend_entity.mtime
-
-    def list_objects(self, path: Optional[str] = None, key: Optional[str] = None) -> List['File']:
-        """Return a list of the objects contained in this repository, optionally in the given sub directory.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :return: a list of `File` named tuples representing the objects present in directory with the given path
-        :raises FileNotFoundError: if the `path` does not exist in the repository of this node
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        return self._repository.list_objects(path)
-
-    def list_object_names(self, path: Optional[str] = None, key: Optional[str] = None) -> List[str]:
-        """Return a list of the object names contained in this repository, optionally in the given sub directory.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        return self._repository.list_object_names(path)
-
-    def open(self, path: Optional[str] = None, mode: str = 'r', key: Optional[str] = None) -> WarnWhenNotEntered:
-        """Open a file handle to the object with the given path.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Starting from `v2.0.0` this will raise if not used in a context manager.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param mode: the mode under which to open the handle
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("open() missing 1 required positional argument: 'path'")
-
-        if mode not in ['r', 'rb']:
-            warnings.warn("from v2.0 only the modes 'r' and 'rb' will be accepted", AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return WarnWhenNotEntered(self._repository.open(path, mode), repr(self))
-
-    def get_object(self, path: Optional[str] = None, key: Optional[str] = None) -> 'File':
-        """Return the object with the given path.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :return: a `File` named tuple
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("get_object() missing 1 required positional argument: 'path'")
-
-        return self._repository.get_object(path)
-
-    def get_object_content(self,
-                           path: Optional[str] = None,
-                           mode: str = 'r',
-                           key: Optional[str] = None) -> Union[str, bytes]:
-        """Return the content of a object with the given path.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("get_object_content() missing 1 required positional argument: 'path'")
-
-        if mode not in ['r', 'rb']:
-            warnings.warn("from v2.0 only the modes 'r' and 'rb' will be accepted", AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return self._repository.get_object_content(path, mode)
-
-    def put_object_from_tree(
-        self,
-        filepath: str,
-        path: Optional[str] = None,
-        contents_only: bool = True,
-        force: bool = False,
-        key: Optional[str] = None
-    ) -> None:
-        """Store a new object under `path` with the contents of the directory located at `filepath` on this file system.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            First positional argument `path` has been deprecated and renamed to `filepath`.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        .. deprecated:: 1.4.0
-            Keyword `contents_only` is deprecated and will be removed in `v2.0.0`.
-
-        :param filepath: absolute path of directory whose contents to copy to the repository
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if contents_only is False:
-            warnings.warn(
-                'the `contents_only` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        self._repository.put_object_from_tree(filepath, path, contents_only, force)
-
-    def put_object_from_file(
-        self,
-        filepath: str,
-        path: Optional[str] = None,
-        mode: Optional[str] = None,
-        encoding: Optional[str] = None,
-        force: bool = False,
-        key: Optional[str] = None
-    ) -> None:
-        """Store a new object under `path` with contents of the file located at `filepath` on this file system.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            First positional argument `path` has been deprecated and renamed to `filepath`.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        :param filepath: absolute path of file whose contents to copy to the repository
-        :param path: the relative path where to store the object in the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param mode: the file mode with which the object will be written
-            Deprecated: will be removed in `v2.0.0`
-        :param encoding: the file encoding with which the object will be written
-            Deprecated: will be removed in `v2.0.0`
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        # Note that the defaults of `mode` and `encoding` had to be change to `None` from `w` and `utf-8` resptively, in
-        # order to detect when they were being passed such that the deprecation warning can be emitted. The defaults did
-        # not make sense and so ignoring them is justified, since the side-effect of this function, a file being copied,
-        # will continue working the same.
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if mode is not None:
-            warnings.warn('the `mode` argument is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if encoding is not None:
-            warnings.warn(  # pylint: disable=no-member
-                'the `encoding` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
-            )
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("put_object_from_file() missing 1 required positional argument: 'path'")
-
-        self._repository.put_object_from_file(filepath, path, mode, encoding, force)
-
-    def put_object_from_filelike(
-        self,
-        handle: IO[Any],
-        path: Optional[str] = None,
-        mode: str = 'w',
-        encoding: str = 'utf8',
-        force: bool = False,
-        key: Optional[str] = None
-    ) -> None:
-        """Store a new object under `path` with contents of filelike object `handle`.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        :param handle: filelike object with the content to be stored
-        :param path: the relative path where to store the object in the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param mode: the file mode with which the object will be written
-        :param encoding: the file encoding with which the object will be written
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("put_object_from_filelike() missing 1 required positional argument: 'path'")
-
-        self._repository.put_object_from_filelike(handle, path, mode, encoding, force)
-
-    def delete_object(self, path: Optional[str] = None, force: bool = False, key: Optional[str] = None) -> None:
-        """Delete the object from the repository.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        :param key: fully qualified identifier for the object within the repository
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("delete_object() missing 1 required positional argument: 'path'")
-
-        self._repository.delete_object(path, force)
 
     def add_comment(self, content: str, user: Optional[User] = None) -> Comment:
         """Add a new comment.
@@ -1087,20 +705,23 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        assert self._repository is not None, 'repository not initialised'
+        from aiida.repository import Repository
+        from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
-        # First store the repository folder such that if this fails, there won't be an incomplete node in the database.
-        # On the flipside, in the case that storing the node does fail, the repository will now have an orphaned node
-        # directory which will have to be cleaned manually sometime.
-        self._repository.store()
+        # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
+        if isinstance(self._repository.backend, SandboxRepositoryBackend):
+            profile = get_manager().get_profile()
+            assert profile is not None, 'profile not loaded'
+            backend = DiskObjectStoreRepositoryBackend(container=profile.get_repository_container())
+            repository = Repository(backend=backend)
+            repository.clone(self._repository)
+            # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
+            self._repository_instance = repository
 
-        try:
-            links = self._incoming_cache
-            self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
-        except Exception:
-            # I put back the files in the sandbox folder since the transaction did not succeed
-            self._repository.restore()
-            raise
+        self.repository_metadata = self._repository.serialize()
+
+        links = self._incoming_cache
+        self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
 
         self._incoming_cache = list()
         self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
@@ -1121,11 +742,18 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
                 )
 
     def _store_from_cache(self, cache_node: 'Node', with_transaction: bool) -> None:
-        """Store this node from an existing cache node."""
-        assert self._repository is not None, 'repository not initialised'
-        assert cache_node._repository is not None, 'cache repository not initialised'  # pylint: disable=protected-access
+        """Store this node from an existing cache node.
 
+        .. note::
+
+            With the current implementation of the backend repository, which automatically deduplicates the content that
+            it contains, we do not have to copy the contents of the source node. Since the content should be exactly
+            equal, the repository will already contain it and there is nothing to copy. We simply replace the current
+            ``repository`` instance with a clone of that of the source node, which does not actually copy any files.
+
+        """
         from aiida.orm.utils.mixins import Sealable
+        from aiida.repository import Repository
         assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
@@ -1135,16 +763,12 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.label = cache_node.label
         self.description = cache_node.description
 
+        # Make sure to reinitialize the repository instance of the clone to that of the source node.
+        self._repository: Repository = copy.copy(cache_node._repository)  # pylint: disable=protected-access
+
         for key, value in cache_node.attributes.items():
             if key != Sealable.SEALED_KEY:
                 self.set_attribute(key, value)
-
-        # The erase() removes the current content of the sandbox folder.
-        # If this was not done, the content of the sandbox folder could
-        # become mangled when copying over the content of the cache
-        # source repository folder.
-        self._repository.erase()
-        self.put_object_from_tree(cache_node._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
         self._store(with_transaction=with_transaction, clean=False)
         self._add_outputs_from_cache(cache_node)
@@ -1199,7 +823,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
                 for key, val in self.attributes_items()
                 if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
-            self._repository._get_base_folder(),  # pylint: disable=protected-access
+            self._repository.hash(),
             self.computer.uuid if self.computer is not None else None
         ]
         return objects

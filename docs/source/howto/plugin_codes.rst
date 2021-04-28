@@ -190,7 +190,7 @@ The following is an example of a simple implementation:
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
-  1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files that the |CalcJob| instructed to retrieve, and provides the means to :py:meth:`~aiida.orm.nodes.node.Node.open` any file it contains.
+  1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files that the |CalcJob| instructed to retrieve, and provides the means to :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.open` any file it contains.
 
   2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
 

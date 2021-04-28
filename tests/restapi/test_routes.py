@@ -154,7 +154,7 @@ class RESTApiTestCase(AiidaTestCase):
         # TODO: Storing the different nodes as lists and accessing them
         # by their list index is very fragile and a pain to debug.
         # Please change this!
-        computer_projections = ['id', 'uuid', 'name', 'hostname', 'transport_type', 'scheduler_type']
+        computer_projections = ['id', 'uuid', 'label', 'hostname', 'transport_type', 'scheduler_type']
         computers = orm.QueryBuilder().append(orm.Computer, tag='comp', project=computer_projections).order_by({
             'comp': [{
                 'id': {
@@ -503,10 +503,10 @@ class RESTApiTestSuite(RESTApiTestCase):
 
     def test_computers_filter_name(self):
         """
-        Add filter for the name of computer and get the filtered computer
+        Add filter for the label of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?name="test1"', expected_list_ids=[1])
+        RESTApiTestCase.process_test(self, 'computers', '/computers?label="test1"', expected_list_ids=[1])
 
     def test_computers_filter_hostname(self):
         """
@@ -522,7 +522,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         list
         """
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?transport_type="local"&name="test3"&orderby=+id', expected_list_ids=[3]
+            self, 'computers', '/computers?transport_type="local"&label="test3"&orderby=+id', expected_list_ids=[3]
         )
 
     ############### list orderby ########################
@@ -547,34 +547,34 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=-id', expected_list_ids=[4, 3, 2, 1, 0])
 
-    def test_computers_orderby_name_asc(self):
+    def test_computers_orderby_label_asc(self):
         """
-        Returns the computers list ordered by "name" in ascending
+        Returns the computers list ordered by "label" in ascending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=name', expected_list_ids=[1, 2, 3, 4]
+            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=label', expected_list_ids=[1, 2, 3, 4]
         )
 
-    def test_computers_orderby_name_asc_sign(self):
+    def test_computers_orderby_label_asc_sign(self):
         """
-        Returns the computers list ordered by "+name" in ascending
+        Returns the computers list ordered by "+label" in ascending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=+name', expected_list_ids=[1, 2, 3, 4]
+            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=+label', expected_list_ids=[1, 2, 3, 4]
         )
 
-    def test_computers_orderby_name_desc(self):
+    def test_computers_orderby_label_desc(self):
         """
-        Returns the computers list ordered by "name" in descending
+        Returns the computers list ordered by "label" in descending
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
         RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=-name', expected_list_ids=[4, 3, 2, 1]
+            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=-label', expected_list_ids=[4, 3, 2, 1]
         )
 
     def test_computers_orderby_scheduler_type_asc(self):
@@ -641,7 +641,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f'/computers?pk>{str(node_pk)}&orderby=-scheduler_type,name',
+            f'/computers?pk>{str(node_pk)}&orderby=-scheduler_type,label',
             expected_list_ids=[2, 3, 4, 1]
         )
 

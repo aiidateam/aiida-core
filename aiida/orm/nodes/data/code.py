@@ -166,10 +166,10 @@ class Code(Data):
         query = QueryBuilder()
         query.append(cls, filters={'label': label}, project='*', tag='code')
         if machinename:
-            query.append(Computer, filters={'name': machinename}, with_node='code')
+            query.append(Computer, filters={'label': machinename}, with_node='code')
 
         if query.count() == 0:
-            raise NotExistent(f"'{label}' is not a valid code name.")
+            raise NotExistent(f"'{label}' is not a valid code label.")
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
@@ -361,9 +361,7 @@ class Code(Data):
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
             raise ValueError(
-                'remote_computer_exec must be a list or tuple '
-                'of length 2, with machine and executable '
-                'name'
+                'remote_computer_exec must be a list or tuple of length 2, with machine and executable name'
             )
 
         computer, remote_exec_path = tuple(remote_computer_exec)

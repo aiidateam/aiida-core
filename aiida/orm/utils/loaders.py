@@ -471,7 +471,7 @@ class CodeEntityLoader(OrmEntityLoader):
         builder.append(cls=classes, tag='code', project=project, filters={'label': {operator: identifier}})
 
         if machinename:
-            builder.append(Computer, filters={'name': {'==': machinename}}, with_node='code')
+            builder.append(Computer, filters={'label': {'==': machinename}}, with_node='code')
 
         return builder
 
@@ -511,7 +511,7 @@ class ComputerEntityLoader(OrmEntityLoader):
             identifier = f'{escape_for_sql_like(identifier)}%'
 
         builder = QueryBuilder()
-        builder.append(cls=classes, tag='computer', project=project, filters={'name': {operator: identifier}})
+        builder.append(cls=classes, tag='computer', project=project, filters={'label': {operator: identifier}})
 
         return builder
 

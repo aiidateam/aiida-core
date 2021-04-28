@@ -22,6 +22,7 @@ from .v07_to_v08 import migrate_v7_to_v8
 from .v08_to_v09 import migrate_v8_to_v9
 from .v09_to_v10 import migrate_v9_to_v10
 from .v10_to_v11 import migrate_v10_to_v11
+from .v11_to_v12 import migrate_v11_to_v12
 
 # version from -> version to, function which acts on the cache folder
 _vtype = Dict[str, Tuple[str, Callable[[CacheFolder], None]]]
@@ -36,4 +37,5 @@ MIGRATE_FUNCTIONS: _vtype = {
     '0.8': ('0.9', migrate_v8_to_v9),
     '0.9': ('0.10', migrate_v9_to_v10),
     '0.10': ('0.11', migrate_v10_to_v11),
+    '0.11': ('0.12', migrate_v11_to_v12),
 }

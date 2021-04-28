@@ -23,7 +23,7 @@ class DbComputer(Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    name = Column(String(255), unique=True, nullable=False)
+    label = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255))
     description = Column(Text, nullable=True)
     scheduler_type = Column(String(255))
@@ -46,4 +46,4 @@ class DbComputer(Base):
         return self.id
 
     def __str__(self):
-        return f'{self.name} ({self.hostname})'
+        return f'{self.label} ({self.hostname})'

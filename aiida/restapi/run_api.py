@@ -13,10 +13,8 @@ It defines the method with all required parameters to run restapi locally.
 """
 import importlib
 import os
-import warnings
 
 from flask_cors import CORS
-from aiida.common.warnings import AiidaDeprecationWarning
 from .common.config import CLI_DEFAULTS, APP_CONFIG, API_CONFIG
 from . import api as api_classes
 
@@ -43,15 +41,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
 
     :returns: tuple (app, api) if hookup==False or runs app if hookup==True
     """
-    hookup = kwargs.pop('hookup', None)
-    if hookup is None:
-        hookup = CLI_DEFAULTS['HOOKUP_APP']
-    else:
-        warnings.warn(  # pylint: disable=no-member
-            'Using the `hookup` parameter is deprecated since `v1.2.1` and will stop working in `v2.0.0`. '
-            'To configure the app without running it, use `configure_api` instead.', AiidaDeprecationWarning
-        )
-
+    hookup = kwargs.pop('hookup', CLI_DEFAULTS['HOOKUP_APP'])
     hostname = kwargs.pop('hostname', CLI_DEFAULTS['HOST_NAME'])
     port = kwargs.pop('port', CLI_DEFAULTS['PORT'])
     debug = kwargs.pop('debug', APP_CONFIG['DEBUG'])

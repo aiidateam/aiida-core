@@ -10,7 +10,6 @@
 """Tests for `verdi run`."""
 import tempfile
 import textwrap
-import warnings
 
 from click.testing import CliRunner
 import pytest
@@ -401,44 +400,3 @@ class TestAutoGroups(AiidaTestCase):
                     len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
                 )
                 self.assertTrue(all_auto_groups[0][0].label.startswith(autogroup_label))
-
-    def test_legacy_autogroup_name(self):
-        """Check if the autogroup is properly generated when using the legacy --group-name flag."""
-        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
-
-        script_content = textwrap.dedent(
-            """\
-            from aiida.orm import Data
-            node = Data().store()
-            print(node.pk)
-            """
-        )
-        group_label = 'legacy-group-name'
-
-        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(script_content)
-            fhandle.flush()
-
-            options = ['--group-name', group_label, fhandle.name]
-            with warnings.catch_warnings(record=True) as warns:  # pylint: disable=no-member
-                result = self.cli_runner.invoke(cmd_run.run, options)
-                self.assertTrue(
-                    any(['use `--auto-group-label-prefix` instead' in str(warn.message) for warn in warns]),
-                    "No warning for '--group-name' was raised"
-                )
-
-            self.assertClickResultNoException(result)
-
-            pk = int(result.output)
-            _ = load_node(pk)  # Check if the node can be loaded
-
-            queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
-            queryb.append(AutoGroup, with_node='node', project='*')
-            all_auto_groups = queryb.all()
-            self.assertEqual(
-                len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
-            )
-            self.assertEqual(
-                all_auto_groups[0][0].label, group_label,
-                f'The auto group label is "{all_auto_groups[0][0].label}" instead of "{group_label}"'
-            )

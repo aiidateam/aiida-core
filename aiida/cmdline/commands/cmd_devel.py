@@ -8,13 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi devel` commands."""
-
 import sys
-import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options
-from aiida.cmdline.params.types import TestModuleParamType
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -87,19 +83,6 @@ def devel_validate_plugins():
         echo.echo_critical(str(exception))
 
     echo.echo_success('all registered plugins could successfully loaded.')
-
-
-@verdi_devel.command('tests')
-@click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
-@options.VERBOSE(help='Print the class and function name for each test.')
-@decorators.deprecated_command("This command has been removed in aiida-core v1.1.0. Please run 'pytest' instead.")
-@decorators.with_dbenv()
-def devel_tests(paths, verbose):  # pylint: disable=unused-argument
-    """Run the unittest suite or parts of it.
-
-    .. deprecated:: 1.1.0
-        Entry point will be completely removed in `v2.0.0`.
-    """
 
 
 @verdi_devel.command('play', hidden=True)

@@ -8,22 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
-
 import os
 import io
 import errno
 import pathlib
 import tempfile
 import gzip
-import warnings
 
 from click.testing import CliRunner
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
-from aiida.common.utils import Capturing
-from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def get_result_lines(result):
@@ -75,30 +71,6 @@ class TestVerdiNode(AiidaTestCase):
         folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
         return folder_node
 
-    def test_node_tree(self):
-        """Test `verdi node tree`"""
-        options = [str(self.node.pk)]
-
-        # This command (and so the test as well) will go away in 2.0
-        # Note: I cannot use simply pytest.mark.filterwarnings as below, as the warning is issued in an invoked command
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
-            result = self.cli_runner.invoke(cmd_node.tree, options)
-        self.assertClickResultNoException(result)
-
-    # This command (and so this test as well) will go away in 2.0
-    def test_node_tree_printer(self):
-        """Test the `NodeTreePrinter` utility."""
-        from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
-
-            with Capturing():
-                NodeTreePrinter.print_node_tree(self.node, max_depth=1)
-
-            with Capturing():
-                NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
-
     def test_node_show(self):
         """Test `verdi node show`"""
         node = orm.Data().store()
@@ -111,7 +83,7 @@ class TestVerdiNode(AiidaTestCase):
         self.assertIn(node.label, result.output)
         self.assertIn(node.uuid, result.output)
 
-        ## Let's now test the '--print-groups' option
+        # Let's now test the '--print-groups' option
         options.append('--print-groups')
         result = self.cli_runner.invoke(cmd_node.node_show, options)
         self.assertClickResultNoException(result)

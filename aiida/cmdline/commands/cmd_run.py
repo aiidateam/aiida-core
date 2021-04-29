@@ -12,14 +12,12 @@ import contextlib
 import os
 import functools
 import sys
-import warnings
 
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.utils import decorators, echo
-from aiida.common.warnings import AiidaDeprecationWarning
 
 
 @contextlib.contextmanager
@@ -65,14 +63,6 @@ def validate_entrypoint_string(ctx, param, value):  # pylint: disable=unused-arg
     'appended to generate unique names per run).'
 )
 @click.option(
-    '-n',
-    '--group-name',
-    type=click.STRING,
-    required=False,
-    help='Specify the name of the auto group [DEPRECATED, USE --auto-group-label-prefix instead]. '
-    'This also enables auto-grouping.'
-)
-@click.option(
     '-e',
     '--exclude',
     cls=MultipleValueOption,
@@ -89,7 +79,7 @@ def validate_entrypoint_string(ctx, param, value):  # pylint: disable=unused-arg
     callback=validate_entrypoint_string
 )
 @decorators.with_dbenv()
-def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, exclude, include):
+def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, include):
     # pylint: disable=too-many-arguments,exec-used
     """Execute scripts with preloaded AiiDA environment."""
     from aiida.cmdline.utils.shell import DEFAULT_MODULES_LIST
@@ -107,17 +97,6 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, group_name, ex
     # Dynamically load modules (the same of verdi shell) - but in globals_dict, not in the current environment
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
         globals_dict[f'{alias}'] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
-
-    if group_name:
-        warnings.warn('--group-name is deprecated, use `--auto-group-label-prefix` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        if auto_group_label_prefix:
-            raise click.BadParameter(
-                'You cannot specify both --group-name and --auto-group-label-prefix; '
-                'use --auto-group-label-prefix only'
-            )
-        auto_group_label_prefix = group_name
-        # To have the old behavior, with auto-group enabled.
-        auto_group = True
 
     if auto_group:
         aiida_verdilib_autogroup = autogroup.Autogroup()

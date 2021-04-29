@@ -28,10 +28,6 @@ def import_data(in_path, group=None, **kwargs):
         set_progress_bar_tqdm(leave=True)
         import_data(...)
 
-    .. deprecated:: 1.5.0
-        Support for the parameter `silent` will be removed in `v2.0.0`.
-        Please set the log level and progress bar implementation independently.
-
     :param in_path: the path to a file or folder that can be imported in AiiDA.
     :type in_path: str
 

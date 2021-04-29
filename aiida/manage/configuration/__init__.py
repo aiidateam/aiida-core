@@ -115,8 +115,8 @@ def _merge_deprecated_cache_yaml(config, filepath):
         cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
 
     warnings.warn(
-        f'cache_config.yml use is deprecated, merging into config.json and moving to: {cache_path_backup}',
-        AiidaDeprecationWarning
+        'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
+        f'moving to: {cache_path_backup}', AiidaDeprecationWarning
     )
     import yaml
     with open(cache_path, 'r', encoding='utf8') as handle:

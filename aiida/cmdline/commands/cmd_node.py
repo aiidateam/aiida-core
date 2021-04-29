@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
-
 import logging
 import shutil
 import pathlib
@@ -279,23 +278,6 @@ def extras(nodes, keys, fmt, identifier, raw):
     echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
 
 
-@verdi_node.command()
-@arguments.NODES()
-@click.option('-d', '--depth', 'depth', default=1, help='Show children of nodes up to given depth')
-@with_dbenv()
-@decorators.deprecated_command('This command will be removed in `aiida-core==2.0.0`.')
-def tree(nodes, depth):
-    """Show a tree of nodes starting from a given node."""
-    from aiida.common import LinkType
-    from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
-
-    for node in nodes:
-        NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))
-
-        if len(nodes) > 1:
-            echo.echo('')
-
-
 @verdi_node.command('delete')
 @click.argument('identifier', nargs=-1, metavar='NODES')
 @options.VERBOSE()
@@ -432,7 +414,6 @@ def verdi_graph():
 )
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
-@options.VERBOSE(help='Print verbose information of the graph traversal.')
 @click.option(
     '-e',
     '--engine',
@@ -453,15 +434,14 @@ def verdi_graph():
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
 @decorators.with_dbenv()
 def graph_generate(
-    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-    output_format, highlight_classes, show
+    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, output_format,
+    highlight_classes, show
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
     """
     # pylint: disable=too-many-arguments
     from aiida.tools.visualization import Graph
-    print_func = echo.echo_info if verbose else None
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
@@ -475,7 +455,6 @@ def graph_generate(
         annotate_links='both',
         include_process_outputs=process_out,
         highlight_classes=highlight_classes,
-        print_func=print_func
     )
     echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
     graph.recurse_descendants(
@@ -485,7 +464,6 @@ def graph_generate(
         annotate_links='both',
         include_process_inputs=process_in,
         highlight_classes=highlight_classes,
-        print_func=print_func
     )
     output_file_name = graph.graphviz.render(
         filename=f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True

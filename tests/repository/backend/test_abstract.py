@@ -3,6 +3,7 @@
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
 import io
 import tempfile
+import typing
 
 import pytest
 
@@ -13,6 +14,17 @@ class RepositoryBackend(AbstractRepositoryBackend):
     """Concrete implementation of ``AbstractRepositoryBackend``."""
 
     def has_object(self, key):
+        return True
+
+    @property
+    def uuid(self) -> typing.Optional[str]:
+        return None
+
+    def initialise(self, **kwargs) -> None:
+        return
+
+    @property
+    def is_initialised(self) -> bool:
         return True
 
 

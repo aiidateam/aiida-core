@@ -45,7 +45,7 @@ def _copy_node_repositories(*, repository_metadatas: List[Dict], reader: Archive
 
     profile = get_manager().get_profile()
     assert profile is not None, 'profile not loaded'
-    container_profile = profile.get_repository_container()
+    container_profile = profile.get_repository().backend.container
 
     def collect_hashkeys(objects, hashkeys):
         for obj in objects.values():

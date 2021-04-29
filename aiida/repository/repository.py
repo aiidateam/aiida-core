@@ -47,6 +47,27 @@ class Repository:
         self.set_backend(backend)
         self.reset()
 
+    def __str__(self) -> str:
+        """Return the string representation of this repository."""
+        return f'Repository<{str(self.backend)}>'
+
+    @property
+    def uuid(self) -> typing.Optional[str]:
+        """Return the unique identifier of the repository or ``None`` if it doesn't have one."""
+        return self.backend.uuid
+
+    def initialise(self, **kwargs) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.
+        """
+        self.backend.initialise(**kwargs)
+
+    @property
+    def is_initialised(self) -> bool:
+        """Return whether the repository has been initialised."""
+        return self.backend.is_initialised
+
     @classmethod
     def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: typing.Dict) -> 'Repository':
         """Construct an instance where the metadata is initialized from the serialized content.

@@ -136,10 +136,7 @@ class Manager:
         # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
         # then become an exception once we have verified that it is working reliably.
         if repository_check and not profile.is_test_profile:
-            if profile.container_is_initialised:
-                repository_uuid_config = profile.get_repository_container().container_id
-            else:
-                repository_uuid_config = None
+            repository_uuid_config = profile.get_repository().uuid
             repository_uuid_database = backend_manager.get_repository_uuid()
 
             from aiida.cmdline.utils import echo

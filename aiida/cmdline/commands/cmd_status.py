@@ -84,13 +84,13 @@ def verdi_status(print_traceback, no_rmq):
 
     # Getting the repository
     try:
-        container = profile.get_repository_container()
+        repository = profile.get_repository()
     except Exception as exc:
         message = 'Error with repository folder'
         print_status(ServiceStatus.ERROR, 'repository', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
-        repository_status = f'Connected to {container.get_folder()} [UUID={container.container_id}]'
+        repository_status = f'Connected to {repository}'
         print_status(ServiceStatus.UP, 'repository', repository_status)
 
     # Getting the postgres status by trying to get a database cursor

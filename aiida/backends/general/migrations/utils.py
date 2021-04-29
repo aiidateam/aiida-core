@@ -85,6 +85,26 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     directly to pack files for optimal efficiency.
     """
 
+    @property
+    def uuid(self) -> typing.Optional[str]:
+        """Return the unique identifier of the repository.
+
+        .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
+        """
+        return None
+
+    def initialise(self, **kwargs) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: parameters for the initialisation.
+        """
+        raise NotImplementedError()
+
+    @property
+    def is_initialised(self) -> bool:
+        """Return whether the repository has been initialised."""
+        return True
+
     def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         """Store the byte contents of a file in the repository.
 

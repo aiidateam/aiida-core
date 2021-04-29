@@ -10,6 +10,7 @@
 """AiiDA profile related code"""
 import collections
 import os
+import pathlib
 from typing import TYPE_CHECKING
 
 from aiida.common import exceptions
@@ -19,7 +20,7 @@ from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 if TYPE_CHECKING:
-    from disk_objectstore import Container
+    from aiida.repository import Repository  # pylint: disable=ungrouped-imports
 
 __all__ = ('Profile',)
 
@@ -127,33 +128,23 @@ class Profile:  # pylint: disable=too-many-public-methods
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))
 
-    def get_repository_container(self) -> 'Container':
-        """Return the container of the profile's file repository.
+    def get_repository(self) -> 'Repository':
+        """Return the repository configured for this profile.
 
-        :return: the profile's file repository container.
+        .. note:: The repository will automatically be initialised if it wasn't yet already.
         """
         from disk_objectstore import Container
+        from aiida.repository import Repository
+        from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
-        filepath = self._container_path
-        container = Container(filepath)
+        container = Container(self.repository_path / 'container')
+        backend = DiskObjectStoreRepositoryBackend(container=container)
+        repository = Repository(backend=backend)
 
-        if not self.container_is_initialised:
-            container.init_container(clear=True, **self.defaults['repository'])  # pylint: disable=unsubscriptable-object
+        if not repository.is_initialised:
+            repository.initialise(clear=True, **self.defaults['repository'])  # pylint: disable=unsubscriptable-object
 
-        return container
-
-    @property
-    def container_is_initialised(self):
-        """Check if the container of the profile file repository has already been initialised."""
-        from disk_objectstore import Container
-        filepath = self._container_path
-        container = Container(filepath)
-        return container.is_initialised
-
-    @property
-    def _container_path(self):
-        """Return the path to the container of the profile file repository."""
-        return os.path.join(self.repository_path, 'container')
+        return repository
 
     @property
     def uuid(self):
@@ -357,12 +348,12 @@ class Profile:  # pylint: disable=too-many-public-methods
         return self._test_profile
 
     @property
-    def repository_path(self):
+    def repository_path(self) -> pathlib.Path:
         """Return the absolute path of the repository configured for this profile.
 
         :return: absolute filepath of the profile's file repository
         """
-        return self._parse_repository_uri()[1]
+        return pathlib.Path(self._parse_repository_uri()[1])
 
     def _parse_repository_uri(self):
         """

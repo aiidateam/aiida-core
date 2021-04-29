@@ -32,7 +32,7 @@ def test_export_repository(aiida_profile, tmp_path):
     export([node], filename=filepath)
 
     aiida_profile.reset_db()
-    container = get_manager().get_profile().get_repository_container()
+    container = get_manager().get_profile().get_repository().backend.container
     container.init_container(clear=True)
     import_data(filepath, silent=True)
 

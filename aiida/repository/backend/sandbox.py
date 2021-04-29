@@ -4,6 +4,7 @@ import contextlib
 import io
 import os
 import shutil
+import typing
 import uuid
 
 from .abstract import AbstractRepositoryBackend
@@ -17,6 +18,10 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def __init__(self):
         self._sandbox = None
 
+    def __str__(self) -> str:
+        """Return the string representation of this repository."""
+        return f'SandboxRepository: {self._sandbox.abspath}'
+
     def __del__(self):
         """Delete the entire sandbox folder if it was instantiated and still exists."""
         if getattr(self, '_sandbox', None) is not None:
@@ -24,6 +29,28 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
                 shutil.rmtree(self.sandbox.abspath)
             except FileNotFoundError:
                 pass
+
+    @property
+    def uuid(self) -> typing.Optional[str]:
+        """Return the unique identifier of the repository.
+
+        .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
+        """
+        return None
+
+    def initialise(self, **kwargs) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: parameters for the initialisation.
+        """
+        # Merely calling the property will cause the sandbox folder to be initialised.
+        self.sandbox  # pylint: disable=pointless-statement
+
+    @property
+    def is_initialised(self) -> bool:
+        """Return whether the repository has been initialised."""
+        from aiida.common.folders import SandboxFolder
+        return isinstance(self._sandbox, SandboxFolder)
 
     @property
     def sandbox(self):

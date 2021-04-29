@@ -315,7 +315,7 @@ def _select_entity_data(
         return
 
     with get_progress_reporter()(desc=f'Reading archived entities - {entity_name}', total=entity_count) as progress:
-        imported_comp_names = set()
+        imported_comp_labels = set()
         for pk, fields in reader.iter_entity_fields(entity_name):
             progress.update()
             if entity_name == GROUP_ENTITY_NAME:
@@ -331,21 +331,21 @@ def _select_entity_data(
                         )
 
             elif entity_name == COMPUTER_ENTITY_NAME:
-                # Check if there is already a computer with the same name in the database
-                dupl = (model.objects.filter(name=fields['name']) or fields['name'] in imported_comp_names)
-                orig_name = fields['name']
+                # Check if there is already a computer with the same label in the database
+                dupl = (model.objects.filter(label=fields['label']) or fields['label'] in imported_comp_labels)
+                orig_label = fields['label']
                 dupl_counter = 0
                 while dupl:
-                    # Rename the new computer
-                    fields['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
-                    dupl = (model.objects.filter(name=fields['name']) or fields['name'] in imported_comp_names)
+                    # Relabel the new computer
+                    fields['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
+                    dupl = (model.objects.filter(label=fields['label']) or fields['label'] in imported_comp_labels)
                     dupl_counter += 1
                     if dupl_counter == MAX_COMPUTERS:
                         raise exceptions.ImportUniquenessError(
-                            f'A computer of that name ( {orig_name} ) already exists and I could not create a new one'
+                            f'A computer of that label ( {orig_label} ) already exists and I could not create a new one'
                         )
 
-                imported_comp_names.add(fields['name'])
+                imported_comp_labels.add(fields['label'])
 
             if fields[unique_identifier] in relevant_db_entries:
                 # Already in DB

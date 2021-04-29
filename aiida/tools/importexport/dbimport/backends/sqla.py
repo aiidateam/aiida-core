@@ -336,7 +336,7 @@ def _select_entity_data(
         return
 
     with get_progress_reporter()(desc=f'Reading archived entities - {entity_name}', total=entity_count) as progress:
-        imported_comp_names = set()
+        imported_comp_labels = set()
         for pk, fields in reader.iter_entity_fields(entity_name):
             if entity_name == GROUP_ENTITY_NAME:
                 # Check if there is already a group with the same name,
@@ -364,25 +364,25 @@ def _select_entity_data(
                     fields['metadata'] = json.loads(fields['metadata'])
 
                 # Check if there is already a computer with the
-                # same name in the database
+                # same label in the database
                 builder = QueryBuilder()
-                builder.append(entity, filters={'name': {'==': fields['name']}}, project=['*'], tag='res')
-                dupl = builder.count() or fields['name'] in imported_comp_names
+                builder.append(entity, filters={'label': {'==': fields['label']}}, project=['*'], tag='res')
+                dupl = builder.count() or fields['label'] in imported_comp_labels
                 dupl_counter = 0
-                orig_name = fields['name']
+                orig_label = fields['label']
                 while dupl:
-                    # Rename the new computer
-                    fields['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                    # Relabel the new computer
+                    fields['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
                     builder = QueryBuilder()
-                    builder.append(entity, filters={'name': {'==': fields['name']}}, project=['*'], tag='res')
-                    dupl = builder.count() or fields['name'] in imported_comp_names
+                    builder.append(entity, filters={'label': {'==': fields['label']}}, project=['*'], tag='res')
+                    dupl = builder.count() or fields['label'] in imported_comp_labels
                     dupl_counter += 1
                     if dupl_counter == MAX_COMPUTERS:
                         raise exceptions.ImportUniquenessError(
-                            f'A computer of that name ( {orig_name} ) already exists and I could not create a new one'
+                            f'A computer of that label ( {orig_label} ) already exists and I could not create a new one'
                         )
 
-                imported_comp_names.add(fields['name'])
+                imported_comp_labels.add(fields['label'])
 
             if fields[unique_identifier] in relevant_db_entries:
                 # Already in DB

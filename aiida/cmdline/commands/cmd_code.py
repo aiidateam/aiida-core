@@ -269,7 +269,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
     qb_computer_filters = dict()
     if computer is not None:
-        qb_computer_filters['name'] = computer.label
+        qb_computer_filters['label'] = computer.label
 
     qb_code_filters = dict()
     if input_plugin is not None:
@@ -303,7 +303,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # return codes that have a computer (and of course satisfy the
         # other filters). The codes that have a computer attached are the
         # remote codes.
-        qb.append(orm.Computer, with_node='code', project=['name'], filters=qb_computer_filters)
+        qb.append(orm.Computer, with_node='code', project=['label'], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
         showed_results = qb.count() > 0
         print_list_res(qb, show_owner)
@@ -317,7 +317,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
         qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
-        qb.append(orm.Computer, with_node='code', project=['name'])
+        qb.append(orm.Computer, with_node='code', project=['label'])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
         showed_results = showed_results or qb.count() > 0

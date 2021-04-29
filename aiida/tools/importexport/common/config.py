@@ -15,7 +15,7 @@ from aiida.orm import Computer, Group, Node, User, Log, Comment
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
-EXPORT_VERSION = '0.11'
+EXPORT_VERSION = '0.12'
 
 
 class ExportFileFormat(str, Enum):
@@ -154,7 +154,7 @@ def get_all_fields_info():
         'scheduler_type': {},
         'metadata': {},
         'uuid': {},
-        'name': {}
+        'label': {}
     }
     all_fields_info[NODE_ENTITY_NAME] = {
         'ctime': {

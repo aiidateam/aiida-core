@@ -165,7 +165,7 @@ class TestBackendNode(AiidaTestCase):
 
     def test_computer_methods(self):
         """Test the computer methods of a BackendNode."""
-        new_computer = self.backend.computers.create(name='localhost2', hostname='localhost').store()
+        new_computer = self.backend.computers.create(label='localhost2', hostname='localhost').store()
         self.assertEqual(self.node.computer.id, self.computer.id)
         self.node.computer = new_computer
         self.assertEqual(self.node.computer.id, new_computer.id)

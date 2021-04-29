@@ -76,8 +76,8 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self
 
     @property
-    def name(self):
-        return self._dbmodel.name
+    def label(self):
+        return self._dbmodel.label
 
     @property
     def description(self):
@@ -93,11 +93,11 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     def set_metadata(self, metadata):
         self._dbmodel._metadata = metadata  # pylint: disable=protected-access
 
-    def get_name(self):
-        return self._dbmodel.name
+    def get_label(self):
+        return self._dbmodel.label
 
-    def set_name(self, val):
-        self._dbmodel.name = val
+    def set_label(self, val):
+        self._dbmodel.label = val
 
     def get_hostname(self):
         return self._dbmodel.hostname
@@ -132,7 +132,7 @@ class SqlaComputerCollection(BackendComputerCollection):
     @staticmethod
     def list_names():
         session = get_scoped_session()
-        return session.query(DbComputer.name).all()
+        return session.query(DbComputer.label).all()
 
     def delete(self, pk):
         try:

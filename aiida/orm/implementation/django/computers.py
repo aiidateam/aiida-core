@@ -67,8 +67,8 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
         return self._dbmodel.id is not None
 
     @property
-    def name(self):
-        return self._dbmodel.name
+    def label(self):
+        return self._dbmodel.label
 
     @property
     def description(self):
@@ -84,11 +84,11 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
     def set_metadata(self, metadata):
         self._dbmodel.metadata = metadata
 
-    def get_name(self):
-        return self._dbmodel.name
+    def get_label(self):
+        return self._dbmodel.label
 
-    def set_name(self, val):
-        self._dbmodel.name = val
+    def set_label(self, val):
+        self._dbmodel.label = val
 
     def get_hostname(self):
         return self._dbmodel.hostname

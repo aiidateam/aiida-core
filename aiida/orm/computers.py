@@ -38,21 +38,6 @@ class Computer(entities.Entity):
     class Collection(entities.Collection):
         """The collection of Computer entries."""
 
-        def get(self, **filters):
-            """Get a single collection entry that matches the filter criteria.
-
-            :param filters: the filters identifying the object to get
-            :type filters: dict
-
-            :return: the entry
-            """
-            # This switch needs to be here until we fully remove `name` and replace it with `label` even on the backend
-            # entities and database models.
-            if 'label' in filters:
-                filters['name'] = filters.pop('label')
-
-            return super().get(**filters)
-
         def get_or_create(self, label=None, **kwargs):
             """
             Try to retrieve a Computer from the DB with the given arguments;
@@ -94,7 +79,7 @@ class Computer(entities.Entity):
         """Construct a new computer."""
         backend = backend or get_manager().get_backend()
         model = backend.computers.create(
-            name=label,
+            label=label,
             hostname=hostname,
             description=description,
             transport_type=transport_type,
@@ -115,12 +100,12 @@ class Computer(entities.Entity):
         return self._logger
 
     @classmethod
-    def _name_validator(cls, name):
+    def _label_validator(cls, label):
         """
-        Validates the name.
+        Validates the label.
         """
-        if not name.strip():
-            raise exceptions.ValidationError('No name specified')
+        if not label.strip():
+            raise exceptions.ValidationError('No label specified')
 
     @classmethod
     def _hostname_validator(cls, hostname):
@@ -225,6 +210,7 @@ class Computer(entities.Entity):
         if not self.label.strip():
             raise exceptions.ValidationError('No name specified')
 
+        self._label_validator(self.label)
         self._hostname_validator(self.hostname)
         self._description_validator(self.description)
         self._transport_type_validator(self.transport_type)
@@ -275,7 +261,7 @@ class Computer(entities.Entity):
 
         :return: the label.
         """
-        return self._backend_entity.name
+        return self._backend_entity.label
 
     @label.setter
     def label(self, value: str):
@@ -283,7 +269,7 @@ class Computer(entities.Entity):
 
         :param value: the label to set.
         """
-        self._backend_entity.set_name(value)
+        self._backend_entity.set_label(value)
 
     @property
     def description(self) -> str:

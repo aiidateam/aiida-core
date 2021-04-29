@@ -1009,7 +1009,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks that the method Code.get_from_string works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
         # Create some code nodes
         code1 = orm.Code()
@@ -1035,7 +1035,7 @@ class TestNodeBasic(AiidaTestCase):
         self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
 
         # Calling get_from_string for a non string type raises exception
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.Code.get_from_string(code1.id)
 
         # Test that the lookup of a nonexistent code works as expected

@@ -19,7 +19,6 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import InputValidationError
 
 
 @verdi.group('code')
@@ -76,7 +75,6 @@ def set_code_builder(ctx, param, value):
 @with_dbenv()
 def setup_code(non_interactive, **kwargs):
     """Setup a new code."""
-    from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
     if kwargs.pop('on_computer'):
@@ -88,15 +86,15 @@ def setup_code(non_interactive, **kwargs):
 
     try:
         code = code_builder.new()
-    except InputValidationError as exception:
+    except ValueError as exception:
         echo.echo_critical(f'invalid inputs: {exception}')
 
     try:
         code.store()
-        code.reveal()
-    except ValidationError as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
+    code.reveal()
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
@@ -244,7 +242,7 @@ def relabel(code, label):
 
     try:
         code.relabel(label)
-    except InputValidationError as exception:
+    except (TypeError, ValueError) as exception:
         echo.echo_critical(f'invalid code label: {exception}')
     else:
         echo.echo_success(f'Code<{code.pk}> relabeled from {old_label} to {code.full_label}')

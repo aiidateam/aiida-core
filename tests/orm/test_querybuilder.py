@@ -511,30 +511,29 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(len(list(orm.QueryBuilder().append(orm.Node, project=['id']).iterdict())), 4)
 
     def test_append_validation(self):
-        from aiida.common.exceptions import InputValidationError
 
         # So here I am giving two times the same tag
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             orm.QueryBuilder().append(orm.StructureData, tag='n').append(orm.StructureData, tag='n')
         # here I am giving a wrong filter specifications
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.QueryBuilder().append(orm.StructureData, filters=['jajjsd'])
         # here I am giving a nonsensical projection:
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             orm.QueryBuilder().append(orm.StructureData, project=True)
 
         # here I am giving a nonsensical projection for the edge:
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             orm.QueryBuilder().append(orm.ProcessNode).append(orm.StructureData, edge_tag='t').add_projection('t', True)
         # Giving a nonsensical limit
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.QueryBuilder().append(orm.ProcessNode).limit(2.3)
         # Giving a nonsensical offset
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.QueryBuilder(offset=2.3)
 
         # So, I mess up one append, I want the QueryBuilder to clean it!
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             qb = orm.QueryBuilder()
             # This also checks if we correctly raise for wrong keywords
             qb.append(orm.StructureData, tag='s', randomkeyword={})

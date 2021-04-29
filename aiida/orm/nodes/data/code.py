@@ -126,7 +126,7 @@ class Code(Data):
         """
         if '@' in str(value):
             msg = "Code labels must not contain the '@' symbol"
-            raise exceptions.InputValidationError(msg)
+            raise ValueError(msg)
 
         super(Code, self.__class__).label.fset(self, value)  # pylint: disable=no-member
 
@@ -191,7 +191,7 @@ class Code(Data):
 
         :raise aiida.common.NotExistent: if no code identified by the given string is found
         :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely a code
-        :raise aiida.common.InputValidationError: if neither a pk nor a label was passed in
+        :raise ValueError: if neither a pk nor a label was passed in
         """
         # pylint: disable=arguments-differ
         from aiida.orm.utils import load_code
@@ -211,7 +211,7 @@ class Code(Data):
             return cls.get_code_helper(label, machinename)
 
         else:
-            raise exceptions.InputValidationError('Pass either pk or code label (and machinename)')
+            raise ValueError('Pass either pk or code label (and machinename)')
 
     @classmethod
     def get_from_string(cls, code_string):
@@ -230,15 +230,15 @@ class Code(Data):
         :raise aiida.common.NotExistent: if no code identified by the given string is found
         :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
-        :raise aiida.common.InputValidationError: if code_string is not of string type
+        :raise TypeError: if code_string is not of string type
 
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
+        from aiida.common.exceptions import NotExistent, MultipleObjectsError
 
         try:
             label, _, machinename = code_string.partition('@')
         except AttributeError:
-            raise InputValidationError('the provided code_string is not of valid string type')
+            raise TypeError('the provided code_string is not of valid string type')
 
         try:
             return cls.get_code_helper(label, machinename)

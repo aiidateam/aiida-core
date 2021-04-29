@@ -134,13 +134,26 @@ class Profile:  # pylint: disable=too-many-public-methods
         """
         from disk_objectstore import Container
 
-        filepath = os.path.join(self.repository_path, 'container')
+        filepath = self._container_path
         container = Container(filepath)
 
-        if not container.is_initialised:
+        if not self.container_is_initialised:
             container.init_container(clear=True, **self.defaults['repository'])  # pylint: disable=unsubscriptable-object
 
         return container
+
+    @property
+    def container_is_initialised(self):
+        """Check if the container of the profile file repository has already been initialised."""
+        from disk_objectstore import Container
+        filepath = self._container_path
+        container = Container(filepath)
+        return container.is_initialised
+
+    @property
+    def _container_path(self):
+        """Return the path to the container of the profile file repository."""
+        return os.path.join(self.repository_path, 'container')
 
     @property
     def uuid(self):

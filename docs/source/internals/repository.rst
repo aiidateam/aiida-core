@@ -147,8 +147,8 @@ Since new objects are concatenated to the end of existing pack files and existin
 The file repository backend
 ---------------------------
 
-To be able to respect the divergent requirements (as layed out in :ref:`internal-architecture:repository:current-design:requirements`) of the file repository regarding itse user interface and the actual data store, the implementation is divided into a backend and frontend interface.
-In a clear separation of responsibilities, the backend is solely tasked with storing the content of files and returning them upon request as efficiently as possible, both when retrieving files individuall as well as in bulk.
+To be able to respect the divergent requirements (as layed out in :ref:`internal-architecture:repository:current-design:requirements`) of the file repository regarding its user interface and the actual data store, the implementation is divided into a backend and frontend interface.
+In a clear separation of responsibilities, the backend is solely tasked with storing the content of files and returning them upon request as efficiently as possible, both when retrieving files individual as well as in bulk.
 For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
 The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.
 
@@ -234,14 +234,14 @@ Encoding and decoding of file objects is therefore the responsibility of the fro
 The lifetime of a node
 ----------------------
 
-Now that all the compontents are described, here we describe how they are employed throughout the lifetime of a node.
+Now that all the components are described, here we describe how they are employed throughout the lifetime of a node.
 When a new node instance is constructed, it will not yet have an instance of the :class:`~aiida.repository.repository.Repository`.
 Instead, this is done lazily as soon as an operation on the file repository is executed.
-This is crucial for performance since node instances may often be initialized without their repository contents ever needing to be accesssed and constructing the repository interface instances will have a non-negligible overhead.
+This is crucial for performance since node instances may often be initialized without their repository contents ever needing to be accessed and constructing the repository interface instances will have a non-negligible overhead.
 If the node is unstored the :class:`~aiida.repository.repository.Repository` will be constructed with an instance of the :class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend` implementation.
-The advantage is that if the node object does out of scope before it has been stored, the contents that may have been created in the repository will be automatically cleaned from the local file system.
+The advantage is that if the node object does go out of scope before it has been stored, the contents that may have been created in the repository will be automatically cleaned from the local file system.
 
-When a node gets stored, :class:`~aiida.repository.repository.Repository` instance is replaced with a new instance, this time with the backend set to the :class:`~aiida.repository.backend.disk_object_store.DiskObjectStoreRepositoryBackend` that is initialized to point to the *container* of the current profile.
+When a node gets stored, the :class:`~aiida.repository.repository.Repository` instance is replaced with a new instance, this time with the backend set to the :class:`~aiida.repository.backend.disk_object_store.DiskObjectStoreRepositoryBackend` that is initialized to point to the *container* of the current profile.
 The contents of the sandbox repository are copied over to the disk object store through the :class:`~aiida.repository.repository.Repository` interface and at the end its contents are serialized.
 The serialized file hierarchy is then stored on the node itself in the ``repository_metadata`` column.
 This allows to reconstruct the :class:`~aiida.repository.repository.Repository` instance correctly once the node is reloaded from the database, by calling the :meth:`~aiida.repository.repository.Repository.from_serialized` classmethod while passing the stored ``repository_metadata``.

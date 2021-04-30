@@ -435,8 +435,8 @@ Backing up your installation
 
 A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
-* the profile configuration in the ``config.json`` file located in the ``.aiida`` folder.
-  Typically located at ``~/.aiida`` (see also :ref:`intro:install:setup`).
+* the AiiDA configuration folder, which is typically named ``.aiida`` and located in the home folder (see also :ref:`intro:install:setup`).
+  This folder contains, among other things, the ``config.json`` configuration file and log files.
 
 * files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
 

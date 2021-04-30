@@ -37,7 +37,6 @@ from ..users import User
 from .repository import NodeRepositoryMixin
 
 if TYPE_CHECKING:
-    from aiida.repository import File
     from ..implementation import Backend
     from ..implementation.nodes import BackendNode
 
@@ -286,7 +285,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
         :return: the repository metadata
         """
-        return self.backend_entity.repository_metadata or {}
+        return self.backend_entity.repository_metadata
 
     @repository_metadata.setter
     def repository_metadata(self, value):

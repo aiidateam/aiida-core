@@ -1786,7 +1786,7 @@ class TestNodeRepositoryMetadataMigration(TestMigrationsSQLA):
             try:
                 node = session.query(DbNode).filter(DbNode.id == self.node_id).one()
                 assert hasattr(node, 'repository_metadata')
-                assert node.repository_metadata is None
+                assert node.repository_metadata == {}
             finally:
                 session.close()
 
@@ -1884,7 +1884,7 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                         }
                     }
                 }
-                assert node_03.repository_metadata is None
+                assert node_03.repository_metadata == {}
 
                 for hashkey, content in (
                     (node_01.repository_metadata['o']['sub']['o']['path']['o']['file_b.txt']['k'], b'b'),

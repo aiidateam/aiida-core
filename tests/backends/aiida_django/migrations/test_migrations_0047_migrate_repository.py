@@ -82,7 +82,7 @@ class TestRepositoryMigration(TestMigrations):
                 }
             }
         }
-        assert node_03.repository_metadata is None
+        assert node_03.repository_metadata == {}
 
         for hashkey, content in (
             (node_01.repository_metadata['o']['sub']['o']['path']['o']['file_b.txt']['k'], b'b'),

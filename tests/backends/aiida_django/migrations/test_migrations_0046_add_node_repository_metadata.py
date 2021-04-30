@@ -25,9 +25,9 @@ class TestNodeRepositoryMetadataMigration(TestMigrations):
         dbnode.save()
         self.node_pk = dbnode.pk
 
-    def test_group_string_update(self):
+    def test_migration(self):
         """Test that the column is added and null by default."""
         DbNode = self.apps.get_model('db', 'DbNode')
         node = DbNode.objects.get(pk=self.node_pk)
         assert hasattr(node, 'repository_metadata')
-        assert node.repository_metadata is None
+        assert node.repository_metadata == {}

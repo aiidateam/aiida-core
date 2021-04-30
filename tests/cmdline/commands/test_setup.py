@@ -79,8 +79,7 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         # Check that the repository UUID was stored in the database
         manager = get_manager()
         backend_manager = manager.get_backend_manager()
-        repository = profile.get_repository_container()
-        self.assertEqual(backend_manager.get_repository_uuid(), repository.container_id)
+        self.assertEqual(backend_manager.get_repository_uuid(), profile.get_repository().uuid)
 
     def test_quicksetup_from_config_file(self):
         """Test `verdi quicksetup` from configuration file."""
@@ -167,5 +166,4 @@ email: 123@234.de"""
         # Check that the repository UUID was stored in the database
         manager = get_manager()
         backend_manager = manager.get_backend_manager()
-        repository = profile.get_repository_container()
-        self.assertEqual(backend_manager.get_repository_uuid(), repository.container_id)
+        self.assertEqual(backend_manager.get_repository_uuid(), profile.get_repository().uuid)

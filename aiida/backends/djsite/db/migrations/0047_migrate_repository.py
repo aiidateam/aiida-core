@@ -80,7 +80,7 @@ def migrate_repository(apps, schema_editor):
     # Store the UUID of the repository container in the `DbSetting` table. Note that for new databases, the profile
     # setup will already have stored the UUID and so it should be skipped, or an exception for a duplicate key will be
     # raised. This migration step is only necessary for existing databases that are migrated.
-    container_id = profile.get_repository_container().container_id
+    container_id = profile.get_repository().uuid
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(
             f"""

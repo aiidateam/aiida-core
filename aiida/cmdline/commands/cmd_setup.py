@@ -94,7 +94,7 @@ def setup(
     # with that UUID and we have to make sure that the provided repository corresponds to it.
     backend_manager = manager.get_backend_manager()
     repository_uuid_database = backend_manager.get_repository_uuid()
-    repository_uuid_profile = profile.get_repository_container().container_id
+    repository_uuid_profile = profile.get_repository().uuid
 
     # If database contains no repository UUID, it should be a clean database so associate it with the repository
     if repository_uuid_database is None:

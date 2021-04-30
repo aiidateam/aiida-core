@@ -17,12 +17,26 @@ def repository(tmp_path):
     """
     from disk_objectstore import Container
     container = Container(tmp_path)
-    container.init_container()
     yield DiskObjectStoreRepositoryBackend(container=container)
+
+
+def test_uuid(repository):
+    """Test the ``uuid`` property."""
+    assert repository.uuid is None
+    repository.initialise()
+    assert isinstance(repository.uuid, str)
+
+
+def test_initialise(repository):
+    """Test the ``initialise`` method and the ``is_initialised`` property."""
+    assert not repository.is_initialised
+    repository.initialise()
+    assert repository.is_initialised
 
 
 def test_put_object_from_filelike_raises(repository, generate_directory):
     """Test the ``Repository.put_object_from_filelike`` method when it should raise."""
+    repository.initialise()
     directory = generate_directory({'file_a': None})
 
     with pytest.raises(TypeError):
@@ -38,6 +52,7 @@ def test_put_object_from_filelike_raises(repository, generate_directory):
 
 def test_put_object_from_filelike(repository, generate_directory):
     """Test the ``Repository.put_object_from_filelike`` method."""
+    repository.initialise()
     directory = generate_directory({'file_a': None})
 
     with open(directory / 'file_a', 'rb') as handle:
@@ -48,6 +63,7 @@ def test_put_object_from_filelike(repository, generate_directory):
 
 def test_has_object(repository, generate_directory):
     """Test the ``Repository.has_object`` method."""
+    repository.initialise()
     directory = generate_directory({'file_a': None})
 
     assert not repository.has_object('non_existant')
@@ -60,6 +76,8 @@ def test_has_object(repository, generate_directory):
 
 def test_open_raise(repository):
     """Test the ``Repository.open`` method when it should raise."""
+    repository.initialise()
+
     with pytest.raises(FileNotFoundError):
         with repository.open('non_existant'):
             pass
@@ -67,6 +85,7 @@ def test_open_raise(repository):
 
 def test_open(repository, generate_directory):
     """Test the ``Repository.open`` method."""
+    repository.initialise()
     directory = generate_directory({'file_a': b'content_a', 'relative': {'file_b': b'content_b'}})
 
     with open(directory / 'file_a', 'rb') as handle:
@@ -87,6 +106,7 @@ def test_open(repository, generate_directory):
 
 def test_delete_object(repository, generate_directory):
     """Test the ``Repository.delete_object`` method."""
+    repository.initialise()
     directory = generate_directory({'file_a': None})
 
     with open(directory / 'file_a', 'rb') as handle:

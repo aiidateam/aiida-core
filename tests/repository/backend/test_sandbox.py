@@ -15,6 +15,18 @@ def repository():
     yield SandboxRepositoryBackend()
 
 
+def test_uuid(repository):
+    """Test the ``uuid`` property."""
+    assert repository.uuid is None
+
+
+def test_initialise(repository):
+    """Test the ``initialise`` method and the ``is_initialised`` property."""
+    assert not repository.is_initialised
+    repository.initialise()
+    assert repository.is_initialised
+
+
 def test_put_object_from_filelike_raises(repository, generate_directory):
     """Test the ``Repository.put_object_from_filelike`` method when it should raise."""
     directory = generate_directory({'file_a': None})

@@ -25,6 +25,21 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     and persistent. Persisting the key or mapping it onto a virtual file hierarchy is again up to the client upstream.
     """
 
+    @abc.abstractproperty
+    def uuid(self) -> typing.Optional[str]:
+        """Return the unique identifier of the repository."""
+
+    @abc.abstractmethod
+    def initialise(self, **kwargs) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: parameters for the initialisation.
+        """
+
+    @abc.abstractproperty
+    def is_initialised(self) -> bool:
+        """Return whether the repository has been initialised."""
+
     @staticmethod
     def is_readable_byte_stream(handle):
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode

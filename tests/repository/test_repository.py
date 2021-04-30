@@ -25,7 +25,6 @@ def get_disk_object_store_backend() -> DiskObjectStoreRepositoryBackend:
 
     with tempfile.TemporaryDirectory() as dirpath:
         container = Container(dirpath)
-        container.init_container()
         yield DiskObjectStoreRepositoryBackend(container=container)
 
 
@@ -37,7 +36,45 @@ def repository(request) -> Repository:
     act on a repository instance, will automatically get tested for all available backends.
     """
     with request.param() as backend:
-        yield Repository(backend=backend)
+        repository = Repository(backend=backend)
+        repository.initialise()
+        yield repository
+
+
+@pytest.fixture(scope='function', params=[get_sandbox_backend, get_disk_object_store_backend])
+def repository_uninitialised(request) -> Repository:
+    """Return uninitialised instance of ``aiida.repository.Repository`` with one of the available repository backends.
+
+    By parametrizing this fixture over the available ``AbstractRepositoryBackend`` implementations, all tests below that
+    act on a repository instance, will automatically get tested for all available backends.
+    """
+    with request.param() as backend:
+        repository = Repository(backend=backend)
+        yield repository
+
+
+def test_uuid(repository_uninitialised):
+    """Test the ``uuid`` property."""
+    repository = repository_uninitialised
+
+    if isinstance(repository.backend, SandboxRepositoryBackend):
+        assert repository.uuid is None
+        repository.initialise()
+        assert repository.uuid is None
+
+    if isinstance(repository.backend, DiskObjectStoreRepositoryBackend):
+        assert repository.uuid is None
+        repository.initialise()
+        assert isinstance(repository.uuid, str)
+
+
+def test_initialise(repository_uninitialised):
+    """Test the ``initialise`` method and the ``is_initialised`` property."""
+    repository = repository_uninitialised
+
+    assert not repository.is_initialised
+    repository.initialise()
+    assert repository.is_initialised
 
 
 def test_pre_process_path():

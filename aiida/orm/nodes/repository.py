@@ -7,7 +7,7 @@ import typing
 
 from aiida.common import exceptions
 from aiida.repository import Repository, File
-from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
+from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)
 
@@ -48,8 +48,7 @@ class NodeRepositoryMixin:
         if self._repository_instance is None:
             if self.is_stored:
                 from aiida.manage.manager import get_manager
-                container = get_manager().get_profile().get_repository_container()
-                backend = DiskObjectStoreRepositoryBackend(container=container)
+                backend = get_manager().get_profile().get_repository().backend
                 serialized = self.repository_metadata
                 self._repository_instance = Repository.from_serialized(backend=backend, serialized=serialized)
             else:

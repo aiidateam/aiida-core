@@ -693,15 +693,13 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        from aiida.repository import Repository
-        from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
+        from aiida.repository.backend import SandboxRepositoryBackend
 
         # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
         if isinstance(self._repository.backend, SandboxRepositoryBackend):
             profile = get_manager().get_profile()
             assert profile is not None, 'profile not loaded'
-            backend = DiskObjectStoreRepositoryBackend(container=profile.get_repository_container())
-            repository = Repository(backend=backend)
+            repository = profile.get_repository()
             repository.clone(self._repository)
             # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
             self._repository_instance = repository

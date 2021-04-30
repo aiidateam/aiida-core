@@ -2,6 +2,7 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
 import io
+import typing
 
 from disk_objectstore import Container
 
@@ -18,6 +19,29 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     def __init__(self, container):
         type_check(container, Container)
         self._container = container
+
+    def __str__(self) -> str:
+        """Return the string representation of this repository."""
+        return f'DiskObjectStoreRepository: {self.container.container_id} | {self.container.get_folder()}'
+
+    @property
+    def uuid(self) -> typing.Optional[str]:
+        """Return the unique identifier of the repository."""
+        if not self.is_initialised:
+            return None
+        return self.container.container_id
+
+    def initialise(self, **kwargs) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: parameters for the initialisation.
+        """
+        self.container.init_container(**kwargs)
+
+    @property
+    def is_initialised(self) -> bool:
+        """Return whether the repository has been initialised."""
+        return self.container.is_initialised
 
     @property
     def container(self):

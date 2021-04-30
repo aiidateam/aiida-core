@@ -153,19 +153,9 @@ def migrate_legacy_repository(node_count, shard=None):
     basepath = pathlib.Path(profile.repository_path) / 'repository' / 'node'
     container = Container(filepath)
 
-    if not basepath.is_dir():
-        # If the database is empty, this is a new profile and so it is normal the repo folder doesn't exist. We simply
-        # return as there is nothing to migrate
-        if profile.is_test_profile or node_count == 0:
-            return None, None
-
-        raise exceptions.DatabaseMigrationError(
-            f'the file repository `{basepath}` does not exist but the database is not empty, it contains {node_count} '
-            'nodes. Aborting the migration.'
-        )
-
-    # When calling this function multiple times, once for each shard, we should only check whether the container has
-    # already been initialized for the first shard.
+    # The new container needs to be initialised. Since this function can be called multiple times, it shouldn't
+    # initialise the repository each time since it will delete all content. By checking the value of the shard, we
+    # should just initialise it for the first iteration.
     if shard is None or shard == '00':
         if container.is_initialised and not profile.is_test_profile:
             raise exceptions.DatabaseMigrationError(
@@ -174,6 +164,17 @@ def migrate_legacy_repository(node_count, shard=None):
             )
 
         container.init_container(clear=True, **profile.defaults['repository'])
+
+    if not basepath.is_dir():
+        # If the database is empty, this is a new profile and so it is normal the repo folder doesn't exist. We simply
+        # return as there is nothing to migrate.
+        if profile.is_test_profile or node_count == 0:
+            return None, None
+
+        raise exceptions.DatabaseMigrationError(
+            f'the file repository `{basepath}` does not exist but the database is not empty, it contains {node_count} '
+            'nodes. Aborting the migration.'
+        )
 
     node_repository_dirpaths, missing_sub_repo_folder = get_node_repository_dirpaths(basepath, shard)
 

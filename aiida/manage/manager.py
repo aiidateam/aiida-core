@@ -186,7 +186,10 @@ class Manager:
         from aiida.common import ConfigurationError
 
         if self._backend_manager is None:
-            self._load_backend()
+
+            if self._backend is None:
+                self._load_backend()
+
             profile = self.get_profile()
             if profile is None:
                 raise ConfigurationError(

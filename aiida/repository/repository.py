@@ -417,6 +417,16 @@ class Repository:
         directory = self.get_directory(path.parent)
         directory.objects.pop(path.name)
 
+    def delete(self):
+        """Delete the repository.
+
+        .. important:: This will not just delete the contents of the repository but also the repository itself and all
+            of its assets. For example, if the repository is stored inside a folder on disk, the folder may be deleted.
+
+        """
+        self.backend.erase()
+        self.reset()
+
     def erase(self):
         """Delete all objects from the repository.
 

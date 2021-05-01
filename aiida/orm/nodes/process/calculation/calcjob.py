@@ -418,7 +418,7 @@ class CalcJobNode(CalculationNode):
         if computer is None:
             raise exceptions.NotExistent('No computer has been set for this calculation')
 
-        return computer.get_authinfo(self.user)
+        return computer.get_authinfo(self.user)  # pylint: disable=no-member
 
     def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.

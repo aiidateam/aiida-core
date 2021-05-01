@@ -2,6 +2,7 @@
 # pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.repository.backend.disk_object_store` module."""
 import io
+import pathlib
 
 import pytest
 
@@ -116,3 +117,20 @@ def test_delete_object(repository, generate_directory):
 
     repository.delete_object(key)
     assert not repository.has_object(key)
+
+
+def test_erase(repository, generate_directory):
+    """Test the ``Repository.erase`` method."""
+    repository.initialise()
+    directory = generate_directory({'file_a': None})
+
+    with open(directory / 'file_a', 'rb') as handle:
+        key = repository.put_object_from_filelike(handle)
+
+    assert repository.has_object(key)
+
+    dirpath = pathlib.Path(repository.container.get_folder())
+    repository.erase()
+
+    assert not dirpath.exists()
+    assert not repository.is_initialised

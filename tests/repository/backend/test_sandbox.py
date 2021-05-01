@@ -2,7 +2,7 @@
 # pylint: disable=redefined-outer-name,invalid-name
 """Tests for the :mod:`aiida.repository.backend.sandbox` module."""
 import io
-import os
+import pathlib
 
 import pytest
 
@@ -104,6 +104,23 @@ def test_delete_object(repository, generate_directory):
     assert not repository.has_object(key)
 
 
+def test_erase(repository, generate_directory):
+    """Test the ``Repository.erase`` method."""
+    repository.initialise()
+    directory = generate_directory({'file_a': None})
+
+    with open(directory / 'file_a', 'rb') as handle:
+        key = repository.put_object_from_filelike(handle)
+
+    assert repository.has_object(key)
+
+    dirpath = repository.sandbox.abspath
+    repository.erase()
+
+    assert not pathlib.Path(dirpath).exists()
+    assert not repository.is_initialised
+
+
 def test_cleanup():
     """Test that the contents of the repository are deleted when the object is deleted.
 
@@ -112,8 +129,8 @@ def test_cleanup():
         will fail as the sandbox won't have been erased yet.
     """
     repository = SandboxRepositoryBackend()
-    dirpath = repository.sandbox.abspath
+    dirpath = pathlib.Path(repository.sandbox.abspath)
 
-    assert os.path.isdir(dirpath)
+    assert dirpath.exists()
     del repository
-    assert not os.path.isdir(dirpath)
+    assert not dirpath.exists()

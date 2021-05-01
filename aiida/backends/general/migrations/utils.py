@@ -105,6 +105,9 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         """Return whether the repository has been initialised."""
         return True
 
+    def erase(self):
+        raise NotImplementedError()
+
     def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         """Store the byte contents of a file in the repository.
 

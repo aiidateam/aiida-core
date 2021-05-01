@@ -4,7 +4,6 @@
 import contextlib
 import io
 import pathlib
-import tempfile
 
 import pytest
 
@@ -13,42 +12,47 @@ from aiida.repository.backend import SandboxRepositoryBackend, DiskObjectStoreRe
 
 
 @contextlib.contextmanager
-def get_sandbox_backend() -> SandboxRepositoryBackend:
+def get_sandbox_backend(*_) -> SandboxRepositoryBackend:
     """Return an instance of the sandbox repository backend."""
     yield SandboxRepositoryBackend()
 
 
 @contextlib.contextmanager
-def get_disk_object_store_backend() -> DiskObjectStoreRepositoryBackend:
+def get_disk_object_store_backend(tmp_path) -> DiskObjectStoreRepositoryBackend:
     """Return an instance of the disk object store repository backend."""
     from disk_objectstore import Container
-
-    with tempfile.TemporaryDirectory() as dirpath:
-        container = Container(dirpath)
-        yield DiskObjectStoreRepositoryBackend(container=container)
+    yield DiskObjectStoreRepositoryBackend(container=Container(tmp_path))
 
 
 @pytest.fixture(scope='function', params=[get_sandbox_backend, get_disk_object_store_backend])
-def repository(request) -> Repository:
+def repository(request, tmp_path_factory) -> Repository:
     """Return an instance of ``aiida.repository.Repository`` with one of the available repository backends.
 
     By parametrizing this fixture over the available ``AbstractRepositoryBackend`` implementations, all tests below that
     act on a repository instance, will automatically get tested for all available backends.
+
+    .. note:: Need to use the ``tmp_path_factory`` instead of simply ``tmp_path`` since the base path is already used
+        for creating the entire configuration directory, so we create a subdirectory for the container.
+
     """
-    with request.param() as backend:
+    with request.param(tmp_path_factory.mktemp('container')) as backend:
         repository = Repository(backend=backend)
         repository.initialise()
         yield repository
 
 
 @pytest.fixture(scope='function', params=[get_sandbox_backend, get_disk_object_store_backend])
-def repository_uninitialised(request) -> Repository:
+def repository_uninitialised(request, tmp_path_factory) -> Repository:
     """Return uninitialised instance of ``aiida.repository.Repository`` with one of the available repository backends.
 
     By parametrizing this fixture over the available ``AbstractRepositoryBackend`` implementations, all tests below that
     act on a repository instance, will automatically get tested for all available backends.
+
+    .. note:: Need to use the ``tmp_path_factory`` instead of simply ``tmp_path`` since the base path is already used
+        for creating the entire configuration directory, so we create a subdirectory for the container.
+
     """
-    with request.param() as backend:
+    with request.param(tmp_path_factory.mktemp('container')) as backend:
         repository = Repository(backend=backend)
         yield repository
 
@@ -487,6 +491,26 @@ def test_delete_object_hard(repository, generate_directory):
 
     assert not repository.has_object('file_a')
     assert not repository.backend.has_object(key)
+
+
+def test_delete(repository, generate_directory):
+    """Test the ``Repository.delete`` method."""
+    directory = generate_directory({
+        'file_a': b'content_a',
+        'relative': {
+            'file_b': b'content_b',
+        }
+    })
+
+    repository.put_object_from_tree(str(directory))
+
+    assert repository.has_object('file_a')
+    assert repository.has_object('relative/file_b')
+
+    repository.delete()
+
+    assert repository.is_empty()
+    assert not repository.is_initialised
 
 
 def test_erase(repository, generate_directory):

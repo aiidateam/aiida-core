@@ -342,6 +342,37 @@ class Config:  # pylint: disable=too-many-public-methods
         self._profiles.pop(name)
         return self
 
+    def delete_profile(
+        self,
+        name: str,
+        include_database: bool = True,
+        include_database_user: bool = False,
+        include_repository: bool = True
+    ):
+        """Delete a profile including its contents.
+
+        :param include_database: also delete the database configured for the profile.
+        :param include_database_user: also delete the database user configured for the profile.
+        :param include_repository: also delete the repository configured for the profile.
+        """
+        from aiida.manage.external.postgres import Postgres
+
+        profile = self.get_profile(name)
+
+        if include_repository:
+            repository = profile.get_repository()
+            repository.delete()
+
+        if include_database:
+            postgres = Postgres.from_profile(profile)
+            if postgres.db_exists(profile.database_name):
+                postgres.drop_db(profile.database_name)
+
+        if include_database_user and postgres.dbuser_exists(profile.database_username):
+            postgres.drop_dbuser(profile.database_username)
+
+        self.remove_profile(name)
+
     def set_default_profile(self, name, overwrite=False):
         """Set the given profile as the new default.
 

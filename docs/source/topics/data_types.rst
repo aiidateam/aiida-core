@@ -26,7 +26,7 @@ The different data types can be accessed through the :py:func:`~aiida.plugins.fa
 
 A list of all the data entry points can be obtain running the command ``verdi plugin list aiida.data``.
 
-For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:data:find>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
+For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:query>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
 
 If you need to work with some specific type of data, first check the list of data types/plugins below, and if you don't find what you need, give a look to :ref:`Adding support for custom data types <topics:data_types:plugin>`.
 

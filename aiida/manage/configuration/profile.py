@@ -129,22 +129,13 @@ class Profile:  # pylint: disable=too-many-public-methods
         self._test_profile = bool(self.name.startswith('test_'))
 
     def get_repository(self) -> 'Repository':
-        """Return the repository configured for this profile.
-
-        .. note:: The repository will automatically be initialised if it wasn't yet already.
-        """
+        """Return the repository configured for this profile."""
         from disk_objectstore import Container
         from aiida.repository import Repository
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
-
         container = Container(self.repository_path / 'container')
         backend = DiskObjectStoreRepositoryBackend(container=container)
-        repository = Repository(backend=backend)
-
-        if not repository.is_initialised:
-            repository.initialise(clear=True, **self.defaults['repository'])  # pylint: disable=unsubscriptable-object
-
-        return repository
+        return Repository(backend=backend)
 
     @property
     def uuid(self):

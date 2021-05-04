@@ -169,7 +169,7 @@ class ArrayData(Data):
             handle.seek(0)
 
             # Write the numpy array to the repository, keeping the byte representation
-            self.put_object_from_filelike(handle, f'{name}.npy', mode='wb', encoding=None)
+            self.put_object_from_filelike(handle, f'{name}.npy')
 
         # Store the array name and shape for querying purposes
         self.set_attribute(f'{self.array_prefix}{name}', list(array.shape))

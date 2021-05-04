@@ -1,5 +1,4 @@
 include aiida/cmdline/templates/*.tpl
-include aiida/manage/backup/backup_info.json.tmpl
 include aiida/manage/configuration/schema/*.json
 include setup.json
 include AUTHORS.txt

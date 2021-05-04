@@ -67,7 +67,6 @@ class TestManager:
     temporary AiiDA environment.
 
     For usage with pytest, see :py:class:`~aiida.manage.tests.pytest_fixtures`.
-    For usage with unittest, see :py:class:`~aiida.manage.tests.unittest_classes`.
     """
 
     def __init__(self):

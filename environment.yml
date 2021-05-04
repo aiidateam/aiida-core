@@ -15,6 +15,7 @@ dependencies:
 - click-config-file~=0.6.0
 - click-spinner~=0.1.8
 - click~=7.1
+- disk-objectstore~=0.5
 - django~=2.2
 - ete3~=3.1
 - python-graphviz~=0.13

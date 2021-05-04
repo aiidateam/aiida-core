@@ -185,6 +185,7 @@ def parse_upf(fname, check_filename=True):
     If check_filename is True, raise a ParsingError exception if the filename
     does not start with the element name.
     """
+    # pylint: disable=too-many-branches
     import os
 
     from aiida.common.exceptions import ParsingError
@@ -195,10 +196,13 @@ def parse_upf(fname, check_filename=True):
 
     try:
         upf_contents = fname.read()
-        fname = fname.name
     except AttributeError:
-        with open(fname, encoding='utf8') as handle:
+        with open(fname) as handle:
             upf_contents = handle.read()
+    else:
+        if check_filename:
+            raise ValueError('cannot use filelike objects when `check_filename=True`, use a filepath instead.')
+        fname = 'file.txt'
 
     match = REGEX_UPF_VERSION.search(upf_contents)
     if match:
@@ -305,8 +309,13 @@ class UpfData(SinglefileData):
         if self.is_stored:
             return self
 
+        # Do not check the filename because it will fail since we are passing in a handle, which doesn't have a filename
+        # and so `parse_upf` will raise. The reason we have to pass in a handle is because this is the repository does
+        # not allow to get an absolute filepath. Anyway, the filename was already checked in `set_file` when the file
+        # was set for the first time. All the logic in this method is duplicated in `store` and `_validate` and badly
+        # needs to be refactored, but that is for another time.
         with self.open(mode='r') as handle:
-            parsed_data = parse_upf(handle)
+            parsed_data = parse_upf(handle, check_filename=False)
 
         # Open in binary mode which is required for generating the md5 checksum
         with self.open(mode='rb') as handle:
@@ -397,8 +406,13 @@ class UpfData(SinglefileData):
 
         super()._validate()
 
+        # Do not check the filename because it will fail since we are passing in a handle, which doesn't have a filename
+        # and so `parse_upf` will raise. The reason we have to pass in a handle is because this is the repository does
+        # not allow to get an absolute filepath. Anyway, the filename was already checked in `set_file` when the file
+        # was set for the first time. All the logic in this method is duplicated in `store` and `_validate` and badly
+        # needs to be refactored, but that is for another time.
         with self.open(mode='r') as handle:
-            parsed_data = parse_upf(handle)
+            parsed_data = parse_upf(handle, check_filename=False)
 
         # Open in binary mode which is required for generating the md5 checksum
         with self.open(mode='rb') as handle:

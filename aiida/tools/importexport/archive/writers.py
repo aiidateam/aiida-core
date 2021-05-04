@@ -10,7 +10,6 @@
 """Archive writer classes."""
 from abc import ABC, abstractmethod
 from copy import deepcopy
-import os
 from pathlib import Path
 import shelve
 import shutil
@@ -21,15 +20,13 @@ from typing import Any, cast, Dict, List, Optional, Type, Union
 import zipfile
 
 from archive_path import TarPath, ZipPath
+from disk_objectstore import Container
 
 from aiida.common import json
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import Folder
 from aiida.tools.importexport.archive.common import ArchiveMetadata
-from aiida.tools.importexport.common.config import (
-    EXPORT_VERSION, NODE_ENTITY_NAME, NODES_EXPORT_SUBFOLDER, ExportFileFormat
-)
-from aiida.tools.importexport.common.utils import export_shard_uuid
+from aiida.tools.importexport.common.config import EXPORT_VERSION, NODE_ENTITY_NAME, ExportFileFormat
 
 __all__ = ('ArchiveWriterAbstract', 'get_writer', 'WriterJsonZip', 'WriterJsonTar', 'WriterJsonFolder')
 
@@ -184,13 +181,10 @@ class ArchiveWriterAbstract(ABC):
         """
 
     @abstractmethod
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
-        """Write a node repository to the archive.
+    def write_repository_container(self, container: Container):
+        """Write a repository container to the archive.
 
-        :param uuid: The UUID of the node
-        :param path: The path to the repository folder on disk
-        :param overwrite: Allow to overwrite existing path in archive
-
+        :param container: the container.
         """
 
 
@@ -223,7 +217,7 @@ class WriterNull(ArchiveWriterAbstract):
     def write_entity_data(self, name: str, pk: int, id_key: str, fields: Dict[str, Any]):
         pass
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
+    def write_repository_container(self, container: Container):
         pass
 
 
@@ -328,9 +322,13 @@ class WriterJsonZip(ArchiveWriterAbstract):
             self._data['node_extras'][pk] = fields.pop('extras')
         self._data['export_data'].setdefault(name, {})[pk] = fields
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
+    def write_repository_container(self, container: Container):
+        """Write a repository container to the archive.
+
+        :param container: the container.
+        """
         self.assert_within_context()
-        (self._archivepath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).puttree(path, check_exists=not overwrite)
+        (self._archivepath / 'container').puttree(container.get_folder())
 
 
 class WriterJsonTar(ArchiveWriterAbstract):
@@ -412,9 +410,13 @@ class WriterJsonTar(ArchiveWriterAbstract):
             self._data['node_extras'][pk] = fields.pop('extras')
         self._data['export_data'].setdefault(name, {})[pk] = fields
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
+    def write_repository_container(self, container: Container):
+        """Write a repository container to the archive.
+
+        :param container: the container.
+        """
         self.assert_within_context()
-        (self._archivepath / NODES_EXPORT_SUBFOLDER / export_shard_uuid(uuid)).puttree(path, check_exists=not overwrite)
+        (self._archivepath / 'container').puttree(container.get_folder())
 
 
 class WriterJsonFolder(ArchiveWriterAbstract):
@@ -495,7 +497,10 @@ class WriterJsonFolder(ArchiveWriterAbstract):
             self._data['node_extras'][pk] = fields.pop('extras')
         self._data['export_data'].setdefault(name, {})[pk] = fields
 
-    def write_node_repo_folder(self, uuid: str, path: Union[str, Path], overwrite: bool = True):
+    def write_repository_container(self, container: Container):
+        """Write a repository container to the archive.
+
+        :param container: the container.
+        """
         self.assert_within_context()
-        repo_folder = self._folder.get_subfolder(NODES_EXPORT_SUBFOLDER).get_subfolder(export_shard_uuid(uuid))
-        repo_folder.insert_path(src=os.path.abspath(path), dest_name='.', overwrite=overwrite)
+        self._folder.get_subfolder('container').insert_path(src=container.get_folder(), dest_name='.')

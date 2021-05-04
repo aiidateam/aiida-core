@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.6.2 - 2021-04-26
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.1...v1.6.2) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-31&to=2021-04-26&type=c)
+
+### Bug fixes
+- CLI: Use the proper proxy command for `verdi calcjob gotocomputer` if configured as such [[#4761]](https://github.com/aiidateam/aiida-core/pull/4761)
+- Respect nested output namespaces in `Process.exposed_outputs` [[#4863]](https://github.com/aiidateam/aiida-core/pull/4863)
+- `NodeLinkManager` now properly regenerates original nested namespaces from the flat link labels stored in the database. This means one can now do `node.outputs.some.nested.output` instead of having to do `node.outputs.some__nested__output`. The same goes for `node.inputs` [[#4625]](https://github.com/aiidateam/aiida-core/pull/4625)
+- Fix `aiida.cmdline.utils.decorators.with_dbenv` always loading the database. Now it will only load the database if not already loaded, as intended [[#4865]](https://github.com/aiidateam/aiida-core/pull/4865)
+
+### Features
+- Add the `account` option to the `LsfScheduler` scheduler plugin [[#4832]](https://github.com/aiidateam/aiida-core/pull/4832)
+
+### Documentation
+- Update ssh proxycommand section with instructions on how to handle cases where the SSH key needs to be specified for the proxy server [[#4839]](https://github.com/aiidateam/aiida-core/pull/4839)
+- Add the ["How to extend workflows"](https://aiida-core.readthedocs.io/en/latest/howto/write_workflows.html#extending-workflows) section, explaining the use of the `expose_inputs` and `expose_outputs` features, as well as nested namespaces [[#4562]](https://github.com/aiidateam/aiida-core/pull/4562)
+- Add help in intro for when quicksetup fails due to problems autodetecting the PostgreSQL settings [[#4838]](https://github.com/aiidateam/aiida-core/pull/4838)
+
+
+## v1.6.1 - 2021-03-31
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.0...v1.6.1) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-15&to=2021-03-31&type=c)
+
+This patch release is primarily intended to fix a regression in the `aiida_profile` test fixture, used by plugin developers, causing config validation errors ([#4831](https://github.com/aiidateam/aiida-core/pull/4831)).
+
+Other additions:
+
+- ✨ NEW: Added `structure.data.import` entry-point, allowing for plugins to define file-format specific sub-commands of `verdi data structure import` ([#4427](https://github.com/aiidateam/aiida-core/pull/4427)).
+- ✨ NEW: Added `--label` and `--group` options to `verdi data structure import`, which apply a label/group to all structures being imported ([#4429](https://github.com/aiidateam/aiida-core/pull/4429)).
+- ⬆️ UPDATE: `psgu` dependency increased to `v0.2.x`.
+  This fixes a bug in `verdi quicksetup`, when used on the Windows Subsystem for Linux (WSL) platform ([#4834](https://github.com/aiidateam/aiida-core/pull/4834)).
+- 🐛 FIX: `metadata.options.max_memory_kb` is now ignored when using the direct scheduler ([#4825](https://github.com/aiidateam/aiida-core/pull/4825)).
+  This was previously imposing a a virtual memory limit with `ulimit -v`, which is very different to the physical memory limit that other scheduler plugins impose. No straightforward way exists to directly limit the physical memory usage for this scheduler.
+- 🐛 FIX: Added `__str__` method to the `Orbital` class, fixing a recursion error ([#4829](https://github.com/aiidateam/aiida-core/pull/4829)).
+
 ## v1.6.0 - 2021-03-15
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.5.2...v1.6.0) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2020-12-07&to=2021-03-15&type=c)

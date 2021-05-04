@@ -28,14 +28,6 @@ class RemoteData(Data):
         if remote_path is not None:
             self.set_remote_path(remote_path)
 
-    def get_computer_name(self):
-        """Get label of this node's computer.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `self.computer.label` property instead.
-        """
-        return self.computer.label  # pylint: disable=no-member
-
     def get_remote_path(self):
         return self.get_attribute('remote_path')
 

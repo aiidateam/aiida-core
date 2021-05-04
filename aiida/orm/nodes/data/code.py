@@ -9,10 +9,8 @@
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
 import os
-import warnings
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
 from .data import Data
 
 __all__ = ('Code',)
@@ -93,20 +91,12 @@ class Code(Data):
         for filename in files:
             if os.path.isfile(filename):
                 with open(filename, 'rb') as handle:
-                    self.put_object_from_filelike(handle, os.path.split(filename)[1], 'wb', encoding=None)
+                    self.put_object_from_filelike(handle, os.path.split(filename)[1])
 
     def __str__(self):
         local_str = 'Local' if self.is_local() else 'Remote'
         computer_str = self.computer.label
         return f"{local_str} code '{self.label}' on {computer_str}, pk: {self.pk}, uuid: {self.uuid}"
-
-    def get_computer_name(self):
-        """Get label of this code's computer.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `self.get_computer_label()` method instead.
-        """
-        return self.get_computer_label()
 
     def get_computer_label(self):
         """Get label of this code's computer."""
@@ -140,15 +130,10 @@ class Code(Data):
 
         super(Code, self.__class__).label.fset(self, value)  # pylint: disable=no-member
 
-    def relabel(self, new_label, raise_error=True):
+    def relabel(self, new_label):
         """Relabel this code.
 
         :param new_label: new code label
-        :param raise_error: Set to False in order to return a list of errors
-            instead of raising them.
-
-        .. deprecated:: 1.2.0
-            Will remove raise_error in `v2.0.0`. Use `try/except` instead.
         """
         # pylint: disable=unused-argument
         suffix = f'@{self.computer.label}'
@@ -181,10 +166,10 @@ class Code(Data):
         query = QueryBuilder()
         query.append(cls, filters={'label': label}, project='*', tag='code')
         if machinename:
-            query.append(Computer, filters={'name': machinename}, with_node='code')
+            query.append(Computer, filters={'label': machinename}, with_node='code')
 
         if query.count() == 0:
-            raise NotExistent(f"'{label}' is not a valid code name.")
+            raise NotExistent(f"'{label}' is not a valid code label.")
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
@@ -376,9 +361,7 @@ class Code(Data):
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
             raise ValueError(
-                'remote_computer_exec must be a list or tuple '
-                'of length 2, with machine and executable '
-                'name'
+                'remote_computer_exec must be a list or tuple of length 2, with machine and executable name'
             )
 
         computer, remote_exec_path = tuple(remote_computer_exec)
@@ -495,54 +478,3 @@ class Code(Data):
         builder.code = self
 
         return builder
-
-    def get_full_text_info(self, verbose=False):
-        """Return a list of lists with a human-readable detailed information on this code.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`.
-
-        :return: list of lists where each entry consists of two elements: a key and a value
-        """
-        warnings.warn('this property is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
-        from aiida.repository import FileType
-
-        result = []
-        result.append(['PK', self.pk])
-        result.append(['UUID', self.uuid])
-        result.append(['Label', self.label])
-        result.append(['Description', self.description])
-        result.append(['Default plugin', self.get_input_plugin_name()])
-
-        if verbose:
-            result.append(['Calculations', len(self.get_outgoing().all())])
-
-        if self.is_local():
-            result.append(['Type', 'local'])
-            result.append(['Exec name', self.get_execname()])
-            result.append(['List of files/folders:', ''])
-            for obj in self.list_objects():
-                if obj.file_type == FileType.DIRECTORY:
-                    result.append(['directory', obj.name])
-                else:
-                    result.append(['file', obj.name])
-        else:
-            result.append(['Type', 'remote'])
-            result.append(['Remote machine', self.get_remote_computer().label])
-            result.append(['Remote absolute path', self.get_remote_exec_path()])
-
-        if self.get_prepend_text().strip():
-            result.append(['Prepend text', ''])
-            for line in self.get_prepend_text().split('\n'):
-                result.append(['', line])
-        else:
-            result.append(['Prepend text', 'No prepend text'])
-
-        if self.get_append_text().strip():
-            result.append(['Append text', ''])
-            for line in self.get_append_text().split('\n'):
-                result.append(['', line])
-        else:
-            result.append(['Append text', 'No append text'])
-
-        return result

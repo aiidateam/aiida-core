@@ -40,14 +40,6 @@ def delete_temporary_file(filepath):
             pass
 
 
-def test_cmd_export_deprecation():
-    """Test that the deprecated `verdi export` commands can still be called."""
-    from aiida.cmdline.commands import cmd_export
-    for command in [cmd_export.inspect, cmd_export.create, cmd_export.migrate]:
-        result = CliRunner().invoke(command, '--help')
-        assert result.exit_code == 0
-
-
 class TestVerdiExport(AiidaTestCase):
     """Tests for `verdi export`."""
 
@@ -285,11 +277,10 @@ class TestVerdiExport(AiidaTestCase):
 
             filename_input = get_archive_file(archive, filepath=self.fixture_archive)
 
-            # Testing the options that will print the meta data and data respectively
-            for option in ['-m', '-d']:
-                options = [option, filename_input]
-                result = self.cli_runner.invoke(cmd_archive.inspect, options)
-                self.assertIsNone(result.exception, result.output)
+            # Test the options that will print the meta data
+            options = ['-m', filename_input]
+            result = self.cli_runner.invoke(cmd_archive.inspect, options)
+            self.assertIsNone(result.exception, result.output)
 
             # Test the --version option which should print the archive format version
             options = ['--version', filename_input]

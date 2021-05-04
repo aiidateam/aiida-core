@@ -26,7 +26,6 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import load_node, CalcJobNode, Code, FolderData, Node, RemoteData
 from aiida.orm.utils.log import get_dblogger_extra
-from aiida.plugins import DataFactory
 from aiida.schedulers.datastructures import JobState
 from aiida.transports import Transport
 
@@ -291,7 +290,12 @@ def upload_calculation(
             relpath = os.path.normpath(os.path.relpath(filepath, folder.abspath))
             if relpath not in provenance_exclude_list:
                 with open(filepath, 'rb') as handle:
-                    node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access
+                    node._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
+
+    # Since the node is already stored, we cannot use the normal repository interface since it will raise a
+    # `ModificationNotAllowed` error. To bypass it, we go straight to the underlying repository instance to store the
+    # files, however, this means we have to manually update the node's repository metadata.
+    node._update_repository_metadata()  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
@@ -427,17 +431,11 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
-        retrieve_singlefile_list = calculation.get_retrieve_singlefile_list()
 
         with SandboxFolder() as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.put_object_from_tree(folder.abspath)
-
-        # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
-        if retrieve_singlefile_list:
-            with SandboxFolder() as folder:
-                _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
@@ -496,41 +494,6 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
             EXEC_LOGGER.warning(
                 'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
             )
-
-
-def _retrieve_singlefiles(
-    job: CalcJobNode,
-    transport: Transport,
-    folder: SandboxFolder,
-    retrieve_file_list: List[Tuple[str, str, str]],
-    logger_extra: Optional[dict] = None
-):
-    """Retrieve files specified through the singlefile list mechanism."""
-    singlefile_list = []
-    for (linkname, subclassname, filename) in retrieve_file_list:
-        EXEC_LOGGER.debug(
-            '[retrieval of calc {}] Trying '
-            "to retrieve remote singlefile '{}'".format(job.pk, filename),
-            extra=logger_extra
-        )
-        localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
-        transport.get(filename, localfilename, ignore_nonexisting=True)
-        singlefile_list.append((linkname, subclassname, localfilename))
-
-    # ignore files that have not been retrieved
-    singlefile_list = [i for i in singlefile_list if os.path.exists(i[2])]
-
-    # after retrieving from the cluster, I create the objects
-    singlefiles = []
-    for (linkname, subclassname, filename) in singlefile_list:
-        cls = DataFactory(subclassname)
-        singlefile = cls(file=filename)
-        singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
-        singlefiles.append(singlefile)
-
-    for fil in singlefiles:
-        EXEC_LOGGER.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
-        fil.store()
 
 
 def retrieve_files_from_list(

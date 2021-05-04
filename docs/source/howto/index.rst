@@ -8,9 +8,10 @@ How-To Guides
    interact
    plugins_install
    run_codes
+   run_workflows
    ssh
    plugin_codes
-   workflows
+   write_workflows
    workchains_restart
    data
    query

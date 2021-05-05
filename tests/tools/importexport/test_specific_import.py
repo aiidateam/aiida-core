@@ -170,7 +170,7 @@ class TestSpecificImport(AiidaArchiveTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
             nodes = [node]
-            export(nodes, filename=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))

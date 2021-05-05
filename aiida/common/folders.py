@@ -342,8 +342,7 @@ class Folder:
         It is always safe to call it, it will do nothing if the folder
         already exists.
         """
-        if not self.exists():
-            os.makedirs(self.abspath, mode=self.mode_dir)
+        os.makedirs(self.abspath, mode=self.mode_dir, exist_ok=True)
 
     def replace_with_folder(self, srcdir, move=False, overwrite=False):
         """This routine copies or moves the source folder 'srcdir' to the local folder pointed to by this Folder.
@@ -370,8 +369,7 @@ class Folder:
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)
-        if not os.path.exists(pardir):
-            os.makedirs(pardir, mode=self.mode_dir)
+        os.makedirs(pardir, mode=self.mode_dir, exist_ok=True)
 
         if move:
             shutil.move(srcdir, self.abspath)
@@ -417,8 +415,7 @@ class SandboxFolder(Folder):
         # First check if the sandbox folder already exists
         if sandbox_in_repo:
             sandbox = os.path.join(get_profile().repository_path, 'sandbox')
-            if not os.path.exists(sandbox):
-                os.makedirs(sandbox)
+            os.makedirs(sandbox, exist_ok=True)
             abspath = tempfile.mkdtemp(dir=sandbox)
         else:
             abspath = tempfile.mkdtemp()

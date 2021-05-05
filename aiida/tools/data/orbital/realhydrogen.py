@@ -11,8 +11,7 @@
 A module defining hydrogen-like orbitals that are real valued (rather than
 complex-valued).
 """
-
-from aiida.common.exceptions import ValidationError, InputValidationError
+from aiida.common.exceptions import ValidationError
 
 from .orbital import Orbital, validate_len3_list_or_none, validate_float_or_none
 
@@ -354,9 +353,7 @@ class RealhydrogenOrbital(Orbital):
             if any([CONVERSION_DICT[x][y]['angular_momentum'] == angular_momentum for y in CONVERSION_DICT[x]])
         ]
         if not orbital_name:
-            raise InputValidationError(
-                f'No orbital name corresponding to the angular_momentum {angular_momentum} could be found'
-            )
+            raise ValueError(f'No orbital name corresponding to the angular_momentum {angular_momentum} could be found')
         if magnetic_number is not None:
             # finds angular momentum
             orbital_name = orbital_name[0]
@@ -366,7 +363,7 @@ class RealhydrogenOrbital(Orbital):
             ]
 
             if not orbital_name:
-                raise InputValidationError(
+                raise ValueError(
                     f'No orbital name corresponding to the magnetic_number {magnetic_number} could be found'
                 )
         return orbital_name[0]
@@ -382,7 +379,7 @@ class RealhydrogenOrbital(Orbital):
         name = name.upper()
         list_of_dicts = [CONVERSION_DICT[x][y] for x in CONVERSION_DICT for y in CONVERSION_DICT[x] if name in (y, x)]
         if not list_of_dicts:
-            raise InputValidationError('Invalid choice of projection name')
+            raise ValueError('Invalid choice of projection name')
         return list_of_dicts
 
 

@@ -15,7 +15,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.expression import case, FunctionElement
 from sqlalchemy.ext.compiler import compiles
 
-from aiida.common.exceptions import InputValidationError
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
 
@@ -220,10 +219,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             negation = False
         if operator in ('longer', 'shorter', 'of_length'):
             if not isinstance(value, int):
-                raise InputValidationError('You have to give an integer when comparing to a length')
+                raise TypeError('You have to give an integer when comparing to a length')
         elif operator in ('like', 'ilike'):
             if not isinstance(value, str):
-                raise InputValidationError(f'Value for operator {operator} has to be a string (you gave {value})')
+                raise TypeError(f'Value for operator {operator} has to be a string (you gave {value})')
 
         elif operator == 'in':
             try:
@@ -231,9 +230,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             except TypeError:
                 raise TypeError('Value for operator `in` could not be iterated')
             if not value_type_set:
-                raise InputValidationError('Value for operator `in` is an empty list')
+                raise ValueError('Value for operator `in` is an empty list')
             if len(value_type_set) > 1:
-                raise InputValidationError(f'Value for operator `in` contains more than one type: {value}')
+                raise ValueError(f'Value for operator `in` contains more than one type: {value}')
         elif operator in ('and', 'or'):
             expressions_for_this_path = []
             for filter_operation_dict in value:
@@ -322,7 +321,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             #  Possible types are object, array, string, number, boolean, and null.
             valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
             if value not in valid_types:
-                raise InputValidationError(f'value {value} for of_type is not among valid types\n{valid_types}')
+                raise ValueError(f'value {value} for of_type is not among valid types\n{valid_types}')
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
@@ -354,7 +353,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             ],
                         else_=False)
         else:
-            raise InputValidationError(f'Unknown operator {operator} for filters in JSON field')
+            raise ValueError(f'Unknown operator {operator} for filters in JSON field')
         return expr
 
     @staticmethod

@@ -10,7 +10,7 @@
 """Data plugin to model an atomic orbital."""
 import copy
 
-from aiida.common.exceptions import ValidationError, InputValidationError
+from aiida.common.exceptions import ValidationError
 from aiida.plugins import OrbitalFactory
 from .data import Data
 
@@ -80,7 +80,7 @@ class OrbitalData(Data):
             try:
                 _orbital_type = orbital_dict['_orbital_type']
             except KeyError:
-                raise InputValidationError(f'No _orbital_type found in: {orbital_dict}')
+                raise ValueError(f'No _orbital_type found in: {orbital_dict}')
             orbital_dicts.append(orbital_dict)
         self.set_attribute('orbital_dicts', orbital_dicts)
 

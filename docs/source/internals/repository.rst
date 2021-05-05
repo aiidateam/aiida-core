@@ -10,6 +10,8 @@ The current architecture is heavily influenced by lessons learned from the origi
 For that reason, at end of the chapter there is a description of the original design and its limitations.
 This can be instructive in understanding the design of the current solution.
 
+.. _internal-architecture:repository:design:
+
 Design
 ******
 
@@ -91,7 +93,7 @@ Since new objects are concatenated to the end of existing pack files and existin
 The file repository backend
 ---------------------------
 
-To be able to respect the divergent requirements (as layed out in :ref:`internal-architecture:repository:design:requirements`) of the file repository regarding its user interface and the actual data store, the implementation is divided into a backend and frontend interface.
+To be able to respect the divergent requirements (as layed out :ref:`at the start of this section <internal-architecture:repository:design>`) of the file repository regarding its user interface and the actual data store, the implementation is divided into a backend and frontend interface.
 In a clear separation of responsibilities, the backend is solely tasked with storing the content of files and returning them upon request as efficiently as possible, both when retrieving files individual as well as in bulk.
 For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
 The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.

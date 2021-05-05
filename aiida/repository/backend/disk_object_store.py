@@ -2,6 +2,7 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
 import io
+import shutil
 import typing
 
 from disk_objectstore import Container
@@ -46,6 +47,13 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     @property
     def container(self):
         return self._container
+
+    def erase(self):
+        """Delete the repository itself and all its contents."""
+        try:
+            shutil.rmtree(self.container.get_folder())
+        except FileNotFoundError:
+            pass
 
     def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         """Store the byte contents of a file in the repository.

@@ -23,6 +23,9 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def initialise(self, **kwargs) -> None:
         return
 
+    def erase(self):
+        pass
+
     @property
     def is_initialised(self) -> bool:
         return True

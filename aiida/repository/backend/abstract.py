@@ -40,6 +40,15 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def is_initialised(self) -> bool:
         """Return whether the repository has been initialised."""
 
+    @abc.abstractmethod
+    def erase(self):
+        """Delete the repository itself and all its contents.
+
+        .. note:: This should not merely delete the contents of the repository but any resources it created. For
+            example, if the repository is essentially a folder on disk, the folder itself should also be deleted, not
+            just its contents.
+        """
+
     @staticmethod
     def is_readable_byte_stream(handle):
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode

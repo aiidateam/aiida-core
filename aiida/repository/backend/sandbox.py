@@ -24,11 +24,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     def __del__(self):
         """Delete the entire sandbox folder if it was instantiated and still exists."""
-        if getattr(self, '_sandbox', None) is not None:
-            try:
-                shutil.rmtree(self.sandbox.abspath)
-            except FileNotFoundError:
-                pass
+        self.erase()
 
     @property
     def uuid(self) -> typing.Optional[str]:
@@ -61,6 +57,16 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
             self._sandbox = SandboxFolder()
 
         return self._sandbox
+
+    def erase(self):
+        """Delete the repository itself and all its contents."""
+        if getattr(self, '_sandbox', None) is not None:
+            try:
+                shutil.rmtree(self.sandbox.abspath)
+            except FileNotFoundError:
+                pass
+            finally:
+                self._sandbox = None
 
     def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         """Store the byte contents of a file in the repository.

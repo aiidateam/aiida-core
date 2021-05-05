@@ -10,6 +10,7 @@
 """Tests for `verdi status`."""
 import pytest
 
+from aiida import __version__
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 
@@ -26,6 +27,8 @@ def test_status(run_cli_command):
 
     for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
         assert string in result.output
+
+    assert __version__ in result.output
 
 
 @pytest.mark.usefixtures('empty_config')

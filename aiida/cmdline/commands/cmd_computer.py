@@ -18,7 +18,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv, deprecated_command
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import ValidationError
 from aiida.plugins.entry_point import get_entry_points
 from aiida.transports import cli as transport_cli
@@ -35,7 +35,7 @@ def get_computer_names():
     """
     from aiida.orm.querybuilder import QueryBuilder
     builder = QueryBuilder()
-    builder.append(entity_type='computer', project=['name'])
+    builder.append(entity_type='computer', project=['label'])
     if builder.count() > 0:
         return next(zip(*builder.all()))  # return the first entry
 
@@ -379,17 +379,6 @@ def computer_show(computer):
     table.append(['Prepend text', computer.get_prepend_text()])
     table.append(['Append text', computer.get_append_text()])
     echo.echo(tabulate.tabulate(table))
-
-
-@verdi_computer.command('rename')
-@arguments.COMPUTER()
-@arguments.LABEL('NEW_NAME')
-@deprecated_command("This command has been deprecated. Please use 'verdi computer relabel' instead.")
-@click.pass_context
-@with_dbenv()
-def computer_rename(ctx, computer, new_name):
-    """Rename a computer."""
-    ctx.invoke(computer_relabel, computer=computer, label=new_name)
 
 
 @verdi_computer.command('relabel')

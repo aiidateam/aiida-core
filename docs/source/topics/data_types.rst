@@ -26,7 +26,7 @@ The different data types can be accessed through the :py:func:`~aiida.plugins.fa
 
 A list of all the data entry points can be obtain running the command ``verdi plugin list aiida.data``.
 
-For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:data:find>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
+For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:query>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
 
 If you need to work with some specific type of data, first check the list of data types/plugins below, and if you don't find what you need, give a look to :ref:`Adding support for custom data types <topics:data_types:plugin>`.
 
@@ -264,14 +264,14 @@ or from `file-like objects <https://docs.python.org/3/glossary.html#term-file-li
 
   In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
 
-Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:class:`~aiida.orm.nodes.node.Node.get_object_content()` method:
+Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method:
 
 .. code-block:: ipython
 
   In [5]: folder.get_object_content('file1.txt')
   Out[5]: 'File 1 content\n'
 
-To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:class:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
@@ -279,14 +279,14 @@ To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.
   Out[6]: ['subdir', 'file1.txt', 'file2.txt']
 
 In this example, ``subdir`` was a sub directory of ``/absolute/path/to/directory``, whose contents where added above.
-to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
   In [7]: folder.list_object_names('subdir')
   Out[7]: ['file3.txt', 'module.py']
 
-The content can once again be shown using the :py:meth:`~aiida.orm.nodes.node.Node.get_object_content()` method by passing the correct path:
+The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method by passing the correct path:
 
 .. code-block:: ipython
 

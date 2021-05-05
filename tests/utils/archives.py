@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test utility to import, inspect, or migrate AiiDA export archives."""
-
 import os
 import tarfile
 import zipfile

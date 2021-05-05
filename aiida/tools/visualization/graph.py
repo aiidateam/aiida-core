@@ -634,7 +634,6 @@ class Graph:
         origin_style=MappingProxyType(_OVERRIDE_STYLES_DICT['origin_node']),
         include_process_inputs=False,
         highlight_classes=None,
-        print_func=None
     ):
         """add nodes and edges from an origin recursively,
         following outgoing links
@@ -654,19 +653,8 @@ class Graph:
         :param highlight_classes: target class in exported graph expected to be highlight and
             other nodes are decolorized (Default value = None)
         :typle highlight_classes: tuple of class or class
-        :param print_func:
-            a function to stream information to, i.e. print_func(str)
-            (this feature is deprecated since `v1.1.0` and will be removed in `v2.0.0`)
-
         """
         # pylint: disable=too-many-arguments,too-many-locals
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning
-        if print_func:
-            warnings.warn( # pylint: disable=no-member
-                '`print_func` is deprecated because graph traversal has been refactored', AiidaDeprecationWarning
-            )
-
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
         origin_pk = self._load_node(origin).pk
@@ -737,7 +725,6 @@ class Graph:
         origin_style=MappingProxyType(_OVERRIDE_STYLES_DICT['origin_node']),
         include_process_outputs=False,
         highlight_classes=None,
-        print_func=None
     ):
         """add nodes and edges from an origin recursively,
         following incoming links
@@ -757,19 +744,8 @@ class Graph:
         :param highlight_classes:  class label (as displayed in the graph, e.g. 'StructureData', 'FolderData', etc.)
             to be highlight and other nodes are decolorized (Default value = None)
         :typle highlight_classes: list or tuple of str
-        :param print_func: a function to stream information to, i.e. print_func(str)
-
-        .. deprecated:: 1.1.0
-            `print_func` will be removed in `v2.0.0`
         """
         # pylint: disable=too-many-arguments,too-many-locals
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning
-        if print_func:
-            warnings.warn( # pylint: disable=no-member
-                '`print_func` is deprecated because graph traversal has been refactored', AiidaDeprecationWarning
-            )
-
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
         origin_pk = self._load_node(origin).pk

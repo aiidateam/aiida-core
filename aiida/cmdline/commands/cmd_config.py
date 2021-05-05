@@ -14,7 +14,7 @@ import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import echo
 
 
 class _DeprecateConfigCommandsGroup(click.Group):
@@ -218,21 +218,3 @@ def verdi_config_caching(disabled):
                     echo.echo(identifier)
             elif disabled:
                 echo.echo(identifier)
-
-
-@verdi_config.command('_deprecated', hidden=True)
-@decorators.deprecated_command("This command has been deprecated. Please use 'verdi config show/set/unset' instead.")
-@click.argument('value', metavar='OPTION_VALUE', required=False)
-@click.option('--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
-@click.option('--unset', is_flag=True, help='Remove the line matching the option name from the config file.')
-@click.pass_context
-def verdi_config_deprecated(ctx, value, globally, unset):
-    """"This command has been deprecated. Please use 'verdi config show/set/unset' instead."""
-    from aiida.manage.configuration import get_option
-    option = get_option(ctx.obj.deprecated_name)
-    if unset:
-        ctx.invoke(verdi_config_unset, option=option, globally=globally)
-    elif value is not None:
-        ctx.invoke(verdi_config_set, option=option, value=value, globally=globally)
-    else:
-        ctx.invoke(verdi_config_get, option=option)

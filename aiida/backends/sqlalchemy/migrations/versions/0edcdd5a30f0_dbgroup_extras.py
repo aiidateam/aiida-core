@@ -28,6 +28,9 @@ depends_on = None
 
 def upgrade():
     """Upgrade: Add the extras column to the 'db_dbgroup' table"""
+    # We add the column with a `server_default` because otherwise the migration would fail since existing rows will not
+    # have a value and violate the not-nullable clause. However, the model doesn't use a server default but a default
+    # on the ORM level, so we remove the server default from the column directly after.
     op.add_column(
         'db_dbgroup', sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}')
     )

@@ -342,8 +342,7 @@ class Folder:
         It is always safe to call it, it will do nothing if the folder
         already exists.
         """
-        if not self.exists():
-            os.makedirs(self.abspath, mode=self.mode_dir)
+        os.makedirs(self.abspath, mode=self.mode_dir, exist_ok=True)
 
     def replace_with_folder(self, srcdir, move=False, overwrite=False):
         """This routine copies or moves the source folder 'srcdir' to the local folder pointed to by this Folder.
@@ -370,8 +369,7 @@ class Folder:
 
         # Create parent dir, if needed, with the right mode
         pardir = os.path.dirname(self.abspath)
-        if not os.path.exists(pardir):
-            os.makedirs(pardir, mode=self.mode_dir)
+        os.makedirs(pardir, mode=self.mode_dir, exist_ok=True)
 
         if move:
             shutil.move(srcdir, self.abspath)
@@ -417,8 +415,7 @@ class SandboxFolder(Folder):
         # First check if the sandbox folder already exists
         if sandbox_in_repo:
             sandbox = os.path.join(get_profile().repository_path, 'sandbox')
-            if not os.path.exists(sandbox):
-                os.makedirs(sandbox)
+            os.makedirs(sandbox, exist_ok=True)
             abspath = tempfile.mkdtemp(dir=sandbox)
         else:
             abspath = tempfile.mkdtemp()
@@ -486,74 +483,3 @@ class SubmitTestFolder(Folder):
 
     def __exit__(self, exc_type, exc_value, traceback):
         """When context manager is exited, do not delete the folder."""
-
-
-class RepositoryFolder(Folder):
-    """
-    A class to manage the local AiiDA repository folders.
-    """
-
-    def __init__(self, section, uuid, subfolder=os.curdir):
-        """
-        Initializes the object by pointing it to a folder in the repository.
-
-        Pass the uuid as a string.
-        """
-        if section not in VALID_SECTIONS:
-            retstr = (f"Repository section '{section}' not allowed. Valid sections are: {','.join(VALID_SECTIONS)}")
-            raise ValueError(retstr)
-        self._section = section
-        self._uuid = uuid
-
-        # If you want to change the sharding scheme, this is the only place
-        # where changes should be needed FOR NODES AND WORKFLOWS
-        # Of course, remember to migrate data!
-        # We set a sharding of level 2+2
-        # Note that a similar sharding should probably has to be done
-        # independently for calculations sent to remote computers in the
-        # execmanager.
-        # Note: I don't do any os.path.abspath (that internally calls
-        # normpath, that may be slow): this is done abywat by the super
-        # class.
-        entity_dir = os.path.join(
-            get_profile().repository_path, 'repository', str(section),
-            str(uuid)[:2],
-            str(uuid)[2:4],
-            str(uuid)[4:]
-        )
-        dest = os.path.join(entity_dir, str(subfolder))
-
-        # Internal variable of this class
-        self._subfolder = subfolder
-
-        # This will also do checks on the folder limits
-        super().__init__(abspath=dest, folder_limit=entity_dir)
-
-    @property
-    def section(self):
-        """
-        The section to which this folder belongs.
-        """
-        return self._section
-
-    @property
-    def uuid(self):
-        """
-        The uuid to which this folder belongs.
-        """
-        return self._uuid
-
-    @property
-    def subfolder(self):
-        """
-        The subfolder within the section/uuid folder.
-        """
-        return self._subfolder
-
-    def get_topdir(self):
-        """
-        Returns the top directory, i.e., the section/uuid folder object.
-        """
-        return RepositoryFolder(self.section, self.uuid)
-
-        # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object

@@ -59,7 +59,7 @@ def database_migrate(force):
     if force:
         try:
             backend.migrate()
-        except exceptions.ConfigurationError as exception:
+        except (exceptions.ConfigurationError, exceptions.DatabaseMigrationError) as exception:
             echo.echo_critical(str(exception))
         return
 
@@ -88,7 +88,7 @@ def database_migrate(force):
     else:
         try:
             backend.migrate()
-        except exceptions.ConfigurationError as exception:
+        except (exceptions.ConfigurationError, exceptions.DatabaseMigrationError) as exception:
             echo.echo_critical(str(exception))
         else:
             echo.echo_success('migration completed')
@@ -210,10 +210,10 @@ def database_summary(verbose):
         data['Users']['emails'] = query_user.distinct().all(flat=True)
 
     # Computer
-    query_comp = QueryBuilder().append(Computer, project=['name'])
+    query_comp = QueryBuilder().append(Computer, project=['label'])
     data['Computers'] = {'count': query_comp.count()}
     if verbose:
-        data['Computers']['names'] = query_comp.distinct().all(flat=True)
+        data['Computers']['labels'] = query_comp.distinct().all(flat=True)
 
     # Node
     count = QueryBuilder().append(Node).count()

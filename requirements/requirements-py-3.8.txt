@@ -29,7 +29,8 @@ cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.6.0
 deprecation==2.1.0
-Django==2.2.18
+disk-objectstore~=0.5
+Django==2.2.20
 docutils==0.15.2
 entrypoints==0.3
 ete3==3.1.2
@@ -162,7 +163,7 @@ traitlets==5.0.5
 tzlocal==2.1
 uncertainties==3.1.5
 upf-to-json==0.9.2
-urllib3==1.26.3
+urllib3==1.26.4
 wcwidth==0.2.5
 webencodings==0.5.1
 Werkzeug==1.0.1

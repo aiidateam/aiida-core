@@ -1694,11 +1694,8 @@ loop_
   _symmetry_equiv_pos_as_xyz
    'x, y, z'
 
-_symmetry_Int_Tables_number             1
+_symmetry_int_tables_number             1
 _symmetry_space_group_name_H-M          'P 1'
-_symmetry_space_group_name_Hall         'P 1'
-_cell_formula_units_Z                   1
-_chemical_formula_sum                   'Ba2 Ti'
 """
             )
         )

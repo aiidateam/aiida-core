@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.6.2 - 2021-04-26
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.1...v1.6.2) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-31&to=2021-04-26&type=c)
+
+### Bug fixes
+- CLI: Use the proper proxy command for `verdi calcjob gotocomputer` if configured as such [[#4761]](https://github.com/aiidateam/aiida-core/pull/4761)
+- Respect nested output namespaces in `Process.exposed_outputs` [[#4863]](https://github.com/aiidateam/aiida-core/pull/4863)
+- `NodeLinkManager` now properly regenerates original nested namespaces from the flat link labels stored in the database. This means one can now do `node.outputs.some.nested.output` instead of having to do `node.outputs.some__nested__output`. The same goes for `node.inputs` [[#4625]](https://github.com/aiidateam/aiida-core/pull/4625)
+- Fix `aiida.cmdline.utils.decorators.with_dbenv` always loading the database. Now it will only load the database if not already loaded, as intended [[#4865]](https://github.com/aiidateam/aiida-core/pull/4865)
+
+### Features
+- Add the `account` option to the `LsfScheduler` scheduler plugin [[#4832]](https://github.com/aiidateam/aiida-core/pull/4832)
+
+### Documentation
+- Update ssh proxycommand section with instructions on how to handle cases where the SSH key needs to be specified for the proxy server [[#4839]](https://github.com/aiidateam/aiida-core/pull/4839)
+- Add the ["How to extend workflows"](https://aiida-core.readthedocs.io/en/latest/howto/write_workflows.html#extending-workflows) section, explaining the use of the `expose_inputs` and `expose_outputs` features, as well as nested namespaces [[#4562]](https://github.com/aiidateam/aiida-core/pull/4562)
+- Add help in intro for when quicksetup fails due to problems autodetecting the PostgreSQL settings [[#4838]](https://github.com/aiidateam/aiida-core/pull/4838)
+
+
 ## v1.6.1 - 2021-03-31
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.0...v1.6.1) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-15&to=2021-03-31&type=c)

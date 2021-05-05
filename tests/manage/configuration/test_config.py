@@ -9,8 +9,11 @@
 ###########################################################################
 """Tests for the Config class."""
 import os
+import pathlib
 import shutil
 import tempfile
+
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, json
@@ -42,6 +45,7 @@ class TestConfigDirectory(AiidaTestCase):
             except KeyError:
                 pass
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_environment_variable_not_set(self):
         """Check that if the environment variable is not set, config folder will be created in `DEFAULT_AIIDA_PATH`.
 
@@ -63,10 +67,11 @@ class TestConfigDirectory(AiidaTestCase):
 
             config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
             self.assertTrue(os.path.isdir(config_folder))
-            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, pathlib.Path(config_folder))
         finally:
             shutil.rmtree(directory)
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_environment_variable_set_single_path_without_config_folder(self):  # pylint: disable=invalid-name
         """If `AIIDA_PATH` is set but does not contain a configuration folder, it should be created."""
         try:
@@ -80,11 +85,12 @@ class TestConfigDirectory(AiidaTestCase):
             # This should have created the configuration directory in the path
             config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
             self.assertTrue(os.path.isdir(config_folder))
-            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, pathlib.Path(config_folder))
 
         finally:
             shutil.rmtree(directory)
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_environment_variable_set_single_path_with_config_folder(self):  # pylint: disable=invalid-name
         """If `AIIDA_PATH` is set and already contains a configuration folder it should simply be used."""
         try:
@@ -99,10 +105,11 @@ class TestConfigDirectory(AiidaTestCase):
             # This should have created the configuration directory in the pathpath
             config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
             self.assertTrue(os.path.isdir(config_folder))
-            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, pathlib.Path(config_folder))
         finally:
             shutil.rmtree(directory)
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_environment_variable_path_including_config_folder(self):  # pylint: disable=invalid-name
         """If `AIIDA_PATH` is set and the path contains the base name of the config folder, it should work, i.e:
 
@@ -122,11 +129,12 @@ class TestConfigDirectory(AiidaTestCase):
             # This should have created the configuration directory in the pathpath
             config_folder = os.path.join(directory, settings.DEFAULT_CONFIG_DIR_NAME)
             self.assertTrue(os.path.isdir(config_folder))
-            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, pathlib.Path(config_folder))
 
         finally:
             shutil.rmtree(directory)
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_environment_variable_set_multiple_path(self):  # pylint: disable=invalid-name
         """If `AIIDA_PATH` is set with multiple paths without actual config folder, one is created in the last."""
         try:
@@ -142,7 +150,7 @@ class TestConfigDirectory(AiidaTestCase):
             # This should have created the configuration directory in the last path
             config_folder = os.path.join(directory_c, settings.DEFAULT_CONFIG_DIR_NAME)
             self.assertTrue(os.path.isdir(config_folder))
-            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, config_folder)
+            self.assertEqual(settings.AIIDA_CONFIG_FOLDER, pathlib.Path(config_folder))
 
         finally:
             shutil.rmtree(directory_a)

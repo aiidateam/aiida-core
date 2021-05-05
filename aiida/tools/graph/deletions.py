@@ -9,13 +9,11 @@
 ###########################################################################
 """Functions to delete entities from the database, preserving provenance integrity."""
 import logging
-from typing import Callable, Iterable, Optional, Set, Tuple, Union
-import warnings
+from typing import Callable, Iterable, Set, Tuple, Union
 
 from aiida.backends.utils import delete_nodes_and_connections
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.orm import Group, Node, QueryBuilder, load_node
+from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
 __all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')
@@ -23,13 +21,9 @@ __all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
-def delete_nodes(
-    pks: Iterable[int],
-    verbosity: Optional[int] = None,
-    dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
-    force: Optional[bool] = None,
-    **traversal_rules: bool
-) -> Tuple[Set[int], bool]:
+def delete_nodes(pks: Iterable[int],
+                 dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
+                 **traversal_rules: bool) -> Tuple[Set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
 
     This command will delete not only the specified nodes, but also the ones that are
@@ -51,12 +45,6 @@ def delete_nodes(
     nodes will be deleted as well, and then any CALC node that may have those as
     inputs, and so on.
 
-    .. deprecated:: 1.6.0
-        The `verbosity` keyword will be removed in `v2.0.0`, set the level of `DELETE_LOGGER` instead.
-
-    .. deprecated:: 1.6.0
-        The `force` keyword will be removed in `v2.0.0`, use the `dry_run` option instead.
-
     :param pks: a list of starting PKs of the nodes to delete
         (the full set will be based on the traversal rules)
 
@@ -72,21 +60,8 @@ def delete_nodes(
     :returns: (pks to delete, whether they were deleted)
 
     """
+
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
-
-    if verbosity is not None:
-        warnings.warn(
-            'The verbosity option is deprecated and will be removed in `aiida-core==2.0.0`. '
-            'Set the level of DELETE_LOGGER instead', AiidaDeprecationWarning
-        )  # pylint: disable=no-member
-
-    if force is not None:
-        warnings.warn(
-            'The force option is deprecated and will be removed in `aiida-core==2.0.0`. '
-            'Use dry_run instead', AiidaDeprecationWarning
-        )  # pylint: disable=no-member
-        if force is True:
-            dry_run = False
 
     def _missing_callback(_pks: Iterable[int]):
         for _pk in _pks:
@@ -123,20 +98,8 @@ def delete_nodes(
     if not pks_set_to_delete:
         return (pks_set_to_delete, True)
 
-    # Recover the list of folders to delete before actually deleting the nodes. I will delete the folders only later,
-    # so that if there is a problem during the deletion of the nodes in the DB, I don't delete the folders
-    repositories = [load_node(pk)._repository for pk in pks_set_to_delete]  # pylint: disable=protected-access
-
     DELETE_LOGGER.info('Starting node deletion...')
     delete_nodes_and_connections(pks_set_to_delete)
-
-    DELETE_LOGGER.info('Nodes deleted from database, deleting files from the repository now...')
-
-    # If we are here, we managed to delete the entries from the DB.
-    # I can now delete the folders
-    for repository in repositories:
-        repository.erase(force=True)
-
     DELETE_LOGGER.info('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)

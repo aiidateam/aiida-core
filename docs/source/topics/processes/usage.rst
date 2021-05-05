@@ -261,7 +261,7 @@ Additionally, the exit codes make it very easy to query for failed processes wit
     - :ref:`CalcJob parsers<topics:calculations:usage:calcjobs:parsers>`
     - :ref:`Workchain exit code specification<topics:workflows:usage:workchains:define_exit_codes>`
     - :ref:`External code plugins<how-to:plugin-codes:parsing:errors>`
-    - :ref:`Restart workchains<how-to:restart_workchain>`
+    - :ref:`Restart workchains<how-to:restart-workchain>`
 
 .. _topics:processes:usage:exit_code_conventions:
 

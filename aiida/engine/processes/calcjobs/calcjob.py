@@ -495,7 +495,6 @@ class CalcJob(Process):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.orm import load_node, Code, Computer
-        from aiida.plugins import DataFactory
         from aiida.schedulers.datastructures import JobTemplate
 
         computer = self.node.computer
@@ -547,18 +546,6 @@ class CalcJob(Process):
                 retrieve_list.append(job_tmpl.sched_error_path)
         retrieve_list.extend(self.node.get_option('additional_retrieve_list') or [])
         self.node.set_retrieve_list(retrieve_list)
-
-        retrieve_singlefile_list = calc_info.retrieve_singlefile_list or []
-        # a validation on the subclasses of retrieve_singlefile_list
-        for _, subclassname, _ in retrieve_singlefile_list:
-            file_sub_class = DataFactory(subclassname)
-            if not issubclass(file_sub_class, orm.SinglefileData):
-                raise PluginInternalError(
-                    '[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is '
-                    'not subclass of SinglefileData'.format(self.node.pk, file_sub_class.__name__)
-                )
-        if retrieve_singlefile_list:
-            self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
         retrieve_temporary_list = calc_info.retrieve_temporary_list or []

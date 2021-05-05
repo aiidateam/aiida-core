@@ -12,7 +12,6 @@
 from contextlib import contextmanager
 from itertools import chain
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
-import warnings
 
 from sqlalchemy.orm import Session
 
@@ -20,7 +19,6 @@ from aiida.common import json
 from aiida.common.links import LinkType
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.utils import get_object_from_string, validate_uuid
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import QueryBuilder, Node, Group
 from aiida.orm.utils.links import link_triple_exists, validate_link
 
@@ -51,7 +49,6 @@ def import_data_sqla(
     extras_mode_existing: str = 'kcl',
     extras_mode_new: str = 'import',
     comment_mode: str = 'newest',
-    silent: Optional[bool] = None,
     **kwargs: Any
 ):  # pylint: disable=unused-argument
     """Import exported AiiDA archive to the AiiDA database and repository.
@@ -110,12 +107,6 @@ def import_data_sqla(
         created.
     """
     # Initial check(s)
-    if silent is not None:
-        warnings.warn(
-            'silent keyword is deprecated and will be removed in AiiDA v2.0.0, set the logger level explicitly instead',
-            AiidaDeprecationWarning
-        )  # pylint: disable=no-member
-
     if extras_mode_new not in ['import', 'none']:
         raise exceptions.ImportValidationError(
             f"Unknown extras_mode_new value: {extras_mode_new}, should be either 'import' or 'none'"
@@ -345,7 +336,7 @@ def _select_entity_data(
         return
 
     with get_progress_reporter()(desc=f'Reading archived entities - {entity_name}', total=entity_count) as progress:
-        imported_comp_names = set()
+        imported_comp_labels = set()
         for pk, fields in reader.iter_entity_fields(entity_name):
             if entity_name == GROUP_ENTITY_NAME:
                 # Check if there is already a group with the same name,
@@ -373,25 +364,25 @@ def _select_entity_data(
                     fields['metadata'] = json.loads(fields['metadata'])
 
                 # Check if there is already a computer with the
-                # same name in the database
+                # same label in the database
                 builder = QueryBuilder()
-                builder.append(entity, filters={'name': {'==': fields['name']}}, project=['*'], tag='res')
-                dupl = builder.count() or fields['name'] in imported_comp_names
+                builder.append(entity, filters={'label': {'==': fields['label']}}, project=['*'], tag='res')
+                dupl = builder.count() or fields['label'] in imported_comp_labels
                 dupl_counter = 0
-                orig_name = fields['name']
+                orig_label = fields['label']
                 while dupl:
-                    # Rename the new computer
-                    fields['name'] = orig_name + DUPL_SUFFIX.format(dupl_counter)
+                    # Relabel the new computer
+                    fields['label'] = orig_label + DUPL_SUFFIX.format(dupl_counter)
                     builder = QueryBuilder()
-                    builder.append(entity, filters={'name': {'==': fields['name']}}, project=['*'], tag='res')
-                    dupl = builder.count() or fields['name'] in imported_comp_names
+                    builder.append(entity, filters={'label': {'==': fields['label']}}, project=['*'], tag='res')
+                    dupl = builder.count() or fields['label'] in imported_comp_labels
                     dupl_counter += 1
                     if dupl_counter == MAX_COMPUTERS:
                         raise exceptions.ImportUniquenessError(
-                            f'A computer of that name ( {orig_name} ) already exists and I could not create a new one'
+                            f'A computer of that label ( {orig_label} ) already exists and I could not create a new one'
                         )
 
-                imported_comp_names.add(fields['name'])
+                imported_comp_labels.add(fields['label'])
 
             if fields[unique_identifier] in relevant_db_entries:
                 # Already in DB
@@ -512,8 +503,8 @@ def _store_entity_data(
 
         # Before storing entries in the DB, I store the files (if these are nodes).
         # Note: only for new entries!
-        uuids_to_create = [obj.uuid for obj in objects_to_create]
-        _copy_node_repositories(uuids_to_create=uuids_to_create, reader=reader)
+        repository_metadatas = [obj.repository_metadata for obj in objects_to_create if obj.repository_metadata]
+        _copy_node_repositories(repository_metadatas=repository_metadatas, reader=reader)
 
         # For the existing nodes that are also in the imported list we also update their extras if necessary
         if existing_entries[entity_name]:

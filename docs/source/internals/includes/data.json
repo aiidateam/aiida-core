@@ -111,7 +111,6 @@
       "remote_workdir": "/scratch/aiida/aiida_run/10/24/e35e-166b-4104-95f6-c1706df4ce15",
       "process_state": "finished",
       "max_wallclock_seconds": 900,
-      "retrieve_singlefile_list": [],
       "scheduler_lastchecktime": "2015-10-02T20:30:36.481951+00:00",
       "job_id": "13489",
       "exit_status": 0,

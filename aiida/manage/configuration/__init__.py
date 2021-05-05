@@ -50,15 +50,11 @@ def load_profile(profile=None):
     if PROFILE and (profile is None or PROFILE.name is profile):
         return PROFILE
 
-    profile = get_config().get_profile(profile)
+    PROFILE = get_config().get_profile(profile)
 
-    if BACKEND_UUID is not None and BACKEND_UUID != profile.uuid:
+    if BACKEND_UUID is not None and BACKEND_UUID != PROFILE.uuid:
         # Once the switching of profiles with different backends becomes possible, the backend has to be reset properly
         raise InvalidOperation('cannot switch profile because backend of another profile is already loaded')
-
-    # Set the global variable and make sure the repository is configured
-    PROFILE = profile
-    PROFILE.configure_repository()
 
     # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
     # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
@@ -98,8 +94,8 @@ def load_config(create=False):
 
     try:
         config = Config.from_file(filepath)
-    except ValueError:
-        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON')
+    except ValueError as exc:
+        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON') from exc
 
     _merge_deprecated_cache_yaml(config, filepath)
 
@@ -119,8 +115,8 @@ def _merge_deprecated_cache_yaml(config, filepath):
         cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
 
     warnings.warn(
-        f'cache_config.yml use is deprecated, merging into config.json and moving to: {cache_path_backup}',
-        AiidaDeprecationWarning
+        'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
+        f'moving to: {cache_path_backup}', AiidaDeprecationWarning
     )
     import yaml
     with open(cache_path, 'r', encoding='utf8') as handle:
@@ -274,4 +270,4 @@ def load_documentation_profile():
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile}}
         PROFILE = Profile(profile_name, profile, from_config=True)
         CONFIG = Config(handle.name, config)
-        get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+        get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access

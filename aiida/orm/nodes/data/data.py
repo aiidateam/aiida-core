@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
-
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.lang import override
@@ -49,26 +48,23 @@ class Data(Node):
 
     def __deepcopy__(self, memo):
         """
-        Create a clone of the Data node by pipiong through to the clone method and return the result.
+        Create a clone of the Data node by piping through to the clone method and return the result.
 
         :returns: an unstored clone of this Data node
         """
         return self.clone()
 
     def clone(self):
-        """
-        Create a clone of the Data node.
+        """Create a clone of the Data node.
 
         :returns: an unstored clone of this Data node
         """
-        # pylint: disable=no-member
         import copy
 
         backend_clone = self.backend_entity.clone()
         clone = self.__class__.from_backend_entity(backend_clone)
-
         clone.reset_attributes(copy.deepcopy(self.attributes))
-        clone.put_object_from_tree(self._repository._get_base_folder().abspath)  # pylint: disable=protected-access
+        clone._repository.clone(self._repository)  # pylint: disable=protected-access
 
         return clone
 

@@ -41,6 +41,7 @@ class DbNode(Base):
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
     attributes = Column(JSONB)
     extras = Column(JSONB)
+    repository_metadata = Column(JSONB, nullable=False, default=dict, server_default='{}')
 
     dbcomputer_id = Column(
         Integer,

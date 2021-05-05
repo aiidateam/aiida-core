@@ -606,7 +606,7 @@ Next Steps
 
 Congratulations! You have completed the first step to becoming an AiiDA expert.
 
-We have also compiled useful how-to guides that are especially relevant for the following use cases:
+We have compiled how-to guides that are especially relevant for the following use cases:
 
 .. div:: dropdown-group
 
@@ -619,8 +619,8 @@ We have also compiled useful how-to guides that are especially relevant for the 
         Reusable data types
             If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <topics:data_types:plugin>`.
 
-        Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
+        Finding and querying for your data
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.
@@ -652,7 +652,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.

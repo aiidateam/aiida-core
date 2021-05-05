@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1620235815629,
+  "lastUpdate": 1620242014213,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -33126,6 +33126,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0026694",
             "group": "node",
             "extra": "mean: 23.600 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.9",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "e274ef2e065ac4aae03492b6736ae9fdea896ae4",
+          "message": "`Config`: add the `delete_profile` method (#4901)\n\nThe class already has `remove_profile` that merely removes the profile\r\nfrom the index and doesn't actually delete its associated resources. The\r\nnrem `delete_profile` method will by default also delete the repository\r\nand database that are configured for the profile, although this behavior\r\ncan be controlled with the `include_database` and `include_repository`\r\narguments.\r\n\r\nThe implementation of `verdi profile delete` is update to use this new\r\nfunctionality instead of the loose functions that were defined in the\r\n`aiida.manage.configuration.setup` module. The latter, since it was not\r\npart of the public API and was only used by this CLI command, has been\r\nremoved from the codebase.\r\n\r\nNote that the implementation for the deletion of the database is\r\nslightly different. Not only does `Config.delete_profile` not contain\r\nany echoing of information, as this should be done in the CLI command\r\nand not in the generic API, the logic for deleting the database user\r\nhas also changed. The old function `delete_database` did delete the\r\ndatabase user configured for the profile, as long as no other profiles\r\nin the config used the same. This is dangerous, however, because the\r\nsame database user can be used by a program outside of AiiDA and we\r\ndon't own those users necessarily. Now, the deletion of the database\r\nuser is optional and turned off by default. When it is used though, the\r\ndatabase user is deleted without checking the config for other profiles\r\nthat may also have configured it.",
+          "timestamp": "2021-05-05T21:03:19+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/e274ef2e065ac4aae03492b6736ae9fdea896ae4",
+          "distinct": true,
+          "tree_id": "f37c987a0390efc02885f7490b0fc8703d4c6397"
+        },
+        "date": 1620242012214,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.104446427433081,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011857",
+            "group": "engine",
+            "extra": "mean: 322.12 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7576114187470033,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053269",
+            "group": "engine",
+            "extra": "mean: 1.3199 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8543695481537473,
+            "unit": "iter/sec",
+            "range": "stddev: 0.052950",
+            "group": "engine",
+            "extra": "mean: 1.1705 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.17412010104304193,
+            "unit": "iter/sec",
+            "range": "stddev: 0.099323",
+            "group": "engine",
+            "extra": "mean: 5.7432 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.20440289809424436,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13394",
+            "group": "engine",
+            "extra": "mean: 4.8923 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.36703983661173,
+            "unit": "iter/sec",
+            "range": "stddev: 0.024587",
+            "group": "engine",
+            "extra": "mean: 422.47 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5804875470755998,
+            "unit": "iter/sec",
+            "range": "stddev: 0.077785",
+            "group": "engine",
+            "extra": "mean: 1.7227 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6704797359260336,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076027",
+            "group": "engine",
+            "extra": "mean: 1.4915 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1545088088675831,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13772",
+            "group": "engine",
+            "extra": "mean: 6.4721 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.1807033552856533,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10655",
+            "group": "engine",
+            "extra": "mean: 5.5339 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.358166286193485,
+            "unit": "iter/sec",
+            "range": "stddev: 0.069257",
+            "group": "import-export",
+            "extra": "mean: 424.06 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.258571290044308,
+            "unit": "iter/sec",
+            "range": "stddev: 0.041384",
+            "group": "import-export",
+            "extra": "mean: 442.76 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 1.7743030607329595,
+            "unit": "iter/sec",
+            "range": "stddev: 0.049035",
+            "group": "import-export",
+            "extra": "mean: 563.60 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.750020589211059,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053135",
+            "group": "import-export",
+            "extra": "mean: 571.42 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 937.6205078165461,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00060879",
+            "group": "node",
+            "extra": "mean: 1.0665 msec\nrounds: 164"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 235.10422704066738,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00038448",
+            "group": "node",
+            "extra": "mean: 4.2534 msec\nrounds: 124"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 85.83966307711196,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012741",
+            "group": "node",
+            "extra": "mean: 11.650 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 219.77527701028288,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00088154",
+            "group": "node",
+            "extra": "mean: 4.5501 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 43.00291689085566,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016014",
+            "group": "node",
+            "extra": "mean: 23.254 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 41.021623952617645,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0027618",
+            "group": "node",
+            "extra": "mean: 24.377 msec\nrounds: 100"
           }
         ]
       }

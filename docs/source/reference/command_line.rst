@@ -80,27 +80,6 @@ Below is a list with all available subcommands.
       show       Display detailed information for a code.
 
 
-.. _reference:command-line:verdi-comment:
-
-``verdi comment``
------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Inspect, create and manage node comments.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      add     Add a comment to one or more nodes.
-      remove  Remove a comment of a node.
-      show    Show the comments of one or multiple nodes.
-      update  Update a comment of a node.
-
-
 .. _reference:command-line:verdi-completioncommand:
 
 ``verdi completioncommand``
@@ -141,7 +120,6 @@ Below is a list with all available subcommands.
       enable     Enable the computer for the given user.
       list       List all available computers.
       relabel    Relabel a computer.
-      rename     Rename a computer.
       setup      Create a new computer.
       show       Show detailed information for a computer.
       test       Test the connection to a computer.
@@ -445,28 +423,6 @@ Below is a list with all available subcommands.
       --help                          Show this message and exit.
 
 
-.. _reference:command-line:verdi-rehash:
-
-``verdi rehash``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] [NODES]...
-
-      Recompute the hash for nodes in the database.
-
-      The set of nodes that will be rehashed can be filtered by their identifier and/or
-      based on their class.
-
-    Options:
-      -e, --entry-point PLUGIN  Only include nodes that are class or sub class of the class
-                                identified by this entry point.
-
-      -f, --force               Do not ask for confirmation.
-      --help                    Show this message and exit.
-
-
 .. _reference:command-line:verdi-restapi:
 
 ``verdi restapi``
@@ -489,7 +445,6 @@ Below is a list with all available subcommands.
       --wsgi-profile           Whether to enable WSGI profiler middleware for finding
                                bottlenecks
 
-      --hookup / --no-hookup   Hookup app to flask server
       --help                   Show this message and exit.
 
 

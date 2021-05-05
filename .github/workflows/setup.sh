@@ -34,4 +34,4 @@ verdi computer configure ssh slurm-ssh --config "${CONFIG}/slurm-ssh-config.yaml
 verdi computer test slurm-ssh --print-traceback
 
 verdi profile setdefault test_${AIIDA_TEST_BACKEND}
-verdi config runner.poll.interval 0
+verdi config set runner.poll.interval 0

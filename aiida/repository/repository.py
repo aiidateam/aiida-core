@@ -31,7 +31,6 @@ class Repository:
 
     # pylint: disable=too-many-public-methods
 
-    _backend: Optional[AbstractRepositoryBackend] = None
     _file_cls = File
 
     def __init__(self, backend: AbstractRepositoryBackend = None):
@@ -138,7 +137,6 @@ class Repository:
 
         :return: the repository backend.
         """
-        assert self._backend is not None, 'backend not set'
         return self._backend
 
     def set_backend(self, backend: AbstractRepositoryBackend) -> None:
@@ -158,11 +156,7 @@ class Repository:
         :param path: the relative path where to store the object in the repository.
         :param key: fully qualified identifier for the object within the repository.
         """
-        if path.parent:
-            directory = self.create_directory(path.parent)
-        else:
-            directory = self.get_directory()
-
+        directory = self.create_directory(path.parent)
         directory.objects[path.name] = self._file_cls(path.name, FileType.FILE, key)
 
     def create_directory(self, path: FilePath) -> File:

@@ -61,7 +61,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        super().put_object_from_filelike(handle)
+        self.check_byte_stream(handle)
         return self.container.add_object(handle.read())
 
     def has_object(self, key: str) -> bool:

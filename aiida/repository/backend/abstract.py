@@ -52,16 +52,23 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     @staticmethod
     def is_readable_byte_stream(handle) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
+    
+    def check_byte_stream(self, handle: typing.Any) -> None:
+        """Check that a handle is a valid byte stream.
+        
+        :param handle: filelike object with the byte content.
+        :raises TypeError: if the handle is not a byte stream.
+        """
+        if not isinstance(handle, io.BytesIO) or not self.is_readable_byte_stream(handle):
+            raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
 
+    @abc.abstractmethod
     def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
         """
-        if not isinstance(handle, io.BytesIO) and not self.is_readable_byte_stream(handle):
-            raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
-        raise NotImplementedError
 
     def put_object_from_file(self, filepath: typing.Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.

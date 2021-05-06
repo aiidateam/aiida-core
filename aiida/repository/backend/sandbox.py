@@ -75,7 +75,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        super().put_object_from_filelike(handle)
+        self.check_byte_stream(handle)
 
         key = str(uuid.uuid4())
         filepath = os.path.join(self.sandbox.abspath, key)

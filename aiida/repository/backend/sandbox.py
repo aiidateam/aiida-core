@@ -68,15 +68,13 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
             finally:
                 self._sandbox = None
 
-    def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        self.check_byte_stream(handle)
-
         key = str(uuid.uuid4())
         filepath = os.path.join(self.sandbox.abspath, key)
 

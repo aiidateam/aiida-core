@@ -30,8 +30,8 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def is_initialised(self) -> bool:
         return True
 
-    def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
-        self.check_byte_stream(handle)
+    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+        pass
 
 
 @pytest.fixture(scope='function')

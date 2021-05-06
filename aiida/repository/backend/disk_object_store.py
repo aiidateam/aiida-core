@@ -54,14 +54,13 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         except FileNotFoundError:
             pass
 
-    def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        self.check_byte_stream(handle)
         return self.container.add_object(handle.read())
 
     def has_object(self, key: str) -> bool:

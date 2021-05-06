@@ -52,10 +52,10 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     @staticmethod
     def is_readable_byte_stream(handle) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
-    
+
     def check_byte_stream(self, handle: typing.Any) -> None:
         """Check that a handle is a valid byte stream.
-        
+
         :param handle: filelike object with the byte content.
         :raises TypeError: if the handle is not a byte stream.
         """

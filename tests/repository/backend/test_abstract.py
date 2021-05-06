@@ -31,7 +31,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
         return True
 
     def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
-        pass
+        self.check_byte_stream(handle)
 
 
 @pytest.fixture(scope='function')

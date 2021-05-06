@@ -412,7 +412,7 @@ class Repository:
             raise IsADirectoryError(f'object with path `{path}` is a directory.')
 
         if hard_delete:
-            assert file_object.key is not None, "Expected FileType.File to have a key"
+            assert file_object.key is not None, 'Expected FileType.File to have a key'
             self.backend.delete_object(file_object.key)
 
         directory = self.get_directory(path.parent)

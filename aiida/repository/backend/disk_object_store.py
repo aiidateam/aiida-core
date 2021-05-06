@@ -101,17 +101,18 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         self.container.delete_objects([key])
 
     def get_object_hash(self, key: str) -> str:
-        """Return the hash of a object identified by key.
+        """Return the SHA-256 hash of an object stored under the given key.
 
-        .. note::
-            This hash value is dependant on the repository implementation
-            and so may change for different repositories.
-            By default the algorithm is SHA-256
+        .. important::
+            A SHA-256 hash should always be returned,
+            to ensure consistency across different repository implementations.
 
         :param key: fully qualified identifier for the object within the repository.
         :raise FileNotFoundError: if the file does not exist.
 
         """
+        if not self.has_object(key):
+            raise FileNotFoundError(key)
         if self.container.hash_type != 'sha256':
             return super().get_object_hash(key)
         return key

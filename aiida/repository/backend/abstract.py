@@ -7,6 +7,7 @@ This key should then be able to be used to retrieve the bytes of the correspondi
 """
 import abc
 import contextlib
+import hashlib
 import io
 import pathlib
 import typing
@@ -104,6 +105,21 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
         with self.open(key) as handle:
             return handle.read()
+
+    def get_object_hash(self, key: str) -> str:
+        """Return the hash of a object identified by key.
+
+        .. note::
+            This hash value is dependant on the repository implementation
+            and so may change for different repositories.
+            By default the algorithm is SHA-256
+
+        :param key: fully qualified identifier for the object within the repository.
+        :raise FileNotFoundError: if the file does not exist.
+        :raise OSError: if the file could not be opened.
+        """
+        with self.open(key) as handle:
+            return hashlib.sha256(handle.read()).hexdigest()
 
     def delete_object(self, key: str):
         """Delete the object from the repository.

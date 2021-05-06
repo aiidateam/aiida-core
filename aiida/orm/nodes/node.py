@@ -84,6 +84,44 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
             self._backend.nodes.delete(node_id)
 
+        def iter_object_keys(self, subclassing: bool = True) -> Iterator[str]:
+            """Iterate over all repository object keys for this ``Node`` class
+
+            .. note::
+                keys will not be deduplicated (wrap in a ``set`` to achieve this)
+            
+            :param bool subclassing: Whether to include subclasses of the given class
+            """
+            from aiida.repository import Repository
+            profile = get_manager().get_profile()
+            assert profile, "profile not loaded"
+            backend = profile.get_repository().backend
+            qb = QueryBuilder()
+            qb.append(self.entity_type, subclassing=subclassing, project=["repository_metadata"])
+            for metadata, in qb.iterall():
+                repo = Repository.from_serialized(backend=backend, serialized=metadata)
+                for hash_key in repo.get_hash_keys():
+                    yield hash_key
+
+        def iter_object_names(self, subclassing: bool = True) -> Iterator[str]:
+            """Iterate over all repository object names for this ``Node`` class
+
+            .. note::
+                names will not be deduplicated (wrap in a ``set`` to achieve this)
+
+            :param bool subclassing: Whether to include subclasses of the given class
+            """
+            from aiida.repository import Repository
+            profile = get_manager().get_profile()
+            assert profile, "profile not loaded"
+            backend = profile.get_repository().backend
+            qb = QueryBuilder()
+            qb.append(self.entity_type, subclassing=subclassing, project=["repository_metadata"])
+            for metadata, in qb.iterall():
+                repo = Repository.from_serialized(backend=backend, serialized=metadata)
+                for hash_key in repo.list_object_names():
+                    yield hash_key
+
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None
 

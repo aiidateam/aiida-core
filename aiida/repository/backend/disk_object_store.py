@@ -45,7 +45,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         return self.container.is_initialised
 
     @property
-    def container(self):
+    def container(self) -> Container:
         return self._container
 
     def erase(self):
@@ -55,7 +55,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         except FileNotFoundError:
             pass
 
-    def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
+    def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -74,7 +74,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         return self.container.has_object(key)
 
     @contextlib.contextmanager
-    def open(self, key: str) -> io.BufferedIOBase:
+    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

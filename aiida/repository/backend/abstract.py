@@ -89,7 +89,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @contextlib.contextmanager
-    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
+    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:  # type: ignore[return]
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -102,7 +102,6 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
         if not self.has_object(key):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
-        raise NotImplementedError
 
     def get_object_content(self, key: str) -> bytes:
         """Return the content of a object identified by key.

@@ -18,6 +18,8 @@ def repository():
 def test_str(repository):
     """Test the ``__str__`` method."""
     assert str(repository)
+    repository.initialise()
+    assert str(repository)
 
 
 def test_uuid(repository):

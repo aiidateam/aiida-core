@@ -260,3 +260,9 @@ class HashingError(AiidaException):
     """
     Raised when an attempt to hash an object fails via a known failure mode
     """
+
+
+class DaemonLock(AiidaException):
+    """
+    Raised when an attempt to instatiate the daemon is made, when it is locked for use
+    """

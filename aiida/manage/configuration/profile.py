@@ -26,6 +26,7 @@ __all__ = ('Profile',)
 
 CIRCUS_PID_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'circus-{}.pid')
 DAEMON_PID_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'aiida-{}.pid')
+DAEMON_LOCK_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'lock-{}.pid')
 CIRCUS_LOG_FILE_TEMPLATE = os.path.join(DAEMON_LOG_DIR, 'circus-{}.log')
 DAEMON_LOG_FILE_TEMPLATE = os.path.join(DAEMON_LOG_DIR, 'aiida-{}.log')
 CIRCUS_PORT_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'circus-{}.port')
@@ -399,5 +400,6 @@ class Profile:  # pylint: disable=too-many-public-methods
             'daemon': {
                 'log': DAEMON_LOG_FILE_TEMPLATE.format(self.name),
                 'pid': DAEMON_PID_FILE_TEMPLATE.format(self.name),
+                'lock': DAEMON_LOCK_FILE_TEMPLATE.format(self.name),
             }
         }

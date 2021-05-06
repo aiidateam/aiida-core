@@ -10,14 +10,16 @@
 """
 Controls the daemon
 """
-
+from contextlib import contextmanager
 import enum
 import os
+from pathlib import Path
 import shutil
 import socket
 import tempfile
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
+from aiida.common.exceptions import DaemonLock
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
 
@@ -83,6 +85,11 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         self._profile = profile
         self._SOCKET_DIRECTORY: Optional[str] = None  # pylint: disable=invalid-name
         self._DAEMON_TIMEOUT: int = config.get_option('daemon.timeout')  # pylint: disable=invalid-name
+        if Path(self.daemon_lock_file).exists():
+            raise DaemonLock(
+                f"The '{self.profile.name}' daemon is locked for use. "
+                'Use `verdi daemon unlock` if this is unexpected.'
+            )
 
     @property
     def profile(self) -> Profile:
@@ -94,6 +101,14 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         Get the daemon name which is tied to the profile name
         """
         return self._DAEMON_NAME.format(name=self.profile.name)
+
+    @contextmanager
+    def lock(self):
+        if self.is_daemon_running:
+            raise RuntimeError(f"Cannot lock the '{self.profile.name}' daemon whilst it is running.")
+        Path(self.daemon_lock_file).touch()
+        yield self
+        Path(self.daemon_lock_file).unlink()
 
     @property
     def cmd_string(self) -> str:
@@ -143,6 +158,10 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
     @property
     def daemon_pid_file(self) -> str:
         return self.profile.filepaths['daemon']['pid']
+
+    @property
+    def daemon_lock_file(self) -> str:
+        return self.profile.filepaths['daemon']['lock']
 
     def get_circus_port(self) -> int:
         """

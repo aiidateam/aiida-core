@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Module for the implementation of a file repository."""
 import contextlib
-import io
 import pathlib
-from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tuple, Union, cast
+from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check

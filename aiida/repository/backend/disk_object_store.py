@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
-import io
 import shutil
 import typing
 

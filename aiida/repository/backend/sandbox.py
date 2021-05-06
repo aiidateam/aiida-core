@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
 import contextlib
-import io
 import os
 import shutil
 import typing

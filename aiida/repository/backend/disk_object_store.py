@@ -22,7 +22,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
-        return f'DiskObjectStoreRepository: {self.container.container_id} | {self.container.get_folder()}'
+        if self.is_initialised:
+            return f'DiskObjectStoreRepository: {self.container.container_id} | {self.container.get_folder()}'
+        return 'DiskObjectStoreRepository: <uninitialised>'
 
     @property
     def uuid(self) -> typing.Optional[str]:

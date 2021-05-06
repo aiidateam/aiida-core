@@ -20,7 +20,9 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
-        return f'SandboxRepository: {self._sandbox.abspath if self._sandbox else "null"}'
+        if self.is_initialised:
+            return f'SandboxRepository: {self._sandbox.abspath if self._sandbox else "null"}'
+        return 'SandboxRepository: <uninitialised>'
 
     def __del__(self):
         """Delete the entire sandbox folder if it was instantiated and still exists."""

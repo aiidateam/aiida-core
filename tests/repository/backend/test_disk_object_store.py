@@ -21,6 +21,11 @@ def repository(tmp_path):
     yield DiskObjectStoreRepositoryBackend(container=container)
 
 
+def test_str(repository):
+    """Test the ``__str__`` method."""
+    assert str(repository)
+
+
 def test_uuid(repository):
     """Test the ``uuid`` property."""
     assert repository.uuid is None

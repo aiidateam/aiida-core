@@ -96,9 +96,9 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             profile = get_manager().get_profile()
             assert profile, 'profile not loaded'
             backend = profile.get_repository().backend
-            qb = QueryBuilder()
-            qb.append(self.entity_type, subclassing=subclassing, project=['repository_metadata'])
-            for metadata, in qb.iterall():
+            query = QueryBuilder()
+            query.append(self.entity_type, subclassing=subclassing, project=['repository_metadata'])
+            for metadata, in query.iterall():
                 repo = Repository.from_serialized(backend=backend, serialized=metadata)
                 for hash_key in repo.get_hash_keys():
                     yield hash_key
@@ -115,9 +115,9 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             profile = get_manager().get_profile()
             assert profile, 'profile not loaded'
             backend = profile.get_repository().backend
-            qb = QueryBuilder()
-            qb.append(self.entity_type, subclassing=subclassing, project=['repository_metadata'])
-            for metadata, in qb.iterall():
+            query = QueryBuilder()
+            query.append(self.entity_type, subclassing=subclassing, project=['repository_metadata'])
+            for metadata, in query.iterall():
                 repo = Repository.from_serialized(backend=backend, serialized=metadata)
                 for hash_key in repo.list_object_names():
                     yield hash_key

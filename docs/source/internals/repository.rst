@@ -18,7 +18,7 @@ Design
 The following requirements were considered during the design of the file repository implementation:
 
  * Scalability: the repository should be able to store millions of files, all the while permitting efficient backups.
- * Heterogeneity: the repository should operate efficiently for data that is heterogenous in size, with object of size ranging from a few bytes to multiple gigabytes.
+ * Heterogeneity: the repository should operate efficiently for data that is heterogeneous in size, with object of size ranging from a few bytes to multiple gigabytes.
  * Simplicity: the solution should not require an actively running server to operate.
  * Concurrency: the repository should support multiple concurrent reading and writing processes.
  * Efficiency: the repository should automatically deduplicate file content in an effort to reduce the total amount of required storage space.
@@ -65,7 +65,7 @@ A schematic overview of the folder structure of a disk object store *container* 
 
 The approach of creating new files in the repository by first writing them to the scratch sandbox folder before atomically moving them to the *loose* object directory, directly addresses the requirement of *concurrency*.
 By relying on the *atomic* file move operation of the operating system, all *loose* objects are guaranteed to be protected from data corruptions, within the limits of the atomicity guarantees of the local file system.
-The usage of the file content's hash checksum as the filename automatically fulfills the *efficiency* requirement.
+The usage of the file content's hash checksum as the filename automatically fulfils the *efficiency* requirement.
 Assuming that the hashing algorithm used has no collisions, two objects with the same hash are guaranteed to have the same content and so therefore can be stored as a single object.
 Although the computation of a file's hash before storing it incurs a non-negligible overhead, the chosen hashing algorithm is fast enough that it justifies that cost given that it gives a significant reduction in required storage space due to the automatic and implicit data deduplication.
 
@@ -80,7 +80,7 @@ A `sqlite <https://sqlite.org/index.html>`_ database is used to track in which p
 Such an index file is necessary once individual objects are packed into a smaller number of files, and to respect the *simplicity* requirement, a sqlite database was chosen, since it is serverless and efficient.
 The loose objects are concatenated in a random order, which is to say that the disk object store undertakes no effort to order objects according to their content size in any way, such as to align them with blocks on the file system, unlike some other key-value store solutions.
 Files of any size are treated equally and as such there is no optimization towards storing smaller files nor larger files.
-This is done intentionally because the disk object store is expected to be able to store files that are strongly heterogenous in size and as such can not make optimizations for a particular range of file sizes.
+This is done intentionally because the disk object store is expected to be able to store files that are strongly heterogeneous in size and as such can not make optimizations for a particular range of file sizes.
 
 Currently, the packing operation is seen as a maintenance operation, and therefore, unlike the writing of new *loose* objects, cannot be operated concurrently by multiple processes.
 Despite this current limitation, the packing mechanism satisfies the final *scalability* requirement.
@@ -93,7 +93,7 @@ Since new objects are concatenated to the end of existing pack files and existin
 The file repository backend
 ---------------------------
 
-To be able to respect the divergent requirements (as layed out :ref:`at the start of this section <internal-architecture:repository:design>`) of the file repository regarding its user interface and the actual data store, the implementation is divided into a backend and frontend interface.
+To be able to respect the divergent requirements (as laid out :ref:`at the start of this section <internal-architecture:repository:design>`) of the file repository regarding its user interface and the actual data store, the implementation is divided into a backend and frontend interface.
 In a clear separation of responsibilities, the backend is solely tasked with storing the content of files and returning them upon request as efficiently as possible, both when retrieving files individual as well as in bulk.
 For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
 The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.

@@ -12,7 +12,7 @@ from .common import File, FileType
 
 __all__ = ('Repository',)
 
-FilePath = Union[str, pathlib.Path]
+FilePath = Union[str, pathlib.PurePosixPath]
 
 
 class Repository:
@@ -109,23 +109,23 @@ class Repository:
         return make_hash(objects)
 
     @staticmethod
-    def _pre_process_path(path: FilePath = None) -> pathlib.Path:
-        """Validate and convert the path to instance of ``pathlib.Path``.
+    def _pre_process_path(path: FilePath = None) -> pathlib.PurePosixPath:
+        """Validate and convert the path to instance of ``pathlib.PurePosixPath``.
 
         This should be called by every method of this class before doing anything, such that it can safely assume that
-        the path is a ``pathlib.Path`` object, which makes path manipulation a lot easier.
+        the path is a ``pathlib.PurePosixPath`` object, which makes path manipulation a lot easier.
 
-        :param path: the path as a ``pathlib.Path`` object or `None`.
-        :raises TypeError: if the type of path was not a str nor a ``pathlib.Path`` instance.
+        :param path: the path as a ``pathlib.PurePosixPath`` object or `None`.
+        :raises TypeError: if the type of path was not a str nor a ``pathlib.PurePosixPath`` instance.
         """
         if path is None:
-            return pathlib.Path()
+            return pathlib.PurePosixPath()
 
         if isinstance(path, str):
-            path = pathlib.Path(path)
+            path = pathlib.PurePosixPath(path)
 
-        if not isinstance(path, pathlib.Path):
-            raise TypeError('path is not of type `str` nor `pathlib.Path`.')
+        if not isinstance(path, pathlib.PurePosixPath):
+            raise TypeError('path is not of type `str` nor `pathlib.PurePosixPath`.')
 
         if path.is_absolute():
             raise TypeError(f'path `{path}` is not a relative path.')
@@ -149,7 +149,7 @@ class Repository:
         type_check(backend, AbstractRepositoryBackend)
         self._backend = backend
 
-    def _insert_file(self, path: pathlib.Path, key: str) -> None:
+    def _insert_file(self, path: pathlib.PurePosixPath, key: str) -> None:
         """Insert a new file object in the object mapping.
 
         .. note:: this assumes the path is a valid relative path, so should be checked by the caller.
@@ -316,10 +316,10 @@ class Repository:
         path = self._pre_process_path(path)
 
         if isinstance(filepath, str):
-            filepath = pathlib.Path(filepath)
+            filepath = pathlib.PurePosixPath(filepath)
 
-        if not isinstance(filepath, pathlib.Path):
-            raise TypeError(f'filepath `{filepath}` is not of type `str` nor `pathlib.Path`.')
+        if not isinstance(filepath, pathlib.PurePosixPath):
+            raise TypeError(f'filepath `{filepath}` is not of type `str` nor `pathlib.PurePosixPath`.')
 
         if not filepath.is_absolute():
             raise TypeError(f'filepath `{filepath}` is not an absolute path.')
@@ -330,7 +330,7 @@ class Repository:
 
         for root_str, dirnames, filenames in os.walk(filepath):
 
-            root = pathlib.Path(root_str)
+            root = pathlib.PurePosixPath(root_str)
 
             for dirname in dirnames:
                 self.create_directory(path / root.relative_to(filepath) / dirname)
@@ -451,7 +451,7 @@ class Repository:
                 with source.open(root / filename) as handle:
                     self.put_object_from_filelike(handle, root / filename)
 
-    def walk(self, path: FilePath = None) -> Iterable[Tuple[pathlib.Path, List[str], List[str]]]:
+    def walk(self, path: FilePath = None) -> Iterable[Tuple[pathlib.PurePosixPath, List[str], List[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -460,7 +460,7 @@ class Repository:
         :param path: the relative path of the directory within the repository whose contents to walk.
         :return: tuples of root, dirnames and filenames just like ``os.walk``, with the exception that the root path is
             always relative with respect to the repository root, instead of an absolute path and it is an instance of
-            ``pathlib.Path`` instead of a normal string
+            ``pathlib.PurePosixPath`` instead of a normal string
         """
         path = self._pre_process_path(path)
 

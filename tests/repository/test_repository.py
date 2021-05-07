@@ -126,11 +126,11 @@ def test_create_directory(repository):
     assert repository.list_object_names('nested') == ['dir']
 
 
-def test_get_hash_keys(repository, generate_directory):
-    """Test the ``Repository.get_hash_keys`` method."""
+def test_get_file_keys(repository, generate_directory):
+    """Test the ``Repository.get_file_keys`` method."""
     directory = generate_directory({'file_a': b'content_a', 'relative': {'file_b': b'content_b'}})
 
-    assert repository.get_hash_keys() == []
+    assert repository.get_file_keys() == []
 
     with open(directory / 'file_a', 'rb') as handle:
         repository.put_object_from_filelike(handle, 'file_a')
@@ -138,9 +138,9 @@ def test_get_hash_keys(repository, generate_directory):
     with open(directory / 'relative/file_b', 'rb') as handle:
         repository.put_object_from_filelike(handle, 'relative/file_b')
 
-    hash_keys = [repository.get_object('file_a').key, repository.get_object('relative/file_b').key]
+    file_keys = [repository.get_object('file_a').key, repository.get_object('relative/file_b').key]
 
-    assert sorted(repository.get_hash_keys()) == sorted(hash_keys)
+    assert sorted(repository.get_file_keys()) == sorted(file_keys)
 
 
 def test_get_object_raises(repository):

@@ -182,14 +182,15 @@ def empty_config(tmp_path) -> Config:
     with Capturing():
         configuration.CONFIG = configuration.load_config(create=True)
 
-    yield get_config()
-
-    # Reset the config folder path and the config instance. Note this will always be executed after the yield no
-    # matter what happened in the test that used this fixture.
-    reset_profile()
-    settings.AIIDA_CONFIG_FOLDER = current_config_path
-    configuration.CONFIG = current_config
-    load_profile(current_profile_name)
+    try:
+        yield get_config()
+    finally:
+        # Reset the config folder path and the config instance. Note this will always be executed after the yield no
+        # matter what happened in the test that used this fixture.
+        reset_profile()
+        settings.AIIDA_CONFIG_FOLDER = current_config_path
+        configuration.CONFIG = current_config
+        load_profile(current_profile_name)
 
 
 @pytest.fixture
@@ -199,7 +200,7 @@ def profile_factory() -> Profile:
     :return: the profile instance.
     """
 
-    def _create_profile(name, **kwargs):
+    def _create_profile(name='test-profile', **kwargs):
 
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 

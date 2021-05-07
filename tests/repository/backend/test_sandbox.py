@@ -134,3 +134,14 @@ def test_cleanup():
     assert dirpath.exists()
     del repository
     assert not dirpath.exists()
+
+
+def test_get_object_hash(repository, generate_directory):
+    """Test the ``Repository.get_object_hash`` returns the expected value."""
+    repository.initialise()
+    directory = generate_directory({'file_a': b'content'})
+
+    with open(directory / 'file_a', 'rb') as handle:
+        key = repository.put_object_from_filelike(handle)
+
+    assert repository.get_object_hash(key) == 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73'

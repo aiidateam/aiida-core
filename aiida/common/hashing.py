@@ -13,6 +13,7 @@ import hashlib
 import numbers
 import random
 import time
+import typing
 import uuid
 from collections import abc, OrderedDict
 from functools import singledispatch
@@ -80,6 +81,31 @@ BLAKE2B_OPTIONS = {
     'digest_size': 32,  # we do not need a cryptographically relevant digest
     'inner_size': 64,  # ... but still use 64 as the inner size
 }
+
+
+def chunked_file_hash(
+    handle: typing.BinaryIO, hash_cls: typing.Any, chunksize: int = 524288, **kwargs: typing.Any
+) -> str:
+    """Return the hash for the given file handle
+
+    Will read the file in chunks, which should be opened in 'rb' mode.
+
+    :param handle: a file handle, opened in 'rb' mode.
+    :param hash_cls: a class implementing hashlib._Hash
+    :param chunksize: number of bytes to chunk the file read in
+    :param kwargs: arguments to pass to the hasher initialisation
+    :return: the hash hexdigest (the hash key)
+    """
+    hasher = hash_cls(**kwargs)
+    while True:
+        chunk = handle.read(chunksize)
+        hasher.update(chunk)
+
+        if not chunk:
+            # Empty returned value: EOF
+            break
+
+    return hasher.hexdigest()
 
 
 def make_hash(object_to_hash, **kwargs):

@@ -25,6 +25,7 @@ py:class function
 py:class IO
 py:class traceback
 py:class _io.BufferedReader
+py:class BinaryIO
 
 ### AiiDA
 

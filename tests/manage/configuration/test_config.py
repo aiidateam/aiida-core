@@ -384,3 +384,23 @@ def test_store(config_with_profile):
         config_recreated = Config(config.filepath, json.load(handle))
 
         assert config.dictionary == config_recreated.dictionary
+
+
+def test_delete_profile(config_with_profile, profile_factory):
+    """Test the ``delete_profile`` method."""
+    config = config_with_profile
+    profile_name = 'to-be-deleted'
+    profile = profile_factory(name=profile_name)
+
+    config.add_profile(profile)
+    assert config.get_profile(profile_name) == profile
+
+    # Write the contents to disk so that the to-be-deleted profile is in the config file on disk
+    config.store()
+
+    config.delete_profile(profile_name)
+    assert profile_name not in config.profile_names
+
+    # Now reload the config from disk to make sure the changes after deletion were persisted to disk
+    config_on_disk = Config.from_file(config.filepath)
+    assert profile_name not in config_on_disk.profile_names

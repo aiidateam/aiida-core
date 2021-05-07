@@ -35,7 +35,7 @@ class File():
 
         :param name: The final element of the file path
         :param file_type: Identifies whether the File is a file or a directory
-        :param key: A key to map the file to an object in the repository (file only)
+        :param key: A key to map the file to its contents in the backend repository (file only)
         :param objects: Mapping of child names to child Files (directory only)
 
         :raises ValueError: If a key is defined for a directory,

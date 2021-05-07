@@ -103,6 +103,7 @@ class Repository:
             objects['__dirnames__'] = dirnames
             for filename in filenames:
                 key = self.get_file(root / filename).key
+                assert key is not None, 'Expected FileType.File to have a key'
                 objects[str(root / filename)] = self.backend.get_object_hash(key)
 
         return make_hash(objects)
@@ -373,8 +374,7 @@ class Repository:
         :raises OSError: if the file could not be opened.
         """
         key = self.get_file(path).key
-        if key is None:
-            raise TypeError('File key not set')
+        assert key is not None, 'Expected FileType.File to have a key'
         with self.backend.open(key) as handle:
             yield handle
 
@@ -388,8 +388,7 @@ class Repository:
         :raises OSError: if the file could not be opened.
         """
         key = self.get_file(path).key
-        if key is None:
-            raise TypeError('File key not set')
+        assert key is not None, 'Expected FileType.File to have a key'
         return self.backend.get_object_content(key)
 
     def delete_object(self, path: FilePath, hard_delete: bool = False) -> None:

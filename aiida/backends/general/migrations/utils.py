@@ -108,7 +108,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def erase(self):
         raise NotImplementedError()
 
-    def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
+    def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.

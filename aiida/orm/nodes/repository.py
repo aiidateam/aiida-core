@@ -105,7 +105,7 @@ class NodeRepositoryMixin:
         return self._repository.list_object_names(path)
 
     @contextlib.contextmanager
-    def open(self, path: str, mode='r') -> io.BufferedReader:
+    def open(self, path: str, mode='r') -> typing.Iterator[typing.BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

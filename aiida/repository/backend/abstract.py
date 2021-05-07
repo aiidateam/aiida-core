@@ -44,7 +44,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """Return whether the repository has been initialised."""
 
     @abc.abstractmethod
-    def erase(self):
+    def erase(self) -> None:
         """Delete the repository itself and all its contents.
 
         .. note:: This should not merely delete the contents of the repository but any resources it created. For
@@ -53,17 +53,23 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @staticmethod
-    def is_readable_byte_stream(handle):
+    def is_readable_byte_stream(handle) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
 
-    def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
+    def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
+        :raises TypeError: if the handle is not a byte stream.
         """
         if not isinstance(handle, io.BytesIO) and not self.is_readable_byte_stream(handle):
             raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
+        return self._put_object_from_filelike(handle)
+
+    @abc.abstractmethod
+    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+        pass
 
     def put_object_from_file(self, filepath: typing.Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
@@ -84,7 +90,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @contextlib.contextmanager
-    def open(self, key: str) -> io.BufferedIOBase:
+    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:  # type: ignore[return]
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

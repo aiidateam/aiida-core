@@ -13,4 +13,4 @@ from .backend import *
 from .common import *
 from .repository import *
 
-__all__ = (backend.__all__ + common.__all__ + repository.__all__)
+__all__ = (backend.__all__ + common.__all__ + repository.__all__)  # type: ignore[name-defined]

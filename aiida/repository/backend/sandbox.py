@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
 import contextlib
-import io
 import os
 import shutil
 import typing
@@ -16,11 +15,14 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
 
     def __init__(self):
-        self._sandbox = None
+        from aiida.common.folders import SandboxFolder
+        self._sandbox: typing.Optional[SandboxFolder] = None
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
-        return f'SandboxRepository: {self._sandbox.abspath}'
+        if self.is_initialised:
+            return f'SandboxRepository: {self._sandbox.abspath if self._sandbox else "null"}'
+        return 'SandboxRepository: <uninitialised>'
 
     def __del__(self):
         """Delete the entire sandbox folder if it was instantiated and still exists."""
@@ -68,15 +70,13 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
             finally:
                 self._sandbox = None
 
-    def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
+    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        super().put_object_from_filelike(handle)
-
         key = str(uuid.uuid4())
         filepath = os.path.join(self.sandbox.abspath, key)
 
@@ -94,7 +94,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         return key in os.listdir(self.sandbox.abspath)
 
     @contextlib.contextmanager
-    def open(self, key: str) -> io.BufferedIOBase:
+    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Module for the implementation of a file repository."""
 import contextlib
-import io
 import pathlib
-import typing
+from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
@@ -13,7 +12,7 @@ from .common import File, FileType
 
 __all__ = ('Repository',)
 
-FilePath = typing.Union[str, pathlib.Path]
+FilePath = Union[str, pathlib.Path]
 
 
 class Repository:
@@ -32,7 +31,6 @@ class Repository:
 
     # pylint: disable=too-many-public-methods
 
-    _backend = None
     _file_cls = File
 
     def __init__(self, backend: AbstractRepositoryBackend = None):
@@ -52,11 +50,11 @@ class Repository:
         return f'Repository<{str(self.backend)}>'
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository or ``None`` if it doesn't have one."""
         return self.backend.uuid
 
-    def initialise(self, **kwargs) -> None:
+    def initialise(self, **kwargs: Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.
@@ -69,7 +67,7 @@ class Repository:
         return self.backend.is_initialised
 
     @classmethod
-    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: typing.Dict) -> 'Repository':
+    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: Dict[str, Any]) -> 'Repository':
         """Construct an instance where the metadata is initialized from the serialized content.
 
         :param backend: instance of repository backend to use to actually store the file objects.
@@ -83,10 +81,10 @@ class Repository:
 
         return instance
 
-    def reset(self):
+    def reset(self) -> None:
         self._directory = self._file_cls()
 
-    def serialize(self) -> typing.Dict:
+    def serialize(self) -> Dict[str, Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         :return: dictionary with the content metadata.
@@ -100,17 +98,18 @@ class Repository:
 
         :return: the hash representing the contents of the repository.
         """
-        objects = {}
+        objects: Dict[str, Any] = {}
         for root, dirnames, filenames in self.walk():
             objects['__dirnames__'] = dirnames
             for filename in filenames:
                 key = self.get_file(root / filename).key
+                assert key is not None, 'Expected FileType.File to have a key'
                 objects[str(root / filename)] = self.backend.get_object_hash(key)
 
         return make_hash(objects)
 
     @staticmethod
-    def _pre_process_path(path: FilePath = None) -> typing.Union[pathlib.Path, None]:
+    def _pre_process_path(path: FilePath = None) -> pathlib.Path:
         """Validate and convert the path to instance of ``pathlib.Path``.
 
         This should be called by every method of this class before doing anything, such that it can safely assume that
@@ -141,7 +140,7 @@ class Repository:
         """
         return self._backend
 
-    def set_backend(self, backend: AbstractRepositoryBackend):
+    def set_backend(self, backend: AbstractRepositoryBackend) -> None:
         """Set the backend for this repository.
 
         :param backend: the repository backend.
@@ -150,7 +149,7 @@ class Repository:
         type_check(backend, AbstractRepositoryBackend)
         self._backend = backend
 
-    def _insert_file(self, path: pathlib.Path, key: str):
+    def _insert_file(self, path: pathlib.Path, key: str) -> None:
         """Insert a new file object in the object mapping.
 
         .. note:: this assumes the path is a valid relative path, so should be checked by the caller.
@@ -158,11 +157,7 @@ class Repository:
         :param path: the relative path where to store the object in the repository.
         :param key: fully qualified identifier for the object within the repository.
         """
-        if path.parent:
-            directory = self.create_directory(path.parent)
-        else:
-            directory = self.get_directory
-
+        directory = self.create_directory(path.parent)
         directory.objects[path.name] = self._file_cls(path.name, FileType.FILE, key)
 
     def create_directory(self, path: FilePath) -> File:
@@ -186,12 +181,12 @@ class Repository:
 
         return directory
 
-    def get_hash_keys(self) -> typing.List[str]:
+    def get_hash_keys(self) -> List[str]:
         """Return the hash keys of all file objects contained within this repository.
 
         :return: list of file object hash keys.
         """
-        hash_keys = []
+        hash_keys: List[str] = []
 
         def add_hash_keys(keys, objects):
             """Recursively add keys of all file objects to the keys list."""
@@ -264,7 +259,7 @@ class Repository:
 
         return file_object
 
-    def list_objects(self, path: FilePath = None) -> typing.List[File]:
+    def list_objects(self, path: FilePath = None) -> List[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
 
         :param path: the relative path of the directory.
@@ -276,7 +271,7 @@ class Repository:
         directory = self.get_directory(path)
         return sorted(directory.objects.values(), key=lambda obj: obj.name)
 
-    def list_object_names(self, path: FilePath = None) -> typing.List[str]:
+    def list_object_names(self, path: FilePath = None) -> List[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
 
         :param path: the relative path of the directory.
@@ -287,7 +282,7 @@ class Repository:
         """
         return [entry.name for entry in self.list_objects(path)]
 
-    def put_object_from_filelike(self, handle: io.BufferedReader, path: FilePath):
+    def put_object_from_filelike(self, handle: BinaryIO, path: FilePath) -> None:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -298,7 +293,7 @@ class Repository:
         key = self.backend.put_object_from_filelike(handle)
         self._insert_file(path, key)
 
-    def put_object_from_file(self, filepath: FilePath, path: FilePath):
+    def put_object_from_file(self, filepath: FilePath, path: FilePath) -> None:
         """Store a new object under `path` with contents of the file located at `filepath` on the local file system.
 
         :param filepath: absolute path of file whose contents to copy to the repository
@@ -308,7 +303,7 @@ class Repository:
         with open(filepath, 'rb') as handle:
             self.put_object_from_filelike(handle, path)
 
-    def put_object_from_tree(self, filepath: FilePath, path: FilePath = None):
+    def put_object_from_tree(self, filepath: FilePath, path: FilePath = None) -> None:
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
 
         :param filepath: absolute path of the directory whose contents to copy to the repository.
@@ -333,9 +328,9 @@ class Repository:
         if path.parts:
             self.create_directory(path)
 
-        for root, dirnames, filenames in os.walk(filepath):
+        for root_str, dirnames, filenames in os.walk(filepath):
 
-            root = pathlib.Path(root)
+            root = pathlib.Path(root_str)
 
             for dirname in dirnames:
                 self.create_directory(path / root.relative_to(filepath) / dirname)
@@ -365,7 +360,7 @@ class Repository:
             return True
 
     @contextlib.contextmanager
-    def open(self, path: FilePath) -> io.BufferedReader:
+    def open(self, path: FilePath) -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given path.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -378,7 +373,9 @@ class Repository:
         :raises IsADirectoryError: if the object is a directory and not a file.
         :raises OSError: if the file could not be opened.
         """
-        with self.backend.open(self.get_file(path).key) as handle:
+        key = self.get_file(path).key
+        assert key is not None, 'Expected FileType.File to have a key'
+        with self.backend.open(key) as handle:
             yield handle
 
     def get_object_content(self, path: FilePath) -> bytes:
@@ -390,9 +387,11 @@ class Repository:
         :raises IsADirectoryError: if the object is a directory and not a file.
         :raises OSError: if the file could not be opened.
         """
-        return self.backend.get_object_content(self.get_file(path).key)
+        key = self.get_file(path).key
+        assert key is not None, 'Expected FileType.File to have a key'
+        return self.backend.get_object_content(key)
 
-    def delete_object(self, path: FilePath, hard_delete: bool = False):
+    def delete_object(self, path: FilePath, hard_delete: bool = False) -> None:
         """Soft delete the object from the repository.
 
         .. note:: can only delete file objects, but not directories.
@@ -412,12 +411,13 @@ class Repository:
             raise IsADirectoryError(f'object with path `{path}` is a directory.')
 
         if hard_delete:
+            assert file_object.key is not None, 'Expected FileType.File to have a key'
             self.backend.delete_object(file_object.key)
 
         directory = self.get_directory(path.parent)
         directory.objects.pop(path.name)
 
-    def delete(self):
+    def delete(self) -> None:
         """Delete the repository.
 
         .. important:: This will not just delete the contents of the repository but also the repository itself and all
@@ -427,7 +427,7 @@ class Repository:
         self.backend.erase()
         self.reset()
 
-    def erase(self):
+    def erase(self) -> None:
         """Delete all objects from the repository.
 
         .. important: this intentionally does not call through to any ``erase`` method of the backend, because unlike
@@ -439,7 +439,7 @@ class Repository:
             self.backend.delete_object(hash_key)
         self.reset()
 
-    def clone(self, source: 'Repository'):
+    def clone(self, source: 'Repository') -> None:
         """Clone the contents of another repository instance."""
         if not isinstance(source, Repository):
             raise TypeError('source is not an instance of `Repository`.')
@@ -451,7 +451,7 @@ class Repository:
                 with source.open(root / filename) as handle:
                     self.put_object_from_filelike(handle, root / filename)
 
-    def walk(self, path: FilePath = None) -> typing.Tuple[pathlib.Path, typing.List[str], typing.List[str]]:
+    def walk(self, path: FilePath = None) -> Iterable[Tuple[pathlib.Path, List[str], List[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in

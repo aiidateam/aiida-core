@@ -108,7 +108,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def erase(self):
         raise NotImplementedError()
 
-    def put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
+    def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -126,8 +126,10 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
 
-def migrate_legacy_repository(node_count, shard=None):
+def migrate_legacy_repository(shard=None):
     """Migrate the legacy file repository to the new disk object store and return mapping of repository metadata.
+
+    .. warning:: this method assumes that the new disk object store container has been initialized.
 
     The format of the return value will be a dictionary where the keys are the UUIDs of the nodes whose repository
     folder has contents have been migrated to the disk object store. The values are the repository metadata that contain
@@ -141,8 +143,6 @@ def migrate_legacy_repository(node_count, shard=None):
     have to be adapted and the significant parts of the implementation will have to be copy pasted here.
 
     :return: mapping of node UUIDs onto the new repository metadata.
-    :raises `~aiida.common.exceptions.DatabaseMigrationError`: in case the container of the migrated repository already
-        exists or if the repository does not exist but the database contains at least one node.
     """
     # pylint: disable=too-many-locals
     from aiida.manage.configuration import get_profile
@@ -151,33 +151,12 @@ def migrate_legacy_repository(node_count, shard=None):
     backend = NoopRepositoryBackend()
     repository = MigrationRepository(backend=backend)
 
-    # Initialize the new container: don't go through the profile, because that will not check if it already exists
-    filepath = pathlib.Path(profile.repository_path) / 'container'
     basepath = pathlib.Path(profile.repository_path) / 'repository' / 'node'
+    filepath = pathlib.Path(profile.repository_path) / 'container'
     container = Container(filepath)
 
-    # The new container needs to be initialised. Since this function can be called multiple times, it shouldn't
-    # initialise the repository each time since it will delete all content. By checking the value of the shard, we
-    # should just initialise it for the first iteration.
-    if shard is None or shard == '00':
-        if container.is_initialised and not profile.is_test_profile:
-            raise exceptions.DatabaseMigrationError(
-                f'the container {filepath} already exists. If you ran this migration before and it failed simply '
-                'delete this directory and restart the migration.'
-            )
-
-        container.init_container(clear=True, **profile.defaults['repository'])
-
-    if not basepath.is_dir():
-        # If the database is empty, this is a new profile and so it is normal the repo folder doesn't exist. We simply
-        # return as there is nothing to migrate.
-        if profile.is_test_profile or node_count == 0:
-            return None, None
-
-        raise exceptions.DatabaseMigrationError(
-            f'the file repository `{basepath}` does not exist but the database is not empty, it contains {node_count} '
-            'nodes. Aborting the migration.'
-        )
+    if not basepath.exists():
+        return None, None
 
     node_repository_dirpaths, missing_sub_repo_folder = get_node_repository_dirpaths(basepath, shard)
 

@@ -102,8 +102,8 @@ class Repository:
         for root, dirnames, filenames in self.walk():
             objects['__dirnames__'] = dirnames
             for filename in filenames:
-                with self.open(root / filename) as handle:
-                    objects[str(root / filename)] = handle.read()
+                key = self.get_file(root / filename).key
+                objects[str(root / filename)] = self.backend.get_object_hash(key)
 
         return make_hash(objects)
 

@@ -7,9 +7,12 @@ This key should then be able to be used to retrieve the bytes of the correspondi
 """
 import abc
 import contextlib
+import hashlib
 import io
 import pathlib
 import typing
+
+from aiida.common.hashing import chunked_file_hash
 
 __all__ = ('AbstractRepositoryBackend',)
 
@@ -110,6 +113,20 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
         with self.open(key) as handle:
             return handle.read()
+
+    def get_object_hash(self, key: str) -> str:
+        """Return the SHA-256 hash of an object stored under the given key.
+
+        .. important::
+            A SHA-256 hash should always be returned,
+            to ensure consistency across different repository implementations.
+
+        :param key: fully qualified identifier for the object within the repository.
+        :raise FileNotFoundError: if the file does not exist.
+        :raise OSError: if the file could not be opened.
+        """
+        with self.open(key) as handle:
+            return chunked_file_hash(handle, hashlib.sha256)
 
     def delete_object(self, key: str):
         """Delete the object from the repository.

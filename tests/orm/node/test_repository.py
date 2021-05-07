@@ -2,6 +2,7 @@
 # pylint: disable=redefined-outer-name,protected-access
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
 import io
+import pathlib
 
 import pytest
 
@@ -147,3 +148,31 @@ def test_sealed():
 
     with pytest.raises(exceptions.ModificationNotAllowed):
         node.put_object_from_filelike(io.BytesIO(b'content'), 'path')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_walk():
+    """Test the ``NodeRepositoryMixin.walk`` method."""
+    node = Data()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+
+    results = []
+    for root, dirnames, filenames in node.walk():
+        results.append((root, sorted(dirnames), sorted(filenames)))
+
+    assert sorted(results) == [
+        (pathlib.Path('.'), ['relative'], []),
+        (pathlib.Path('relative'), [], ['path']),
+    ]
+
+    # Check that the method still works after storing the node
+    node.store()
+
+    results = []
+    for root, dirnames, filenames in node.walk():
+        results.append((root, sorted(dirnames), sorted(filenames)))
+
+    assert sorted(results) == [
+        (pathlib.Path('.'), ['relative'], []),
+        (pathlib.Path('relative'), [], ['path']),
+    ]

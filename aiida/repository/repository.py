@@ -181,24 +181,24 @@ class Repository:
 
         return directory
 
-    def get_hash_keys(self) -> List[str]:
-        """Return the hash keys of all file objects contained within this repository.
+    def get_file_keys(self) -> List[str]:
+        """Return the keys of all file objects contained within this repository.
 
-        :return: list of file object hash keys.
+        :return: list of keys, which map a file to its content in the backend repository.
         """
-        hash_keys: List[str] = []
+        file_keys: List[str] = []
 
-        def add_hash_keys(keys, objects):
+        def _add_file_keys(keys, objects):
             """Recursively add keys of all file objects to the keys list."""
             for obj in objects.values():
                 if obj.file_type == FileType.FILE and obj.key is not None:
                     keys.append(obj.key)
                 elif obj.file_type == FileType.DIRECTORY:
-                    add_hash_keys(keys, obj.objects)
+                    _add_file_keys(keys, obj.objects)
 
-        add_hash_keys(hash_keys, self._directory.objects)
+        _add_file_keys(file_keys, self._directory.objects)
 
-        return hash_keys
+        return file_keys
 
     def get_object(self, path: FilePath = None) -> File:
         """Return the object at the given path.
@@ -435,8 +435,8 @@ class Repository:
             nodes. Therefore, we manually delete all file objects and then simply reset the internal file hierarchy.
 
         """
-        for hash_key in self.get_hash_keys():
-            self.backend.delete_object(hash_key)
+        for file_key in self.get_file_keys():
+            self.backend.delete_object(file_key)
         self.reset()
 
     def clone(self, source: 'Repository') -> None:

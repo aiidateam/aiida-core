@@ -1228,6 +1228,7 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
+
 class TestParameterDataToDictMigration(TestMigrationsSQLA):
     """Test the data migration after `ParameterData` was renamed to `Dict`."""
 
@@ -1896,5 +1897,48 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                 repository_uuid = session.query(DbSetting).filter(DbSetting.key == repository_uuid_key).one()
                 assert repository_uuid is not None
                 assert isinstance(repository_uuid.val, str)
+            finally:
+                session.close()
+
+
+class TestComputerNameToLabelMigration(TestMigrationsSQLA):
+    """Test the renaming of `name` to `label` for `DbComputer."""
+
+    migrate_from = '1feaea71bd5a'  # 1feaea71bd5a_migrate_repository
+    migrate_to = '535039300e4a'  # 5ddd24e52864_dbnode_type_to_dbnode_node_type
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbComputer = self.get_auto_base().classes.db_dbcomputer  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                computer = DbComputer(name='testing')
+
+                session.add(computer)
+                session.commit()
+
+                self.computer_id = computer.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_migration(self):
+        """Verify that the column was successfully renamed."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbComputer = self.get_auto_base().classes.db_dbcomputer  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                computer = session.query(DbComputer).filter(DbComputer.id == self.computer_id).one()
+                self.assertEqual(computer.label, 'testing')
             finally:
                 session.close()

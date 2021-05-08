@@ -127,7 +127,7 @@ def migrate_legacy_repository(shard=None):
     # add the value (which is the `LazyOpener`) to the `streams` list as well as its relative path to `filepaths`.
     for node_uuid, node_dirpath in node_repository_dirpaths.items():
         repository.dir_write('', node_dirpath)
-        metadata = serialize_repository(repository)
+        metadata = repository.serialize()
         mapping_metadata[node_uuid] = metadata
         for path, key in repository.dir_walk(''):
             if not key:
@@ -234,21 +234,6 @@ def get_node_repository_dirpaths(basepath, shard=None):
         )
 
     return mapping, missing_sub_repo_folder
-
-
-def serialize_repository(repository: Repository) -> dict:
-    """Serialize the metadata into a JSON-serializable format.
-
-    .. note:: the serialization format is optimized to reduce the size in bytes.
-
-    :return: dictionary with the content metadata.
-    """
-    file_object = repository._directory  # pylint: disable=protected-access
-    if file_object.file_type == FileType.DIRECTORY:
-        if file_object.objects:
-            return {'o': {key: obj.serialize() for key, obj in file_object.objects.items()}}
-        return {}
-    return {'k': file_object.key}
 
 
 def ensure_repository_folder_created(uuid):

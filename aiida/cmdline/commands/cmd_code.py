@@ -148,7 +148,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code, verbose):
     """Display detailed information for a code."""
-    from aiida.repository import FileType
 
     table = []
     table.append(['PK', code.pk])
@@ -162,7 +161,7 @@ def show(code, verbose):
         table.append(['Exec name', code.get_execname()])
         table.append(['List of files/folders:', ''])
         for obj in code.list_objects():
-            if obj.file_type == FileType.DIRECTORY:
+            if obj.is_dir():
                 table.append(['directory', obj.name])
             else:
                 table.append(['file', obj.name])

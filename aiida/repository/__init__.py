@@ -10,7 +10,6 @@
 """Module with resources dealing with the file repository."""
 # pylint: disable=undefined-variable
 from .backend import *
-from .common import *
-from .repository import *
+from .file_system import *
 
-__all__ = (backend.__all__ + common.__all__ + repository.__all__)  # type: ignore[name-defined]
+__all__ = (backend.__all__ + file_system.__all__)  # type: ignore[name-defined]

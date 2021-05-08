@@ -478,7 +478,7 @@ class NodeTranslator(BaseTranslator):
         raise RestFeatureNotAvailable('This endpoint is not available for Process nodes.')
 
     @staticmethod
-    def get_repo_list(node, filename=''):
+    def get_repo_list(node: orm.nodes.Node, filename='') -> list:
         """
         Every node in AiiDA is having repo folder.
         This function returns the metadata using list_objects() method
@@ -492,7 +492,7 @@ class NodeTranslator(BaseTranslator):
             raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
         for fobj in flist:
-            response.append({'name': fobj.name, 'type': fobj.file_type.name})
+            response.append({'name': fobj.name, 'type': fobj.otype})
         return response
 
     @staticmethod

@@ -23,57 +23,11 @@ from disk_objectstore.utils import LazyOpener
 
 from aiida.common import exceptions, json
 from aiida.repository.backend import AbstractRepositoryBackend
-from aiida.repository.common import File, FileType
-from aiida.repository.repository import Repository
+from aiida.repository import MutableRepoFileSystem
 
 ISOFORMAT_DATETIME_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 REGEX_SHARD_SUB_LEVEL = re.compile(r'^[0-9a-f]{2}$')
 REGEX_SHARD_FINAL_LEVEL = re.compile(r'^[0-9a-f-]{32}$')
-
-
-class LazyFile(File):
-    """Subclass of `File` where `key` also allows `LazyOpener` in addition to a string.
-
-    This subclass is necessary because the migration will be storing instances of `LazyOpener` as the `key` which should
-    normally only be a string. This subclass updates the `key` type check to allow this.
-    """
-
-    def __init__(
-        self,
-        name: str = '',
-        file_type: FileType = FileType.DIRECTORY,
-        key: typing.Union[str, None, LazyOpener] = None,
-        objects: typing.Dict[str, 'File'] = None
-    ):
-        # pylint: disable=super-init-not-called
-        if not isinstance(name, str):
-            raise TypeError('name should be a string.')
-
-        if not isinstance(file_type, FileType):
-            raise TypeError('file_type should be an instance of `FileType`.')
-
-        if key is not None and not isinstance(key, (str, LazyOpener)):
-            raise TypeError('key should be `None` or a string.')
-
-        if objects is not None and any([not isinstance(obj, self.__class__) for obj in objects.values()]):
-            raise TypeError('objects should be `None` or a dictionary of `File` instances.')
-
-        if file_type == FileType.DIRECTORY and key is not None:
-            raise ValueError('an object of type `FileType.DIRECTORY` cannot define a key.')
-
-        if file_type == FileType.FILE and objects is not None:
-            raise ValueError('an object of type `FileType.FILE` cannot define any objects.')
-
-        self._name = name
-        self._file_type = file_type
-        self._key = key
-        self._objects = objects or {}
-
-
-class MigrationRepository(Repository):
-    """Subclass of `Repository` that uses `LazyFile` instead of `File` as its file class."""
-
-    _file_cls = LazyFile
 
 
 class NoopRepositoryBackend(AbstractRepositoryBackend):
@@ -149,7 +103,7 @@ def migrate_legacy_repository(shard=None):
 
     profile = get_profile()
     backend = NoopRepositoryBackend()
-    repository = MigrationRepository(backend=backend)
+    repository = MutableRepoFileSystem(backend=backend)
 
     basepath = pathlib.Path(profile.repository_path) / 'repository' / 'node'
     filepath = pathlib.Path(profile.repository_path) / 'container'
@@ -172,14 +126,15 @@ def migrate_legacy_repository(shard=None):
     # function. After having constructed the virtual hierarchy, we walk over the contents and take just the files and
     # add the value (which is the `LazyOpener`) to the `streams` list as well as its relative path to `filepaths`.
     for node_uuid, node_dirpath in node_repository_dirpaths.items():
-        repository.put_object_from_tree(node_dirpath)
+        repository.dir_write('', node_dirpath)
         metadata = serialize_repository(repository)
         mapping_metadata[node_uuid] = metadata
-        for root, _, filenames in repository.walk():
-            for filename in filenames:
-                parts = list(pathlib.Path(root / filename).parts)
-                filepaths.append((node_uuid, parts))
-                streams.append(functools.reduce(lambda objects, part: objects['o'].get(part), parts, metadata)['k'])
+        for path, key in repository.dir_walk(''):
+            if not key:
+                continue
+            parts = list(path.parts)
+            filepaths.append((node_uuid, parts))
+            streams.append(functools.reduce(lambda objects, part: objects['o'].get(part), parts, metadata)['k'])
 
         # Reset the repository to a clean node repository, which removes the internal virtual file hierarchy
         repository.reset()

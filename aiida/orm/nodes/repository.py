@@ -6,7 +6,7 @@ import tempfile
 import typing
 
 from aiida.common import exceptions
-from aiida.repository import Repository, File
+from aiida.repository import MutableRepoFileSystem, FrozenRepoFileSystem, RepoPath
 from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)
@@ -32,13 +32,8 @@ class NodeRepositoryMixin:
 
     _repository_instance = None
 
-    def _update_repository_metadata(self):
-        """Refresh the repository metadata of the node if it is stored and the decorated method returns successfully."""
-        if self.is_stored:
-            self.repository_metadata = self._repository.serialize()
-
     @property
-    def _repository(self) -> Repository:
+    def _repository(self) -> typing.Union[MutableRepoFileSystem, FrozenRepoFileSystem]:
         """Return the repository instance, lazily constructing it if necessary.
 
         .. note:: this property is protected because a node's repository should not be accessed outside of its scope.
@@ -50,14 +45,14 @@ class NodeRepositoryMixin:
                 from aiida.manage.manager import get_manager
                 backend = get_manager().get_profile().get_repository().backend
                 serialized = self.repository_metadata
-                self._repository_instance = Repository.from_serialized(backend=backend, serialized=serialized)
+                self._repository_instance = FrozenRepoFileSystem(backend=backend, file_tree=serialized)
             else:
-                self._repository_instance = Repository(backend=SandboxRepositoryBackend())
+                self._repository_instance = MutableRepoFileSystem(backend=SandboxRepositoryBackend())
 
         return self._repository_instance
 
     @_repository.setter
-    def _repository(self, repository: Repository) -> None:
+    def _repository(self, repository: typing.Union[MutableRepoFileSystem, FrozenRepoFileSystem]) -> None:
         """Set a new repository instance, deleting the current reference if it has been initialized.
 
         :param repository: the new repository instance to set.
@@ -74,6 +69,13 @@ class NodeRepositoryMixin:
         """
         return self._repository.serialize()
 
+    @property
+    def repo_path(self) -> RepoPath:
+        return RepoPath('', self._repository)
+
+    def repo_content_string(self) -> str:
+        return self._repository.pretty()
+
     def check_mutability(self):
         """Check if the node is mutable.
 
@@ -82,7 +84,7 @@ class NodeRepositoryMixin:
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('the node is stored and therefore the repository is immutable.')
 
-    def list_objects(self, path: str = None) -> typing.List[File]:
+    def list_objects(self, path: str = None) -> typing.List[RepoPath]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
 
         :param path: the relative path where to store the object in the repository.
@@ -91,7 +93,7 @@ class NodeRepositoryMixin:
         :raises FileNotFoundError: if no object exists for the given path.
         :raises NotADirectoryError: if the object at the given path is not a directory.
         """
-        return self._repository.list_objects(path)
+        return list(self.repo_path.joinpath(path or '').iterdir())
 
     def list_object_names(self, path: str = None) -> typing.List[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
@@ -102,7 +104,7 @@ class NodeRepositoryMixin:
         :raises FileNotFoundError: if no object exists for the given path.
         :raises NotADirectoryError: if the object at the given path is not a directory.
         """
-        return self._repository.list_object_names(path)
+        return sorted(self._repository.dir_children(path or ''))
 
     @contextlib.contextmanager
     def open(self, path: str, mode='r') -> typing.Iterator[typing.BinaryIO]:
@@ -118,14 +120,8 @@ class NodeRepositoryMixin:
         :raises IsADirectoryError: if the object is a directory and not a file.
         :raises OSError: if the file could not be opened.
         """
-        if mode not in ['r', 'rb']:
-            raise ValueError(f'the mode {mode} is not supported.')
-
-        with self._repository.open(path) as handle:
-            if 'b' not in mode:
-                yield io.StringIO(handle.read().decode('utf-8'))
-            else:
-                yield handle
+        with self._repository.file_open(path, mode=mode, encoding='utf-8') as handle:
+            yield handle
 
     def get_object_content(self, path: str, mode='r') -> typing.Union[str, bytes]:
         """Return the content of a object identified by key.
@@ -140,9 +136,9 @@ class NodeRepositoryMixin:
             raise ValueError(f'the mode {mode} is not supported.')
 
         if 'b' not in mode:
-            return self._repository.get_object_content(path).decode('utf-8')
+            return self._repository.file_read(path).decode('utf-8')
 
-        return self._repository.get_object_content(path)
+        return self._repository.file_read(path)
 
     def put_object_from_filelike(self, handle: io.BufferedReader, path: str):
         """Store the byte contents of a file in the repository.
@@ -163,8 +159,7 @@ class NodeRepositoryMixin:
             else:
                 handle = io.BytesIO(handle.read().encode('utf-8'))
 
-        self._repository.put_object_from_filelike(handle, path)
-        self._update_repository_metadata()
+        self._repository.file_write_handle(path, handle)
 
     def put_object_from_file(self, filepath: str, path: str):
         """Store a new object under `path` with contents of the file located at `filepath` on the local file system.
@@ -175,8 +170,7 @@ class NodeRepositoryMixin:
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
         self.check_mutability()
-        self._repository.put_object_from_file(filepath, path)
-        self._update_repository_metadata()
+        self._repository.file_write_path(path, filepath)
 
     def put_object_from_tree(self, filepath: str, path: str = None):
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
@@ -187,8 +181,7 @@ class NodeRepositoryMixin:
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
         self.check_mutability()
-        self._repository.put_object_from_tree(filepath, path)
-        self._update_repository_metadata()
+        self._repository.dir_write(path or '', filepath)
 
     def delete_object(self, path: str):
         """Delete the object from the repository.
@@ -201,8 +194,7 @@ class NodeRepositoryMixin:
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
         self.check_mutability()
-        self._repository.delete_object(path)
-        self._update_repository_metadata()
+        self._repository.file_remove(path)
 
     def erase(self):
         """Delete all objects from the repository.
@@ -211,4 +203,3 @@ class NodeRepositoryMixin:
         """
         self.check_mutability()
         self._repository.erase()
-        self._update_repository_metadata()

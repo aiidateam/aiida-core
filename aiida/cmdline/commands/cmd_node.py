@@ -84,8 +84,6 @@ def repo_dump(node, output_directory):
     The output directory should not exist. If it does, the command
     will abort.
     """
-    from aiida.repository import FileType
-
     output_directory = pathlib.Path(output_directory)
 
     try:
@@ -102,14 +100,14 @@ def repo_dump(node, output_directory):
             # Not using os.path.join here, because this is the "path"
             # in the AiiDA node, not an actual OS - level path.
             file_key = file.name if not key else f'{key}/{file.name}'
-            if file.file_type == FileType.DIRECTORY:
+            if file.is_dir():
                 new_out_dir = output_dir / file.name
                 assert not new_out_dir.exists()
                 new_out_dir.mkdir()
                 _copy_tree(key=file_key, output_dir=new_out_dir)
 
             else:
-                assert file.file_type == FileType.FILE
+                assert file.is_file(), str(file)
                 out_file_path = output_dir / file.name
                 assert not out_file_path.exists()
                 with node.open(file_key, 'rb') as in_file:

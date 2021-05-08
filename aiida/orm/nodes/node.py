@@ -693,6 +693,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
         from aiida.repository.backend import SandboxRepositoryBackend
+        from aiida.repository import FrozenRepoFileSystem
 
         # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
         if isinstance(self._repository.backend, SandboxRepositoryBackend):
@@ -701,7 +702,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             repository = profile.get_repository()
             repository.clone(self._repository)
             # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
-            self._repository_instance = repository
+            self._repository_instance = FrozenRepoFileSystem(backend=repository.backend, file_tree=repository.serialize())
 
         self.repository_metadata = self._repository.serialize()
 
@@ -738,7 +739,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
         """
         from aiida.orm.utils.mixins import Sealable
-        from aiida.repository import Repository
+        from aiida.repository import BaseRepoFileSystem
         assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
@@ -749,7 +750,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         self.description = cache_node.description
 
         # Make sure to reinitialize the repository instance of the clone to that of the source node.
-        self._repository: Repository = copy.copy(cache_node._repository)  # pylint: disable=protected-access
+        self._repository: BaseRepoFileSystem = copy.copy(cache_node._repository)  # pylint: disable=protected-access
 
         for key, value in cache_node.attributes.items():
             if key != Sealable.SEALED_KEY:

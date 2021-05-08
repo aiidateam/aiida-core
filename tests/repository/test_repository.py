@@ -7,7 +7,7 @@ import pathlib
 
 import pytest
 
-from aiida.repository import Repository, File, FileType
+from aiida.repository import MutableRepoFileSystem
 from aiida.repository.backend import SandboxRepositoryBackend, DiskObjectStoreRepositoryBackend
 
 
@@ -25,7 +25,7 @@ def get_disk_object_store_backend(tmp_path) -> DiskObjectStoreRepositoryBackend:
 
 
 @pytest.fixture(scope='function', params=[get_sandbox_backend, get_disk_object_store_backend])
-def repository(request, tmp_path_factory) -> Repository:
+def repository(request, tmp_path_factory) -> MutableRepoFileSystem:
     """Return an instance of ``aiida.repository.Repository`` with one of the available repository backends.
 
     By parametrizing this fixture over the available ``AbstractRepositoryBackend`` implementations, all tests below that
@@ -36,13 +36,13 @@ def repository(request, tmp_path_factory) -> Repository:
 
     """
     with request.param(tmp_path_factory.mktemp('container')) as backend:
-        repository = Repository(backend=backend)
-        repository.initialise()
+        repository = MutableRepoFileSystem(backend=backend)
+        # repository.initialise()
         yield repository
 
 
 @pytest.fixture(scope='function', params=[get_sandbox_backend, get_disk_object_store_backend])
-def repository_uninitialised(request, tmp_path_factory) -> Repository:
+def repository_uninitialised(request, tmp_path_factory) -> MutableRepoFileSystem:
     """Return uninitialised instance of ``aiida.repository.Repository`` with one of the available repository backends.
 
     By parametrizing this fixture over the available ``AbstractRepositoryBackend`` implementations, all tests below that
@@ -53,7 +53,7 @@ def repository_uninitialised(request, tmp_path_factory) -> Repository:
 
     """
     with request.param(tmp_path_factory.mktemp('container')) as backend:
-        repository = Repository(backend=backend)
+        repository = MutableRepoFileSystem(backend=backend)
         yield repository
 
 

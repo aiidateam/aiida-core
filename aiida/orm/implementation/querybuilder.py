@@ -18,14 +18,12 @@ likely be moved to a `SqlAlchemyBasedQueryBuilder` class and restore this abstra
 import abc
 import uuid
 
-# pylint: disable=no-name-in-module, import-error
+# pylint: disable=no-name-in-module,import-error
 from sqlalchemy_utils.types.choice import Choice
 from sqlalchemy.types import Integer, Float, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 
-from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.common.exceptions import InputValidationError
 
 __all__ = ('BackendQueryBuilder',)
 
@@ -220,7 +218,7 @@ class BackendQueryBuilder:
         elif operator == 'in':
             expr = database_entity.in_(value)
         else:
-            raise InputValidationError(f'Unknown operator {operator} for filters on columns')
+            raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
 
     def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
@@ -244,7 +242,7 @@ class BackendQueryBuilder:
         elif cast == 'd':
             entity = entity.astext.cast(DateTime)
         else:
-            raise InputValidationError(f'Unkown casting key {cast}')
+            raise ValueError(f'Unkown casting key {cast}')
         return entity
 
     def get_aiida_res(self, res):
@@ -399,13 +397,9 @@ class BackendQueryBuilder:
         """
         try:
             return getattr(alias, colname)
-        except AttributeError:
-            raise exceptions.InputValidationError(
+        except AttributeError as exc:
+            raise ValueError(
                 '{} is not a column of {}\n'
                 'Valid columns are:\n'
-                '{}'.format(
-                    colname,
-                    alias,
-                    '\n'.join(alias._sa_class_manager.mapper.c.keys())  # pylint: disable=protected-access
-                )
-            )
+                '{}'.format(colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys()))  # pylint: disable=protected-access
+            ) from exc

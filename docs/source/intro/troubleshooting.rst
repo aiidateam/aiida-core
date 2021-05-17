@@ -19,6 +19,8 @@ If you experience any problems, first check that all services are up and running
 In the example output, all service have a green check mark and so should be running as expected.
 If all services are up and running and you are still experiencing problems or if you have trouble with the installation of aiida-core and related services, consider the commonly encountered problems below.
 
+.. _intro:troubleshooting:installation:
+
 Installation issues
 -------------------
 
@@ -76,6 +78,19 @@ A way to do it is to add a line similar to the following to the ``~/.bashrc`` an
 (you should of course adapt the path to the PostgreSQL libraries).
 
 .. _Stackoverflow link: http://stackoverflow.com/questions/21079820/how-to-find-pg-config-pathlink
+
+
+.. _intro:troubleshooting:installation:postgresql-autodetect-issues:
+
+Autodetection of the PostgreSQL setup
+.....................................
+
+Sometimes AiiDA fails to autodetect the local configuration of PostgreSQL when running ``verdi quicksetup``.
+In that case try to:
+
+    1. Create the database manually in PostgreSQL (see :ref:`here<intro:install:database>`).
+    2. Then run the full ``verdi setup`` command (see :ref:`here<intro:install:verdi_setup>`).
+
 
 RabbitMQ Installation (Unix)
 .............................

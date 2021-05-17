@@ -883,7 +883,7 @@ class Process(plumpy.processes.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = {entry.link_label: entry.node for entry in node.get_outgoing(link_type=link_types)}
+        process_outputs_dict = node.get_outgoing(link_type=link_types).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

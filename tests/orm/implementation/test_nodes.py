@@ -59,6 +59,7 @@ class TestBackendNode(AiidaTestCase):
         self.assertIsNone(node.process_type)
         self.assertEqual(node.attributes, dict())
         self.assertEqual(node.extras, dict())
+        self.assertEqual(node.repository_metadata, {})
         self.assertEqual(node.node_type, self.node_type)
         self.assertEqual(node.label, self.node_label)
         self.assertEqual(node.description, self.node_description)
@@ -86,6 +87,7 @@ class TestBackendNode(AiidaTestCase):
         self.assertIsNone(node.process_type)
         self.assertEqual(node.attributes, dict())
         self.assertEqual(node.extras, dict())
+        self.assertEqual(node.repository_metadata, {})
         self.assertEqual(node.node_type, self.node_type)
         self.assertEqual(node.label, self.node_label)
         self.assertEqual(node.description, self.node_description)
@@ -163,7 +165,7 @@ class TestBackendNode(AiidaTestCase):
 
     def test_computer_methods(self):
         """Test the computer methods of a BackendNode."""
-        new_computer = self.backend.computers.create(name='localhost2', hostname='localhost').store()
+        new_computer = self.backend.computers.create(label='localhost2', hostname='localhost').store()
         self.assertEqual(self.node.computer.id, self.computer.id)
         self.node.computer = new_computer
         self.assertEqual(self.node.computer.id, new_computer.id)

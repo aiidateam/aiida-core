@@ -127,6 +127,7 @@ class DbNode(m.Model):
     attributes = JSONField(default=dict, null=True)
     # JSON Extras
     extras = JSONField(default=dict, null=True)
+    repository_metadata = JSONField(default=dict, null=True)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
@@ -269,7 +270,7 @@ class DbComputer(m.Model):
     Table of computers or clusters.
 
     Attributes:
-    * name: A name to be used to refer to this computer. Must be unique.
+    * label: A name to be used to refer to this computer. Must be unique.
     * hostname: Fully-qualified hostname of the host
     * transport_type: a string with a valid transport type
 
@@ -297,7 +298,7 @@ class DbComputer(m.Model):
 
     """
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
-    name = m.CharField(max_length=255, unique=True, blank=False)
+    label = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
     scheduler_type = m.CharField(max_length=255)
@@ -305,7 +306,7 @@ class DbComputer(m.Model):
     metadata = JSONField(default=dict)
 
     def __str__(self):
-        return f'{self.name} ({self.hostname})'
+        return f'{self.label} ({self.hostname})'
 
 
 class DbAuthInfo(m.Model):
@@ -319,7 +320,7 @@ class DbAuthInfo(m.Model):
     auth_params = JSONField(default=dict)  # contains mainly the remoteuser and the private_key
 
     # The keys defined in the metadata of the DbAuthInfo will override the
-    # keys with the same name defined in the DbComputer (using a dict.update()
+    # keys with the same label defined in the DbComputer (using a dict.update()
     # call of python).
     metadata = JSONField(default=dict)
     # Whether this computer is enabled (user-level enabling feature)
@@ -330,8 +331,8 @@ class DbAuthInfo(m.Model):
 
     def __str__(self):
         if self.enabled:
-            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name}'
-        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name} [DISABLED]'
+            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label}'
+        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label} [DISABLED]'
 
 
 class DbComment(m.Model):

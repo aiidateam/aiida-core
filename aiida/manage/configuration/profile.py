@@ -10,11 +10,17 @@
 """AiiDA profile related code"""
 import collections
 import os
+import pathlib
+from typing import TYPE_CHECKING
 
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
 
 from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+
+if TYPE_CHECKING:
+    from aiida.repository import Repository  # pylint: disable=ungrouped-imports
 
 __all__ = ('Profile',)
 
@@ -74,6 +80,18 @@ class Profile:  # pylint: disable=too-many-public-methods
         KEY_REPOSITORY_URI: 'repository_uri',
     }
 
+    @classproperty
+    def defaults(cls):  # pylint: disable=no-self-use,no-self-argument
+        """Return the dictionary of default values for profile settings."""
+        return {
+            'repository': {
+                'pack_size_target': 4 * 1024 * 1024 * 1024,
+                'loose_prefix_len': 2,
+                'hash_type': 'sha256',
+                'compression_algorithm': 'zlib+1'
+            }
+        }
+
     @classmethod
     def contains_unknown_keys(cls, dictionary):
         """Return whether the profile dictionary contains any unsupported keys.
@@ -109,6 +127,15 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))
+
+    def get_repository(self) -> 'Repository':
+        """Return the repository configured for this profile."""
+        from disk_objectstore import Container
+        from aiida.repository import Repository
+        from aiida.repository.backend import DiskObjectStoreRepositoryBackend
+        container = Container(self.repository_path / 'container')
+        backend = DiskObjectStoreRepositoryBackend(container=container)
+        return Repository(backend=backend)
 
     @property
     def uuid(self):
@@ -312,12 +339,12 @@ class Profile:  # pylint: disable=too-many-public-methods
         return self._test_profile
 
     @property
-    def repository_path(self):
+    def repository_path(self) -> pathlib.Path:
         """Return the absolute path of the repository configured for this profile.
 
         :return: absolute filepath of the profile's file repository
         """
-        return self._parse_repository_uri()[1]
+        return pathlib.Path(self._parse_repository_uri()[1])
 
     def _parse_repository_uri(self):
         """
@@ -350,18 +377,6 @@ class Profile:  # pylint: disable=too-many-public-methods
             virtual_host=self.broker_virtual_host,
             **self.broker_parameters
         )
-
-    def configure_repository(self):
-        """Validates the configured repository and in the case of a file system repo makes sure the folder exists."""
-        import errno
-
-        try:
-            os.makedirs(self.repository_path)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise exceptions.ConfigurationError(
-                    f'could not create the configured repository `{self.repository_path}`: {str(exception)}'
-                )
 
     @property
     def filepaths(self):

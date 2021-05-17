@@ -14,6 +14,7 @@ import warnings
 import sys
 
 from pgtest import pgtest
+import pytest
 
 from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 from aiida.common.utils import Capturing
@@ -42,6 +43,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
         self.profile_manager.create_aiida_db()
         self.assertTrue(self.profile_manager.postgres.db_exists(self.profile_manager.profile_info['database_name']))
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_create_use_destroy_profile2(self):
         """
         Test temporary test profile creation

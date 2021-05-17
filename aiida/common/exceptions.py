@@ -17,7 +17,7 @@ __all__ = (
     'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
     'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
     'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError'
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError'
 )
 
 
@@ -184,6 +184,10 @@ class ConfigurationVersionError(ConfigurationError):
 
 class IncompatibleDatabaseSchema(ConfigurationError):
     """Raised when the database schema is incompatible with that of the code."""
+
+
+class DatabaseMigrationError(AiidaException):
+    """Raised if a critical error is encountered during a database migration."""
 
 
 class DbContentError(AiidaException):

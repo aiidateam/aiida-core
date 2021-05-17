@@ -80,27 +80,6 @@ Below is a list with all available subcommands.
       show       Display detailed information for a code.
 
 
-.. _reference:command-line:verdi-comment:
-
-``verdi comment``
------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Inspect, create and manage node comments.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      add     Add a comment to one or more nodes.
-      remove  Remove a comment of a node.
-      show    Show the comments of one or multiple nodes.
-      update  Update a comment of a node.
-
-
 .. _reference:command-line:verdi-completioncommand:
 
 ``verdi completioncommand``
@@ -141,7 +120,6 @@ Below is a list with all available subcommands.
       enable     Enable the computer for the given user.
       list       List all available computers.
       relabel    Relabel a computer.
-      rename     Rename a computer.
       setup      Create a new computer.
       show       Show detailed information for a computer.
       test       Test the connection to a computer.
@@ -247,48 +225,8 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
-      configure-backup         Configure backup of the repository folder.
       run_daemon               Run a daemon instance in the current interpreter.
-      tests                    Run the unittest suite or parts of it.
       validate-plugins         Validate all plugins by checking they can be loaded.
-
-
-.. _reference:command-line:verdi-export:
-
-``verdi export``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Deprecated, use `verdi archive`.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      create   Export subsets of the provenance graph to file for sharing.
-      inspect  Inspect contents of an exported archive without importing it.
-      migrate  Migrate an export archive to a more recent format version.
-
-
-.. _reference:command-line:verdi-graph:
-
-``verdi graph``
----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Create visual representations of the provenance graph.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      generate  Generate a graph from a ROOT_NODE (specified by pk or uuid).
 
 
 .. _reference:command-line:verdi-group:
@@ -333,59 +271,6 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
 
-.. _reference:command-line:verdi-import:
-
-``verdi import``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] [--] [ARCHIVES]...
-
-      Deprecated, use `verdi archive import`.
-
-    Options:
-      -w, --webpages TEXT...          Discover all URL targets pointing to files with the
-                                      .aiida extension for these HTTP addresses. Automatically
-                                      discovered archive URLs will be downloaded and added to
-                                      ARCHIVES for importing
-
-      -G, --group GROUP               Specify group to which all the import nodes will be
-                                      added. If such a group does not exist, it will be
-                                      created automatically.
-
-      -e, --extras-mode-existing [keep_existing|update_existing|mirror|none|ask]
-                                      Specify which extras from the export archive should be
-                                      imported for nodes that are already contained in the
-                                      database: ask: import all extras and prompt what to do
-                                      for existing extras. keep_existing: import all extras
-                                      and keep original value of existing extras.
-                                      update_existing: import all extras and overwrite value
-                                      of existing extras. mirror: import all extras and remove
-                                      any existing extras that are not present in the archive.
-                                      none: do not import any extras.
-
-      -n, --extras-mode-new [import|none]
-                                      Specify whether to import extras of new nodes: import:
-                                      import extras. none: do not import extras.
-
-      --comment-mode [newest|overwrite]
-                                      Specify the way to import Comments with identical UUIDs:
-                                      newest: Only the newest Comments (based on mtime)
-                                      (default).overwrite: Replace existing Comments with
-                                      those from the import file.
-
-      --migration / --no-migration    Force migration of archive file archives, if needed.
-                                      [default: True]
-
-      -v, --verbosity [DEBUG|INFO|WARNING|CRITICAL]
-                                      Control the verbosity of console logging
-      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
-                                      simply uses default values for options that define one.
-
-      --help                          Show this message and exit.
-
-
 .. _reference:command-line:verdi-node:
 
 ``verdi node``
@@ -411,7 +296,6 @@ Below is a list with all available subcommands.
       rehash       Recompute the hash for nodes in the database.
       repo         Inspect the content of a node repository folder.
       show         Show generic information on one or more nodes.
-      tree         Show a tree of nodes starting from a given node.
 
 
 .. _reference:command-line:verdi-plugin:
@@ -539,28 +423,6 @@ Below is a list with all available subcommands.
       --help                          Show this message and exit.
 
 
-.. _reference:command-line:verdi-rehash:
-
-``verdi rehash``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] [NODES]...
-
-      Recompute the hash for nodes in the database.
-
-      The set of nodes that will be rehashed can be filtered by their identifier and/or
-      based on their class.
-
-    Options:
-      -e, --entry-point PLUGIN  Only include nodes that are class or sub class of the class
-                                identified by this entry point.
-
-      -f, --force               Do not ask for confirmation.
-      --help                    Show this message and exit.
-
-
 .. _reference:command-line:verdi-restapi:
 
 ``verdi restapi``
@@ -583,7 +445,6 @@ Below is a list with all available subcommands.
       --wsgi-profile           Whether to enable WSGI profiler middleware for finding
                                bottlenecks
 
-      --hookup / --no-hookup   Hookup app to flask server
       --help                   Show this message and exit.
 
 
@@ -604,10 +465,6 @@ Below is a list with all available subcommands.
                                       Specify the prefix of the label of the auto group
                                       (numbers might be automatically appended to generate
                                       unique names per run).
-
-      -n, --group-name TEXT           Specify the name of the auto group [DEPRECATED, USE
-                                      --auto-group-label-prefix instead]. This also enables
-                                      auto-grouping.
 
       -e, --exclude TEXT              Exclude these classes from auto grouping (use full
                                       entrypoint strings).

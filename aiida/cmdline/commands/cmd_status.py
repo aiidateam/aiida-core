@@ -55,6 +55,7 @@ STATUS_SYMBOLS = {
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements,too-many-branches
+    from aiida import __version__
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing
     from aiida.manage.manager import get_manager
@@ -62,7 +63,8 @@ def verdi_status(print_traceback, no_rmq):
 
     exit_code = ExitCode.SUCCESS
 
-    print_status(ServiceStatus.UP, 'config dir', AIIDA_CONFIG_FOLDER)
+    print_status(ServiceStatus.UP, 'version', f'AiiDA v{__version__}')
+    print_status(ServiceStatus.UP, 'config', AIIDA_CONFIG_FOLDER)
 
     manager = get_manager()
     profile = manager.get_profile()
@@ -74,7 +76,7 @@ def verdi_status(print_traceback, no_rmq):
 
     try:
         profile = manager.get_profile()
-        print_status(ServiceStatus.UP, 'profile', f'On profile {profile.name}')
+        print_status(ServiceStatus.UP, 'profile', profile.name)
     except Exception as exc:
         message = 'Unable to read AiiDA profile'
         print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
@@ -82,13 +84,14 @@ def verdi_status(print_traceback, no_rmq):
 
     # Getting the repository
     try:
-        repo_folder = profile.repository_path
+        repository = profile.get_repository()
     except Exception as exc:
         message = 'Error with repository folder'
         print_status(ServiceStatus.ERROR, 'repository', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'repository', repo_folder)
+        repository_status = f'Connected to {repository}'
+        print_status(ServiceStatus.UP, 'repository', repository_status)
 
     # Getting the postgres status by trying to get a database cursor
     database_data = [profile.database_username, profile.database_hostname, profile.database_port]

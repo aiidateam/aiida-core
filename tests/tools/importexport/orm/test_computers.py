@@ -89,7 +89,7 @@ class TestComputer(AiidaArchiveTestCase):
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+        builder.append(orm.Computer, project=['label', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
         self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
@@ -103,7 +103,7 @@ class TestComputer(AiidaArchiveTestCase):
         # Check that the number of computers remains the same and its data
         # did not change.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+        builder.append(orm.Computer, project=['label', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, f'Found {builder.count()} computersbut only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
         self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
@@ -185,7 +185,7 @@ class TestComputer(AiidaArchiveTestCase):
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+        builder.append(orm.Computer, project=['label', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
@@ -195,7 +195,7 @@ class TestComputer(AiidaArchiveTestCase):
         # Check that the number of computers remains the same and its data
         # did not change.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name'])
+        builder.append(orm.Computer, project=['label'])
         self.assertEqual(builder.count(), 1, f'Found {builder.count()} computersbut only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
@@ -287,7 +287,7 @@ class TestComputer(AiidaArchiveTestCase):
         # Retrieve the calculation-computer pairs
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'], tag='jcalc')
-        builder.append(orm.Computer, project=['name'], with_node='jcalc')
+        builder.append(orm.Computer, project=['label'], with_node='jcalc')
         self.assertEqual(builder.count(), 3, 'Three combinations expected.')
         res = builder.all()
         self.assertIn([calc1_label, comp1_name], res, 'Calc-Computer combination not found.')
@@ -349,7 +349,7 @@ class TestComputer(AiidaArchiveTestCase):
             # Make sure to exclude the default computer
             builder = orm.QueryBuilder()
             builder.append(
-                orm.Computer, project=['metadata'], tag='comp', filters={'name': {
+                orm.Computer, project=['metadata'], tag='comp', filters={'label': {
                     '!==': self.computer.label
                 }}
             )

@@ -10,10 +10,8 @@
 """Module for Computer entities"""
 import logging
 import os
-import warnings
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 from aiida.orm.implementation import Backend
 from aiida.plugins import SchedulerFactory, TransportFactory
@@ -40,24 +38,6 @@ class Computer(entities.Entity):
     class Collection(entities.Collection):
         """The collection of Computer entries."""
 
-        def get(self, **filters):
-            """Get a single collection entry that matches the filter criteria.
-
-            :param filters: the filters identifying the object to get
-            :type filters: dict
-
-            :return: the entry
-            """
-            if 'name' in filters:
-                warnings.warn('keyword `name` is deprecated, use `label` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-            # This switch needs to be here until we fully remove `name` and replace it with `label` even on the backend
-            # entities and database models.
-            if 'label' in filters:
-                filters['name'] = filters.pop('label')
-
-            return super().get(**filters)
-
         def get_or_create(self, label=None, **kwargs):
             """
             Try to retrieve a Computer from the DB with the given arguments;
@@ -78,14 +58,6 @@ class Computer(entities.Entity):
             except exceptions.NotExistent:
                 return True, Computer(backend=self.backend, label=label, **kwargs)
 
-        def list_names(self):
-            """Return a list with all the names of the computers in the DB.
-
-            .. deprecated:: 1.4.0
-                Will be removed in `v2.0.0`, use `list_labels` instead.
-            """
-            return self._backend.computers.list_names()
-
         def list_labels(self):
             """Return a list with all the labels of the computers in the DB."""
             return self._backend.computers.list_names()
@@ -103,29 +75,11 @@ class Computer(entities.Entity):
         scheduler_type: str = '',
         workdir: str = None,
         backend: Backend = None,
-        name: str = None
     ) -> 'Computer':
-        """Construct a new computer
-
-            .. deprecated:: 1.4.0
-                The `name` keyword will be removed in `v2.0.0`, use `label` instead.
-        """
-
-        # This needs to be here because `label` needed to get a default, since it was replacing `name` and during the
-        # deprecation period, it needs to be automatically set to whatever `name` is passed. As a knock-on effect, since
-        # a keyword argument cannot preceed a normal argument, `hostname` also needed to become a keyword argument,
-        # forcing us to set a default, which we set to `None`. We raise the same exception that Python would normally
-        # raise if a normally positional argument is not specified.
-        if hostname is None:
-            raise TypeError("missing 1 required positional argument: 'hostname'")
-
-        if name is not None:
-            warnings.warn('keyword `name` is deprecated, use `label` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-            label = name
-
+        """Construct a new computer."""
         backend = backend or get_manager().get_backend()
         model = backend.computers.create(
-            name=label,
+            label=label,
             hostname=hostname,
             description=description,
             transport_type=transport_type,
@@ -142,60 +96,16 @@ class Computer(entities.Entity):
         return f'{self.label} ({self.hostname}), pk: {self.pk}'
 
     @property
-    def full_text_info(self):
-        """
-        Return a (multiline) string with a human-readable detailed information on this computer.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`.
-
-        :rtype: str
-        """
-        warnings.warn('this property is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
-        ret_lines = []
-        ret_lines.append(f'Computer name:     {self.label}')
-        ret_lines.append(f' * PK:             {self.pk}')
-        ret_lines.append(f' * UUID:           {self.uuid}')
-        ret_lines.append(f' * Description:    {self.description}')
-        ret_lines.append(f' * Hostname:       {self.hostname}')
-        ret_lines.append(f' * Transport type: {self.transport_type}')
-        ret_lines.append(f' * Scheduler type: {self.scheduler_type}')
-        ret_lines.append(f' * Work directory: {self.get_workdir()}')
-        ret_lines.append(f' * Shebang:        {self.get_shebang()}')
-        ret_lines.append(f" * mpirun command: {' '.join(self.get_mpirun_command())}")
-        def_cpus_machine = self.get_default_mpiprocs_per_machine()
-        if def_cpus_machine is not None:
-            ret_lines.append(f' * Default number of cpus per machine: {def_cpus_machine}')
-        # pylint: disable=fixme
-        # TODO: Put back following line when we port Node to new backend system
-        # ret_lines.append(" * Used by:        {} nodes".format(len(self._dbcomputer.dbnodes.all())))
-
-        ret_lines.append(' * prepend text:')
-        if self.get_prepend_text().strip():
-            for line in self.get_prepend_text().split('\n'):
-                ret_lines.append(f'   {line}')
-        else:
-            ret_lines.append('   # No prepend text.')
-        ret_lines.append(' * append text:')
-        if self.get_append_text().strip():
-            for line in self.get_append_text().split('\n'):
-                ret_lines.append(f'   {line}')
-        else:
-            ret_lines.append('   # No append text.')
-
-        return '\n'.join(ret_lines)
-
-    @property
     def logger(self):
         return self._logger
 
     @classmethod
-    def _name_validator(cls, name):
+    def _label_validator(cls, label):
         """
-        Validates the name.
+        Validates the label.
         """
-        if not name.strip():
-            raise exceptions.ValidationError('No name specified')
+        if not label.strip():
+            raise exceptions.ValidationError('No label specified')
 
     @classmethod
     def _hostname_validator(cls, hostname):
@@ -300,6 +210,7 @@ class Computer(entities.Entity):
         if not self.label.strip():
             raise exceptions.ValidationError('No name specified')
 
+        self._label_validator(self.label)
         self._hostname_validator(self.hostname)
         self._description_validator(self.description)
         self._transport_type_validator(self.transport_type)
@@ -350,7 +261,7 @@ class Computer(entities.Entity):
 
         :return: the label.
         """
-        return self._backend_entity.name
+        return self._backend_entity.label
 
     @label.setter
     def label(self, value: str):
@@ -358,7 +269,7 @@ class Computer(entities.Entity):
 
         :param value: the label to set.
         """
-        self._backend_entity.set_name(value)
+        self._backend_entity.set_label(value)
 
     @property
     def description(self) -> str:
@@ -600,7 +511,15 @@ class Computer(entities.Entity):
         """
         from . import authinfos
 
-        return authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.id, aiidauser_id=user.id)
+        try:
+            authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.id, aiidauser_id=user.id)
+        except exceptions.NotExistent as exc:
+            raise exceptions.NotExistent(
+                f'Computer `{self.label}` (ID={self.id}) not configured for user `{user.get_short_name()}` '
+                f'(ID={user.id}) - use `verdi computer configure` first'
+            ) from exc
+
+        return authinfo
 
     def is_user_configured(self, user):
         """
@@ -738,254 +657,3 @@ class Computer(entities.Entity):
             pass
 
         return config
-
-    @property
-    def name(self):
-        """Return the computer name.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
-        """
-        warnings.warn('this property is deprecated, use the `label` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.label
-
-    def get_name(self):
-        """Return the computer name.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
-        """
-        warnings.warn('this property is deprecated, use the `label` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.label
-
-    def set_name(self, val):
-        """Set the computer name.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
-        """
-        warnings.warn('this method is deprecated, use the `label` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.label = val
-
-    def get_hostname(self):
-        """Get this computer hostname
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `hostname` property instead.
-
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `hostname` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.hostname
-
-    def set_hostname(self, val):
-        """
-        Set the hostname of this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `hostname` property instead.
-
-        :param val: The new hostname
-        :type val: str
-        """
-        warnings.warn('this method is deprecated, use the `hostname` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.hostname = val
-
-    def get_description(self):
-        """
-        Get the description for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `description` property instead.
-
-        :return: the description
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `description` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.description
-
-    def set_description(self, val):
-        """
-        Set the description for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `description` property instead.
-
-        :param val: the new description
-        :type val: str
-        """
-        warnings.warn('this method is deprecated, use the `description` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.description = val
-
-    def get_scheduler_type(self):
-        """
-        Get the scheduler type for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `scheduler_type` property instead.
-
-        :return: the scheduler type
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `scheduler_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.scheduler_type
-
-    def set_scheduler_type(self, scheduler_type):
-        """
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `scheduler_type` property instead.
-
-        :param scheduler_type: the new scheduler type
-        """
-        warnings.warn('this method is deprecated, use the `scheduler_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self._scheduler_type_validator(scheduler_type)
-        self.scheduler_type = scheduler_type
-
-    def get_transport_type(self):
-        """
-        Get the current transport type for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `transport_type` property instead.
-
-        :return: the transport type
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `transport_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.transport_type
-
-    def set_transport_type(self, transport_type):
-        """
-        Set the transport type for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `transport_type` property instead.
-
-        :param transport_type: the new transport type
-        :type transport_type: str
-        """
-        warnings.warn('this method is deprecated, use the `transport_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.transport_type = transport_type
-
-    def get_metadata(self):
-        """
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `metadata` property instead.
-
-        """
-        warnings.warn('this method is deprecated, use the `metadata` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.metadata
-
-    def set_metadata(self, metadata):
-        """
-        Set the metadata.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `metadata` property instead.
-
-        .. note: You still need to call the .store() method to actually save
-           data to the database! (The store method can be called multiple
-           times, differently from AiiDA Node objects).
-        """
-        warnings.warn('this method is deprecated, use the `metadata` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.metadata = metadata
-
-    @staticmethod
-    def get_schema():
-        """
-        Every node property contains:
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the computer
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
-
-        """
-        message = 'method is deprecated, use' \
-            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return {
-            'description': {
-                'display_name': 'Description',
-                'help_text': 'short description of the Computer',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'hostname': {
-                'display_name': 'Host',
-                'help_text': 'Name of the host',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'id': {
-                'display_name': 'Id',
-                'help_text': 'Id of the object',
-                'is_foreign_key': False,
-                'type': 'int'
-            },
-            'name': {
-                'display_name': 'Name',
-                'help_text': 'Name of the object',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'scheduler_type': {
-                'display_name': 'Scheduler',
-                'help_text': 'Scheduler type',
-                'is_foreign_key': False,
-                'type': 'str',
-                'valid_choices': {
-                    'direct': {
-                        'doc': 'Support for the direct execution bypassing schedulers.'
-                    },
-                    'pbsbaseclasses.PbsBaseClass': {
-                        'doc': 'Base class with support for the PBSPro scheduler'
-                    },
-                    'pbspro': {
-                        'doc': 'Subclass to support the PBSPro scheduler'
-                    },
-                    'sge': {
-                        'doc':
-                        'Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, '
-                        'Oracle Grid Engine, ...)'
-                    },
-                    'slurm': {
-                        'doc': 'Support for the SLURM scheduler (http://slurm.schedmd.com/).'
-                    },
-                    'torque': {
-                        'doc': 'Subclass to support the Torque scheduler.'
-                    }
-                }
-            },
-            'transport_type': {
-                'display_name': 'Transport type',
-                'help_text': 'Transport Type',
-                'is_foreign_key': False,
-                'type': 'str',
-                'valid_choices': {
-                    'local': {
-                        'doc':
-                        'Support copy and command execution on the same host on which AiiDA is running via direct '
-                        'file copy and execution commands.'
-                    },
-                    'ssh': {
-                        'doc':
-                        'Support connection, command execution and data transfer to remote computers via SSH+SFTP.'
-                    }
-                }
-            },
-            'uuid': {
-                'display_name': 'Unique ID',
-                'help_text': 'Universally Unique Identifier',
-                'is_foreign_key': False,
-                'type': 'unicode'
-            }
-        }

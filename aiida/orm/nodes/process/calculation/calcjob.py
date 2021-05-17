@@ -11,14 +11,11 @@
 import datetime
 from typing import Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 from typing import TYPE_CHECKING
-import warnings
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.common.folders import Folder
-from aiida.common.warnings import AiidaDeprecationWarning
 
 from .calculation import CalculationNode
 
@@ -44,15 +41,11 @@ class CalcJobNode(CalculationNode):
     REMOTE_WORKDIR_KEY = 'remote_workdir'
     RETRIEVE_LIST_KEY = 'retrieve_list'
     RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
-    RETRIEVE_SINGLE_FILE_LIST_KEY = 'retrieve_singlefile_list'
     SCHEDULER_JOB_ID_KEY = 'job_id'
     SCHEDULER_STATE_KEY = 'scheduler_state'
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
-
-    # Base path within the repository where to put objects by default
-    _repository_base_path = 'raw_input'
 
     # An optional entry point for a CalculationTools instance
     _tools = None
@@ -95,7 +88,6 @@ class CalcJobNode(CalculationNode):
             cls.REMOTE_WORKDIR_KEY,
             cls.RETRIEVE_LIST_KEY,
             cls.RETRIEVE_TEMPORARY_LIST_KEY,
-            cls.RETRIEVE_SINGLE_FILE_LIST_KEY,
             cls.SCHEDULER_JOB_ID_KEY,
             cls.SCHEDULER_STATE_KEY,
             cls.SCHEDULER_LAST_CHECK_TIME_KEY,
@@ -153,26 +145,7 @@ class CalcJobNode(CalculationNode):
         """
         builder = super().get_builder_restart()
         builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
-
         return builder
-
-    @property
-    def _raw_input_folder(self) -> Folder:
-        """
-        Get the input folder object.
-
-        :return: the input folder object.
-        :raise: NotExistent: if the raw folder hasn't been created yet
-        """
-        from aiida.common.exceptions import NotExistent
-
-        assert self._repository is not None, 'repository not initialised'
-
-        return_folder = self._repository._get_base_folder()  # pylint: disable=protected-access
-        if return_folder.exists():
-            return return_folder
-
-        raise NotExistent('the `_raw_input_folder` has not yet been created')
 
     def get_option(self, name: str) -> Optional[Any]:
         """
@@ -333,46 +306,6 @@ class CalcJobNode(CalculationNode):
         """
         return self.get_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
 
-    def set_retrieve_singlefile_list(self, retrieve_singlefile_list):
-        """Set the retrieve singlefile list.
-
-        The files will be stored as `SinglefileData` instances and added as output nodes to this calculation node.
-        The format of a single file directive is a tuple or list of length 3 with the following entries:
-
-            1. the link label under which the file should be added
-            2. the `SinglefileData` class or sub class to use to store
-            3. the filepath relative to the remote working directory of the calculation
-
-        :param retrieve_singlefile_list: list or tuple of single file directives
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_retrieve_temporary_list` instead.
-
-        """
-        warnings.warn('method is deprecated, use `set_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if not isinstance(retrieve_singlefile_list, (tuple, list)):
-            raise TypeError('retrieve_singlefile_list has to be a list or tuple')
-
-        for j in retrieve_singlefile_list:
-            if not isinstance(j, (tuple, list)) or not all(isinstance(i, str) for i in j):
-                raise ValueError('You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list')
-
-        self.set_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, retrieve_singlefile_list)
-
-    def get_retrieve_singlefile_list(self):
-        """Return the list of files to be retrieved on the cluster after the calculation has completed.
-
-        :return: list of single file retrieval directives
-
-        .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use
-            :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_retrieve_temporary_list` instead.
-        """
-        return self.get_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, None)
-
     def set_job_id(self, job_id: Union[int, str]) -> None:
         """Set the job id that was assigned to the calculation by the scheduler.
 
@@ -485,7 +418,7 @@ class CalcJobNode(CalculationNode):
         if computer is None:
             raise exceptions.NotExistent('No computer has been set for this calculation')
 
-        return computer.get_authinfo(self.user)
+        return computer.get_authinfo(self.user)  # pylint: disable=no-member
 
     def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.

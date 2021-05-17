@@ -13,7 +13,7 @@ collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
 import numpy as np
-from aiida.common.exceptions import InputValidationError, NotExistent
+from aiida.common.exceptions import NotExistent
 from .array import ArrayData
 
 
@@ -43,19 +43,19 @@ class XyData(ArrayData):
     def _arrayandname_validator(array, name, units):
         """
         Validates that the array is an numpy.ndarray and that the name is
-        of type str. Raises InputValidationError if this not the case.
+        of type str. Raises TypeError or ValueError if this not the case.
         """
         if not isinstance(name, str):
-            raise InputValidationError('The name must always be a str.')
+            raise TypeError('The name must always be a str.')
 
         if not isinstance(array, np.ndarray):
-            raise InputValidationError('The input array must always be a numpy array')
+            raise TypeError('The input array must always be a numpy array')
         try:
             array.astype(float)
-        except ValueError:
-            raise InputValidationError('The input array must only contain floats')
+        except ValueError as exc:
+            raise TypeError('The input array must only contain floats') from exc
         if not isinstance(units, str):
-            raise InputValidationError('The units must always be a str.')
+            raise TypeError('The units must always be a str.')
 
     def set_x(self, x_array, x_name, x_units):
         """
@@ -86,20 +86,20 @@ class XyData(ArrayData):
 
         # checks that the input lengths match
         if len(y_arrays) != len(y_names):
-            raise InputValidationError('Length of arrays and names do not match!')
+            raise ValueError('Length of arrays and names do not match!')
         if len(y_units) != len(y_names):
-            raise InputValidationError('Length of units does not match!')
+            raise ValueError('Length of units does not match!')
 
         # Try to get the x_array
         try:
             x_array = self.get_x()[1]
-        except NotExistent:
-            raise InputValidationError('X array has not been set yet')
+        except NotExistent as exc:
+            raise ValueError('X array has not been set yet') from exc
         # validate each of the y_arrays
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise InputValidationError(f'y_array {y_name} did not have the same shape has the x_array!')
+                raise ValueError(f'y_array {y_name} did not have the same shape has the x_array!')
             self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each

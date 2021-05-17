@@ -24,6 +24,8 @@ py:class EntityType
 py:class function
 py:class IO
 py:class traceback
+py:class _io.BufferedReader
+py:class BinaryIO
 
 ### AiiDA
 
@@ -59,6 +61,7 @@ py:class ProcessNode
 py:class ProcessSpec
 py:class Port
 py:class PortNamespace
+py:class Repository
 py:class Runner
 py:class Transport
 py:class TransportQueue
@@ -105,6 +108,8 @@ py:class IPython.core.magic.Magics
 
 py:class HTMLParser.HTMLParser
 py:class html.parser.HTMLParser
+
+py:class disk_objectstore.container.Container
 
 py:class django.contrib.auth.base_user.AbstractBaseUser
 py:class django.contrib.auth.base_user.BaseUserManager

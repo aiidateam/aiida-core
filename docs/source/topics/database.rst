@@ -14,7 +14,7 @@ Database
 Advanced querying
 =================
 
-The basics on using the :class:`~aiida.orm.querybuilder.QueryBuilder` to find the data you are interested in is explained in the :ref:`finding and querying how-to<how-to:data:find>`.
+The basics on using the :class:`~aiida.orm.querybuilder.QueryBuilder` to find the data you are interested in is explained in the :ref:`finding and querying how-to<how-to:query>`.
 This section explains some more advanced methods for querying your database and the :ref:`queryhelp dictionary<topics:database:advancedquery>`.
 
 .. _topics:database:advancedquery:edges:
@@ -227,7 +227,7 @@ The queryhelp
 -------------
 
 The ``queryhelp`` dictionary is a property of the :class:`~aiida.orm.querybuilder.QueryBuilder` class.
-Once you have built your query using the appender method explained in the :ref:`finding and querying for data how-to<how-to:data:find>` and the advanced sections above, you can easily store your query by saving the ``QueryBuilder.queryhelp`` dictionary as a JSON file for later use:
+Once you have built your query using the appender method explained in the :ref:`finding and querying for data how-to<how-to:query>` and the advanced sections above, you can easily store your query by saving the ``QueryBuilder.queryhelp`` dictionary as a JSON file for later use:
 
 .. code-block:: python
 

@@ -79,6 +79,7 @@ class AiidaTestCase(unittest.TestCase):
         cls._class_was_setup = True
 
         cls.refurbish_db()
+        cls.initialise_repository()
 
     @classmethod
     def tearDownClass(cls):
@@ -137,6 +138,14 @@ class AiidaTestCase(unittest.TestCase):
         reset_manager()
 
     @classmethod
+    def initialise_repository(cls):
+        """Initialise the repository"""
+        from aiida.manage.configuration import get_profile
+        profile = get_profile()
+        repository = profile.get_repository()
+        repository.initialise(clear=True, **profile.defaults['repository'])
+
+    @classmethod
     def refurbish_db(cls):
         """Clean up database and repopulate with initial data.
 
@@ -168,6 +177,7 @@ class AiidaTestCase(unittest.TestCase):
         # Clean the test repository
         shutil.rmtree(dirpath_repository, ignore_errors=True)
         os.makedirs(dirpath_repository)
+        cls.initialise_repository()
 
     @classproperty
     def computer(cls):  # pylint: disable=no-self-argument

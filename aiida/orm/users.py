@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ORM user class."""
-
-import warnings
-
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
 
 from . import entities
@@ -156,58 +152,3 @@ class User(entities.Entity):
         :return: The short name
         """
         return self.email
-
-    @staticmethod
-    def get_schema():
-        """
-        Every node property contains:
-
-          - display_name: display name of the property
-          - help text: short help text of the property
-          - is_foreign_key: is the property foreign key to other type of the node
-          - type: type of the property. e.g. str, dict, int
-
-        :return: schema of the user
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
-
-        """
-        message = 'method is deprecated, use' \
-            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return {
-            'id': {
-                'display_name': 'Id',
-                'help_text': 'Id of the object',
-                'is_foreign_key': False,
-                'type': 'int'
-            },
-            'email': {
-                'display_name': 'email',
-                'help_text': 'e-mail of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'first_name': {
-                'display_name': 'First name',
-                'help_text': 'First name of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'institution': {
-                'display_name': 'Institution',
-                'help_text': 'Affiliation of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'last_name': {
-                'display_name': 'Last name',
-                'help_text': 'Last name of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            }
-        }

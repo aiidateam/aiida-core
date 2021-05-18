@@ -12,9 +12,11 @@
 import glob
 import io
 import os
+import re
 from stat import S_ISDIR, S_ISREG
 
 import click
+import paramiko
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
@@ -33,7 +35,6 @@ def parse_sshconfig(computername):
 
     :param computername: the computer name for which we want the configuration.
     """
-    import paramiko
     config = paramiko.SSHConfig()
     try:
         with open(os.path.expanduser('~/.ssh/config'), encoding='utf8') as fhandle:
@@ -119,11 +120,28 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             }
         ),
         (
+            'proxy_jump', {
+                'prompt':
+                'SSH proxy jump',
+                'help':
+                'SSH proxy jump for tunneling through other SSH hosts.'
+                ' Use a comma-separated list of hosts of the form [user@]host[:port].'
+                ' If user or port are not specified for a host, the user & port values from the target host are used.'
+                ' This option must be provided explicitly and is not parsed from the SSH config file when left empty.',
+                'non_interactive_default':
+                True
+            }
+        ),  # Managed 'manually' in connect
+        (
             'proxy_command', {
-                'prompt': 'SSH proxy command',
-                'help': 'SSH proxy command for tunneling through a proxy server.'
+                'prompt':
+                'SSH proxy command',
+                'help':
+                'SSH proxy command for tunneling through a proxy server.'
+                ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!'
                 ' Leave empty to parse the proxy command from the SSH config file.',
-                'non_interactive_default': True
+                'non_interactive_default':
+                True
             }
         ),  # Managed 'manually' in connect
         (
@@ -310,6 +328,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return ' '.join(new_pieces)
 
     @classmethod
+    def _get_proxy_jump_suggestion_string(cls, _):
+        """
+        Return an empty suggestion since Paramiko does not parse ProxyJump from the SSH config.
+        """
+        return ''
+
+    @classmethod
     def _get_compress_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
         Return a suggestion for the specific field.
@@ -377,11 +402,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.
         """
-        import paramiko
         super().__init__(*args, **kwargs)
 
         self._sftp = None
         self._proxy = None
+        self._proxies = []
 
         self._machine = kwargs.pop('machine')
 
@@ -410,7 +435,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             except KeyError:
                 pass
 
-    def open(self):
+    def open(self):  # pylint: disable=too-many-branches,too-many-statements
         """
         Open a SSHClient to the machine possibly using the parameters given
         in the __init__.
@@ -420,6 +445,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         :raise aiida.common.InvalidOperation: if the channel is already open
         """
+        from paramiko.ssh_exception import SSHException
         from aiida.common.exceptions import InvalidOperation
         from aiida.transports.util import _DetachedProxyCommand
 
@@ -429,9 +455,65 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         connection_arguments = self._connect_args.copy()
         if 'key_filename' in connection_arguments and not connection_arguments['key_filename']:
             connection_arguments.pop('key_filename')
-        proxystring = connection_arguments.pop('proxy_command', None)
-        if proxystring:
-            self._proxy = _DetachedProxyCommand(proxystring)
+
+        proxyjumpstring = connection_arguments.pop('proxy_jump', None)
+        proxycmdstring = connection_arguments.pop('proxy_command', None)
+
+        if proxyjumpstring and proxycmdstring:
+            raise ValueError('The SSH proxy jump and SSH proxy command options can not be used together')
+
+        if proxyjumpstring:
+            matcher = re.compile(r'^(?:(?P<username>[^@]+)@)?(?P<host>[^@:]+)(?::(?P<port>\d+))?\s*$')
+            try:
+                # don't use a generator here to have everything evaluated
+                proxies = [matcher.match(s).groupdict() for s in proxyjumpstring.split(',')]
+            except AttributeError:
+                raise ValueError('The given configuration for the SSH proxy jump option could not be parsed')
+
+            # proxy_jump supports a list of jump hosts, each jump host is another Paramiko SSH connection
+            # but when opening a forward channel on a connection, we have to give the next hop.
+            # So we go through adjacent pairs and by adding the final target to the list we make it universal.
+            for proxy, target in zip(
+                proxies, proxies[1:] + [{
+                    'host': self._machine,
+                    'port': connection_arguments.get('port', 22),
+                }]
+            ):
+                proxy_connargs = connection_arguments.copy()
+
+                if proxy['username']:
+                    proxy_connargs['username'] = proxy['username']
+                if proxy['port']:
+                    proxy_connargs['port'] = int(proxy['port'])
+                if not target['port']:  # the target port for the channel can not be None
+                    target['port'] = connection_arguments.get('port', 22)
+
+                proxy_client = paramiko.SSHClient()
+                if self._load_system_host_keys:
+                    proxy_client.load_system_host_keys()
+                if self._missing_key_policy == 'RejectPolicy':
+                    proxy_client.set_missing_host_key_policy(paramiko.RejectPolicy())
+                elif self._missing_key_policy == 'WarningPolicy':
+                    proxy_client.set_missing_host_key_policy(paramiko.WarningPolicy())
+                elif self._missing_key_policy == 'AutoAddPolicy':
+                    proxy_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+                try:
+                    proxy_client.connect(proxy['host'], **proxy_connargs)
+                except Exception as exc:
+                    self.logger.error(
+                        f"Error connecting to proxy '{proxy['host']}' through SSH: [{self.__class__.__name__}] {exc}, "
+                        f'connect_args were: {proxy_connargs}'
+                    )
+                    self._close_proxies()  # close all since we're going to start anew on the next open() (if any)
+                    raise
+                connection_arguments['sock'] = proxy_client.get_transport().open_channel(
+                    'direct-tcpip', (target['host'], target['port']), ('', 0)
+                )
+                self._proxies.append(proxy_client)
+
+        if proxycmdstring:
+            self._proxy = _DetachedProxyCommand(proxycmdstring)
             connection_arguments['sock'] = self._proxy
 
         try:
@@ -441,22 +523,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 f"Error connecting to '{self._machine}' through SSH: " + f'[{self.__class__.__name__}] {exc}, ' +
                 f'connect_args were: {self._connect_args}'
             )
+            self._close_proxies()
             raise
 
-        # Open also a File transport client. SFTP by default, pure SSH in ssh_only
-        self.open_file_transport()
-
-        return self
-
-    def open_file_transport(self):
-        """
-        Open the SFTP channel, and handle error by directing customer to try another transport
-        """
-        from aiida.common.exceptions import InvalidOperation
-        from paramiko.ssh_exception import SSHException
+        # Open the SFTP channel, and handle error by directing customer to try another transport
         try:
             self._sftp = self._client.open_sftp()
         except SSHException:
+            self._close_proxies()
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
                 'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
@@ -466,6 +540,21 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         # Set the current directory to a explicit path, and not to None
         self._sftp.chdir(self._sftp.normalize('.'))
+
+        return self
+
+    def _close_proxies(self):
+        """Close all proxy connections (proxy_jump and proxy_command)"""
+
+        # Paramiko only closes the channel when closing the main connection, but not the connection itself.
+        while self._proxies:
+            self._proxies.pop().close()
+
+        if self._proxy:
+            # Paramiko should close this automatically when closing the channel,
+            # but since the process is started in __init__this might not happen correctly.
+            self._proxy.close()
+            self._proxy = None
 
     def close(self):
         """
@@ -482,6 +571,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         self._sftp.close()
         self._client.close()
+        self._close_proxies()
+
         self._is_open = False
 
     @property
@@ -1156,7 +1247,6 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         if not pattern:
             return os.listdir(path)
-        import re
         if path.startswith('/'):  # always this is the case in the local case
             base_dir = path
         else:
@@ -1177,7 +1267,6 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         if not pattern:
             return self.sftp.listdir(path)
-        import re
         if path.startswith('/'):
             base_dir = path
         else:
@@ -1334,13 +1423,16 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if 'username' in self._connect_args:
             further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
 
-        if 'port' in self._connect_args and self._connect_args['port']:
+        if self._connect_args.get('port'):
             further_params.append(f"-p {self._connect_args['port']}")
 
-        if 'key_filename' in self._connect_args and self._connect_args['key_filename']:
+        if self._connect_args.get('key_filename'):
             further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
 
-        if 'proxy_command' in self._connect_args and self._connect_args['proxy_command']:
+        if self._connect_args.get('proxy_jump'):
+            further_params.append(f"-o ProxyJump={escape_for_bash(self._connect_args['proxy_jump'])}")
+
+        if self._connect_args.get('proxy_command'):
             further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
 
         further_params_str = ' '.join(further_params)

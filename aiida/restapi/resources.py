@@ -276,9 +276,7 @@ class QueryBuilder(BaseResource):
 
         try:
             self.trans._query_help = querybuilder_schema(request.get_json(force=True))
-
         except MultipleInvalid as error:
-
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
             return self.utils.build_response(

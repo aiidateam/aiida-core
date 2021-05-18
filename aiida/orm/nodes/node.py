@@ -197,7 +197,8 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
-            msg = f'class `{self.__module__}:{self.__class__.__name__}` does not have registered entry point'
+            msg = f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point.' \
+             + ' Consider running `reentry scan`.'
             raise exceptions.StoringNotAllowed(msg)
 
     @classproperty

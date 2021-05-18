@@ -12,6 +12,7 @@ from urllib.parse import unquote
 
 from flask import request, make_response
 from flask_restful import Resource
+from voluptuous import Schema, Any, MultipleInvalid
 
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
@@ -263,7 +264,39 @@ class QueryBuilder(BaseResource):
         :return: QueryBuilder result of AiiDA entities in "standard" REST API format.
         """
         # pylint: disable=protected-access
-        self.trans._query_help = request.get_json(force=True)
+
+        querybuilder_schema = Schema({
+            'path': list,
+            'filters': dict,
+            'project': dict,
+            'order_by': Any(None, list),
+            'limit': Any(None, int),
+            'offset': Any(None, int),
+        })
+
+        try:
+            self.trans._query_help = querybuilder_schema(request.get_json(force=True))
+
+        except MultipleInvalid as error:
+
+            headers = self.utils.build_headers(url=request.url, total_count=1)
+
+            return self.utils.build_response(
+                status=400,
+                headers=headers,
+                data={
+                    'method': request.method,
+                    'url': unquote(request.url),
+                    'url_root': unquote(request.url_root),
+                    'path': unquote(request.path),
+                    'query_string': request.query_string.decode('utf-8'),
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': str(error)
+                    },
+                },
+            )
+
         # While the data may be correct JSON, it MUST be a single JSON Object,
         # equivalent of a QuieryBuilder.queryhelp dictionary.
         assert isinstance(self.trans._query_help, dict), (

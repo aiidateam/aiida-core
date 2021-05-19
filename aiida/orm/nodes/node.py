@@ -197,11 +197,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
-            msg = f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point.' \
-             + ' Consider running `reentry scan`.' \
-             + ' If the issue persists, check that the corresponding plugin is installed ' \
-             + 'and that the entry point shows up in `verdi plugin list`.'
-            raise exceptions.StoringNotAllowed(msg)
+            raise exceptions.StoringNotAllowed(
+                f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
+                'Consider running `reentry scan`. If the issue persists, check that the corresponding plugin is '
+                'installed and that the entry point shows up in `verdi plugin list`.'
+            )
 
     @classproperty
     def class_node_type(cls) -> str:

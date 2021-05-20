@@ -1,0 +1,188 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "description": "Schema for POST requests to /querybuilder",
+    "type": "object",
+    "definitions": {
+      "path_object": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "joining_keyword": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "joining_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outerjoin": {
+            "type": "boolean"
+          },
+          "edge_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "edge_tag",
+          "entity_type",
+          "joining_keyword",
+          "joining_value",
+          "outerjoin",
+          "tag"
+        ]
+      },
+      "FiltersCalc": {
+        "type": "object",
+        "properties": {
+          "node_type": {
+            "$ref": "#/definitions/NodeType"
+          }
+        },
+        "required": [
+          "node_type"
+        ]
+      },
+      "NodeType": {
+        "type": "object",
+        "properties": {
+          "like": {
+            "type": "string"
+          }
+        },
+        "title": "NodeType"
+      },
+      "OrderBy": {
+        "type": "object",
+        "properties": {
+          "calc": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/OrderByCalc"
+            }
+          }
+        }
+      },
+      "OrderByCalc": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/ID"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "OrderByCalc"
+      },
+      "Calc": {
+        "type": "object"
+      },
+      "ID": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "required": [
+      "path",
+      "filters",
+      "order_by",
+      "limit",
+      "offset",
+      "project"
+    ],
+    "properties": {
+      "path": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/path_object"
+        }
+      },
+      "filters": {
+        "type": "object",
+        "properties": {
+          "calc": {
+            "$ref": "#/definitions/FiltersCalc"
+          }
+        }
+      },
+      "order_by": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/OrderBy"
+        }
+      },
+      "project": {
+        "type": "object",
+        "properties": {
+          "calc": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Calc"
+            }
+          }
+        }
+      },
+      "limit": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "offset": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    }
+  }

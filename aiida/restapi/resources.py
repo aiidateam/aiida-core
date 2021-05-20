@@ -9,14 +9,28 @@
 ###########################################################################
 """ Resources for REST API """
 from urllib.parse import unquote
+from functools import lru_cache
+from importlib import resources
 
 from flask import request, make_response
 from flask_restful import Resource
-from voluptuous import Schema, Any, MultipleInvalid
 
+import jsonschema
+
+from aiida.common import json
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.restapi.common.utils import Utils, close_session
+
+from . import schema as schema_module
+
+SCHEMA_FILE = 'querybuilder.schema.json'
+
+
+@lru_cache(1)
+def config_schema():
+    """Return the configuration schema."""
+    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
 
 
 class ServerInfo(Resource):
@@ -265,18 +279,12 @@ class QueryBuilder(BaseResource):
         """
         # pylint: disable=protected-access
 
-        querybuilder_schema = Schema({
-            'path': list,
-            'filters': dict,
-            'project': dict,
-            'order_by': Any(None, list),
-            'limit': Any(None, int),
-            'offset': Any(None, int),
-        })
+        self.trans._query_help = request.get_json(force=True)
 
         try:
-            self.trans._query_help = querybuilder_schema(request.get_json(force=True))
-        except MultipleInvalid as error:
+            jsonschema.validate(instance=self.trans._query_help, schema=config_schema())
+
+        except jsonschema.ValidationError as error:
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
             return self.utils.build_response(
@@ -290,7 +298,7 @@ class QueryBuilder(BaseResource):
                     'query_string': request.query_string.decode('utf-8'),
                     'resource_type': self.__class__.__name__,
                     'data': {
-                        'message': str(error)
+                        'message': error.message
                     },
                 },
             )

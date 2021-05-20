@@ -68,8 +68,7 @@
             "flask~=1.1",
             "pyparsing~=2.4",
             "python-memcached~=1.59",
-            "seekpath~=1.9,>=1.9.3",
-            "voluptuous~=0.12.1"
+            "seekpath~=1.9,>=1.9.3"
         ],
         "docs": [
             "docutils==0.15.2",

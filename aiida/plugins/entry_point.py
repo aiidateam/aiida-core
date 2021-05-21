@@ -11,16 +11,35 @@
 import enum
 import traceback
 import functools
-
-try:
-    from reentry.default_manager import PluginManager
-    # I don't use the default manager as it has scan_for_not_found=True
-    # by default, which re-runs scan if no entrypoints are found
-    ENTRYPOINT_MANAGER = PluginManager(scan_for_not_found=False)
-except ImportError:
-    import pkg_resources as ENTRYPOINT_MANAGER
+import importlib
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+# try:
+#     from reentry.default_manager import PluginManager
+#     # I don't use the default manager as it has scan_for_not_found=True
+#     # by default, which re-runs scan if no entrypoints are found
+#     ENTRYPOINT_MANAGER = PluginManager(scan_for_not_found=False)
+# except ImportError:
+#     import pkg_resources as ENTRYPOINT_MANAGER
+
+
+class EPManager:
+    """Entrypoint manager class
+
+    Replaces former class from reentry
+    """
+
+    def __init__(self):
+        self._map = None
+
+    def get_entry_point_map(self):
+        if self._map is None:
+            self._map = importlib.metadata.entry_points()
+
+        return self._map
+
+
+ENTRYPOINT_MANAGER = EPManager()
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string')
 
@@ -219,7 +238,7 @@ def get_entry_point_groups():
 
     :return: a list of valid entry point groups
     """
-    return ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()
+    return list(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys())
 
 
 def get_entry_point_names(group, sort=True):
@@ -238,6 +257,14 @@ def get_entry_point_names(group, sort=True):
     return entry_point_names
 
 
+def get_entry_point_map():
+    """
+    Return a dictionary of all entry point groups (=key) and entry points (=values).
+    :return: dictionary of all entry points
+    """
+    return ENTRYPOINT_MANAGER.get_entry_point_map()
+
+
 @functools.lru_cache(maxsize=None)
 def get_entry_points(group):
     """
@@ -246,7 +273,10 @@ def get_entry_points(group):
     :param group: the entry point group
     :return: a list of entry points
     """
-    return list(ENTRYPOINT_MANAGER.iter_entry_points(group=group))
+    try:
+        return get_entry_point_map()[group]
+    except KeyError:
+        return []
 
 
 @functools.lru_cache(maxsize=None)
@@ -285,10 +315,11 @@ def get_entry_point_from_class(class_module, class_name):
     :param class_name: name of the class
     :return: a tuple of the corresponding group and entry point or None if not found
     """
-    for group in ENTRYPOINT_MANAGER.get_entry_map().keys():
-        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
+    entry_points = get_entry_point_map()
+    for group in entry_points:
+        for entry_point in entry_points[group]:
 
-            if entry_point.module_name != class_module:
+            if entry_point.value != class_module:
                 continue
 
             for entry_point_class_name in entry_point.attrs:
@@ -357,8 +388,9 @@ def is_registered_entry_point(class_module, class_name, groups=None):
     if groups is None:
         groups = list(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys())
 
+    entry_points = get_entry_point_map()
     for group in groups:
-        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
+        for entry_point in entry_points[group]:
             if class_module == entry_point.module_name and [class_name] == entry_point.attrs:
                 return True
     return False

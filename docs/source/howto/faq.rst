@@ -13,15 +13,16 @@ First, make sure that your daemon is not running.
 You can check this with ``verdi daemon status``.
 If you find that your daemon was actually still running, that is likely the problem, so stop it first using ``verdi daemon stop``.
 It is very important that each time you want to :ref:`update your AiiDA installation<how-to:installation:update>`, you should *always* first finish all running processes and stop the daemon before doing so.
-After you have stopped the daemon, make sure to run ``reentry scan`` before you restart the daemon with ``verdi daemon start``.
 
 
 I get a :py:class:`~aiida.common.exceptions.MissingEntryPointError` or :py:class:`~aiida.common.exceptions.MultipleEntryPointError` exception, saying that a particular entry point cannot be found. How can I fix this?
 ========================================================================================================================================================================================================================
-Often this is caused by an outdated entry point cache.
-This can happen for example when you have updated your AiiDA installation or installed a new plugin using ``pip install``.
+This can be caused by an outdated entry point cache, for example when you have updated your AiiDA installation or installed a new plugin using ``pip install``.
 In both cases, you can fix the problem by running ``reentry scan``.
 Make sure to also restart all daemons, to ensure that the changes are picked up by the daemons as well.
+
+.. note::
+    AiiDA 2.0 has dropped the ``reentry`` dependency and this issue should no longer occur.
 
 
 I have updated the code of a :py:class:`~aiida.engine.processes.workchains.WorkChain`, :py:class:`~aiida.engine.processes.calcjobs.CalcJob` or whatever other Python code, but the daemon does not seem to pick up the changes?

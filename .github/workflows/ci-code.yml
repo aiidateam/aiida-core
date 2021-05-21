@@ -23,7 +23,7 @@ jobs:
         python-version: 3.8
 
     - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1
 
     - name: Check requirements files
       id: check_reqs
@@ -98,7 +98,6 @@ jobs:
       run: |
         pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip install --use-feature=2020-resolver --no-deps -e .
-        reentry scan
         pip freeze
 
     - name: Setup environment

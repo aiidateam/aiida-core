@@ -12,15 +12,11 @@ import enum
 import traceback
 import functools
 import importlib
+from importlib.metadata import EntryPoint
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
-# try:
-#     from reentry.default_manager import PluginManager
-#     # I don't use the default manager as it has scan_for_not_found=True
-#     # by default, which re-runs scan if no entrypoints are found
-#     ENTRYPOINT_MANAGER = PluginManager(scan_for_not_found=False)
-# except ImportError:
-#     import pkg_resources as ENTRYPOINT_MANAGER
+
+__all__ = ('load_entry_point', 'load_entry_point_from_string', 'EntryPoint')
 
 
 class EPManager:
@@ -40,8 +36,6 @@ class EPManager:
 
 
 ENTRYPOINT_MANAGER = EPManager()
-
-__all__ = ('load_entry_point', 'load_entry_point_from_string')
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
@@ -293,16 +287,10 @@ def get_entry_point(group, name):
     entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
 
     if not entry_points:
-        raise MissingEntryPointError(
-            "Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
-            'the entry point cache.'.format(name, group)
-        )
+        raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
 
     if len(entry_points) > 1:
-        raise MultipleEntryPointError(
-            "Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
-            'repopulate the entry point cache.'.format(name, group)
-        )
+        raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}'.")
 
     return entry_points[0]
 
@@ -391,6 +379,6 @@ def is_registered_entry_point(class_module, class_name, groups=None):
     entry_points = get_entry_point_map()
     for group in groups:
         for entry_point in entry_points[group]:
-            if class_module == entry_point.module_name and [class_name] == entry_point.attrs:
+            if class_module == entry_point.module and [class_name] == entry_point.attr:
                 return True
     return False

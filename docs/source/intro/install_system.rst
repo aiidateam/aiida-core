@@ -151,7 +151,6 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
           $ python -m pip venv ~/envs/aiida
           $ source ~/envs/aiida/bin/activate
           (aiida) $ pip install aiida-core
-          (aiida) $ reentry scan
 
       .. tip::
 
@@ -197,7 +196,6 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
              $ conda create -n aiida -c conda-forge aiida-core
              $ conda activate aiida
-             (aiida) $ reentry scan
 
    .. tabbed:: From source
 
@@ -212,7 +210,6 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
           $ python -m pip venv ~/envs/aiida
           $ source ~/envs/aiida/bin/activate
           (aiida) $ pip install .
-          (aiida) $ reentry scan
 
    ---
 

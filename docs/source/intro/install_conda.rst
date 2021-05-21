@@ -22,7 +22,6 @@ This is the recommended method for users on shared systems and systems where the
 
        $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
        $ conda activate aiida
-       (aiida) $ reentry scan
 
    ---
 

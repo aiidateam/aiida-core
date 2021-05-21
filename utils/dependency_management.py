@@ -21,7 +21,6 @@ from packaging.utils import canonicalize_name
 
 import click
 import yaml
-import tomlkit as toml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -161,49 +160,10 @@ def generate_environment_yml():
 
 
 @cli.command()
-def update_pyproject_toml():
-    """Generate a 'pyproject.toml' file, or update an existing one.
-
-    This function generates/updates the ``build-system`` section,
-    to be consistent with the 'setup.json' file.
-    """
-
-    # read the current file
-    toml_path = ROOT / 'pyproject.toml'
-    if toml_path.exists():
-        pyproject = toml.loads(toml_path.read_text(encoding='utf8'))
-    else:
-        pyproject = {}
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
-
-    # update the build-system key
-    pyproject.setdefault('build-system', {})
-    pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0', 'wheel',
-                     str(reentry_requirement), 'fastentrypoints~=0.12'],
-        'build-backend':
-        'setuptools.build_meta',
-    })
-
-    # write the new file
-    toml_path.write_text(toml.dumps(pyproject), encoding='utf8')
-
-
-@cli.command()
 @click.pass_context
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(update_pyproject_toml)
 
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
@@ -277,34 +237,6 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     click.secho('Conda dependency specification is consistent.', fg='green')
 
 
-@cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
-def validate_pyproject_toml():
-    """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
-
-    pyproject_file = ROOT / 'pyproject.toml'
-    if not pyproject_file.exists():
-        raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
-
-    pyproject = toml.loads(pyproject_file.read_text(encoding='utf8'))
-    pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
-
-    if reentry_requirement not in pyproject_requires:
-        raise DependencySpecificationError(f"Missing requirement '{reentry_requirement}' in 'pyproject.toml'.")
-
-    click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
-
-
 @cli.command('validate-all', help='Validate consistency of all requirements.')
 @click.pass_context
 def validate_all(ctx):
@@ -320,7 +252,6 @@ def validate_all(ctx):
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_pyproject_toml)
 
 
 @cli.command()

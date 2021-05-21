@@ -31,7 +31,7 @@ jobs:
         python-version: 3.9
 
     - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1
 
     - name: Validate
       run: python ./utils/dependency_management.py validate-all
@@ -158,7 +158,6 @@ jobs:
     - name: Install aiida-core
       run: |
         pip install -e .[atomic_tools,docs,notebook,rest,tests]
-        reentry scan
 
     - run: pip freeze
 
@@ -206,7 +205,7 @@ jobs:
         python-version: 3.9
 
     - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1
 
     - name: Check consistency of requirements/ files
       id: check_reqs

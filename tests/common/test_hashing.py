@@ -25,6 +25,7 @@ try:
 except ImportError:
     import unittest
 
+from aiida.restapi.common.utils import DatetimePrecision
 from aiida.common.exceptions import HashingError
 from aiida.common.hashing import make_hash, float_to_text, chunked_file_hash
 from aiida.common.folders import SandboxFolder
@@ -168,6 +169,12 @@ class MakeHashTest(unittest.TestCase):
             make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('Europe/Amsterdam'))),
             'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
         )
+
+    def test_datetime_precision_hashing(self):
+        dt_prec = DatetimePrecision(datetime(2018, 8, 18, 8, 18), 10)
+        self.assertEqual(make_hash(dt_prec), '837ab70b3b7bd04c1718834a0394a2230d81242c442e4aa088abeab15622df37')
+        dt_prec_utc = DatetimePrecision(datetime.utcfromtimestamp(0), 0)
+        self.assertEqual(make_hash(dt_prec_utc), '8c756ee99eaf9655bb00166839b9d40aa44eac97684b28f6e3c07d4331ae644e')
 
     def test_numpy_types(self):
         self.assertEqual(

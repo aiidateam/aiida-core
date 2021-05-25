@@ -25,7 +25,7 @@ try:
 except ImportError:
     import unittest
 
-from aiida.restapi.common.utils import DatetimePrecision
+from aiida.common.utils import DatetimePrecision
 from aiida.common.exceptions import HashingError
 from aiida.common.hashing import make_hash, float_to_text, chunked_file_hash
 from aiida.common.folders import SandboxFolder

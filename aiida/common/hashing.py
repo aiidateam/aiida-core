@@ -21,7 +21,7 @@ from itertools import chain
 from operator import itemgetter
 import pytz
 
-from aiida.restapi.common.utils import DatetimePrecision
+from aiida.common.utils import DatetimePrecision
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
 

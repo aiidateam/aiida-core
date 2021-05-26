@@ -280,9 +280,10 @@ class FunctionProcess(Process):
             spec.outputs.valid_type = (Data, dict)
 
         return type(
-            func.__name__, (FunctionProcess,), {
+            func.__qualname__, (FunctionProcess,), {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
+                '__qualname__': func.__qualname__,
                 '_func': staticmethod(func),
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,

@@ -219,14 +219,25 @@ class ProcessNode(Sealable, Node):
         except exceptions.EntryPointError as exception:
             raise ValueError(
                 f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
-            )
+            ) from exception
         except ValueError:
-            try:
-                import importlib
-                module_name, class_name = self.process_type.rsplit('.', 1)
-                module = importlib.import_module(module_name)
-                process_class = getattr(module, class_name)
-            except (AttributeError, ValueError, ImportError) as exception:
+            import importlib
+
+            def str_rsplit_iter(string, sep='.'):
+                components = string.split(sep)
+                for idx in range(1, len(components)):
+                    yield sep.join(components[:-idx]), components[-idx:]
+
+            for module_name, class_names in str_rsplit_iter(self.process_type):
+                try:
+                    module = importlib.import_module(module_name)
+                    process_class = module
+                    for objname in class_names:
+                        process_class = getattr(process_class, objname)
+                    break
+                except (AttributeError, ValueError, ImportError):
+                    pass
+            else:
                 raise ValueError(
                     f'could not load process class from `{self.process_type}` for Node<{self.pk}>: {exception}'
                 )

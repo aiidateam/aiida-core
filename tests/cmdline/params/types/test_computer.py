@@ -8,88 +8,112 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `ComputerParamType`."""
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.cmdline.params.types import ComputerParamType
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 from aiida import orm
 
+# pylint: disable=redefined-outer-name
 
-class TestComputerParamType(AiidaTestCase):
-    """Tests for the `ComputerParamType`."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """
-        Create some computers to test the ComputerParamType parameter type for the command line infrastructure
-        We create an initial computer with a random name and then on purpose create two computers with a name
-        that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
-        the rules implemented to solve ambiguities that arise when determing the identifier type
-        """
-        super().setUpClass(*args, **kwargs)
+@pytest.fixture
+def parameter_type():
+    """Return an instance of the `ComputerParamType`."""
+    return ComputerParamType()
 
-        kwargs = {
-            'hostname': 'localhost',
-            'transport_type': 'local',
-            'scheduler_type': 'direct',
-            'workdir': '/tmp/aiida'
-        }
 
-        cls.param = ComputerParamType()
-        cls.entity_01 = orm.Computer(label='computer_01', **kwargs).store()
-        cls.entity_02 = orm.Computer(label=str(cls.entity_01.pk), **kwargs).store()
-        cls.entity_03 = orm.Computer(label=str(cls.entity_01.uuid), **kwargs).store()
+@pytest.fixture
+def setup_computers(clear_database_before_test):  # pylint: disable=unused-argument
+    """Create some `Computer` instances to test the `ComputerParamType` parameter type for the command line
+    infrastructure.
 
-    def test_get_by_id(self):
-        """
-        Verify that using the ID will retrieve the correct entity
-        """
-        identifier = f'{self.entity_01.pk}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+    We create an initial computer with name computer_01 and then on purpose create two computer with a name that matches
+    exactly the ID and UUID, respectively, of the first one. This allows us to test the rules implemented to solve
+    ambiguities that arise when determing the identifier type.
+    """
+    kwargs = {'hostname': 'localhost', 'transport_type': 'local', 'scheduler_type': 'direct', 'workdir': '/tmp/aiida'}
 
-    def test_get_by_uuid(self):
-        """
-        Verify that using the UUID will retrieve the correct entity
-        """
-        identifier = f'{self.entity_01.uuid}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+    entity_01 = orm.Computer(label='computer_01', **kwargs).store()
+    entity_02 = orm.Computer(label=str(entity_01.pk), **kwargs).store()
+    entity_03 = orm.Computer(label=str(entity_01.uuid), **kwargs).store()
 
-    def test_get_by_label(self):
-        """
-        Verify that using the LABEL will retrieve the correct entity
-        """
-        identifier = f'{self.entity_01.label}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+    return entity_01, entity_02, entity_03
 
-    def test_ambiguous_label_pk(self):
-        """
-        Situation: LABEL of entity_02 is exactly equal to ID of entity_01
 
-        Verify that using an ambiguous identifier gives precedence to the ID interpretation
-        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
-        """
-        identifier = f'{self.entity_02.label}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+def test_complete(setup_computers, parameter_type):
+    """Test the `complete` method that provides auto-complete functionality."""
+    kwargs = {'hostname': 'localhost', 'transport_type': 'local', 'scheduler_type': 'direct', 'workdir': '/tmp/aiida'}
+    entity_01, entity_02, entity_03 = setup_computers
+    entity_04 = orm.Computer(label='xavier', **kwargs).store()
 
-        identifier = f'{self.entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_02.uuid)
+    options = [item[0] for item in parameter_type.complete(None, '')]
+    assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])
 
-    def test_ambiguous_label_uuid(self):
-        """
-        Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
+    options = [item[0] for item in parameter_type.complete(None, 'xa')]
+    assert sorted(options) == sorted([entity_04.label])
 
-        Verify that using an ambiguous identifier gives precedence to the UUID interpretation
-        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
-        """
-        identifier = f'{self.entity_03.label}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
 
-        identifier = f'{self.entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
-        result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_03.uuid)
+def test_get_by_id(setup_computers, parameter_type):
+    """
+    Verify that using the ID will retrieve the correct entity
+    """
+    entity_01, _, _ = setup_computers
+    identifier = f'{entity_01.pk}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+
+def test_get_by_uuid(setup_computers, parameter_type):
+    """
+    Verify that using the UUID will retrieve the correct entity
+    """
+    entity_01, _, _ = setup_computers
+    identifier = f'{entity_01.uuid}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+
+def test_get_by_label(setup_computers, parameter_type):
+    """
+    Verify that using the LABEL will retrieve the correct entity
+    """
+    entity_01, _, _ = setup_computers
+    identifier = f'{entity_01.label}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+
+def test_ambiguous_label_pk(setup_computers, parameter_type):
+    """
+    Situation: LABEL of entity_02 is exactly equal to ID of entity_01
+
+    Verify that using an ambiguous identifier gives precedence to the ID interpretation
+    Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
+    """
+    entity_01, entity_02, _ = setup_computers
+    identifier = f'{entity_02.label}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+    identifier = f'{entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_02.uuid
+
+
+def test_ambiguous_label_uuid(setup_computers, parameter_type):
+    """
+    Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
+
+    Verify that using an ambiguous identifier gives precedence to the UUID interpretation
+    Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
+    """
+    entity_01, _, entity_03 = setup_computers
+    identifier = f'{entity_03.label}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+    identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
+    result = parameter_type.convert(identifier, None, None)
+    assert result.uuid == entity_03.uuid

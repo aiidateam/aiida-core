@@ -15,6 +15,7 @@ from django.contrib.postgres.fields import JSONField
 from django.db import models as m
 from django.db.models.query import QuerySet
 from pytz import UTC
+import simplejson
 
 import aiida.backends.djsite.db.migrations as migrations
 from aiida.common import timezone
@@ -30,6 +31,13 @@ from aiida.common.utils import get_new_uuid
 # is stored in the DbSetting table and the check is done in the
 # load_dbenv() function).
 SCHEMA_VERSION = migrations.current_schema_version()
+
+# NOTE for JSONField:
+# For SQLA simplejson's dumps/loads is used (when initializing the engine).
+# Since most of the magic is in the JSONEncoder/JSONDecoder, we can simply
+# set the encoder to that of simplejson to obtain the behaviour of simplejson.
+# As soon as the upgrade to Django 3.2.x is done, one can also set the decoder
+# to ensure that also the simplejson.JSONDecoder is used.
 
 
 class AiidaQuerySet(QuerySet):
@@ -124,10 +132,10 @@ class DbNode(m.Model):
     dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT, related_name='dbnodes')
 
     # JSON Attributes
-    attributes = JSONField(default=dict, null=True)
+    attributes = JSONField(default=dict, null=True, encoder=simplejson.JSONEncoder)
     # JSON Extras
-    extras = JSONField(default=dict, null=True)
-    repository_metadata = JSONField(default=dict, null=True)
+    extras = JSONField(default=dict, null=True, encoder=simplejson.JSONEncoder)
+    repository_metadata = JSONField(default=dict, null=True, encoder=simplejson.JSONEncoder)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
@@ -184,7 +192,7 @@ class DbLink(m.Model):
 class DbSetting(m.Model):
     """This will store generic settings that should be database-wide."""
     key = m.CharField(max_length=1024, db_index=True, blank=False, unique=True)
-    val = JSONField(default=None, null=True)
+    val = JSONField(default=None, null=True, encoder=simplejson.JSONEncoder)
     # I also add a description field for the variables
     description = m.TextField(blank=True)
     # Modification time of this attribute
@@ -256,7 +264,7 @@ class DbGroup(m.Model):
     # the groups
     user = m.ForeignKey(DbUser, on_delete=m.CASCADE, related_name='dbgroups')
     # JSON Extras
-    extras = JSONField(default=dict, null=False)
+    extras = JSONField(default=dict, null=False, encoder=simplejson.JSONEncoder)
 
     class Meta:
         unique_together = (('label', 'type_string'),)
@@ -303,7 +311,7 @@ class DbComputer(m.Model):
     description = m.TextField(blank=True)
     scheduler_type = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
-    metadata = JSONField(default=dict)
+    metadata = JSONField(default=dict, encoder=simplejson.JSONEncoder)
 
     def __str__(self):
         return f'{self.label} ({self.hostname})'
@@ -317,12 +325,14 @@ class DbAuthInfo(m.Model):
     # Delete the DbAuthInfo if either the user or the computer are removed
     aiidauser = m.ForeignKey(DbUser, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
-    auth_params = JSONField(default=dict)  # contains mainly the remoteuser and the private_key
+    auth_params = JSONField(
+        default=dict, encoder=simplejson.JSONEncoder
+    )  # contains mainly the remoteuser and the private_key
 
     # The keys defined in the metadata of the DbAuthInfo will override the
     # keys with the same label defined in the DbComputer (using a dict.update()
     # call of python).
-    metadata = JSONField(default=dict)
+    metadata = JSONField(default=dict, encoder=simplejson.JSONEncoder)
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
@@ -361,7 +371,7 @@ class DbLog(m.Model):
     levelname = m.CharField(max_length=50, db_index=True)
     dbnode = m.ForeignKey(DbNode, related_name='dblogs', on_delete=m.CASCADE)
     message = m.TextField(blank=True)
-    metadata = JSONField(default=dict)
+    metadata = JSONField(default=dict, encoder=simplejson.JSONEncoder)
 
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'

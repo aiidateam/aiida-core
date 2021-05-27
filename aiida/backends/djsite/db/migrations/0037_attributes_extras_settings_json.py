@@ -16,6 +16,7 @@ import click
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations, models
 from django.db import transaction
+import simplejson
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.cmdline.utils import echo
@@ -202,12 +203,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbnode',
             name='attributes',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=True),
+            field=django.contrib.postgres.fields.jsonb.JSONField(
+                default=dict, null=True, encoder=simplejson.JSONEncoder
+            ),
         ),
         migrations.AddField(
             model_name='dbnode',
             name='extras',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=True),
+            field=django.contrib.postgres.fields.jsonb.JSONField(
+                default=dict, null=True, encoder=simplejson.JSONEncoder
+            ),
         ),
         # Migrate the data from the DbAttribute table to the JSONB field
         migrations.RunPython(transition_attributes_extras, reverse_code=migrations.RunPython.noop),
@@ -232,7 +237,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbsetting',
             name='val',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=None, null=True),
+            field=django.contrib.postgres.fields.jsonb.JSONField(
+                default=None, null=True, encoder=simplejson.JSONEncoder
+            ),
         ),
         # Migrate the data from the DbSetting EAV to the JSONB val field
         migrations.RunPython(transition_settings, reverse_code=migrations.RunPython.noop),

@@ -372,6 +372,7 @@ class Config:  # pylint: disable=too-many-public-methods
             postgres.drop_dbuser(profile.database_username)
 
         self.remove_profile(name)
+        self.store()
 
     def set_default_profile(self, name, overwrite=False):
         """Set the given profile as the new default.

@@ -55,11 +55,21 @@ class ProcessNode(Sealable, Node):
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     def __str__(self) -> str:
-        base = super().__str__()
-        if self.process_type:
-            return f'{base} ({self.process_type})'
+        base = f'{super().__str__()}\n\ttype: {self.process_type}' if self.process_type else f'{super().__str__()}'
+        out =  f"""
+        {base}
+        process_state: {self.process_state}
+        exit_state: {self.exit_status}
+        exit_message: {self.exit_message}\n"""
+        if self.caller:
+            out += f'\tcaller: {self.caller.pk}, {self.caller.process_class}\n'
 
-        return f'{base}'
+        if self.called_descendants:
+            out += f'\t{len(self.called_descendants)} called descendants:\n'
+            for d in self.called_descendants:
+                out += f'\t\t{d.pk}, {d.process_class}'
+        
+        return out
 
     @classproperty
     def _updatable_attributes(cls) -> Tuple[str, ...]:

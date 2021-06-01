@@ -153,7 +153,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if not self.is_stored:
             return f'uuid: {self.uuid} (unstored)'
 
-        return f'uuid: {self.uuid} (pk: {self.pk})'
+        return f'uuid: {self.uuid}\n\tpk: {self.pk}'
 
     def __copy__(self):
         """Copying a Node is not supported in general, but only for the Data sub class."""

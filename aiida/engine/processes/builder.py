@@ -244,8 +244,8 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
         self._process_spec = self._process_class.spec()
         super().__init__(self._process_spec.inputs)
 
-    def _repr_html_(self):
-        """HTML representation for in example Jupyter notebooks."""
+    def _repr_pretty_(self, p, _):  # pylint: disable=invalid-name
+        """Pretty representation for in the IPython console and notebooks."""
 
         def format_inputs(inputs, level=0):
             """Return the dictionary of inputs as a human-readable wayformatted multiline string for displaying.
@@ -257,7 +257,7 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
 
             def fmt_indent(content, level):
                 indent_string = ' ' * (4 * level)
-                return f'<pre class="tab">{indent_string}{content}</pre>'
+                return f'{indent_string}{content}'
 
             for key, value in sorted(inputs.items()):
                 if isinstance(value, (dict, ProcessBuilder, ProcessBuilderNamespace)) and len(value) > 0:
@@ -277,12 +277,9 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
                 else:
                     result.append(fmt_indent(f'"{key}": {value}', level))
 
-            return ''.join(result)
+            return '\n'.join(result)
 
-        return f'''
-                <p style="margin-bottom: 4px"><b>Process class:</b> {self._process_class.get_name()} <br />
-                <b>Inputs:</b> </p> {format_inputs(self._data)}
-                '''
+        return p.text(f'Process class: {self._process_class.get_name()}\nInputs:\n{format_inputs(self._data)}')
 
     @property
     def process_class(self) -> Type['Process']:

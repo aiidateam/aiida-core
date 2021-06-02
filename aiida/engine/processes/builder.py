@@ -9,19 +9,25 @@
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
+from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
 from aiida.engine.processes.ports import PortNamespace
 from aiida.orm import Node
+from aiida.orm.nodes.data.base import BaseType
+from aiida.plugins import DataFactory
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
+Dict = DataFactory('dict')
+Structure = DataFactory('structure')
 
-class ProcessBuilderNamespace(collections.abc.MutableMapping):
+
+class ProcessBuilderNamespace(MutableMapping):
     """Input namespace for the `ProcessBuilder`.
 
     Dynamically generates the getters and setters for the input ports of a given PortNamespace
@@ -183,13 +189,13 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         """
         if args:
             for key, value in args[0].items():
-                if isinstance(value, collections.abc.Mapping):
+                if isinstance(value, Mapping):
                     self[key].update(value)
                 else:
                     self.__setattr__(key, value)
 
         for key, value in kwds.items():
-            if isinstance(value, collections.abc.Mapping):
+            if isinstance(value, Mapping):
                 self[key].update(value)
             else:
                 self.__setattr__(key, value)
@@ -214,12 +220,12 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         :param value: a nested mapping of port values
         :return: the same mapping but without any nested namespace that is completely empty.
         """
-        if isinstance(value, collections.abc.Mapping) and not isinstance(value, Node):
+        if isinstance(value, Mapping) and not isinstance(value, Node):
             result = {}
             for key, sub_value in value.items():
                 pruned = self._prune(sub_value)
                 # If `pruned` is an "empty'ish" mapping and not an instance of `Node`, skip it, otherwise keep it.
-                if not (isinstance(pruned, collections.abc.Mapping) and not pruned and not isinstance(pruned, Node)):
+                if not (isinstance(pruned, Mapping) and not pruned and not isinstance(pruned, Node)):
                     result[key] = pruned
             return result
 
@@ -237,6 +243,46 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
         self._process_class = process_class
         self._process_spec = self._process_class.spec()
         super().__init__(self._process_spec.inputs)
+
+    def _repr_html_(self):
+        """HTML representation for in example Jupyter notebooks."""
+
+        def format_inputs(inputs, level=0):
+            """Return the dictionary of inputs as a human-readable wayformatted multiline string for displaying.
+
+            :param inputs: a nested dictionary of inputs nodes
+            :param level: the nesting level of the current dictionary
+            """
+            result = []
+
+            def fmt_indent(content, level):
+                indent_string = ' ' * (4 * level)
+                return f'<pre class="tab">{indent_string}{content}</pre>'
+
+            for key, value in sorted(inputs.items()):
+                if isinstance(value, (dict, ProcessBuilder, ProcessBuilderNamespace)) and len(value) > 0:
+                    result.append(fmt_indent(f'"{key}": {{', level))
+                    result.append(format_inputs(value, level=level + 1))
+                    result.append(fmt_indent('},', level))
+                elif isinstance(value, Dict):
+                    result.append(fmt_indent(f'"{key}": {{', level))
+                    for line in json.dumps(value.get_dict(), indent=4).split('\n'):
+                        if line not in ['{', '}', '{}']:
+                            result.append(fmt_indent(f'{line}', level))
+                    result.append(fmt_indent('},', level))
+                elif isinstance(value, BaseType):
+                    result.append(fmt_indent(f'"{key}": {value.value}', level))
+                elif isinstance(value, Structure):
+                    result.append(fmt_indent(f'"{key}": {value.get_formula()} (pk: {value.pk})', level))
+                else:
+                    result.append(fmt_indent(f'"{key}": {value}', level))
+
+            return ''.join(result)
+
+        return f'''
+                <p style="margin-bottom: 4px"><b>Process class:</b> {self._process_class.get_name()} <br />
+                <b>Inputs:</b> </p> {format_inputs(self._data)}
+                '''
 
     @property
     def process_class(self) -> Type['Process']:

@@ -114,7 +114,8 @@
             "pytest-benchmark~=3.2",
             "pympler~=0.9",
             "coverage<5.0",
-            "sqlalchemy-diff~=0.1.3"
+            "sqlalchemy-diff~=0.1.3",
+            "sphinx~=3.2.1"
         ],
         "bpython": [
             "bpython~=0.18.0"

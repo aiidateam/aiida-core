@@ -765,14 +765,14 @@ class LocalTransport(Transport):
 
         :param command: the command to execute
 
-        :return: a tuple with (return_value, stdout, stderr) where stdout and
-                 stderr are bytes.
+        :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
+            are both bytes and the return_value is an int.
         """
         local_stdin, _, _, local_proc = self._exec_command_internal(command)
 
         if stdin is not None:
             # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
-            # Also, if I get a StringIO, I jsut read it all in memory and put it into a BytesIO.
+            # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.
             # Clearly not memory effective - in this case do not use a StringIO, but pass directly a BytesIO
             # that will be read line by line, if you have a huge stdin and care about memory usage.
             if isinstance(stdin, str):
@@ -790,10 +790,10 @@ class LocalTransport(Transport):
                         yield line.encode(encoding)
 
                 filelike_stdin = line_encoder(stdin)
-            else:
-                if not isinstance(stdin, io.BufferedIOBase):
-                    raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
+            elif isinstance(stdin, io.BufferedIOBase):
                 filelike_stdin = stdin
+            else:
+                raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
 
             try:
                 for line in filelike_stdin:

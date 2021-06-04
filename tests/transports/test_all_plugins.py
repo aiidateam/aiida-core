@@ -1282,7 +1282,11 @@ class TestExecuteCommandWait(unittest.TestCase):
         """Test command execution with a stdin from filelike of type bytes.
 
         I test directly the exec_command_wait_bytes function; I also pass some non-unicode
-        bytes to check that there is no internal implicit encoding/decoding in the code.
+        bytes to check that there is no place in the code where this non-unicode string is
+        implicitly converted to unicode (temporarily, and then converted back) -
+        if this happens somewhere, that code would fail (as the test_string
+        cannot be decoded to UTF8). (Note: we cannot test for all encodings, we test for
+        unicode hoping that this would already catch possible issues.)
         """
         test_string = b'some_test bytes with non-unicode -> \xFA'
         stdin = io.BytesIO(test_string)
@@ -1294,10 +1298,14 @@ class TestExecuteCommandWait(unittest.TestCase):
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike_bytes_decoding(self, custom_transport):
-        """Test command execution with a stdin from filelike of type bytes, trying to decod.
+        """Test command execution with a stdin from filelike of type bytes, trying to decode.
 
-        I test that the exec_command_wait function fails if I pass some non-unicode
-        bytes to check that there is no internal implicit encoding/decoding in the code.
+        I test directly the exec_command_wait_bytes function; I also pass some non-unicode
+        bytes to check that there is no place in the code where this non-unicode string is
+        implicitly converted to unicode (temporarily, and then converted back) -
+        if this happens somewhere, that code would fail (as the test_string
+        cannot be decoded to UTF8). (Note: we cannot test for all encodings, we test for
+        unicode hoping that this would already catch possible issues.)
         """
         test_string = b'some_test bytes with non-unicode -> \xFA'
         stdin = io.BytesIO(test_string)
@@ -1316,11 +1324,6 @@ class TestExecuteCommandWait(unittest.TestCase):
     @run_for_all_plugins
     def test_transfer_big_stdout(self, custom_transport):  # pylint: disable=too-many-locals
         """Test the transfer of a large amount of data on stdout."""
-        import os
-        import random
-        import string
-        import tempfile
-
         # Create a "big" file of > 2MB (10MB here; in general, larger than the buffer size)
         min_file_size_bytes = 5 * 1024 * 1024
         # The file content will be a sequence of these lines, until the size
@@ -1337,10 +1340,10 @@ class TestExecuteCommandWait(unittest.TestCase):
         with custom_transport as trans:
             # We cannot use tempfile.mkdtemp because we're on a remote folder
             location = trans.normalize(os.path.join('/', 'tmp'))
-            directory = 'temp_dir_test_transfer_big_stdout'
             trans.chdir(location)
-
             self.assertEqual(location, trans.getcwd())
+
+            directory = 'temp_dir_test_transfer_big_stdout'
             while trans.isdir(directory):
                 # I append a random letter/number until it is unique
                 directory += random.choice(string.ascii_uppercase + string.digits)

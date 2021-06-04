@@ -1295,7 +1295,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         :param bufsize: same meaning of paramiko.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
-            are both bytes.
+            are both bytes and the return_value is an int.
         """
         import socket
         import time
@@ -1307,19 +1307,15 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 filelike_stdin = io.StringIO(stdin)
             elif isinstance(stdin, bytes):
                 filelike_stdin = io.BytesIO(stdin)
-            else:
+            elif isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
                 # It seems both StringIO and BytesIO work correctly when doing ssh_stdin.write(line)?
                 # (The ChannelFile is opened with mode 'b', but until now it always has been a StringIO)
-                if not isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
-                    raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
-
                 filelike_stdin = stdin
+            else:
+                raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
 
-            try:
-                for line in filelike_stdin:
-                    ssh_stdin.write(line)
-            except AttributeError:
-                raise ValueError('stdin can only be either a string, bytes or a file-like object!')
+            for line in filelike_stdin:
+                ssh_stdin.write(line)
 
         # I flush and close them anyway; important to call shutdown_write
         # to avoid hangouts
@@ -1329,7 +1325,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # Now I get the output
         stdout_bytes = []
         stderr_bytes = []
-        # 10kB buffer (note that this should be smaller than the window size of paramiko)
+        # 100kB buffer (note that this should be smaller than the window size of paramiko)
         # Also, apparently if the data is coming slowly, the read() command will not unlock even for
         # times much larger than the timeout. Therefore we don't want to have very large buffers otherwise
         # you risk that a lot of output is sent to both stdout and stderr, and stderr goes beyond the

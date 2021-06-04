@@ -30,7 +30,7 @@ decorator==4.4.2
 defusedxml==0.6.0
 deprecation==2.1.0
 disk-objectstore~=0.5
-Django==2.2.20
+Django==2.2.21
 docutils==0.15.2
 entrypoints==0.3
 Flask==1.1.2

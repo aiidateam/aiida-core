@@ -28,7 +28,8 @@ class EPManager:
     def __init__(self):
         self._map = None
 
-    def get_entry_point_map(self):
+    @property
+    def map(self):
         if self._map is None:
             self._map = importlib.metadata.entry_points()
 
@@ -256,7 +257,7 @@ def get_entry_point_map():
     Return a dictionary of all entry point groups (=key) and entry points (=values).
     :return: dictionary of all entry points
     """
-    return ENTRYPOINT_MANAGER.get_entry_point_map()
+    return ENTRYPOINT_MANAGER.map
 
 
 @functools.lru_cache(maxsize=None)

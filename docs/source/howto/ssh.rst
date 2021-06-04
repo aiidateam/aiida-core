@@ -250,7 +250,7 @@ When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configur
 .. dropdown:: Specifying the proxy_jump
 
     The ``proxy_jump`` *must** be specified manually when configuring the SSH connection and is not automatically taken from your ``~/.ssh/config``.
-    Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``.
+    Simply copy & paste the instructions you passed to the ``ProxyJump`` directive in your ``~/.ssh/config`` to the input of ``proxy_jump``.
 
     The same key (if any) as specified for the *TARGET* host will be used to login to the proxy, hence you have to make sure that the public part
     of your local key is registered in the ``.ssh/authorized_keys`` file for both the *TARGET* host and all of the proxies/jump hosts.

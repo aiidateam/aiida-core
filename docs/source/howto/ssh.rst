@@ -39,7 +39,7 @@ Add the following lines to your ``~/.ssh/config`` file (or create it, if it does
 
 .. note::
 
-  If your cluster needs you to connect to another computer *PROXY* first, you can use the ``proxy_jump`` or ``proxy_command`` feature of SSH, see :ref:`how-to:ssh:proxy`.
+  If your cluster needs you to connect to another computer *PROXY* first, you can use the ``ProxyJump`` or ``ProxyCommand`` feature of SSH, see :ref:`how-to:ssh:proxy`.
 
 You should now be able to access the remote computer (without the need to type a password) *via*:
 
@@ -185,19 +185,18 @@ Connecting to a remote computer *via* a proxy server
 ====================================================
 
 Some compute clusters require you to connect to an intermediate server *PROXY*, from which you can then connect to the cluster *TARGET* on which you run your calculations.
-This section explains how to use the ``proxy_jump`` or ``proxy_command`` feature of ``ssh`` in order to make this jump automatically.
+This section explains how to use the ``ProxyJump`` or ``ProxyCommand`` feature of ``ssh`` in order to make this jump automatically.
 
 .. tip::
 
-  This method can also be used to automatically tunnel into virtual private networks, if you have an account on a proxy/jumphost server with access to the network.
-
+  This method can also be used to avoid having to start a virtual private network (VPN) client if you have an SSH account on a proxy/jumphost server which is accessible from your current network **and** from which you can access the *TARGET* machine directly.
 
 
 SSH configuration
 ^^^^^^^^^^^^^^^^^
 
 To decide whether to use the ``ProxyJump`` (recommended) or the ``ProxyCommand`` directive, please check the version of your SSH client first with ``ssh -V``.
-The ``ProxyJump`` directive has been added in version 7.3 of OpenSSH, hence if you are using an older version of SSH (on your machine or the *PROXY*) you have to use ``ProxyCommand``.
+The ``ProxyJump`` directive has been added in version 7.3 of OpenSSH, hence if you are using an older version of SSH (on your machine or the *PROXY*) you have to use older ``ProxyCommand``.
 
 To setup the proxy configuration with ``ProxyJump``, edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing)
 and add the following lines::
@@ -235,26 +234,28 @@ In both cases, this should allow you to directly connect to the *TARGET* server 
 
    $ ssh SHORTNAME_TARGET
 
+
+
 .. note ::
 
-   For a *passwordless* connection, you may need to follow the instructions :ref:`how-to:ssh:passwordless` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server, **unless** the user directory of the proxy is shared with the target host (often the case in supercomputing facilities).
+   If the user directory is not shared between the *PROXY* and the *TARGET* (in most supercomputing facilities your user directory is shared between the machines), you need to follow the :ref:`instructions for a passwordless connection <how-to:ssh:passwordless>` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server (e.g. the public key must be listed in the `~/.ssh/authorized_keys` file of both the *PROXY* and the *TARGET* server).
 
 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse most of required information from your ``~/.ssh/config`` file. A notable exception is the ``proxy_jump`` directive (see below).
+When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse most of required information from your ``~/.ssh/config`` file. A notable exception to this is the ``proxy_jump`` directive, which **must** be specified manually.
 
-.. dropdown:: Specifying the ``proxy_jump``
+Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``:
 
-    The ``proxy_jump`` **must** be specified manually when configuring the SSH connection and is not automatically taken from your ``~/.ssh/config``.
-    Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``.
+.. code-block:: console
 
-    The same key (if any) as specified for the *TARGET* host will be used to login to the proxy, hence you have to make sure that the public part
-    of your local key is registered in the ``.ssh/authorized_keys`` file for both the *TARGET* host and all of the proxies/jump hosts.
-    Since the user directory is usually shared between all nodes in a supercomputing facility, hence this is usually ensured automatically.
+   $ verdi computer configure ssh SHORTNAME_TARGET
+   ...
+   Allow ssh agent [True]:
+   SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY
 
-    Multiple proxies can be specified as a comma-separated list.
+.. note:: A chain of proxies can be specified as a comma-separated list. If you need to specify a different username, you can so with ``USER_PROXY@...``. If no username is specified for the proxy the same username as for the *TARGET* is used.
 
 .. dropdown:: Specifying the ``proxy_command`` manually
 

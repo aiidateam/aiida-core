@@ -122,7 +122,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             raise ValueError('the computer is not stored')
 
         computer = computer.backend_entity if computer else None
-        user = user.backend_entity if user else User.objects(backend).get_default()
+        user = user if user else User.objects(backend).get_default()
 
         if user is None:
             raise ValueError('the user cannot be None')

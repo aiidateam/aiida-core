@@ -58,13 +58,14 @@ class NewTransport(Transport):
         :raise IOError: if one of src or dst does not exist
         """
 
-    def exec_command_wait(self, command, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
         """Execute the command on the shell, wait for it to finish and return the retcode, the stdout and the stderr.
 
         Enforce the execution to be run from the pwd (as given by ``self.getcwd``), if this is not None.
 
         :param str command: execute the command given as a string
-        :return: a tuple: the retcode (int), stdout (str) and stderr (str).
+        :param stdin: (optional,default=None) can be a string or a file-like object.
+        :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
 
     def get_attribute(self, path):

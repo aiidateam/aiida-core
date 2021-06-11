@@ -10,6 +10,7 @@
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
 from typing import Any, Type, TYPE_CHECKING
+from uuid import uuid4
 
 from aiida.orm import Node
 from aiida.engine.processes.ports import PortNamespace
@@ -41,6 +42,8 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         self._valid_fields = []
         self._data = {}
 
+        dynamic_properties = {}
+
         # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
         # saved. If they are used directly in the body, it will try to capture the value from
@@ -69,7 +72,15 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             fgetter.__doc__ = str(port)
             getter = property(fgetter)
             getter.setter(fsetter)  # pylint: disable=too-many-function-args
-            setattr(self.__class__, name, getter)
+            dynamic_properties[name] = getter
+
+        # The dynamic property can only be attached to a class and not an instance, however, we cannot attach it to
+        # the ``ProcessBuilderNamespace`` class since it would interfere with other instances that may already
+        # exist. The workaround is to create a new class on the fly that derives from ``ProcessBuilderNamespace``
+        # and add the dynamic property to that instead
+        class_name = f'{self.__class__.__name__}-{uuid4()}'
+        child_class = type(class_name, (self.__class__,), dynamic_properties)
+        self.__class__ = child_class
 
     def __setattr__(self, attr: str, value: Any) -> None:
         """Assign the given value to the port with key `attr`.

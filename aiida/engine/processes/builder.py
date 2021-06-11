@@ -41,7 +41,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         self._valid_fields = []
         self._data = {}
 
-        # The name and port objects have to be passed to the defined functions as defaults for
+        # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
         # saved. If they are used directly in the body, it will try to capture the value from
         # its enclosing scope at the time of being called.
@@ -83,16 +83,28 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         else:
             try:
                 port = self._port_namespace[attr]
-            except KeyError:
+            except KeyError as exception:
                 if not self._port_namespace.dynamic:
-                    raise AttributeError(f'Unknown builder parameter: {attr}')
+                    raise AttributeError(f'Unknown builder parameter: {attr}') from exception
+                port = None  # type: ignore[assignment]
             else:
                 value = port.serialize(value)  # type: ignore[union-attr]
                 validation_error = port.validate(value)
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
 
-            self._data[attr] = value
+            # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
+            # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become
+            # plain dictionaries and no longer have the properties of the ``ProcessBuilderNamespace`` that provide all
+            # the autocompletion and validation when values are being set. Therefore we first construct a new instance
+            # of a ``ProcessBuilderNamespace`` for the port of the attribute that is being set and than iteratively set
+            # all the values within the mapping that is being assigned to the attribute.
+            if isinstance(port, PortNamespace):
+                self._data[attr] = ProcessBuilderNamespace(port)
+                for sub_key, sub_value in value.items():
+                    setattr(self._data[attr], sub_key, sub_value)
+            else:
+                self._data[attr] = value
 
     def __repr__(self):
         return self._data.__repr__()

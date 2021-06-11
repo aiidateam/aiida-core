@@ -14,7 +14,7 @@ from collections.abc import Mapping, MutableMapping
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
-from aiida.engine import WorkChain, Process
+from aiida.engine import WorkChain, Process, ProcessBuilderNamespace
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256
@@ -45,6 +45,17 @@ class LazyProcessNamespace(Process):
         spec.input('namespace.nested.bird')
         spec.input('namespace.a')
         spec.input('namespace.c')
+
+
+class SimpleProcessNamespace(Process):
+    """Process with basic nested namespaces to test "pruning" of empty nested namespaces from the builder."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input_namespace('namespace.nested', dynamic=True)
+        spec.input('namespace.a', valid_type=int)
+        spec.input('namespace.c', valid_type=dict)
 
 
 class MappingData(Mapping, orm.Data):
@@ -159,7 +170,7 @@ class TestProcessBuilder(AiidaTestCase):
         self.builder_workchain.boolean = self.inputs['boolean']
 
         # Verify that the correct type is returned by the getter
-        self.assertTrue(isinstance(self.builder_workchain.dynamic.namespace, dict))
+        self.assertTrue(isinstance(self.builder_workchain.dynamic.namespace, ProcessBuilderNamespace))
         self.assertTrue(isinstance(self.builder_workchain.name.spaced, orm.Int))
         self.assertTrue(isinstance(self.builder_workchain.name_spaced, orm.Str))
         self.assertTrue(isinstance(self.builder_workchain.boolean, orm.Bool))
@@ -259,7 +270,7 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertIn('options', builder.metadata)
         self.assertEqual(builder.x, orm.Int(1))
         self.assertEqual(builder.y, orm.Int(2))
-        self.assertDictEqual(builder.metadata.options, original.get_options())
+        self.assertDictEqual(builder._inputs(prune=True)['metadata']['options'], original.get_options())
 
     def test_code_get_builder(self):
         """Test that the `Code.get_builder` method returns a builder where the code is already set."""
@@ -283,3 +294,13 @@ class TestProcessBuilder(AiidaTestCase):
         # Check that it complains if the type is not the correct one (for the templatereplacer, it should be a Dict)
         with self.assertRaises(ValueError):
             builder.parameters = orm.Int(3)
+
+    def test_set_attr(self):
+        """Test that ``__setattr__`` keeps sub portnamespaces as ``ProcessBuilderNamespace`` instances."""
+        builder = LazyProcessNamespace.get_builder()
+        self.assertTrue(isinstance(builder.namespace, ProcessBuilderNamespace))
+        self.assertTrue(isinstance(builder.namespace.nested, ProcessBuilderNamespace))
+
+        builder.namespace = {'a': 'a', 'c': 'c', 'nested': {'bird': 'mus'}}
+        self.assertTrue(isinstance(builder.namespace, ProcessBuilderNamespace))
+        self.assertTrue(isinstance(builder.namespace.nested, ProcessBuilderNamespace))

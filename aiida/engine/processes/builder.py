@@ -131,19 +131,45 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
     def __delattr__(self, item):
         self._data.__delitem__(item)
 
-    def _update(self, *args, **kwds):
-        """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
+    def _recursive_merge(self, dictionary, key, value):
+        """Recursively merge the contents of ``dictionary`` setting its ``key`` to ``value``."""
+        if isinstance(value, collections.abc.Mapping):
+            for inner_key, inner_value in value.items():
+                self._recursive_merge(dictionary[key], inner_key, inner_value)
+        else:
+            dictionary[key] = value
 
-        The method is prefixed with an underscore in order to not reserve the name for a potential port, but in
-        principle the method functions just as `collections.abc.MutableMapping.update`.
+    def _merge(self, *args, **kwds):
+        """Merge the content of a dictionary or keyword arguments in .
 
-        :param args: a single mapping that should be mapped on the namespace
+        .. note:: This method differs in behavior from ``_update`` in that ``_merge`` will recursively update the
+            existing dictionary with the one that is specified in the arguments. The ``_update`` method will merge only
+            the keys on the top level, but any lower lying nested namespace will be replaced entirely.
 
-        :param kwds: keyword value pairs that should be mapped onto the ports
+        The method is prefixed with an underscore in order to not reserve the name for a potential port.
+
+        :param args: a single mapping that should be mapped on the namespace.
+        :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
             raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
 
+        if args:
+            for key, value in args[0].items():
+                self._recursive_merge(self, key, value)
+
+        for key, value in kwds.items():
+            self._recursive_merge(self, key, value)
+
+    def _update(self, *args, **kwds):
+        """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
+
+        The method functions just as `collections.abc.MutableMapping.update` and is merely prefixed with an underscore
+        in order to not reserve the name for a potential port.
+
+        :param args: a single mapping that should be mapped on the namespace.
+        :param kwds: keyword value pairs that should be mapped onto the ports.
+        """
         if args:
             for key, value in args[0].items():
                 if isinstance(value, collections.abc.Mapping):

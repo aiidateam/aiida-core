@@ -58,6 +58,17 @@ class SimpleProcessNamespace(Process):
         spec.input('namespace.c', valid_type=dict)
 
 
+class NestedNamespaceProcess(Process):
+    """Process with nested required ports to check the update and merge functionality."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('nested.namespace.int', valid_type=int, required=True)
+        spec.input('nested.namespace.float', valid_type=float, required=True)
+        spec.input('nested.namespace.str', valid_type=str, required=False)
+
+
 class MappingData(Mapping, orm.Data):
     """Data sub class that is also a `Mapping`."""
 
@@ -304,3 +315,34 @@ class TestProcessBuilder(AiidaTestCase):
         builder.namespace = {'a': 'a', 'c': 'c', 'nested': {'bird': 'mus'}}
         self.assertTrue(isinstance(builder.namespace, ProcessBuilderNamespace))
         self.assertTrue(isinstance(builder.namespace.nested, ProcessBuilderNamespace))
+
+    def test_update(self):
+        """Test the ``_update`` method to update an existing builder with a dictionary."""
+        builder = NestedNamespaceProcess.get_builder()
+        builder.nested.namespace = {'int': 1, 'float': 2.0}
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 1, 'float': 2.0}}})
+
+        # Since ``_update`` will replace nested namespaces and not recursively merge them, if we don't specify all
+        # required inputs, the validation should fail.
+        with self.assertRaises(ValueError):
+            builder._update({'nested': {'namespace': {'int': 5, 'str': 'x'}}})
+
+        # Now we specify all required inputs and an additional optional one and since it is a nested namespace
+        builder._update({'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}})
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}})
+
+    def test_merge(self):
+        """Test the ``_merge`` method to merge a dictionary into an existing builder."""
+        builder = NestedNamespaceProcess.get_builder()
+        builder.nested.namespace = {'int': 1, 'float': 2.0}
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 1, 'float': 2.0}}})
+
+        # Define only one of the required ports of `nested.namespace`. This should leave the `float` input untouched and
+        # even though not specified explicitly again, since the merged dictionary still contains it, the
+        # `nested.namespace` port should still be valid.
+        builder._merge({'nested': {'namespace': {'int': 5}}})
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 2.0}}})
+
+        # Perform same test but passing the dictionary in as keyword arguments
+        builder._merge(**{'nested': {'namespace': {'int': 5}}})
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 2.0}}})

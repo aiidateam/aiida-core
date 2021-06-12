@@ -44,10 +44,10 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
    .. admonition:: Further Reading
        :class: seealso title-icon-read-more
-   
+
        - `Creating a Database Cluster <https://www.postgresql.org/docs/12/creating-cluster.html>`__.
        - `Starting the Database Server <https://www.postgresql.org/docs/12/server-start.html>`__.
-   
+
 
 
    Then, start the RabbitMQ server:
@@ -55,11 +55,11 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
    .. code-block:: console
 
        (aiida) $ rabbitmq-server -detached
-   
-   .. important:: 
-   
+
+   .. important::
+
         The services started this way will use the default ports on the machine. Conflicts may happen if there are more than one user running AiiDA this way on the same machine, or you already have the server running in a system-wide installation. To get around this issue, you can explicitly define the ports to be used.
-        
+
    ---
 
    **Setup profile**
@@ -76,12 +76,12 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
        First name: my
        Last name: name
        Institution: where-i-work
-       
-   .. tip:: 
-   
+
+   .. tip::
+
         Non-default ports are used for *database cluster* and the RabbitMQ server, you can pass them using ``--db-port`` and ``--broker-port`` options respectively.
-        
-        
+
+
    .. admonition:: Is AiiDA unable to auto-detect the PostgreSQL setup?
        :class: attention title-icon-troubleshoot
 
@@ -141,20 +141,20 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
        (aiida) $ verdi daemon stop
        (aiida) $ pg_ctl -D mylocal_db stop
        (aiida) $ rabbitmqctl stop
-       
-       
-   --- 
-   
+
+
+   ---
+
    **Restart the services**
-   
+
    If you want to restart the services and the daemon:
-   
+
    .. code-block:: console
-   
+
        (aiida) $ pg_ctl -D mylocal_db start
        (aiida) $ rabbitmq-server -detached
        (aiida) $ verdi daemon stop
 
    .. tip::
-       
-       If different ports are used, you have to pass them here as well. 
+
+       If different ports are used, you have to pass them here as well.

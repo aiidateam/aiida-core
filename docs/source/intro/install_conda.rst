@@ -58,7 +58,9 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
    .. important::
 
-        The services started this way will use the default ports on the machine. Conflicts may happen if there are more than one user running AiiDA this way on the same machine, or you already have the server running in a system-wide installation. To get around this issue, you can explicitly define the ports to be used.
+        The services started this way will use the default ports on the machine.
+        Conflicts may happen if there are more than one user running AiiDA this way on the same machine, or you already have the server running in a system-wide installation.
+        To get around this issue, you can explicitly define the ports to be used.
 
    ---
 
@@ -79,7 +81,7 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
    .. tip::
 
-        Non-default ports are used for *database cluster* and the RabbitMQ server, you can pass them using ``--db-port`` and ``--broker-port`` options respectively.
+        In case of non-default ports are used for the *database cluster* and the RabbitMQ server, you can pass them using ``--db-port`` and ``--broker-port`` options respectively.
 
 
    .. admonition:: Is AiiDA unable to auto-detect the PostgreSQL setup?
@@ -153,7 +155,7 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
        (aiida) $ pg_ctl -D mylocal_db start
        (aiida) $ rabbitmq-server -detached
-       (aiida) $ verdi daemon stop
+       (aiida) $ verdi daemon start
 
    .. tip::
 

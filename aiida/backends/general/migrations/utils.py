@@ -252,12 +252,16 @@ def get_node_repository_dirpaths(basepath, shard=None):
                 path = None
 
                 if 'path' in subdirs and 'raw_input' in subdirs:
-                    # If the `path` is empty, we simply ignore and set `raw_input` to be migrated, otherwise we add
-                    # the entry to `contains_both` which will cause the migration to fail.
-                    if os.listdir(dirpath / 'path'):
-                        contains_both.append(str(dirpath))
-                    else:
+                    # If the `path` folder is empty OR it contains *only* a `.gitignore`, we simply ignore and set
+                    # `raw_input` to be migrated, otherwise we add the entry to `contains_both` which will cause the
+                    # migration to fail.
+                    # See issue #4910 (https://github.com/aiidateam/aiida-core/issues/4910) for more information on the
+                    # `.gitignore` case.
+                    path_contents = os.listdir(dirpath / 'path')
+                    if not path_contents or path_contents == ['.gitignore']:
                         path = dirpath / 'raw_input'
+                    else:
+                        contains_both.append(str(dirpath))
                 elif 'path' in subdirs:
                     path = dirpath / 'path'
                 elif 'raw_input' in subdirs:

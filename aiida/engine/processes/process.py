@@ -604,7 +604,7 @@ class Process(plumpy.processes.Process):
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        return serialize.deserialize(encoded)
+        return serialize.deserialize_unsafe(encoded)
 
     def update_node_state(self, state: plumpy.process_states.State) -> None:
         self.update_outputs()

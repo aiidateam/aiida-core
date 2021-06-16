@@ -30,6 +30,9 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def is_initialised(self) -> bool:
         return True
 
+    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+        pass
+
 
 @pytest.fixture(scope='function')
 def repository():

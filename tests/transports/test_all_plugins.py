@@ -1245,7 +1245,7 @@ class TestExecuteCommandWait(unittest.TestCase):
     @run_for_all_plugins
     def test_exec_with_stdin_string(self, custom_transport):
         """Test command execution with a stdin string."""
-        test_string = str('some_test String')
+        test_string = 'some_test String'
         with custom_transport as transport:
             retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=test_string)
             self.assertEqual(retcode, 0)
@@ -1253,14 +1253,18 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEqual(stderr, '')
 
     @run_for_all_plugins
-    def test_exec_with_stdin_unicode(self, custom_transport):
-        """Test command execution with a unicode stdin string."""
-        test_string = 'some_test String'
+    def test_exec_with_stdin_bytes(self, custom_transport):
+        """Test command execution with a stdin bytes.
+
+        I test directly the exec_command_wait_bytes function; I also pass some non-unicode
+        bytes to check that there is no internal implicit encoding/decoding in the code.
+        """
+        test_string = b'some_test bytes with non-unicode -> \xFA'
         with custom_transport as transport:
-            retcode, stdout, stderr = transport.exec_command_wait('cat', stdin=test_string)
+            retcode, stdout, stderr = transport.exec_command_wait_bytes('cat', stdin=test_string)
             self.assertEqual(retcode, 0)
             self.assertEqual(stdout, test_string)
-            self.assertEqual(stderr, '')
+            self.assertEqual(stderr, b'')
 
     @run_for_all_plugins
     def test_exec_with_stdin_filelike(self, custom_transport):
@@ -1274,12 +1278,140 @@ class TestExecuteCommandWait(unittest.TestCase):
             self.assertEqual(stderr, '')
 
     @run_for_all_plugins
+    def test_exec_with_stdin_filelike_bytes(self, custom_transport):
+        """Test command execution with a stdin from filelike of type bytes.
+
+        I test directly the exec_command_wait_bytes function; I also pass some non-unicode
+        bytes to check that there is no place in the code where this non-unicode string is
+        implicitly converted to unicode (temporarily, and then converted back) -
+        if this happens somewhere, that code would fail (as the test_string
+        cannot be decoded to UTF8). (Note: we cannot test for all encodings, we test for
+        unicode hoping that this would already catch possible issues.)
+        """
+        test_string = b'some_test bytes with non-unicode -> \xFA'
+        stdin = io.BytesIO(test_string)
+        with custom_transport as transport:
+            retcode, stdout, stderr = transport.exec_command_wait_bytes('cat', stdin=stdin)
+            self.assertEqual(retcode, 0)
+            self.assertEqual(stdout, test_string)
+            self.assertEqual(stderr, b'')
+
+    @run_for_all_plugins
+    def test_exec_with_stdin_filelike_bytes_decoding(self, custom_transport):
+        """Test command execution with a stdin from filelike of type bytes, trying to decode.
+
+        I test directly the exec_command_wait_bytes function; I also pass some non-unicode
+        bytes to check that there is no place in the code where this non-unicode string is
+        implicitly converted to unicode (temporarily, and then converted back) -
+        if this happens somewhere, that code would fail (as the test_string
+        cannot be decoded to UTF8). (Note: we cannot test for all encodings, we test for
+        unicode hoping that this would already catch possible issues.)
+        """
+        test_string = b'some_test bytes with non-unicode -> \xFA'
+        stdin = io.BytesIO(test_string)
+        with custom_transport as transport:
+            with self.assertRaises(UnicodeDecodeError):
+                transport.exec_command_wait('cat', stdin=stdin, encoding='utf-8')
+
+    @run_for_all_plugins
     def test_exec_with_wrong_stdin(self, custom_transport):
         """Test command execution with incorrect stdin string."""
         # I pass a number
         with custom_transport as transport:
             with self.assertRaises(ValueError):
                 transport.exec_command_wait('cat', stdin=1)
+
+    @run_for_all_plugins
+    def test_transfer_big_stdout(self, custom_transport):  # pylint: disable=too-many-locals
+        """Test the transfer of a large amount of data on stdout."""
+        # Create a "big" file of > 2MB (10MB here; in general, larger than the buffer size)
+        min_file_size_bytes = 5 * 1024 * 1024
+        # The file content will be a sequence of these lines, until the size
+        # is > MIN_FILE_SIZE_BYTES
+        file_line = 'This is a Unicødê štring\n'
+        fname = 'test.dat'
+        script_fname = 'script.py'
+
+        # I create a large content of the file (as a string)
+        file_line_binary = file_line.encode('utf8')
+        line_repetitions = (min_file_size_bytes // len(file_line_binary) + 1)
+        fcontent = (file_line_binary * line_repetitions).decode('utf8')
+
+        with custom_transport as trans:
+            # We cannot use tempfile.mkdtemp because we're on a remote folder
+            location = trans.normalize(os.path.join('/', 'tmp'))
+            trans.chdir(location)
+            self.assertEqual(location, trans.getcwd())
+
+            directory = 'temp_dir_test_transfer_big_stdout'
+            while trans.isdir(directory):
+                # I append a random letter/number until it is unique
+                directory += random.choice(string.ascii_uppercase + string.digits)
+            trans.mkdir(directory)
+            trans.chdir(directory)
+
+            with tempfile.NamedTemporaryFile(mode='wb') as tmpf:
+                tmpf.write(fcontent.encode('utf8'))
+                tmpf.flush()
+
+                # I put a file with specific content there at the right file name
+                trans.putfile(tmpf.name, fname)
+
+            python_code = r"""import sys
+
+# disable buffering is only allowed in binary
+#stdout = open(sys.stdout.fileno(), mode="wb", buffering=0)
+#stderr = open(sys.stderr.fileno(), mode="wb", buffering=0)
+# Use these lines instead if you want to use buffering
+# I am leaving these in as most programs typically are buffered
+stdout = open(sys.stdout.fileno(), mode="wb")
+stderr = open(sys.stderr.fileno(), mode="wb")
+
+line = '''{}'''.encode('utf-8')
+
+for i in range({}):
+    stdout.write(line)
+    stderr.write(line)
+""".format(file_line, line_repetitions)
+
+            with tempfile.NamedTemporaryFile(mode='w') as tmpf:
+                tmpf.write(python_code)
+                tmpf.flush()
+
+                # I put a file with specific content there at the right file name
+                trans.putfile(tmpf.name, script_fname)
+
+            # I get its content via the stdout; emulate also network slowness (note I cat twice)
+            retcode, stdout, stderr = trans.exec_command_wait(f'cat {fname} ; sleep 1 ; cat {fname}')
+            self.assertEqual(stderr, '')
+            self.assertEqual(stdout, fcontent + fcontent)
+            self.assertEqual(retcode, 0)
+
+            # I get its content via the stderr; emulate also network slowness (note I cat twice)
+            retcode, stdout, stderr = trans.exec_command_wait(f'cat {fname} >&2 ; sleep 1 ; cat {fname} >&2')
+            self.assertEqual(stderr, fcontent + fcontent)
+            self.assertEqual(stdout, '')
+            self.assertEqual(retcode, 0)
+
+            # This time, I cat one one on each of the two streams intermittently, to check
+            # that this does not hang.
+
+            # Initially I was using a command like
+            #        'i=0; while [ "$i" -lt {} ] ; do let i=i+1; echo -n "{}" ; echo -n "{}" >&2 ; done'.format(
+            #        line_repetitions, file_line, file_line))
+            # However this is pretty slow (and using 'cat' of a file containing only one line is even slower)
+
+            retcode, stdout, stderr = trans.exec_command_wait(f'python3 {script_fname}')
+
+            self.assertEqual(stderr, fcontent)
+            self.assertEqual(stdout, fcontent)
+            self.assertEqual(retcode, 0)
+
+            # Clean-up
+            trans.remove(fname)
+            trans.remove(script_fname)
+            trans.chdir('..')
+            trans.rmdir(directory)
 
 
 class TestDirectScheduler(unittest.TestCase):

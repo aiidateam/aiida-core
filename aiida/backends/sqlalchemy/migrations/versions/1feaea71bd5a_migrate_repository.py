@@ -7,6 +7,8 @@ Revises: 7536a82b2cc4
 Create Date: 2020-10-01 15:05:49.271958
 
 """
+import pathlib
+
 from alembic import op
 from sqlalchemy import Integer, cast
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -24,10 +26,13 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     import json
     from tempfile import NamedTemporaryFile
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, get_progress_reporter
+    from disk_objectstore import Container
+
+    from aiida.common import exceptions
+    from aiida.common.progress_reporter import set_progress_bar_tqdm, get_progress_reporter, set_progress_reporter
     from aiida.manage.configuration import get_profile
 
     connection = op.get_bind()
@@ -44,7 +49,31 @@ def upgrade():
     missing_repo_folder = []
     shard_count = 256
 
-    set_progress_bar_tqdm()
+    basepath = pathlib.Path(profile.repository_path) / 'repository' / 'node'
+    filepath = pathlib.Path(profile.repository_path) / 'container'
+    container = Container(filepath)
+
+    if not profile.is_test_profile and (node_count > 0 and not basepath.is_dir()):
+        raise exceptions.DatabaseMigrationError(
+            f'the file repository `{basepath}` does not exist but the database is not empty, it contains {node_count} '
+            'nodes. Aborting the migration.'
+        )
+
+    if not profile.is_test_profile and container.is_initialised:
+        raise exceptions.DatabaseMigrationError(
+            f'the container {filepath} already exists. If you ran this migration before and it failed simply '
+            'delete this directory and restart the migration.'
+        )
+
+    container.init_container(clear=True, **profile.defaults['repository'])
+
+    # Only show the progress bar if there is at least a node in the database. Note that we cannot simply make the entire
+    # next block under the context manager optional, since it performs checks on whether the repository contains files
+    # that are not in the database that are still important to perform even if the database is empty.
+    if node_count > 0:
+        set_progress_bar_tqdm()
+    else:
+        set_progress_reporter(None)
 
     with get_progress_reporter()(total=shard_count, desc='Migrating file repository') as progress:
         for i in range(shard_count):
@@ -52,9 +81,7 @@ def upgrade():
             shard = '%.2x' % i  # noqa flynt
             progress.set_description_str(f'Migrating file repository: shard {shard}')
 
-            mapping_node_repository_metadata, missing_sub_repo_folder = utils.migrate_legacy_repository(
-                node_count, shard
-            )
+            mapping_node_repository_metadata, missing_sub_repo_folder = utils.migrate_legacy_repository(shard)
 
             if missing_sub_repo_folder:
                 missing_repo_folder.extend(missing_sub_repo_folder)
@@ -101,7 +128,6 @@ def upgrade():
 
         # If there were no nodes, most likely a new profile, there is not need to print the warning
         if node_count:
-            import pathlib
             echo.echo_warning(
                 'Migrated file repository to the new disk object store. The old repository has not been deleted out'
                 f' of safety and can be found at {pathlib.Path(get_profile().repository_path, "repository")}.'

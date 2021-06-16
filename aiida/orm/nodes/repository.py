@@ -2,14 +2,17 @@
 """Interface to the file repository of a node instance."""
 import contextlib
 import io
+import pathlib
 import tempfile
-import typing
+from typing import BinaryIO, Dict, Iterable, Iterator, List, Tuple, Union
 
 from aiida.common import exceptions
 from aiida.repository import Repository, File
 from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)
+
+FilePath = Union[str, pathlib.PurePosixPath]
 
 
 class NodeRepositoryMixin:
@@ -67,7 +70,7 @@ class NodeRepositoryMixin:
 
         self._repository_instance = repository
 
-    def repository_serialize(self) -> typing.Dict:
+    def repository_serialize(self) -> Dict:
         """Serialize the metadata of the repository content into a JSON-serializable format.
 
         :return: dictionary with the content metadata.
@@ -82,7 +85,7 @@ class NodeRepositoryMixin:
         if self.is_stored:
             raise exceptions.ModificationNotAllowed('the node is stored and therefore the repository is immutable.')
 
-    def list_objects(self, path: str = None) -> typing.List[File]:
+    def list_objects(self, path: str = None) -> List[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
 
         :param path: the relative path where to store the object in the repository.
@@ -93,7 +96,7 @@ class NodeRepositoryMixin:
         """
         return self._repository.list_objects(path)
 
-    def list_object_names(self, path: str = None) -> typing.List[str]:
+    def list_object_names(self, path: str = None) -> List[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
 
         :param path: the relative path where to store the object in the repository.
@@ -105,7 +108,7 @@ class NodeRepositoryMixin:
         return self._repository.list_object_names(path)
 
     @contextlib.contextmanager
-    def open(self, path: str, mode='r') -> io.BufferedReader:
+    def open(self, path: str, mode='r') -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -127,7 +130,7 @@ class NodeRepositoryMixin:
             else:
                 yield handle
 
-    def get_object_content(self, path: str, mode='r') -> typing.Union[str, bytes]:
+    def get_object_content(self, path: str, mode='r') -> Union[str, bytes]:
         """Return the content of a object identified by key.
 
         :param key: fully qualified identifier for the object within the repository.
@@ -189,6 +192,19 @@ class NodeRepositoryMixin:
         self.check_mutability()
         self._repository.put_object_from_tree(filepath, path)
         self._update_repository_metadata()
+
+    def walk(self, path: FilePath = None) -> Iterable[Tuple[pathlib.PurePosixPath, List[str], List[str]]]:
+        """Walk over the directories and files contained within this repository.
+
+        .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
+            line with the ``os.walk`` implementation where the order depends on the underlying file system used.
+
+        :param path: the relative path of the directory within the repository whose contents to walk.
+        :return: tuples of root, dirnames and filenames just like ``os.walk``, with the exception that the root path is
+            always relative with respect to the repository root, instead of an absolute path and it is an instance of
+            ``pathlib.PurePosixPath`` instead of a normal string
+        """
+        yield from self._repository.walk(path)
 
     def delete_object(self, path: str):
         """Delete the object from the repository.

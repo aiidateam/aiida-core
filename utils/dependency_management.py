@@ -26,7 +26,6 @@ import tomlkit as toml
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
 SETUPTOOLS_CONDA_MAPPINGS = {
-    'psycopg2-binary': 'psycopg2',
     'graphviz': 'python-graphviz',
 }
 

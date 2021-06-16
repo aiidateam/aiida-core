@@ -365,19 +365,21 @@ def computer_list(all_entries, raw):
 @with_dbenv()
 def computer_show(computer):
     """Show detailed information for a computer."""
-    table = []
-    table.append(['Label', computer.label])
-    table.append(['PK', computer.pk])
-    table.append(['UUID', computer.uuid])
-    table.append(['Description', computer.description])
-    table.append(['Hostname', computer.hostname])
-    table.append(['Transport type', computer.transport_type])
-    table.append(['Scheduler type', computer.scheduler_type])
-    table.append(['Work directory', computer.get_workdir()])
-    table.append(['Shebang', computer.get_shebang()])
-    table.append(['Mpirun command', ' '.join(computer.get_mpirun_command())])
-    table.append(['Prepend text', computer.get_prepend_text()])
-    table.append(['Append text', computer.get_append_text()])
+    table = [
+        ['Label', computer.label],
+        ['PK', computer.pk],
+        ['UUID', computer.uuid],
+        ['Description', computer.description],
+        ['Hostname', computer.hostname],
+        ['Transport type', computer.transport_type],
+        ['Scheduler type', computer.scheduler_type],
+        ['Work directory', computer.get_workdir()],
+        ['Shebang', computer.get_shebang()],
+        ['Mpirun command', ' '.join(computer.get_mpirun_command())],
+        ['Default #procs/machine', computer.get_default_mpiprocs_per_machine()],
+        ['Prepend text', computer.get_prepend_text()],
+        ['Append text', computer.get_append_text()],
+    ]
     echo.echo(tabulate.tabulate(table))
 
 

@@ -9,6 +9,10 @@
 ###########################################################################
 """Serialization tests"""
 
+import types
+
+import numpy as np
+
 from aiida import orm
 from aiida.orm.utils import serialize
 from aiida.backends.testbase import AiidaTestCase
@@ -28,7 +32,7 @@ class TestSerialize(AiidaTestCase):
         data = {'test': 1, 'list': [1, 2, 3, node_a], 'dict': {('Si',): node_b, 'foo': 'bar'}, 'baz': 'aar'}
 
         serialized_data = serialize.serialize(data)
-        deserialized_data = serialize.deserialize(serialized_data)
+        deserialized_data = serialize.deserialize_unsafe(serialized_data)
 
         # For now manual element-for-element comparison until we come up with general
         # purpose function that can equate two node instances properly
@@ -49,7 +53,7 @@ class TestSerialize(AiidaTestCase):
         data = {'group': group_a}
 
         serialized_data = serialize.serialize(data)
-        deserialized_data = serialize.deserialize(serialized_data)
+        deserialized_data = serialize.deserialize_unsafe(serialized_data)
 
         self.assertEqual(data['group'].uuid, deserialized_data['group'].uuid)
         self.assertEqual(data['group'].label, deserialized_data['group'].label)
@@ -57,13 +61,13 @@ class TestSerialize(AiidaTestCase):
     def test_serialize_node_round_trip(self):
         """Test you can serialize and deserialize a node"""
         node = orm.Data().store()
-        deserialized = serialize.deserialize(serialize.serialize(node))
+        deserialized = serialize.deserialize_unsafe(serialize.serialize(node))
         self.assertEqual(node.uuid, deserialized.uuid)
 
     def test_serialize_group_round_trip(self):
         """Test you can serialize and deserialize a group"""
         group = orm.Group(label='test_serialize_group_round_trip').store()
-        deserialized = serialize.deserialize(serialize.serialize(group))
+        deserialized = serialize.deserialize_unsafe(serialize.serialize(group))
 
         self.assertEqual(group.uuid, deserialized.uuid)
         self.assertEqual(group.label, deserialized.label)
@@ -71,7 +75,7 @@ class TestSerialize(AiidaTestCase):
     def test_serialize_computer_round_trip(self):
         """Test you can serialize and deserialize a computer"""
         computer = self.computer
-        deserialized = serialize.deserialize(serialize.serialize(computer))
+        deserialized = serialize.deserialize_unsafe(serialize.serialize(computer))
 
         # pylint: disable=no-member
         self.assertEqual(computer.uuid, deserialized.uuid)
@@ -117,6 +121,28 @@ class TestSerialize(AiidaTestCase):
         attribute_dict['nested']['normal'] = {'a': 2}
 
         serialized = serialize.serialize(attribute_dict)
-        deserialized = serialize.deserialize(serialized)
+        deserialized = serialize.deserialize_unsafe(serialized)
 
         self.assertEqual(attribute_dict, deserialized)
+
+    def test_serialize_numpy(self):  # pylint: disable=no-self-use
+        """Regression test for #3709
+
+        Check that numpy arrays can be serialized.
+        """
+        data = np.array([1, 2, 3])
+
+        serialized = serialize.serialize(data)
+        deserialized = serialize.deserialize_unsafe(serialized)
+        assert np.all(data == deserialized)
+
+    def test_serialize_simplenamespace(self):  # pylint: disable=no-self-use
+        """Regression test for #3709
+
+        Check that `types.SimpleNamespace` can be serialized.
+        """
+        data = types.SimpleNamespace(a=1, b=2.1)
+
+        serialized = serialize.serialize(data)
+        deserialized = serialize.deserialize_unsafe(serialized)
+        assert data == deserialized

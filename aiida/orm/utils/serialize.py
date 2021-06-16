@@ -176,13 +176,11 @@ class AiiDADumper(yaml.Dumper):
         return super().represent_data(data)
 
 
-class AiiDALoader(yaml.FullLoader):
+class AiiDALoader(yaml.UnsafeLoader):
     """AiiDA specific yaml loader
 
-    .. note:: we subclass the `FullLoader` which is the one that since `pyyaml>=5.1` is the loader that prevents
-        arbitrary code execution. Even though this is in principle only used internally, one could imagine someone
-        sharing a database with a maliciously crafted process instance dump, which when reloaded could execute arbitrary
-        code. This load prevents this: https://github.com/yaml/pyyaml/wiki/PyYAML-yaml.load(input)-Deprecation
+    .. note:: The `AiiDALoader` should only be used on trusted input, because it uses the `yaml.UnsafeLoader`. When
+        importing a shared database, we strip all process node checkpoints to avoid this being a security risk.
     """
 
 
@@ -219,10 +217,11 @@ def serialize(data, encoding=None):
     return serialized
 
 
-def deserialize(serialized):
+def deserialize_unsafe(serialized):
     """Deserialize a yaml dump that represents a serialized data structure.
 
-    .. note:: no need to use `yaml.safe_load` here because the `Loader` will ensure that loading is safe.
+    .. note:: This function should not be used on untrusted input, because
+        it is built upon `yaml.UnsafeLoader`.
 
     :param serialized: a yaml serialized string representation
     :return: the deserialized data structure

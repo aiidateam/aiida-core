@@ -183,6 +183,12 @@ In our example, the two input files are already stored in the AiiDA file reposit
 The ``retrieve_list`` on the other hand tells the engine which files to retrieve from the directory where the job ran after it has finished.
 All files listed here will be store in a |FolderData| node that is attached as an output node to the calculation with the label ``retrieved``.
 
+Finally, we pass the |CodeInfo| to a |CalcInfo| object.
+One calculation job can involve more than one executable, so ``codes_info`` is a list.
+If you have more than one executable in your ``codes_info``, you can set ``codes_run_mode`` to specify the mode with which these will be executed (`CodeRunMode.SERIAL` by default).
+We define the ``retrieve_list`` of filenames that the engine should retrieve from the directory where the job ran after it has finished.
+The engine will store these files in a |FolderData| node that will be attached as an output node to the calculation with the label ``retrieved``.
+
 .. admonition:: Further reading
 
     There are :ref:`other file lists available<topics:calculations:usage:calcjobs:file_lists>` that allow you to easily customize how to move files to and from the remote working directory in order to prevent the creation of unnecessary copies.

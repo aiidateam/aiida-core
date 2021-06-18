@@ -593,12 +593,17 @@ class CalcJob(Process):
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
             this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
-            this_withmpi = code_info.withmpi  # to decide better how to set the default
-            if this_withmpi is None:
-                if len(calc_info.codes_info) > 1:
-                    raise PluginInternalError('For more than one code, it is necessary to set withmpi in codes_info')
-                else:
-                    this_withmpi = self.node.get_option('withmpi')
+            # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
+            # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
+            # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
+            # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
+            # multiple codes always have to be executed without MPI.
+
+            this_withmpi = self.node.get_option('withmpi')
+
+            # Override the value of `withmpi` with that of the `CodeInfo` if and only if it is set
+            if code_info.withmpi is not None:
+                this_withmpi = code_info.withmpi
 
             if this_withmpi:
                 this_argv = (
@@ -615,15 +620,12 @@ class CalcJob(Process):
             codes_info.append(code_info)
         job_tmpl.codes_info = codes_info
 
-        # set the codes execution mode
+        # set the codes execution mode, default set to `SERIAL`
+        codes_run_mode = CodeRunMode.SERIAL
+        if calc_info.codes_run_mode:
+            codes_run_mode = calc_info.codes_run_mode
 
-        if len(codes) > 1:
-            try:
-                job_tmpl.codes_run_mode = calc_info.codes_run_mode
-            except KeyError as exc:
-                raise PluginInternalError('Need to set the order of the code execution (parallel or serial?)') from exc
-        else:
-            job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+        job_tmpl.codes_run_mode = codes_run_mode
         ########################################################################
 
         custom_sched_commands = self.node.get_option('custom_scheduler_commands')

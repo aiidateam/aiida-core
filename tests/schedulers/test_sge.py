@@ -369,4 +369,3 @@ class TestCommand(unittest.TestCase):
 
         header = scheduler._get_submit_script_header(job_tmpl)
         self.assertTrue('#$ -N Somejobnamewithinvalid-characters.' in header, header)
-

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.6.4 - 2021-06-23
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.3...v1.6.4)
+
+This is a patch release to pin `psycopg2-binary` to version 2.8.x, to avoid an issue with database creation in version 2.9 ([#4989](https://github.com/aiidateam/aiida-core/pull/4989)).
+
 ## v1.6.3 - 2021-04-28
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.2...v1.6.3) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-04-281&to=2021-04-28&type=c)

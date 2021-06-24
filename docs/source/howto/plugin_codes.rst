@@ -23,26 +23,44 @@ Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
 3. Parse the output of the code.
 
-This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for a simple executable that sums two numbers, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
+This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for the `diff` executable that "computes" the difference between two files, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
 
-In the following, as an example, our |Code| will be the `bash` executable, and our "input file" will be a `bash` script ``aiida.in`` that sums two numbers and prints the result:
-
-.. code-block:: bash
-
-   echo $(( numx + numy ))
-
-We will run this as:
+In the following, our |Code| will be the `diff` executable, which takes two "input files" and prints the difference between the files to standard output.
 
 .. code-block:: bash
 
-    /bin/bash < aiida.in > aiida.out
+   $ cat file1.txt
+   file with content
+   content1
 
-thus writing the sum of the two numbers ``numx`` and ``numy`` (provided by the user) to the output file ``aiida.out``.
+   $ cat file2.txt
+   file with content
+   content2
+
+   $ diff file1.txt file2.txt
+   2c2
+   < content1
+   ---
+   > content2
+
+We will run it as:
+
+.. code-block:: bash
+
+   $ diff file1.txt file2.txt > diff.patch
+
+thus writing difference between `file1.txt` and `file2.txt` to `diff.patch`.
 
 
-.. todo::
+.. admonition:: Why diff?
 
-    Add to preceding sentence: :ref:`the communication with external machines<how-to:plugin-codes:transport>` and the interaction with its :ref:`scheduling software<how-to:plugin-codes:scheduler>`.
+  * ``diff`` is available on almost every UNIX system
+  * ``diff`` has both command line *arguments* (the two files) and command line *options* (e.g. `-i` for case-insensitive matching)
+  * ``diff`` takes 2 input files & produces 1 output file
+
+  This is similar to how many scientific codes work, making it easy to adapt this example to your use case.
+
+
 
 .. _how-to:plugin-codes:interfacing:
 
@@ -54,14 +72,12 @@ Start by creating a file ``calculations.py`` and subclass the |CalcJob| class:
 
 .. code-block:: python
 
-    from aiida import orm
-    from aiida.common.datastructures import CalcInfo, CodeInfo
-    from aiida.common.folders import Folder
-    from aiida.engine import CalcJob, CalcJobProcessSpec
+    from aiida.common import datastructures
+    from aiida.engine import CalcJob
+    from aiida.orm import SinglefileData
 
-
-    class ArithmeticAddCalculation(CalcJob):
-        """`CalcJob` implementation to add two numbers using bash for testing and demonstration purposes."""
+    class DiffCalculation(CalcJob):
+        """AiiDA calculation plugin wrapping the diff executable."""
 
 
 In the following, we will tell AiiDA how to run our code by implementing two key methods:
@@ -76,23 +92,44 @@ The |define| method tells AiiDA which inputs the |CalcJob| expects and which out
 This is done through an instance of the :py:class:`~aiida.engine.processes.process_spec.CalcJobProcessSpec` class, which is passed as the |spec| argument to the |define| method.
 For example:
 
-.. literalinclude:: ../../../aiida/calculations/arithmetic/add.py
-    :language: python
-    :pyobject: ArithmeticAddCalculation.define
+.. code-block:: python
+
+    @classmethod
+    def define(cls, spec):
+        """Define inputs and outputs of the calculation."""
+        super().define(spec)
+        spec.input('file1', valid_type=SinglefileData, help='First file to be compared.')
+        spec.input('file2', valid_type=SinglefileData, help='Second file to be compared.')
+        spec.output('diff', valid_type=SinglefileData,
+            help='diff between file1 and file2.')
+
+        # set default values for AiiDA options (optional)
+        spec.inputs['metadata']['options']['parser_name'].default = 'diff'
+        spec.inputs['metadata']['options']['output_filename'].default = 'diff.patch'
+        spec.inputs['metadata']['options']['resources'].default = {
+            'num_machines': 1,
+            'num_mpiprocs_per_machine': 1,
+        }
+
+        spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
 
 The first line of the method calls the |define| method of the |CalcJob| parent class.
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
 
-Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input numbers ``x`` and ``y`` (we support integers and floating point numbers), and we use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``sum``.
+Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input files ``file1`` and ``file2`` of type |SinglefileData|.
+
+.. note::
+    When using |SinglefileData|, AiiDA keeps track of the inputs as *files*.
+    This is very flexible but has the downside of making it difficult to query for information contained in those files and ensuring that the inputs are valid.
+    The `aiida-diff`_ demo plugin builds on the example shown here and uses the |Dict| class to represent the `diff` command line options as a python dictionary, enabling querying and automatic validation.
+
+We then use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``diff``.
 AiiDA will attach the outputs defined here to a (successfully) finished calculation using the link label provided.
 
 .. note::
     This holds for *required* outputs (the default behaviour).
     Use ``required=False`` in order to mark an output as optional.
 
-.. tip::
-
-    For the input parameters and input files of more complex simulation codes, consider using :py:class:`~aiida.orm.nodes.data.dict.Dict` (python dictionary) and :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData` (file wrapper) input nodes.
 
 Finally, we set a couple of default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
 These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
@@ -447,6 +484,8 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 
 
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`
+.. |SinglefileData| replace:: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
+.. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
 .. |Code| replace:: :py:class:`~aiida.orm.nodes.data.Code`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
@@ -460,7 +499,6 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |spec| replace:: ``spec``
 .. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
 .. |prepare_for_submission| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
+.. |PluginCutter| replace:: `AiiDA plugin cutter <https://github.com/aiidateam/aiida-plugin-cutter>`_
 
-.. _#3989: https://github.com/aiidateam/aiida-core/issues/3989
-.. _#3990: https://github.com/aiidateam/aiida-core/issues/3990
-.. _#4123: https://github.com/aiidateam/aiida-core/issues/4123
+.. _aiida-diff: https://github.com/aiidateam/aiida-diff

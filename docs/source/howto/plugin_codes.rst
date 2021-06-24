@@ -23,7 +23,7 @@ Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
 3. Parse the output of the code.
 
-This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for the `diff` executable that "computes" the difference between two files, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
+This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for the `diff` executable that "computes" the difference between two files, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs. While this example is specifically meant for `diff` it can be easily expanded to most other codes with some changes. 
 
 In the following, our |Code| will be the `diff` executable, which takes two "input files" and prints the difference between the files to standard output.
 

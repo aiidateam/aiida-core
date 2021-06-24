@@ -442,9 +442,6 @@ With the entry points set up, you are ready to launch your first calculation wit
 
         diff_code = load_code('diff@localhost')
 
-        DiffParameters = DataFactory('diff')
-        parameters = DiffParameters({'ignore-case': True})
-
         SinglefileData = DataFactory('singlefile')
         file1 = SinglefileData(file=path.join('file1.txt'))
         file2 = SinglefileData(file=path.join('file2.txt'))
@@ -452,7 +449,6 @@ With the entry points set up, you are ready to launch your first calculation wit
         # set up calculation
         inputs = {
             'code': diff_code,
-            'parameters': parameters,
             'file1': file1,
             'file2': file2,
             'metadata': {

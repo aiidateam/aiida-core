@@ -23,7 +23,7 @@ Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
 3. Parse the output of the code.
 
-This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for the `diff` executable that "computes" the difference between two files, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs. While this example is specifically meant for `diff` it can be easily expanded to most other codes with some changes. 
+This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for the `diff` executable that "computes" the difference between two files, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs. While this example is specifically meant for `diff` it can be easily expanded to most other codes with some changes.
 
 In the following, our |Code| will be the `diff` executable, which takes two "input files" and prints the difference between the files to standard output.
 
@@ -190,11 +190,11 @@ For example:
 
 .. note:: Unlike the |define| method, the ``prepare_for_submission`` method is implemented from scratch and so there is no super call.
 
-There are two types of information that we have to specify, namely |CodeInfo|, which contains information necessary to execute the code and |CalcInfo|, which has to do with storage of data produced by the calculation. 
+There are two types of information that we have to specify, namely |CodeInfo|, which contains information necessary to execute the code and |CalcInfo|, which has to do with storage of data produced by the calculation.
 
 We start by look at the inputs for |CodeInfo|. Here we supply the command line parameters as the names of the files that we would like to ``diff``. Use ``self.inputs``, which provides access to all inputs defined in ``spec``. All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called. Therefore, when accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
 
-Recall that ``diff`` requires the two filenames as inputs. These are provided using ``self.inputs.file1.filename`` and ``self.inputs.file2.filename``. We would also need to supply the code, which is done through its uuid as ``self.inputs.code.uuid``. To capture the output of ``diff``, specify an output filename as ``self.metadata.options.output_filename``. 
+Recall that ``diff`` requires the two filenames as inputs. These are provided using ``self.inputs.file1.filename`` and ``self.inputs.file2.filename``. We would also need to supply the code, which is done through its uuid as ``self.inputs.code.uuid``. To capture the output of ``diff``, specify an output filename as ``self.metadata.options.output_filename``.
 
 .. note::
 
@@ -237,8 +237,7 @@ Parsing the outputs
 
 Parsing the output files produced by a code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
 
-To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``) and implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
-The following is an example of a simple implementation:
+To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``) and implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method:
 
 .. code-block:: python
 
@@ -246,38 +245,19 @@ The following is an example of a simple implementation:
         """
         Parser class for parsing output of calculation.
         """
-        def __init__(self, node):
+
+        def parse(self, **kwargs):
             """
-            Initialize Parser instance
-            Checks that the ProcessNode being passed was produced by a DiffCalculation.
-            :param node: ProcessNode of calculation
-            :param type node: :class:`aiida.orm.ProcessNode`
+            Parse results
+            :returns: an exit code, if parsing fails (or nothing if parsing succeeds)
             """
-            super(DiffParser, self).__init__(node)
+            output_filename = self.node.get_option('output_filename')
 
-.. Here I am not sure if we should have the lines to check if the subclass is DiffParser because it makes it harder to look at and it is just a check anyway
-
-After initializing the Parser, we can now define the ``parse()`` method. 
-
-.. code-block:: python 
-
-    def parse(self, **kwargs):
-        """
-        Parse outputs, store results in database.
-        :returns: an exit code, if parsing fails (or nothing if parsing succeeds)
-        """
-        from aiida.orm import SinglefileData
-
-        output_filename = self.node.get_option('output_filename')
-
-        # Check that folder content is as expected
-        files_retrieved = self.retrieved.list_object_names()
-
-        # add output file
-        self.logger.info("Parsing '{}'".format(output_filename))
-        with self.retrieved.open(output_filename, 'rb') as handle:
-            output_node = SinglefileData(file=handle)
-        self.out('diff', output_node)
+            # add output file
+            self.logger.info("Parsing '{}'".format(output_filename))
+            with self.retrieved.open(output_filename, 'rb') as handle:
+                output_node = SinglefileData(file=handle)
+            self.out('diff', output_node)
 
         return ExitCode(0)
 
@@ -287,15 +267,18 @@ Before the ``parse()`` method is called, two important attributes are set on the
 
   2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
 
-The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file. A file with this filename is then made into a ``SinglefileData``.
+The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file.
 
-Finally, the :py:meth:`~aiida.parsers.parser.Parser.out` method is used to link the parsed ``diff`` as an output of the calculation.
-The first argument is the name of the output, which will be used as the label for the link that connects the calculation and data node, and the second is the node that should be recorded as an output.
+Finally, the :py:meth:`~aiida.parsers.parser.Parser.out` method is used return the output file as the ``diff`` output of the calculation:
+The first argument is the name to be used as the label for the link that connects the calculation and data node.
+The second argument is the node that should be recorded as an output.
 
 .. note::
 
-    The type of the output should match the type that is specified by the process specification of the corresponding |CalcJob|.
-    If any of the registered outputs do not match the specification, the calculation will be marked as failed.
+    The outputs and their types need to match those from the process specification of the corresponding |CalcJob| (or an exception will be raised).
+
+In this minimalist example, there isn't actually much parsing going on -- we are simply passing along the output file as a |SinglefileData| node.
+If your code produces output in a structured format, instead of just returning the file you will likely want to parse it and return information e.g. in the form of a python dictionary (i.e. a |Dict| node).
 
 In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when launching the job.
 If a particular parser should be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as was done in the :ref:`previous section <how-to:plugin-codes:interfacing>`:
@@ -307,8 +290,8 @@ If a particular parser should be used by default, the |CalcJob| ``define`` metho
         ...
         spec.inputs['metadata']['options']['parser_name'].default = 'diff'
 
-Note, that the default is not set to the |Parser| class itself, but the *entry point string* under which the parser class is registered.
-How to register a parser class through an entry point is explained in the how-to section on :ref:`registering plugins <how-to:plugins-develop>`.
+Note that the default is not set to the |Parser| class itself, but the *entry point string* under which the parser class is registered.
+How to register a parser class through an entry point is explained in :ref:`registering plugins <how-to:plugins-develop>`.
 
 
 .. _how-to:plugin-codes:parsing:errors:
@@ -321,13 +304,13 @@ However, there are lots of ways in which codes can fail to execute nominally.
 A |Parser| can play an important role in detecting and communicating such errors, where :ref:`workflows <how-to:run-workflows>` can then decide how to proceed, e.g., by modifying input parameters and resubmitting the calculation.
 
 Parsers communicate errors through :ref:`exit codes<topics:processes:concepts:exit_codes>`, which are defined in the |spec| of the |CalcJob| they parse.
-The :py:class:`DiffCalculation` example, defines the following exit codes:
+The :py:class:`DiffCalculation` example, defines the following exit code:
 
-.. code-block:: python 
+.. code-block:: python
 
     spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
 
-Each ``exit_code`` defines:
+An ``exit_code`` defines:
 
  * an exit status (a positive integer),
  * a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
@@ -364,12 +347,12 @@ Here is a more complete version of the example |Parser| presented in the previou
 
         return ExitCode(0)
 
-It checks if the required number of files match the produced files, effectively checking if ``diff.patch`` if produced during the calculation.
+This simple check makes sure that the expected output file ``diff.patch`` is among the files retrieved from the computer where the calculation was run.
+Production plugins will often check further aspects of the output (e.g. the standard error, the output file, etc.) to detect whether the code failed and return a corresponding exit code.
 
-AiiDA stores the exit code returned by the |parse| method on the calculation node that is being parsed, from where it can then be inspected further down the line.
-The Topics section on :ref:`defining processes <topics:processes:usage:defining>` provides more details on exit codes.
-Note that scheduler plugins can also implement parsing of the output generated by the job scheduler and in the case of problems can set an exit code.
-The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calcjobs:scheduler-errors>` explains how they can be inspected inside an output parser and how they can optionally be overridden.
+AiiDA stores the exit code returned by the |parse| method on the calculation node that is being parsed, from where it can then be inspected further down the line (see the :ref:`defining processes <topics:processes:usage:defining>` topic for more details).
+Note that some scheduler plugins can detect issues at the scheduler level (by parsing the job scheduler output) and set an exit code.
+The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calcjobs:scheduler-errors>` explains how these can be inspected inside a parser and how they can optionally be overridden.
 
 
 .. todo::

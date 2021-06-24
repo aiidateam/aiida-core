@@ -278,7 +278,18 @@ The second argument is the node that should be recorded as an output.
     The outputs and their types need to match those from the process specification of the corresponding |CalcJob| (or an exception will be raised).
 
 In this minimalist example, there isn't actually much parsing going on -- we are simply passing along the output file as a |SinglefileData| node.
-If your code produces output in a structured format, instead of just returning the file you will likely want to parse it and return information e.g. in the form of a python dictionary (i.e. a |Dict| node).
+If your code produces output in a structured format, instead of just returning the file you may want to parse it e.g. to a python dictionary (|Dict| node) to make the results easily searchable.
+
+.. admonition:: Exercise
+
+    Consider the different output files produced by your favorite simulation code.
+    Which information would you want to:
+
+     1. parse into the database for querying (e.g. as |Dict|, |StructureData|, ...)?
+     2. store in the AiiDA file repository for safe-keeping (e.g. as |SinglefileData|, ...)?
+     3. leave on the computer where the calculation ran (e.g. recording their remote location using |RemoteData| or simply ignoring them)?
+
+    Once you know the answers to these questions, you are ready to start writing your parser.
 
 In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when launching the job.
 If a particular parser should be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as was done in the :ref:`previous section <how-to:plugin-codes:interfacing>`:
@@ -546,6 +557,8 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`
 .. |SinglefileData| replace:: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
+.. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
+.. |RemoteData| replace:: :py:class:`~aiida.orm.nodes.data.remote.RemoteData`
 .. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
 .. |Code| replace:: :py:class:`~aiida.orm.nodes.data.Code`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`

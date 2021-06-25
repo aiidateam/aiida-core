@@ -92,26 +92,10 @@ The |define| method tells AiiDA which inputs the |CalcJob| expects and which out
 This is done through an instance of the :py:class:`~aiida.engine.processes.process_spec.CalcJobProcessSpec` class, which is passed as the |spec| argument to the |define| method.
 For example:
 
-.. code-block:: python
+.. literalinclude:: ../../../aiida/calculations/diff/diff_calculation.py
+    :language: python
+    :pyobject: DiffCalculation.define
 
-    @classmethod
-    def define(cls, spec):
-        """Define inputs and outputs of the calculation."""
-        super().define(spec)
-        spec.input('file1', valid_type=SinglefileData, help='First file to be compared.')
-        spec.input('file2', valid_type=SinglefileData, help='Second file to be compared.')
-        spec.output('diff', valid_type=SinglefileData,
-            help='diff between file1 and file2.')
-
-        # set default values for AiiDA options (optional)
-        spec.inputs['metadata']['options']['parser_name'].default = 'diff'
-        spec.inputs['metadata']['options']['output_filename'].default = 'diff.patch'
-        spec.inputs['metadata']['options']['resources'].default = {
-            'num_machines': 1,
-            'num_mpiprocs_per_machine': 1,
-        }
-
-        spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
 
 The first line of the method calls the |define| method of the |CalcJob| parent class.
 This necessary step defines the `inputs` and `outputs` that are common to all |CalcJob|'s.
@@ -158,34 +142,9 @@ The :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submi
 Creating the input files in the format the external code expects and returning a :py:class:`~aiida.common.datastructures.CalcInfo` object that contains instructions for the AiiDA engine on how the code should be run.
 For example:
 
-.. code-block:: python
-
-    def prepare_for_submission(self, folder):
-        """
-        Create input files.
-        :param folder: an `aiida.common.folders.Folder` where the plugin should temporarily place all files needed by
-            the calculation.
-        :return: `aiida.common.datastructures.CalcInfo` instance
-        """
-        codeinfo = datastructures.CodeInfo()
-        codeinfo.cmdline_params = self.inputs.parameters.cmdline_params(
-            file1_name=self.inputs.file1.filename,
-            file2_name=self.inputs.file2.filename)
-        codeinfo.code_uuid = self.inputs.code.uuid
-        codeinfo.stdout_name = self.metadata.options.output_filename
-        codeinfo.withmpi = self.inputs.metadata.options.withmpi
-
-        # Prepare a `CalcInfo` to be returned to the engine
-        calcinfo = datastructures.CalcInfo()
-        calcinfo.codes_info = [codeinfo]
-        calcinfo.local_copy_list = [
-            (self.inputs.file1.uuid, self.inputs.file1.filename, self.inputs.file1.filename),
-            (self.inputs.file2.uuid, self.inputs.file2.filename, self.inputs.file2.filename),
-        ]
-        calcinfo.retrieve_list = [self.metadata.options.output_filename]
-
-        return calcinfo
-
+.. literalinclude:: ../../../aiida/calculations/diff/diff_calculation.py
+    :language: python
+    :pyobject: DiffCalculation.prepare_for_submission
 
 
 .. note:: Unlike the |define| method, the ``prepare_for_submission`` method is implemented from scratch and so there is no super call.
@@ -205,8 +164,6 @@ Recall that ``diff`` requires the two filenames as inputs. These are provided us
 
     By default, the contents of the sandbox ``folder`` are also stored permanently in the file repository of the calculation node for additional provenance guarantees.
     There are cases (e.g. license issues, file size) where you may want to change this behavior and :ref:`exclude files from being stored<topics:calculations:usage:calcjobs:file_lists_provenance_exclude>`.
-
-
 
 
 We now pass the |CodeInfo| to a |CalcInfo| object (one calculation job can involve more than one executable, so ``codes_info`` is a list).
@@ -237,35 +194,23 @@ Parsing the outputs
 
 Parsing the output files produced by a code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
 
-To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``) and implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method:
+To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``) 
 
-.. code-block:: python
+.. code-block:: python 
 
     class DiffParser(Parser):
-        """
-        Parser class for parsing output of calculation.
-        """
-
-        def parse(self, **kwargs):
-            """
-            Parse results
-            :returns: an exit code, if parsing fails (or nothing if parsing succeeds)
-            """
-            output_filename = self.node.get_option('output_filename')
-
-            # add output file
-            self.logger.info("Parsing '{}'".format(output_filename))
-            with self.retrieved.open(output_filename, 'rb') as handle:
-                output_node = SinglefileData(file=handle)
-            self.out('diff', output_node)
-
-        return ExitCode(0)
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
   1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files that the |CalcJob| instructed to retrieve, and provides the means to :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.open` any file it contains.
 
   2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
+
+Now implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method as
+
+.. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser_simple.py
+    :language: python
+    :pyobject: DiffParser.parse
 
 The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file.
 
@@ -330,33 +275,9 @@ An ``exit_code`` defines:
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of the example |Parser| presented in the previous section:
 
-.. code-block:: python
-
-    def parse(self, **kwargs):
-        """
-        Parse outputs, store results in database.
-        :returns: an exit code, if parsing fails (or nothing if parsing succeeds)
-        """
-        from aiida.orm import SinglefileData
-
-        output_filename = self.node.get_option('output_filename')
-
-        # Check that folder content is as expected
-        files_retrieved = self.retrieved.list_object_names()
-        files_expected = [output_filename]
-        # Note: set(A) <= set(B) checks whether A is a subset of B
-        if not set(files_expected) <= set(files_retrieved):
-            self.logger.error("Found files '{}', expected to find '{}'".format(
-                files_retrieved, files_expected))
-            return self.exit_codes.ERROR_MISSING_OUTPUT_FILES
-
-        # add output file
-        self.logger.info("Parsing '{}'".format(output_filename))
-        with self.retrieved.open(output_filename, 'rb') as handle:
-            output_node = SinglefileData(file=handle)
-        self.out('diff', output_node)
-
-        return ExitCode(0)
+.. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser.py
+    :language: python
+    :pyobject: DiffParser.parse
 
 This simple check makes sure that the expected output file ``diff.patch`` is among the files retrieved from the computer where the calculation was run.
 Production plugins will often check further aspects of the output (e.g. the standard error, the output file, etc.) to detect whether the code failed and return a corresponding exit code.
@@ -451,24 +372,31 @@ With the entry points set up, you are ready to launch your first calculation wit
 
     .. code-block:: python
 
-        diff_code = load_code('diff@localhost')
+        # get code
+        computer = helpers.get_computer()
+        diff_code = helpers.get_code(entry_point='diff', computer=computer)
 
+        ## Get the builder 
+        DiffCalculation = CalculationFactory('diff')
+        builder = DiffCalculation.get_builder()
+
+        ## Populate the builder with the two files to be diff'ed
         SinglefileData = DataFactory('singlefile')
-        file1 = SinglefileData(file=path.join('file1.txt'))
-        file2 = SinglefileData(file=path.join('file2.txt'))
+        builder.file1 =  SinglefileData(file=path.join(INPUT_DIR, 'file1.txt'))
+        builder.file2 =  SinglefileData(file=path.join(INPUT_DIR, 'file2.txt')) 
+
+        ## some description about what is done
+        builder.metadata.description = "Test job submission with the aiida_diff plugin"
+        builder.code = diff_code
+
+        ## specify some parameters
+        d = { 'ignore-case': True }
+        DiffParameters = DataFactory('diff')
+
+        builder.parameters = DiffParameters(dict=d)
 
         # set up calculation
-        inputs = {
-            'code': diff_code,
-            'file1': file1,
-            'file2': file2,
-            'metadata': {
-                'description': "Test job submission with the aiida_diff plugin",
-            },
-        }
-
-        # Note: in order to submit your calculation to the aiida daemon, do:
-        result = engine.run(CalculationFactory('diff'), **inputs)
+        result = engine.run(DiffCalculation, **builder)
 
         computed_diff = result['diff'].get_content()
         print("Computed diff between files: \n{}".format(computed_diff))
@@ -509,9 +437,10 @@ Finally instead of running your calculation in the current shell, you can submit
 
     .. code-block:: python
 
-        # Submitting the calculation
-        node = engine.submit(CalculationFactory('diff'), **inputs)
-        print("Submitted calculation {}".format(node))
+        Note: in order to submit your calculation to the aiida daemon, do:
+        from aiida.engine import submit
+        result = engine.submit(DiffCalculation, **builder)
+
 
     .. note::
 

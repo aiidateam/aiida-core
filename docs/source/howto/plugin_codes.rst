@@ -23,11 +23,11 @@ Finally, you will probably want a *parser* plugin, which tells AiiDA how to:
 
 3. Parse the output of the code.
 
-This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>` for the `diff` executable that "computes" the difference between two files, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs. While this example is specifically meant for `diff` it can be easily expanded to most other codes with some changes.
+This how-to takes you through the process of :ref:`creating a calculation plugin<how-to:plugin-codes:interfacing>`, using it to :ref:`run the code<how-to:plugin-codes:run>`, and :ref:`writing a parser <how-to:plugin-codes:parsing>` for its outputs.
 
-In the following, our |Code| will be the `diff` executable, which takes two "input files" and prints the difference between the files to standard output.
+In this example, our |Code| will be the ``diff`` executable that "computes" the difference between two "input files" and prints the difference to standard output:
 
-.. code-block:: bash
+.. code-block:: console
 
    $ cat file1.txt
    file with content
@@ -43,22 +43,16 @@ In the following, our |Code| will be the `diff` executable, which takes two "inp
    ---
    > content2
 
-We will run it as:
+We are using ``diff`` here since it is available on almost every UNIX system by default, and it takes both command line *arguments* (the two files) and command line *options* (e.g. ``-i`` for case-insensitive matching).
+This is similar to how the executables of many scientific simulation codes work, making it easy to adapt this example to your use case.
+
+We will run ``diff`` as:
 
 .. code-block:: bash
 
    $ diff file1.txt file2.txt > diff.patch
 
 thus writing difference between `file1.txt` and `file2.txt` to `diff.patch`.
-
-
-.. admonition:: Why diff?
-
-  * ``diff`` is available on almost every UNIX system
-  * ``diff`` has both command line *arguments* (the two files) and command line *options* (e.g. `-i` for case-insensitive matching)
-  * ``diff`` takes 2 input files & produces 1 output file
-
-  This is similar to how many scientific codes work, making it easy to adapt this example to your use case.
 
 
 
@@ -102,37 +96,40 @@ This necessary step defines the `inputs` and `outputs` that are common to all |C
 
 Next, we use the :py:meth:`~plumpy.process_spec.ProcessSpec.input` method in order to define our two input files ``file1`` and ``file2`` of type |SinglefileData|.
 
-.. note::
+.. admonition:: Further reading
+
     When using |SinglefileData|, AiiDA keeps track of the inputs as *files*.
     This is very flexible but has the downside of making it difficult to query for information contained in those files and ensuring that the inputs are valid.
-    The `aiida-diff`_ demo plugin builds on the example shown here and uses the |Dict| class to represent the `diff` command line options as a python dictionary, enabling querying and automatic validation.
+    The `aiida-diff`_ demo plugin builds on the example shown here and uses the |Dict| class to represent the ``diff`` command line options as a python dictionary, enabling querying and automatic validation.
 
 We then use :py:meth:`~plumpy.process_spec.ProcessSpec.output` to define the only output of the calculation with the label ``diff``.
 AiiDA will attach the outputs defined here to a (successfully) finished calculation using the link label provided.
 
-.. note::
-    This holds for *required* outputs (the default behaviour).
-    Use ``required=False`` in order to mark an output as optional.
+..  I think the following is not really needed here at this point
+    .. note::
+        By default, AiiDA expects all outputs defined in the spec.
+        Use ``required=False`` in order to mark an output as optional.
 
 
 Finally, we set a couple of default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
 These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
 
+There is no ``return`` statement in ``define``: the ``define`` method directly modifies the |spec| object it receives.
+
 .. note::
 
-    One more important input required by any |CalcJob| is which external executable to use.
-    External executables are represented by |Code|  instances that contain information about the computer they reside on, their path in the file system and more.
+        One more input required by any |CalcJob| is which external executable to use.
 
-    They are passed to a |CalcJob| via the ``code`` input, which is defined in the |CalcJob| base class, so you don't have to:
+        External executables are represented by |Code|  instances that contain information about the computer they reside on, their path in the file system and more.
+        They are passed to a |CalcJob| via the ``code`` input, which is defined in the |CalcJob| base class, so you don't have to:
 
-    .. code-block:: python
+        .. code-block:: python
 
-        spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+            spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
 
+.. admonition:: Further reading
 
-
-There is no ``return`` statement in ``define``: the ``define`` method directly modifies the |spec| object it receives.
-For more details on setting up your `inputs` and `outputs` (covering validation, dynamic number of inputs, etc.) see the :ref:`Defining Processes <topics:processes:usage:defining>` topic.
+    For more details on setting up your `inputs` and `outputs` (covering validation, dynamic number of inputs, etc.) see the :ref:`Defining Processes <topics:processes:usage:defining>` topic.
 
 Preparing for submission
 ------------------------
@@ -146,46 +143,50 @@ For example:
     :language: python
     :pyobject: DiffCalculation.prepare_for_submission
 
+All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called.
+Therefore, when accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
 
-.. note:: Unlike the |define| method, the ``prepare_for_submission`` method is implemented from scratch and so there is no super call.
+We start by creating a |CodeInfo| object that lets AiiDA know how to run the code, i.e. here:
 
-There are two types of information that we have to specify, namely |CodeInfo|, which contains information necessary to execute the code and |CalcInfo|, which has to do with storage of data produced by the calculation.
+.. code-block:: bash
 
-We start by look at the inputs for |CodeInfo|. Here we supply the command line parameters as the names of the files that we would like to ``diff``. Use ``self.inputs``, which provides access to all inputs defined in ``spec``. All inputs provided to the calculation are validated against the ``spec`` *before* |prepare_for_submission| is called. Therefore, when accessing the :py:attr:`~plumpy.processes.Process.inputs` attribute, you can safely assume that all required inputs have been set and that all inputs have a valid type.
+   $ diff file1.txt file2.txt > diff.patch
 
-Recall that ``diff`` requires the two filenames as inputs. These are provided using ``self.inputs.file1.filename`` and ``self.inputs.file2.filename``. We would also need to supply the code, which is done through its uuid as ``self.inputs.code.uuid``. To capture the output of ``diff``, specify an output filename as ``self.metadata.options.output_filename``.
+This includes the command line parameters (here: the names of the files that we would like to ``diff``) and the UUID of the |Code| to run.
+Since ``diff`` writes directly to standard output, we redirect standard output to the specified output filename.
+
+Next, we create a |CalcInfo| object that lets AiiDA know which files to copy back and forth.
+In our example, the two input files are already stored in the AiiDA file repository and we can use the ``local_copy_list`` to pass them along.
 
 .. note::
 
-    The ``folder`` argument (a |Folder| instance) allows us to write the input file to a sandbox folder, whose contents will be transferred to the compute resource where the actual calculation takes place.
-    In this example, we only create a single input file, but you can create as many as you need, including subfolders if required.
+  In other use cases you may need to *create* new files on the fly.
+  This is what the ``folder`` argument of :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` is for:
 
-.. note::
+  .. code:: python
 
-    By default, the contents of the sandbox ``folder`` are also stored permanently in the file repository of the calculation node for additional provenance guarantees.
-    There are cases (e.g. license issues, file size) where you may want to change this behavior and :ref:`exclude files from being stored<topics:calculations:usage:calcjobs:file_lists_provenance_exclude>`.
+    with folder.open("filename", 'w'):
+        handle.write("file content")
 
 
-We now pass the |CodeInfo| to a |CalcInfo| object (one calculation job can involve more than one executable, so ``codes_info`` is a list).
-We define the ``retrieve_list`` of filenames that the engine should retrieve from the directory where the job ran after it has finished.
-The engine will store these files in a |FolderData| node that will be attached as an output node to the calculation with the label ``retrieved``. Define a ``local_copy_list`` to provide the files that must be copied over to the remote computer.
-There are :ref:`other file lists available<topics:calculations:usage:calcjobs:file_lists>` that allow you to easily customize how to move files to and from the remote working directory in order to prevent the creation of unnecessary copies.
+  Any files and directories created in this sandbox folder will automatically be transferred to the compute resource where the actual calculation takes place.
 
-This was an example of how to implement the |CalcJob| class to interface AiiDA with an external code.
-For more details on the |CalcJob| class, refer to the Topics section on :ref:`defining calculations <topics:calculations:usage>`.
 
-.. tip::
+.. This is too detailed for a tutorial
+    .. note::
 
-     Many executables don't read from standard input but instead require the path to an input file to be passed via command line parameters (potentially including further configuration options).
-     In that case, use the |CodeInfo| ``cmdline_params`` attribute:
+        By default, the contents of the sandbox ``folder`` are also stored permanently in the file repository of the calculation node for additional provenance guarantees.
+        There are cases (e.g. license issues, file size) where you may want to change this behavior and :ref:`exclude files from being stored<topics:calculations:usage:calcjobs:file_lists_provenance_exclude>`.
 
-     .. code-block:: python
 
-         codeinfo.cmdline_params = ['--input', self.inputs.input_filename]
+The ``retrieve_list`` on the other hand tells the engine which files to retrieve from the directory where the job ran after it has finished.
+All files listed here will be store in a |FolderData| node that is attached as an output node to the calculation with the label ``retrieved``.
 
-.. tip::
+.. admonition:: Further reading
 
-    ``self.options.input_filename`` is just a shorthand for ``self.inputs.metadata['options']['input_filename']``.
+    There are :ref:`other file lists available<topics:calculations:usage:calcjobs:file_lists>` that allow you to easily customize how to move files to and from the remote working directory in order to prevent the creation of unnecessary copies.
+    For more details on the |CalcJob| class, refer to the Topics section on :ref:`defining calculations <topics:calculations:usage>`.
+
 
 .. _how-to:plugin-codes:parsing:
 
@@ -194,9 +195,9 @@ Parsing the outputs
 
 Parsing the output files produced by a code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
 
-To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``) 
+To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``)
 
-.. code-block:: python 
+.. code-block:: python
 
     class DiffParser(Parser):
 
@@ -361,46 +362,46 @@ With the entry points set up, you are ready to launch your first calculation wit
         $ verdi computer setup -L localhost -H localhost -T local -S direct -w `echo $PWD/work` -n
         $ verdi computer configure local localhost --safe-interval 5 -n
 
- *  Setup two simple files to run
+ *  Create the input files for our calculation
 
     .. code-block:: console
 
-        $ echo "This is the first file" > file1.txt
-        $ echo "This is the second file" > file2.txt
+        $ echo "File with content\ncontent1" > file1.txt
+        $ echo "File with content\ncontent2" > file2.txt
 
  * Write a ``launch.py`` script:
 
     .. code-block:: python
 
-        # get code
-        computer = helpers.get_computer()
-        diff_code = helpers.get_code(entry_point='diff', computer=computer)
+        from aiida import orm, engine
+        from aiida.common.exceptions import NotExistent
 
-        ## Get the builder 
-        DiffCalculation = CalculationFactory('diff')
-        builder = DiffCalculation.get_builder()
-
-        ## Populate the builder with the two files to be diff'ed
         SinglefileData = DataFactory('singlefile')
-        builder.file1 =  SinglefileData(file=path.join(INPUT_DIR, 'file1.txt'))
-        builder.file2 =  SinglefileData(file=path.join(INPUT_DIR, 'file2.txt')) 
 
-        ## some description about what is done
+        # Create or load code
+        computer = orm.load_computer('localhost')
+        try:
+            code = load_code('diff@localhost')
+        except NotExistent:
+            # Setting up code via python API (or use "verdi code setup")
+            code = orm.Code(label='diff', remote_computer_exec=[computer, '/usr/bin/diff'], input_plugin_name='diff')
+
+        # Set up inputs
+        builder = code.get_builder()
+        builder.file1 = SinglefileData(file=path.join(INPUT_DIR, 'file1.txt'))
+        builder.file2 = SinglefileData(file=path.join(INPUT_DIR, 'file2.txt'))
         builder.metadata.description = "Test job submission with the aiida_diff plugin"
-        builder.code = diff_code
 
-        ## specify some parameters
-        d = { 'ignore-case': True }
-        DiffParameters = DataFactory('diff')
-
-        builder.parameters = DiffParameters(dict=d)
-
-        # set up calculation
-        result = engine.run(DiffCalculation, **builder)
-
+        # Run the calculation & parse results
+        result = engine.run(builder)
         computed_diff = result['diff'].get_content()
-        print("Computed diff between files: \n{}".format(computed_diff))
+        print("Computed diff between files:\n{}".format(computed_diff))
 
+    .. note::
+
+        The ``launch.py`` script sets up an AiiDA |Code| instance that associates the ``/usr/bin/diff`` executable with the ``DiffCalculation`` class (through its entry point ``diff``).
+
+        This code is automatically set on the ``code`` input port of the builder and passed as an input to the calculation plugin.
 
  * Launch the calculation:
 
@@ -414,15 +415,18 @@ With the entry points set up, you are ready to launch your first calculation wit
     .. code-block:: console
 
         $ verdi run launch.py
-        Computer diff between files:
-        1c1
-        < This is the first file
+        Computed diff between files:
+        2c2
+        < content1
         ---
-        > This is the second file
+        > content2
 
 .. tip::
 
     If you encountered a parsing error, it can be helpful to make a :ref:`topics:calculations:usage:calcjobs:dry_run`, which allows you to inspect the input folder generated by AiiDA before any calculation is launched.
+
+
+
 
 
 Finally instead of running your calculation in the current shell, you can submit your calculation to the AiiDA daemon:

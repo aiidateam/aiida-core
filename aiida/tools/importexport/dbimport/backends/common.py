@@ -45,7 +45,7 @@ def _copy_node_repositories(*, repository_metadatas: List[Dict], reader: Archive
 
     profile = get_manager().get_profile()
     assert profile is not None, 'profile not loaded'
-    container_profile = profile.get_repository().backend.container
+    container_profile = profile.get_repository_backend().container
 
     def collect_hashkeys(objects, hashkeys):
         for obj in objects.values():
@@ -66,7 +66,7 @@ def _copy_node_repositories(*, repository_metadatas: List[Dict], reader: Archive
         container_export.export(set(hashkeys), container_profile, compress=True, callback=callback)
 
 
-def _make_import_group(*, group: Optional[ImportGroup], node_pks: List[int]) -> ImportGroup:
+def _make_import_group(*, group: Optional[Group], node_pks: List[int]) -> Optional[Group]:
     """Make an import group containing all imported nodes.
 
     :param group: Use an existing group
@@ -79,7 +79,7 @@ def _make_import_group(*, group: Optional[ImportGroup], node_pks: List[int]) -> 
         return group
 
     # If user specified a group, import all things into it
-    if not group:
+    if group is None:
         # Get an unique name for the import group, based on the current (local) time
         basename = timezone.localtime(timezone.now()).strftime('%Y%m%d-%H%M%S')
         counter = 0

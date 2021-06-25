@@ -158,6 +158,8 @@ class Manager:
         elif backend_type == BACKEND_SQLA:
             from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             self._backend = SqlaBackend()
+        else:
+            raise AssertionError('Could not load the backend.')
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
@@ -206,7 +208,7 @@ class Manager:
 
         """
         if self._backend is None:
-            self._load_backend()
+            return self._load_backend()
 
         return self._backend
 
@@ -269,7 +271,7 @@ class Manager:
             # used by verdi status to get a communicator without needing to load the dbenv
             from aiida.common import json
             encoder = functools.partial(json.dumps, encoding='utf-8')
-            decoder = json.loads
+            decoder = json.loads  # type: ignore[assignment]
 
         return kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': profile.get_rmq_url()},
@@ -289,14 +291,18 @@ class Manager:
         """Return the daemon client for the current profile.
 
         :return: the daemon client
-
-        :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
-        :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         """
+        from aiida.common import ConfigurationError
         from aiida.engine.daemon.client import DaemonClient
 
+        profile = self.get_profile()
+        if profile is None:
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
+
         if self._daemon_client is None:
-            self._daemon_client = DaemonClient(self.get_profile())
+            self._daemon_client = DaemonClient(profile)
 
         return self._daemon_client
 

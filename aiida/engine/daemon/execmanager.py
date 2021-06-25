@@ -77,7 +77,7 @@ def upload_calculation(
     link_label = 'remote_folder'
     if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
         EXEC_LOGGER.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
-        return calc_info
+        return
 
     computer = node.computer
 

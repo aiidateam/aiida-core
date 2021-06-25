@@ -263,7 +263,7 @@ class JobManager:
 
     def __init__(self, transport_queue: 'TransportQueue') -> None:
         self._transport_queue = transport_queue
-        self._job_lists: Dict[Hashable, 'JobInfo'] = {}
+        self._job_lists: Dict[Hashable, 'JobsList'] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.

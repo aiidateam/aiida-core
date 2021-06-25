@@ -47,7 +47,7 @@ def get_migrator(file_format: str) -> Type['ArchiveMigratorAbstract']:
             f'Can only migrate in the formats: {tuple(migrators.keys())}, please specify one for "file_format".'
         )
 
-    return cast(Type[ArchiveMigratorAbstract], migrators[file_format])
+    return cast(Type[ArchiveMigratorAbstract], migrators[file_format])  # type: ignore[index]
 
 
 class ArchiveMigratorAbstract(ABC):

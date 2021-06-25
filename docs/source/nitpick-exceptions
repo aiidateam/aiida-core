@@ -62,6 +62,7 @@ py:class ProcessSpec
 py:class Port
 py:class PortNamespace
 py:class Repository
+py:class DiskObjectStoreRepositoryBackend
 py:class Runner
 py:class Transport
 py:class TransportQueue

@@ -207,7 +207,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     def class_node_type(cls) -> str:
         """Returns the node type of this node (sub) class."""
         # pylint: disable=no-self-argument,no-member
-        return cls._plugin_type_string
+        return cls._plugin_type_string  # type: ignore[attr-defined]
 
     @property
     def logger(self) -> Optional[Logger]:
@@ -324,7 +324,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if computer is not None:
             computer = computer.backend_entity
 
-        self.backend_entity.computer = computer
+        self.backend_entity.computer = computer  # type: ignore[misc] # See: https://github.com/python/mypy/issues/4165
 
     @property
     def user(self) -> User:
@@ -345,7 +345,8 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             raise exceptions.ModificationNotAllowed('cannot set the user on a stored node')
 
         type_check(user, User)
-        self.backend_entity.user = user.backend_entity
+        # See: https://github.com/python/mypy/issues/4165
+        self.backend_entity.user = user.backend_entity  # type: ignore[misc]
 
     @property
     def ctime(self) -> datetime.datetime:
@@ -507,7 +508,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
-        if not isinstance(link_type, tuple):
+        if isinstance(link_type, LinkType):
             link_type = (link_type,)
 
         if link_type and not all([isinstance(t, LinkType) for t in link_type]):
@@ -565,7 +566,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         """
         assert self._incoming_cache is not None, 'incoming_cache not initialised'
 
-        if not isinstance(link_type, tuple):
+        if isinstance(link_type, LinkType):
             link_type = (link_type,)
 
         if self.is_stored:

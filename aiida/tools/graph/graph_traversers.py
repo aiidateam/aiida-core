@@ -250,7 +250,7 @@ def traverse_graph(
     elif missing_pks and missing_callback is not None:
         missing_callback(missing_pks)
 
-    rules = []
+    rules = []  # type: List[UpdateRule|RuleSaveWalkers|RuleSetWalkers]
     basket = Basket(nodes=existing_pks)
 
     # When max_iterations is finite, the order of traversal may affect the result

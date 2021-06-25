@@ -71,6 +71,46 @@ markers = [
     "sphinx: set parameters for the sphinx `app` fixture"
 ]
 
+[tool.yapf]
+based_on_style = "google"
+column_limit = 120
+dedent_closing_brackets = true
+coalesce_brackets = true
+align_closing_bracket_with_visual_indent = true
+split_arguments_when_comma_terminated = true
+indent_dictionary_value = false
+
+[tool.mypy]
+show_error_codes = true
+check_untyped_defs = true
+scripts_are_modules = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = [
+    'tqdm.*',
+    'circus.*',
+    'disk_objectstore.*',
+    'django.*',
+    'sqlalchemy.*',
+    'numpy.*',
+    'kiwipy.*',
+    'scipy.*',
+    'wrapt.*',
+    'ruamel.*',
+    'pymatgen',
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = 'aiida'
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = 'tests'
+check_untyped_defs = false
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]

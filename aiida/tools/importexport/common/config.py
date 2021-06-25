@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """ Configuration file for AiiDA Import/Export module """
+from typing import Dict
 from enum import Enum
 from aiida.orm import Computer, Group, Node, User, Log, Comment
 
@@ -105,7 +106,8 @@ file_fields_to_model_fields = {
         'dbnode': 'dbnode_id',
         'user': 'user_id'
     }
-}
+}  # type: Dict[str, Dict[str, str]]
+
 # As above but the opposite procedure
 model_fields_to_file_fields = {
     NODE_ENTITY_NAME: {
@@ -124,7 +126,7 @@ model_fields_to_file_fields = {
         'dbnode_id': 'dbnode',
         'user_id': 'user'
     }
-}
+}  # type: Dict[str, Dict[str, str]]
 
 
 def get_all_fields_info():

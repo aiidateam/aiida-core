@@ -21,6 +21,7 @@ from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 if TYPE_CHECKING:
     from aiida.repository import Repository  # pylint: disable=ungrouped-imports
+    from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('Profile',)
 
@@ -130,12 +131,16 @@ class Profile:  # pylint: disable=too-many-public-methods
 
     def get_repository(self) -> 'Repository':
         """Return the repository configured for this profile."""
-        from disk_objectstore import Container
         from aiida.repository import Repository
+        backend = self.get_repository_backend()
+        return Repository(backend=backend)
+
+    def get_repository_backend(self) -> 'DiskObjectStoreRepositoryBackend':
+        """Return the backend of the repository configured for this profile."""
+        from disk_objectstore import Container
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
         container = Container(self.repository_path / 'container')
-        backend = DiskObjectStoreRepositoryBackend(container=container)
-        return Repository(backend=backend)
+        return DiskObjectStoreRepositoryBackend(container=container)
 
     @property
     def uuid(self):

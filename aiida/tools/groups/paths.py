@@ -184,7 +184,7 @@ class GroupPath:
 
     def get_or_create_group(self) -> Tuple[orm.Group, bool]:
         """Return the concrete group associated with this path or, create it, if it does not already exist."""
-        return self.cls.objects.get_or_create(label=self.path)
+        return self.cls.objects.get_or_create(label=self.path)  # type: ignore[attr-defined]
 
     def delete_group(self):
         """Delete the concrete group associated with this path.
@@ -196,7 +196,7 @@ class GroupPath:
             raise GroupNotFoundError(self)
         if len(ids) > 1:
             raise GroupNotUniqueError(self)
-        self.cls.objects.delete(ids[0])
+        self.cls.objects.delete(ids[0])  # type: ignore[attr-defined]
 
     @property
     def children(self) -> Iterator['GroupPath']:

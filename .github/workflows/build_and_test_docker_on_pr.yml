@@ -8,7 +8,9 @@
 name: build-and-test-image-from-pull-request
 
 on:
-  [pull_request]
+  pull_request:
+    path_ignore:
+      - 'docs/**'
 
 jobs:
 

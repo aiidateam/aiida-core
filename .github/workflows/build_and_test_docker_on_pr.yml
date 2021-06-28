@@ -2,10 +2,8 @@
 #
 # The steps are:
 # 1. Build docker image using cached data.
-# 2. Start the docker container with local folder mounted to it.
-# 3. Check that postgresql and rabbitmq are running.
-# 4. Copy id_rsa file from the docker container to local folder.
-# 5. Restart the container and check that the id_rsa file didn't change.
+# 2. Start the docker container.
+# 3. Check that AiiDA is responsive.
 
 name: build-and-test-image-from-pull-request
 

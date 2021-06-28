@@ -325,9 +325,10 @@ class TestVerdiGroup(AiidaTestCase):
         options = [source_label, dest_label]
         result = self.cli_runner.invoke(cmd_group.group_copy, options)
         self.assertClickResultNoException(result)
-        self.assertIn(
-            f'Success: Nodes copied from group<{source_label}> to group<{dest_label}>', result.output, result.exception
-        )
+        self.assertIn((
+            f'Success: Nodes copied from {source_group.__class__.__name__}<{source_label}> to '
+            f'{source_group.__class__.__name__}<{dest_label}>.'
+        ), result.output, result.exception)
 
         # Check destination group exists with source group's nodes
         dest_group = orm.load_group(label=dest_label)
@@ -339,8 +340,8 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_group.group_copy, options)
         self.assertIsNotNone(result.exception, result.output)
         self.assertIn(
-            f'Warning: Destination group<{dest_label}> already exists and is not empty.', result.output,
-            result.exception
+            f'Warning: Destination {dest_group.__class__.__name__}<{dest_label}> already exists and is not empty.',
+            result.output, result.exception
         )
 
         # Check destination group is unchanged

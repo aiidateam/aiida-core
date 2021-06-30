@@ -165,7 +165,7 @@ In our example, the two input files are already stored in the AiiDA file reposit
 
   .. code:: python
 
-    with folder.open("filename", 'w'):
+    with folder.open("filename", 'w') as handle:
         handle.write("file content")
 
 
@@ -199,6 +199,10 @@ To create a parser plugin, subclass the |Parser| class (for example in a file ca
 
 .. code-block:: python
 
+    from aiida.engine import ExitCode
+    from aiida.parsers.parser import Parser
+    from aiida.plugins import CalculationFactory
+
     class DiffParser(Parser):
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
@@ -209,9 +213,9 @@ Before the ``parse()`` method is called, two important attributes are set on the
 
 Now implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method as
 
-.. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser_simple.py
+.. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser.py
     :language: python
-    :pyobject: DiffParser.parse
+    :pyobject: DiffParser.parse_simple
 
 The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file.
 
@@ -324,8 +328,8 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
             name='aiida-diff',
             packages=['aiida_diff'],
             entry_points={
-                'aiida.calculations': ["add = aiida_add.calculations:DiffCalculation"],
-                'aiida.parsers': ["add = aiida_add.parsers:DiffParser"],
+                'aiida.calculations': ["diff = aiida_diff.calculations:DiffCalculation"],
+                'aiida.parsers': ["diff = aiida_diff.parsers:DiffParser"],
             }
         )
 
@@ -368,6 +372,8 @@ With the entry points set up, you are ready to launch your first calculation wit
 
         $ echo "File with content\ncontent1" > file1.txt
         $ echo "File with content\ncontent2" > file2.txt
+        $ mkdir input_files
+        $ mv file1.txt file2.txt input_files
 
  * Write a ``launch.py`` script:
 
@@ -375,9 +381,11 @@ With the entry points set up, you are ready to launch your first calculation wit
 
         from aiida import orm, engine
         from aiida.common.exceptions import NotExistent
-
+        from os import path
+        
         SinglefileData = DataFactory('singlefile')
-
+        INPUT_DIR = path.join(path.dirname(path.realpath(__file__)), 'input_files')
+        
         # Create or load code
         computer = orm.load_computer('localhost')
         try:
@@ -385,13 +393,14 @@ With the entry points set up, you are ready to launch your first calculation wit
         except NotExistent:
             # Setting up code via python API (or use "verdi code setup")
             code = orm.Code(label='diff', remote_computer_exec=[computer, '/usr/bin/diff'], input_plugin_name='diff')
-
+        
         # Set up inputs
         builder = code.get_builder()
         builder.file1 = SinglefileData(file=path.join(INPUT_DIR, 'file1.txt'))
         builder.file2 = SinglefileData(file=path.join(INPUT_DIR, 'file2.txt'))
         builder.metadata.description = "Test job submission with the aiida_diff plugin"
-
+        builder.metadata.options.resources = {'num_machines':1, 'num_mpiprocs_per_machine': 1}
+        
         # Run the calculation & parse results
         result = engine.run(builder)
         computed_diff = result['diff'].get_content()

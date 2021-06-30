@@ -142,32 +142,3 @@ jobs:
       run: |
         verdi devel check-load-time
         .github/workflows/verdi.sh
-
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable"
-        sudo apt-get update
-        sudo apt-get install docker-ce
-
-    - name: Build the aiida-core image
-      run:
-        docker build -t aiida-core .
-
-    - name: Run aiida-core image and test the default aiida profile and localhost computer.
-      run: |
-        export DOCKERID=`docker run -d aiida-core`
-        docker exec --tty $DOCKERID wait-for-services
-        docker logs $DOCKERID
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

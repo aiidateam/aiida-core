@@ -138,10 +138,7 @@ class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
         return f'<{self.__class__.__name__}: {str(self)}>'
 
     def __str__(self):
-        if self.type_string:
-            return f'"{self.label}" [type {self.type_string}], of user {self.user.email}'
-
-        return f'"{self.label}" [user-defined], of user {self.user.email}'
+        return f'"{self.label}" [{"type " + self.type_string if self.type_string else "user-defined"}]'
 
     def store(self):
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""

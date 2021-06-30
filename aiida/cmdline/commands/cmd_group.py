@@ -32,9 +32,7 @@ def verdi_group():
 def group_add_nodes(group, force, nodes):
     """Add nodes to a group."""
     if not force:
-        click.confirm(
-            f'Do you really want to add {len(nodes)} nodes to {group.__class__.__name__}<{group.label}>?', abort=True
-        )
+        click.confirm(f'Do you really want to add {len(nodes)} nodes to {group}?', abort=True)
 
     group.add_nodes(nodes)
 
@@ -48,9 +46,6 @@ def group_add_nodes(group, force, nodes):
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
     from aiida.orm import QueryBuilder, Group, Node
-
-    label = group.label
-    klass = group.__class__.__name__
 
     if nodes and clear:
         echo.echo_critical(
@@ -69,18 +64,18 @@ def group_remove_nodes(group, nodes, clear, force):
             group_node_pks = query.all(flat=True)
 
             if not group_node_pks:
-                echo.echo_critical(f'None of the specified nodes are in {klass}<{label}>.')
+                echo.echo_critical(f'None of the specified nodes are in {group}.')
 
             if len(node_pks) > len(group_node_pks):
                 node_pks = set(node_pks).difference(set(group_node_pks))
-                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {klass}<{label}>.')
+                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {group}.')
 
-            message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {klass}<{label}>?'
+            message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {group}?'
 
         elif clear:
-            message = f'Are you sure you want to remove ALL the nodes from {klass}<{label}>?'
+            message = f'Are you sure you want to remove ALL the nodes from {group}?'
         else:
-            echo.echo_critical(f'No nodes were provided for removal from {klass}<{label}>.')
+            echo.echo_critical(f'No nodes were provided for removal from {group}.')
 
         click.confirm(message, abort=True)
 
@@ -106,16 +101,13 @@ def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules
     from aiida.tools import delete_group_nodes, DELETE_LOGGER
     from aiida import orm
 
-    label = group.label
-    klass = group.__class__.__name__
-
     verbosity = logging.DEBUG if verbose else logging.INFO
     DELETE_LOGGER.setLevel(verbosity)
 
     if not (force or dry_run):
-        click.confirm(f'Are you sure you want to delete {klass}<{label}>?', abort=True)
+        click.confirm(f'Are you sure you want to delete {group}?', abort=True)
     elif dry_run:
-        echo.echo_info(f'Would have deleted {klass}<{label}>.')
+        echo.echo_info(f'Would have deleted {group}.')
 
     if delete_nodes:
 
@@ -133,7 +125,7 @@ def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules
 
     if not dry_run:
         orm.Group.objects.delete(group.pk)
-        echo.echo_success(f'{klass}<{label}> deleted.')
+        echo.echo_success(f'{group} deleted.')
 
 
 @verdi_group.command('relabel')
@@ -161,7 +153,7 @@ def group_description(group, description):
     """
     if description:
         group.description = description
-        echo.echo_success(f'Changed the description of {group.__class__.__name__}<{group.label}>.')
+        echo.echo_success(f'Changed the description of {group}.')
     else:
         echo.echo(group.description)
 
@@ -366,9 +358,9 @@ def group_create(group_label):
     group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
-        echo.echo_success(f"Group created with PK = {group.id} and label '{group.label}'")
+        echo.echo_success(f"Group created with PK = {group.pk} and label '{group.label}'.")
     else:
-        echo.echo_info(f"Group with label '{group.label}' already exists: {group.__class__.__name__}<{group.id}>.")
+        echo.echo_info(f"Group with label '{group.label}' already exists: {group}.")
 
 
 @verdi_group.command('copy')
@@ -383,18 +375,15 @@ def group_copy(source_group, destination_group):
     from aiida import orm
 
     dest_group, created = orm.Group.objects.get_or_create(label=destination_group)
-    klass = dest_group.__class__.__name__
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
-        echo.echo_warning(f'Destination {klass}<{dest_group.label}> already exists and is not empty.')
+        echo.echo_warning(f'Destination {dest_group} already exists and is not empty.')
         click.confirm('Do you wish to continue anyway?', abort=True)
 
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
-    echo.echo_success(
-        f'Nodes copied from {source_group.__class__.__name__}<{source_group.label}> to {klass}<{dest_group.label}>.'
-    )
+    echo.echo_success(f'Nodes copied from {source_group} to {dest_group}.')
 
 
 @verdi_group.group('path')

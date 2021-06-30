@@ -124,8 +124,9 @@ def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules
             return
 
     if not dry_run:
+        group_str = str(group)
         orm.Group.objects.delete(group.pk)
-        echo.echo_success(f'{group} deleted.')
+        echo.echo_success(f'{group_str} deleted.')
 
 
 @verdi_group.command('relabel')

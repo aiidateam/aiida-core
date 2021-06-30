@@ -135,10 +135,13 @@ class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
         super().__init__(model)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return (
+            f'{self.__class__.__name__}(label={self.label}, user={self.user}, description={self.description}, '
+            f'type_string={self.type_string}, backend={self.backend})'
+        )
 
     def __str__(self):
-        return f'"{self.label}" [{"type " + self.type_string if self.type_string else "user-defined"}]'
+        return f'{self.__class__.__name__}<{self.label}>'
 
     def store(self):
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""

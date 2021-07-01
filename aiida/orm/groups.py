@@ -136,8 +136,8 @@ class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
 
     def __repr__(self):
         return (
-            f'{self.__class__.__name__}(label={self.label}, user={self.user}, description={self.description}, '
-            f'type_string={self.type_string}, backend={self.backend})'
+            f'<{self.__class__.__name__}: {self.label!r} '
+            f'[{"type " + self.type_string if self.type_string else "user-defined"}], of user {self.user.email}>'
         )
 
     def __str__(self):

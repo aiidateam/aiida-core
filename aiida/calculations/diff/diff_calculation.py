@@ -1,5 +1,5 @@
 """
-Calculations provided by aiida_diff.
+Calculations provided by aiida_diff tutorial plugin.
 
 Register calculations via the "aiida.calculations" entry point in setup.json.
 """

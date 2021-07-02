@@ -100,6 +100,7 @@ prompt-toolkit==3.0.23
 psutil==5.8.0
 psycopg2-binary==2.8.6
 ptyprocess==0.7.0
+<<<<<<< HEAD
 py==1.11.0
 py-cpuinfo==8.0.0
 PyCifRW==4.4.3
@@ -108,6 +109,16 @@ pydata-sphinx-theme==0.6.3
 Pygments==2.10.0
 pymatgen==2022.0.16
 Pympler==0.9
+=======
+py==1.10.0
+py-cpuinfo==7.0.0
+PyCifRW==4.4.2
+pycparser==2.20
+pydata-sphinx-theme==0.6.3
+Pygments==2.7.4
+pymatgen==2021.2.8.1
+pympler==0.9
+>>>>>>> da67eb99a (update pydata-sphinx-theme to ~=0.6 fix #5005)
 PyMySQL==0.9.3
 PyNaCl==1.4.0
 pyparsing==2.4.7

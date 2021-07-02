@@ -1,7 +1,7 @@
 """
 Parsers provided by aiida_diff.
 
-Register parsers via the "aiida.parsers" entry point in setup.json.
+Register parsers via the "aiida.parsers" entry point in the setup.json file.
 """
 from aiida.engine import ExitCode
 from aiida.parsers.parser import Parser
@@ -18,15 +18,12 @@ class DiffParser(Parser):
     def parse_simple(self, **kwargs):
         """
         Parse outputs, store results in database.
-
-        :returns: an exit code, if parsing fails (or nothing if parsing succeeds)
+        
+        This function is used just as a code snippet for the plugin tutorial.
         """
         from aiida.orm import SinglefileData
 
         output_filename = self.node.get_option('output_filename')
-
-        # Check that folder content is as expected
-        files_retrieved = self.retrieved.list_object_names()
 
         # add output file
         self.logger.info("Parsing '{}'".format(output_filename))
@@ -40,7 +37,7 @@ class DiffParser(Parser):
         """
         Parse outputs, store results in database.
 
-        :returns: an exit code, if parsing fails (or nothing if parsing succeeds)
+        :returns: non-zero exit code, if parsing fails
         """
         from aiida.orm import SinglefileData
 

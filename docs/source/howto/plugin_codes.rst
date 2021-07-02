@@ -195,7 +195,7 @@ Parsing the outputs
 
 Parsing the output files produced by a code into AiiDA nodes is optional, but it can make your data queryable and therefore easier to access and analyze.
 
-To create a parser plugin, subclass the |Parser| class (for example in a file called ``parsers.py``)
+To create a parser plugin, subclass the |Parser| class in a file called ``parsers.py``.
 
 .. code-block:: python
 
@@ -239,7 +239,7 @@ If your code produces output in a structured format, instead of just returning t
      2. store in the AiiDA file repository for safe-keeping (e.g. as |SinglefileData|, ...)?
      3. leave on the computer where the calculation ran (e.g. recording their remote location using |RemoteData| or simply ignoring them)?
 
-    Once you know the answers to these questions, you are ready to start writing your parser.
+    Once you know the answers to these questions, you are ready to start writing a parser for your code.
 
 In order to request automatic parsing of a |CalcJob| (once it has finished), users can set the ``metadata.options.parser_name`` input when launching the job.
 If a particular parser should be used by default, the |CalcJob| ``define`` method can set a default value for the parser name as was done in the :ref:`previous section <how-to:plugin-codes:interfacing>`:
@@ -251,8 +251,8 @@ If a particular parser should be used by default, the |CalcJob| ``define`` metho
         ...
         spec.inputs['metadata']['options']['parser_name'].default = 'diff'
 
-Note that the default is not set to the |Parser| class itself, but the *entry point string* under which the parser class is registered.
-How to register a parser class through an entry point is explained in :ref:`registering plugins <how-to:plugins-develop>`.
+Note that the default is not set to the |Parser| class itself, but to the *entry point string* under which the parser class is registered.
+We will register the entry point for the parser in a bit.
 
 
 .. _how-to:plugin-codes:parsing:errors:
@@ -285,7 +285,7 @@ Here is a more complete version of the example |Parser| presented in the previou
     :pyobject: DiffParser.parse
 
 This simple check makes sure that the expected output file ``diff.patch`` is among the files retrieved from the computer where the calculation was run.
-Production plugins will often check further aspects of the output (e.g. the standard error, the output file, etc.) to detect whether the code failed and return a corresponding exit code.
+Production plugins will often scan further aspects of the output (e.g. the standard error, the output file, etc.) for any issues that may indicate a problem with the calculation and return a corresponding exit code.
 
 AiiDA stores the exit code returned by the |parse| method on the calculation node that is being parsed, from where it can then be inspected further down the line (see the :ref:`defining processes <topics:processes:usage:defining>` topic for more details).
 Note that some scheduler plugins can detect issues at the scheduler level (by parsing the job scheduler output) and set an exit code.
@@ -339,6 +339,11 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
 
  * Install your new ``aiida-diff`` plugin package.
+ 
+   .. code-block:: console
+   
+       $ pip install aiida_diff
+       $ reentry scan
    See the :ref:`how-to:plugins-install` section for details.
 
 After this, you should see your plugins listed:
@@ -381,10 +386,10 @@ With the entry points set up, you are ready to launch your first calculation wit
 
         from aiida import orm, engine
         from aiida.common.exceptions import NotExistent
-        from os import path
+        import pathlib
         
         SinglefileData = DataFactory('singlefile')
-        INPUT_DIR = path.join(path.dirname(path.realpath(__file__)), 'input_files')
+        INPUT_DIR = Path(__file__).resolve().parent / 'input_files'
         
         # Create or load code
         computer = orm.load_computer('localhost')
@@ -396,10 +401,9 @@ With the entry points set up, you are ready to launch your first calculation wit
         
         # Set up inputs
         builder = code.get_builder()
-        builder.file1 = SinglefileData(file=path.join(INPUT_DIR, 'file1.txt'))
-        builder.file2 = SinglefileData(file=path.join(INPUT_DIR, 'file2.txt'))
+        builder.file1 = SinglefileData(file= INPUT_DIR / 'file1.txt')
+        builder.file2 = SinglefileData(file= INPUT_DIR / 'file2.txt')
         builder.metadata.description = "Test job submission with the aiida_diff plugin"
-        builder.metadata.options.resources = {'num_machines':1, 'num_mpiprocs_per_machine': 1}
         
         # Run the calculation & parse results
         result = engine.run(builder)
@@ -450,7 +454,7 @@ Finally instead of running your calculation in the current shell, you can submit
 
     .. code-block:: python
 
-        Note: in order to submit your calculation to the aiida daemon, do:
+        # Submit calculation to the aiida daemon
         from aiida.engine import submit
         result = engine.submit(DiffCalculation, **builder)
 

@@ -19,17 +19,17 @@ class DiffCalculation(CalcJob):
         # yapf: disable
         super(DiffCalculation, cls).define(spec)
 
-        spec.inputs['metadata']['options']['parser_name'].default = 'diff'
-        spec.inputs['metadata']['options']['resources'].default = {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1,
-                }
-
         # new ports
-        spec.input('metadata.options.output_filename', valid_type=str, default='patch.diff')
         spec.input('file1', valid_type=SinglefileData, help='First file to be compared.')
         spec.input('file2', valid_type=SinglefileData, help='Second file to be compared.')
         spec.output('diff', valid_type=SinglefileData, help='diff between file1 and file2.')
+
+        spec.input('metadata.options.output_filename', valid_type=str, default='patch.diff')
+        spec.inputs['metadata']['options']['resources'].default = {
+                                            'num_machines': 1,
+                                            'num_mpiprocs_per_machine': 1,
+                                            }
+        spec.inputs['metadata']['options']['parser_name'].default = 'diff'
 
         spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
 

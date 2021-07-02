@@ -111,7 +111,7 @@ AiiDA will attach the outputs defined here to a (successfully) finished calculat
         Use ``required=False`` in order to mark an output as optional.
 
 
-Finally, we set a couple of default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
+Finally, we set a few default ``options``, such as the name of the parser (which we will implement later), the name of input and output files, and the computational resources to use for such a calculation.
 These ``options`` have already been defined on the |spec| by the ``super().define(spec)`` call, and they can be accessed through the :py:attr:`~plumpy.process_spec.ProcessSpec.inputs` attribute, which behaves like a dictionary.
 
 There is no ``return`` statement in ``define``: the ``define`` method directly modifies the |spec| object it receives.
@@ -261,7 +261,7 @@ However, there are lots of ways in which codes can fail to execute nominally.
 A |Parser| can play an important role in detecting and communicating such errors, where :ref:`workflows <how-to:run-workflows>` can then decide how to proceed, e.g., by modifying input parameters and resubmitting the calculation.
 
 Parsers communicate errors through :ref:`exit codes<topics:processes:concepts:exit_codes>`, which are defined in the |spec| of the |CalcJob| they parse.
-The :py:class:`DiffCalculation` example, defines the following exit code:
+The ``DiffCalculation`` example, defines the following exit code:
 
 .. code-block:: python
 

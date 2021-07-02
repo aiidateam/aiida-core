@@ -20,6 +20,10 @@ class DiffCalculation(CalcJob):
         super(DiffCalculation, cls).define(spec)
 
         spec.inputs['metadata']['options']['parser_name'].default = 'diff'
+        spec.inputs['metadata']['options']['resources'].default = {
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1,
+                }
 
         # new ports
         spec.input('metadata.options.output_filename', valid_type=str, default='patch.diff')

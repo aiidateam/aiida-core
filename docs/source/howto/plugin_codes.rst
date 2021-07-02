@@ -197,13 +197,9 @@ Parsing the output files produced by a code into AiiDA nodes is optional, but it
 
 To create a parser plugin, subclass the |Parser| class in a file called ``parsers.py``.
 
-.. code-block:: python
-
-    from aiida.engine import ExitCode
-    from aiida.parsers.parser import Parser
-    from aiida.plugins import CalculationFactory
-
-    class DiffParser(Parser):
+.. literalinclude::  ../../../aiida/parsers/plugins/diff/diff_parser.py
+    :language: python
+    :lines: 6-14
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
@@ -215,7 +211,7 @@ Now implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method as
 
 .. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser.py
     :language: python
-    :pyobject: DiffParser.parse_simple
+    :pyobject: DiffParserSimple.parse
 
 The :py:meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_option` convenience method is used to get the filename of the output file.
 
@@ -455,8 +451,8 @@ Finally instead of running your calculation in the current shell, you can submit
     .. code-block:: python
 
         # Submit calculation to the aiida daemon
-        from aiida.engine import submit
-        result = engine.submit(DiffCalculation, **builder)
+        node = engine.submit(builder)
+        print("Submitted calculation {}".format(node))
 
 
     .. note::

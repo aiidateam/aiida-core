@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Calculations provided by aiida_diff tutorial plugin.
 
@@ -7,12 +8,14 @@ from aiida.common import datastructures
 from aiida.engine import CalcJob
 from aiida.orm import SinglefileData
 
+
 class DiffCalculation(CalcJob):
     """
     AiiDA calculation plugin wrapping the diff executable.
 
     Simple AiiDA plugin wrapper for 'diffing' two files.
     """
+
     @classmethod
     def define(cls, spec):
         """Define inputs and outputs of the calculation."""
@@ -31,7 +34,8 @@ class DiffCalculation(CalcJob):
                                             }
         spec.inputs['metadata']['options']['parser_name'].default = 'diff'
 
-        spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
+        spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES',
+                message='Calculation did not produce all expected output files.')
 
 
     def prepare_for_submission(self, folder):
@@ -43,7 +47,7 @@ class DiffCalculation(CalcJob):
         :return: `aiida.common.datastructures.CalcInfo` instance
         """
         codeinfo = datastructures.CodeInfo()
-        codeinfo.cmdline_params = [ self.inputs.file1.filename, self.inputs.file2.filename  ]
+        codeinfo.cmdline_params = [self.inputs.file1.filename, self.inputs.file2.filename]
         codeinfo.code_uuid = self.inputs.code.uuid
         codeinfo.stdout_name = self.metadata.options.output_filename
 

@@ -477,12 +477,14 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. todo::
 
     .. _how-to:plugin-codes:scheduler:
+
     title: Adding support for a custom scheduler
 
     `#3989`_
 
 
     .. _how-to:plugin-codes:transport:
+
     title: Adding support for a custom transport
 
     `#3990`_

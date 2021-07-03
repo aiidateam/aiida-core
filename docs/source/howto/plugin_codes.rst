@@ -474,6 +474,19 @@ This marks the end of this how-to.
 The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-diff`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
+.. todo::
+
+    .. _how-to:plugin-codes:scheduler:
+    title: Adding support for a custom scheduler
+
+    `#3989`_
+
+
+    .. _how-to:plugin-codes:transport:
+    title: Adding support for a custom transport
+
+    `#3990`_
+
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`
 .. |SinglefileData| replace:: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
@@ -493,3 +506,5 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
 .. |prepare_for_submission| replace:: :py:meth:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
 .. _aiida-diff: https://github.com/aiidateam/aiida-diff
+.. _#3989: https://github.com/aiidateam/aiida-core/issues/3989
+.. _#3990: https://github.com/aiidateam/aiida-core/issues/3990

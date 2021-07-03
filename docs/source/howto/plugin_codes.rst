@@ -199,7 +199,8 @@ To create a parser plugin, subclass the |Parser| class in a file called ``parser
 
 .. literalinclude::  ../../../aiida/parsers/plugins/diff/diff_parser.py
     :language: python
-    :lines: 6-14
+    :start-after: # START PARSER HEAD
+    :end-before: # END PARSER HEAD
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
@@ -335,9 +336,9 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
 
  * Install your new ``aiida-diff`` plugin package.
- 
+
    .. code-block:: console
-   
+
        $ pip install aiida_diff
        $ reentry scan
    See the :ref:`how-to:plugins-install` section for details.
@@ -383,10 +384,10 @@ With the entry points set up, you are ready to launch your first calculation wit
         from aiida import orm, engine
         from aiida.common.exceptions import NotExistent
         import pathlib
-        
+
         SinglefileData = DataFactory('singlefile')
         INPUT_DIR = Path(__file__).resolve().parent / 'input_files'
-        
+
         # Create or load code
         computer = orm.load_computer('localhost')
         try:
@@ -394,13 +395,13 @@ With the entry points set up, you are ready to launch your first calculation wit
         except NotExistent:
             # Setting up code via python API (or use "verdi code setup")
             code = orm.Code(label='diff', remote_computer_exec=[computer, '/usr/bin/diff'], input_plugin_name='diff')
-        
+
         # Set up inputs
         builder = code.get_builder()
         builder.file1 = SinglefileData(file= INPUT_DIR / 'file1.txt')
         builder.file2 = SinglefileData(file= INPUT_DIR / 'file2.txt')
         builder.metadata.description = "Test job submission with the aiida_diff plugin"
-        
+
         # Run the calculation & parse results
         result = engine.run(builder)
         computed_diff = result['diff'].get_content()

@@ -289,14 +289,6 @@ Note that some scheduler plugins can detect issues at the scheduler level (by pa
 The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calcjobs:scheduler-errors>` explains how these can be inspected inside a parser and how they can optionally be overridden.
 
 
-.. todo::
-
-    .. _how-to:plugin-codes:computers:
-
-    title: Configuring remote computers
-
-    `#4123`_
-
 .. _how-to:plugin-codes:entry-points:
 
 Registering entry points

@@ -277,7 +277,7 @@ An ``exit_code`` defines:
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of the example |Parser| presented in the previous section:
 
-.. literalinclude:: ../../../aiida/parsers/plugins/diff_tutorial/diff_parser.py
+.. literalinclude:: ../../../aiida/parsers/plugins/diff_tutorial/parsers.py
     :language: python
     :pyobject: DiffParser.parse
 
@@ -331,7 +331,7 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
    .. code-block:: console
 
-       $ pip install aiida_diff_tutorial
+       $ pip install -e .  # install in "editable mode"
        $ reentry scan
 
    See the :ref:`how-to:plugins-install` section for details.
@@ -372,33 +372,8 @@ With the entry points set up, you are ready to launch your first calculation wit
 
  * Write a ``launch.py`` script:
 
-    .. code-block:: python
-
-        from aiida import orm, engine
-        from aiida.common.exceptions import NotExistent
-        import pathlib
-
-        SinglefileData = DataFactory('singlefile')
-        INPUT_DIR = Path(__file__).resolve().parent / 'input_files'
-
-        # Create or load code
-        computer = orm.load_computer('localhost')
-        try:
-            code = load_code('diff@localhost')
-        except NotExistent:
-            # Setting up code via python API (or use "verdi code setup")
-            code = orm.Code(label='diff', remote_computer_exec=[computer, '/usr/bin/diff'], input_plugin_name='diff-tutorial')
-
-        # Set up inputs
-        builder = code.get_builder()
-        builder.file1 = SinglefileData(file= INPUT_DIR / 'file1.txt')
-        builder.file2 = SinglefileData(file= INPUT_DIR / 'file2.txt')
-        builder.metadata.description = "Test job submission with the aiida_diff plugin"
-
-        # Run the calculation & parse results
-        result = engine.run(builder)
-        computed_diff = result['diff'].get_content()
-        print("Computed diff between files:\n{}".format(computed_diff))
+    .. literalinclude:: ./include/snippets/plugins/launch.py
+      :language: python
 
     .. note::
 

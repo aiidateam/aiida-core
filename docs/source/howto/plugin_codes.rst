@@ -522,6 +522,21 @@ Let's open our previous ``calculations.py`` file and start modifying the ``DiffC
  2. | In the ``prepare_for_submission`` method run the ``cli_options`` function from above on ``self.inputs.parameters.get_dict()`` to get the list of command-line options.
     | Add them to the ``codeinfo.cmdline_params``.
 
+.. dropdown:: Solution
+
+   For 1. add the following line to the ``define`` method:
+
+   .. code-block:: python
+
+        spec.input('parameters', valid_type=Dict, help='diff command-line parameters')
+
+   For 2. copy the ``cli_options`` snippet at the end of ``calculations.py`` and set the ``cmdline_params`` to:
+
+   .. code:: python
+
+        codeinfo.cmdline_params = cli_options(self.inputs.parameters.get_dict()) + [ self.inputs.file1.filename, self.inputs.file2.filename]
+
+
 That's it. Let's now open the ``launch.py`` script and pass along our command line parameters:
 
 .. code:: python

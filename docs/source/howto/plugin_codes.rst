@@ -366,8 +366,8 @@ With the entry points set up, you are ready to launch your first calculation wit
 
     .. code-block:: console
 
-        $ echo "File with content\ncontent1" > file1.txt
-        $ echo "File with content\ncontent2" > file2.txt
+        $ echo -e "File with content\ncontent1" > file1.txt
+        $ echo -e "File with content\ncontent2" > file2.txt
         $ mkdir input_files
         $ mv file1.txt file2.txt input_files
 

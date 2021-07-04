@@ -86,7 +86,7 @@ The |define| method tells AiiDA which inputs the |CalcJob| expects and which out
 This is done through an instance of the :py:class:`~aiida.engine.processes.process_spec.CalcJobProcessSpec` class, which is passed as the |spec| argument to the |define| method.
 For example:
 
-.. literalinclude:: ../../../aiida/calculations/diff/diff_calculation.py
+.. literalinclude:: ../../../aiida/calculations/diff_tutorial/calculations.py
     :language: python
     :pyobject: DiffCalculation.define
 
@@ -139,7 +139,7 @@ The :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submi
 Creating the input files in the format the external code expects and returning a :py:class:`~aiida.common.datastructures.CalcInfo` object that contains instructions for the AiiDA engine on how the code should be run.
 For example:
 
-.. literalinclude:: ../../../aiida/calculations/diff/diff_calculation.py
+.. literalinclude:: ../../../aiida/calculations/diff_tutorial/calculations.py
     :language: python
     :pyobject: DiffCalculation.prepare_for_submission
 
@@ -197,7 +197,7 @@ Parsing the output files produced by a code into AiiDA nodes is optional, but it
 
 To create a parser plugin, subclass the |Parser| class in a file called ``parsers.py``.
 
-.. literalinclude::  ../../../aiida/parsers/plugins/diff/diff_parser.py
+.. literalinclude::  ../../../aiida/parsers/plugins/diff_tutorial/parsers.py
     :language: python
     :start-after: # START PARSER HEAD
     :end-before: # END PARSER HEAD
@@ -210,7 +210,7 @@ Before the ``parse()`` method is called, two important attributes are set on the
 
 Now implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method as
 
-.. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser.py
+.. literalinclude:: ../../../aiida/parsers/plugins/diff_tutorial/parsers.py
     :language: python
     :pyobject: DiffParserSimple.parse
 
@@ -246,7 +246,7 @@ If a particular parser should be used by default, the |CalcJob| ``define`` metho
     @classmethod
     def define(cls, spec):
         ...
-        spec.inputs['metadata']['options']['parser_name'].default = 'diff'
+        spec.inputs['metadata']['options']['parser_name'].default = 'diff-tutorial'
 
 Note that the default is not set to the |Parser| class itself, but to the *entry point string* under which the parser class is registered.
 We will register the entry point for the parser in a bit.
@@ -277,7 +277,7 @@ An ``exit_code`` defines:
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of the example |Parser| presented in the previous section:
 
-.. literalinclude:: ../../../aiida/parsers/plugins/diff/diff_parser.py
+.. literalinclude:: ../../../aiida/parsers/plugins/diff_tutorial/diff_parser.py
     :language: python
     :pyobject: DiffParser.parse
 
@@ -298,14 +298,14 @@ Registering entry points
 
 With your ``calculations.py`` and ``parsers.py`` files at hand, let's register entry points for the plugins they contain:
 
- * Move your two scripts into a subfolder ``aiida_diff``:
+ * Move your two scripts into a subfolder ``aiida_diff_tutorial``:
 
    .. code-block:: console
 
-      $ mkdir aiida_diff
-      $ mv calculations.py parsers.py aiida_diff/
+      $ mkdir aiida_diff_tutorial
+      $ mv calculations.py parsers.py aiida_diff_tutorial/
 
-   You have just created an ``aiida_diff`` Python *package*!
+   You have just created an ``aiida_diff_tutorial`` Python *package*!
 
  * Write a minimalistic ``setup.py`` script for your new package:
 
@@ -314,24 +314,24 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
         from setuptools import setup
 
         setup(
-            name='aiida-diff',
-            packages=['aiida_diff'],
+            name='aiida-diff-tutorial',
+            packages=['aiida_diff_tutorial'],
             entry_points={
-                'aiida.calculations': ["diff = aiida_diff.calculations:DiffCalculation"],
-                'aiida.parsers': ["diff = aiida_diff.parsers:DiffParser"],
+                'aiida.calculations': ["diff-tutorial = aiida_diff_tutorial.calculations:DiffCalculation"],
+                'aiida.parsers': ["diff-tutorial = aiida_diff_tutorial.parsers:DiffParser"],
             }
         )
 
     .. note::
-        Strictly speaking, ``aiida-diff`` is the name of the *distribution*, while ``aiida_diff`` is the name of the *package*.
+        Strictly speaking, ``aiida-diff-tutorial`` is the name of the *distribution*, while ``aiida_diff_tutorial`` is the name of the *package*.
         The aiida-core documentation uses the term *package* a bit more loosely.
 
 
- * Install your new ``aiida-diff`` plugin package.
+ * Install your new ``aiida-diff-tutorial`` plugin package.
 
    .. code-block:: console
 
-       $ pip install aiida_diff
+       $ pip install aiida_diff_tutorial
        $ reentry scan
 
    See the :ref:`how-to:plugins-install` section for details.
@@ -341,7 +341,7 @@ After this, you should see your plugins listed:
    .. code-block:: console
 
       $ verdi plugin list aiida.calculations
-      $ verdi plugin list aiida.calculations diff
+      $ verdi plugin list aiida.calculations diff-tutorial
       $ verdi plugin list aiida.parsers
 
 
@@ -387,7 +387,7 @@ With the entry points set up, you are ready to launch your first calculation wit
             code = load_code('diff@localhost')
         except NotExistent:
             # Setting up code via python API (or use "verdi code setup")
-            code = orm.Code(label='diff', remote_computer_exec=[computer, '/usr/bin/diff'], input_plugin_name='diff')
+            code = orm.Code(label='diff', remote_computer_exec=[computer, '/usr/bin/diff'], input_plugin_name='diff-tutorial')
 
         # Set up inputs
         builder = code.get_builder()
@@ -471,7 +471,7 @@ You can use the verdi command line interface to :ref:`monitor<topics:processes:u
 
 This marks the end of this how-to.
 
-The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-diff`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
+The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-diff-tutorial`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
 .. todo::

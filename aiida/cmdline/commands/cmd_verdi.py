@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The main `verdi` click group."""
-
 import difflib
+
 import click
 
 from aiida import __version__
@@ -52,9 +52,20 @@ class MostSimilarCommandGroup(click.Group):
         """
         cmd = click.Group.get_command(self, ctx, cmd_name)
 
-        # return the exact match
+        # If we match an actual command, simply return the match
         if cmd is not None:
             return cmd
+
+        # If this command is called during tab-completion, we do not want to print an error message if the command can't
+        # be found, but instead we want to simply return here. However, in a normal command execution, we do want to
+        # execute the rest of this method to try and match commands that are similar in order to provide the user with
+        # some hints. The problem is that there is no one canonical way to determine whether the invocation is due to a
+        # normal command execution or a tab-complete operation. The `resilient_parsing` attribute of the `Context` is
+        # designed to allow things like tab-completion, however, it is not the only purpose. For now this is our best
+        # bet though to detect a tab-complete event. When `resilient_parsing` is switched on, we assume a tab-complete
+        # and do nothing in case the command name does not match an actual command.
+        if ctx.resilient_parsing:
+            return
 
         if int(cmd_name.lower().encode('utf-8').hex(), 16) == 0x6769757365707065:
             import base64
@@ -62,13 +73,12 @@ class MostSimilarCommandGroup(click.Group):
             click.echo(gzip.decompress(base64.b85decode(GIU.encode('utf-8'))).decode('utf-8'))
             return None
 
-        # we might get better results with the Levenshtein distance
-        # or more advanced methods implemented in FuzzyWuzzy or similar libs,
-        # but this is an easy win for now
+        # We might get better results with the Levenshtein distance or more advanced methods implemented in FuzzyWuzzy
+        # or similar libs, but this is an easy win for now.
         matches = difflib.get_close_matches(cmd_name, self.list_commands(ctx), cutoff=0.5)
 
         if not matches:
-            # single letters are sometimes not matched, try with a simple startswith
+            # Single letters are sometimes not matched so also try with a simple startswith
             matches = [c for c in sorted(self.list_commands(ctx)) if c.startswith(cmd_name)][:3]
 
         if matches:

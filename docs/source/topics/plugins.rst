@@ -26,9 +26,9 @@ An AiiDA plugin should not:
 * Use protected functions, methods or classes of AiiDA (those starting with an underscore ``_``)
 * Monkey patch anything within the ``aiida`` namespace (or the namespace itself)
 
-Failure to comply will likely prevent your plugin from being listed on the official `AiiDA plugin registry <registry>`_.
+Failure to comply will likely prevent your plugin from being listed on the official `AiiDA plugin registry <registry_>`_.
 
-If you find yourself in a situation where you feel like you need to do any of the above, please open an issue on the `AiiDA repository <core>`_ and we can try to advise on how to proceed.
+If you find yourself in a situation where you feel like you need to do any of the above, please open an issue on the `AiiDA repository <core_>`_ and we can try to advise on how to proceed.
 
 
 .. _core: https://github.com/aiidateam/aiida-core
@@ -399,4 +399,4 @@ In particular:
 .. _unittest: https://docs.python.org/library/unittest.html
 .. _fixture: https://docs.pytest.org/en/latest/fixture.html
 .. _click: https://click.palletsprojects.com/
-.. _Entry points: https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+.. _Entry points: https://packaging.python.org/guides/creating-and-discovering-plugins/

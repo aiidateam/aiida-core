@@ -608,11 +608,11 @@ class TrajectoryData(ArrayData):
         # Try to get the units.
         try:
             positions_unit = self.get_attribute('units|positions')
-        except KeyError:
+        except AttributeError:
             positions_unit = 'A'
         try:
             times_unit = self.get_attribute('units|times')
-        except KeyError:
+        except AttributeError:
             times_unit = 'ps'
 
         # Getting the keyword input
@@ -731,7 +731,7 @@ class TrajectoryData(ArrayData):
             if self.get_attribute('units|positions') in ('bohr', 'atomic'):
                 bohr_to_ang = 0.52917720859
                 positions *= bohr_to_ang
-        except KeyError:
+        except AttributeError:
             pass
 
         symbols = self.symbols

@@ -8,12 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
-import warnings
 import logging
 import click
 
 from aiida.common.exceptions import UniquenessError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.utils import echo
@@ -47,12 +45,41 @@ def group_add_nodes(group, force, nodes):
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
-    if clear:
-        message = f'Do you really want to remove ALL the nodes from Group<{group.label}>?'
-    else:
-        message = f'Do you really want to remove {len(nodes)} nodes from Group<{group.label}>?'
+    from aiida.orm import QueryBuilder, Group, Node
+
+    label = group.label
+    klass = group.__class__.__name__
+
+    if nodes and clear:
+        echo.echo_critical(
+            'Specify either the `--clear` flag to remove all nodes or the identifiers of the nodes you want to remove.'
+        )
 
     if not force:
+
+        if nodes:
+            node_pks = [node.pk for node in nodes]
+
+            query = QueryBuilder()
+            query.append(Group, filters={'id': group.pk}, tag='group')
+            query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+
+            group_node_pks = query.all(flat=True)
+
+            if not group_node_pks:
+                echo.echo_critical(f'None of the specified nodes are in {klass}<{label}>.')
+
+            if len(node_pks) > len(group_node_pks):
+                node_pks = set(node_pks).difference(set(group_node_pks))
+                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {klass}<{label}>.')
+
+            message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {klass}<{label}>?'
+
+        elif clear:
+            message = f'Are you sure you want to remove ALL the nodes from {klass}<{label}>?'
+        else:
+            echo.echo_critical(f'No nodes were provided for removal from {klass}<{label}>.')
+
         click.confirm(message, abort=True)
 
     if clear:
@@ -70,19 +97,12 @@ def group_remove_nodes(group, nodes, clear, force):
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
 @options.VERBOSE()
-@options.GROUP_CLEAR(
-    help='Remove all nodes before deleting the group itself.' +
-    ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
-)
 @with_dbenv()
-def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversal_rules):
+def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules):
     """Delete a group and (optionally) the nodes it contains."""
     from aiida.common.log import override_log_formatter_context
     from aiida.tools import delete_group_nodes, DELETE_LOGGER
     from aiida import orm
-
-    if clear:
-        warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
 
     label = group.label
     klass = group.__class__.__name__
@@ -205,14 +225,6 @@ def group_show(group, raw, limit, uuid):
 @options.ALL_USERS(help='Show groups for all users, rather than only for the current user.')
 @options.USER(help='Add a filter to show only groups belonging to a specific user')
 @options.ALL(help='Show groups of all types.')
-@click.option(
-    '-t',
-    '--type',
-    'group_type',
-    default=None,
-    help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
-    'specify aiida-internal type. [deprecated: use `--type-string` instead. Will be removed in 2.0.0]'
-)
 @options.TYPE_STRING()
 @click.option(
     '-d',
@@ -250,8 +262,8 @@ def group_show(group, raw, limit, uuid):
 @options.NODE(help='Show only the groups that contain the node.')
 @with_dbenv()
 def group_list(
-    all_users, user, all_entries, group_type, type_string, with_description, count, past_days, startswith, endswith,
-    contains, order_by, order_dir, node
+    all_users, user, all_entries, type_string, with_description, count, past_days, startswith, endswith, contains,
+    order_by, order_dir, node
 ):
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
@@ -263,14 +275,6 @@ def group_list(
 
     builder = orm.QueryBuilder()
     filters = {}
-
-    if group_type is not None:
-        warnings.warn('`--group-type` is deprecated, use `--type-string` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if type_string is not None:
-            raise click.BadOptionUsage('group-type', 'cannot use `--group-type` and `--type-string` at the same time.')
-        else:
-            type_string = group_type
 
     # Have to specify the default for `type_string` here instead of directly in the option otherwise it will always
     # raise above if the user specifies just the `--group-type` option. Once that option is removed, the default can

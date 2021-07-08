@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `CalcJobNode` node sub class."""
-
-import tempfile
+import io
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType, CalcJobState
@@ -40,30 +39,25 @@ class TestCalcJobNode(AiidaTestCase):
         option_value = '_scheduler-output.txt'
         stdout = 'some\nstandard output'
 
-        node = CalcJobNode(computer=self.computer,)
-        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        retrieved = FolderData()
+        # Note: cannot use pytest.mark.parametrize in unittest classes, so I just do a loop here
+        for with_file in [True, False]:
+            for with_option in [True, False]:
+                node = CalcJobNode(computer=self.computer,)
+                node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+                retrieved = FolderData()
 
-        # No scheduler output filename option so should return `None`
-        self.assertEqual(node.get_scheduler_stdout(), None)
+                if with_file:
+                    retrieved._repository.put_object_from_filelike(io.BytesIO(stdout.encode('utf-8')), option_value)  # pylint: disable=protected-access
+                    retrieved._update_repository_metadata()  # pylint: disable=protected-access
+                if with_option:
+                    node.set_option(option_key, option_value)
+                node.store()
+                retrieved.store()
+                retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
-        # No retrieved folder so should return `None`
-        node.set_option(option_key, option_value)
-        self.assertEqual(node.get_scheduler_stdout(), None)
-
-        # Now it has retrieved folder, but file does not actually exist in it, should not except but return `None
-        node.store()
-        retrieved.store()
-        retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
-        self.assertEqual(node.get_scheduler_stdout(), None)
-
-        # Add the file to the retrieved folder
-        with tempfile.NamedTemporaryFile(mode='w+') as handle:
-            handle.write(stdout)
-            handle.flush()
-            handle.seek(0)
-            retrieved.put_object_from_filelike(handle, option_value, force=True)
-        self.assertEqual(node.get_scheduler_stdout(), stdout)
+                # It should return `None` if no scheduler output is there (file not there, or option not set),
+                # while it should return the content if both are set
+                self.assertEqual(node.get_scheduler_stdout(), stdout if with_file and with_option else None)
 
     def test_get_scheduler_stderr(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
@@ -71,27 +65,22 @@ class TestCalcJobNode(AiidaTestCase):
         option_value = '_scheduler-error.txt'
         stderr = 'some\nstandard error'
 
-        node = CalcJobNode(computer=self.computer,)
-        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-        retrieved = FolderData()
+        # Note: cannot use pytest.mark.parametrize in unittest classes, so I just do a loop here
+        for with_file in [True, False]:
+            for with_option in [True, False]:
+                node = CalcJobNode(computer=self.computer,)
+                node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+                retrieved = FolderData()
 
-        # No scheduler error filename option so should return `None`
-        self.assertEqual(node.get_scheduler_stderr(), None)
+                if with_file:
+                    retrieved._repository.put_object_from_filelike(io.BytesIO(stderr.encode('utf-8')), option_value)  # pylint: disable=protected-access
+                    retrieved._update_repository_metadata()  # pylint: disable=protected-access
+                if with_option:
+                    node.set_option(option_key, option_value)
+                node.store()
+                retrieved.store()
+                retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
-        # No retrieved folder so should return `None`
-        node.set_option(option_key, option_value)
-        self.assertEqual(node.get_scheduler_stderr(), None)
-
-        # Now it has retrieved folder, but file does not actually exist in it, should not except but return `None
-        node.store()
-        retrieved.store()
-        retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
-        self.assertEqual(node.get_scheduler_stderr(), None)
-
-        # Add the file to the retrieved folder
-        with tempfile.NamedTemporaryFile(mode='w+') as handle:
-            handle.write(stderr)
-            handle.flush()
-            handle.seek(0)
-            retrieved.put_object_from_filelike(handle, option_value, force=True)
-        self.assertEqual(node.get_scheduler_stderr(), stderr)
+                # It should return `None` if no scheduler output is there (file not there, or option not set),
+                # while it should return the content if both are set
+                self.assertEqual(node.get_scheduler_stderr(), stderr if with_file and with_option else None)

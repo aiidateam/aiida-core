@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi profile` command."""
-
 import click
 import tabulate
 
@@ -83,7 +82,18 @@ def profile_setdefault(profile):
     help='Include deletion of entry in configuration file.'
 )
 @click.option(
-    '--include-db/--skip-db', default=True, show_default=True, help='Include deletion of associated database.'
+    '--include-db/--skip-db',
+    'include_database',
+    default=True,
+    show_default=True,
+    help='Include deletion of associated database.'
+)
+@click.option(
+    '--include-db-user/--skip-db-user',
+    'include_database_user',
+    default=False,
+    show_default=True,
+    help='Include deletion of associated database user.'
 )
 @click.option(
     '--include-repository/--skip-repository',
@@ -92,22 +102,41 @@ def profile_setdefault(profile):
     help='Include deletion of associated file repository.'
 )
 @arguments.PROFILES(required=True)
-def profile_delete(force, include_config, include_db, include_repository, profiles):
-    """
-    Delete one or more profiles.
+def profile_delete(force, include_config, include_database, include_database_user, include_repository, profiles):
+    """Delete one or more profiles.
 
-    You can specify more profile names (separated by spaces).
-    These will be removed from the aiida config file,
-    and the associated databases and file repositories will also be removed.
+    The PROFILES argument takes one or multiple profile names that will be deleted. Deletion here means that the profile
+    will be removed including its file repository and database. The various options can be used to control which parts
+    of the profile are deleted.
     """
-    from aiida.manage.configuration.setup import delete_profile
+    if not include_config:
+        echo.echo_deprecated('the `--skip-config` option is deprecated and is no longer respected.')
 
     for profile in profiles:
-        echo.echo_info(f"Deleting profile '{profile.name}'")
-        delete_profile(
-            profile,
-            non_interactive=force,
-            include_db=include_db,
-            include_repository=include_repository,
-            include_config=include_config
+
+        includes = {
+            'database': include_database,
+            'database user': include_database_user,
+            'file repository': include_repository
+        }
+
+        if not all(includes.values()):
+            excludes = [label for label in includes if not includes[label]]
+            message_suffix = f' excluding: {", ".join(excludes)}.'
+        else:
+            message_suffix = '.'
+
+        echo.echo_warning(f'deleting profile `{profile.name}`{message_suffix}')
+        echo.echo_warning('this operation cannot be undone, ', nl=False)
+
+        if not force and not click.confirm('are you sure you want to continue?'):
+            echo.echo_info(f'deleting of `{profile.name} cancelled.')
+            continue
+
+        get_config().delete_profile(
+            profile.name,
+            include_database=include_database,
+            include_database_user=include_database_user,
+            include_repository=include_repository
         )
+        echo.echo_success(f'profile `{profile.name}` was deleted{message_suffix}.')

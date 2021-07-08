@@ -272,7 +272,7 @@ Converting the resulting flow diagram in a one-to-one fashion into an outline, o
 Exit codes
 ----------
 There is one more property of a work chain that is specified through its process specification, in addition to its inputs, outputs and outline.
-Any work chain may have one to multiple failure modes, which are modeled by :ref:`exit codes<topics:processes:usage:exit_codes>`.
+Any work chain may have one to multiple failure modes, which are modelled by :ref:`exit codes<topics:processes:usage:exit_codes>`.
 A work chain can be stopped at any time, simply by returning an exit code from an outline method.
 To retrieve an exit code that is defined on the spec, one can use the :py:meth:`~aiida.engine.processes.process.Process.exit_codes` property.
 This returns an attribute dictionary where the exit code labels map to their corresponding exit code.
@@ -416,6 +416,17 @@ If the list did not yet exist, it will automatically be created.
 The ``self.ctx.workchains`` now contains a list with the nodes of the completed work chains, with the same order as they had been inserted, and so in the ``inspect_workchains`` step we can simply iterate over it to access all of them.
 Note that the use of ``append_`` is not just limited to the ``to_context`` method.
 You can also use it in exactly the same way with ``ToContext`` to append a process to a list in the context in multiple outline steps.
+
+Nested context keys
+^^^^^^^^^^^^^^^^^^^
+
+To simplify the organization of the context, the keys may contain dots ``.``, transparently creating namespaces in the process.
+As an example compare the following to the parallel submission example above:
+
+.. include:: include/snippets/workchains/run_workchain_submit_append.py
+    :code: python
+
+This allows to create intuitively grouped and easily accessible structures of child calculations or workchains.
 
 .. _topics:workflows:usage:workchains:reporting:
 
@@ -587,6 +598,9 @@ Of course, we then need to explicitly pass the input ``a``.
 Finally, we use :meth:`~aiida.engine.processes.process.Process.exposed_outputs` and :meth:`~aiida.engine.processes.process.Process.out_many` to forward the outputs of the children to the outputs of the parent.
 Again, the ``namespace`` and ``agglomerate`` options can be used to select which outputs are returned by the :meth:`~aiida.engine.processes.process.Process.exposed_outputs` method.
 
+.. seealso::
+
+    For further practical examples of creating workflows, see the :ref:`how to write workflows<how-to:write-workflows>` and :ref:`how to write error resistant workflows <how-to:restart-workchain>` sections.
 
 
 .. rubric:: Footnotes

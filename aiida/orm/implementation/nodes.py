@@ -96,6 +96,22 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttribut
         """
         self._dbmodel.description = value
 
+    @property
+    def repository_metadata(self):
+        """Return the node repository metadata.
+
+        :return: the repository metadata
+        """
+        return self._dbmodel.repository_metadata
+
+    @repository_metadata.setter
+    def repository_metadata(self, value):
+        """Set the repository metadata.
+
+        :param value: the new value to set
+        """
+        self._dbmodel.repository_metadata = value
+
     @abc.abstractproperty
     def computer(self):
         """Return the computer of this node.

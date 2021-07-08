@@ -13,26 +13,15 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestLogs(AiidaTestCase):
+class TestLogs(AiidaArchiveTestCase):
     """Test ex-/import cases related to Logs"""
-
-    def setUp(self):
-        """Reset database prior to all tests"""
-        super().setUp()
-        self.reset_database()
-
-    def tearDown(self):
-        """
-        Delete all the created log entries
-        """
-        super().tearDown()
-        orm.Log.objects.delete_all()
 
     @with_temp_dir
     def test_critical_log_msg_and_metadata(self, temp_dir):
@@ -54,11 +43,11 @@ class TestLogs(AiidaTestCase):
         log_metadata = orm.Log.objects.get(dbnode_id=calc.id).metadata
 
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([calc], filename=export_file, silent=True)
+        export([calc], filename=export_file)
 
-        self.reset_database()
+        self.clean_db()
 
-        import_data(export_file, silent=True)
+        import_data(export_file)
 
         # Finding all the log messages
         logs = orm.Log.objects.all()
@@ -85,11 +74,11 @@ class TestLogs(AiidaTestCase):
 
         # Export, excluding logs
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([calc], filename=export_file, silent=True, include_logs=False)
+        export([calc], filename=export_file, include_logs=False)
 
         # Clean database and reimport exported data
-        self.reset_database()
-        import_data(export_file, silent=True)
+        self.clean_db()
+        import_data(export_file)
 
         # Finding all the log messages
         import_calcs = orm.QueryBuilder().append(orm.CalculationNode, project=['uuid']).all()
@@ -122,11 +111,11 @@ class TestLogs(AiidaTestCase):
 
         # Export
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([calc], filename=export_file, silent=True)
+        export([calc], filename=export_file)
 
         # Clean database and reimport exported data
-        self.reset_database()
-        import_data(export_file, silent=True)
+        self.clean_db()
+        import_data(export_file)
 
         # Finding all the log messages
         import_calcs = orm.QueryBuilder().append(orm.CalculationNode, project=['uuid']).all()
@@ -143,11 +132,11 @@ class TestLogs(AiidaTestCase):
         # Re-export
         calc = orm.load_node(import_calcs[0][0])
         re_export_file = os.path.join(temp_dir, 're_export.aiida')
-        export([calc], filename=re_export_file, silent=True)
+        export([calc], filename=re_export_file)
 
         # Clean database and reimport exported data
-        self.reset_database()
-        import_data(re_export_file, silent=True)
+        self.clean_db()
+        import_data(re_export_file)
 
         # Finding all the log messages
         import_calcs = orm.QueryBuilder().append(orm.CalculationNode, project=['uuid']).all()
@@ -176,7 +165,7 @@ class TestLogs(AiidaTestCase):
 
         # Export as "EXISTING" DB
         export_file_existing = os.path.join(temp_dir, 'export_EXISTING.aiida')
-        export([node], filename=export_file_existing, silent=True)
+        export([node], filename=export_file_existing)
 
         # Add 2 more Logs and save UUIDs for all three Logs prior to export
         node.logger.critical(log_msgs[1])
@@ -186,11 +175,11 @@ class TestLogs(AiidaTestCase):
 
         # Export as "FULL" DB
         export_file_full = os.path.join(temp_dir, 'export_FULL.aiida')
-        export([node], filename=export_file_full, silent=True)
+        export([node], filename=export_file_full)
 
         # Clean database and reimport "EXISTING" DB
-        self.reset_database()
-        import_data(export_file_existing, silent=True)
+        self.clean_db()
+        import_data(export_file_existing)
 
         # Check correct import
         builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
@@ -208,7 +197,7 @@ class TestLogs(AiidaTestCase):
         self.assertEqual(imported_log_message, log_msgs[0])
 
         # Import "FULL" DB
-        import_data(export_file_full, silent=True)
+        import_data(export_file_full)
 
         # Since the UUID of the node is identical with the node already in the DB,
         # the Logs should be added to the existing node, avoiding the addition of
@@ -290,7 +279,7 @@ class TestLogs(AiidaTestCase):
 
         # Export "EXISTING" DB
         export_file_existing = os.path.join(temp_dir, export_filenames['EXISTING'])
-        export([calc], filename=export_file_existing, silent=True)
+        export([calc], filename=export_file_existing)
 
         # Add remaining Log messages
         for log_msg in log_msgs[1:]:
@@ -310,14 +299,14 @@ class TestLogs(AiidaTestCase):
 
         # Export "FULL" DB
         export_file_full = os.path.join(temp_dir, export_filenames['FULL'])
-        export([calc], filename=export_file_full, silent=True)
+        export([calc], filename=export_file_full)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part II
         # Reimport "EXISTING" DB
-        import_data(export_file_existing, silent=True)
+        import_data(export_file_existing)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 1 Log
@@ -348,14 +337,14 @@ class TestLogs(AiidaTestCase):
 
         # Export "NEW" DB
         export_file_new = os.path.join(temp_dir, export_filenames['NEW'])
-        export([calc], filename=export_file_new, silent=True)
+        export([calc], filename=export_file_new)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part III
         # Reimport "EXISTING" DB
-        import_data(export_file_existing, silent=True)
+        import_data(export_file_existing)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 1 Log
@@ -368,7 +357,7 @@ class TestLogs(AiidaTestCase):
         self.assertIn(str(import_logs.all()[0][0]), existing_log_uuids)
 
         # Import "FULL" DB
-        import_data(export_file_full, silent=True)
+        import_data(export_file_full)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 3 Logs (len(log_msgs))
@@ -384,7 +373,7 @@ class TestLogs(AiidaTestCase):
 
         ## Part IV
         # Import "NEW" DB
-        import_data(export_file_new, silent=True)
+        import_data(export_file_new)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 5 Logs (len(log_msgs))

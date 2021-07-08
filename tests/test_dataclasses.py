@@ -13,11 +13,16 @@ import os
 import tempfile
 import unittest
 
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
 from aiida.orm import load_node
 from aiida.orm import CifData, StructureData, KpointsData, BandsData, ArrayData, TrajectoryData, Dict
+from aiida.orm.nodes.data.structure import (
+    ase_refine_cell, get_formula, get_pymatgen_version, has_ase, has_pymatgen, has_spglib
+)
 from aiida.orm.nodes.data.structure import Kind, Site
 
 
@@ -49,11 +54,15 @@ def simplify(string):
     return '\n'.join(s.strip() for s in string.split())
 
 
+@pytest.mark.skipif(not has_pymatgen(), reason='pymatgen not installed')
+def test_get_pymatgen_version():
+    assert isinstance(get_pymatgen_version(), str)
+
+
 class TestCifData(AiidaTestCase):
     """Tests for CifData class."""
     from distutils.version import StrictVersion
     from aiida.orm.nodes.data.cif import has_pycifrw
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, has_spglib, get_pymatgen_version
 
     valid_sample_cif_str = '''
         data_test
@@ -188,6 +197,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -225,6 +235,7 @@ O 0.5 0.5 0.5
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_ase(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -270,6 +281,7 @@ O 0.5 0.5 0.5
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
+    @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -530,6 +542,7 @@ _tag   {}
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     @unittest.skipIf(not has_spglib(), 'Unable to import spglib')
+    @pytest.mark.requires_rmq
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -1032,7 +1045,6 @@ class TestStructureData(AiidaTestCase):
     Tests the creation of StructureData objects (cell and pbc).
     """
     # pylint: disable=too-many-public-methods
-    from aiida.orm.nodes.data.structure import has_ase, has_spglib
     from aiida.orm.nodes.data.cif import has_pycifrw
 
     def test_cell_ok_and_atoms(self):
@@ -1506,7 +1518,6 @@ class TestStructureData(AiidaTestCase):
         Test the ase_refine_cell() function
         """
         # pylint: disable=too-many-statements
-        from aiida.orm.nodes.data.structure import ase_refine_cell
         import ase
         import math
         import numpy
@@ -1587,8 +1598,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the generation of formula
         """
-        from aiida.orm.nodes.data.structure import get_formula
-
         self.assertEqual(get_formula(['Ba', 'Ti'] + ['O'] * 3), 'BaO3Ti')
         self.assertEqual(get_formula(['Ba', 'Ti', 'C'] + ['O'] * 3, separator=' '), 'C Ba O3 Ti')
         self.assertEqual(get_formula(['H'] * 6 + ['C'] * 6), 'C6H6')
@@ -1616,8 +1625,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the generation of formula, including unknown entry.
         """
-        from aiida.orm.nodes.data.structure import get_formula
-
         self.assertEqual(get_formula(['Ba', 'Ti'] + ['X'] * 3), 'BaTiX3')
         self.assertEqual(get_formula(['Ba', 'Ti', 'C'] + ['X'] * 3, separator=' '), 'C Ba Ti X3')
         self.assertEqual(get_formula(['X'] * 6 + ['C'] * 6), 'C6X6')
@@ -1643,6 +1650,7 @@ class TestStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_get_cif(self):
         """
         Tests the conversion to CifData
@@ -1686,11 +1694,8 @@ loop_
   _symmetry_equiv_pos_as_xyz
    'x, y, z'
 
-_symmetry_Int_Tables_number             1
+_symmetry_int_tables_number             1
 _symmetry_space_group_name_H-M          'P 1'
-_symmetry_space_group_name_Hall         'P 1'
-_cell_formula_units_Z                   1
-_chemical_formula_sum                   'Ba2 Ti'
 """
             )
         )
@@ -1909,7 +1914,6 @@ class TestStructureDataReload(AiidaTestCase):
 
 class TestStructureDataFromAse(AiidaTestCase):
     """Tests the creation of Sites from/to a ASE object."""
-    from aiida.orm.nodes.data.structure import has_ase
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     def test_ase(self):
@@ -2096,7 +2100,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
     """
-    from aiida.orm.nodes.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_1(self):
@@ -2220,15 +2223,17 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests pymatgen -> StructureData, with partial occupancies and spins.
         This should raise a ValueError.
         """
-        import pymatgen
+        from pymatgen.core.periodic_table import Specie
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        Fe_spin_up = pymatgen.Specie('Fe', 0, properties={'spin': 1})
-        Mn_spin_up = pymatgen.Specie('Mn', 0, properties={'spin': 1})
-        Fe_spin_down = pymatgen.Specie('Fe', 0, properties={'spin': -1})
-        Mn_spin_down = pymatgen.Specie('Mn', 0, properties={'spin': -1})
-        FeMn1 = pymatgen.Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
-        FeMn2 = pymatgen.Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
-        a = pymatgen.Structure(
+        Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})
+        Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})
+        Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})
+        Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})
+        FeMn1 = Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
+        FeMn2 = Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[FeMn1, FeMn2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2236,9 +2241,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             StructureData(pymatgen=a)
 
         # same, with vacancies
-        Fe1 = pymatgen.Composition({Fe_spin_up: 0.5})
-        Fe2 = pymatgen.Composition({Fe_spin_down: 0.5})
-        a = pymatgen.Structure(
+        Fe1 = Composition({Fe_spin_up: 0.5})
+        Fe2 = Composition({Fe_spin_down: 0.5})
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Fe1, Fe2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2250,12 +2255,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     def test_multiple_kinds_partial_occupancies():
         """Tests that a structure with multiple sites with the same element but different
         partial occupancies, get their own unique kind name."""
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        Mg1 = pymatgen.Composition({'Mg': 0.50})
-        Mg2 = pymatgen.Composition({'Mg': 0.25})
+        Mg1 = Composition({'Mg': 0.50})
+        Mg2 = Composition({'Mg': 0.25})
 
-        a = pymatgen.Structure(
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Mg1, Mg2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2268,12 +2274,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests that a structure with multiple sites with the same alloy symbols but different
         weights, get their own unique kind name
         """
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        alloy_one = pymatgen.Composition({'Mg': 0.25, 'Al': 0.75})
-        alloy_two = pymatgen.Composition({'Mg': 0.45, 'Al': 0.55})
+        alloy_one = Composition({'Mg': 0.25, 'Al': 0.75})
+        alloy_two = Composition({'Mg': 0.45, 'Al': 0.55})
 
-        a = pymatgen.Structure(
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
             species=[alloy_one, alloy_two],
             coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
@@ -2285,7 +2292,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 class TestPymatgenFromStructureData(AiidaTestCase):
     """Tests the creation of pymatgen Structure and Molecule objects from
     StructureData."""
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_1(self):
@@ -2823,6 +2829,7 @@ class TestTrajectoryData(AiidaTestCase):
             # Step 66 does not exist
             n.get_index_from_stepid(66)
 
+    @pytest.mark.requires_rmq
     def test_conversion_to_structure(self):
         """
         Check the methods to export a given time step to a StructureData node.

@@ -26,9 +26,9 @@ An AiiDA plugin should not:
 * Use protected functions, methods or classes of AiiDA (those starting with an underscore ``_``)
 * Monkey patch anything within the ``aiida`` namespace (or the namespace itself)
 
-Failure to comply will likely prevent your plugin from being listed on the official `AiiDA plugin registry <registry>`_.
+Failure to comply will likely prevent your plugin from being listed on the official `AiiDA plugin registry <registry_>`_.
 
-If you find yourself in a situation where you feel like you need to do any of the above, please open an issue on the `AiiDA repository <core>`_ and we can try to advise on how to proceed.
+If you find yourself in a situation where you feel like you need to do any of the above, please open an issue on the `AiiDA repository <core_>`_ and we can try to advise on how to proceed.
 
 
 .. _core: https://github.com/aiidateam/aiida-core
@@ -212,10 +212,15 @@ Usage::
 -----------------
 
 ``verdi`` uses the `click_` framework, which makes it possible to add new subcommands to existing verdi commands, such as ``verdi data mydata``.
-AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``.
+AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``. At present extra commands can be injected at the following levels:
+
+  * As a :ref:`direct subcommand of verdi data<spec-verdi-data>`
+  * As a :ref:`subcommand of verdi data structure import<spec-verdi-data-structure-import>`
 
 
-Spec::
+.. _spec-verdi-data:
+
+Spec for ``verdi data``::
 
    entry_points={
       "aiida.cmdline.data": [
@@ -242,6 +247,32 @@ Usage:
 .. code-block:: bash
 
    verdi data mydata animate --format=Format PK
+
+.. _spec-verdi-data-structure-import:
+
+Spec for ``verdi data structure import``::
+
+   entry_points={
+      "aiida.cmdline.data.structure.import": [
+         "myformat = aiida_mycode.commands.myformat:myformat"
+      ]
+   }
+
+``aiida_mycode/commands/myformat.py``::
+
+   import click
+   @click.group()
+   @click.argument('filename', type=click.File('r'))
+   myformat(filename):
+      """commandline help for myformat import command"""
+      ...
+
+Usage:
+
+.. code-block:: bash
+
+   verdi data structure import myformat a_file.myfmt
+
 
 ``aiida.tools.dbexporters``
 ---------------------------
@@ -368,4 +399,4 @@ In particular:
 .. _unittest: https://docs.python.org/library/unittest.html
 .. _fixture: https://docs.pytest.org/en/latest/fixture.html
 .. _click: https://click.palletsprojects.com/
-.. _Entry points: https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+.. _Entry points: https://packaging.python.org/guides/creating-and-discovering-plugins/

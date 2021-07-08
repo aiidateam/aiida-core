@@ -15,7 +15,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    **Install prerequisite services**
 
-      AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires a `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ shell, and Python >= 3.6.
+      AiiDA is designed to run on `Unix <https://en.wikipedia.org/wiki/Unix>`_ operating systems and requires a `bash <https://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ or `zsh <https://en.wikipedia.org/wiki/Z_shell>`_ shell, and Python >= 3.7.
 
    .. tabbed:: Ubuntu
 
@@ -230,6 +230,11 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
        First name: my
        Last name: name
        Institution: where-i-work
+
+   .. admonition:: Is AiiDA unable to auto-detect the PostgreSQL setup?
+       :class: attention title-icon-troubleshoot
+
+       If you get an error saying that AiiDA has trouble autodetecting the PostgreSQL setup, you will need to do the manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
 
    ---
 

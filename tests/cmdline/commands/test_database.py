@@ -49,10 +49,8 @@ class TestVerdiDatabasaIntegrity(AiidaTestCase):
         data_output.add_incoming(workflow_parent, link_label='output', link_type=LinkType.RETURN)
 
     def setUp(self):
+        self.refurbish_db()
         self.cli_runner = CliRunner()
-
-    def tearDown(self):
-        self.reset_database()
 
     def test_detect_invalid_links_workflow_create(self):
         """Test `verdi database integrity detect-invalid-links` outgoing `create` from `workflow`."""
@@ -180,3 +178,13 @@ def tests_database_version(run_cli_command, manager):
     result = run_cli_command(cmd_database.database_version)
     assert result.output_lines[0].endswith(backend_manager.get_schema_generation_database())
     assert result.output_lines[1].endswith(backend_manager.get_schema_version_database())
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def tests_database_summary(aiida_localhost, run_cli_command):
+    """Test the ``verdi database summary -v`` command."""
+    from aiida import orm
+    node = orm.Dict().store()
+    result = run_cli_command(cmd_database.database_summary, ['--verbose'])
+    assert aiida_localhost.label in result.output
+    assert node.node_type in result.output

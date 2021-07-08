@@ -22,15 +22,16 @@ class TestQueryBuilder(AiidaTestCase):
 
     def setUp(self):
         super().setUp()
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
-        from datetime import datetime, date, timedelta
+        from datetime import date, timedelta
+        from aiida.common import timezone
 
-        orm.Data(ctime=datetime.now() - timedelta(days=3)).store()
-        orm.Data(ctime=datetime.now() - timedelta(days=1)).store()
+        # Using timezone.now() rather than datetime.now() to get a timezone-aware object rather than a naive one
+        orm.Data(ctime=timezone.now() - timedelta(days=3)).store()
+        orm.Data(ctime=timezone.now() - timedelta(days=1)).store()
 
         builder = orm.QueryBuilder().append(orm.Node, filters={'ctime': {'>': date.today() - timedelta(days=1)}})
         self.assertEqual(builder.count(), 1)
@@ -133,6 +134,7 @@ class TestQueryBuilder(AiidaTestCase):
 
     # Tracked in issue #4281
     @pytest.mark.flaky(reruns=2)
+    @pytest.mark.requires_rmq
     def test_process_query(self):
         """
         Test querying for a process class.
@@ -509,30 +511,29 @@ class TestQueryBuilder(AiidaTestCase):
         self.assertEqual(len(list(orm.QueryBuilder().append(orm.Node, project=['id']).iterdict())), 4)
 
     def test_append_validation(self):
-        from aiida.common.exceptions import InputValidationError
 
         # So here I am giving two times the same tag
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             orm.QueryBuilder().append(orm.StructureData, tag='n').append(orm.StructureData, tag='n')
         # here I am giving a wrong filter specifications
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.QueryBuilder().append(orm.StructureData, filters=['jajjsd'])
         # here I am giving a nonsensical projection:
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             orm.QueryBuilder().append(orm.StructureData, project=True)
 
         # here I am giving a nonsensical projection for the edge:
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             orm.QueryBuilder().append(orm.ProcessNode).append(orm.StructureData, edge_tag='t').add_projection('t', True)
         # Giving a nonsensical limit
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.QueryBuilder().append(orm.ProcessNode).limit(2.3)
         # Giving a nonsensical offset
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(TypeError):
             orm.QueryBuilder(offset=2.3)
 
         # So, I mess up one append, I want the QueryBuilder to clean it!
-        with self.assertRaises(InputValidationError):
+        with self.assertRaises(ValueError):
             qb = orm.QueryBuilder()
             # This also checks if we correctly raise for wrong keywords
             qb.append(orm.StructureData, tag='s', randomkeyword={})
@@ -733,6 +734,8 @@ class TestQueryHelp(AiidaTestCase):
         qb = orm.QueryBuilder().append((orm.Group,), filters={'label': 'helloworld'})
         self.assertEqual(qb.count(), 1)
 
+        # populate computer
+        self.computer  # pylint:disable=pointless-statement
         qb = orm.QueryBuilder().append(orm.Computer,)
         self.assertEqual(qb.count(), 1)
 
@@ -1427,7 +1430,7 @@ class TestDoubleStar(AiidaTestCase):
             'scheduler_type': self.computer.scheduler_type,
             'hostname': self.computer.hostname,
             'uuid': self.computer.uuid,
-            'name': self.computer.label,
+            'label': self.computer.label,
             'transport_type': self.computer.transport_type,
             'id': self.computer.id,
             'metadata': self.computer.metadata,

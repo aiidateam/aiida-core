@@ -10,6 +10,7 @@
 """The AiiDA process class"""
 import asyncio
 import collections
+from collections.abc import Mapping
 import enum
 import inspect
 import logging
@@ -413,7 +414,7 @@ class Process(plumpy.processes.Process):
         :param exc_info: the sys.exc_info() object (type, value, traceback)
         """
         super().on_except(exc_info)
-        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
+        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)).rstrip())
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
@@ -603,7 +604,7 @@ class Process(plumpy.processes.Process):
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        return serialize.deserialize(encoded)
+        return serialize.deserialize_unsafe(encoded)
 
     def update_node_state(self, state: plumpy.process_states.State) -> None:
         self.update_outputs()
@@ -755,7 +756,7 @@ class Process(plumpy.processes.Process):
         if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace):
+        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
 
@@ -796,7 +797,7 @@ class Process(plumpy.processes.Process):
         if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
 
-        if (port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace)):
+        if (port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace)):
             items = []
             for name, value in port_value.items():
 
@@ -882,7 +883,7 @@ class Process(plumpy.processes.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = {entry.link_label: entry.node for entry in node.get_outgoing(link_type=link_types)}
+        process_outputs_dict = node.get_outgoing(link_type=link_types).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

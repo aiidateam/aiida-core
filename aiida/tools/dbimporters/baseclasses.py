@@ -333,8 +333,8 @@ class UpfEntry(DbEntry):
 
         # Prefixing with an ID in order to start file name with the name
         # of the described element.
-        with tempfile.NamedTemporaryFile(mode='w+', prefix=self.source['id']) as handle:
-            handle.write(self.contents)
+        with tempfile.NamedTemporaryFile(mode='w+b', prefix=self.source['id']) as handle:
+            handle.write(self.contents.encode('utf-8'))
             handle.flush()
             upfnode = UpfData(file=handle.name, source=self.source)
 

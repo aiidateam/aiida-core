@@ -1,0 +1,59 @@
+- name: Get DB summary statistics
+  postgresql_query:
+    login_host: localhost
+    login_user: "{{ aiida_user | default('aiida') }}"
+    login_password: ''
+    db: "{{ aiida_backend }}"
+    query: |
+      SELECT
+        CAST(sum(calls) AS INTEGER) as calls,
+        CAST(sum(rows) AS INTEGER) as rows,
+        to_char(sum(total_time), '9.99EEEE') as time_ms
+      FROM pg_stat_statements
+      WHERE query !~* 'pg_stat_statements';
+  register: db_query_stats_summary
+
+- debug:
+    var: db_query_stats_summary.query_result
+
+- name: Get DB statistics for largest queries by time
+  postgresql_query:
+    login_host: localhost
+    login_user: "{{ aiida_user | default('aiida') }}"
+    login_password: ''
+    db: "{{ aiida_backend }}"
+    query: |
+      SELECT
+        to_char(total_time, '9.99EEEE') AS time_ms,
+        calls,
+        rows,
+        query
+      FROM pg_stat_statements
+      WHERE query !~* 'pg_stat_statements'
+      ORDER BY calls DESC
+      LIMIT {{ query_stats_limit | default(5) }};
+  register: db_query_stats_time
+
+- debug:
+    var: db_query_stats_time.query_result
+
+- name: Get DB statistics for largest queries by calls
+  postgresql_query:
+    login_host: localhost
+    login_user: "{{ aiida_user | default('aiida') }}"
+    login_password: ''
+    db: "{{ aiida_backend }}"
+    query: |
+      SELECT
+        to_char(total_time, '9.99EEEE') AS time_ms,
+        calls,
+        rows,
+        query
+      FROM pg_stat_statements
+      WHERE query !~* 'pg_stat_statements'
+      ORDER BY calls DESC
+      LIMIT {{ query_stats_limit | default(5) }};
+  register: db_query_stats_calls
+
+- debug:
+    var: db_query_stats_calls.query_result

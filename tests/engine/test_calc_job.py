@@ -11,6 +11,7 @@
 """Test for the `CalcJob` process sub class."""
 from copy import deepcopy
 from functools import partial
+import io
 import os
 from unittest.mock import patch
 
@@ -18,9 +19,10 @@ import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions, LinkType, CalcJobState
+from aiida.common import exceptions, LinkType, CalcJobState, StashMode
 from aiida.engine import launch, CalcJob, Process, ExitCode
 from aiida.engine.processes.ports import PortNamespace
+from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
@@ -34,6 +36,7 @@ def raise_exception(exception):
     raise exception()
 
 
+@pytest.mark.requires_rmq
 class FileCalcJob(CalcJob):
     """Example `CalcJob` implementation to test the `provenance_exclude_list` functionality.
 
@@ -71,6 +74,7 @@ class FileCalcJob(CalcJob):
         return calcinfo
 
 
+@pytest.mark.requires_rmq
 class TestCalcJob(AiidaTestCase):
     """Test for the `CalcJob` process sub class."""
 
@@ -387,6 +391,7 @@ def generate_process(aiida_local_code_factory):
     return _generate_process
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -417,6 +422,7 @@ def test_parse_insufficient_data(generate_process):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -436,6 +442,7 @@ def test_parse_non_zero_retval(generate_process):
     assert 'could not parse scheduler output: return value of `detailed_job_info` is non-zero' in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -444,7 +451,7 @@ def test_parse_not_implemented(generate_process):
     """
     process = generate_process()
 
-    retrieved = orm.FolderData().store()
+    retrieved = orm.FolderData()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
     process.node.set_attribute('detailed_job_info', {})
@@ -452,11 +459,9 @@ def test_parse_not_implemented(generate_process):
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    with retrieved.open(filename_stderr, 'w') as handle:
-        handle.write('\n')
-
-    with retrieved.open(filename_stdout, 'w') as handle:
-        handle.write('\n')
+    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
+    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
+    retrieved.store()
 
     process.parse()
 
@@ -469,6 +474,7 @@ def test_parse_not_implemented(generate_process):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -479,7 +485,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
 
     process = generate_process()
 
-    retrieved = orm.FolderData().store()
+    retrieved = orm.FolderData()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
     process.node.set_attribute('detailed_job_info', {})
@@ -487,11 +493,9 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    with retrieved.open(filename_stderr, 'w') as handle:
-        handle.write('\n')
-
-    with retrieved.open(filename_stdout, 'w') as handle:
-        handle.write('\n')
+    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
+    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
+    retrieved.store()
 
     msg = 'crash'
 
@@ -508,6 +512,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
         assert log in logs
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.parametrize(('exit_status_scheduler', 'exit_status_retrieved', 'final'), (
     (None, None, 0),
     (100, None, 100),
@@ -575,6 +580,7 @@ def test_parse_exit_code_priority(
     assert result.status == final
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
@@ -615,3 +621,41 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
 
     with pytest.raises(ValueError, match=r'`additional_retrieve_list` should only contain relative filepaths.*'):
         process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize(('stash_options', 'expected'), (
+    ({
+        'target_base': None
+    }, '`metadata.options.stash.target_base` should be'),
+    ({
+        'target_base': 'relative/path'
+    }, '`metadata.options.stash.target_base` should be'),
+    ({
+        'target_base': '/path'
+    }, '`metadata.options.stash.source_list` should be'),
+    ({
+        'target_base': '/path',
+        'source_list': ['/abspath']
+    }, '`metadata.options.stash.source_list` should be'),
+    ({
+        'target_base': '/path',
+        'source_list': ['rel/path'],
+        'mode': 'test'
+    }, '`metadata.options.stash.mode` should be'),
+    ({
+        'target_base': '/path',
+        'source_list': ['rel/path']
+    }, None),
+    ({
+        'target_base': '/path',
+        'source_list': ['rel/path'],
+        'mode': StashMode.COPY.value
+    }, None),
+))
+def test_validate_stash_options(stash_options, expected):
+    """Test the ``validate_stash_options`` function."""
+    if expected is None:
+        assert validate_stash_options(stash_options, None) is expected
+    else:
+        assert expected in validate_stash_options(stash_options, None)

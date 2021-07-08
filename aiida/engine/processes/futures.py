@@ -59,7 +59,12 @@ class ProcessFuture(asyncio.Future):
 
             # Try setting up a filtered broadcast subscriber
             if self._communicator is not None:
-                broadcast_filter = kiwipy.BroadcastFilter(lambda *args, **kwargs: self.set_result(node), sender=pk)
+
+                def _subscriber(*args, **kwargs):  # pylint: disable=unused-argument
+                    if not self.done():
+                        self.set_result(node)
+
+                broadcast_filter = kiwipy.BroadcastFilter(_subscriber, sender=pk)
                 for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
                     broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
                 self._broadcast_identifier = self._communicator.add_broadcast_subscriber(broadcast_filter)

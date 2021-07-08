@@ -13,26 +13,21 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestComments(AiidaTestCase):
+class TestComments(AiidaArchiveTestCase):
     """Test ex-/import cases related to Comments"""
 
     def setUp(self):
         super().setUp()
-        self.reset_database()
         self.comments = [
             "We're no strangers to love", 'You know the rules and so do I', "A full commitment's what I'm thinking of",
             "You wouldn't get this from any other guy"
         ]
-
-    def tearDown(self):
-        super().tearDown()
-        self.reset_database()
 
     @with_temp_dir
     def test_multiple_imports_for_single_node(self, temp_dir):
@@ -49,7 +44,7 @@ class TestComments(AiidaTestCase):
 
         # Export as "EXISTING" DB
         export_file_existing = os.path.join(temp_dir, 'export_EXISTING.aiida')
-        export([node], filename=export_file_existing, silent=True)
+        export([node], filename=export_file_existing)
 
         # Add 2 more Comments and save UUIDs prior to export
         comment_three = orm.Comment(node, user, self.comments[2]).store()
@@ -58,11 +53,11 @@ class TestComments(AiidaTestCase):
 
         # Export as "FULL" DB
         export_file_full = os.path.join(temp_dir, 'export_FULL.aiida')
-        export([node], filename=export_file_full, silent=True)
+        export([node], filename=export_file_full)
 
         # Clean database and reimport "EXISTING" DB
-        self.reset_database()
-        import_data(export_file_existing, silent=True)
+        self.clean_db()
+        import_data(export_file_existing)
 
         # Check correct import
         builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
@@ -81,7 +76,7 @@ class TestComments(AiidaTestCase):
             self.assertIn(imported_comment_content, self.comments[0:2])
 
         # Import "FULL" DB
-        import_data(export_file_full, silent=True)
+        import_data(export_file_full)
 
         # Since the UUID of the node is identical with the node already in the DB,
         # the Comments should be added to the existing node, avoiding the addition
@@ -125,11 +120,11 @@ class TestComments(AiidaTestCase):
 
         # Export nodes, excluding comments
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=export_file, silent=True, include_comments=False)
+        export([node], filename=export_file, include_comments=False)
 
         # Clean database and reimport exported file
-        self.reset_database()
-        import_data(export_file, silent=True)
+        self.clean_db()
+        import_data(export_file)
 
         # Get node, users, and comments
         import_nodes = orm.QueryBuilder().append(orm.Node, project=['uuid']).all()
@@ -169,11 +164,11 @@ class TestComments(AiidaTestCase):
 
         # Export nodes
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([calc_node, data_node], filename=export_file, silent=True)
+        export([calc_node, data_node], filename=export_file)
 
         # Clean database and reimport exported file
-        self.reset_database()
-        import_data(export_file, silent=True)
+        self.clean_db()
+        import_data(export_file)
 
         # Get nodes and comments
         builder = orm.QueryBuilder()
@@ -220,11 +215,11 @@ class TestComments(AiidaTestCase):
 
         # Export node, along with comments and users recursively
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=export_file, silent=True)
+        export([node], filename=export_file)
 
         # Clean database and reimport exported file
-        self.reset_database()
-        import_data(export_file, silent=True)
+        self.clean_db()
+        import_data(export_file)
 
         # Get node, users, and comments
         builder = orm.QueryBuilder()
@@ -308,9 +303,9 @@ class TestComments(AiidaTestCase):
 
         # Export, reset database and reimport
         export_file = os.path.join(temp_dir, 'export.aiida')
-        export([calc], filename=export_file, silent=True)
-        self.reset_database()
-        import_data(export_file, silent=True)
+        export([calc], filename=export_file)
+        self.clean_db()
+        import_data(export_file)
 
         # Retrieve node and comment
         builder = orm.QueryBuilder().append(orm.CalculationNode, tag='calc', project=['uuid', 'mtime'])
@@ -358,7 +353,7 @@ class TestComments(AiidaTestCase):
 
         # Export calc and comment
         export_file = os.path.join(temp_dir, 'export_file.aiida')
-        export([calc], filename=export_file, silent=True)
+        export([calc], filename=export_file)
 
         # Update comment
         cmt.set_content(self.comments[1])
@@ -371,10 +366,10 @@ class TestComments(AiidaTestCase):
 
         # Export calc and UPDATED comment
         export_file_updated = os.path.join(temp_dir, 'export_file_updated.aiida')
-        export([calc], filename=export_file_updated, silent=True)
+        export([calc], filename=export_file_updated)
 
         # Reimport exported 'old' calc and comment
-        import_data(export_file, silent=True, comment_mode='newest')
+        import_data(export_file, comment_mode='newest')
 
         # Check there are exactly 1 CalculationNode and 1 Comment
         import_calcs = orm.QueryBuilder().append(orm.CalculationNode, tag='calc', project=['uuid'])
@@ -391,7 +386,7 @@ class TestComments(AiidaTestCase):
 
         ## Test comment_mode='overwrite'
         # Reimport exported 'old' calc and comment
-        import_data(export_file, silent=True, comment_mode='overwrite')
+        import_data(export_file, comment_mode='overwrite')
 
         # Check there are exactly 1 CalculationNode and 1 Comment
         import_calcs = orm.QueryBuilder().append(orm.CalculationNode, tag='calc', project=['uuid'])
@@ -408,7 +403,7 @@ class TestComments(AiidaTestCase):
 
         ## Test ValueError is raised when using a wrong comment_mode:
         with self.assertRaises(ImportValidationError):
-            import_data(export_file, silent=True, comment_mode='invalid')
+            import_data(export_file, comment_mode='invalid')
 
     @with_temp_dir
     def test_reimport_of_comments_for_single_node(self, temp_dir):
@@ -474,7 +469,7 @@ class TestComments(AiidaTestCase):
 
         # Export "EXISTING" DB
         export_file_existing = os.path.join(temp_dir, export_filenames['EXISTING'])
-        export([calc], filename=export_file_existing, silent=True)
+        export([calc], filename=export_file_existing)
 
         # Add remaining Comments
         for comment in self.comments[1:]:
@@ -494,14 +489,14 @@ class TestComments(AiidaTestCase):
 
         # Export "FULL" DB
         export_file_full = os.path.join(temp_dir, export_filenames['FULL'])
-        export([calc], filename=export_file_full, silent=True)
+        export([calc], filename=export_file_full)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part II
         # Reimport "EXISTING" DB
-        import_data(export_file_existing, silent=True)
+        import_data(export_file_existing)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 1 Comment
@@ -533,14 +528,14 @@ class TestComments(AiidaTestCase):
 
         # Export "NEW" DB
         export_file_new = os.path.join(temp_dir, export_filenames['NEW'])
-        export([calc], filename=export_file_new, silent=True)
+        export([calc], filename=export_file_new)
 
         # Clean database
-        self.reset_database()
+        self.clean_db()
 
         ## Part III
         # Reimport "EXISTING" DB
-        import_data(export_file_existing, silent=True)
+        import_data(export_file_existing)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 1 Comment
@@ -553,7 +548,7 @@ class TestComments(AiidaTestCase):
         self.assertIn(str(import_comments.all()[0][0]), existing_comment_uuids)
 
         # Import "FULL" DB
-        import_data(export_file_full, silent=True)
+        import_data(export_file_full)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 4 Comments (len(self.comments))
@@ -569,7 +564,7 @@ class TestComments(AiidaTestCase):
 
         ## Part IV
         # Import "NEW" DB
-        import_data(export_file_new, silent=True)
+        import_data(export_file_new)
 
         # Check the database is correctly imported.
         # There should be exactly: 1 CalculationNode, 7 Comments (org. (1) + 2 x added (3) Comments)

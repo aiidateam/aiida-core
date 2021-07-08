@@ -15,15 +15,15 @@ import shutil
 import tempfile
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
+from .. import AiidaArchiveTestCase
 
 
-class TestExtras(AiidaTestCase):
+class TestExtras(AiidaArchiveTestCase):
     """Test ex-/import cases related to Extras"""
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUpClass(cls):
         """Only run to prepare an archive file"""
         super().setUpClass()
 
@@ -33,23 +33,18 @@ class TestExtras(AiidaTestCase):
         data.set_extra_many({'b': 2, 'c': 3})
         cls.tmp_folder = tempfile.mkdtemp()
         cls.export_file = os.path.join(cls.tmp_folder, 'export.aiida')
-        export([data], filename=cls.export_file, silent=True)
+        export([data], filename=cls.export_file)
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls):
         """Remove tmp_folder"""
         super().tearDownClass()
 
         shutil.rmtree(cls.tmp_folder, ignore_errors=True)
 
-    def setUp(self):
-        """This function runs before every test execution"""
-        self.clean_db()
-        self.insert_data()
-
     def import_extras(self, mode_new='import'):
         """Import an aiida database"""
-        import_data(self.export_file, silent=True, extras_mode_new=mode_new)
+        import_data(self.export_file, extras_mode_new=mode_new)
 
         builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
 
@@ -62,15 +57,12 @@ class TestExtras(AiidaTestCase):
         self.imported_node.set_extra('b', 1000)
         self.imported_node.delete_extra('c')
 
-        import_data(self.export_file, silent=True, extras_mode_existing=mode_existing)
+        import_data(self.export_file, extras_mode_existing=mode_existing)
 
         # Query again the database
         builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
         self.assertEqual(builder.count(), 1)
         return builder.all()[0][0]
-
-    def tearDown(self):
-        pass
 
     def test_import_of_extras(self):
         """Check if extras are properly imported"""
@@ -157,7 +149,7 @@ class TestExtras(AiidaTestCase):
             for mode2 in ['n', 'c']:  # create or not create new extras
                 for mode3 in ['l', 'u', 'd']:  # leave old, update or delete collided extras
                     mode = mode1 + mode2 + mode3
-                    import_data(self.export_file, silent=True, extras_mode_existing=mode)
+                    import_data(self.export_file, extras_mode_existing=mode)
 
     def test_extras_import_mode_wrong(self):
         """Check a mode that is wrong"""
@@ -165,14 +157,14 @@ class TestExtras(AiidaTestCase):
 
         self.import_extras()
         with self.assertRaises(ImportValidationError):
-            import_data(self.export_file, silent=True, extras_mode_existing='xnd')  # first letter is wrong
+            import_data(self.export_file, extras_mode_existing='xnd')  # first letter is wrong
         with self.assertRaises(ImportValidationError):
-            import_data(self.export_file, silent=True, extras_mode_existing='nxd')  # second letter is wrong
+            import_data(self.export_file, extras_mode_existing='nxd')  # second letter is wrong
         with self.assertRaises(ImportValidationError):
-            import_data(self.export_file, silent=True, extras_mode_existing='nnx')  # third letter is wrong
+            import_data(self.export_file, extras_mode_existing='nnx')  # third letter is wrong
         with self.assertRaises(ImportValidationError):
-            import_data(self.export_file, silent=True, extras_mode_existing='n')  # too short
+            import_data(self.export_file, extras_mode_existing='n')  # too short
         with self.assertRaises(ImportValidationError):
-            import_data(self.export_file, silent=True, extras_mode_existing='nndnn')  # too long
+            import_data(self.export_file, extras_mode_existing='nndnn')  # too long
         with self.assertRaises(ImportValidationError):
-            import_data(self.export_file, silent=True, extras_mode_existing=5)  # wrong type
+            import_data(self.export_file, extras_mode_existing=5)  # wrong type

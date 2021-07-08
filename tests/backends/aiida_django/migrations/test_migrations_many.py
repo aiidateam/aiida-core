@@ -12,14 +12,12 @@
 This file contains the majority of the migration tests that are too short to
 go to a separate file.
 """
-
 import numpy
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.djsite.db.migrations import ModelModifierV0025
 from aiida.backends.general.migrations import utils
 from aiida.common.exceptions import IntegrityError
-from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids, verify_uuid_uniqueness
 from .test_migrations_common import TestMigrations
 
 
@@ -78,6 +76,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
     def setUpBeforeMigration(self):
         from aiida.common.utils import get_new_uuid
+        from aiida.backends.general.migrations.utils import deduplicate_uuids, verify_uuid_uniqueness
         self.file_name = 'test.temp'
         self.file_content = '#!/bin/bash\n\necho test run\n'
 
@@ -113,11 +112,13 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
         # Now run the function responsible for solving duplicate UUIDs which would also be called by the user
         # through the `verdi database integrity detect-duplicate-uuid` command
-        deduplicate_uuids(table='db_dbnode', dry_run=False)
+        deduplicate_uuids(table='db_dbnode')
 
     def test_deduplicated_uuids(self):
         """Verify that after the migration, all expected nodes are still there with unique UUIDs."""
         # If the duplicate UUIDs were successfully fixed, the following should not raise.
+        from aiida.backends.general.migrations.utils import verify_uuid_uniqueness
+
         verify_uuid_uniqueness(table='db_dbnode')
 
         # Reload the nodes by PK and check that all UUIDs are now unique

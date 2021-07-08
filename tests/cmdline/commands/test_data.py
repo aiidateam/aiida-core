@@ -17,14 +17,16 @@ import shutil
 import unittest
 import tempfile
 import subprocess as sp
-import numpy as np
 
 from click.testing import CliRunner
+import numpy as np
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_data import cmd_array, cmd_bands, cmd_cif, cmd_dict, cmd_remote
 from aiida.cmdline.commands.cmd_data import cmd_structure, cmd_trajectory, cmd_upf, cmd_singlefile
+from aiida.cmdline.commands import cmd_group
 from aiida.engine import calcfunction
 from aiida.orm.nodes.data.cif import has_pycifrw
 from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
@@ -229,6 +231,7 @@ class TestVerdiDataArray(AiidaTestCase):
         self.assertEqual(res.exit_code, 0, 'The command did not finish correctly')
 
 
+@pytest.mark.requires_rmq
 class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
     """Testing verdi data bands."""
 
@@ -615,6 +618,9 @@ class TestVerdiDataStructure(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDa
         ).store()
         cls.ids = cls.create_structure_data()
 
+        for group_label in ['xyz structure group', 'ase structure group']:
+            Group(label=group_label).store()
+
     def setUp(self):
         self.comp = self.computer
         self.runner = CliRunner()
@@ -703,6 +709,48 @@ class TestVerdiDataStructure(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDa
                 ' of verdi data structure import.'
             )
 
+    def test_import_aiida_xyz_w_group_label(self):
+        """Test import xyz file including setting label and group."""
+        xyzcontent = '''
+        2
+
+        Fe     0.0 0.0 0.0
+        O      2.0 2.0 2.0
+        '''
+        group_label = 'xyz structure group'
+        with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
+            fhandle.write(xyzcontent)
+            fhandle.flush()
+            options = [
+                fhandle.name,
+                '--vacuum-factor',
+                '1.0',
+                '--vacuum-addition',
+                '10.0',
+                '--pbc',
+                '1',
+                '1',
+                '1',
+                '--label',
+                'a  structure',
+                '--group',
+                group_label,
+            ]
+            res = self.cli_runner.invoke(cmd_structure.import_aiida_xyz, options, catch_exceptions=False)
+            self.assertIn(
+                b'Successfully imported', res.stdout_bytes,
+                'The string "Successfully imported" was not found in the output'
+                ' of verdi data structure import.'
+            )
+            self.assertIn(
+                b'PK', res.stdout_bytes, 'The string "PK" was not found in the output'
+                ' of verdi data structure import.'
+            )
+            res = self.cli_runner.invoke(cmd_group.group_show, [group_label])
+            self.assertClickResultNoException(res)
+            for grpline in [group_label, 'StructureData']:
+                self.assertIn(grpline, res.output)
+
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     def test_import_ase(self):
         """Trying to import an xsf file through ase."""
@@ -732,6 +780,39 @@ PRIMVEC
                 b'PK', res.stdout_bytes, 'The string "PK" was not found in the output'
                 ' of verdi data structure import.'
             )
+
+    @unittest.skipIf(not has_ase(), 'Unable to import ase')
+    def test_import_ase_w_group_label(self):
+        """Trying to import an xsf file through ase including setting label and group."""
+        xsfcontent = '''CRYSTAL
+PRIMVEC
+    2.7100000000    2.7100000000    0.0000000000
+    2.7100000000    0.0000000000    2.7100000000
+    0.0000000000    2.7100000000    2.7100000000
+ PRIMCOORD
+           2           1
+ 16      0.0000000000     0.0000000000     0.0000000000
+ 30      1.3550000000    -1.3550000000    -1.3550000000
+        '''
+        group_label = 'ase structure group'
+        with tempfile.NamedTemporaryFile(mode='w+', suffix='.xsf') as fhandle:
+            fhandle.write(xsfcontent)
+            fhandle.flush()
+            options = [fhandle.name, '--label', 'another  structure', '--group', group_label]
+            res = self.cli_runner.invoke(cmd_structure.import_ase, options, catch_exceptions=False)
+            self.assertIn(
+                b'Successfully imported', res.stdout_bytes,
+                'The string "Successfully imported" was not found in the output'
+                ' of verdi data structure import.'
+            )
+            self.assertIn(
+                b'PK', res.stdout_bytes, 'The string "PK" was not found in the output'
+                ' of verdi data structure import.'
+            )
+            res = self.cli_runner.invoke(cmd_group.group_show, [group_label])
+            self.assertClickResultNoException(res)
+            for grpline in [group_label, 'StructureData']:
+                self.assertIn(grpline, res.output)
 
     def test_list(self):
         self.data_listing_test(StructureData, 'BaO3Ti', self.ids)

@@ -9,14 +9,14 @@
 ###########################################################################
 """Tests for `verdi`."""
 from click.testing import CliRunner
+import pytest
 
 from aiida import get_version
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_verdi
 
-from tests.utils.configuration import with_temporary_config_instance
 
-
+@pytest.mark.usefixtures('config_with_profile')
 class TestVerdi(AiidaTestCase):
     """Tests for `verdi`."""
 
@@ -30,7 +30,6 @@ class TestVerdi(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertIn(get_version(), result.output)
 
-    @with_temporary_config_instance
     def test_verdi_with_empty_profile_list(self):
         """Regression test for #2424: verify that verdi remains operable even if profile list is empty"""
         from aiida.manage.configuration import CONFIG
@@ -40,7 +39,6 @@ class TestVerdi(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_verdi.verdi, [])
         self.assertIsNone(result.exception, result.output)
 
-    @with_temporary_config_instance
     def test_invalid_cmd_matches(self):
         """Test that verdi with an invalid command will return matches if somewhat close"""
         result = self.cli_runner.invoke(cmd_verdi.verdi, ['usr'])
@@ -49,7 +47,6 @@ class TestVerdi(AiidaTestCase):
         self.assertIn('user', result.output)
         self.assertNotEqual(result.exit_code, 0)
 
-    @with_temporary_config_instance
     def test_invalid_cmd_no_matches(self):
         """Test that verdi with an invalid command with no matches returns an appropriate message"""
         result = self.cli_runner.invoke(cmd_verdi.verdi, ['foobar'])

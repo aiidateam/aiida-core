@@ -17,7 +17,7 @@ __all__ = (
     'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
     'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
     'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError'
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError'
 )
 
 
@@ -186,6 +186,10 @@ class IncompatibleDatabaseSchema(ConfigurationError):
     """Raised when the database schema is incompatible with that of the code."""
 
 
+class DatabaseMigrationError(AiidaException):
+    """Raised if a critical error is encountered during a database migration."""
+
+
 class DbContentError(AiidaException):
     """
     Raised when the content of the DB is not valid.
@@ -249,4 +253,10 @@ class OutputParsingError(ParsingError):
 class CircusCallError(AiidaException):
     """
     Raised when an attempt to contact Circus returns an error in the response
+    """
+
+
+class HashingError(AiidaException):
+    """
+    Raised when an attempt to hash an object fails via a known failure mode
     """

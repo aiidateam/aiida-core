@@ -49,7 +49,7 @@ jobs:
         -   name: Install system dependencies
             run: |
                 sudo apt update
-                sudo apt install postgresql-10
+                sudo apt install postgresql
 
         -   name: Upgrade pip
             run: |
@@ -64,4 +64,4 @@ jobs:
                 pip freeze
 
         -   name: Run tests
-            run: pytest -sv tests/manage/external/test_rmq.py
+            run: pytest -sv -k 'requires_rmq'

@@ -97,6 +97,33 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
     return None
 
 
+def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
+    """Validate the ``stash`` options."""
+    from aiida.common.datastructures import StashMode
+
+    target_base = stash_options.get('target_base', None)
+    source_list = stash_options.get('source_list', None)
+    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+
+    if not isinstance(target_base, str) or not os.path.isabs(target_base):
+        return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
+
+    if (
+        not isinstance(source_list, (list, tuple)) or
+        any(not isinstance(src, str) or os.path.isabs(src) for src in source_list)
+    ):
+        port = 'metadata.options.stash.source_list'
+        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+
+    try:
+        StashMode(stash_mode)
+    except ValueError:
+        port = 'metadata.options.stash.mode'
+        return f'`{port}` should be a member of aiida.common.datastructures.StashMode, got: {stash_mode}'
+
+    return None
+
+
 def validate_parser(parser_name: Any, _: Any) -> Optional[str]:
     """Validate the parser.
 
@@ -104,11 +131,10 @@ def validate_parser(parser_name: Any, _: Any) -> Optional[str]:
     """
     from aiida.plugins import ParserFactory
 
-    if parser_name is not plumpy.ports.UNSPECIFIED:
-        try:
-            ParserFactory(parser_name)
-        except exceptions.EntryPointError as exception:
-            return f'invalid parser specified: {exception}'
+    try:
+        ParserFactory(parser_name)
+    except exceptions.EntryPointError as exception:
+        return f'invalid parser specified: {exception}'
 
     return None
 
@@ -118,9 +144,6 @@ def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> 
 
     :return: string with error message in case the input is invalid.
     """
-    if additional_retrieve_list is plumpy.ports.UNSPECIFIED:
-        return None
-
     if any(not isinstance(value, str) or os.path.isabs(value) for value in additional_retrieve_list):
         return f'`additional_retrieve_list` should only contain relative filepaths but got: {additional_retrieve_list}'
 
@@ -216,9 +239,21 @@ class CalcJob(Process):
         spec.input('metadata.options.additional_retrieve_list', required=False,
             valid_type=(list, tuple), validator=validate_additional_retrieve_list,
             help='List of relative file paths that should be retrieved in addition to what the plugin specifies.')
+        spec.input_namespace('metadata.options.stash', required=False, populate_defaults=False,
+            validator=validate_stash_options,
+            help='Optional directives to stash files after the calculation job has completed.')
+        spec.input('metadata.options.stash.target_base', valid_type=str, required=False,
+            help='The base location to where the files should be stashd. For example, for the `copy` stash mode, this '
+            'should be an absolute filepath on the remote computer.')
+        spec.input('metadata.options.stash.source_list', valid_type=(tuple, list), required=False,
+            help='Sequence of relative filepaths representing files in the remote directory that should be stashed.')
+        spec.input('metadata.options.stash.stash_mode', valid_type=str, required=False,
+            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode.')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,
             help='Input files necessary to run the process will be stored in this folder node.')
+        spec.output('remote_stash', valid_type=orm.RemoteStashData, required=False,
+            help='Contents of the `stash.source_list` option are stored in this remote folder after job completion.')
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
@@ -460,7 +495,6 @@ class CalcJob(Process):
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.orm import load_node, Code, Computer
-        from aiida.plugins import DataFactory
         from aiida.schedulers.datastructures import JobTemplate
 
         computer = self.node.computer
@@ -512,18 +546,6 @@ class CalcJob(Process):
                 retrieve_list.append(job_tmpl.sched_error_path)
         retrieve_list.extend(self.node.get_option('additional_retrieve_list') or [])
         self.node.set_retrieve_list(retrieve_list)
-
-        retrieve_singlefile_list = calc_info.retrieve_singlefile_list or []
-        # a validation on the subclasses of retrieve_singlefile_list
-        for _, subclassname, _ in retrieve_singlefile_list:
-            file_sub_class = DataFactory(subclassname)
-            if not issubclass(file_sub_class, orm.SinglefileData):
-                raise PluginInternalError(
-                    '[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is '
-                    'not subclass of SinglefileData'.format(self.node.pk, file_sub_class.__name__)
-                )
-        if retrieve_singlefile_list:
-            self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
 
         # Handle the retrieve_temporary_list
         retrieve_temporary_list = calc_info.retrieve_temporary_list or []
@@ -653,29 +675,29 @@ class CalcJob(Process):
         local_copy_list = calc_info.local_copy_list
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
-        except ValidationError as exc:
+        except ValidationError as exception:
             raise PluginInternalError(
-                f'[presubmission of calc {this_pk}] local_copy_list format problem: {exc}'
-            ) from exc
+                f'[presubmission of calc {this_pk}] local_copy_list format problem: {exception}'
+            ) from exception
 
         remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
-        except ValidationError as exc:
+        except ValidationError as exception:
             raise PluginInternalError(
-                f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exc}'
-            ) from exc
+                f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
+            ) from exception
 
         for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
             try:
                 Computer.objects.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
-            except exceptions.NotExistent as exc:
+            except exceptions.NotExistent as exception:
                 raise PluginInternalError(
                     '[presubmission of calc {}] '
                     'The remote copy requires a computer with UUID={}'
                     'but no such computer was found in the '
                     'database'.format(this_pk, remote_computer_uuid)
-                ) from exc
+                ) from exception
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError(
                     '[presubmission of calc {}] '

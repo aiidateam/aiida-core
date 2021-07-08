@@ -11,6 +11,7 @@
 import asyncio
 
 import plumpy
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ProcessState
@@ -20,6 +21,7 @@ from aiida.orm import Int
 from tests.utils import processes as test_processes
 
 
+@pytest.mark.requires_rmq
 class TestProcessControl(AiidaTestCase):
     """Test AiiDA's RabbitMQ functionalities."""
 
@@ -33,6 +35,10 @@ class TestProcessControl(AiidaTestCase):
         # aiida.engine, since the broad one will create its own loop
         manager = get_manager()
         self.runner = manager.get_runner()
+
+    def tearDown(self):
+        self.runner.close()
+        super().tearDown()
 
     def test_submit_simple(self):
         """"Launch the process."""

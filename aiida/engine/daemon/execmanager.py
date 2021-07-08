@@ -26,13 +26,12 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import load_node, CalcJobNode, Code, FolderData, Node, RemoteData
 from aiida.orm.utils.log import get_dblogger_extra
-from aiida.plugins import DataFactory
 from aiida.schedulers.datastructures import JobState
 from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
-execlogger = AIIDA_LOGGER.getChild('execmanager')
+EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
 def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
@@ -77,7 +76,7 @@ def upload_calculation(
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
     link_label = 'remote_folder'
     if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
-        execlogger.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
+        EXEC_LOGGER.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
         return calc_info
 
     computer = node.computer
@@ -87,7 +86,7 @@ def upload_calculation(
 
     logger_extra = get_dblogger_extra(node)
     transport.set_logger_extra(logger_extra)
-    logger = LoggerAdapter(logger=execlogger, extra=logger_extra)
+    logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
     if not dry_run and node.has_cached_links():
         raise ValueError(
@@ -291,7 +290,12 @@ def upload_calculation(
             relpath = os.path.normpath(os.path.relpath(filepath, folder.abspath))
             if relpath not in provenance_exclude_list:
                 with open(filepath, 'rb') as handle:
-                    node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access
+                    node._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
+
+    # Since the node is already stored, we cannot use the normal repository interface since it will raise a
+    # `ModificationNotAllowed` error. To bypass it, we go straight to the underlying repository instance to store the
+    # files, however, this means we have to manually update the node's repository metadata.
+    node._update_repository_metadata()  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
@@ -332,6 +336,65 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
     return job_id
 
 
+def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+    """Stash files from the working directory of a completed calculation to a permanent remote folder.
+
+    After a calculation has been completed, optionally stash files from the work directory to a storage location on the
+    same remote machine. This is useful if one wants to keep certain files from a completed calculation to be removed
+    from the scratch directory, because they are necessary for restarts, but that are too heavy to retrieve.
+    Instructions of which files to copy where are retrieved from the `stash.source_list` option.
+
+    :param calculation: the calculation job node.
+    :param transport: an already opened transport.
+    """
+    from aiida.common.datastructures import StashMode
+    from aiida.orm import RemoteStashFolderData
+
+    logger_extra = get_dblogger_extra(calculation)
+
+    stash_options = calculation.get_option('stash')
+    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    source_list = stash_options.get('source_list', [])
+
+    if not source_list:
+        return
+
+    if stash_mode != StashMode.COPY.value:
+        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not implemented yet.')
+        return
+
+    cls = RemoteStashFolderData
+
+    EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
+
+    uuid = calculation.uuid
+    target_basepath = os.path.join(stash_options['target_base'], uuid[:2], uuid[2:4], uuid[4:])
+
+    for source_filename in source_list:
+
+        source_filepath = os.path.join(calculation.get_remote_workdir(), source_filename)
+        target_filepath = os.path.join(target_basepath, source_filename)
+
+        # If the source file is in a (nested) directory, create those directories first in the target directory
+        target_dirname = os.path.dirname(target_filepath)
+        transport.makedirs(target_dirname, ignore_existing=True)
+
+        try:
+            transport.copy(source_filepath, target_filepath)
+        except (IOError, ValueError) as exception:
+            EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        else:
+            EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+
+    remote_stash = cls(
+        computer=calculation.computer,
+        target_basepath=target_basepath,
+        stash_mode=StashMode(stash_mode),
+        source_list=source_list,
+    ).store()
+    remote_stash.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+
+
 def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
@@ -346,15 +409,15 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     logger_extra = get_dblogger_extra(calculation)
     workdir = calculation.get_remote_workdir()
 
-    execlogger.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
-    execlogger.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
+    EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
+    EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
 
     # If the calculation already has a `retrieved` folder, simply return. The retrieval was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
     link_label = calculation.link_label_retrieved
     if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
-        execlogger.warning(
+        EXEC_LOGGER.warning(
             f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping retrieval'
         )
         return
@@ -368,17 +431,11 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
-        retrieve_singlefile_list = calculation.get_retrieve_singlefile_list()
 
         with SandboxFolder() as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.put_object_from_tree(folder.abspath)
-
-        # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
-        if retrieve_singlefile_list:
-            with SandboxFolder() as folder:
-                _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
@@ -387,13 +444,13 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
-                execlogger.debug(
+                EXEC_LOGGER.debug(
                     f"[retrieval of calc {calculation.pk}] Retrieved temporary file or folder '{filename}'",
                     extra=logger_extra
                 )
 
         # Store everything
-        execlogger.debug(
+        EXEC_LOGGER.debug(
             f'[retrieval of calc {calculation.pk}] Storing retrieved_files={retrieved_files.pk}', extra=logger_extra
         )
         retrieved_files.store()
@@ -404,7 +461,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
-def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
+def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """
     Kill the calculation through the scheduler
 
@@ -412,6 +469,10 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
     :param transport: an already opened transport to use to address the scheduler
     """
     job_id = calculation.get_job_id()
+
+    if job_id is None:
+        # the calculation has not yet been submitted to the scheduler
+        return
 
     # Get the scheduler plugin class and initialize it with the correct transport
     scheduler = calculation.computer.get_scheduler()
@@ -430,44 +491,9 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> bool:
         if job is not None and job.job_state != JobState.DONE:
             raise exceptions.RemoteOperationError(f'scheduler.kill({job_id}) was unsuccessful')
         else:
-            execlogger.warning('scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id)
-
-    return True
-
-
-def _retrieve_singlefiles(
-    job: CalcJobNode,
-    transport: Transport,
-    folder: SandboxFolder,
-    retrieve_file_list: List[Tuple[str, str, str]],
-    logger_extra: Optional[dict] = None
-):
-    """Retrieve files specified through the singlefile list mechanism."""
-    singlefile_list = []
-    for (linkname, subclassname, filename) in retrieve_file_list:
-        execlogger.debug(
-            '[retrieval of calc {}] Trying '
-            "to retrieve remote singlefile '{}'".format(job.pk, filename),
-            extra=logger_extra
-        )
-        localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
-        transport.get(filename, localfilename, ignore_nonexisting=True)
-        singlefile_list.append((linkname, subclassname, localfilename))
-
-    # ignore files that have not been retrieved
-    singlefile_list = [i for i in singlefile_list if os.path.exists(i[2])]
-
-    # after retrieving from the cluster, I create the objects
-    singlefiles = []
-    for (linkname, subclassname, filename) in singlefile_list:
-        cls = DataFactory(subclassname)
-        singlefile = cls(file=filename)
-        singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
-        singlefiles.append(singlefile)
-
-    for fil in singlefiles:
-        execlogger.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
-        fil.store()
+            EXEC_LOGGER.warning(
+                'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
+            )
 
 
 def retrieve_files_from_list(

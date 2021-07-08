@@ -11,7 +11,7 @@
 AiiDA class to deal with crystal structure trajectories.
 """
 
-import collections
+import collections.abc
 
 from .array import ArrayData
 
@@ -35,7 +35,7 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        if not isinstance(symbols, collections.Iterable):
+        if not isinstance(symbols, collections.abc.Iterable):
             raise TypeError('TrajectoryData.symbols must be of type list')
         if any([not isinstance(i, str) for i in symbols]):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
@@ -599,7 +599,6 @@ class TrajectoryData(ArrayData):
         :param bool dont_block: If True, interpreter is not blocked when figure is displayed.
         """
         from ase.data import atomic_numbers
-        from aiida.common.exceptions import InputValidationError
 
         # Reading the arrays I need:
         positions = self.get_positions()
@@ -632,9 +631,9 @@ class TrajectoryData(ArrayData):
         elif colors == 'cpk':
             from ase.data.colors import cpk_colors as colors
         else:
-            raise InputValidationError(f'Unknown color spec {colors}')
+            raise ValueError(f'Unknown color spec {colors}')
         if kwargs:
-            raise InputValidationError(f'Unrecognized keyword {kwargs.keys()}')
+            raise ValueError(f'Unrecognized keyword {kwargs.keys()}')
 
         if element_list is None:
             # If not all elements are allowed

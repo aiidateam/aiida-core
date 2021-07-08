@@ -8,32 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the export and import routines"""
-
-import os
-import shutil
 import tempfile
 
 import numpy as np
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
-from aiida.common.folders import RepositoryFolder
-from aiida.orm.utils._repository import Repository
 from aiida.tools.importexport import import_data, export
-from aiida.tools.importexport.common import exceptions
 
-from tests.utils.configuration import with_temp_dir
+from . import AiidaArchiveTestCase
 
 
-class TestSpecificImport(AiidaTestCase):
+class TestSpecificImport(AiidaArchiveTestCase):
     """Test specific ex-/import cases"""
-
-    def setUp(self):
-        super().setUp()
-        self.reset_database()
-
-    def tearDown(self):
-        self.reset_database()
 
     def test_simple_import(self):
         """
@@ -64,18 +50,17 @@ class TestSpecificImport(AiidaTestCase):
 
         with tempfile.NamedTemporaryFile() as handle:
             nodes = [parameters]
-            export(nodes, filename=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Clean the database and verify there are no nodes left
-            self.clean_db()
-            self.create_user()
+            self.refurbish_db()
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
-            import_data(handle.name, silent=True)
+            import_data(handle.name)
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
     def test_cycle_structure_data(self):
@@ -125,18 +110,17 @@ class TestSpecificImport(AiidaTestCase):
         with tempfile.NamedTemporaryFile() as handle:
 
             nodes = [structure, child_calculation, parent_process, remote_folder]
-            export(nodes, filename=handle.name, overwrite=True, silent=True)
+            export(nodes, filename=handle.name, overwrite=True)
 
             # Check that we have the expected number of nodes in the database
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Clean the database and verify there are no nodes left
-            self.clean_db()
-            self.create_user()
+            self.refurbish_db()
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), 0)
 
             # After importing we should have the original number of nodes again
-            import_data(handle.name, silent=True)
+            import_data(handle.name)
             self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
             # Verify that orm.CalculationNodes have non-empty attribute dictionaries
@@ -171,182 +155,32 @@ class TestSpecificImport(AiidaTestCase):
             builder.append(orm.CalculationNode, with_incoming='remote')
             self.assertGreater(len(builder.all()), 0)
 
-    @with_temp_dir
-    def test_missing_node_repo_folder_export(self, temp_dir):
+    def test_import_checkpoints(self):
+        """Check that process node checkpoints are stripped when importing.
+
+        The process node checkpoints need to be stripped because they
+        could be maliciously crafted to execute arbitrary code, since
+        we use the `yaml.UnsafeLoader` to load them.
         """
-        Make sure `~aiida.tools.importexport.common.exceptions.ArchiveExportError` is raised during export when missing
-        Node repository folder.
-        Create and store a new Node and manually remove its repository folder.
-        Attempt to export it and make sure `~aiida.tools.importexport.common.exceptions.ArchiveExportError` is raised,
-        due to the missing folder.
-        """
-        node = orm.CalculationNode().store()
+        node = orm.WorkflowNode().store()
+        node.set_checkpoint(12)
         node.seal()
         node_uuid = node.uuid
+        assert node.checkpoint == 12
 
-        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
-        self.assertTrue(
-            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
-        )
+        with tempfile.NamedTemporaryFile() as handle:
+            nodes = [node]
+            export(nodes, filename=handle.name, overwrite=True)
 
-        # Removing the Node's local repository folder
-        shutil.rmtree(node_repo.abspath, ignore_errors=True)
-        self.assertFalse(
-            node_repo.exists(), msg='Newly created and stored Node should have had its repository folder removed'
-        )
+            # Check that we have the expected number of nodes in the database
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
 
-        # Try to export, check it raises and check the raise message
-        filename = os.path.join(temp_dir, 'export.aiida')
-        with self.assertRaises(exceptions.ArchiveExportError) as exc:
-            export([node], filename=filename)
+            # Clean the database and verify there are no nodes left
+            self.clean_db()
+            assert orm.QueryBuilder().append(orm.Node).count() == 0
 
-        self.assertIn(f'Unable to find the repository folder for Node with UUID={node_uuid}', str(exc.exception))
-        self.assertFalse(os.path.exists(filename), msg='The archive file should not exist')
+            import_data(handle.name)
 
-    @with_temp_dir
-    def test_missing_node_repo_folder_import(self, temp_dir):
-        """
-        Make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised during import when missing
-        Node repository folder.
-        Create and export a Node and manually remove its repository folder in the archive file.
-        Attempt to import it and make sure `~aiida.tools.importexport.common.exceptions.CorruptArchive` is raised,
-        due to the missing folder.
-        """
-        import tarfile
-
-        from aiida.common.folders import SandboxFolder
-        from aiida.tools.importexport.common.archive import extract_tar
-        from aiida.tools.importexport.common.config import NODES_EXPORT_SUBFOLDER
-        from aiida.tools.importexport.common.utils import export_shard_uuid
-
-        node = orm.CalculationNode().store()
-        node.seal()
-        node_uuid = node.uuid
-
-        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
-        self.assertTrue(
-            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
-        )
-
-        # Export and reset db
-        filename = os.path.join(temp_dir, 'export.aiida')
-        export([node], filename=filename, file_format='tar.gz', silent=True)
-        self.reset_database()
-
-        # Untar archive file, remove repository folder, re-tar
-        node_shard_uuid = export_shard_uuid(node_uuid)
-        node_top_folder = node_shard_uuid.split('/')[0]
-        with SandboxFolder() as folder:
-            extract_tar(filename, folder, silent=True, nodes_export_subfolder=NODES_EXPORT_SUBFOLDER)
-            node_folder = folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_shard_uuid))
-            self.assertTrue(
-                node_folder.exists(), msg="The Node's repository folder should still exist in the archive file"
-            )
-
-            # Removing the Node's repository folder from the archive file
-            shutil.rmtree(
-                folder.get_subfolder(os.path.join(NODES_EXPORT_SUBFOLDER, node_top_folder)).abspath, ignore_errors=True
-            )
-            self.assertFalse(
-                node_folder.exists(),
-                msg="The Node's repository folder should now have been removed in the archive file"
-            )
-
-            filename_corrupt = os.path.join(temp_dir, 'export_corrupt.aiida')
-            with tarfile.open(filename_corrupt, 'w:gz', format=tarfile.PAX_FORMAT, dereference=True) as tar:
-                tar.add(folder.abspath, arcname='')
-
-        # Try to import, check it raises and check the raise message
-        with self.assertRaises(exceptions.CorruptArchive) as exc:
-            import_data(filename_corrupt)
-
-        self.assertIn('Unable to find required folder in archive', str(exc.exception))
-
-    @with_temp_dir
-    def test_empty_repo_folder_export(self, temp_dir):
-        """Check a Node's empty repository folder is exported properly"""
-        from aiida.common.folders import Folder
-        from aiida.tools.importexport.dbexport import export_tree
-
-        node = orm.Dict().store()
-        node_uuid = node.uuid
-
-        node_repo = RepositoryFolder(section=Repository._section_name, uuid=node_uuid)  # pylint: disable=protected-access
-        self.assertTrue(
-            node_repo.exists(), msg='Newly created and stored Node should have had an existing repository folder'
-        )
-        for filename, is_file in node_repo.get_content_list(only_paths=False):
-            abspath_filename = os.path.join(node_repo.abspath, filename)
-            if is_file:
-                os.remove(abspath_filename)
-            else:
-                shutil.rmtree(abspath_filename, ignore_errors=False)
-        self.assertFalse(
-            node_repo.get_content_list(),
-            msg=f'Repository folder should be empty, instead the following was found: {node_repo.get_content_list()}'
-        )
-
-        archive_variants = {
-            'archive folder': os.path.join(temp_dir, 'export_tree'),
-            'tar archive': os.path.join(temp_dir, 'export.tar.gz'),
-            'zip archive': os.path.join(temp_dir, 'export.zip')
-        }
-
-        export_tree([node], folder=Folder(archive_variants['archive folder']))
-        export([node], filename=archive_variants['tar archive'], file_format='tar.gz')
-        export([node], filename=archive_variants['zip archive'], file_format='zip')
-
-        for variant, filename in archive_variants.items():
-            self.reset_database()
-            node_count = orm.QueryBuilder().append(orm.Dict, project='uuid').count()
-            self.assertEqual(node_count, 0, msg=f'After DB reset {node_count} Dict Nodes was (wrongly) found')
-
-            import_data(filename)
-            builder = orm.QueryBuilder().append(orm.Dict, project='uuid')
-            imported_node_count = builder.count()
-            self.assertEqual(
-                imported_node_count,
-                1,
-                msg='After {} import a single Dict Node should have been found, '
-                'instead {} was/were found'.format(variant, imported_node_count)
-            )
-            imported_node_uuid = builder.all()[0][0]
-            self.assertEqual(
-                imported_node_uuid,
-                node_uuid,
-                msg='The wrong UUID was found for the imported {}: '
-                '{}. It should have been: {}'.format(variant, imported_node_uuid, node_uuid)
-            )
-
-    def test_import_folder(self):
-        """Verify a pre-extracted archive (aka. a folder with the archive structure) can be imported.
-
-        It is important to check that the source directory or any of its contents are not deleted after import.
-        """
-        from aiida.common.folders import SandboxFolder
-        from tests.utils.archives import get_archive_file
-        from aiida.tools.importexport.common.archive import extract_zip
-
-        archive = get_archive_file('arithmetic.add.aiida', filepath='calcjob')
-
-        with SandboxFolder() as temp_dir:
-            extract_zip(archive, temp_dir, silent=True)
-
-            # Make sure the JSON files and the nodes subfolder was correctly extracted (is present),
-            # then try to import it by passing the extracted folder to the import function.
-            for name in {'metadata.json', 'data.json', 'nodes'}:
-                self.assertTrue(os.path.exists(os.path.join(temp_dir.abspath, name)))
-
-            # Get list of all folders in extracted archive
-            org_folders = []
-            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
-                org_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
-
-            import_data(temp_dir.abspath, silent=True)
-
-            # Check nothing from the source was deleted
-            src_folders = []
-            for dirpath, dirnames, _ in os.walk(temp_dir.abspath):
-                src_folders += [os.path.join(dirpath, dirname) for dirname in dirnames]
-            self.maxDiff = None  # pylint: disable=invalid-name
-            self.assertListEqual(org_folders, src_folders)
+        assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
+        node_new = orm.load_node(node_uuid)
+        assert node_new.checkpoint is None

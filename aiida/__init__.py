@@ -20,10 +20,7 @@ and workflow engine for the automation of complex sequences of simulations.
 
 More information at http://www.aiida.net
 """
-import warnings
-
 from aiida.common.log import configure_logging
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config_option, get_profile, load_profile
 
 __copyright__ = (
@@ -31,64 +28,13 @@ __copyright__ = (
     'For further information please visit http://www.aiida.net/. All rights reserved.'
 )
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '1.5.2'
+__version__ = '1.6.2'
 __authors__ = 'The AiiDA team.'
 __paper__ = (
     'S. P. Huber et al., "AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and '
     'data provenance", Scientific Data 7, 300 (2020); https://doi.org/10.1038/s41597-020-00638-4'
 )
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
-
-
-def load_dbenv(profile=None):
-    """Alias for `load_dbenv` from `aiida.backends.utils`
-
-    :param profile: name of the profile to load
-    :type profile: str
-
-    .. deprecated:: 1.0.0
-        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
-    """
-    warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-    current_profile = get_profile()
-    from aiida.common import InvalidOperation
-
-    if current_profile:
-        raise InvalidOperation('You cannot call load_dbenv multiple times!')
-
-    load_profile(profile)
-
-
-def try_load_dbenv(profile=None):
-    """Run `load_dbenv` unless the dbenv has already been loaded.
-
-    :param profile: name of the profile to load
-    :type profile: str
-
-    :returns: whether profile was loaded
-    :rtype: bool
-
-
-    .. deprecated:: 1.0.0
-        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
-    """
-    warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-    if not is_dbenv_loaded():
-        load_dbenv(profile)
-        return True
-    return False
-
-
-def is_dbenv_loaded():
-    """Determine whether database environment is already loaded.
-
-    :rtype: bool
-
-    .. deprecated:: 1.0.0
-        Will be removed in `v2.0.0`, use :func:`aiida.manage.configuration.load_profile` instead.
-    """
-    warnings.warn('function is deprecated, use `load_profile` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-    return get_profile() is not None
 
 
 def get_strict_version():

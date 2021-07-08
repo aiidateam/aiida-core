@@ -117,15 +117,14 @@ class LsfJobResource(JobResource):
         from aiida.common.exceptions import ConfigurationError
         super().__init__()
 
-        try:
-            self.parallel_env = str(kwargs.pop('parallel_env', ''))
-        except (TypeError, ValueError):
+        self.parallel_env = kwargs.pop('parallel_env', '')
+        if not isinstance(self.parallel_env, str):
             raise TypeError("When specified, 'parallel_env' must be a string")
 
         try:
             self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except (KeyError, ValueError):
-            raise TypeError('tot_num_mpiprocs must be specified and must be an integer')
+        except (KeyError, ValueError) as exc:
+            raise TypeError('tot_num_mpiprocs must be specified and must be an integer') from exc
 
         default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
@@ -360,6 +359,9 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.queue_name:
             lines.append(f'#BSUB -q {job_tmpl.queue_name}')
 
+        if job_tmpl.account:
+            lines.append(f'#BSUB -G {job_tmpl.account}')
+
         if job_tmpl.priority:
             # Specifies user-assigned job priority that orders all jobs
             # (from all users) in a queue. Valid values for priority
@@ -386,12 +388,12 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                 tot_secs = int(job_tmpl.max_wallclock_seconds)
                 if tot_secs <= 0:
                     raise ValueError
-            except ValueError:
+            except ValueError as exc:
                 raise ValueError(
                     'max_wallclock_seconds must be '
                     "a positive integer (in seconds)! It is instead '{}'"
                     ''.format((job_tmpl.max_wallclock_seconds))
-                )
+                ) from exc
             hours = tot_secs // 3600
             # The double negation results in the ceiling rather than the floor
             # of the division
@@ -401,18 +403,18 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         # TODO: check if this is the memory per node  # pylint: disable=fixme
         if job_tmpl.max_memory_kb:
             try:
-                virtual_memory_kb = int(job_tmpl.max_memory_kb)
-                if virtual_memory_kb <= 0:
+                physical_memory_kb = int(job_tmpl.max_memory_kb)
+                if physical_memory_kb <= 0:
                     raise ValueError
-            except ValueError:
+            except ValueError as exc:
                 raise ValueError(
                     'max_memory_kb must be '
                     "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.MaxMemoryKb))
-                )
+                    ''.format((job_tmpl.max_memory_kb))
+                ) from exc
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
-            lines.append(f'#BSUB -M {virtual_memory_kb}')
+            lines.append(f'#BSUB -M {physical_memory_kb}')
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
@@ -672,8 +674,8 @@ fi
 
         try:
             return stdout.strip().split('Job <')[1].split('>')[0]
-        except IndexError:
-            raise SchedulerParsingError(f'Cannot parse submission output: {stdout}')
+        except IndexError as exc:
+            raise SchedulerParsingError(f'Cannot parse submission output: `{stdout}`') from exc
 
     def _parse_time_string(self, string, fmt='%b %d %H:%M'):
         """
@@ -698,7 +700,7 @@ fi
                 thetime = datetime.datetime.strptime(actual_string, f'{actual_fmt} L')
         except Exception as exc:
             self.logger.debug(f'Unable to parse time string {string}, the message was {exc}')
-            raise ValueError('Problem parsing the time string.')
+            raise ValueError(f'Problem parsing the time string: `{string}`') from exc
 
         return thetime
 

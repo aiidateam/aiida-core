@@ -49,5 +49,5 @@ class DbAuthInfo(Base):
 
     def __str__(self):
         if self.enabled:
-            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name}'
-        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name} [DISABLED]'
+            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label}'
+        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label} [DISABLED]'

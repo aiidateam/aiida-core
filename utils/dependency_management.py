@@ -26,7 +26,6 @@ import tomlkit as toml
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
 SETUPTOOLS_CONDA_MAPPINGS = {
-    'psycopg2-binary': 'psycopg2',
     'graphviz': 'python-graphviz',
 }
 
@@ -188,10 +187,10 @@ def update_pyproject_toml():
     # update the build-system key
     pyproject.setdefault('build-system', {})
     pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0,<50', 'wheel',
+        'requires': ['setuptools>=40.8.0', 'wheel',
                      str(reentry_requirement), 'fastentrypoints~=0.12'],
         'build-backend':
-        'setuptools.build_meta:__legacy__',
+        'setuptools.build_meta',
     })
 
     # write the new file
@@ -247,7 +246,8 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
         # The Python version should be specified as supported in 'setup.json'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
             raise DependencySpecificationError(
-                "Required Python version between 'setup.json' and 'environment.yml' not consistent."
+                f"Required Python version {spec.version} from 'environment.yaml' is not consistent with " +
+                "required version in 'setup.json'."
             )
 
         break
@@ -396,6 +396,37 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
         raise DependencySpecificationError('\n'.join(error_msg))
 
     click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
+@click.option('--format', 'fmt', type=click.Choice(['pip', 'pipfile']), default='pip')
+def show_requirements(extras, fmt):
+    """Show the installation requirements.
+
+    For example:
+
+        show-requirements --format=pipfile all
+
+    This will show all reqiurements including *all* extras in Pipfile format.
+    """
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+
+    if 'all' in extras:
+        extras = list(setup_cfg['extras_require'])
+
+    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in extras:
+        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+
+    if fmt == 'pip':
+        click.echo('\n'.join(sorted(map(str, to_install))))
+    elif fmt == 'pipfile':
+        click.echo('[packages]')
+        for requirement in sorted(to_install, key=str):
+            click.echo(f'{requirement.name} = "{requirement.specifier}"')
 
 
 @cli.command()

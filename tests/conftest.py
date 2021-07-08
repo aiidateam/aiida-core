@@ -13,7 +13,7 @@ import os
 
 import pytest
 
-from aiida.manage.configuration import Config, Profile, get_config
+from aiida.manage.configuration import Config, Profile, get_config, load_profile
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
@@ -152,7 +152,7 @@ def generate_calculation_node():
 
 
 @pytest.fixture
-def create_empty_config_instance(tmp_path) -> Config:
+def empty_config(tmp_path) -> Config:
     """Create a temporary configuration instance.
 
     This creates a temporary directory with a clean `.aiida` folder and basic configuration file. The currently loaded
@@ -162,7 +162,7 @@ def create_empty_config_instance(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings, load_profile, reset_profile
+    from aiida.manage.configuration import settings, reset_profile
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
@@ -182,24 +182,25 @@ def create_empty_config_instance(tmp_path) -> Config:
     with Capturing():
         configuration.CONFIG = configuration.load_config(create=True)
 
-    yield get_config()
-
-    # Reset the config folder path and the config instance. Note this will always be executed after the yield no
-    # matter what happened in the test that used this fixture.
-    reset_profile()
-    settings.AIIDA_CONFIG_FOLDER = current_config_path
-    configuration.CONFIG = current_config
-    load_profile(current_profile_name)
+    try:
+        yield get_config()
+    finally:
+        # Reset the config folder path and the config instance. Note this will always be executed after the yield no
+        # matter what happened in the test that used this fixture.
+        reset_profile()
+        settings.AIIDA_CONFIG_FOLDER = current_config_path
+        configuration.CONFIG = current_config
+        load_profile(current_profile_name)
 
 
 @pytest.fixture
-def create_profile() -> Profile:
+def profile_factory() -> Profile:
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name, **kwargs):
+    def _create_profile(name='test-profile', **kwargs):
 
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
@@ -218,6 +219,60 @@ def create_profile() -> Profile:
         return Profile(name, profile_dictionary)
 
     return _create_profile
+
+
+@pytest.fixture
+def config_with_profile_factory(empty_config, profile_factory) -> Config:
+    """Create a temporary configuration instance with one profile.
+
+    This fixture builds on the `empty_config` fixture, to add a single profile.
+
+    The defaults of the profile can be overridden in the callable, as well as whether it should be set as default.
+
+    Example::
+
+        def test_config_with_profile(config_with_profile_factory):
+            config = config_with_profile_factory(set_as_default=True, name='default', database_backend='django')
+            assert config.current_profile.name == 'default'
+
+    As with `empty_config`, the currently loaded configuration and profile are stored in memory,
+    and are automatically restored at the end of this context manager.
+
+    This fixture should be used by tests that modify aspects of the AiiDA configuration or profile
+    and require a preconfigured profile, but do not require an actual configured database.
+    """
+
+    def _config_with_profile_factory(set_as_default=True, load=True, name='default', **kwargs):
+        """Create a temporary configuration instance with one profile.
+
+        :param set_as_default: whether to set the one profile as the default.
+        :param load: whether to load the profile.
+        :param name: the profile name
+        :param kwargs: parameters that are forwarded to the `Profile` constructor.
+
+        :return: a config instance with a configured profile.
+        """
+        profile = profile_factory(name=name, **kwargs)
+        config = empty_config
+        config.add_profile(profile)
+
+        if set_as_default:
+            config.set_default_profile(profile.name, overwrite=True)
+
+        config.store()
+
+        if load:
+            load_profile(profile.name)
+
+        return config
+
+    return _config_with_profile_factory
+
+
+@pytest.fixture
+def config_with_profile(config_with_profile_factory):
+    """Create a temporary configuration instance with one default, loaded profile."""
+    yield config_with_profile_factory()
 
 
 @pytest.fixture
@@ -280,3 +335,33 @@ def override_logging():
         config.unset_option('logging.aiida_loglevel')
         config.unset_option('logging.db_loglevel')
         configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def with_daemon():
+    """Starts the daemon process and then makes sure to kill it once the test is done."""
+    import sys
+    import signal
+    import subprocess
+
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.cmdline.utils.common import get_env_with_venv_bin
+
+    # Add the current python path to the environment that will be used for the daemon sub process.
+    # This is necessary to guarantee the daemon can also import all the classes that are defined
+    # in this `tests` module.
+    env = get_env_with_venv_bin()
+    env['PYTHONPATH'] = ':'.join(sys.path)
+
+    profile = get_config().current_profile
+    daemon = subprocess.Popen(
+        DaemonClient(profile).cmd_string.split(),
+        stderr=sys.stderr,
+        stdout=sys.stdout,
+        env=env,
+    )
+
+    yield
+
+    # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
+    os.kill(daemon.pid, signal.SIGTERM)

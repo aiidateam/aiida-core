@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
-
 import os
 import io
 import errno
@@ -21,7 +20,6 @@ from click.testing import CliRunner
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
-from aiida.common.utils import Capturing
 
 
 def get_result_lines(result):
@@ -55,7 +53,15 @@ class TestVerdiNode(AiidaTestCase):
 
         cls.node = node
 
-        # Set up a FolderData for the node repo cp tests.
+    def setUp(self):
+        self.cli_runner = CliRunner()
+
+    @classmethod
+    def get_unstored_folder_node(cls):
+        """Get a "default" folder node with some data.
+
+        The node is unstored so one can add more content to it before storing it.
+        """
         folder_node = orm.FolderData()
         cls.content_file1 = 'nobody expects'
         cls.content_file2 = 'the minister of silly walks'
@@ -63,27 +69,7 @@ class TestVerdiNode(AiidaTestCase):
         cls.key_file2 = 'some_other_file.txt'
         folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), cls.key_file1)
         folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
-        folder_node.store()
-        cls.folder_node = folder_node
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
-
-    def test_node_tree(self):
-        """Test `verdi node tree`"""
-        options = [str(self.node.pk)]
-        result = self.cli_runner.invoke(cmd_node.tree, options)
-        self.assertClickResultNoException(result)
-
-    def test_node_tree_printer(self):
-        """Test the `NodeTreePrinter` utility."""
-        from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
-
-        with Capturing():
-            NodeTreePrinter.print_node_tree(self.node, max_depth=1)
-
-        with Capturing():
-            NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
+        return folder_node
 
     def test_node_show(self):
         """Test `verdi node show`"""
@@ -97,7 +83,7 @@ class TestVerdiNode(AiidaTestCase):
         self.assertIn(node.label, result.output)
         self.assertIn(node.uuid, result.output)
 
-        ## Let's now test the '--print-groups' option
+        # Let's now test the '--print-groups' option
         options.append('--print-groups')
         result = self.cli_runner.invoke(cmd_node.node_show, options)
         self.assertClickResultNoException(result)
@@ -187,12 +173,14 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_repo_ls(self):
         """Test 'verdi node repo ls' command."""
-        options = [str(self.folder_node.pk), 'some/nested/folder']
+        folder_node = self.get_unstored_folder_node().store()
+
+        options = [str(folder_node.pk), 'some/nested/folder']
         result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
         self.assertClickResultNoException(result)
         self.assertIn('filename.txt', result.output)
 
-        options = [str(self.folder_node.pk), 'some/non-existing-folder']
+        options = [str(folder_node.pk), 'some/non-existing-folder']
         result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
         self.assertIn('does not exist for the given node', result.output)
@@ -200,19 +188,22 @@ class TestVerdiNode(AiidaTestCase):
     def test_node_repo_cat(self):
         """Test 'verdi node repo cat' command."""
         # Test cat binary files
-        with self.folder_node.open('filename.txt.gz', 'wb') as fh_out:
-            fh_out.write(gzip.compress(b'COMPRESS'))
+        folder_node = orm.FolderData()
+        bytestream = gzip.compress(b'COMPRESS')
+        folder_node.put_object_from_filelike(io.BytesIO(bytestream), 'filename.txt.gz')
+        folder_node.store()
 
-        options = [str(self.folder_node.pk), 'filename.txt.gz']
+        options = [str(folder_node.pk), 'filename.txt.gz']
         result = self.cli_runner.invoke(cmd_node.repo_cat, options)
         assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
     def test_node_repo_dump(self):
         """Test 'verdi node repo dump' command."""
+        folder_node = self.get_unstored_folder_node().store()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir'
-            options = [str(self.folder_node.uuid), str(out_path)]
+            options = [str(folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertFalse(res.stdout)
 
@@ -226,10 +217,11 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_repo_dump_to_nested_folder(self):
         """Test 'verdi node repo dump' command, with an output folder whose parent does not exist."""
+        folder_node = self.get_unstored_folder_node().store()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir' / 'nested' / 'path'
-            options = [str(self.folder_node.uuid), str(out_path)]
+            options = [str(folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertFalse(res.stdout)
 
@@ -243,6 +235,7 @@ class TestVerdiNode(AiidaTestCase):
 
     def test_node_repo_existing_out_dir(self):
         """Test 'verdi node repo dump' command, check that an existing output directory is not overwritten."""
+        folder_node = self.get_unstored_folder_node().store()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir'
@@ -252,7 +245,7 @@ class TestVerdiNode(AiidaTestCase):
             some_file_content = 'ni!'
             with some_file.open('w') as file_handle:
                 file_handle.write(some_file_content)
-            options = [str(self.folder_node.uuid), str(out_path)]
+            options = [str(folder_node.uuid), str(out_path)]
             res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
             self.assertIn('exists', res.stdout)
             self.assertIn('Critical:', res.stdout)
@@ -282,7 +275,7 @@ class TestVerdiGraph(AiidaTestCase):
     """Tests for the ``verdi node graph`` command."""
 
     @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    def setUpClass(cls):
         super().setUpClass()
         from aiida.orm import Data
 
@@ -295,7 +288,7 @@ class TestVerdiGraph(AiidaTestCase):
         os.chdir(cls.cwd)
 
     @classmethod
-    def tearDownClass(cls, *args, **kwargs):
+    def tearDownClass(cls):
         os.chdir(cls.old_cwd)
         os.rmdir(cls.cwd)
 

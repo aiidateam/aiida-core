@@ -78,7 +78,8 @@ def setup(
 
     # Migrate the database
     echo.echo_info('migrating the database.')
-    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+    manager = get_manager()
+    backend = manager._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
     try:
         backend.migrate()
@@ -89,11 +90,24 @@ def setup(
     else:
         echo.echo_success('database migration completed.')
 
+    # Retrieve the repository UUID from the database. If set, this means this database is associated with the repository
+    # with that UUID and we have to make sure that the provided repository corresponds to it.
+    backend_manager = manager.get_backend_manager()
+    repository_uuid_database = backend_manager.get_repository_uuid()
+    repository_uuid_profile = profile.get_repository().uuid
+
+    if repository_uuid_database != repository_uuid_profile:
+        echo.echo_critical(
+            f'incompatible database and repository configured:\n'
+            f'Database `{db_name}` is associated with the repository with UUID `{repository_uuid_database}`\n'
+            f'However, the configured repository has UUID `{repository_uuid_profile}`.'
+        )
+
     # Optionally setting configuration default user settings
-    config.set_option('user.email', email, override=False)
-    config.set_option('user.first_name', first_name, override=False)
-    config.set_option('user.last_name', last_name, override=False)
-    config.set_option('user.institution', institution, override=False)
+    config.set_option('autofill.user.email', email, override=False)
+    config.set_option('autofill.user.first_name', first_name, override=False)
+    config.set_option('autofill.user.last_name', last_name, override=False)
+    config.set_option('autofill.user.institution', institution, override=False)
 
     # Create the user if it does not yet exist
     created, user = orm.User.objects.get_or_create(

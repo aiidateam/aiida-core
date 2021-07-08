@@ -103,6 +103,11 @@ LOGGING = {
             'level': lambda: get_config_option('logging.alembic_loglevel'),
             'propagate': False,
         },
+        'aio_pika': {
+            'handlers': ['console'],
+            'level': lambda: get_config_option('logging.aiopika_loglevel'),
+            'propagate': False,
+        },
         'sqlalchemy': {
             'handlers': ['console'],
             'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),
@@ -212,18 +217,19 @@ def override_log_formatter_context(fmt: str):
     """Temporarily use a different formatter for all handlers.
 
     NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
-    Be aware! This may fail if the number of handlers is changed within the decorated function/method.
     """
     temp_formatter = logging.Formatter(fmt=fmt)
-    cached_formatters = [handler.formatter for handler in AIIDA_LOGGER.handlers]
+    cached_formatters = {}
 
     for handler in AIIDA_LOGGER.handlers:
+        # Need a copy here so we keep the original one should the handler's formatter be changed during the yield
+        cached_formatters[handler] = copy.copy(handler.formatter)
         handler.setFormatter(temp_formatter)
 
     yield
 
-    for index, handler in enumerate(AIIDA_LOGGER.handlers):
-        handler.setFormatter(cached_formatters[index])
+    for handler, formatter in cached_formatters.items():
+        handler.setFormatter(formatter)
 
 
 def override_log_formatter(fmt: str):

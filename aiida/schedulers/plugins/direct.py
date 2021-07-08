@@ -142,17 +142,8 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                 lines.append('exec 2>&1')
 
         if job_tmpl.max_memory_kb:
-            try:
-                virtual_memory_kb = int(job_tmpl.max_memory_kb)
-                if virtual_memory_kb <= 0:
-                    raise ValueError
-            except ValueError:
-                raise ValueError(
-                    'max_memory_kb must be '
-                    "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.max_memory_kb))
-                )
-            lines.append(f'ulimit -v {virtual_memory_kb}')
+            self.logger.warning('Physical memory limiting is not supported by the direct scheduler.')
+
         if not job_tmpl.import_sys_environment:
             lines.append('env --ignore-environment \\')
 

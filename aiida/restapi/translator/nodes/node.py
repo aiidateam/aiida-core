@@ -9,7 +9,10 @@
 ###########################################################################
 """Translator for node"""
 import pkgutil
-import imp
+import importlib.util
+import importlib.machinery
+from importlib._bootstrap import _exec, _load
+import sys
 import inspect
 import os
 
@@ -341,17 +344,36 @@ class NodeTranslator(BaseTranslator):
         results = {}
 
         for _, name, is_pkg in pkgutil.walk_packages([package_path]):
-            # N.B. pkgutil.walk_package requires a LIST of paths.
+            # N.B. pkgutil.walk_packages requires a LIST of paths
 
             full_path_base = os.path.join(package_path, name)
-
             if is_pkg:
-                app_module = imp.load_package(full_path_base, full_path_base)
+                # re-implementation of deprecated `imp.load_package`
+                if os.path.isdir(full_path_base):
+                    #Adds an extension to check for __init__ file in the package directory
+                    extensions = (importlib.machinery.SOURCE_SUFFIXES[:] + importlib.machinery.BYTECODE_SUFFIXES[:])
+                    for extension in extensions:
+                        init_path = os.path.join(full_path_base, '__init__' + extension)
+                        if os.path.exists(init_path):
+                            path = init_path
+                            break
+                    else:
+                        raise ValueError(f'{full_path_base!r} is not a package')
+                #passing [] to submodule_search_locations indicates its a package and python searches for sub-modules
+                spec = importlib.util.spec_from_file_location(full_path_base, path, submodule_search_locations=[])
+                if full_path_base in sys.modules:
+                    #executes from sys.modules
+                    app_module = _exec(spec, sys.modules[full_path_base])
+                else:
+                    #loads and executes the module
+                    app_module = _load(spec)
             else:
                 full_path = f'{full_path_base}.py'
-                # I could use load_module but it takes lots of arguments,
-                # then I use load_source
-                app_module = imp.load_source(f'rst{name}', full_path)
+                # reimplementation of deprecated `imp.load_source`
+                spec = importlib.util.spec_from_file_location(name, full_path)
+                app_module = importlib.util.module_from_spec(spec)
+                sys.modules[name] = app_module
+                spec.loader.exec_module(app_module)
 
             # Go through the content of the module
             if not is_pkg:
@@ -466,7 +488,7 @@ class NodeTranslator(BaseTranslator):
         """
         try:
             flist = node.list_objects(filename)
-        except IOError:
+        except NotADirectoryError:
             raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
         for fobj in flist:
@@ -487,7 +509,7 @@ class NodeTranslator(BaseTranslator):
             try:
                 data = node.get_object_content(filename, mode='rb')
                 return data
-            except IOError:
+            except FileNotFoundError:
                 raise RestInputValidationError('No such file is present')
         raise RestValidationError('filename is not provided')
 

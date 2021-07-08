@@ -184,7 +184,9 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if self.is_daemon_running:
             try:
-                return open(self.circus_socket_file, 'r', encoding='utf8').read().strip()
+                with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
+                    content = fhandle.read().strip()
+                return content
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
@@ -208,7 +210,9 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                return int(open(self.circus_pid_file, 'r', encoding='utf8').read().strip())
+                with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
+                    content = fhandle.read().strip()
+                return int(content)
             except (ValueError, IOError):
                 return None
         else:

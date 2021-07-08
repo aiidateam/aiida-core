@@ -22,7 +22,17 @@ import shutil
 import tempfile
 import pytest
 
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+
+
+@pytest.fixture(scope='function')
+def aiida_caplog(caplog):
+    """A copy of pytest's caplog fixture, which allows ``AIIDA_LOGGER`` to propagate."""
+    propogate = AIIDA_LOGGER.propagate
+    AIIDA_LOGGER.propagate = True
+    yield caplog
+    AIIDA_LOGGER.propagate = propogate
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -56,6 +66,13 @@ def clear_database_after_test(aiida_profile):
 @pytest.fixture(scope='function')
 def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
+    aiida_profile.reset_db()
+    yield
+
+
+@pytest.fixture(scope='class')
+def clear_database_before_test_class(aiida_profile):
+    """Clear the database before a test class."""
     aiida_profile.reset_db()
     yield
 
@@ -98,7 +115,7 @@ def aiida_localhost(temp_dir):
     Usage::
 
       def test_1(aiida_localhost):
-          name = aiida_localhost.get_name()
+          label = aiida_localhost.get_label()
           # proceed to set up code or use 'aiida_local_code_factory' instead
 
 

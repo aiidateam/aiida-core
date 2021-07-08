@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test utility to import, inspect, or migrate AiiDA export archives."""
-
 import os
 import tarfile
 import zipfile
@@ -77,7 +76,7 @@ def import_archive(archive, filepath=None, external_module=None):
 
     dirpath_archive = get_archive_file(archive, filepath=filepath, external_module=external_module)
 
-    import_data(dirpath_archive, silent=True)
+    import_data(dirpath_archive)
 
 
 def read_json_files(path, *, names=('metadata.json', 'data.json')) -> List[dict]:

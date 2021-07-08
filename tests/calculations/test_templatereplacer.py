@@ -15,6 +15,7 @@ from aiida import orm
 from aiida.common import datastructures
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that emulates the arithmetic add."""
@@ -70,6 +71,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
         assert input_written == f"echo $(({inputs['parameters']['x']} + {inputs['parameters']['y']}))"
 
 
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that uses two files."""

@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
-import gzip
+import io
 
 from click.testing import CliRunner
 
@@ -97,6 +97,7 @@ class TestVerdiCalculation(AiidaTestCase):
         ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
+        print(cls.arithmetic_job.repository_metadata)
 
     def setUp(self):
         super().setUp()
@@ -130,10 +131,13 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 3)
+        # There is also an additional fourth file added by hand to test retrieval of binary content
+        # see comments in test_calcjob_inputcat
+        self.assertEqual(len(get_result_lines(result)), 4)
         self.assertIn('.aiida', get_result_lines(result))
         self.assertIn('aiida.in', get_result_lines(result))
         self.assertIn('_aiidasubmit.sh', get_result_lines(result))
+        self.assertIn('in_gzipped_data', get_result_lines(result))
 
         options = [self.arithmetic_job.uuid, '.aiida']
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
@@ -156,10 +160,13 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_outputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 3)
+        # There is also an additional fourth file added by hand to test retrieval of binary content
+        # see comments in test_calcjob_outputcat
+        self.assertEqual(len(get_result_lines(result)), 4)
         self.assertIn('_scheduler-stderr.txt', get_result_lines(result))
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
+        self.assertIn('gzipped_data', get_result_lines(result))
 
         options = [self.arithmetic_job.uuid, 'non-existing-folder']
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
@@ -186,16 +193,16 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(get_result_lines(result)[0], '2 3')
 
         # Test cat binary files
-        with self.arithmetic_job.open('aiida.in', 'wb') as fh_out:
-            fh_out.write(gzip.compress(b'COMPRESS'))
+        self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.in')
+        self.arithmetic_job._update_repository_metadata()
 
         options = [self.arithmetic_job.uuid, 'aiida.in']
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
-        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
+        assert result.stdout_bytes == b'COMPRESS'
 
-        # Replace the file
-        with self.arithmetic_job.open('aiida.in', 'w') as fh_out:
-            fh_out.write('2 3\n')
+        # Restore the file
+        self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'2 3\n'), 'aiida.in')
+        self.arithmetic_job._update_repository_metadata()
 
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
@@ -218,16 +225,16 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Test cat binary files
         retrieved = self.arithmetic_job.outputs.retrieved
-        with retrieved.open('aiida.out', 'wb') as fh_out:
-            fh_out.write(gzip.compress(b'COMPRESS'))
+        retrieved._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.out')
+        retrieved._update_repository_metadata()
 
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
-        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
+        assert result.stdout_bytes == b'COMPRESS'
 
-        # Replace the file
-        with retrieved.open('aiida.out', 'w') as fh_out:
-            fh_out.write('5\n')
+        # Restore the file
+        retrieved._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
+        retrieved._update_repository_metadata()
 
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""

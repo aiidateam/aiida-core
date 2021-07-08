@@ -13,20 +13,14 @@
 import os
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.tools.importexport import import_data, export
 
 from tests.utils.configuration import with_temp_dir
+from .. import AiidaArchiveTestCase
 
 
-class TestComputer(AiidaTestCase):
+class TestComputer(AiidaArchiveTestCase):
     """Test ex-/import cases related to Computers"""
-
-    def setUp(self):
-        self.reset_database()
-
-    def tearDown(self):
-        self.reset_database()
 
     @with_temp_dir
     def test_same_computer_import(self, temp_dir):
@@ -65,15 +59,14 @@ class TestComputer(AiidaTestCase):
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([calc1], filename=filename1, silent=True)
+        export([calc1], filename=filename1)
 
         # Export the second job calculation
         filename2 = os.path.join(temp_dir, 'export2.aiida')
-        export([calc2], filename=filename2, silent=True)
+        export([calc2], filename=filename2)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -86,7 +79,7 @@ class TestComputer(AiidaTestCase):
         self.assertEqual(builder.count(), 0, 'There should not be any calculations in the database at this point.')
 
         # Import the first calculation
-        import_data(filename1, silent=True)
+        import_data(filename1)
 
         # Check that the calculation computer is imported correctly.
         builder = orm.QueryBuilder()
@@ -96,7 +89,7 @@ class TestComputer(AiidaTestCase):
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+        builder.append(orm.Computer, project=['label', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
         self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
@@ -105,12 +98,12 @@ class TestComputer(AiidaTestCase):
         comp_id = builder.first()[2]
 
         # Import the second calculation
-        import_data(filename2, silent=True)
+        import_data(filename2)
 
         # Check that the number of computers remains the same and its data
         # did not change.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+        builder.append(orm.Computer, project=['label', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, f'Found {builder.count()} computersbut only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp_name, 'The computer name is not correct.')
         self.assertEqual(str(builder.first()[1]), comp_uuid, 'The computer uuid is not correct.')
@@ -150,7 +143,7 @@ class TestComputer(AiidaTestCase):
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([calc1], filename=filename1, silent=True)
+        export([calc1], filename=filename1)
 
         # Rename the computer
         comp1.label = f'{comp1_name}_updated'
@@ -166,11 +159,10 @@ class TestComputer(AiidaTestCase):
 
         # Export the second job calculation
         filename2 = os.path.join(temp_dir, 'export2.aiida')
-        export([calc2], filename=filename2, silent=True)
+        export([calc2], filename=filename2)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -183,7 +175,7 @@ class TestComputer(AiidaTestCase):
         self.assertEqual(builder.count(), 0, 'There should not be any calculations in the database at this point.')
 
         # Import the first calculation
-        import_data(filename1, silent=True)
+        import_data(filename1)
 
         # Check that the calculation computer is imported correctly.
         builder = orm.QueryBuilder()
@@ -193,17 +185,17 @@ class TestComputer(AiidaTestCase):
 
         # Check that the referenced computer is imported correctly.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name', 'uuid', 'id'])
+        builder.append(orm.Computer, project=['label', 'uuid', 'id'])
         self.assertEqual(builder.count(), 1, 'Only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
         # Import the second calculation
-        import_data(filename2, silent=True)
+        import_data(filename2)
 
         # Check that the number of computers remains the same and its data
         # did not change.
         builder = orm.QueryBuilder()
-        builder.append(orm.Computer, project=['name'])
+        builder.append(orm.Computer, project=['label'])
         self.assertEqual(builder.count(), 1, f'Found {builder.count()} computersbut only one computer should be found.')
         self.assertEqual(str(builder.first()[0]), comp1_name, 'The computer name is not correct.')
 
@@ -230,11 +222,10 @@ class TestComputer(AiidaTestCase):
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([calc1], filename=filename1, silent=True)
+        export([calc1], filename=filename1)
 
         # Reset the database
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
         # Set the computer name to the same name as before
         self.computer.label = comp1_name
@@ -250,11 +241,10 @@ class TestComputer(AiidaTestCase):
 
         # Export the second job calculation
         filename2 = os.path.join(temp_dir, 'export2.aiida')
-        export([calc2], filename=filename2, silent=True)
+        export([calc2], filename=filename2)
 
         # Reset the database
-        self.clean_db()
-        self.insert_data()
+        self.refurbish_db()
 
         # Set the computer name to the same name as before
         self.computer.label = comp1_name
@@ -270,11 +260,10 @@ class TestComputer(AiidaTestCase):
 
         # Export the third job calculation
         filename3 = os.path.join(temp_dir, 'export3.aiida')
-        export([calc3], filename=filename3, silent=True)
+        export([calc3], filename=filename3)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Check that there are no computers
         builder = orm.QueryBuilder()
@@ -291,14 +280,14 @@ class TestComputer(AiidaTestCase):
         )
 
         # Import all the calculations
-        import_data(filename1, silent=True)
-        import_data(filename2, silent=True)
-        import_data(filename3, silent=True)
+        import_data(filename1)
+        import_data(filename2)
+        import_data(filename3)
 
         # Retrieve the calculation-computer pairs
         builder = orm.QueryBuilder()
         builder.append(orm.CalcJobNode, project=['label'], tag='jcalc')
-        builder.append(orm.Computer, project=['name'], with_node='jcalc')
+        builder.append(orm.Computer, project=['label'], with_node='jcalc')
         self.assertEqual(builder.count(), 3, 'Three combinations expected.')
         res = builder.all()
         self.assertIn([calc1_label, comp1_name], res, 'Calc-Computer combination not found.')
@@ -327,14 +316,13 @@ class TestComputer(AiidaTestCase):
 
         # Export the first job calculation
         filename1 = os.path.join(temp_dir, 'export1.aiida')
-        export([calc1], filename=filename1, silent=True)
+        export([calc1], filename=filename1)
 
         # Clean the local database
-        self.clean_db()
-        self.create_user()
+        self.refurbish_db()
 
         # Import the data
-        import_data(filename1, silent=True)
+        import_data(filename1)
 
         builder = orm.QueryBuilder()
         builder.append(orm.Computer, project=['metadata'], tag='comp')
@@ -349,7 +337,7 @@ class TestComputer(AiidaTestCase):
 
         for archive in ['django.aiida', 'sqlalchemy.aiida']:
             # Clean the database
-            self.reset_database()
+            self.refurbish_db()
 
             # Import the needed data
             import_archive(archive, filepath='export/compare')
@@ -361,7 +349,7 @@ class TestComputer(AiidaTestCase):
             # Make sure to exclude the default computer
             builder = orm.QueryBuilder()
             builder.append(
-                orm.Computer, project=['metadata'], tag='comp', filters={'name': {
+                orm.Computer, project=['metadata'], tag='comp', filters={'label': {
                     '!==': self.computer.label
                 }}
             )

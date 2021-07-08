@@ -75,9 +75,9 @@ class ComputerTranslator(BaseTranslator):
                 'type': 'int',
                 'is_display': False
             },
-            'name': {
-                'display_name': 'Name',
-                'help_text': 'Name of the object',
+            'label': {
+                'display_name': 'Label',
+                'help_text': 'Label of the computer',
                 'is_foreign_key': False,
                 'type': 'str',
                 'is_display': True
@@ -108,6 +108,6 @@ class ComputerTranslator(BaseTranslator):
         }
 
         # Note: final schema will contain details for only the fields present in column order
-        column_order = ['uuid', 'name', 'hostname', 'description', 'scheduler_type', 'transport_type']
+        column_order = ['uuid', 'label', 'hostname', 'description', 'scheduler_type', 'transport_type']
 
         return projectable_properties, column_order

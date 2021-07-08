@@ -11,9 +11,10 @@
 Unittests for aiida.common.hashing:make_hash with hardcoded hash values
 """
 
-import itertools
 import collections
+import itertools
 from datetime import datetime
+import hashlib
 import uuid
 
 import numpy as np
@@ -24,7 +25,8 @@ try:
 except ImportError:
     import unittest
 
-from aiida.common.hashing import make_hash, float_to_text
+from aiida.common.exceptions import HashingError
+from aiida.common.hashing import make_hash, float_to_text, chunked_file_hash
 from aiida.common.folders import SandboxFolder
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Dict
@@ -178,7 +180,7 @@ class MakeHashTest(unittest.TestCase):
         class MadeupClass:
             pass
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HashingError):
             make_hash(MadeupClass())
 
     def test_folder(self):
@@ -256,3 +258,11 @@ class CheckDBRoundTrip(AiidaTestCase):
             recomputed_hash = node.get_hash()
 
             self.assertEqual(first_hash, recomputed_hash)
+
+
+def test_chunked_file_hash(tmp_path):
+    """Test the ``chunked_file_hash`` function."""
+    (tmp_path / 'afile').write_bytes(b'content')
+    with (tmp_path / 'afile').open('rb') as handle:
+        key = chunked_file_hash(handle, hashlib.sha256)
+    assert key == 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73'

@@ -1,4 +1,4 @@
-name: continuous-integration
+name: continuous-integration-code
 
 on:
   push:
@@ -49,8 +49,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        python-version: [3.7, 3.8]
         backend: ['django', 'sqlalchemy']
-        python-version: [3.6, 3.8]
 
     services:
       postgres:
@@ -70,6 +70,10 @@ jobs:
         image: rabbitmq:latest
         ports:
           - 5672:5672
+      slurm:
+        image: xenonmiddleware/slurm:17
+        ports:
+          - 5001:22
 
     steps:
     - uses: actions/checkout@v2
@@ -82,7 +86,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break
@@ -110,10 +114,10 @@ jobs:
         .github/workflows/tests.sh
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.6 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.7 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v1
       with:
-        name: aiida-pytests-py3.6-${{ matrix.backend }}
+        name: aiida-pytests-py3.7-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
@@ -138,32 +142,3 @@ jobs:
       run: |
         verdi devel check-load-time
         .github/workflows/verdi.sh
-
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable"
-        sudo apt-get update
-        sudo apt-get install docker-ce
-
-    - name: Build the aiida-core image
-      run:
-        docker build -t aiida-core .
-
-    - name: Run aiida-core image and test the default aiida profile and localhost computer.
-      run: |
-        export DOCKERID=`docker run -d aiida-core`
-        docker exec --tty $DOCKERID wait-for-services
-        docker logs $DOCKERID
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

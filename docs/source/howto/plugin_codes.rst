@@ -267,11 +267,11 @@ The ``DiffCalculation`` example, defines the following exit code:
 
 .. code-block:: python
 
-    spec.exit_code(100, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
+    spec.exit_code(300, 'ERROR_MISSING_OUTPUT_FILES', message='Calculation did not produce all expected output files.')
 
 An ``exit_code`` defines:
 
- * an exit status (a positive integer),
+ * an exit status (a positive integer, following the :ref:`topics:processes:usage:exit_code_conventions`),
  * a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
  * a message that provides a more detailed description of the problem.
 
@@ -333,7 +333,7 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
    .. code-block:: console
 
        $ pip install -e .  # install package in "editable mode"
-        reentry scan
+       $ reentry scan
 
    See the :ref:`how-to:plugins-install` section for details.
 
@@ -440,7 +440,10 @@ You can use the verdi command line interface to :ref:`monitor<topics:processes:u
 
 .. code-block:: bash
 
-    $ verdi process list
+    $ verdi process list -a -p1
+
+This should show the processes of both calculations you just ran.
+Use ``verdi calcjob outputcat <pk>`` to check the output of the calculation you submitted to the daemon.
 
 Congratulations - you can now write plugins for external simulation codes and use them to submit calculations!
 

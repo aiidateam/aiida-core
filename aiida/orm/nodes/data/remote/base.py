@@ -56,8 +56,7 @@ class RemoteData(Data):
         Connects to the remote folder and retrieves the content of a file.
 
         :param relpath:  The relative path of the file on the remote to retrieve.
-        :param destpath: The absolute path of the copied/retrieved file on the local machine.
-        :return: a string with the file content
+        :param destpath: The absolute path of where to store the file on the local machine.
         """
         authinfo = self.get_authinfo()
 
@@ -74,9 +73,6 @@ class RemoteData(Data):
                         )
                     ) from exception
                 raise
-
-            else:
-                return content
 
     def listdir(self, relpath='.'):
         """

@@ -87,7 +87,10 @@ class NodeLinksManager:
         try:
             node = attribute_dict[label]
         except KeyError as exception:
-            if '__' in label:
+            # Check whether the label contains a double underscore, in which case we want to warn the user that this is
+            # deprecated. However, we need to exclude labels that corresponds to dunder methods, i.e., those that start
+            # and end with a double underscore.
+            if '__' in label and not (label.startswith('__') and label.endswith('__')):
                 import functools
                 import warnings
                 from aiida.common.warnings import AiidaDeprecationWarning
@@ -98,7 +101,16 @@ class NodeLinksManager:
                     'Support for double underscores will be removed in the future.', AiidaDeprecationWarning
                 )  # pylint: disable=no-member
                 namespaces = label.split('__')
-                return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)
+                try:
+                    return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)
+                except TypeError as exc:
+                    # This can be raised if part of the `namespaces` correspond to an actual leaf node, but is treated
+                    # like a namespace
+                    raise NotExistent from exc
+                except AttributeError as exc:
+                    # This will be raised if any of the intermediate namespaces don't exist, and so the label node does
+                    # not exist.
+                    raise NotExistent from exc
             raise NotExistent from exception
 
         return node

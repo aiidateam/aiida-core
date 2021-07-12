@@ -196,7 +196,7 @@ SSH configuration
 ^^^^^^^^^^^^^^^^^
 
 To decide whether to use the ``ProxyJump`` (recommended) or the ``ProxyCommand`` directive, please check the version of your SSH client first with ``ssh -V``.
-The ``ProxyJump`` directive has been added in version 7.3 of OpenSSH, hence if you are using an older version of SSH (on your machine or the *PROXY*) you have to use older ``ProxyCommand``.
+The ``ProxyJump`` directive has been added in version 7.3 of OpenSSH, hence if you are using an older version of SSH (on your machine or the *PROXY*) you have to use the older ``ProxyCommand``.
 
 To setup the proxy configuration with ``ProxyJump``, edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing)
 and add the following lines::
@@ -238,7 +238,7 @@ In both cases, this should allow you to directly connect to the *TARGET* server 
 
 .. note ::
 
-   If the user directory is not shared between the *PROXY* and the *TARGET* (in most supercomputing facilities your user directory is shared between the machines), you need to follow the :ref:`instructions for a passwordless connection <how-to:ssh:passwordless>` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server (e.g. the public key must be listed in the `~/.ssh/authorized_keys` file of both the *PROXY* and the *TARGET* server).
+   If the user directory is not shared between the *PROXY* and the *TARGET* (in most supercomputing facilities your user directory is shared between the machines), you need to follow the :ref:`instructions for a passwordless connection <how-to:ssh:passwordless>` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server (e.g. the public key must be listed in the ``~/.ssh/authorized_keys`` file of both the *PROXY* and the *TARGET* server).
 
 
 AiiDA configuration
@@ -257,7 +257,7 @@ Simply copy & paste the same instructions as you have used for ``ProxyJump`` in 
 
 .. note:: A chain of proxies can be specified as a comma-separated list. If you need to specify a different username, you can so with ``USER_PROXY@...``. If no username is specified for the proxy the same username as for the *TARGET* is used.
 
-.. dropdown:: Specifying the ``proxy_command`` manually
+.. important:: Specifying the ``proxy_command`` manually
 
     When specifying or updating the ``proxy_command`` option via ``verdi computer configure ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
     AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.

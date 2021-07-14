@@ -38,7 +38,7 @@ from aiida.tools.importexport.archive.common import detect_archive_type
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract, get_reader
 
 from aiida.tools.importexport.dbimport.backends.common import (
-    _copy_node_repositories, _make_import_group, _sanitize_extras, MAX_COMPUTERS, MAX_GROUPS
+    _copy_node_repositories, _make_import_group, _sanitize_extras, _strip_checkpoints, MAX_COMPUTERS, MAX_GROUPS
 )
 
 
@@ -392,6 +392,8 @@ def _select_entity_data(
                 if entity_name == NODE_ENTITY_NAME:
                     # format extras
                     fields = _sanitize_extras(fields)
+                    # strip checkpoints
+                    fields = _strip_checkpoints(fields)
                     if extras_mode_new != 'import':
                         fields.pop('extras', None)
                 new_entries[entity_name][str(pk)] = fields

@@ -206,7 +206,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             if not job_title or (job_title[0] not in string.ascii_letters):
                 job_title = f'j{job_title}'
 
-            lines.append(f'#$ -N {job_tmpl.job_name}')
+            lines.append(f'#$ -N {job_title}')
 
         if job_tmpl.import_sys_environment:
             lines.append('#$ -V')

@@ -2168,7 +2168,7 @@ class QueryBuilder:
         Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
-        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+        https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
 
 
         :param int batch_size:
@@ -2191,7 +2191,7 @@ class QueryBuilder:
         Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
-        http://docs.sqlalchemy.org/en/latest/orm/query.html#sqlalchemy.orm.query.Query.yield_per
+        https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
 
 
         :param int batch_size:

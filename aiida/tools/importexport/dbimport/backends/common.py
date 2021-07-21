@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 from aiida.common import timezone
 from aiida.common.progress_reporter import get_progress_reporter, create_callback
-from aiida.orm import Group, ImportGroup, Node, QueryBuilder
+from aiida.orm import Group, ImportGroup, Node, QueryBuilder, ProcessNode
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
@@ -126,4 +126,17 @@ def _sanitize_extras(fields: dict) -> dict:
     fields['extras'] = {key: value for key, value in fields['extras'].items() if not key.startswith('_aiida_')}
     if fields.get('node_type', '').endswith('code.Code.'):
         fields['extras'] = {key: value for key, value in fields['extras'].items() if not key == 'hidden'}
+    return fields
+
+
+def _strip_checkpoints(fields: dict) -> dict:
+    """Remove checkpoint from attributes of process nodes.
+
+    :param fields: the database fields for the entity
+    """
+    if fields.get('node_type', '').startswith('process.'):
+        fields = copy.copy(fields)
+        fields['attributes'] = {
+            key: value for key, value in fields['attributes'].items() if key != ProcessNode.CHECKPOINT_KEY
+        }
     return fields

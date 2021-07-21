@@ -264,7 +264,7 @@ class Manager:
         if with_orm:
             from aiida.orm.utils import serialize
             encoder = functools.partial(serialize.serialize, encoding='utf-8')
-            decoder = serialize.deserialize
+            decoder = serialize.deserialize_unsafe
         else:
             # used by verdi status to get a communicator without needing to load the dbenv
             from aiida.common import json

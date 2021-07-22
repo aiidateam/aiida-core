@@ -303,11 +303,13 @@ class BaseRestartWorkChain(WorkChain):
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
 
+        exposed_outputs = self.exposed_outputs(node, self.process_class)
+
         for name, port in self.spec().outputs.items():
 
             try:
-                output = node.get_outgoing(link_label_filter=name).one().node
-            except ValueError:
+                output = exposed_outputs[name]
+            except KeyError:
                 if port.required:
                     self.report(f"required output '{name}' was not an output of {self.ctx.process_name}<{node.pk}>")
             else:

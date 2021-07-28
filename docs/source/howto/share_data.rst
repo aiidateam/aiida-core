@@ -215,7 +215,7 @@ Deploying a REST API server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``verdi restapi`` command runs the REST API through the ``werkzeug`` python-based HTTP server.
-In order to deploy production instances of the REST API for serving your data to others, we recommend using a fully fledged web server, such as `Apache <https://httpd.apache.org/>`_ or `NGINX <https://www.nginx.com/>`_, which then runs the REST API python application through the `web server gateway interface (WSGI) <wsgi.readthedocs.io/>`_.
+In order to deploy production instances of the REST API for serving your data to others, we recommend using a fully fledged web server, such as `Apache <https://httpd.apache.org/>`_ or `NGINX <https://www.nginx.com/>`_, which then runs the REST API python application through the `web server gateway interface (WSGI) <https://wsgi.readthedocs.io/>`_.
 
 .. note::
     One Apache/NGINX server can host multiple instances of the REST APIs, e.g. serving data from different AiiDA profiles.
@@ -228,7 +228,7 @@ A ``myprofile-rest.wsgi`` script for an AiiDA profile ``myprofile`` would look l
 
 In the following, we explain how to run this wsgi application using Apache on Ubuntu.
 
-    #. Install and enable the ``mod_wsgi`` `WSGI module <modwsgi.readthedocs.io/>`_ module:
+    #. Install and enable the ``mod_wsgi`` `WSGI module <https://modwsgi.readthedocs.io/>`_ module:
 
     .. code-block:: console
 

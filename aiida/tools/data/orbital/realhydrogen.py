@@ -258,7 +258,7 @@ class RealhydrogenOrbital(Orbital):
     OrbitalData class.
 
     Following the notation of table 3.1, 3.2 of Wannier90 user guide
-    http://www.wannier.org/doc/user_guide.pdf
+    (which can be downloaded from http://www.wannier.org/support/)
     A brief description of what is meant by each of these labels:
 
     :param radial_nodes: the number of radial nodes (or inflections) if no

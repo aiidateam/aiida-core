@@ -15,7 +15,7 @@ import os
 import re
 import sys
 from uuid import UUID
-
+from datetime import datetime
 from .lang import classproperty
 
 
@@ -595,3 +595,27 @@ class ErrorAccumulator:
     def raise_errors(self, raise_cls):
         if not self.success():
             raise raise_cls(f'The following errors were encountered: {self.errors}')
+
+
+class DatetimePrecision:
+    """
+    A simple class which stores a datetime object with its precision. No
+    internal check is done (cause itis not possible).
+
+    precision:  1 (only full date)
+                2 (date plus hour)
+                3 (date + hour + minute)
+                4 (dare + hour + minute +second)
+    """
+
+    def __init__(self, dtobj, precision):
+        """ Constructor to check valid datetime object and precision """
+
+        if not isinstance(dtobj, datetime):
+            raise TypeError('dtobj argument has to be a datetime object')
+
+        if not isinstance(precision, int):
+            raise TypeError('precision argument has to be an integer')
+
+        self.dtobj = dtobj
+        self.precision = precision

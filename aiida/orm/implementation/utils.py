@@ -10,6 +10,7 @@
 """Utility methods for backend non-specific implementations."""
 import math
 import numbers
+from decimal import Decimal
 
 from collections.abc import Iterable, Mapping
 
@@ -63,7 +64,7 @@ def clean_value(value):
         It mainly checks that we don't store NaN or Inf.
         """
         # This is a whitelist of all the things we understand currently
-        if val is None or isinstance(val, (bool, str)):
+        if val is None or isinstance(val, (bool, str, Decimal)):
             return val
 
         # This fixes #2773 - in python3, ``numpy.int64(-1)`` cannot be json-serialized

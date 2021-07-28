@@ -10,6 +10,7 @@
 # pylint: disable=too-many-lines
 """Unittests for REST API."""
 import io
+from datetime import date
 
 from flask_cors.core import ACL_ORIGIN
 
@@ -973,6 +974,33 @@ class RESTApiTestSuite(RESTApiTestCase):
                 expected_node_uuids.append(calc['uuid'])
 
         url = f"{self.get_url_prefix()}/nodes/?full_type=\"process.calculation.calcjob.CalcJobNode.|\""
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)
+            for node in response['data']['nodes']:
+                self.assertIn(node['uuid'], expected_node_uuids)
+
+    def test_nodes_time_filters(self):
+        """
+        Get the list of node filtered by time
+        """
+        today = date.today().strftime('%Y-%m-%d')
+
+        expected_node_uuids = []
+        data = self.get_dummy_data()
+        for calc in data['calculations']:
+            expected_node_uuids.append(calc['uuid'])
+
+        # ctime filter test
+        url = f"{self.get_url_prefix()}/nodes/?ctime={today}&full_type=\"process.calculation.calcjob.CalcJobNode.|\""
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)
+            for node in response['data']['nodes']:
+                self.assertIn(node['uuid'], expected_node_uuids)
+
+        # mtime filter test
+        url = f"{self.get_url_prefix()}/nodes/?mtime={today}&full_type=\"process.calculation.calcjob.CalcJobNode.|\""
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)

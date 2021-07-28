@@ -11,7 +11,7 @@
 # pylint: disable=invalid-name,no-self-use,no-member
 import pytest
 
-from aiida import engine
+from aiida import engine, orm
 from aiida.engine.processes.workchains.awaitable import Awaitable
 
 
@@ -146,3 +146,48 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
     assert isinstance(result, engine.ToContext)
     assert isinstance(result['children'], Awaitable)
     assert process.node.get_extra(SomeWorkChain._considered_handlers_extra) == [[]]  # pylint: disable=protected-access
+
+
+class OutputNamespaceWorkChain(engine.WorkChain):
+    """A WorkChain has namespaced output"""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.output_namespace('sub', valid_type=orm.Int, dynamic=True)
+        spec.outline(cls.finalize)
+
+    def finalize(self):
+        self.out('sub.result', orm.Int(1).store())
+
+
+class CustomBRWorkChain(engine.BaseRestartWorkChain):
+    """`BaseRestartWorkChain` of `OutputNamespaceWorkChain`"""
+
+    _process_class = OutputNamespaceWorkChain
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.expose_outputs(cls._process_class)
+        spec.output('extra', valid_type=orm.Int)
+
+        spec.outline(
+            cls.setup,
+            engine.while_(cls.should_run_process)(
+                cls.run_process,
+                cls.inspect_process,
+            ),
+            cls.results,
+        )
+
+    def setup(self):
+        super().setup()
+        self.ctx.inputs = {}
+
+
+@pytest.mark.requires_rmq
+def test_results():
+    res, node = engine.launch.run_get_node(CustomBRWorkChain)
+    assert res['sub'].result.value == 1
+    assert node.exit_status == 11

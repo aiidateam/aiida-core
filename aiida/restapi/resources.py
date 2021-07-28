@@ -9,13 +9,28 @@
 ###########################################################################
 """ Resources for REST API """
 from urllib.parse import unquote
+from functools import lru_cache
+from importlib import resources
 
 from flask import request, make_response
 from flask_restful import Resource
 
+import jsonschema
+
+from aiida.common import json
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.restapi.common.utils import Utils, close_session
+
+from . import schema as schema_module
+
+SCHEMA_FILE = 'querybuilder.schema.json'
+
+
+@lru_cache(1)
+def config_schema():
+    """Return the configuration schema."""
+    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
 
 
 class ServerInfo(Resource):
@@ -263,7 +278,31 @@ class QueryBuilder(BaseResource):
         :return: QueryBuilder result of AiiDA entities in "standard" REST API format.
         """
         # pylint: disable=protected-access
+
         self.trans._query_help = request.get_json(force=True)
+
+        try:
+            jsonschema.validate(instance=self.trans._query_help, schema=config_schema())
+
+        except jsonschema.ValidationError as error:
+            headers = self.utils.build_headers(url=request.url, total_count=1)
+
+            return self.utils.build_response(
+                status=400,
+                headers=headers,
+                data={
+                    'method': request.method,
+                    'url': unquote(request.url),
+                    'url_root': unquote(request.url_root),
+                    'path': unquote(request.path),
+                    'query_string': request.query_string.decode('utf-8'),
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': error.message
+                    },
+                },
+            )
+
         # While the data may be correct JSON, it MUST be a single JSON Object,
         # equivalent of a QuieryBuilder.queryhelp dictionary.
         assert isinstance(self.trans._query_help, dict), (

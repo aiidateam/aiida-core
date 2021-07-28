@@ -10,6 +10,7 @@
 # pylint: disable=too-many-lines
 """Unittests for REST API."""
 import io
+import copy
 
 from flask_cors.core import ACL_ORIGIN
 
@@ -1181,6 +1182,42 @@ class RESTApiTestSuite(RESTApiTestCase):
                 # hence `full_type` should not be present.
                 self.assertFalse('full_type' in entity)
 
+    def test_querybuilder_schema_validation(self):
+        """Test schema validation for POST method at /querybuilder"""
+
+        queryhelp_correct = orm.QueryBuilder().append(
+            orm.CalculationNode,
+            tag='calc',
+            project=['id', 'uuid', 'user_id'],
+        ).order_by({
+            'calc': [{
+                'id': {
+                    'order': 'desc'
+                }
+            }]
+        }).queryhelp
+
+        incorrent_values = {
+            'path': 'incorrect',
+            'filters': 'incorrect',
+            'project': 'incorrect',
+            'order_by': 'incorrect',
+            'limit': 'incorrect',
+            'offset': 'incorrect',
+        }
+
+        for key, value in incorrent_values.items():
+            queryhelp_incorrect = copy.deepcopy(queryhelp_correct)
+            queryhelp_incorrect[key] = value
+
+            with self.app.test_client() as client:
+                response_value = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp_incorrect)
+                response = response_value.json
+
+            self.assertEqual(response_value.status_code, 400)
+            self.assertEqual('POST', response.get('method', ''))
+            self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+
     def test_get_querybuilder(self):
         """Test GETting the /querybuilder endpoint
 
@@ -1226,7 +1263,6 @@ class RESTApiTestSuite(RESTApiTestCase):
                 }
             }]
         }).queryhelp
-
         expected_user_ids = []
         for calc in self.get_dummy_data()['calculations']:
             if calc['node_type'].startswith('process.calculation.'):

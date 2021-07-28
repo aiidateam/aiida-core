@@ -32,13 +32,6 @@ from aiida.common.utils import get_new_uuid
 # load_dbenv() function).
 SCHEMA_VERSION = migrations.current_schema_version()
 
-# NOTE for JSONField:
-# For SQLA simplejson's dumps/loads is used (when initializing the engine).
-# Since most of the magic is in the JSONEncoder/JSONDecoder, we can simply
-# set the encoder to that of simplejson to obtain the behaviour of simplejson.
-# As soon as the upgrade to Django 3.2.x is done, one can also set the decoder
-# to ensure that also the simplejson.JSONDecoder is used.
-
 
 class AiidaQuerySet(QuerySet):
     """Represent a lazy database lookup for a set of objects."""

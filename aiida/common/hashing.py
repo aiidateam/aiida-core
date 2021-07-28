@@ -19,9 +19,9 @@ from collections import abc, OrderedDict
 from functools import singledispatch
 from itertools import chain
 from operator import itemgetter
-
 import pytz
 
+from aiida.common.utils import DatetimePrecision
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
 
@@ -277,6 +277,15 @@ def _(val, **kwargs):
 @_make_hash.register(uuid.UUID)
 def _(val, **kwargs):
     return [_single_digest('uuid', val.bytes)]
+
+
+@_make_hash.register(DatetimePrecision)
+def _(datetime_precision, **kwargs):
+    """ Hashes for DatetimePrecision object
+    """
+    return [_single_digest('dt_prec')] + list(
+        chain.from_iterable(_make_hash(i, **kwargs) for i in [datetime_precision.dtobj, datetime_precision.precision])
+    ) + [_END_DIGEST]
 
 
 @_make_hash.register(Folder)

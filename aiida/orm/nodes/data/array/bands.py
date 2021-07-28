@@ -784,9 +784,9 @@ class BandsData(KpointsData):
 
         # axis limits
         if y_max_lim is None:
-            y_max_lim = numpy.array(bands).max()
+            y_max_lim = numpy.nanmax(bands)
         if y_min_lim is None:
-            y_min_lim = numpy.array(bands).min()
+            y_min_lim = numpy.nanmin(bands)
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
         all_data['x_min_lim'] = x_min_lim

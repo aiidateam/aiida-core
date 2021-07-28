@@ -121,7 +121,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
             raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
 
         try:
-            bundle = serialize.deserialize(checkpoint)
+            bundle = serialize.deserialize_unsafe(checkpoint)
         except Exception:
             raise PersistenceError(f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}')
 

@@ -256,6 +256,10 @@ async def task_retrieve_job(
             scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
             scheduler.set_transport(transport)
 
+            if node.get_job_id() is None:
+                logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
+                return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+
             try:
                 detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
             except FeatureNotAvailable:

@@ -50,7 +50,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     """
     Construct a CIF datablock from the ASE structure. The code is taken
     from
-    https://wiki.fysik.dtu.dk/ase/epydoc/ase.io.cif-pysrc.html#write_cif,
+    https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html#ase.io.cif.write_cif,
     as the original ASE code contains a bug in printing the
     Hermann-Mauguin symmetry space group symbol.
 

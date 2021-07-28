@@ -1816,22 +1816,26 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                 node_02 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
                 node_03 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
                 node_04 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
+                node_05 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
 
                 session.add(node_01)
                 session.add(node_02)
                 session.add(node_03)  # Empty repository folder
                 session.add(node_04)  # Both `path` and `raw_input` subfolder
+                session.add(node_05)  # Both `path` and `raw_input` subfolder & `.gitignore` in `path`
                 session.commit()
 
                 assert node_01.uuid is not None
                 assert node_02.uuid is not None
                 assert node_03.uuid is not None
                 assert node_04.uuid is not None
+                assert node_05.uuid is not None
 
                 self.node_01_pk = node_01.id
                 self.node_02_pk = node_02.id
                 self.node_03_pk = node_03.id
                 self.node_04_pk = node_04.id
+                self.node_05_pk = node_05.id
 
                 utils.put_object_from_string(node_01.uuid, 'sub/path/file_b.txt', 'b')
                 utils.put_object_from_string(node_01.uuid, 'sub/file_a.txt', 'a')
@@ -1839,6 +1843,17 @@ class TestRepositoryMigration(TestMigrationsSQLA):
 
                 os.makedirs(utils.get_node_repository_sub_folder(node_04.uuid, 'path'), exist_ok=True)
                 os.makedirs(utils.get_node_repository_sub_folder(node_04.uuid, 'raw_input'), exist_ok=True)
+                os.makedirs(utils.get_node_repository_sub_folder(node_05.uuid, 'path'), exist_ok=True)
+                os.makedirs(utils.get_node_repository_sub_folder(node_05.uuid, 'raw_input'), exist_ok=True)
+
+                utils.put_object_from_string(node_05.uuid, '.gitignore', 'test')
+                with open(
+                    os.path.join(
+                        utils.get_node_repository_sub_folder(node_05.uuid, 'raw_input'), 'input.txt'),
+                        'w',
+                        encoding='utf-8',
+                ) as handle:
+                    handle.write('input')
 
                 # Add a repository folder for a node that no longer exists - i.e. it may have been deleted.
                 utils.put_object_from_string(get_new_uuid(), 'file_of_deleted_node', 'output')
@@ -1859,6 +1874,7 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                 node_01 = session.query(DbNode).filter(DbNode.id == self.node_01_pk).one()
                 node_02 = session.query(DbNode).filter(DbNode.id == self.node_02_pk).one()
                 node_03 = session.query(DbNode).filter(DbNode.id == self.node_03_pk).one()
+                node_05 = session.query(DbNode).filter(DbNode.id == self.node_05_pk).one()
 
                 assert node_01.repository_metadata == {
                     'o': {
@@ -1886,11 +1902,19 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                     }
                 }
                 assert node_03.repository_metadata == {}
+                assert node_05.repository_metadata == {
+                    'o': {
+                        'input.txt': {
+                            'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()
+                        }
+                    }
+                }
 
                 for hashkey, content in (
                     (node_01.repository_metadata['o']['sub']['o']['path']['o']['file_b.txt']['k'], b'b'),
                     (node_01.repository_metadata['o']['sub']['o']['file_a.txt']['k'], b'a'),
                     (node_02.repository_metadata['o']['output.txt']['k'], b'output'),
+                    (node_05.repository_metadata['o']['input.txt']['k'], b'input'),
                 ):
                     assert utils.get_repository_object(hashkey) == content
 

@@ -152,6 +152,10 @@ def test_link_manager_with_nested_namespaces(clear_database_before_test):
     out1.add_incoming(calc, link_type=LinkType.CREATE, link_label='nested__sub__namespace')
     out1.store()
 
+    out2 = orm.Data()
+    out2.add_incoming(calc, link_type=LinkType.CREATE, link_label='remote_folder')
+    out2.store()
+
     # Check that the recommended way of dereferencing works
     assert calc.inputs.nested.sub.namespace.uuid == inp1.uuid
     assert calc.outputs.nested.sub.namespace.uuid == out1.uuid
@@ -164,10 +168,27 @@ def test_link_manager_with_nested_namespaces(clear_database_before_test):
         assert calc.inputs.nested__sub__namespace.uuid == inp1.uuid
         assert calc.outputs.nested__sub__namespace.uuid == out1.uuid
 
+    # Dunder methods should not invoke the deprecation warning
+    with pytest.warns(None) as record:
+        try:
+            calc.inputs.__name__
+        except AttributeError:
+            pass
+        assert not record
+
     # Must raise a AttributeError, otherwise tab competion will not work
-    with pytest.raises(AttributeError):
-        _ = calc.outputs.nested.not_existent
+    for attribute in ['not_existent', 'not__existent__nested']:
+        with pytest.raises(AttributeError):
+            _ = getattr(calc.outputs.nested, attribute)
 
     # Must raise a KeyError
+    for key in ['not_existent', 'not__existent__nested']:
+        with pytest.raises(KeyError):
+            _ = calc.outputs.nested[key]
+
+    # Note that `remote_folder` corresponds to an actual leaf node, but it is treated like an intermediate namespace
+    with pytest.raises(AttributeError):
+        _ = calc.outputs.remote_folder__namespace
+
     with pytest.raises(KeyError):
-        _ = calc.outputs.nested['not_existent']
+        _ = calc.outputs['remote_folder__namespace']

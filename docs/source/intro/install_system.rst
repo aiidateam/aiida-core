@@ -148,7 +148,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       .. code-block:: console
 
-          $ python -m pip venv ~/envs/aiida
+          $ python -m venv ~/envs/aiida
           $ source ~/envs/aiida/bin/activate
           (aiida) $ pip install aiida-core
           (aiida) $ reentry scan

@@ -154,3 +154,33 @@ class TestSpecificImport(AiidaArchiveTestCase):
             builder.append(orm.RemoteData, project=['uuid'], with_incoming='parent', tag='remote')
             builder.append(orm.CalculationNode, with_incoming='remote')
             self.assertGreater(len(builder.all()), 0)
+
+    def test_import_checkpoints(self):
+        """Check that process node checkpoints are stripped when importing.
+
+        The process node checkpoints need to be stripped because they
+        could be maliciously crafted to execute arbitrary code, since
+        we use the `yaml.UnsafeLoader` to load them.
+        """
+        node = orm.WorkflowNode().store()
+        node.set_checkpoint(12)
+        node.seal()
+        node_uuid = node.uuid
+        assert node.checkpoint == 12
+
+        with tempfile.NamedTemporaryFile() as handle:
+            nodes = [node]
+            export(nodes, filename=handle.name, overwrite=True)
+
+            # Check that we have the expected number of nodes in the database
+            self.assertEqual(orm.QueryBuilder().append(orm.Node).count(), len(nodes))
+
+            # Clean the database and verify there are no nodes left
+            self.clean_db()
+            assert orm.QueryBuilder().append(orm.Node).count() == 0
+
+            import_data(handle.name)
+
+        assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
+        node_new = orm.load_node(node_uuid)
+        assert node_new.checkpoint is None

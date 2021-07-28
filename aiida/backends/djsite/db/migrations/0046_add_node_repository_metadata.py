@@ -13,8 +13,9 @@
 # pylint: disable=no-name-in-module,import-error
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations
-import simplejson
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+from aiida.common.json import JSONEncoder
 
 REVISION = '1.0.46'
 DOWN_REVISION = '1.0.45'
@@ -31,9 +32,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbnode',
             name='repository_metadata',
-            field=django.contrib.postgres.fields.jsonb.JSONField(
-                default=dict, null=True, encoder=simplejson.JSONEncoder
-            ),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=True, encoder=JSONEncoder),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION),
     ]

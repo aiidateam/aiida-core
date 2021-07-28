@@ -11,8 +11,9 @@
 # pylint: disable=invalid-name
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations
-import simplejson
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+from aiida.common.json import JSONEncoder
 
 REVISION = '1.0.45'
 DOWN_REVISION = '1.0.44'
@@ -28,9 +29,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbgroup',
             name='extras',
-            field=django.contrib.postgres.fields.jsonb.JSONField(
-                default=dict, null=False, encoder=simplejson.JSONEncoder
-            ),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=False, encoder=JSONEncoder),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION),
     ]

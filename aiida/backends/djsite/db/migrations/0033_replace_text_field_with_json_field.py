@@ -14,9 +14,9 @@
 # pylint: disable=no-name-in-module,import-error,no-member
 import django.contrib.postgres.fields.jsonb
 from django.db import migrations
-import simplejson
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+from aiida.common.json import JSONEncoder
 
 REVISION = '1.0.33'
 DOWN_REVISION = '1.0.32'
@@ -33,27 +33,27 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dbauthinfo',
             name='auth_params',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=simplejson.JSONEncoder),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=JSONEncoder),
         ),
         migrations.AlterField(
             model_name='dbauthinfo',
             name='metadata',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=simplejson.JSONEncoder),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=JSONEncoder),
         ),
         migrations.AlterField(
             model_name='dbcomputer',
             name='metadata',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=simplejson.JSONEncoder),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=JSONEncoder),
         ),
         migrations.AlterField(
             model_name='dbcomputer',
             name='transport_params',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=simplejson.JSONEncoder),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=JSONEncoder),
         ),
         migrations.AlterField(
             model_name='dblog',
             name='metadata',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=simplejson.JSONEncoder),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, encoder=JSONEncoder),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION)
     ]

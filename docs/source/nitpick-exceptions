@@ -93,6 +93,8 @@ py:class sphinx.util.docutils.SphinxDirective
 py:class frozenset
 
 py:class numpy.bool_
+py:class numpy.dtype
+py:class numpy.typing._array_like._SupportsArray
 
 py:class paramiko.proxy.ProxyCommand
 

@@ -151,7 +151,8 @@
         ],
         "aiida.data": [
             "array = aiida.orm.nodes.data.array.array:ArrayData",
-            "array.bands = aiida.orm.nodes.data.array.bands:BandsData",
+            "array.bands = aiida.orm.nodes.data.array.bands.bands:BandsData",
+            "array.bands.electronic = aiida.orm.nodes.data.array.bands.electronic:ElectronicBandsData",
             "array.kpoints = aiida.orm.nodes.data.array.kpoints:KpointsData",
             "array.projection = aiida.orm.nodes.data.array.projection:ProjectionData",
             "array.trajectory = aiida.orm.nodes.data.array.trajectory:TrajectoryData",

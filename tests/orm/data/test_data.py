@@ -7,14 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-return-statements
 """Tests for the `Data` base class."""
-
 import os
 import numpy
 import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.nodes.data.array.bands import ElectronicBandsData
 from tests.static import STATIC_DIR
 
 
@@ -44,6 +45,13 @@ class TestData(AiidaTestCase):
             instance = data_class()
             instance.set_kpointsdata(kpoints)
             instance.set_bands([[1.0, 2.0], [3.0, 4.0]])
+            return instance
+
+        if data_class is ElectronicBandsData:
+            kpoints = orm.KpointsData()
+            kpoints.set_cell([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            kpoints.set_kpoints([[0., 0., 0.], [0.1, 0.1, 0.1]])
+            instance = data_class(kpoints, [[1.0, 2.0], [3.0, 4.0]])
             return instance
 
         if data_class is orm.TrajectoryData:

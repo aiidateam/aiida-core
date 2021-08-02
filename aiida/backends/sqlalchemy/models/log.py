@@ -38,21 +38,10 @@ class DbLog(Base):
 
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
 
-    def __init__(self, time, loggername, levelname, dbnode_id, **kwargs):
-        """Setup initial value for the class attributes."""
-        if 'uuid' in kwargs:
-            self.uuid = kwargs['uuid']
-        if 'message' in kwargs:
-            self.message = kwargs['message']
-        if 'metadata' in kwargs:
-            self._metadata = kwargs['metadata'] or {}
-        else:
-            self._metadata = {}
-
-        self.time = time
-        self.loggername = loggername
-        self.levelname = levelname
-        self.dbnode_id = dbnode_id
-
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
+
+    def __init__(self, *args, **kwargs):
+        """Construct new instance making sure the `_metadata` column is initialized to empty dict if `None`."""
+        super().__init__(*args, **kwargs)
+        self._metadata = kwargs.pop('metadata', {}) or {}

@@ -22,8 +22,8 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Check requirements files
       id: check_reqs

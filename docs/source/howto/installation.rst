@@ -90,7 +90,7 @@ This file is shell specific, but likely one of the following:
 
     * the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
     * the `activators <https://virtualenv.pypa.io/en/latest/user_guide.html#activators>`_ of your virtual environment
-    * a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+    * a `startup file <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
 
 
 .. important::

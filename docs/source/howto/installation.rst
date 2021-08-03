@@ -343,16 +343,6 @@ Here are a few tips for tuning AiiDA performance:
             verdi config set daemon.worker_process_slots 1000
 
 
-    .. dropdown:: Analyze engine performance
-
-        If you're observing slow performance of the AiiDA engine, the rabbitmq message rate is a useful indicator to check.
-
-        rabbitmq comes with a built-in `management plugin <https://www.rabbitmq.com/management.html>`_ that can be enabled via something like::
-
-            sudo rabbitmq-plugins enable rabbitmq_management
-
-        Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
-
 
     .. dropdown:: Prevent your operating system from indexing the file repository.
 
@@ -415,6 +405,19 @@ Here are a few tips for tuning AiiDA performance:
 
         and try a simple AiiDA query with the new database.
         If everything went fine, you can delete the old database location.
+
+If you're still encountering performance issues, the following tips can help with pinpointing performance bottlenecks.
+
+    .. dropdown:: Analyze the RabbitMQ message rate
+
+        If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
+
+        Enable the management plugin via something like::
+
+            sudo rabbitmq-plugins enable rabbitmq_management
+
+        Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
+
 
 .. _how-to:installation:update:
 

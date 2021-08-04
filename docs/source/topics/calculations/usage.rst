@@ -495,17 +495,17 @@ The contract of the 'retrieve temporary list' is essentially that the files will
 
 .. _topics:calculations:usage:calcjobs:stashing:
 
-Stashing files on the remote
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Stashing on the remote
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 1.6.0
 
-The ``stash`` option namespace allows a user to specify certain files that are created by the calculation job to be stashed somewhere on the remote.
-This can be useful if those files need to be stored for a longer time than the scratch space where the job was run is typically not cleaned for, but need to be kept on the remote machine and not retrieved.
+The ``stash`` option namespace allows a user to specify certain files and/or folders that are created by the calculation job to be stashed somewhere on the remote where the job is run.
+This can be useful if these need to be stored for a longer time on a machine where the scratch space is cleaned regularly, but they need to be kept on the remote machine and not retrieved.
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
 
-The files that are to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
-Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy these files to, and is set through the ``stash.target_base`` option, for example:
+The files/folders that need to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
+Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy the files/folders to, and is set through the ``stash.target_base`` option, for example:
 
 .. code-block:: python
 
@@ -527,20 +527,20 @@ Using the ``COPY`` mode, the target path defines another location (on the same f
 
 .. note::
 
-   In the future, other methods for stashing may be implemented, such as placing all files in a (compressed) tarball or even stash files on tape.
+   In the future, other methods for stashing may be implemented, such as placing all files/folders in a (compressed) tarball or even stash files on tape.
 
 .. important::
 
-   If the ``stash`` option namespace is defined for a calculation job, the daemon will perform the stashing operations before the files are retrieved.
-   This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files will be stashed independent of the final exit status that the parser will assign to the calculation job.
-   This may cause files to be stashed for calculations that will later be considered to have failed.
+   If the ``stash`` option namespace is defined for a calculation job, the daemon will perform the stashing operations before the files/folders are retrieved.
+   This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files/folders will be stashed independent of the final exit status that the parser will assign to the calculation job.
+   This may cause files/folders to be stashed for calculations that will later be considered to have failed.
 
-The stashed files are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
-Just like the ``remote_folder`` node, this represents a location or files on a remote machine and so is equivalent to a "symbolic link".
+The stashed files/folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
+Just like the ``remote_folder`` node, this represents a location or files/folders on a remote machine and so is equivalent to a "symbolic link".
 
 .. important::
 
-   AiiDA does not actually own the files in the remote stash, and so the contents may disappear at some point.
+   AiiDA does not actually control the files/folders in the remote stash, and so the contents may disappear at some point.
 
 .. _topics:calculations:usage:calcjobs:options:
 

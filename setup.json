@@ -33,7 +33,7 @@
         "django~=2.2",
         "graphviz~=0.13",
         "ipython~=7.20",
-        "jinja2~=2.10",
+        "jinja2~=3.0",
         "jsonschema~=3.0",
         "kiwipy[rmq]~=0.7.4",
         "numpy~=1.17",

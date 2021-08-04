@@ -6,7 +6,7 @@ channels:
 - defaults
 dependencies:
 - python~=3.7
-- aldjemy~=0.9.1
+- aldjemy~=1.0.0
 - alembic~=1.2
 - archive-path~=0.2.1
 - aio-pika~=6.6

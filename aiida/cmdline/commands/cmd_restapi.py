@@ -45,7 +45,8 @@ from aiida.restapi.common import config
     help='Enable POST endpoints (currently only /querybuilder).',
     hidden=True,
 )
-def restapi(hostname, port, config_dir, debug, wsgi_profile, posting):
+@click.pass_context
+def restapi(ctx, hostname, port, config_dir, debug, wsgi_profile, posting):
     """
     Run the AiiDA REST API server.
 
@@ -58,6 +59,7 @@ def restapi(hostname, port, config_dir, debug, wsgi_profile, posting):
     # Invoke the runner
     try:
         run_api(
+            profile=ctx.obj['profile'].name,
             hostname=hostname,
             port=port,
             config=config_dir,

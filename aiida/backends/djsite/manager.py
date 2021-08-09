@@ -87,14 +87,16 @@ class DjangoBackendManager(BackendManager):
         backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
         try:
-            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'schema_generation';""")
-        except ProgrammingError:
             result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'schema_generation';""")
-
-        try:
-            return str(int(result[0][0]))
-        except (IndexError, TypeError, ValueError):
+        except ProgrammingError:
+            # If this value does not exist, the schema has to correspond to the first generation which didn't actually
+            # record its value explicitly in the database until ``aiida-core>=1.0.0``.
             return '1'
+        else:
+            try:
+                return str(int(result[0][0]))
+            except (IndexError, ValueError, TypeError):
+                return '1'
 
     def get_schema_version_database(self):
         """Return the database schema version.
@@ -107,9 +109,9 @@ class DjangoBackendManager(BackendManager):
         backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
         try:
-            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
-        except ProgrammingError:
             result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+        except ProgrammingError:
+            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
         return result[0][0]
 
     def set_schema_version_database(self, version):

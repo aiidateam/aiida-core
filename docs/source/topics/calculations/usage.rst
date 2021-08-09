@@ -504,7 +504,7 @@ The ``stash`` option namespace allows a user to specify certain files and/or fol
 This can be useful if these need to be stored for a longer time on a machine where the scratch space is cleaned regularly, but they need to be kept on the remote machine and not retrieved.
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
 
-The files and that need to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
+The files/folder that need to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
 Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy the files to, and is set through the ``stash.target_base`` option, for example:
 
 .. code-block:: python

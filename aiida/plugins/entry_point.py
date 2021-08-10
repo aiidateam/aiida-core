@@ -15,7 +15,7 @@ from typing import Any, Optional, List, Sequence, Set, Tuple
 
 # importlib.metadata was introduced into the standard library in python 3.8,
 # but also was updated in python 3.10 to use the `select` API for selecting entry points.
-# because of https://github.com/python/importlib_metadata/issues/308
+# Because of https://github.com/python/importlib_metadata/issues/308
 # we do not assume that we have this API, and instead use try/except for the new/old APIs
 from importlib_metadata import EntryPoint, EntryPoints
 from importlib_metadata import entry_points as eps
@@ -225,6 +225,7 @@ def get_entry_point_groups() -> Set[str]:
     :return: a list of valid entry point groups
     """
     try:
+        # importlib_metadata v4 / python 3.10
         return eps().groups
     except AttributeError:
         return set(eps())
@@ -252,6 +253,7 @@ def get_entry_points(group: str) -> EntryPoints:
     :return: a list of entry points
     """
     try:
+        # importlib_metadata v4 / python 3.10
         return eps().select(group=group)
     except (AttributeError, TypeError):
         return eps.get(group, [])  # type: ignore # pylint: disable=no-member

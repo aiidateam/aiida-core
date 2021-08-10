@@ -7,8 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Provides tools for traversing the provenance graph."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
 from .deletions import *
 
-__all__ = deletions.__all__
+__all__ = (
+    'DELETE_LOGGER',
+    'delete_group_nodes',
+    'delete_nodes',
+)

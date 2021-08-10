@@ -17,6 +17,8 @@ For subclasses of Orbital, see submodules.
 from aiida.common.exceptions import ValidationError
 from aiida.plugins.entry_point import get_entry_point_from_class
 
+__all__ = ('Orbital',)
+
 
 def validate_int(value):
     """

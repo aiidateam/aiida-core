@@ -7,10 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Module for classes and utilities to interact with cluster schedulers."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
 from .datastructures import *
 from .scheduler import *
 
-__all__ = (datastructures.__all__ + scheduler.__all__)
+__all__ = (
+    'JobInfo',
+    'JobResource',
+    'JobState',
+    'JobTemplate',
+    'MachineInfo',
+    'NodeNumberJobResource',
+    'ParEnvJobResource',
+    'Scheduler',
+    'SchedulerError',
+    'SchedulerParsingError',
+)

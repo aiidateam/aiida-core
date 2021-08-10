@@ -9,8 +9,16 @@
 ###########################################################################
 """Module with `Node` sub classes for calculation processes."""
 
-from .calculation import CalculationNode
-from .calcfunction import CalcFunctionNode
-from .calcjob import CalcJobNode
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
-__all__ = ('CalculationNode', 'CalcFunctionNode', 'CalcJobNode')
+from .calcfunction import *
+from .calcjob import *
+from .calculation import *
+
+__all__ = (
+    'CalcFunctionNode',
+    'CalcJobNode',
+    'CalculationNode',
+)

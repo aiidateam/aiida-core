@@ -12,6 +12,7 @@ Module to define custom click param type for multiple values
 """
 import click
 
+__all__ = ('MultipleValueParamType', )
 
 class MultipleValueParamType(click.ParamType):
     """

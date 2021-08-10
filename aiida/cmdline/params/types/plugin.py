@@ -18,6 +18,7 @@ from aiida.plugins.entry_point import format_entry_point_string, get_entry_point
 from aiida.plugins.entry_point import get_entry_point, get_entry_points, get_entry_point_groups
 from ..types import EntryPointType
 
+__all__ = ('PluginParamType',)
 
 class PluginParamType(EntryPointType):
     """

@@ -16,6 +16,8 @@ from aiida.common.exceptions import ValidationError
 from .orbital import Orbital, validate_len3_list_or_none, validate_float_or_none
 
 
+__all__ = ('RealhydrogenOrbital',)
+
 def validate_l(value):
     """
     Validate the value of the angular momentum

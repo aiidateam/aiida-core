@@ -13,6 +13,7 @@ import click
 from aiida.cmdline.utils import decorators
 from .identifier import IdentifierParamType
 
+__all__ = ('CodeParamType',)
 
 class CodeParamType(IdentifierParamType):
     """

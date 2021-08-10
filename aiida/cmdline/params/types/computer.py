@@ -16,6 +16,7 @@ from click.types import StringParamType
 from ...utils import decorators
 from .identifier import IdentifierParamType
 
+__all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')
 
 class ComputerParamType(IdentifierParamType):
     """

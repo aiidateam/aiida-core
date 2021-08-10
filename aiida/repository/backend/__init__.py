@@ -1,8 +1,16 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=undefined-variable
 """Module for file repository backend implementations."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
 from .abstract import *
 from .disk_object_store import *
 from .sandbox import *
 
-__all__ = (abstract.__all__ + disk_object_store.__all__ + sandbox.__all__)  # type: ignore[name-defined]
+__all__ = (
+    'AbstractRepositoryBackend',
+    'DiskObjectStoreRepositoryBackend',
+    'SandboxRepositoryBackend',
+)

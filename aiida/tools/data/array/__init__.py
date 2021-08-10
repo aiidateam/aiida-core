@@ -7,3 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .kpoints import *
+
+__all__ = (
+    'get_explicit_kpoints_path',
+    'get_kpoints_path',
+)

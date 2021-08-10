@@ -9,8 +9,16 @@
 ###########################################################################
 """Module with `Node` sub classes for workflow processes."""
 
-from .workflow import WorkflowNode
-from .workchain import WorkChainNode
-from .workfunction import WorkFunctionNode
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
-__all__ = ('WorkflowNode', 'WorkChainNode', 'WorkFunctionNode')
+from .workchain import *
+from .workflow import *
+from .workfunction import *
+
+__all__ = (
+    'WorkChainNode',
+    'WorkFunctionNode',
+    'WorkflowNode',
+)

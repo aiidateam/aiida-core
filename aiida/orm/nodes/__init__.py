@@ -7,11 +7,53 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Module with `Node` sub classes for data and processes."""
 
-from .data import *
-from .process import *
-from .node import *
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
-__all__ = (data.__all__ + process.__all__ + node.__all__)
+from .data import *
+from .node import *
+from .process import *
+from .repository import *
+
+__all__ = (
+    'ArrayData',
+    'BandsData',
+    'BaseType',
+    'Bool',
+    'CalcFunctionNode',
+    'CalcJobNode',
+    'CalculationNode',
+    'Code',
+    'Data',
+    'Dict',
+    'Float',
+    'FolderData',
+    'Int',
+    'Kind',
+    'KpointsData',
+    'List',
+    'Node',
+    'NodeRepositoryMixin',
+    'NumericType',
+    'OrbitalData',
+    'ProcessNode',
+    'ProjectionData',
+    'RemoteData',
+    'RemoteStashData',
+    'RemoteStashFolderData',
+    'SinglefileData',
+    'Site',
+    'Str',
+    'StructureData',
+    'TrajectoryData',
+    'UpfData',
+    'WorkChainNode',
+    'WorkFunctionNode',
+    'WorkflowNode',
+    'XyData',
+    'find_bandgap',
+    'to_aiida_type',
+)

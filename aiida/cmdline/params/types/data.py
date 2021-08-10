@@ -12,6 +12,7 @@ Module for the custom click param type for data
 """
 from .identifier import IdentifierParamType
 
+__all__ = ('DataParamType',)
 
 class DataParamType(IdentifierParamType):
     """

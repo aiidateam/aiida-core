@@ -7,9 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Calculation tool plugins for Calculation classes."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
 from .base import *
 
-__all__ = (base.__all__)
+__all__ = (
+    'CalculationTools',
+)

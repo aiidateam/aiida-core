@@ -9,29 +9,54 @@
 ###########################################################################
 """Provides all parameter types."""
 
-from .calculation import CalculationParamType
-from .choice import LazyChoice
-from .code import CodeParamType
-from .computer import ComputerParamType, ShebangParamType, MpirunCommandParamType
-from .config import ConfigOptionParamType
-from .data import DataParamType
-from .group import GroupParamType
-from .identifier import IdentifierParamType
-from .multiple import MultipleValueParamType
-from .node import NodeParamType
-from .process import ProcessParamType
-from .strings import (NonEmptyStringParamType, EmailType, HostnameType, EntryPointType, LabelStringType)
-from .path import AbsolutePathParamType, PathOrUrl, FileOrUrl
-from .plugin import PluginParamType
-from .profile import ProfileParamType
-from .user import UserParamType
-from .test_module import TestModuleParamType
-from .workflow import WorkflowParamType
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .calculation import *
+from .choice import *
+from .code import *
+from .computer import *
+from .config import *
+from .data import *
+from .group import *
+from .identifier import *
+from .multiple import *
+from .node import *
+from .path import *
+from .plugin import *
+from .process import *
+from .profile import *
+from .strings import *
+from .test_module import *
+from .user import *
+from .workflow import *
 
 __all__ = (
-    'LazyChoice', 'IdentifierParamType', 'CalculationParamType', 'CodeParamType', 'ComputerParamType',
-    'ConfigOptionParamType', 'DataParamType', 'GroupParamType', 'NodeParamType', 'MpirunCommandParamType',
-    'MultipleValueParamType', 'NonEmptyStringParamType', 'PluginParamType', 'AbsolutePathParamType', 'ShebangParamType',
-    'UserParamType', 'TestModuleParamType', 'ProfileParamType', 'WorkflowParamType', 'ProcessParamType', 'PathOrUrl',
-    'FileOrUrl'
+    'AbsolutePathParamType',
+    'CalculationParamType',
+    'CodeParamType',
+    'ComputerParamType',
+    'ConfigOptionParamType',
+    'DataParamType',
+    'EmailType',
+    'EntryPointType',
+    'FileOrUrl',
+    'GroupParamType',
+    'HostnameType',
+    'IdentifierParamType',
+    'LabelStringType',
+    'LazyChoice',
+    'MpirunCommandParamType',
+    'MultipleValueParamType',
+    'NodeParamType',
+    'NonEmptyStringParamType',
+    'PathOrUrl',
+    'PluginParamType',
+    'ProcessParamType',
+    'ProfileParamType',
+    'ShebangParamType',
+    'TestModuleParamType',
+    'UserParamType',
+    'WorkflowParamType',
 )

@@ -7,10 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=undefined-variable,wildcard-import
 """Methods and definitions of migrations for the configuration file of an AiiDA instance."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
 from .migrations import *
 from .utils import *
 
-__all__ = (migrations.__all__ + utils.__all__)
+__all__ = (
+    'CURRENT_CONFIG_VERSION',
+    'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'check_and_migrate_config',
+    'config_needs_migrating',
+    'get_current_version',
+)

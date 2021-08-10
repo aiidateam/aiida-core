@@ -9,11 +9,23 @@
 ###########################################################################
 """Module with `Node` sub classes for array based data structures."""
 
-from .array import ArrayData
-from .bands import BandsData
-from .kpoints import KpointsData
-from .projection import ProjectionData
-from .trajectory import TrajectoryData
-from .xy import XyData
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
-__all__ = ('ArrayData', 'BandsData', 'KpointsData', 'ProjectionData', 'TrajectoryData', 'XyData')
+from .array import *
+from .bands import *
+from .kpoints import *
+from .projection import *
+from .trajectory import *
+from .xy import *
+
+__all__ = (
+    'ArrayData',
+    'BandsData',
+    'KpointsData',
+    'ProjectionData',
+    'TrajectoryData',
+    'XyData',
+    'find_bandgap',
+)

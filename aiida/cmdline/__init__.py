@@ -7,16 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """The command line interface of AiiDA."""
 
-from .params.arguments import *
-from .params.options import *
-from .params.types import *
-from .utils.decorators import *
-from .utils.echo import *
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .utils import *
 
 __all__ = (
-    params.arguments.__all__ + params.options.__all__ + params.types.__all__ + utils.decorators.__all__ +
-    utils.echo.__all__
+    'dbenv',
+    'echo',
+    'echo_critical',
+    'echo_dictionary',
+    'echo_error',
+    'echo_highlight',
+    'echo_info',
+    'echo_success',
+    'echo_warning',
+    'format_call_graph',
+    'only_if_daemon_running',
+    'with_dbenv',
 )

@@ -9,6 +9,14 @@
 ###########################################################################
 """Module for classes and methods that represents molecular orbitals."""
 
-from .orbital import Orbital
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
 
-__all__ = ('Orbital',)
+from .orbital import *
+from .realhydrogen import *
+
+__all__ = (
+    'Orbital',
+    'RealhydrogenOrbital',
+)

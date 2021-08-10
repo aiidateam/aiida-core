@@ -13,6 +13,7 @@ Module for the process node parameter type
 
 from .identifier import IdentifierParamType
 
+__all__ = ('ProcessParamType',)
 
 class ProcessParamType(IdentifierParamType):
     """

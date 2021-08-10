@@ -7,18 +7,57 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable,redefined-builtin
 """Module for processes and related utilities."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
 from .builder import *
 from .calcjobs import *
 from .exit_code import *
 from .functions import *
+from .futures import *
 from .ports import *
 from .process import *
 from .process_spec import *
 from .workchains import *
 
 __all__ = (
-    builder.__all__ + calcjobs.__all__ + exit_code.__all__ + functions.__all__ +  # type: ignore[name-defined]
-    ports.__all__ + process.__all__ + process_spec.__all__ + workchains.__all__  # type: ignore[name-defined]
+    'Awaitable',
+    'AwaitableAction',
+    'AwaitableTarget',
+    'BaseRestartWorkChain',
+    'CalcJob',
+    'CalcJobOutputPort',
+    'CalcJobProcessSpec',
+    'ExitCode',
+    'ExitCodesNamespace',
+    'FunctionProcess',
+    'InputPort',
+    'JobManager',
+    'JobsList',
+    'OutputPort',
+    'PORT_NAMESPACE_SEPARATOR',
+    'PortNamespace',
+    'Process',
+    'ProcessBuilder',
+    'ProcessBuilderNamespace',
+    'ProcessFuture',
+    'ProcessHandlerReport',
+    'ProcessSpec',
+    'ProcessState',
+    'ToContext',
+    'WithNonDb',
+    'WithSerialize',
+    'WorkChain',
+    'append_',
+    'assign_',
+    'calcfunction',
+    'construct_awaitable',
+    'if_',
+    'process_handler',
+    'return_',
+    'while_',
+    'workfunction',
 )

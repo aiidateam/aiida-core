@@ -7,11 +7,31 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Module for the `WorkChain` process and related utilities."""
+
+# AUTO-GENERATED
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .awaitable import *
 from .context import *
 from .restart import *
 from .utils import *
 from .workchain import *
 
-__all__ = (context.__all__ + restart.__all__ + utils.__all__ + workchain.__all__)  # type: ignore[name-defined]
+__all__ = (
+    'Awaitable',
+    'AwaitableAction',
+    'AwaitableTarget',
+    'BaseRestartWorkChain',
+    'ProcessHandlerReport',
+    'ToContext',
+    'WorkChain',
+    'append_',
+    'assign_',
+    'construct_awaitable',
+    'if_',
+    'process_handler',
+    'return_',
+    'while_',
+)

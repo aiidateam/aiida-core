@@ -16,6 +16,8 @@ import numpy as np
 from aiida.common.exceptions import NotExistent
 from .array import ArrayData
 
+__all__ = ('XyData',)
+
 
 def check_convert_single_to_tuple(item):
     """

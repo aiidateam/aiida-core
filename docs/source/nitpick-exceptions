@@ -161,3 +161,5 @@ py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
 
 py:class jsonschema.exceptions._Error
+
+importlib_metadata.EntryPoint

@@ -14,9 +14,8 @@ import traceback
 from typing import Any, Optional, List, Sequence, Set, Tuple
 
 # importlib.metadata was introduced into the standard library in python 3.8,
-# but also was updated in python 3.10 to use the `select` API for selecting entry points.
-# Because of https://github.com/python/importlib_metadata/issues/308
-# we do not assume that we have this API, and instead use try/except for the new/old APIs
+# but was then updated in python 3.10 to use an improved API.
+# So for now we use the backport importlib_metadata package.
 from importlib_metadata import EntryPoint, EntryPoints
 from importlib_metadata import entry_points as eps
 
@@ -224,23 +223,15 @@ def get_entry_point_groups() -> Set[str]:
 
     :return: a list of valid entry point groups
     """
-    try:
-        # importlib_metadata v4 / python 3.10
-        return eps().groups
-    except AttributeError:
-        return set(eps())
+    return eps().groups
 
 
 def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     """Return the entry points within a group."""
     all_eps = eps()
-    try:
-        # importlib_metadata v4 / python 3.10
-        group_names = list(all_eps.select(group=group).names)
-    except (AttributeError, TypeError):
-        group_names = [ep.name for ep in all_eps.get(group, [])]  # type: ignore
+    group_names = list(all_eps.select(group=group).names)
     if sort:
-        return list(sorted(group_names))
+        return sorted(group_names)
     return group_names
 
 
@@ -252,11 +243,7 @@ def get_entry_points(group: str) -> EntryPoints:
     :param group: the entry point group
     :return: a list of entry points
     """
-    try:
-        # importlib_metadata v4 / python 3.10
-        return eps().select(group=group)
-    except (AttributeError, TypeError):
-        return eps.get(group, [])  # type: ignore # pylint: disable=no-member
+    return eps().select(group=group)
 
 
 @functools.lru_cache(maxsize=None)
@@ -270,21 +257,12 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     :raises aiida.common.MissingEntryPointError: entry point was not registered
 
     """
-    all_eps = eps()
-    try:
-        # importlib_metadata v4 / python 3.10
-        found = all_eps.select(group=group, name=name)
-        if len(found.names) > 1:
-            raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}'.")
-        entry_point = found[name] if name in found.names else None
-    except (AttributeError, TypeError):
-        found = {ep.name: ep for ep in all_eps.get(group, []) if ep.name == name}  # type: ignore
-        if len(found) > 1:
-            raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}'.")
-        entry_point = found[name] if name in found else None
-    if not entry_point:
+    found = eps().select(group=group, name=name)
+    if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
-    return entry_point
+    if len(found.names) > 1:
+        raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}'.")
+    return found[name]
 
 
 def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:

@@ -9,7 +9,7 @@
 ###########################################################################
 """Utilities related to the ORM."""
 
-__all__ = ('load_code', 'load_computer', 'load_group', 'load_node')
+__all__ = ('load_code', 'load_computer', 'load_group', 'load_node', 'load_entity')
 
 
 def load_entity(

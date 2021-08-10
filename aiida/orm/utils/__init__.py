@@ -40,6 +40,7 @@ __all__ = (
     'get_type_string_from_class',
     'load_code',
     'load_computer',
+    'load_entity',
     'load_group',
     'load_node',
     'load_node_class',

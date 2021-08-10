@@ -100,6 +100,7 @@ __all__ = (
     'has_pycifrw',
     'load_code',
     'load_computer',
+    'load_entity',
     'load_group',
     'load_node',
     'load_node_class',

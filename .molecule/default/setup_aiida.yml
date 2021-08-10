@@ -12,10 +12,6 @@
 
   tasks:
 
-  - name: reentry scan
-    command: "{{ venv_bin }}/reentry scan"
-    changed_when: false
-
   - name: Create a new database with name "{{ aiida_backend }}"
     postgresql_db:
       name: "{{ aiida_backend }}"

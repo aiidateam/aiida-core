@@ -48,6 +48,7 @@ repos:
                 aiida/manage/database/delete/nodes.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
+                aiida/plugins/entry_point.py|
                 aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|

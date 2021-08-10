@@ -177,22 +177,13 @@ def update_pyproject_toml():
         pyproject = {}
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
+    _load_setup_cfg()
 
     # update the build-system key
     pyproject.setdefault('build-system', {})
     pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0', 'wheel',
-                     str(reentry_requirement), 'fastentrypoints~=0.12'],
-        'build-backend':
-        'setuptools.build_meta',
+        'requires': ['setuptools>=40.8.0', 'wheel'],
+        'build-backend': 'setuptools.build_meta',
     })
 
     # write the new file
@@ -283,25 +274,11 @@ def validate_pyproject_toml():
     """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
+    _load_setup_cfg()
 
     pyproject_file = ROOT / 'pyproject.toml'
     if not pyproject_file.exists():
         raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
-
-    pyproject = toml.loads(pyproject_file.read_text(encoding='utf8'))
-    pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
-
-    if reentry_requirement not in pyproject_requires:
-        raise DependencySpecificationError(f"Missing requirement '{reentry_requirement}' in 'pyproject.toml'.")
 
     click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
 

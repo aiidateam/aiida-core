@@ -30,8 +30,8 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Validate
       run: python ./utils/dependency_management.py validate-all
@@ -90,15 +90,17 @@ jobs:
     - run: python --version
     - run: which python
 
-    - name: Create conda environment
+    - name: Test direct installation
+      run: |
+        conda create -n test-install aiida-core
+        source activate test-install
+        python -c "import aiida"
+
+    - name: Test conda environment
       run: |
         conda env create -f environment.yml -n test-environment
         source activate test-environment
         python -m pip install --no-deps -e .
-
-    - name: Test importing aiida
-      run: |
-        source activate test-environment
         python -c "import aiida"
 
   tests:
@@ -205,8 +207,8 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Check consistency of requirements/ files
       id: check_reqs

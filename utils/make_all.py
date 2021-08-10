@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 from pprint import pprint
 import sys
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 def parse_all(folder_path: str) -> Tuple[dict, dict]:
@@ -42,7 +42,7 @@ def parse_all(folder_path: str) -> Tuple[dict, dict]:
             continue
 
         if not isinstance(all_token.value, (ast.List, ast.Tuple)):
-            bad_all.setdefault('vaue not list/tuple', []).append(str(path.relative_to(folder_path)))
+            bad_all.setdefault('value not list/tuple', []).append(str(path.relative_to(folder_path)))
             continue
 
         if not all(isinstance(el, ast.Str) for el in all_token.value.elts):
@@ -75,7 +75,7 @@ def gather_all(cur_path: List[str],
     return all_list
 
 
-def write_inits(folder_path: str, all_dict: dict, skip_children: dict) -> dict:
+def write_inits(folder_path: str, all_dict: dict, skip_children: Dict[str, List[str]]) -> Dict[str, List[str]]:
     """Write __init__.py files for all subfolders.
 
     :return: folders with non-unique imports
@@ -99,16 +99,24 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: dict) -> dict:
             # there is nothing to import
             continue
 
-        path_all_dict = {key: val for key, val in path_all_dict.items() if key not in skip_children.get(rel_path, [])}
-        alls = gather_all(list(mod_path), path_all_dict, skip_children)
+        if '*' in skip_children.get(rel_path, []):
+            path_all_dict = {}
+            alls = []
+            auto_content = ['', '# AUTO-GENERATED', '', '__all__ = ()', '']
+        else:
+            path_all_dict = {
+                key: val for key, val in path_all_dict.items() if key not in skip_children.get(rel_path, [])
+            }
+            alls = gather_all(list(mod_path), path_all_dict, skip_children)
 
-        # check for non-unique imports
-        if len(alls + list(path_all_dict)) != len(set(alls + list(path_all_dict))):
-            non_unique[rel_path] = [k for k, v in Counter(alls + list(path_all_dict)).items() if v > 1]
+            # check for non-unique imports
+            if len(alls + list(path_all_dict)) != len(set(alls + list(path_all_dict))):
+                non_unique[rel_path] = [k for k, v in Counter(alls + list(path_all_dict)).items() if v > 1]
 
-        auto_content = (['', '# AUTO-GENERATED'] + ['', '# yapf: disable', '# pylint: disable=wildcard-import', ''] +
-                        [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())] + ['', '__all__ = ('] +
-                        [f'    {a!r},' for a in sorted(set(alls))] + [')', '', '# yapf: enable', ''])
+            auto_content = (['', '# AUTO-GENERATED'] +
+                            ['', '# yapf: disable', '# pylint: disable=wildcard-import', ''] +
+                            [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())] + ['', '__all__ = ('] +
+                            [f'    {a!r},' for a in sorted(set(alls))] + [')', '', '# yapf: enable', ''])
 
         start_content = []
         end_content = []
@@ -134,10 +142,6 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: dict) -> dict:
 
         new_content = start_content + auto_content + end_content
 
-        if not alls:
-            # there is nothing to import
-            continue
-
         path.write_text('\n'.join(new_content).rstrip() + '\n', encoding='utf8')
 
     return non_unique
@@ -149,9 +153,9 @@ if __name__ == '__main__':
         'cmdline/params': ['arguments', 'options'],
         'cmdline/utils': ['echo'],
         'manage': ['tests'],
-        'orm': 'implementation',
+        'orm': ['implementation'],
         'orm/implementation': ['django', 'sqlalchemy', 'sql'],
-        'restapi': ['run_api'],
+        'restapi': ['*'],
     }
     _all_dict, _bad_all = parse_all(_folder)
     _non_unique = write_inits(_folder, _all_dict, _skip)

@@ -112,6 +112,7 @@ pytest-benchmark==3.2.3
 pytest-cov==2.10.1
 pytest-rerunfailures==9.1.1
 pytest-timeout==1.4.2
+pytest-regressions==2.2.0
 python-dateutil==2.8.1
 python-editor==1.0.4
 python-memcached==1.59

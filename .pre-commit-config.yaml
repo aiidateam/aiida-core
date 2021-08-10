@@ -4,9 +4,15 @@ repos:
     hooks:
     -   id: double-quote-string-fixer
     -   id: end-of-file-fixer
+        exclude: &exclude_pre_commit_hooks >
+            (?x)^(
+                tests/.*(?<!\.py)$
+            )$
     -   id: fix-encoding-pragma
     -   id: mixed-line-ending
     -   id: trailing-whitespace
+        exclude: *exclude_pre_commit_hooks
+
 
 -   repo: https://github.com/ikamensh/flynt/
     rev: '0.55'

@@ -111,6 +111,7 @@
             "pytest-cov~=2.7,<2.11",
             "pytest-rerunfailures~=9.1,>=9.1.1",
             "pytest-benchmark~=3.2",
+            "pytest-regressions~=2.2",
             "pympler~=0.9",
             "coverage<5.0",
             "sqlalchemy-diff~=0.1.3",

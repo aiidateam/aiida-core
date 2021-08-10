@@ -72,7 +72,7 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
     name, value = spec.split('=', maxsplit=1)
-    return EntryPoint(group, name, value)
+    return EntryPoint(group=group, name=name.strip(), value=value.strip())
 
 
 def validate_registered_entry_points() -> None:  # pylint: disable=invalid-name

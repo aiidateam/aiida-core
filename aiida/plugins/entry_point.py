@@ -20,7 +20,7 @@ from typing import Any, Optional, List, Sequence, Set, Tuple
 from importlib_metadata import EntryPoint, EntryPoints
 from importlib_metadata import entry_points as eps
 
-from aiida.common.exceptions import MissingEntryPointError, LoadingEntryPointError
+from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
 
@@ -272,9 +272,13 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     try:
         # importlib_metadata v4 / python 3.10
         found = all_eps.select(group=group, name=name)
+        if len(found.names) > 1:
+            raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}'.")
         entry_point = found[name] if name in found.names else None
     except (AttributeError, TypeError):
-        found = {ep.name: ep for ep in all_eps.get(group, [])}  # type: ignore
+        found = {ep.name: ep for ep in all_eps.get(group, []) if ep.name == name}  # type: ignore
+        if len(found) > 1:
+            raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}'.")
         entry_point = found[name] if name in found else None
     if not entry_point:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")

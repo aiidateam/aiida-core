@@ -24,7 +24,6 @@ from aiida.manage import manager
 from aiida.manage.external.postgres import Postgres
 
 __all__ = (
-    '_GLOBAL_TEST_MANAGER',
     'get_test_profile_name',
     'get_test_backend_name',
     'get_user_dict',

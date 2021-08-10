@@ -9,7 +9,6 @@
 ###########################################################################
 """
 Testing infrastructure for easy testing of AiiDA plugins.
-
 """
 
 # AUTO-GENERATED
@@ -27,7 +26,6 @@ __all__ = (
     'TestManager',
     'TestManagerError',
     'TestRunner',
-    '_GLOBAL_TEST_MANAGER',
     'get_test_backend_name',
     'get_test_profile_name',
     'get_user_dict',

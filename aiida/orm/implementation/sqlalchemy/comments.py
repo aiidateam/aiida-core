@@ -112,7 +112,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        return SqlaComment(self.backend, node, user, content, **kwargs)
+        return SqlaComment(self.backend, node, user, content, **kwargs)  # pylint: disable=abstract-class-instantiated
 
     def delete(self, comment_id):
         """

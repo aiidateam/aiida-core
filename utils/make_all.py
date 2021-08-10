@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# pylint: disable=simplifiable-if-statement,too-many-branches
 """Pre-commit hook to add ``__all__`` installs to ``__init__`` files."""
 import ast
 from collections import Counter
@@ -69,7 +70,7 @@ def gather_all(cur_path: List[str],
     for key, val in cur_dict.items():
         if key == '__all__':
             all_list.extend(val)
-        elif key not in skip_children.get("/".join(cur_path), []):
+        elif key not in skip_children.get('/'.join(cur_path), []):
             gather_all(cur_path + [key], val, skip_children, all_list)
     return all_list
 
@@ -106,8 +107,8 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: dict) -> dict:
             non_unique[rel_path] = [k for k, v in Counter(alls + list(path_all_dict)).items() if v > 1]
 
         auto_content = (['', '# AUTO-GENERATED'] + ['', '# yapf: disable', '# pylint: disable=wildcard-import', ''] +
-                   [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())] + ['', '__all__ = ('] +
-                   [f'    {a!r},' for a in sorted(set(alls))] + [')', '', '# yapf: enable', ''])
+                        [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())] + ['', '__all__ = ('] +
+                        [f'    {a!r},' for a in sorted(set(alls))] + [')', '', '# yapf: enable', ''])
 
         start_content = []
         end_content = []
@@ -137,7 +138,7 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: dict) -> dict:
             # there is nothing to import
             continue
 
-        path.write_text('\n'.join(new_content).rstrip() + "\n", encoding='utf8')
+        path.write_text('\n'.join(new_content).rstrip() + '\n', encoding='utf8')
 
     return non_unique
 

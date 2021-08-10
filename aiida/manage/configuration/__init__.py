@@ -39,6 +39,8 @@ __all__ = (
 
 # END AUTO-GENERATED
 
+# pylint: disable=global-statement,redefined-outer-name,wrong-import-order
+
 __all__ += (
     'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_documentation_profile', 'load_profile',
     'reset_config', 'reset_profile', 'CONFIG', 'PROFILE', 'BACKEND_UUID'

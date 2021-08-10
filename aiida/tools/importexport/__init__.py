@@ -16,6 +16,7 @@ Tests: <tree>/aiida/backends/tests/test_export_and_import.py
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -66,3 +67,5 @@ __all__ = (
     'import_data',
     'null_callback',
 )
+
+# yapf: enable

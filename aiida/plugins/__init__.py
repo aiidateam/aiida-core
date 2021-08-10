@@ -10,6 +10,7 @@
 """Classes and functions to load and interact with plugin classes accessible through defined entry points."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -32,3 +33,5 @@ __all__ = (
     'load_entry_point',
     'load_entry_point_from_string',
 )
+
+# yapf: enable

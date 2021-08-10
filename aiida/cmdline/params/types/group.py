@@ -17,6 +17,7 @@ from .identifier import IdentifierParamType
 
 __all__ = ('GroupParamType',)
 
+
 class GroupParamType(IdentifierParamType):
     """The ParamType for identifying Group entities or its subclasses."""
 

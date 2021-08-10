@@ -11,6 +11,7 @@
 """Readers and writers for archive formats, that work independently of a connection to an AiiDA profile."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -43,3 +44,5 @@ __all__ = (
     'get_writer',
     'null_callback',
 )
+
+# yapf: enable

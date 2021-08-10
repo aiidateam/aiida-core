@@ -10,6 +10,7 @@
 """Module with `Node` sub classes for data and processes."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -26,6 +27,7 @@ __all__ = (
     'CalcFunctionNode',
     'CalcJobNode',
     'CalculationNode',
+    'CifData',
     'Code',
     'Data',
     'Dict',
@@ -54,6 +56,11 @@ __all__ = (
     'WorkFunctionNode',
     'WorkflowNode',
     'XyData',
+    'cif_from_ase',
     'find_bandgap',
+    'has_pycifrw',
+    'pycifrw_from_cif',
     'to_aiida_type',
 )
+
+# yapf: enable

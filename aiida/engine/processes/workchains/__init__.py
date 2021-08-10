@@ -10,6 +10,7 @@
 """Module for the `WorkChain` process and related utilities."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -35,3 +36,5 @@ __all__ = (
     'return_',
     'while_',
 )
+
+# yapf: enable

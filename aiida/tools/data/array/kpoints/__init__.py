@@ -13,6 +13,7 @@ Various utilities to deal with KpointsData instances or create new ones
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -22,3 +23,5 @@ __all__ = (
     'get_explicit_kpoints_path',
     'get_kpoints_path',
 )
+
+# yapf: enable

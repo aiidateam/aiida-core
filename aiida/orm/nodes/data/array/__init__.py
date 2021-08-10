@@ -10,6 +10,7 @@
 """Module with `Node` sub classes for array based data structures."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -29,3 +30,5 @@ __all__ = (
     'XyData',
     'find_bandgap',
 )
+
+# yapf: enable

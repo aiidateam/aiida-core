@@ -14,6 +14,7 @@ from .identifier import IdentifierParamType
 
 __all__ = ('DataParamType',)
 
+
 class DataParamType(IdentifierParamType):
     """
     The ParamType for identifying Data entities or its subclasses

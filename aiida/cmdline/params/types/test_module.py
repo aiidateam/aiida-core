@@ -12,6 +12,7 @@ import click
 
 __all__ = ('TestModuleParamType',)
 
+
 class TestModuleParamType(click.ParamType):
     """Parameter type to represent a unittest module.
 

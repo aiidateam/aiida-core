@@ -10,6 +10,7 @@
 """Common utility functions, classes, and exceptions"""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -31,3 +32,5 @@ __all__ = (
     'MigrationValidationError',
     'ProgressBarError',
 )
+
+# yapf: enable

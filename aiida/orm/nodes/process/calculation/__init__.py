@@ -10,6 +10,7 @@
 """Module with `Node` sub classes for calculation processes."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -22,3 +23,5 @@ __all__ = (
     'CalcJobNode',
     'CalculationNode',
 )
+
+# yapf: enable

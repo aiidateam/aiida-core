@@ -10,6 +10,7 @@
 """Provides import functionalities."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -19,3 +20,5 @@ __all__ = (
     'IMPORT_LOGGER',
     'import_data',
 )
+
+# yapf: enable

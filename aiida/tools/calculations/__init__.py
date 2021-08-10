@@ -10,6 +10,7 @@
 """Calculation tool plugins for Calculation classes."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -18,3 +19,5 @@ from .base import *
 __all__ = (
     'CalculationTools',
 )
+
+# yapf: enable

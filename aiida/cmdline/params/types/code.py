@@ -15,6 +15,7 @@ from .identifier import IdentifierParamType
 
 __all__ = ('CodeParamType',)
 
+
 class CodeParamType(IdentifierParamType):
     """
     The ParamType for identifying Code entities or its subclasses

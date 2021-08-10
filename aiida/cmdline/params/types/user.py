@@ -14,6 +14,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 
 __all__ = ('UserParamType',)
 
+
 class UserParamType(click.ParamType):
     """
     The user parameter type for click.   Can get or create a user.

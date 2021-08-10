@@ -13,12 +13,25 @@ Testing infrastructure for easy testing of AiiDA plugins.
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
+from .main import *
 from .unittest_classes import *
 
 __all__ = (
     'PluginTestCase',
+    'ProfileManager',
+    'TemporaryProfileManager',
+    'TestManager',
+    'TestManagerError',
     'TestRunner',
+    '_GLOBAL_TEST_MANAGER',
+    'get_test_backend_name',
+    'get_test_profile_name',
+    'get_user_dict',
+    'test_manager',
 )
+
+# yapf: enable

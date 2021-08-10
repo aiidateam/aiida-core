@@ -21,6 +21,7 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -93,3 +94,5 @@ __all__ = (
     'spglib_tuple_to_structure',
     'structure_to_spglib_tuple',
 )
+
+# yapf: enable

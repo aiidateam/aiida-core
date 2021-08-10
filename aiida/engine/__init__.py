@@ -10,6 +10,7 @@
 """Module with all the internals that make up the engine of `aiida-core`."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -70,3 +71,5 @@ __all__ = (
     'while_',
     'workfunction',
 )
+
+# yapf: enable

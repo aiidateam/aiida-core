@@ -10,6 +10,7 @@
 """Methods and definitions of migrations for the configuration file of an AiiDA instance."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -23,3 +24,5 @@ __all__ = (
     'config_needs_migrating',
     'get_current_version',
 )
+
+# yapf: enable

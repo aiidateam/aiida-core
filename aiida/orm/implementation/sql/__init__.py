@@ -14,6 +14,7 @@ All SQL backends with an ORM should subclass from the classes in this module
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -22,3 +23,5 @@ from .backends import *
 __all__ = (
     'SqlBackend',
 )
+
+# yapf: enable

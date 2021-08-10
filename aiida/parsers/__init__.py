@@ -10,6 +10,7 @@
 """Module for classes and utilities to write parsers for calculation jobs."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -18,3 +19,5 @@ from .parser import *
 __all__ = (
     'Parser',
 )
+
+# yapf: enable

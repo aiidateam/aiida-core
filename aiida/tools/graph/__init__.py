@@ -10,6 +10,7 @@
 """Provides tools for traversing the provenance graph."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -20,3 +21,5 @@ __all__ = (
     'delete_group_nodes',
     'delete_nodes',
 )
+
+# yapf: enable

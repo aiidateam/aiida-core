@@ -18,6 +18,7 @@ from .identifier import IdentifierParamType
 
 __all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')
 
+
 class ComputerParamType(IdentifierParamType):
     """
     The ParamType for identifying Computer entities or its subclasses

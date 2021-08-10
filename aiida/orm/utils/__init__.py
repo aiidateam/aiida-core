@@ -10,6 +10,7 @@
 """Utilities related to the ORM."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -44,3 +45,5 @@ __all__ = (
     'load_node_class',
     'validate_link',
 )
+
+# yapf: enable

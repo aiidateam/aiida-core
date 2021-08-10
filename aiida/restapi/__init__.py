@@ -14,6 +14,7 @@ using Flask RESTFul framework.
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -23,3 +24,5 @@ __all__ = (
     'configure_api',
     'run_api',
 )
+
+# yapf: enable

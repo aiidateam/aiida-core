@@ -10,6 +10,7 @@
 """Module for processes and related utilities."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -61,3 +62,5 @@ __all__ = (
     'while_',
     'workfunction',
 )
+
+# yapf: enable

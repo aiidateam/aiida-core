@@ -10,6 +10,7 @@
 """User facing APIs to control AiiDA from the verdi cli, scripts or plugins"""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -26,3 +27,5 @@ __all__ = (
     'ProcessLauncher',
     'RemoteException',
 )
+
+# yapf: enable

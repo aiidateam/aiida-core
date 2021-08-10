@@ -16,9 +16,10 @@ from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_PREFIX, EntryPointFormat
 from aiida.plugins.entry_point import format_entry_point_string, get_entry_point_string_format
 from aiida.plugins.entry_point import get_entry_point, get_entry_points, get_entry_point_groups
-from ..types import EntryPointType
+from .strings import EntryPointType
 
 __all__ = ('PluginParamType',)
+
 
 class PluginParamType(EntryPointType):
     """
@@ -144,7 +145,7 @@ class PluginParamType(EntryPointType):
         """
         return [(p, '') for p in self.get_possibilities(incomplete=incomplete)]
 
-    def get_missing_message(self, param):
+    def get_missing_message(self, param):  # pylint: disable=unused-argument
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
 
     def get_entry_point_from_string(self, entry_point_string):

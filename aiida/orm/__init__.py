@@ -10,6 +10,7 @@
 """Main module to expose all orm classes and methods"""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -39,6 +40,7 @@ __all__ = (
     'CalcJobResultManager',
     'CalculationEntityLoader',
     'CalculationNode',
+    'CifData',
     'Code',
     'CodeEntityLoader',
     'Collection',
@@ -90,15 +92,20 @@ __all__ = (
     'WorkFunctionNode',
     'WorkflowNode',
     'XyData',
+    'cif_from_ase',
     'find_bandgap',
     'get_loader',
     'get_query_type_from_type_string',
     'get_type_string_from_class',
+    'has_pycifrw',
     'load_code',
     'load_computer',
     'load_group',
     'load_node',
     'load_node_class',
+    'pycifrw_from_cif',
     'to_aiida_type',
     'validate_link',
 )
+
+# yapf: enable

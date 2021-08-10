@@ -10,6 +10,7 @@
 """Provides tools for visualization of the provenance graph."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -22,3 +23,5 @@ __all__ = (
     'default_node_sublabels',
     'pstate_node_styles',
 )
+
+# yapf: enable

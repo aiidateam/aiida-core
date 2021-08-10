@@ -9,6 +9,7 @@
 ###########################################################################
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -21,3 +22,5 @@ __all__ = (
     'verify_uuid_uniqueness',
     'write_database_integrity_violation',
 )
+
+# yapf: enable

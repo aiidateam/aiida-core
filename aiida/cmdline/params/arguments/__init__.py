@@ -11,6 +11,7 @@
 """Module with pre-defined reusable commandline arguments that can be used as `click` decorators."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -41,3 +42,5 @@ __all__ = (
     'WORKFLOW',
     'WORKFLOWS',
 )
+
+# yapf: enable

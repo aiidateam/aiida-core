@@ -15,8 +15,6 @@ import types
 from contextlib import contextmanager
 from wrapt import decorator
 
-from aiida.manage.configuration import get_config_option
-
 __all__ = ('AIIDA_LOGGER', 'override_log_level', 'override_log_formatter')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
@@ -51,74 +49,77 @@ class NotInTestingFilter(logging.Filter):
 
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
-            '%(thread)d %(message)s',
+def get_logging_config():
+    from aiida.manage.configuration import get_config_option
+
+    return {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '%(levelname)s %(asctime)s %(module)s %(process)d '
+                '%(thread)d %(message)s',
+            },
+            'halfverbose': {
+                'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
+                'datefmt': '%m/%d/%Y %I:%M:%S %p',
+            },
         },
-        'halfverbose': {
-            'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
-            'datefmt': '%m/%d/%Y %I:%M:%S %p',
+        'filters': {
+            'testing': {
+                '()': NotInTestingFilter
+            }
         },
-    },
-    'filters': {
-        'testing': {
-            '()': NotInTestingFilter
-        }
-    },
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'halfverbose',
-            'filters': ['testing']
+        'handlers': {
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'halfverbose',
+                'filters': ['testing']
+            },
         },
-    },
-    'loggers': {
-        'aiida': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.aiida_loglevel'),
-            'propagate': False,
+        'loggers': {
+            'aiida': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.aiida_loglevel'),
+                'propagate': False,
+            },
+            'plumpy': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.plumpy_loglevel'),
+                'propagate': False,
+            },
+            'kiwipy': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.kiwipy_loglevel'),
+                'propagate': False,
+            },
+            'paramiko': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.paramiko_loglevel'),
+                'propagate': False,
+            },
+            'alembic': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.alembic_loglevel'),
+                'propagate': False,
+            },
+            'aio_pika': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.aiopika_loglevel'),
+                'propagate': False,
+            },
+            'sqlalchemy': {
+                'handlers': ['console'],
+                'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),
+                'propagate': False,
+                'qualname': 'sqlalchemy.engine',
+            },
+            'py.warnings': {
+                'handlers': ['console'],
+            },
         },
-        'plumpy': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.plumpy_loglevel'),
-            'propagate': False,
-        },
-        'kiwipy': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.kiwipy_loglevel'),
-            'propagate': False,
-        },
-        'paramiko': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.paramiko_loglevel'),
-            'propagate': False,
-        },
-        'alembic': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.alembic_loglevel'),
-            'propagate': False,
-        },
-        'aio_pika': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.aiopika_loglevel'),
-            'propagate': False,
-        },
-        'sqlalchemy': {
-            'handlers': ['console'],
-            'level': lambda: get_config_option('logging.sqlalchemy_loglevel'),
-            'propagate': False,
-            'qualname': 'sqlalchemy.engine',
-        },
-        'py.warnings': {
-            'handlers': ['console'],
-        },
-    },
-}
+    }
 
 
 def evaluate_logging_configuration(dictionary):
@@ -155,9 +156,11 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     """
     from logging.config import dictConfig
 
+    from aiida.manage.configuration import get_config_option
+
     # Evaluate the `LOGGING` configuration to resolve the lambdas that will retrieve the correct values based on the
     # currently configured profile. Pass a deep copy of `LOGGING` to ensure that the original remains unaltered.
-    config = evaluate_logging_configuration(copy.deepcopy(LOGGING))
+    config = evaluate_logging_configuration(get_logging_config())
     daemon_handler_name = 'daemon_log_file'
 
     # Add the daemon file handler to all loggers if daemon=True

@@ -16,6 +16,7 @@
 """Provides tools for interacting with AiiDA Groups."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -28,3 +29,5 @@ __all__ = (
     'InvalidPath',
     'NoGroupsInPathError',
 )
+
+# yapf: enable

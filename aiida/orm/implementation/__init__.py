@@ -10,6 +10,7 @@
 """Module with the implementations of the various backend entities for various database backends."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -50,3 +51,5 @@ __all__ = (
     'clean_value',
     'validate_attribute_extra_key',
 )
+
+# yapf: enable

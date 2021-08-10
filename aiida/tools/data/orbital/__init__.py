@@ -10,6 +10,7 @@
 """Module for classes and methods that represents molecular orbitals."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -20,3 +21,5 @@ __all__ = (
     'Orbital',
     'RealhydrogenOrbital',
 )
+
+# yapf: enable

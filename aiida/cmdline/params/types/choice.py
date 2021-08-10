@@ -12,7 +12,7 @@ A custom click type that defines a lazy choice
 """
 import click
 
-__all__ = ('LazyChoice', )
+__all__ = ('LazyChoice',)
 
 
 class LazyChoice(click.ParamType):

@@ -17,6 +17,7 @@ from .array import ArrayData
 
 __all__ = ('TrajectoryData',)
 
+
 class TrajectoryData(ArrayData):
     """
     Stores a trajectory (a sequence of crystal structures with timestamps, and

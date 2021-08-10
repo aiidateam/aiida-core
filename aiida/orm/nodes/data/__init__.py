@@ -10,12 +10,14 @@
 """Module with `Node` sub classes for data structures."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
 from .array import *
 from .base import *
 from .bool import *
+from .cif import *
 from .code import *
 from .data import *
 from .dict import *
@@ -36,6 +38,7 @@ __all__ = (
     'BandsData',
     'BaseType',
     'Bool',
+    'CifData',
     'Code',
     'Data',
     'Dict',
@@ -58,6 +61,11 @@ __all__ = (
     'TrajectoryData',
     'UpfData',
     'XyData',
+    'cif_from_ase',
     'find_bandgap',
+    'has_pycifrw',
+    'pycifrw_from_cif',
     'to_aiida_type',
 )
+
+# yapf: enable

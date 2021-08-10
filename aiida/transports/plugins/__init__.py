@@ -9,6 +9,7 @@
 ###########################################################################
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -19,3 +20,5 @@ __all__ = (
     'convert_to_bool',
     'parse_sshconfig',
 )
+
+# yapf: enable

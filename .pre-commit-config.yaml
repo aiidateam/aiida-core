@@ -41,7 +41,7 @@ repos:
 
     -   id: imports
         name: imports
-        entry: utils/make_all.py
+        entry: python utils/make_all.py
         language: python
         types: [python]
         require_serial: true

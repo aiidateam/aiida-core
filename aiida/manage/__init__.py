@@ -21,6 +21,7 @@ Managing an AiiDA instance:
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -29,12 +30,9 @@ from .configuration import *
 from .database import *
 from .external import *
 from .manager import *
-from .tests import *
 
 __all__ = (
-    'BACKEND_UUID',
     'BROKER_DEFAULTS',
-    'CONFIG',
     'CURRENT_CONFIG_VERSION',
     'CommunicationTimeout',
     'Config',
@@ -43,34 +41,28 @@ __all__ = (
     'DeliveryFailed',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
-    'PROFILE',
-    'PluginTestCase',
     'Postgres',
     'PostgresConnectionMode',
     'ProcessLauncher',
     'Profile',
     'RemoteException',
     'TABLES_UUID_DEDUPLICATION',
-    'TestRunner',
     'check_and_migrate_config',
     'config_needs_migrating',
     'config_schema',
     'deduplicate_uuids',
     'disable_caching',
     'enable_caching',
-    'get_config',
-    'get_config_option',
-    'get_config_path',
     'get_current_version',
     'get_duplicate_uuids',
     'get_manager',
     'get_option',
     'get_option_names',
     'get_use_cache',
-    'load_profile',
     'parse_option',
-    'reset_config',
     'reset_manager',
     'verify_uuid_uniqueness',
     'write_database_integrity_violation',
 )
+
+# yapf: enable

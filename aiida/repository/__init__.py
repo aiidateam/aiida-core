@@ -10,6 +10,7 @@
 """Module with resources dealing with the file repository."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -25,3 +26,5 @@ __all__ = (
     'Repository',
     'SandboxRepositoryBackend',
 )
+
+# yapf: enable

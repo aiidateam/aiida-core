@@ -10,6 +10,7 @@
 """Module for the `CalcJob` process and related utilities."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -21,3 +22,5 @@ __all__ = (
     'JobManager',
     'JobsList',
 )
+
+# yapf: enable

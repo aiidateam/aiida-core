@@ -15,6 +15,7 @@ Common data structures, utility classes and functions
 """
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -86,3 +87,5 @@ __all__ = (
     'set_progress_reporter',
     'validate_link_label',
 )
+
+# yapf: enable

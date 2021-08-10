@@ -9,6 +9,7 @@
 ###########################################################################
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -25,3 +26,5 @@ __all__ = (
     'DjangoUserCollection',
     'get_backend_entity',
 )
+
+# yapf: enable

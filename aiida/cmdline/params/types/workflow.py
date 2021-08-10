@@ -15,6 +15,7 @@ from .identifier import IdentifierParamType
 
 __all__ = ('WorkflowParamType',)
 
+
 class WorkflowParamType(IdentifierParamType):
     """
     The ParamType for identifying WorkflowNode entities or its subclasses

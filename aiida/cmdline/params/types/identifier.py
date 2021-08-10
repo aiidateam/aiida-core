@@ -19,6 +19,7 @@ from aiida.plugins.entry_point import get_entry_point_from_string
 
 __all__ = ('IdentifierParamType',)
 
+
 class IdentifierParamType(click.ParamType, ABC):
     """
     An extension of click.ParamType for a generic identifier parameter. In AiiDA, orm entities can often be

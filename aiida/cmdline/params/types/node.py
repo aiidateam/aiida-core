@@ -12,7 +12,8 @@ Module to define the custom click param type for node
 """
 from .identifier import IdentifierParamType
 
-__all__ = ('NodeParamType', )
+__all__ = ('NodeParamType',)
+
 
 class NodeParamType(IdentifierParamType):
     """

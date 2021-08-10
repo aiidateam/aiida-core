@@ -10,6 +10,7 @@
 """Module for classes and utilities to interact with cluster schedulers."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -28,3 +29,5 @@ __all__ = (
     'SchedulerError',
     'SchedulerParsingError',
 )
+
+# yapf: enable

@@ -10,6 +10,7 @@
 """Module with `Node` sub classes for processes."""
 
 # AUTO-GENERATED
+
 # yapf: disable
 # pylint: disable=wildcard-import
 
@@ -26,3 +27,5 @@ __all__ = (
     'WorkFunctionNode',
     'WorkflowNode',
 )
+
+# yapf: enable

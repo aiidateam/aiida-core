@@ -15,6 +15,7 @@ from .identifier import IdentifierParamType
 
 __all__ = ('ProcessParamType',)
 
+
 class ProcessParamType(IdentifierParamType):
     """
     The ParamType for identifying ProcessNode entities or its subclasses

@@ -16,6 +16,8 @@
 
 import click
 
+__all__ = ('OverridableOption',)
+
 
 class OverridableOption:
     """

@@ -13,6 +13,7 @@ from .strings import LabelStringType
 
 __all__ = ('ProfileParamType',)
 
+
 class ProfileParamType(LabelStringType):
     """The profile parameter type for click."""
 

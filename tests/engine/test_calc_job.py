@@ -75,6 +75,99 @@ class FileCalcJob(CalcJob):
 
 
 @pytest.mark.requires_rmq
+class MultiCodesCalcJob(CalcJob):
+    """`MultiCodesCalcJob` implementation to test the calcinfo with multiple codes set.
+
+    The codes are run in parallel. The codeinfo1 is set to run without mpi, and codeinfo2
+    is set to run with mpi.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('parallel_run', valid_type=orm.Bool)
+
+    def prepare_for_submission(self, folder):
+        from aiida.common.datastructures import CalcInfo, CodeInfo, CodeRunMode
+
+        codeinfo1 = CodeInfo()
+        codeinfo1.code_uuid = self.inputs.code.uuid
+        codeinfo1.withmpi = False
+
+        codeinfo2 = CodeInfo()
+        codeinfo2.code_uuid = self.inputs.code.uuid
+
+        calcinfo = CalcInfo()
+        calcinfo.codes_info = [codeinfo1, codeinfo2]
+        if self.inputs.parallel_run:
+            calcinfo.codes_run_mode = CodeRunMode.PARALLEL
+        else:
+            calcinfo.codes_run_mode = CodeRunMode.SERIAL
+        return calcinfo
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('dry_run_in_tmp')
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('parallel_run', [True, False])
+def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
+    """test codes_run_mode set in CalcJob"""
+
+    inputs = {
+        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+        'parallel_run': orm.Bool(parallel_run),
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                }
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename)) as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('dry_run_in_tmp')
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('calcjob_withmpi', [True, False])
+def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
+    """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
+
+    inputs = {
+        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+        'parallel_run': orm.Bool(False),
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': calcjob_withmpi,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename)) as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
 class TestCalcJob(AiidaTestCase):
     """Test for the `CalcJob` process sub class."""
 
@@ -279,6 +372,7 @@ class TestCalcJob(AiidaTestCase):
 
         self.assertIn('exception occurred in presubmit call', str(context.exception))
 
+    @pytest.mark.usefixtures('dry_run_in_tmp')
     def test_run_local_code(self):
         """Run a dry-run with local code."""
         inputs = deepcopy(self.inputs)
@@ -294,6 +388,7 @@ class TestCalcJob(AiidaTestCase):
         for filename in self.local_code.list_object_names():
             self.assertTrue(filename in uploaded_files)
 
+    @pytest.mark.usefixtures('dry_run_in_tmp')
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
         import tempfile

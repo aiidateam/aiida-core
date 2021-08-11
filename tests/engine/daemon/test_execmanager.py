@@ -147,7 +147,7 @@ def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_co
     node = CalcJobNode(computer=aiida_localhost)
     node.store()
 
-    code = aiida_local_code_factory('arithmetic.add', '/bin/bash').store()
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash').store()
     code_info = CodeInfo()
     code_info.code_uuid = code.uuid
 

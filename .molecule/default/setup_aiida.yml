@@ -64,8 +64,8 @@
       --label "localhost"
       --description "this computer"
       --hostname "localhost"
-      --transport local
-      --scheduler direct
+      --transport core.local
+      --scheduler core.direct
       --work-dir {{ aiida_path }}/local_work_dir/
       --mpirun-command "mpirun -np {tot_num_mpiprocs}"
       --mpiprocs-per-machine 1
@@ -73,7 +73,7 @@
   - name: verdi computer configure localhost
     when: aiida_check_computer.rc != 0
     command: >
-      {{ venv_bin }}/verdi -p {{ aiida_backend }} computer configure local "localhost"
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} computer configure core.local "localhost"
       --non-interactive
       --safe-interval 0.0
 

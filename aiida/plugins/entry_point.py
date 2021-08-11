@@ -40,9 +40,9 @@ class EntryPointFormat(enum.Enum):
 
     Under these definitions a potentially valid entry point string may have the following formats:
 
-        * FULL:    prefixed group plus entry point name     aiida.transports:ssh
-        * PARTIAL: unprefixed group plus entry point name   transports:ssh
-        * MINIMAL: no group but only entry point name:      ssh
+        * FULL:    prefixed group plus entry point name     aiida.transports:core.ssh
+        * PARTIAL: unprefixed group plus entry point name   transports:core.ssh
+        * MINIMAL: no group but only entry point name:      core.ssh
 
     Note that the MINIMAL format can potentially lead to ambiguity if the name appears in multiple
     entry point groups.

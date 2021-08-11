@@ -95,7 +95,7 @@ def default_node_styles(node):
         }
 
     node_type_map = {
-        'data.code.Code.': {
+        'data.core.code.Code.': {
             'shape': 'ellipse',
             'style': 'filled',
             'fillcolor': '#4ca4b9aa',  # blue
@@ -212,23 +212,23 @@ def default_node_sublabels(node):
     # pylint: disable=too-many-branches
 
     class_node_type = node.class_node_type
-    if class_node_type == 'data.int.Int.':
+    if class_node_type == 'data.core.int.Int.':
         sublabel = f"value: {node.get_attribute('value', '')}"
-    elif class_node_type == 'data.float.Float.':
+    elif class_node_type == 'data.core.float.Float.':
         sublabel = f"value: {node.get_attribute('value', '')}"
-    elif class_node_type == 'data.str.Str.':
+    elif class_node_type == 'data.core.str.Str.':
         sublabel = f"{node.get_attribute('value', '')}"
-    elif class_node_type == 'data.bool.Bool.':
+    elif class_node_type == 'data.core.bool.Bool.':
         sublabel = f"{node.get_attribute('value', '')}"
-    elif class_node_type == 'data.code.Code.':
+    elif class_node_type == 'data.core.code.Code.':
         sublabel = f'{os.path.basename(node.get_execname())}@{node.computer.label}'
-    elif class_node_type == 'data.singlefile.SinglefileData.':
+    elif class_node_type == 'data.core.singlefile.SinglefileData.':
         sublabel = node.filename
-    elif class_node_type == 'data.remote.RemoteData.':
+    elif class_node_type == 'data.core.remote.RemoteData.':
         sublabel = f'@{node.computer.label}'
-    elif class_node_type == 'data.structure.StructureData.':
+    elif class_node_type == 'data.core.structure.StructureData.':
         sublabel = node.get_formula()
-    elif class_node_type == 'data.cif.CifData.':
+    elif class_node_type == 'data.core.cif.CifData.':
         formulae = [str(f).replace(' ', '') for f in node.get_formulae() or []]
         sg_numbers = [str(s) for s in node.get_spacegroup_numbers() or []]
         sublabel_lines = []
@@ -237,7 +237,7 @@ def default_node_sublabels(node):
         if sg_numbers:
             sublabel_lines.append(', '.join(sg_numbers))
         sublabel = '; '.join(sublabel_lines)
-    elif class_node_type == 'data.upf.UpfData.':
+    elif class_node_type == 'data.core.upf.UpfData.':
         sublabel = f"{node.get_attribute('element', '')}"
     elif isinstance(node, orm.ProcessNode):
         sublabel = []

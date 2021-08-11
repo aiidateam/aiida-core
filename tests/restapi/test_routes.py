@@ -112,23 +112,23 @@ class RESTApiTestCase(AiidaTestCase):
         dummy_computers = [{
             'label': 'test1',
             'hostname': 'test1.epfl.ch',
-            'transport_type': 'ssh',
-            'scheduler_type': 'pbspro',
+            'transport_type': 'core.ssh',
+            'scheduler_type': 'core.pbspro',
         }, {
             'label': 'test2',
             'hostname': 'test2.epfl.ch',
-            'transport_type': 'ssh',
-            'scheduler_type': 'torque',
+            'transport_type': 'core.ssh',
+            'scheduler_type': 'core.torque',
         }, {
             'label': 'test3',
             'hostname': 'test3.epfl.ch',
-            'transport_type': 'local',
-            'scheduler_type': 'slurm',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.slurm',
         }, {
             'label': 'test4',
             'hostname': 'test4.epfl.ch',
-            'transport_type': 'ssh',
-            'scheduler_type': 'slurm',
+            'transport_type': 'core.ssh',
+            'scheduler_type': 'core.slurm',
         }]
 
         for dummy_computer in dummy_computers:
@@ -523,7 +523,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         list
         """
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?transport_type="local"&label="test3"&orderby=+id', expected_list_ids=[3]
+            self,
+            'computers',
+            '/computers?transport_type="core.local"&label="test3"&orderby=+id',
+            expected_list_ids=[3]
         )
 
     ############### list orderby ########################
@@ -587,7 +590,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?transport_type=\"ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
+            f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
             expected_list_ids=[1, 4, 2]
         )
 
@@ -600,7 +603,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?transport_type=\"ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
+            f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
             expected_list_ids=[1, 4, 2]
         )
 
@@ -613,7 +616,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?pk>{str(node_pk)}&transport_type=\"ssh\"&orderby=-scheduler_type",
+            f"/computers?pk>{str(node_pk)}&transport_type=\"core.ssh\"&orderby=-scheduler_type",
             expected_list_ids=[2, 4, 1]
         )
 
@@ -694,7 +697,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"ssh\"",
+            f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"core.ssh\"",
             empty_list=True
         )
 
@@ -725,7 +728,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?id>={str(node_pk)}&transport_type=\"ssh\"&orderby=-id&limit=2",
+            f"/computers?id>={str(node_pk)}&transport_type=\"core.ssh\"&orderby=-id&limit=2",
             expected_list_ids=[4, 2]
         )
 
@@ -783,7 +786,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
             'nodes',
-            f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.dict.Dict.\"",
+            f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.core.dict.Dict.\"",
             expected_list_ids=[3],
             uuid=node_uuid,
             result_node_type='data',
@@ -1158,11 +1161,11 @@ class RESTApiTestSuite(RESTApiTestCase):
             response_value = client.get(url)
             response = json.loads(response_value.data)
 
-            for key in ['data.structure.StructureData.|', 'data.cif.CifData.|']:
+            for key in ['data.core.structure.StructureData.|', 'data.core.cif.CifData.|']:
                 self.assertIn(key, response['data'].keys())
             for key in ['cif', 'xsf', 'xyz']:
-                self.assertIn(key, response['data']['data.structure.StructureData.|'])
-            self.assertIn('cif', response['data']['data.cif.CifData.|'])
+                self.assertIn(key, response['data']['data.core.structure.StructureData.|'])
+            self.assertIn('cif', response['data']['data.core.cif.CifData.|'])
 
     ############### querybuilder ###############
     def test_querybuilder(self):

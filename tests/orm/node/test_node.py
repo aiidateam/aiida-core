@@ -32,8 +32,8 @@ class TestNode:
             label='localhost',
             description='localhost computer set up by test manager',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         self.computer.store()
 

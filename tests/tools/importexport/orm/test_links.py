@@ -675,7 +675,7 @@ class TestLinks(AiidaArchiveTestCase):
         work_uuid = work.uuid
         before_links = get_all_node_links()
 
-        data_provenance = os.path.join(temp_dir, 'data.aiida')
+        data_provenance = os.path.join(temp_dir, 'data.core.aiida')
         all_provenance = os.path.join(temp_dir, 'all.aiida')
 
         export([data], filename=data_provenance, return_backward=False)

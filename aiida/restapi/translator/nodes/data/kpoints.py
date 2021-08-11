@@ -25,7 +25,7 @@ class KpointsDataTranslator(DataTranslator):
     from aiida.orm import KpointsData
     _aiida_class = KpointsData
     # The string name of the AiiDA class
-    _aiida_type = 'data.array.kpoints.KpointsData'
+    _aiida_type = 'data.core.array.kpoints.KpointsData'
 
     _result_type = __label__
 

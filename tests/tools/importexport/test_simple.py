@@ -58,8 +58,8 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
         description='localhost computer set up by test manager',
         hostname='localhost-test',
         workdir=str(tmp_path / 'workdir'),
-        transport_type='local',
-        scheduler_type='direct'
+        transport_type='core.local',
+        scheduler_type='core.direct'
     )
     computer.store()
     computer.configure()

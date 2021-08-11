@@ -882,4 +882,4 @@ class LocalTransport(Transport):
         return os.path.exists(os.path.join(self.curdir, path))
 
 
-CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('local')
+CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('core.local')

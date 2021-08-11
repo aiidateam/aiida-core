@@ -92,7 +92,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @contextlib.contextmanager
-    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:  # type: ignore[return]
+    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

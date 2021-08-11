@@ -6,7 +6,7 @@ from aiida.orm import Code, Int, Str, Dict
 from aiida.plugins import CalculationFactory
 
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 def get_default_options(num_machines=1, max_wallclock_seconds=1800):

@@ -183,7 +183,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
 
         extra_name = f'{self.__class__.__name__}/test_with_subclasses'
 
-        Dict = DataFactory('dict')
+        Dict = DataFactory('core.dict')
 
         a1 = orm.CalcJobNode(computer=self.computer)
         a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -1387,7 +1387,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_valid_links(self):
         from aiida.plugins import DataFactory
 
-        SinglefileData = DataFactory('singlefile')
+        SinglefileData = DataFactory('core.singlefile')
 
         # I create some objects
         d1 = orm.Data().store()
@@ -1395,7 +1395,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
             d2 = SinglefileData(file=handle).store()
 
         unsavedcomputer = orm.Computer(
-            label='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local'
+            label='localhost2', hostname='localhost', scheduler_type='core.direct', transport_type='core.local'
         )
 
         with self.assertRaises(ValueError):

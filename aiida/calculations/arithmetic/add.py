@@ -28,7 +28,7 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
         # set default options (optional)
-        spec.inputs['metadata']['options']['parser_name'].default = 'arithmetic.add'
+        spec.inputs['metadata']['options']['parser_name'].default = 'core.arithmetic.add'
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.inputs['metadata']['options']['resources'].default = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}

@@ -58,7 +58,7 @@ If you have such a file that you would like to store in AiiDA, you can use the `
 
 .. code-block:: python
 
-    SinglefileData = DataFactory('singlefile')
+    SinglefileData = DataFactory('core.singlefile')
     singlefile = SinglefileData(file='/absolute/path/to/file.txt')
     singlefile.store()
 

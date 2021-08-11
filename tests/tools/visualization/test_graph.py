@@ -248,10 +248,6 @@ class TestVisGraph(AiidaTestCase):
         graph = graph_mod.Graph()
         graph.recurse_descendants(nodes.pd0)
 
-        # print()
-        # print(graph.graphviz.source)
-        # graph.graphviz.render("test_graphviz", cleanup=True)
-
         expected = """\
         digraph {{
                 N{pd0} [label="Dict ({pd0})" color=red fillcolor="#8cd499ff" penwidth=6 shape=ellipse style=filled]

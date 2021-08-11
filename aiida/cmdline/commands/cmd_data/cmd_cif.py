@@ -71,7 +71,7 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
 
 
 @cif.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.cif',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='jmol')
 @decorators.with_dbenv()
 def cif_show(data, fmt):
@@ -85,7 +85,7 @@ def cif_show(data, fmt):
 
 
 @cif.command('content')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.cif',)))
 @decorators.with_dbenv()
 def cif_content(data):
     """Show the content of the CIF file."""
@@ -97,7 +97,7 @@ def cif_content(data):
 
 
 @cif.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:cif',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.cif',)))
 @options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='cif')
 @export_options
 @decorators.with_dbenv()

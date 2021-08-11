@@ -18,7 +18,7 @@ import click
 
 __all__ = (
     'echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_highlight',
-    'echo_dictionary', 'VALID_DICT_FORMATS_MAPPING'
+    'echo_dictionary'
 )
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable=simplifiable-if-statement,too-many-branches
-"""Pre-commit hook to add ``__all__`` installs to ``__init__`` files."""
+"""Pre-commit hook to add ``__all__`` imports to ``__init__`` files."""
 import ast
 from collections import Counter
 from pathlib import Path
@@ -150,11 +150,17 @@ def write_inits(folder_path: str, all_dict: dict, skip_children: Dict[str, List[
 if __name__ == '__main__':
     _folder = Path(__file__).parent.parent.joinpath('aiida')
     _skip = {
+        # skipped since some arguments and options share the same name
         'cmdline/params': ['arguments', 'options'],
+        # skipped since the module and its method share the same name
         'cmdline/utils': ['echo'],
+        # skipped since this is for testing only not general use
         'manage': ['tests'],
+        # skipped since we don't want to expose the implmentation
         'orm': ['implementation'],
+        # skipped since both implementations share class/function names
         'orm/implementation': ['django', 'sqlalchemy', 'sql'],
+        # skip all since the module requires extra requirements
         'restapi': ['*'],
     }
     _all_dict, _bad_all = parse_all(_folder)

@@ -194,6 +194,7 @@ def load_entry_point_from_string(entry_point_string: str) -> Any:
     return load_entry_point(group, name)
 
 
+@functools.lru_cache(maxsize=100)
 def load_entry_point(group: str, name: str) -> Any:
     """
     Load the class registered under the entry point for a given name and group
@@ -217,6 +218,7 @@ def load_entry_point(group: str, name: str) -> Any:
     return loaded_entry_point
 
 
+@functools.lru_cache(maxsize=None)
 def get_entry_point_groups() -> Set[str]:
     """
     Return a list of all the recognized entry point groups

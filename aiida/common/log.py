@@ -159,7 +159,7 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     from aiida.manage.configuration import get_config_option
 
     # Evaluate the `LOGGING` configuration to resolve the lambdas that will retrieve the correct values based on the
-    # currently configured profile. Pass a deep copy of `LOGGING` to ensure that the original remains unaltered.
+    # currently configured profile.
     config = evaluate_logging_configuration(get_logging_config())
     daemon_handler_name = 'daemon_log_file'
 

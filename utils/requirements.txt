@@ -1,4 +1,4 @@
 click==7.1.2
 packaging==20.3
-pyyaml==5.1.2
+pyyaml==5.4.1
 requests==2.25.1

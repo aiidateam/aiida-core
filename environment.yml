@@ -26,13 +26,13 @@ dependencies:
 - numpy~=1.17
 - pamqp~=2.3
 - paramiko>=2.7.2,~=2.7
-- plumpy~=0.19.0
+- plumpy~=0.20.0
 - pgsu~=0.2.0
 - psutil~=5.6
 - psycopg2-binary~=2.8.3
 - python-dateutil~=2.8
 - pytz~=2021.1
-- pyyaml~=5.1
+- pyyaml~=5.4
 - simplejson~=3.16
 - sqlalchemy-utils~=0.37.2
 - sqlalchemy~=1.3.10

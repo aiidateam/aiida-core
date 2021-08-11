@@ -250,8 +250,8 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     .. code-block:: console
 
-        $ verdi computer setup -L tutor -H localhost -T local -S direct -w `echo $PWD/work` -n
-        $ verdi computer configure local tutor --safe-interval 5 -n
+        $ verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
+        $ verdi computer configure core.local tutor --safe-interval 5 -n
 
     The first commands sets up the computer with the following options:
 
@@ -268,9 +268,9 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     .. code-block:: console
 
-        $ verdi code setup -L add --on-computer --computer=tutor -P arithmetic.add --remote-abs-path=/bin/bash -n
+        $ verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
 
-    This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``arithmetic.add``.
+    This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``core.arithmetic.add``.
 
 A typical real-world example of a computer is a remote supercomputing facility.
 Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
@@ -449,7 +449,7 @@ Instead of the *result* of the calculation, it returns the node of the ``CalcJob
 
 .. code-block:: ipython
 
-    Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:arithmetic.add)>
+    Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:core.arithmetic.add)>
 
 Let's exit the IPython shell and have a look at the process list:
 
@@ -524,9 +524,9 @@ Start up the ``verdi shell`` and load the ``MultiplyAddWorkChain`` using the ``W
 
 .. code-block:: ipython
 
-    In [1]: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    In [1]: MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
-The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'arithmetic.multiply_add'`` in this case.
+The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'core.arithmetic.multiply_add'`` in this case.
 Similar to a ``CalcJob``, the ``WorkChain`` input can be set up using a builder:
 
 .. code-block:: ipython

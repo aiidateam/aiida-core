@@ -250,7 +250,7 @@ Simply copy & paste the same instructions as you have used for ``ProxyJump`` in 
 
 .. code-block:: console
 
-   $ verdi computer configure ssh SHORTNAME_TARGET
+   $ verdi computer configure core.ssh SHORTNAME_TARGET
    ...
    Allow ssh agent [True]:
    SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY

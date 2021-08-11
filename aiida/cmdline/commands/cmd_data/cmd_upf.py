@@ -65,7 +65,7 @@ def upf_listfamilies(elements, with_description):
     from aiida import orm
     from aiida.plugins import DataFactory
 
-    UpfData = DataFactory('upf')  # pylint: disable=invalid-name
+    UpfData = DataFactory('core.upf')  # pylint: disable=invalid-name
     query = orm.QueryBuilder()
     query.append(UpfData, tag='upfdata')
     if elements is not None:
@@ -127,7 +127,7 @@ def upf_import(filename):
 
 
 @upf.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:upf',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.upf',)))
 @options.EXPORT_FORMAT(
     type=click.Choice(['json']),
     default='json',

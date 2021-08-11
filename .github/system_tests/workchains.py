@@ -16,7 +16,7 @@ from aiida.engine.persistence import ObjectLoader
 from aiida.orm import Int, List, Str
 from aiida.plugins import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):

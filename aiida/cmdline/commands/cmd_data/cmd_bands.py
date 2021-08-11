@@ -82,7 +82,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
 
 
 @bands.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array.bands',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.array.bands',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='xmgrace')
 @decorators.with_dbenv()
 def bands_show(data, fmt):
@@ -96,7 +96,7 @@ def bands_show(data, fmt):
 
 
 @bands.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.bands',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.array.bands',)))
 @options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='json')
 @click.option(
     '--y-min-lim',

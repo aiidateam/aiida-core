@@ -135,8 +135,8 @@ def aiida_localhost(temp_dir):
             description='localhost computer set up by test manager',
             hostname=label,
             workdir=temp_dir,
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         computer.store()
         computer.set_minimum_job_poll_interval(0.)

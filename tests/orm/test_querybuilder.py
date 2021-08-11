@@ -54,7 +54,7 @@ class TestBasic:
         # Asserting that the query type string and plugin type string are returned:
         for _cls, classifiers in (
             _get_ormclass(orm.StructureData, None),
-            _get_ormclass(None, 'data.structure.StructureData.'),
+            _get_ormclass(None, 'data.core.structure.StructureData.'),
         ):
             assert classifiers[0].ormclass_type_string == orm.StructureData._plugin_type_string  # pylint: disable=no-member,protected-access
 
@@ -92,7 +92,7 @@ class TestBasic:
         from aiida.engine import WorkChain
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAdd = CalculationFactory('arithmetic.add')
+        ArithmeticAdd = CalculationFactory('core.arithmetic.add')
 
         # When passing a WorkChain class, it should return the type of the corresponding Node
         # including the appropriate filter on the process_type
@@ -108,7 +108,7 @@ class TestBasic:
         # Same tests for a calculation
         _cls, classifiers = _get_ormclass(ArithmeticAdd, None)
         assert classifiers[0].ormclass_type_string == 'process.calculation.calcjob.CalcJobNode.'
-        assert classifiers[0].process_type_string == 'aiida.calculations:arithmetic.add'
+        assert classifiers[0].process_type_string == 'aiida.calculations:core.arithmetic.add'
 
     def test_get_group_type_filter(self):
         """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
@@ -457,7 +457,8 @@ class TestBasic:
         qb = orm.QueryBuilder().append(cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'})
         assert qb.count() == 2
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.dict.Dict.'), filters={'attributes.cat': 'miau'}
+            entity_type=('data.core.structure.StructureData.', 'data.core.dict.Dict.'),
+            filters={'attributes.cat': 'miau'}
         )
         assert qb.count() == 2
         qb = orm.QueryBuilder().append(
@@ -470,13 +471,13 @@ class TestBasic:
         )
         assert qb.count() == 3
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.dict.Dict.'),
+            entity_type=('data.core.structure.StructureData.', 'data.core.dict.Dict.'),
             filters={'attributes.cat': 'miau'},
             subclassing=False
         )
         assert qb.count() == 2
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.Data.'),
+            entity_type=('data.core.structure.StructureData.', 'data.Data.'),
             filters={'attributes.cat': 'miau'},
             subclassing=False
         )
@@ -718,7 +719,11 @@ class TestRepresentations:
     def test_as_sql_literal_quote(self):
         """Test that literal values can be rendered."""
         qb = orm.QueryBuilder()
-        qb.append(plugins.DataFactory('structure'), project=['uuid'], filters={'extras.elements': {'contains': ['Si']}})
+        qb.append(
+            plugins.DataFactory('core.structure'), project=['uuid'], filters={'extras.elements': {
+                'contains': ['Si']
+            }}
+        )
         self.regress_str(qb.as_sql(inline=True))
 
     def test_as_dict(self):

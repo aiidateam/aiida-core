@@ -75,8 +75,8 @@ class TestAttributesExtrasToJSONMigrationSimple(TestMigrations):
         computer = db_computer_model(
             name='localhost_migration',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
             metadata={'workdir': '/tmp/aiida'}
         )
         computer.save()
@@ -131,8 +131,8 @@ class TestAttributesExtrasToJSONMigrationManyNodes(TestMigrations):
         computer = db_computer_model(
             name='localhost_migration',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
             metadata={'workdir': '/tmp/aiida'}
         )
         computer.save()

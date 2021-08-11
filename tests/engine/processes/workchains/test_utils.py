@@ -18,7 +18,7 @@ from aiida.engine.processes.workchains.utils import process_handler, ProcessHand
 from aiida.orm import ProcessNode
 from aiida.plugins import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 @pytest.mark.requires_rmq

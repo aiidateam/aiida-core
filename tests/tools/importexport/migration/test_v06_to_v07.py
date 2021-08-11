@@ -63,10 +63,10 @@ def test_migration_0040_corrupt_archive():
         'export_data': {
             'Node': {
                 42: {
-                    'node_type': 'data.int.Int.'
+                    'node_type': 'data.core.int.Int.'
                 },
                 52: {
-                    'node_type': 'data.dict.Dict.'
+                    'node_type': 'data.core.dict.Dict.'
                 }
             }
         }

@@ -24,7 +24,7 @@ class TestCommonUtilities(AiidaTestCase):
         computer_label = self.computer.label  # pylint: disable=no-member
 
         code = orm.Code(
-            input_plugin_name='arithmetic.add',
+            input_plugin_name='core.arithmetic.add',
             remote_computer_exec=[self.computer, '/remote/abs/path'],
         )
         code.store()

@@ -193,20 +193,20 @@ class TestAutoGroups(AiidaTestCase):
             from aiida.orm import Computer, Int, ArrayData, KpointsData, CalculationNode, WorkflowNode
             from aiida.plugins import CalculationFactory
             from aiida.engine import run_get_node
-            ArithmeticAdd = CalculationFactory('arithmetic.add')
+            ArithmeticAdd = CalculationFactory('core.arithmetic.add')
 
             computer = Computer(
                 label='localhost-example-{}'.format(sys.argv[1]),
                 hostname='localhost',
                 description='my computer',
-                transport_type='local',
-                scheduler_type='direct',
+                transport_type='core.local',
+                scheduler_type='core.direct',
                 workdir='/tmp'
             ).store()
             computer.configure()
 
             code = Code(
-                input_plugin_name='arithmetic.add',
+                input_plugin_name='core.arithmetic.add',
                 remote_computer_exec=[computer, '/bin/true']).store()
             inputs = {
                 'x': Int(1),
@@ -247,15 +247,15 @@ class TestAutoGroups(AiidaTestCase):
             wf_in_autogroup,
             calcarithmetic_in_autogroup,
         ) in enumerate([
-            [['--exclude', 'aiida.data:array.kpoints'], False, True, True, True, True, True],
+            [['--exclude', 'aiida.data:core.array.kpoints'], False, True, True, True, True, True],
             # Check if % works anywhere - both 'int' and 'array.kpoints' contain an 'i'
-            [['--exclude', 'aiida.data:%i%'], False, True, False, True, True, True],
-            [['--exclude', 'aiida.data:int'], True, True, False, True, True, True],
+            [['--exclude', 'aiida.data:core.%i%'], False, True, False, True, True, True],
+            [['--exclude', 'aiida.data:core.int'], True, True, False, True, True, True],
             [['--exclude', 'aiida.data:%'], False, False, False, True, True, True],
-            [['--exclude', 'aiida.data:array', 'aiida.data:array.%'], False, False, True, True, True, True],
-            [['--exclude', 'aiida.data:array', 'aiida.data:array.%', 'aiida.data:int'], False, False, False, True, True,
-             True],
-            [['--exclude', 'aiida.calculations:arithmetic.add'], True, True, True, True, True, False],
+            [['--exclude', 'aiida.data:core.array', 'aiida.data:core.array.%'], False, False, True, True, True, True],
+            [['--exclude', 'aiida.data:core.array', 'aiida.data:core.array.%', 'aiida.data:core.int'], False, False,
+             False, True, True, True],
+            [['--exclude', 'aiida.calculations:core.arithmetic.add'], True, True, True, True, True, False],
             [
                 ['--include', 'aiida.node:process.calculation'],  # Base type, no specific plugin
                 False,

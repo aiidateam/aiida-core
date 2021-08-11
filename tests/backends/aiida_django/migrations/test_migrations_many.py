@@ -85,23 +85,23 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
         self.n_bool_duplicates = 2
         self.n_int_duplicates = 4
 
-        node_bool = self.DbNode(type='data.bool.Bool.', user_id=self.default_user.id, uuid=get_new_uuid())
+        node_bool = self.DbNode(type='data.core.bool.Bool.', user_id=self.default_user.id, uuid=get_new_uuid())
         node_bool.save()
 
-        node_int = self.DbNode(type='data.int.Int.', user_id=self.default_user.id, uuid=get_new_uuid())
+        node_int = self.DbNode(type='data.core.int.Int.', user_id=self.default_user.id, uuid=get_new_uuid())
         node_int.save()
 
         self.nodes_boolean.append(node_bool)
         self.nodes_integer.append(node_int)
 
         for _ in range(self.n_bool_duplicates):
-            node = self.DbNode(type='data.bool.Bool.', user_id=self.default_user.id, uuid=node_bool.uuid)
+            node = self.DbNode(type='data.core.bool.Bool.', user_id=self.default_user.id, uuid=node_bool.uuid)
             node.save()
             utils.put_object_from_string(node.uuid, self.file_name, self.file_content)
             self.nodes_boolean.append(node)
 
         for _ in range(self.n_int_duplicates):
-            node = self.DbNode(type='data.int.Int.', user_id=self.default_user.id, uuid=node_int.uuid)
+            node = self.DbNode(type='data.core.int.Int.', user_id=self.default_user.id, uuid=node_int.uuid)
             node.save()
             utils.put_object_from_string(node.uuid, self.file_name, self.file_content)
             self.nodes_integer.append(node)
@@ -314,7 +314,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         # Creating the needed nodes & workflows
         calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
-        param = DbNode(type='data.dict.Dict.', user_id=self.default_user.id)
+        param = DbNode(type='data.core.dict.Dict.', user_id=self.default_user.id)
         leg_workf = DbWorkflow(label='Legacy WorkflowNode', user_id=self.default_user.id)
         calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
 
@@ -764,8 +764,8 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):  # pylint: disable=too-
         self.computer_kwargs = {
             'name': 'localhost_testing',
             'hostname': 'localhost',
-            'transport_type': 'local',
-            'scheduler_type': 'direct',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.direct',
             'metadata': json.dumps(self.computer_metadata),
         }
         self.computer = self.DbComputer(**self.computer_kwargs)

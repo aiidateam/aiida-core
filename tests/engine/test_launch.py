@@ -172,9 +172,10 @@ class TestLaunchersDryRun(AiidaTestCase):
         """All launchers should work with `dry_run=True`, even `submit` which forwards to `run`."""
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -212,9 +213,10 @@ class TestLaunchersDryRun(AiidaTestCase):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -262,7 +264,8 @@ class TestLaunchersDryRun(AiidaTestCase):
         import os
         import tempfile
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')

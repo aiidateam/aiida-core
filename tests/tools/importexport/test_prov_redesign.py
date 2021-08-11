@@ -39,7 +39,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         test_content = ('Hello', 6, -1.2399834e12, False)
         test_types = ()
         for node_type in ['str', 'int', 'float', 'bool']:
-            add_type = (f'data.{node_type}.{node_type.capitalize()}.',)
+            add_type = (f'data.core.{node_type}.{node_type.capitalize()}.',)
             test_types = test_types.__add__(add_type)
 
         # List of nodes to be exported
@@ -86,7 +86,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
 
         # Check List type
         msg = f"type of node ('{nlist.node_type}') is not updated according to db schema v0.4"
-        self.assertEqual(nlist.node_type, 'data.list.List.', msg=msg)
+        self.assertEqual(nlist.node_type, 'data.core.list.List.', msg=msg)
 
     @pytest.mark.requires_rmq
     @with_temp_dir
@@ -150,7 +150,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         code_type = code.node_type
 
         # Assert correct type exists prior to export
-        self.assertEqual(code_type, 'data.code.Code.')
+        self.assertEqual(code_type, 'data.core.code.Code.')
 
         # Export node
         filename = os.path.join(temp_dir, 'export.aiida')

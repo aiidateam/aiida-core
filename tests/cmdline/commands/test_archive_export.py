@@ -42,7 +42,11 @@ def test_create_force(run_cli_command, tmp_path):
 def test_create_compressed(run_cli_command, tmp_path, fmt):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
     computer = Computer(
-        label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+        label='comp',
+        hostname='localhost',
+        transport_type='core.local',
+        scheduler_type='core.direct',
+        workdir='/tmp/aiida'
     ).store()
     code = Code(remote_computer_exec=(computer, '/bin/true')).store()
     group = Group(label='test_group').store()

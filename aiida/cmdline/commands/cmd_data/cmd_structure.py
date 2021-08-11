@@ -119,7 +119,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
 
 
 @structure.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:structure',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.structure',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='ase')
 @decorators.with_dbenv()
 def structure_show(data, fmt):
@@ -133,7 +133,7 @@ def structure_show(data, fmt):
 
 
 @structure.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:structure',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.structure',)))
 @options.EXPORT_FORMAT(
     type=click.Choice(EXPORT_FORMATS),
     default='xyz',

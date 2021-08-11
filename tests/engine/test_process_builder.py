@@ -94,7 +94,7 @@ class TestProcessBuilder(AiidaTestCase):
     def setUp(self):
         super().setUp()
         self.assertIsNone(Process.current())
-        self.process_class = CalculationFactory('templatereplacer')
+        self.process_class = CalculationFactory('core.templatereplacer')
         self.builder = self.process_class.get_builder()
         self.builder_workchain = ExampleWorkChain.get_builder()
         self.inputs = {
@@ -264,7 +264,7 @@ class TestProcessBuilder(AiidaTestCase):
     def test_calc_job_node_get_builder_restart(self):
         """Test the `CalcJobNode.get_builder_restart` method."""
         original = orm.CalcJobNode(
-            computer=self.computer, process_type='aiida.calculations:arithmetic.add', label='original'
+            computer=self.computer, process_type='aiida.calculations:core.arithmetic.add', label='original'
         )
         original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         original.set_option('max_wallclock_seconds', 1800)
@@ -288,7 +288,7 @@ class TestProcessBuilder(AiidaTestCase):
         code = orm.Code()
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.label = 'test_code'
-        code.set_input_plugin_name('templatereplacer')
+        code.set_input_plugin_name('core.templatereplacer')
         code.store()
 
         # Check that I can get a builder

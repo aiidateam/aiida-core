@@ -1435,7 +1435,7 @@ class TestDirectScheduler(unittest.TestCase):
         # tests that follow each other) to overwrite the same destination
         script_fname = f'sleep-submit-{uuid.uuid4().hex}-{custom_transport.__class__.__name__}.sh'
 
-        scheduler = SchedulerFactory('direct')()
+        scheduler = SchedulerFactory('core.direct')()
         scheduler.set_transport(custom_transport)
         with custom_transport as transport:
             try:

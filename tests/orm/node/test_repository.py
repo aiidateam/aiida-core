@@ -16,7 +16,7 @@ from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRe
 @pytest.fixture
 def cacheable_node():
     """Return a node that can be cached from."""
-    node = CalcJobNode(process_type='aiida.calculations:arithmetic.add')
+    node = CalcJobNode(process_type='aiida.calculations:core.arithmetic.add')
     node.set_process_state(ProcessState.FINISHED)
     node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
     node.store()
@@ -95,7 +95,7 @@ def test_caching(cacheable_node):
     """Test the repository after a node is stored from the cache."""
 
     with enable_caching():
-        cached = CalcJobNode(process_type='aiida.calculations:arithmetic.add')
+        cached = CalcJobNode(process_type='aiida.calculations:core.core.arithmetic.add')
         cached.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
         cached.store()
 

@@ -1,7 +1,7 @@
 ---
 label: add
 description: add
-input_plugin: arithmetic.add
+input_plugin: core.arithmetic.add
 on_computer: true
 computer: localhost
 remote_abs_path: /bin/bash

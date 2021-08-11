@@ -27,7 +27,7 @@ class TestGroupTypeStringMigration(TestMigrations):
         group_user.save()
         self.group_user_pk = group_user.pk
 
-        # test data.upf group type_string: 'data.upf' -> 'core.upf'
+        # test data.upf group type_string: 'data.core.upf' -> 'core.upf'
         group_data_upf = DbGroup(label='02', user_id=self.default_user.id, type_string='data.upf')
         group_data_upf.save()
         self.group_data_upf_pk = group_data_upf.pk

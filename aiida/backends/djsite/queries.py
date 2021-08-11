@@ -137,7 +137,7 @@ class DjangoQueryManager(AbstractQueryManager):
             pks = [_[0] for _ in this_chunk]
 
             # get the closest structures (WITHOUT DbPath)
-            structure_dict = get_closest_parents(pks, Q(node_type='data.structure.StructureData.'), chunk_size=1)
+            structure_dict = get_closest_parents(pks, Q(node_type='data.core.structure.StructureData.'), chunk_size=1)
 
             struc_pks = [structure_dict.get(pk) for pk in pks]
 

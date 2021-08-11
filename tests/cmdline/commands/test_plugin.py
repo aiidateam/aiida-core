@@ -41,9 +41,9 @@ def test_plugin_list_non_existing(run_cli_command):
 
 @pytest.mark.parametrize(
     'entry_point_string', (
-        'aiida.calculations:arithmetic.add',
-        'aiida.workflows:arithmetic.multiply_add',
-        'aiida.workflows:arithmetic.add_multiply',
+        'aiida.calculations:core.arithmetic.add',
+        'aiida.workflows:core.arithmetic.multiply_add',
+        'aiida.workflows:core.arithmetic.add_multiply',
     )
 )
 def test_plugin_list_detail(run_cli_command, entry_point_string):

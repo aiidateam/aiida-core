@@ -64,7 +64,7 @@ def trajectory_list(raw, past_days, groups, all_users):
 
 
 @trajectory.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array.trajectory',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.array.trajectory',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='jmol')
 @show_options
 @decorators.with_dbenv()
@@ -79,7 +79,7 @@ def trajectory_show(data, fmt):
 
 
 @trajectory.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.trajectory',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.array.trajectory',)))
 @options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='cif')
 @options.TRAJECTORY_INDEX()
 @export_options

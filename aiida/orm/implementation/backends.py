@@ -9,6 +9,16 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm.session import Session
+
+    from aiida.orm.implementation import (
+        BackendAuthInfoCollection, BackendCommentCollection, BackendComputerCollection, BackendGroupCollection,
+        BackendLogCollection, BackendNodeCollection, BackendQueryBuilder, BackendUserCollection
+    )
+    from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 __all__ = ('Backend',)
 
@@ -21,85 +31,40 @@ class Backend(abc.ABC):
         """Migrate the database to the latest schema generation or version."""
 
     @abc.abstractproperty
-    def authinfos(self):
-        """
-        Return the collection of authorisation information objects
-
-        :return: the authinfo collection
-        :rtype: :class:`aiida.orm.implementation.BackendAuthInfoCollection`
-        """
+    def authinfos(self) -> 'BackendAuthInfoCollection':
+        """Return the collection of authorisation information objects"""
 
     @abc.abstractproperty
-    def comments(self):
-        """
-        Return the collection of comments
-
-        :return: the comment collection
-        :rtype: :class:`aiida.orm.implementation.BackendCommentCollection`
-        """
+    def comments(self) -> 'BackendCommentCollection':
+        """Return the collection of comments"""
 
     @abc.abstractproperty
-    def computers(self):
-        """
-        Return the collection of computers
-
-        :return: the computers collection
-        :rtype: :class:`aiida.orm.implementation.BackendComputerCollection`
-        """
+    def computers(self) -> 'BackendComputerCollection':
+        """Return the collection of computers"""
 
     @abc.abstractproperty
-    def groups(self):
-        """
-        Return the collection of groups
-
-        :return: the groups collection
-        :rtype: :class:`aiida.orm.implementation.BackendGroupCollection`
-        """
+    def groups(self) -> 'BackendGroupCollection':
+        """Return the collection of groups"""
 
     @abc.abstractproperty
-    def logs(self):
-        """
-        Return the collection of logs
-
-        :return: the log collection
-        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
-        """
+    def logs(self) -> 'BackendLogCollection':
+        """Return the collection of logs"""
 
     @abc.abstractproperty
-    def nodes(self):
-        """
-        Return the collection of nodes
-
-        :return: the nodes collection
-        :rtype: :class:`aiida.orm.implementation.BackendNodeCollection`
-        """
+    def nodes(self) -> 'BackendNodeCollection':
+        """Return the collection of nodes"""
 
     @abc.abstractproperty
-    def query_manager(self):
-        """
-        Return the query manager for the objects stored in the backend
-
-        :return: The query manger
-        :rtype: :class:`aiida.backends.general.abstractqueries.AbstractQueryManager`
-        """
+    def query_manager(self) -> 'AbstractQueryManager':
+        """Return the query manager for the objects stored in the backend"""
 
     @abc.abstractmethod
-    def query(self):
-        """
-        Return an instance of a query builder implementation for this backend
-
-        :return: a new query builder instance
-        :rtype: :class:`aiida.orm.implementation.BackendQueryBuilder`
-        """
+    def query(self) -> 'BackendQueryBuilder':
+        """Return an instance of a query builder implementation for this backend"""
 
     @abc.abstractproperty
-    def users(self):
-        """
-        Return the collection of users
-
-        :return: the users collection
-        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
-        """
+    def users(self) -> 'BackendUserCollection':
+        """Return the collection of users"""
 
     @abc.abstractmethod
     def transaction(self):
@@ -112,7 +77,7 @@ class Backend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_session(self):
+    def get_session(self) -> 'Session':
         """Return a database session that can be used by the `QueryBuilder` to perform its query.
 
         :return: an instance of :class:`sqlalchemy.orm.session.Session`

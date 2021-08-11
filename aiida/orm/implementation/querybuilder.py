@@ -16,6 +16,7 @@ not go through SqlAlchemy, this class will have to be refactored. The SqlAlchemy
 likely be moved to a `SqlAlchemyBasedQueryBuilder` class and restore this abstract class to being a pure agnostic one.
 """
 import abc
+from typing import TYPE_CHECKING
 import uuid
 
 # pylint: disable=no-name-in-module,import-error
@@ -24,6 +25,9 @@ from sqlalchemy.types import Integer, Float, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 
 from aiida.common.lang import type_check
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm.session import Session  # pylint: disable=ungrouped-imports
 
 __all__ = ('BackendQueryBuilder',)
 
@@ -111,7 +115,7 @@ class BackendQueryBuilder:
         from aiida.orm import Node
         return Node
 
-    def get_session(self):
+    def get_session(self) -> 'Session':
         """
         :returns: a valid session, an instance of :class:`sqlalchemy.orm.session.Session`
         """

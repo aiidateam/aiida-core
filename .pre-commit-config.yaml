@@ -68,6 +68,7 @@ repos:
                 aiida/engine/.*py|
                 aiida/manage/manager.py|
                 aiida/manage/database/delete/nodes.py|
+                aiida/orm/querybuilder.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
                 aiida/repository/.*py|

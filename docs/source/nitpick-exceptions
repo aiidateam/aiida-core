@@ -161,3 +161,6 @@ py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
 
 py:class jsonschema.exceptions._Error
+
+py:class Session
+py:class BackendQueryBuilder

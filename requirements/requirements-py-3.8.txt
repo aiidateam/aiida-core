@@ -115,6 +115,7 @@ pytest-cov==2.10.1
 pytest-rerunfailures==9.1.1
 pytest-timeout==1.4.2
 python-dateutil==2.8.2
+pytest-regressions==2.2.0
 python-editor==1.0.4
 python-memcached==1.59
 pytray==0.3.2

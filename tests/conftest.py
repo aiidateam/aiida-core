@@ -365,3 +365,11 @@ def with_daemon():
 
     # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
     os.kill(daemon.pid, signal.SIGTERM)
+
+
+@pytest.fixture(scope='function')
+def dry_run_in_tmp(request, tmpdir):
+    """change to the tmp directory to do the dry run, then change back to the calling directory to avoid side-effects"""
+    os.chdir(tmpdir)
+    yield
+    os.chdir(request.config.invocation_dir)

@@ -192,3 +192,30 @@ def test_link_manager_with_nested_namespaces(clear_database_before_test):
 
     with pytest.raises(KeyError):
         _ = calc.outputs['remote_folder__namespace']
+
+
+def test_link_manager_contains(clear_database_before_test):
+    """Test the ``__contains__`` method for the ``LinkManager``."""
+    data = orm.Data()
+    data.store()
+
+    calc = orm.CalculationNode()
+    calc.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='nested__sub__name')
+    calc.store()
+
+    assert 'nested' in calc.inputs
+    assert 'sub' in calc.inputs.nested
+    assert 'name' in calc.inputs.nested.sub
+
+    # Check that using a double-underscore-containing key with an ``in`` statement issues a warning but works
+    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
+        assert 'nested__sub__name' in calc.inputs
+
+    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
+        assert 'nested__sub' in calc.inputs
+
+    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
+        assert 'spaced__sub' not in calc.inputs
+
+    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
+        assert 'nested__namespace' not in calc.inputs

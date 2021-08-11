@@ -47,6 +47,21 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
         raise BadParameter(f'{value} is not a valid positive number')
 
 
+def validate_positive_number_with_echo(ctx, param, value):  # pylint: disable=unused-argument
+    """Validate that the number passed to this parameter is a positive number.
+       Also echos a message to the terminal
+
+    :param ctx: the `click.Context`
+    :param param: the parameter
+    :param value: the value passed for the parameter
+    :raises `click.BadParameter`: if the value is not a positive number
+    """
+    click.echo('Validating Number')
+    if not isinstance(value, (int, float)) or value < 0:
+        from click import BadParameter
+        raise BadParameter(f'{value} is not a valid positive number')
+
+
 class InteractiveOptionTest(unittest.TestCase):
     """Unit tests for InteractiveOption."""
 
@@ -94,6 +109,20 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIn(expected_2, lines[6])
         self.assertIn(expected_3, lines[9])
         self.assertIn(expected_4, lines[12])
+
+    def test_callback_prompt_only_once(self):
+        """
+        scenario: using InteractiveOption with type=float and callback that echos an additional message
+        behaviour: the callback should be called at most once per prompt
+        """
+        cmd = self.simple_command(type=float, callback=validate_positive_number_with_echo)
+        runner = CliRunner()
+        result = runner.invoke(cmd, [], input='string\n-1\n-1\n1\n')
+        self.assertIsNone(result.exception)
+        lines = result.output.split('\n')
+        #The callback should be called once per prompt
+        #where type conversion was successful
+        self.assertEqual(lines.count('Validating Number'), 3)
 
     def test_prompt_str(self):
         """

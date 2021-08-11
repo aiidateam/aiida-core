@@ -10,8 +10,9 @@
 """
 AiiDA ORM data class storing (numpy) arrays
 """
-
 from ..data import Data
+
+__all__ = ('ArrayData',)
 
 
 class ArrayData(Data):

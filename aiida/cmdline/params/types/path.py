@@ -15,6 +15,8 @@ import urllib.error
 from socket import timeout
 import click
 
+__all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
+
 URL_TIMEOUT_SECONDS = 10
 
 

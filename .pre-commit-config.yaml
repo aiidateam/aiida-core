@@ -44,6 +44,15 @@ repos:
 
     hooks:
 
+    -   id: imports
+        name: imports
+        entry: python utils/make_all.py
+        language: python
+        types: [python]
+        require_serial: true
+        pass_filenames: false
+        files: aiida/.*py
+
     -   id: mypy
         name: mypy
         entry: mypy

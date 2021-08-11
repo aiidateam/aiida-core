@@ -15,7 +15,7 @@ import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
-from . import _GLOBAL_TEST_MANAGER, test_manager, get_test_backend_name, get_test_profile_name
+from .main import _GLOBAL_TEST_MANAGER, test_manager, get_test_backend_name, get_test_profile_name
 
 __all__ = ('PluginTestCase', 'TestRunner')
 

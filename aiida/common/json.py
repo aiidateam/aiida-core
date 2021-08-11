@@ -13,8 +13,9 @@ Abstracts JSON usage to ensure compatibility with Python2 and Python3.
 Use this module prefentially over standard json to ensure compatibility.
 
 """
-
 import simplejson
+
+JSONEncoder = simplejson.JSONEncoder
 
 
 def dump(data, fhandle, **kwargs):

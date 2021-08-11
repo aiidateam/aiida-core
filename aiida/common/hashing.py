@@ -19,9 +19,11 @@ from collections import abc, OrderedDict
 from functools import singledispatch
 from itertools import chain
 from operator import itemgetter
+from decimal import Decimal
 
 import pytz
 
+from aiida.common.utils import DatetimePrecision
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
 
@@ -222,9 +224,22 @@ def _(mapping, **kwargs):
 def _(val, **kwargs):
     """
     Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
-    Note that the `_singe_digest` requires a bytes object so we need to encode the utf-8 string first
+    Note that the `_single_digest` requires a bytes object so we need to encode the utf-8 string first
     """
     return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
+
+
+@_make_hash.register(Decimal)
+def _(val, **kwargs):
+    """
+    While a decimal can be converted exactly to a string which captures all characteristics of the underlying
+    implementation, we also need compatibility with "equal" representations as int or float. Hence we are checking
+    for the exponent (which is negative if there is a fractional component, 0 otherwise) and get the same hash
+    as for a corresponding float or int.
+    """
+    if val.as_tuple().exponent < 0:
+        return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode('utf-8'))]
 
 
 @_make_hash.register(numbers.Complex)
@@ -277,6 +292,15 @@ def _(val, **kwargs):
 @_make_hash.register(uuid.UUID)
 def _(val, **kwargs):
     return [_single_digest('uuid', val.bytes)]
+
+
+@_make_hash.register(DatetimePrecision)
+def _(datetime_precision, **kwargs):
+    """ Hashes for DatetimePrecision object
+    """
+    return [_single_digest('dt_prec')] + list(
+        chain.from_iterable(_make_hash(i, **kwargs) for i in [datetime_precision.dtobj, datetime_precision.precision])
+    ) + [_END_DIGEST]
 
 
 @_make_hash.register(Folder)

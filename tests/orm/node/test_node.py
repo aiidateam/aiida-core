@@ -12,6 +12,7 @@
 import logging
 import os
 import tempfile
+from decimal import Decimal
 
 import pytest
 
@@ -415,6 +416,13 @@ class TestNodeAttributesExtras:
         extras = {'extra_one': 'value', 'extra_two': 'value'}
         self.node.set_extra_many(extras)
         assert set(self.node.extras_keys()) == set(extras)
+
+    def test_attribute_decimal(self):
+        """Test that the `Node.set_attribute` method supports Decimal."""
+        self.node.set_attribute('a_val', Decimal('3.141'))
+        self.node.store()
+        # ensure the returned node is a float
+        assert self.node.get_attribute('a_val') == 3.141
 
 
 @pytest.mark.usefixtures('clear_database_before_test_class')

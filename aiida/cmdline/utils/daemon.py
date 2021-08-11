@@ -126,8 +126,13 @@ def delete_stale_pid_file(client):
     if pid is not None:
         try:
             process = psutil.Process(pid)
+            # the PID got recycled, but a different process
             if _START_CIRCUS_COMMAND not in process.cmdline():
                 raise StartCircusNotFound()  # Also this is a case in which the process is not there anymore
+
+            # the PID got recycled, but for a daemon of someone else
+            if process.username() != psutil.Process().username():  # compare against the username of this interpreter
+                raise StartCircusNotFound()
         except (psutil.AccessDenied, psutil.NoSuchProcess, StartCircusNotFound):
             echo.echo_warning(
                 f'Deleted apparently stale daemon PID file as its associated process<{pid}> does not exist anymore'

@@ -16,6 +16,8 @@ import numpy
 
 from .array import ArrayData
 
+__all__ = ('KpointsData',)
+
 _DEFAULT_EPSILON_LENGTH = 1e-5
 _DEFAULT_EPSILON_ANGLE = 1e-5
 

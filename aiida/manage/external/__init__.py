@@ -8,3 +8,24 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """User facing APIs to control AiiDA from the verdi cli, scripts or plugins"""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .postgres import *
+from .rmq import *
+
+__all__ = (
+    'BROKER_DEFAULTS',
+    'CommunicationTimeout',
+    'DEFAULT_DBINFO',
+    'DeliveryFailed',
+    'Postgres',
+    'PostgresConnectionMode',
+    'ProcessLauncher',
+    'RemoteException',
+)
+
+# yapf: enable

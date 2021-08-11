@@ -16,6 +16,7 @@ import itertools
 from datetime import datetime
 import hashlib
 import uuid
+from decimal import Decimal
 
 import numpy as np
 import pytz
@@ -25,6 +26,7 @@ try:
 except ImportError:
     import unittest
 
+from aiida.common.utils import DatetimePrecision
 from aiida.common.exceptions import HashingError
 from aiida.common.hashing import make_hash, float_to_text, chunked_file_hash
 from aiida.common.folders import SandboxFolder
@@ -169,11 +171,29 @@ class MakeHashTest(unittest.TestCase):
             'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
         )
 
+    def test_datetime_precision_hashing(self):
+        dt_prec = DatetimePrecision(datetime(2018, 8, 18, 8, 18), 10)
+        self.assertEqual(make_hash(dt_prec), '837ab70b3b7bd04c1718834a0394a2230d81242c442e4aa088abeab15622df37')
+        dt_prec_utc = DatetimePrecision(datetime.utcfromtimestamp(0), 0)
+        self.assertEqual(make_hash(dt_prec_utc), '8c756ee99eaf9655bb00166839b9d40aa44eac97684b28f6e3c07d4331ae644e')
+
     def test_numpy_types(self):
         self.assertEqual(
             make_hash(np.float64(3.141)), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
         )  # pylint: disable=no-member
         self.assertEqual(make_hash(np.int64(42)), '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd')  # pylint: disable=no-member
+
+    def test_decimal(self):
+        self.assertEqual(
+            make_hash(Decimal('3.141')), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
+        )  # pylint: disable=no-member
+
+        # make sure we get the same hashes as for corresponding float or int
+        self.assertEqual(make_hash(Decimal('3.141')), make_hash(3.141))  # pylint: disable=no-member
+
+        self.assertEqual(make_hash(Decimal('3.')), make_hash(3))  # pylint: disable=no-member
+
+        self.assertEqual(make_hash(Decimal('3141')), make_hash(3141))  # pylint: disable=no-member
 
     def test_unhashable_type(self):
 

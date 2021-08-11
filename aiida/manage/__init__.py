@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """
 Managing an AiiDA instance:
 
@@ -20,3 +19,50 @@ Managing an AiiDA instance:
 .. note:: Modules in this sub package may require the database environment to be loaded
 
 """
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .caching import *
+from .configuration import *
+from .database import *
+from .external import *
+from .manager import *
+
+__all__ = (
+    'BROKER_DEFAULTS',
+    'CURRENT_CONFIG_VERSION',
+    'CommunicationTimeout',
+    'Config',
+    'ConfigValidationError',
+    'DEFAULT_DBINFO',
+    'DeliveryFailed',
+    'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'Option',
+    'Postgres',
+    'PostgresConnectionMode',
+    'ProcessLauncher',
+    'Profile',
+    'RemoteException',
+    'TABLES_UUID_DEDUPLICATION',
+    'check_and_migrate_config',
+    'config_needs_migrating',
+    'config_schema',
+    'deduplicate_uuids',
+    'disable_caching',
+    'enable_caching',
+    'get_current_version',
+    'get_duplicate_uuids',
+    'get_manager',
+    'get_option',
+    'get_option_names',
+    'get_use_cache',
+    'parse_option',
+    'reset_manager',
+    'verify_uuid_uniqueness',
+    'write_database_integrity_violation',
+)
+
+# yapf: enable

@@ -1,8 +1,24 @@
 # Changelog
 
-## v1.6.2 - 2021-04-26
+## v1.6.4 - 2021-06-23
 
-[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.1...v1.6.2) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-31&to=2021-04-26&type=c)
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.3...v1.6.4)
+
+This is a patch release to pin `psycopg2-binary` to version 2.8.x, to avoid an issue with database creation in version 2.9 ([#4989](https://github.com/aiidateam/aiida-core/pull/4989)).
+
+## v1.6.3 - 2021-04-28
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.2...v1.6.3) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-04-281&to=2021-04-28&type=c)
+
+This is a patch release to fix a bug that was introduced in `v1.6.2` that would cause a number of `verdi` commands to fail due to a bug in the `with_dbenv` decorator utility.
+
+### Bug fixes
+- Fix `aiida.cmdline.utils.decorators.load_backend_if_not_loaded` [[#4878]](https://github.com/aiidateam/aiida-core/pull/4878)
+
+
+## v1.6.2 - 2021-04-28
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.1...v1.6.2) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-31&to=2021-04-27&type=c)
 
 ### Bug fixes
 - CLI: Use the proper proxy command for `verdi calcjob gotocomputer` if configured as such [[#4761]](https://github.com/aiidateam/aiida-core/pull/4761)

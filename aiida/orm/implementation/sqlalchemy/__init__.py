@@ -7,3 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Implementation of SQLAlchemy backend."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .backend import *
+from .convert import *
+from .groups import *
+from .users import *
+
+__all__ = (
+    'SqlaBackend',
+    'SqlaGroup',
+    'SqlaGroupCollection',
+    'SqlaUser',
+    'SqlaUserCollection',
+    'get_backend_entity',
+)
+
+# yapf: enable

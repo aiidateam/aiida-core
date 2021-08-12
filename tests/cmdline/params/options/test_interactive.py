@@ -56,7 +56,7 @@ def validate_positive_number_with_echo(ctx, param, value):  # pylint: disable=un
     :param value: the value passed for the parameter
     :raises `click.BadParameter`: if the value is not a positive number
     """
-    click.echo('Validating Number')
+    click.echo(f'Validating {value}')
     if not isinstance(value, (int, float)) or value < 0:
         from click import BadParameter
         raise BadParameter(f'{value} is not a valid positive number')
@@ -117,12 +117,21 @@ class InteractiveOptionTest(unittest.TestCase):
         """
         cmd = self.simple_command(type=float, callback=validate_positive_number_with_echo)
         runner = CliRunner()
-        result = runner.invoke(cmd, [], input='string\n-1\n-1\n1\n')
+        result = runner.invoke(cmd, [], input='string\n-1\n1\n')
         self.assertIsNone(result.exception)
+        expected_1 = 'Error: string is not a valid floating point value'
+        expected_2 = 'Validating -1.0'
+        expected_3 = 'Error: -1.0 is not a valid positive number'
+        expected_4 = 'Validating 1.0'
+        expected_5 = '1.0'
         lines = result.output.split('\n')
         #The callback should be called once per prompt
         #where type conversion was successful
-        self.assertEqual(lines.count('Validating Number'), 3)
+        self.assertEqual(expected_1, lines[3])
+        self.assertEqual(expected_2, lines[6])
+        self.assertEqual(expected_3, lines[7])
+        self.assertEqual(expected_4, lines[10])
+        self.assertEqual(expected_5, lines[11])
 
     def test_prompt_str(self):
         """

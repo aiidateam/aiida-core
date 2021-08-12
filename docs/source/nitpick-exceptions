@@ -26,6 +26,7 @@ py:class IO
 py:class traceback
 py:class _io.BufferedReader
 py:class BinaryIO
+py:class typing_extensions.Protocol
 
 ### AiiDA
 

@@ -1306,7 +1306,7 @@ class QueryBuilder:
 
     def debug(self, msg: str, *objects: Any) -> None:
         """Log debug message.
-        
+
         objects will passed to the format string, e.g. ``msg % objects``
         """
         if self._debug:
@@ -1928,8 +1928,8 @@ class QueryBuilder:
                 edge_tag = vertex.get('edge_tag', None)  # type: ignore
 
                 self.debug(
-                    'Checking projections for edges: This is edge %s from %s, %s of %s',
-                    edge_tag, vertex.get('tag'), vertex.get('joining_keyword'), vertex.get('joining_value')
+                    'Checking projections for edges: This is edge %s from %s, %s of %s', edge_tag, vertex.get('tag'),
+                    vertex.get('joining_keyword'), vertex.get('joining_value')
                 )
                 if edge_tag is not None:
                     self._build_projections(edge_tag)

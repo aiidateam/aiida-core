@@ -15,6 +15,8 @@ import collections.abc
 
 from .array import ArrayData
 
+__all__ = ('TrajectoryData',)
+
 
 class TrajectoryData(ArrayData):
     """

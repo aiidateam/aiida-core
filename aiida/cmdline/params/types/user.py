@@ -12,6 +12,8 @@ import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 
+__all__ = ('UserParamType',)
+
 
 class UserParamType(click.ParamType):
     """

@@ -7,9 +7,30 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Common utility functions, classes, and exceptions"""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
 from .config import *
 from .exceptions import *
 
-__all__ = (config.__all__ + exceptions.__all__)
+__all__ = (
+    'ArchiveExportError',
+    'ArchiveImportError',
+    'ArchiveMigrationError',
+    'CorruptArchive',
+    'DanglingLinkError',
+    'EXPORT_VERSION',
+    'ExportImportException',
+    'ExportValidationError',
+    'ImportUniquenessError',
+    'ImportValidationError',
+    'IncompatibleArchiveVersionError',
+    'MigrationValidationError',
+    'ProgressBarError',
+)
+
+# yapf: enable

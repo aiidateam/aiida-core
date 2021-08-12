@@ -15,6 +15,8 @@ from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
 
+__all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
+
 ase_loops = {
     '_atom_site': [
         '_atom_site_label',

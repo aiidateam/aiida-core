@@ -15,6 +15,8 @@ import click
 
 from .. import types
 
+__all__ = ('MultipleValueOption',)
+
 
 def collect_usage_pieces(self, ctx):
     """Returns all the pieces that go into the usage line and returns it as a list of strings."""

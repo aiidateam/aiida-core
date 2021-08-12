@@ -33,7 +33,7 @@
         "django~=2.2",
         "graphviz~=0.13",
         "ipython~=7.20",
-        "jinja2~=2.10",
+        "jinja2~=3.0",
         "jsonschema~=3.0",
         "kiwipy[rmq]~=0.7.4",
         "numpy~=1.17",
@@ -72,7 +72,7 @@
         "docs": [
             "docutils==0.15.2",
             "pygments~=2.5",
-            "pydata-sphinx-theme~=0.4.0",
+            "pydata-sphinx-theme~=0.6.3",
             "sphinx~=3.2.1",
             "sphinxcontrib-details-directive~=0.1.0",
             "sphinx-panels~=0.5.0",
@@ -95,7 +95,7 @@
         ],
         "pre-commit": [
             "astroid<2.5",
-            "mypy==0.790",
+            "mypy==0.910",
             "packaging==20.3",
             "pre-commit~=2.2",
             "pylint~=2.5.0",

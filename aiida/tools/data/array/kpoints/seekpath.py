@@ -12,8 +12,6 @@ import seekpath
 
 from aiida.orm import KpointsData, Dict
 
-__all__ = ('get_explicit_kpoints_path', 'get_kpoints_path')
-
 
 def get_explicit_kpoints_path(structure, parameters):
     """

@@ -13,6 +13,8 @@ Module for the workflow parameter type
 
 from .identifier import IdentifierParamType
 
+__all__ = ('WorkflowParamType',)
+
 
 class WorkflowParamType(IdentifierParamType):
     """

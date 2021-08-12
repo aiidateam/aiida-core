@@ -7,25 +7,55 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .config import *
+from .migrations import *
+from .options import *
+from .profile import *
+
+__all__ = (
+    'CURRENT_CONFIG_VERSION',
+    'Config',
+    'ConfigValidationError',
+    'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'Option',
+    'Profile',
+    'check_and_migrate_config',
+    'config_needs_migrating',
+    'config_schema',
+    'get_current_version',
+    'get_option',
+    'get_option_names',
+    'parse_option',
+)
+
+# yapf: enable
+
+# END AUTO-GENERATED
+
+# pylint: disable=global-statement,redefined-outer-name,wrong-import-order
+
+__all__ += (
+    'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_documentation_profile', 'load_profile',
+    'reset_config', 'reset_profile', 'CONFIG', 'PROFILE', 'BACKEND_UUID'
+)
+
 import os
 import shutil
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
-from .config import *
-from .options import *
-from .profile import *
+from . import options
 
 CONFIG = None
 PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
-
-__all__ = (
-    config.__all__ + options.__all__ + profile.__all__ +
-    ('get_config', 'get_config_option', 'get_config_path', 'load_profile', 'reset_config')
-)
 
 
 def load_profile(profile=None):

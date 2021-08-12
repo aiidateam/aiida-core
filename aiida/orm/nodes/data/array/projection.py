@@ -18,6 +18,8 @@ from ..orbital import OrbitalData
 from .array import ArrayData
 from .bands import BandsData
 
+__all__ = ('ProjectionData',)
+
 
 class ProjectionData(OrbitalData, ArrayData):
     """

@@ -639,7 +639,7 @@ class QueryBuilder:
         :param project:
             Projections to apply. See usage examples for details.
             More information also in :meth:`.add_projection`.
-        :param bool subclassing:
+        :param subclassing:
             Whether to include subclasses of the given class (default **True**).
             E.g. Specifying a ProcessNode as cls will include CalcJobNode, WorkChainNode, CalcFunctionNode, etc..
         :param edge_tag:
@@ -650,7 +650,7 @@ class QueryBuilder:
             The filters to apply on the edge. Also here, details in :meth:`.add_filter`.
         :param edge_project:
             The project from the edges. API-details in :meth:`.add_projection`.
-        :param bool outerjoin:
+        :param outerjoin:
             If True, (default is False), will do a left outerjoin
             instead of an inner join
 
@@ -751,9 +751,7 @@ class QueryBuilder:
         try:
             self.tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as exception:
-            if self._debug:
-                print('DEBUG: Exception caught in append, cleaning up')
-                print('  ', exception)
+            self.debug('Exception caught in append, cleaning up: %s' % exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -777,9 +775,7 @@ class QueryBuilder:
             if filters is not None:
                 self.add_filter(tag, filters)
         except Exception as exception:
-            if self._debug:
-                print('DEBUG: Exception caught in append (part filters), cleaning up')
-                print('  ', exception)
+            self.debug('Exception caught in append (part filters), cleaning up: %s' % exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag)
@@ -792,9 +788,7 @@ class QueryBuilder:
             if project is not None:
                 self.add_projection(tag, project)
         except Exception as exception:
-            if self._debug:
-                print('DEBUG: Exception caught in append (part projections), cleaning up')
-                print('  ', exception)
+            self.debug('Exception caught in append (part filters), cleaning up: %s' % exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -848,9 +842,7 @@ class QueryBuilder:
                 joining_value = self._path[-1]['tag']
 
         except Exception as exception:
-            if self._debug:
-                print('DEBUG: Exception caught in append (part joining), cleaning up')
-                print('  ', exception)
+            self.debug('Exception caught in append (part filters), cleaning up: %s' % exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -862,16 +854,14 @@ class QueryBuilder:
         # EDGES #################################
         if len(self._path) > 0:
             try:
-                if self._debug:
-                    print('DEBUG: Choosing an edge_tag')
+                self.debug('Choosing an edge_tag')
                 if edge_tag is None:
                     edge_destination_tag = self._get_tag_from_specification(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
                 else:
                     if edge_tag in self.tag_to_alias_map.keys():
                         raise ValueError(f'The tag {edge_tag} is already in use')
-                if self._debug:
-                    print('I have chosen', edge_tag)
+                self.debug('I have chosen %s' % edge_tag)
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
@@ -889,11 +879,7 @@ class QueryBuilder:
                 if edge_project is not None:
                     self.add_projection(edge_tag, edge_project)
             except Exception as exception:
-
-                if self._debug:
-                    print('DEBUG: Exception caught in append (part joining), cleaning up')
-                    import traceback
-                    print(traceback.format_exc())
+                self.debug('Exception caught in append (part joining), cleaning up %s' % exception)
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
                 self.tag_to_alias_map.pop(tag, None)
@@ -1182,9 +1168,7 @@ class QueryBuilder:
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
-        if self._debug:
-            print('DEBUG: Adding projection of', tag_spec)
-            print('   projection', projection_spec)
+        self.debug('Adding projection of %s: %s' % (tag_spec, projection_spec))
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore
         for projection in projection_spec:
@@ -1206,8 +1190,7 @@ class QueryBuilder:
                     if not isinstance(val, str):
                         raise TypeError(f'{val} has to be a string')
             _projections.append(_thisprojection)
-        if self._debug:
-            print('   projections have become:', _projections)
+        self.debug('projections have become: %s' % _projections)
         self._projections[tag] = _projections
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
@@ -1260,8 +1243,7 @@ class QueryBuilder:
             items_to_project = self._projections.get(tag, [])
 
         # Return here if there is nothing to project, reduces number of key in return dictionary
-        if self._debug:
-            print(tag, items_to_project)
+        self.debug('%s; %s' % (tag, items_to_project))
         if not items_to_project:
             return
 
@@ -1313,7 +1295,7 @@ class QueryBuilder:
         Run in debug mode. This does not affect functionality, but prints intermediate stages
         when creating a query on screen.
 
-        :param bool debug: Turn debug on or off
+        :param debug: Turn debug on or off
         """
         if not isinstance(debug, bool):
             return TypeError('I expect a boolean')
@@ -1321,13 +1303,17 @@ class QueryBuilder:
 
         return self
 
+    def debug(self, msg: str) -> None:
+        """Log debug message."""
+        if self._debug:
+            print(f"DEBUG: {msg}")
+
     def limit(self, limit: Optional[int]) -> 'QueryBuilder':
         """
         Set the limit (nr of rows to return)
 
-        :param int limit: integers of number of rows of rows to return
+        :param limit: integers of number of rows of rows to return
         """
-
         if (limit is not None) and (not isinstance(limit, int)):
             raise TypeError('The limit has to be an integer, or None')
         self._limit = limit
@@ -1341,7 +1327,7 @@ class QueryBuilder:
         then *offset* rows are skipped before starting to count the *limit* rows
         that are returned.
 
-        :param int offset: integers of nr of rows to skip
+        :param offset: integers of nr of rows to skip
         """
         if (offset is not None) and (not isinstance(offset, int)):
             raise TypeError('offset has to be an integer, or None')
@@ -1920,11 +1906,7 @@ class QueryBuilder:
         self.tag_to_projected_property_dict = {}
 
         self.nr_of_projections = 0
-        if self._debug:
-            print('DEBUG:')
-            print('   Printing the content of self._projections')
-            print('  ', self._projections)
-            print()
+        self.debug('self._projections: %s' % self._projections)
 
         if not any(self._projections.values()):
             # If user has not set projection,
@@ -1940,13 +1922,12 @@ class QueryBuilder:
 
             for vertex in self._path[1:]:
                 edge_tag = vertex.get('edge_tag', None)  # type: ignore
-                if self._debug:
-                    print('DEBUG: Checking projections for edges:')
-                    print(
-                        '   This is edge {} from {}, {} of {}'.format(
-                            edge_tag, vertex.get('tag'), vertex.get('joining_keyword'), vertex.get('joining_value')
-                        )
-                    )
+
+                self.debug(
+                    'Checking projections for edges: '
+                    'This is edge %s from %s, %s of %s' %
+                    (edge_tag, vertex.get('tag'), vertex.get('joining_keyword'), vertex.get('joining_value'))
+                )
                 if edge_tag is not None:
                     self._build_projections(edge_tag)
 
@@ -1993,7 +1974,7 @@ class QueryBuilder:
 
         return self._query
 
-    def get_alias(self, tag):
+    def get_alias(self, tag: str):
         """
         In order to continue a query by the user, this utility function
         returns the aliased ormclasses.
@@ -2004,12 +1985,12 @@ class QueryBuilder:
         tag = self._get_tag_from_specification(tag)
         return self.tag_to_alias_map[tag]
 
-    def get_used_tags(self, vertices=True, edges=True):
+    def get_used_tags(self, vertices: bool = True, edges: bool = True) -> List[str]:
         """
         Returns a list of all the vertices that are being used.
         Some parameter allow to select only subsets.
-        :param bool vertices: Defaults to True. If True, adds the tags of vertices to the returned list
-        :param bool edges: Defaults to True. If True,  adds the tags of edges to the returnend list.
+        :param vertices: Defaults to True. If True, adds the tags of vertices to the returned list
+        :param edges: Defaults to True. If True,  adds the tags of edges to the returnend list.
 
         :returns: A list of all tags, including (if there is) also the tag give for the edges
         """
@@ -2160,7 +2141,7 @@ class QueryBuilder:
         query = self.get_query()
         return self._impl.count(query)
 
-    def iterall(self, batch_size=100):
+    def iterall(self, batch_size: int = 100):
         """
         Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
@@ -2168,7 +2149,7 @@ class QueryBuilder:
         https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
 
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -2191,7 +2172,7 @@ class QueryBuilder:
         https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
 
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
 
@@ -2211,10 +2192,10 @@ class QueryBuilder:
         The order inside each row is given by the order of the vertices in the path and the order of the projections for
         each vertex in the path.
 
-        :param int batch_size: the size of the batches to ask the backend to batch results in subcollections. You can
+        :param batch_size: the size of the batches to ask the backend to batch results in subcollections. You can
             optimize the speed of the query by tuning this parameter. Leave the default `None` if speed is not critical
             or if you don't know what you're doing.
-        :param bool flat: return the result as a flat list of projected entities without sub lists.
+        :param flat: return the result as a flat list of projected entities without sub lists.
         :returns: a list of lists of all projected entities.
         """
         matches = list(self.iterall(batch_size=batch_size))
@@ -2230,7 +2211,7 @@ class QueryBuilder:
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
 
-        :param int batch_size:
+        :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
             You can optimize the speed of the query by tuning this parameter.
             Leave the default (*None*) if speed is not critical or if you don't know

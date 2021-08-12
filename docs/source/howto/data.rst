@@ -79,7 +79,6 @@ If none of the currently available data types, as listed by ``verdi plugin list`
 For details refer to the next section :ref:`"How to add support for custom data types"<topics:data_types:plugin>`.
 
 
-
 .. _how-to:data:organize:
 
 Organizing data

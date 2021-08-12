@@ -22,7 +22,7 @@ when instantiated by the user.
 from inspect import isclass as inspect_isclass
 import copy
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, Union, TYPE_CHECKING
 import warnings
 
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
@@ -60,9 +60,11 @@ _LOGGER = logging.getLogger(__name__)
 # subclassing for any entity type. This workaround should then be able to be removed.
 GROUP_ENTITY_TYPE_PREFIX = 'group.'
 
+# re-usable type annotations
 NODE_CLS_TYPE = Type[Any]  # pylint: disable=invalid-name
 PROJECT_TYPE = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=invalid-name
 FILTER_TYPE = Dict[str, Any]  # pylint: disable=invalid-name
+ROW_TYPE = Any  # pylint: disable=invalid-name
 
 try:
     # new in python 3.8
@@ -751,7 +753,7 @@ class QueryBuilder:
         try:
             self.tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as exception:
-            self.debug(f'Exception caught in append, cleaning up: {exception}')
+            self.debug('Exception caught in append, cleaning up: %s', exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -775,7 +777,7 @@ class QueryBuilder:
             if filters is not None:
                 self.add_filter(tag, filters)
         except Exception as exception:
-            self.debug(f'Exception caught in append (part filters), cleaning up: {exception}')
+            self.debug('Exception caught in append, cleaning up: %s', exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag)
@@ -788,7 +790,7 @@ class QueryBuilder:
             if project is not None:
                 self.add_projection(tag, project)
         except Exception as exception:
-            self.debug(f'Exception caught in append (part filters), cleaning up: {exception}')
+            self.debug('Exception caught in append, cleaning up: %s', exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -842,7 +844,7 @@ class QueryBuilder:
                 joining_value = self._path[-1]['tag']
 
         except Exception as exception:
-            self.debug(f'Exception caught in append (part filters), cleaning up: {exception}')
+            self.debug('Exception caught in append (part filters), cleaning up: %s', exception)
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -854,14 +856,13 @@ class QueryBuilder:
         # EDGES #################################
         if len(self._path) > 0:
             try:
-                self.debug('Choosing an edge_tag')
                 if edge_tag is None:
                     edge_destination_tag = self._get_tag_from_specification(joining_value)
                     edge_tag = edge_destination_tag + self._EDGE_TAG_DELIM + tag
                 else:
                     if edge_tag in self.tag_to_alias_map.keys():
                         raise ValueError(f'The tag {edge_tag} is already in use')
-                self.debug(f'I have chosen {edge_tag}')
+                self.debug('edge_tag chosen: %s', edge_tag)
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
@@ -879,7 +880,7 @@ class QueryBuilder:
                 if edge_project is not None:
                     self.add_projection(edge_tag, edge_project)
             except Exception as exception:
-                self.debug(f'Exception caught in append (part joining), cleaning up {exception}')
+                self.debug('Exception caught in append (part joining), cleaning up %s', exception)
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
                 self.tag_to_alias_map.pop(tag, None)
@@ -1168,7 +1169,7 @@ class QueryBuilder:
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
-        self.debug(f'Adding projection of {tag_spec}: {projection_spec}')
+        self.debug('Adding projection of %s: %s', tag_spec, projection_spec)
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore
         for projection in projection_spec:
@@ -1190,7 +1191,7 @@ class QueryBuilder:
                     if not isinstance(val, str):
                         raise TypeError(f'{val} has to be a string')
             _projections.append(_thisprojection)
-        self.debug(f'projections have become: {_projections}')
+        self.debug('projections have become: %s', _projections)
         self._projections[tag] = _projections
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
@@ -1243,7 +1244,7 @@ class QueryBuilder:
             items_to_project = self._projections.get(tag, [])
 
         # Return here if there is nothing to project, reduces number of key in return dictionary
-        self.debug(f'{tag}; {items_to_project}')
+        self.debug('projection for %s: %s', tag, items_to_project)
         if not items_to_project:
             return
 
@@ -1303,10 +1304,13 @@ class QueryBuilder:
 
         return self
 
-    def debug(self, msg: str) -> None:
-        """Log debug message."""
+    def debug(self, msg: str, *objects: Any) -> None:
+        """Log debug message.
+        
+        objects will passed to the format string, e.g. ``msg % objects``
+        """
         if self._debug:
-            print(f'DEBUG: {msg}')
+            print(f'DEBUG: {msg}' % objects)
 
     def limit(self, limit: Optional[int]) -> 'QueryBuilder':
         """
@@ -1906,7 +1910,7 @@ class QueryBuilder:
         self.tag_to_projected_property_dict = {}
 
         self.nr_of_projections = 0
-        self.debug(f'self._projections: {self._projections}')
+        self.debug('self._projections: %s', self._projections)
 
         if not any(self._projections.values()):
             # If user has not set projection,
@@ -1924,9 +1928,8 @@ class QueryBuilder:
                 edge_tag = vertex.get('edge_tag', None)  # type: ignore
 
                 self.debug(
-                    'Checking projections for edges: '
-                    'This is edge %s from %s, %s of %s' %
-                    (edge_tag, vertex.get('tag'), vertex.get('joining_keyword'), vertex.get('joining_value'))
+                    'Checking projections for edges: This is edge %s from %s, %s of %s',
+                    edge_tag, vertex.get('tag'), vertex.get('joining_keyword'), vertex.get('joining_value')
                 )
                 if edge_tag is not None:
                     self._build_projections(edge_tag)
@@ -2046,7 +2049,7 @@ class QueryBuilder:
         return query
 
     @staticmethod
-    def get_aiida_entity_res(value):
+    def get_aiida_entity_res(value) -> ROW_TYPE:
         """Convert a projected query result to front end class if it is an instance of a `BackendEntity`.
 
         Values that are not an `BackendEntity` instance will be returned unaltered
@@ -2059,7 +2062,7 @@ class QueryBuilder:
         except TypeError:
             return value
 
-    def inject_query(self, query):
+    def inject_query(self, query: 'Query') -> None:
         """
         Manipulate the query an inject it back.
         This can be done to add custom filters using SQLA.
@@ -2092,7 +2095,7 @@ class QueryBuilder:
         self._query = self.get_query().distinct()
         return self
 
-    def first(self):
+    def first(self) -> Optional[List[ROW_TYPE]]:
         """
         Executes query asking for one instance.
         Use as follows::
@@ -2117,7 +2120,7 @@ class QueryBuilder:
 
         return [self.get_aiida_entity_res(self._impl.get_aiida_res(rowitem)) for colindex, rowitem in enumerate(result)]
 
-    def one(self):
+    def one(self) -> ROW_TYPE:
         """
         Executes the query asking for exactly one results. Will raise an exception if this is not the case
         :raises: MultipleObjectsError if more then one row can be returned
@@ -2141,13 +2144,12 @@ class QueryBuilder:
         query = self.get_query()
         return self._impl.count(query)
 
-    def iterall(self, batch_size: int = 100):
+    def iterall(self, batch_size: Optional[int] = 100) -> Iterator[List[ROW_TYPE]]:
         """
         Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
         https://docs.sqlalchemy.org/en/14/orm/query.html#sqlalchemy.orm.Query.yield_per
-
 
         :param batch_size:
             The size of the batches to ask the backend to batch results in subcollections.
@@ -2164,7 +2166,7 @@ class QueryBuilder:
 
             yield item
 
-    def iterdict(self, batch_size: Optional[int] = 100) -> Iterable[Dict]:
+    def iterdict(self, batch_size: Optional[int] = 100) -> Iterable[Dict[str, ROW_TYPE]]:
         """
         Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
@@ -2186,7 +2188,7 @@ class QueryBuilder:
 
             yield item
 
-    def all(self, batch_size: Optional[int] = None, flat: bool = False):
+    def all(self, batch_size: Optional[int] = None, flat: bool = False) -> Union[List[List[ROW_TYPE]], List[ROW_TYPE]]:
         """Executes the full query with the order of the rows as returned by the backend.
 
         The order inside each row is given by the order of the vertices in the path and the order of the projections for
@@ -2205,7 +2207,7 @@ class QueryBuilder:
 
         return [projection for entry in matches for projection in entry]
 
-    def dict(self, batch_size: Optional[int] = None) -> List[dict]:
+    def dict(self, batch_size: Optional[int] = None) -> List[Dict[str, ROW_TYPE]]:
         """
         Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path

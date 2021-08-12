@@ -339,7 +339,6 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
    .. code-block:: console
 
        $ pip install -e .  # install package in "editable mode"
-       $ reentry scan
 
    See the :ref:`how-to:plugins-install` section for details.
 

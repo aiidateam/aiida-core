@@ -1,7 +1,7 @@
 ci:
     autoupdate_schedule: monthly
     autofix_prs: true
-    skip: [mypy, pylint, dm-generate-all, pyproject, dependencies, verdi-autodocs, version-number]
+    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs, version-number]
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
@@ -70,6 +70,7 @@ repos:
                 aiida/manage/database/delete/nodes.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
+                aiida/plugins/entry_point.py|
                 aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
@@ -95,19 +96,6 @@ repos:
                 setup.py|
                 setup.json|
                 utils/dependency_management.py
-            )$
-
-    -   id: pyproject
-        name: Validate pyproject.toml
-        entry: python ./utils/dependency_management.py validate-pyproject-toml
-        language: system
-        pass_filenames: false
-        files: >-
-            (?x)^(
-                setup.json|
-                setup.py|
-                utils/dependency_management.py|
-                pyproject.toml
             )$
 
     -   id: dependencies

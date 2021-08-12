@@ -14,7 +14,6 @@ Validates consistency of setup.json and
 
  * environment.yml
  * version in aiida/__init__.py
- * reentry dependency in pyproject.toml
 
 """
 import collections

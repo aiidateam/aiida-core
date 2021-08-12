@@ -67,7 +67,7 @@ class CalcJobNode(CalculationNode):
         if self._tools is None:
             entry_point_string = self.process_type
 
-            if is_valid_entry_point_string(entry_point_string):
+            if entry_point_string and is_valid_entry_point_string(entry_point_string):
                 entry_point = get_entry_point_from_string(entry_point_string)
 
                 try:

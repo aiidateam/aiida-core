@@ -20,7 +20,7 @@ from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import ValidationError
-from aiida.plugins.entry_point import get_entry_points
+from aiida.plugins.entry_point import get_entry_point_names
 from aiida.transports import cli as transport_cli
 
 
@@ -597,5 +597,5 @@ def computer_config_show(computer, user, defaults, as_option_string):
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
 
 
-for ep in get_entry_points('aiida.transports'):
-    computer_configure.add_command(transport_cli.create_configure_cmd(ep.name))
+for ep_name in get_entry_point_names('aiida.transports'):
+    computer_configure.add_command(transport_cli.create_configure_cmd(ep_name))

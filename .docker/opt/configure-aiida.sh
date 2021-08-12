@@ -8,9 +8,6 @@ set -x
 # Environment.
 export SHELL=/bin/bash
 
-# Update the list of installed aiida plugins.
-reentry scan
-
 # Setup AiiDA autocompletion.
 grep _VERDI_COMPLETE /home/${SYSTEM_USER}/.bashrc &> /dev/null || echo 'eval "$(_VERDI_COMPLETE=source verdi)"' >> /home/${SYSTEM_USER}/.bashrc
 

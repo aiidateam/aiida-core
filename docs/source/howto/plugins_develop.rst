@@ -121,11 +121,6 @@ Adding a new entry point consists of the following steps:
      }
      ...
 
- #. Let setuptools and reentry know about your entry point by installing your plugin again::
-
-     pip install -e .
-     reentry scan
-
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
 .. note::

@@ -50,7 +50,7 @@ class GroupMeta(ABCMeta):
         from aiida.plugins.entry_point import get_entry_point_from_class
 
         newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
-        
+
         mod = namespace['__module__']
         entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 

@@ -271,11 +271,11 @@ class InteractiveOption(ConditionalOption):
 
             # If we are here, we are in interactive mode and the parameter is not specified
             # We enter the prompt loop
-            value = self.prompt_loop(ctx, param, value)
-        else:
-            # There is a prompt_fn function and returns False (i.e. should not ask for this value
-            # We then set the value to None
-            value = None
+            return self.prompt_loop(ctx, param, value)
+
+        # There is a prompt_fn function and returns False (i.e. should not ask for this value
+        # We then set the value to None
+        value = None
 
         # And then we call the callback
         return self.after_callback(ctx, param, value)

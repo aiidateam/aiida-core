@@ -45,7 +45,7 @@ idna==3.2
 imagesize==1.2.0
 importlib-metadata==4.6.3
 iniconfig==1.1.1
-ipykernel==5.5.5
+ipykernel==6.1
 ipython==7.26.0
 ipython-genutils==0.2.0
 ipywidgets==7.6.3

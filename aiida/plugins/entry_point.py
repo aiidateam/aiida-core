@@ -17,7 +17,7 @@ from typing import Any, Optional, List, Sequence, Set, Tuple
 # but was then updated in python 3.10 to use an improved API.
 # So for now we use the backport importlib_metadata package.
 from importlib_metadata import EntryPoint, EntryPoints
-from importlib_metadata import entry_points as eps
+from importlib_metadata import entry_points as _eps
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
 
@@ -25,6 +25,11 @@ __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_poin
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
+
+
+@functools.lru_cache(maxsize=1)
+def eps():
+    return _eps()
 
 
 class EntryPointFormat(enum.Enum):
@@ -194,7 +199,6 @@ def load_entry_point_from_string(entry_point_string: str) -> Any:
     return load_entry_point(group, name)
 
 
-@functools.lru_cache(maxsize=100)
 def load_entry_point(group: str, name: str) -> Any:
     """
     Load the class registered under the entry point for a given name and group
@@ -218,7 +222,6 @@ def load_entry_point(group: str, name: str) -> Any:
     return loaded_entry_point
 
 
-@functools.lru_cache(maxsize=None)
 def get_entry_point_groups() -> Set[str]:
     """
     Return a list of all the recognized entry point groups
@@ -237,7 +240,6 @@ def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     return group_names
 
 
-@functools.lru_cache(maxsize=None)
 def get_entry_points(group: str) -> EntryPoints:
     """
     Return a list of all the entry points within a specific group
@@ -248,7 +250,6 @@ def get_entry_points(group: str) -> EntryPoints:
     return eps().select(group=group)
 
 
-@functools.lru_cache(maxsize=None)
 def get_entry_point(group: str, name: str) -> EntryPoint:
     """
     Return an entry point with a given name within a specific group
@@ -267,6 +268,7 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     return found[name]
 
 
+@functools.lru_cache(maxsize=100)
 def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:
     """
     Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
@@ -330,7 +332,7 @@ def is_valid_entry_point_string(entry_point_string: str) -> bool:
     return group in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=100)
 def is_registered_entry_point(class_module: str, class_name: str, groups: Optional[Sequence[str]] = None) -> bool:
     """Verify whether the class with the given module and class name is a registered entry point.
 

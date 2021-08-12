@@ -61,10 +61,10 @@ _LOGGER = logging.getLogger(__name__)
 GROUP_ENTITY_TYPE_PREFIX = 'group.'
 
 # re-usable type annotations
-NODE_CLS_TYPE = Type[Any]  # pylint: disable=invalid-name
-PROJECT_TYPE = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=invalid-name
-FILTER_TYPE = Dict[str, Any]  # pylint: disable=invalid-name
-ROW_TYPE = Any  # pylint: disable=invalid-name
+NodeClsType = Type[Any]  # pylint: disable=invalid-name
+ProjectType = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=invalid-name
+FilterType = Dict[str, Any]  # pylint: disable=invalid-name
+RowType = Any  # pylint: disable=invalid-name
 
 try:
     # new in python 3.8
@@ -364,9 +364,9 @@ class QueryBuilder:
         backend: Optional['Backend'] = None,
         *,
         debug: bool = False,
-        path: Optional[Sequence[Union[str, Dict[str, Any], NODE_CLS_TYPE]]] = (),
-        filters: Optional[Dict[str, FILTER_TYPE]] = None,
-        project: Optional[Dict[str, PROJECT_TYPE]] = None,
+        path: Optional[Sequence[Union[str, Dict[str, Any], NodeClsType]]] = (),
+        filters: Optional[Dict[str, FilterType]] = None,
+        project: Optional[Dict[str, ProjectType]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         order_by: Optional[Any] = None,
@@ -413,7 +413,7 @@ class QueryBuilder:
         self.tag_to_projected_property_dict: Dict[str, dict] = {}
 
         # A dictionary tag: filter specification for this alias
-        self._filters: Dict[str, FILTER_TYPE] = {}
+        self._filters: Dict[str, FilterType] = {}
 
         # A dictionary tag: projections for this alias
         self._projections: Dict[str, List[dict]] = {}
@@ -602,15 +602,15 @@ class QueryBuilder:
 
     def append(
         self,
-        cls: Optional[Union[NODE_CLS_TYPE, Sequence[NODE_CLS_TYPE]]] = None,
+        cls: Optional[Union[NodeClsType, Sequence[NodeClsType]]] = None,
         entity_type: Optional[Union[str, Sequence[str]]] = None,
         tag: Optional[str] = None,
-        filters: Optional[FILTER_TYPE] = None,
-        project: Optional[PROJECT_TYPE] = None,
+        filters: Optional[FilterType] = None,
+        project: Optional[ProjectType] = None,
         subclassing: bool = True,
         edge_tag: Optional[str] = None,
-        edge_filters: Optional[FILTER_TYPE] = None,
-        edge_project: Optional[PROJECT_TYPE] = None,
+        edge_filters: Optional[FilterType] = None,
+        edge_project: Optional[ProjectType] = None,
         outerjoin: bool = False,
         joining_keyword: Optional[str] = None,
         joining_value: Optional[Any] = None,
@@ -1019,7 +1019,7 @@ class QueryBuilder:
             self._order_by.append(_order_spec)
         return self
 
-    def add_filter(self, tagspec: str, filter_spec: FILTER_TYPE) -> None:
+    def add_filter(self, tagspec: str, filter_spec: FilterType) -> None:
         """
         Adding a filter to my filters.
 
@@ -1042,7 +1042,7 @@ class QueryBuilder:
         self._filters[tag].update(filters)
 
     @staticmethod
-    def _process_filters(filters: FILTER_TYPE) -> dict:
+    def _process_filters(filters: FilterType) -> dict:
         """Process filters."""
         if not isinstance(filters, dict):
             raise TypeError('Filters have to be passed as dictionaries')
@@ -1120,7 +1120,7 @@ class QueryBuilder:
 
         self.add_filter(tagspec, {'type_string': type_string_filter})
 
-    def add_projection(self, tag_spec: str, projection_spec: PROJECT_TYPE) -> None:
+    def add_projection(self, tag_spec: str, projection_spec: ProjectType) -> None:
         r"""
         Adds a projection
 
@@ -2049,7 +2049,7 @@ class QueryBuilder:
         return query
 
     @staticmethod
-    def get_aiida_entity_res(value) -> ROW_TYPE:
+    def get_aiida_entity_res(value) -> RowType:
         """Convert a projected query result to front end class if it is an instance of a `BackendEntity`.
 
         Values that are not an `BackendEntity` instance will be returned unaltered
@@ -2095,7 +2095,7 @@ class QueryBuilder:
         self._query = self.get_query().distinct()
         return self
 
-    def first(self) -> Optional[List[ROW_TYPE]]:
+    def first(self) -> Optional[List[RowType]]:
         """
         Executes query asking for one instance.
         Use as follows::
@@ -2120,7 +2120,7 @@ class QueryBuilder:
 
         return [self.get_aiida_entity_res(self._impl.get_aiida_res(rowitem)) for colindex, rowitem in enumerate(result)]
 
-    def one(self) -> ROW_TYPE:
+    def one(self) -> RowType:
         """
         Executes the query asking for exactly one results. Will raise an exception if this is not the case
         :raises: MultipleObjectsError if more then one row can be returned
@@ -2144,7 +2144,7 @@ class QueryBuilder:
         query = self.get_query()
         return self._impl.count(query)
 
-    def iterall(self, batch_size: Optional[int] = 100) -> Iterator[List[ROW_TYPE]]:
+    def iterall(self, batch_size: Optional[int] = 100) -> Iterator[List[RowType]]:
         """
         Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
@@ -2166,7 +2166,7 @@ class QueryBuilder:
 
             yield item
 
-    def iterdict(self, batch_size: Optional[int] = 100) -> Iterable[Dict[str, ROW_TYPE]]:
+    def iterdict(self, batch_size: Optional[int] = 100) -> Iterable[Dict[str, RowType]]:
         """
         Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
@@ -2188,7 +2188,7 @@ class QueryBuilder:
 
             yield item
 
-    def all(self, batch_size: Optional[int] = None, flat: bool = False) -> Union[List[List[ROW_TYPE]], List[ROW_TYPE]]:
+    def all(self, batch_size: Optional[int] = None, flat: bool = False) -> Union[List[List[RowType]], List[RowType]]:
         """Executes the full query with the order of the rows as returned by the backend.
 
         The order inside each row is given by the order of the vertices in the path and the order of the projections for
@@ -2207,7 +2207,7 @@ class QueryBuilder:
 
         return [projection for entry in matches for projection in entry]
 
-    def dict(self, batch_size: Optional[int] = None) -> List[Dict[str, ROW_TYPE]]:
+    def dict(self, batch_size: Optional[int] = None) -> List[Dict[str, RowType]]:
         """
         Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path

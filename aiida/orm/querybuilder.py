@@ -751,7 +751,7 @@ class QueryBuilder:
         try:
             self.tag_to_alias_map[tag] = aliased(ormclass)
         except Exception as exception:
-            self.debug('Exception caught in append, cleaning up: %s' % exception)
+            self.debug(f'Exception caught in append, cleaning up: {exception}')
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -775,7 +775,7 @@ class QueryBuilder:
             if filters is not None:
                 self.add_filter(tag, filters)
         except Exception as exception:
-            self.debug('Exception caught in append (part filters), cleaning up: %s' % exception)
+            self.debug(f'Exception caught in append (part filters), cleaning up: {exception}')
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag)
@@ -788,7 +788,7 @@ class QueryBuilder:
             if project is not None:
                 self.add_projection(tag, project)
         except Exception as exception:
-            self.debug('Exception caught in append (part filters), cleaning up: %s' % exception)
+            self.debug(f'Exception caught in append (part filters), cleaning up: {exception}')
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -842,7 +842,7 @@ class QueryBuilder:
                 joining_value = self._path[-1]['tag']
 
         except Exception as exception:
-            self.debug('Exception caught in append (part filters), cleaning up: %s' % exception)
+            self.debug(f'Exception caught in append (part filters), cleaning up: {exception}')
             if l_class_added_to_map:
                 self._cls_to_tag_map.pop(cls)
             self.tag_to_alias_map.pop(tag, None)
@@ -861,7 +861,7 @@ class QueryBuilder:
                 else:
                     if edge_tag in self.tag_to_alias_map.keys():
                         raise ValueError(f'The tag {edge_tag} is already in use')
-                self.debug('I have chosen %s' % edge_tag)
+                self.debug(f'I have chosen {edge_tag}')
 
                 # My edge is None for now, since this is created on the FLY,
                 # the _tag_to_alias_map will be updated later (in _build)
@@ -879,7 +879,7 @@ class QueryBuilder:
                 if edge_project is not None:
                     self.add_projection(edge_tag, edge_project)
             except Exception as exception:
-                self.debug('Exception caught in append (part joining), cleaning up %s' % exception)
+                self.debug(f'Exception caught in append (part joining), cleaning up {exception}')
                 if l_class_added_to_map:
                     self._cls_to_tag_map.pop(cls)
                 self.tag_to_alias_map.pop(tag, None)
@@ -1168,7 +1168,7 @@ class QueryBuilder:
         """
         tag = self._get_tag_from_specification(tag_spec)
         _projections = []
-        self.debug('Adding projection of %s: %s' % (tag_spec, projection_spec))
+        self.debug(f'Adding projection of {tag_spec}: {projection_spec}')
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore
         for projection in projection_spec:
@@ -1190,7 +1190,7 @@ class QueryBuilder:
                     if not isinstance(val, str):
                         raise TypeError(f'{val} has to be a string')
             _projections.append(_thisprojection)
-        self.debug('projections have become: %s' % _projections)
+        self.debug(f'projections have become: {_projections}')
         self._projections[tag] = _projections
 
     def _get_projectable_entity(self, alias, column_name, attrpath, **entityspec):
@@ -1243,7 +1243,7 @@ class QueryBuilder:
             items_to_project = self._projections.get(tag, [])
 
         # Return here if there is nothing to project, reduces number of key in return dictionary
-        self.debug('%s; %s' % (tag, items_to_project))
+        self.debug(f'{tag}; {items_to_project}')
         if not items_to_project:
             return
 
@@ -1306,7 +1306,7 @@ class QueryBuilder:
     def debug(self, msg: str) -> None:
         """Log debug message."""
         if self._debug:
-            print(f"DEBUG: {msg}")
+            print(f'DEBUG: {msg}')
 
     def limit(self, limit: Optional[int]) -> 'QueryBuilder':
         """
@@ -1906,7 +1906,7 @@ class QueryBuilder:
         self.tag_to_projected_property_dict = {}
 
         self.nr_of_projections = 0
-        self.debug('self._projections: %s' % self._projections)
+        self.debug(f'self._projections: {self._projections}')
 
         if not any(self._projections.values()):
             # If user has not set projection,

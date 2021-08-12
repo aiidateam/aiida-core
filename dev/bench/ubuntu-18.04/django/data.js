@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1628777185297,
+  "lastUpdate": 1628786021930,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -43923,6 +43923,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.011718",
             "group": "node",
             "extra": "mean: 18.094 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.11",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "79d2d273780b5ef43750c858361b139fc25c2753",
+          "message": "Add the `JsonableData` data plugin (#5017)\n\nThis data plugin is designed to make it easy to wrap instances of\r\narbitrary Python classes and store them as a node in the database. The\r\nonly requirement is that the class implements the `as_dict` method,\r\nwhich should return a dictionary that represents the instance which is\r\nJSON-serializable. The latter means that it can be serialized by the\r\n`JsonEncoder` of the `json` built-in module.\r\n\r\nIf the class also implements a `from_dict` method, that can consume the\r\ndictionary that is returned by `as_dict`, to reconstruct an instance,\r\nthe original instance that is wrapped by the node (loaded from the\r\ndatabase), can be recovered through the `obj` property.",
+          "timestamp": "2021-08-12T18:25:11+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/79d2d273780b5ef43750c858361b139fc25c2753",
+          "distinct": true,
+          "tree_id": "c8e30501a4eb62b2ca95a628d912cdbc5261d642"
+        },
+        "date": 1628786018935,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.594862316961861,
+            "unit": "iter/sec",
+            "range": "stddev: 0.057767",
+            "group": "engine",
+            "extra": "mean: 278.17 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.921977538846999,
+            "unit": "iter/sec",
+            "range": "stddev: 0.043858",
+            "group": "engine",
+            "extra": "mean: 1.0846 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 1.0466798122408076,
+            "unit": "iter/sec",
+            "range": "stddev: 0.041793",
+            "group": "engine",
+            "extra": "mean: 955.40 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.20558254943206988,
+            "unit": "iter/sec",
+            "range": "stddev: 0.098364",
+            "group": "engine",
+            "extra": "mean: 4.8642 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.23821810928877984,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12198",
+            "group": "engine",
+            "extra": "mean: 4.1978 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.851495952533752,
+            "unit": "iter/sec",
+            "range": "stddev: 0.045282",
+            "group": "engine",
+            "extra": "mean: 350.69 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6941800347401017,
+            "unit": "iter/sec",
+            "range": "stddev: 0.049876",
+            "group": "engine",
+            "extra": "mean: 1.4405 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.801690184753168,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062331",
+            "group": "engine",
+            "extra": "mean: 1.2474 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1778702068307264,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14592",
+            "group": "engine",
+            "extra": "mean: 5.6221 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.21346991315072866,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11726",
+            "group": "engine",
+            "extra": "mean: 4.6845 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.843926272482643,
+            "unit": "iter/sec",
+            "range": "stddev: 0.046673",
+            "group": "import-export",
+            "extra": "mean: 351.63 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.628337227128433,
+            "unit": "iter/sec",
+            "range": "stddev: 0.052429",
+            "group": "import-export",
+            "extra": "mean: 380.47 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 1.7389447275826857,
+            "unit": "iter/sec",
+            "range": "stddev: 0.049221",
+            "group": "import-export",
+            "extra": "mean: 575.06 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.7045005203768693,
+            "unit": "iter/sec",
+            "range": "stddev: 0.048367",
+            "group": "import-export",
+            "extra": "mean: 586.68 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 1083.8835364174145,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00093351",
+            "group": "node",
+            "extra": "mean: 922.61 usec\nrounds: 192"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 250.41892874441504,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000095472",
+            "group": "node",
+            "extra": "mean: 3.9933 msec\nrounds: 133"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 118.53256724433746,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00048144",
+            "group": "node",
+            "extra": "mean: 8.4365 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 244.44040884213163,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00030225",
+            "group": "node",
+            "extra": "mean: 4.0910 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 49.25239438410722,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015846",
+            "group": "node",
+            "extra": "mean: 20.304 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 45.70522247835319,
+            "unit": "iter/sec",
+            "range": "stddev: 0.012307",
+            "group": "node",
+            "extra": "mean: 21.879 msec\nrounds: 100"
           }
         ]
       }

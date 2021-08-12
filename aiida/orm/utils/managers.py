@@ -12,9 +12,12 @@ Contain utility classes for "managers", i.e., classes that allow
 to access members of other classes via TAB-completable attributes
 (e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
+import warnings
+
 from aiida.common import AttributeDict
 from aiida.common.links import LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
+from aiida.common.warnings import AiidaDeprecationWarning
 
 __all__ = ('NodeLinksManager', 'AttributeManager')
 
@@ -24,6 +27,8 @@ class NodeLinksManager:
     A manager that allows to inspect, with tab-completion, nodes linked to a given one.
     See an example of its use in `CalculationNode.inputs`.
     """
+
+    _namespace_separator = '__'
 
     def __init__(self, node, link_type, incoming):
         """
@@ -90,17 +95,18 @@ class NodeLinksManager:
             # Check whether the label contains a double underscore, in which case we want to warn the user that this is
             # deprecated. However, we need to exclude labels that corresponds to dunder methods, i.e., those that start
             # and end with a double underscore.
-            if '__' in label and not (label.startswith('__') and label.endswith('__')):
+            if (
+                self._namespace_separator in label and
+                not (label.startswith(self._namespace_separator) and label.endswith(self._namespace_separator))
+            ):
                 import functools
-                import warnings
-                from aiida.common.warnings import AiidaDeprecationWarning
                 warnings.warn(
                     'dereferencing nodes with links containing double underscores is deprecated, simply replace '
                     'the double underscores with a single dot instead. For example: \n'
                     '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n'
                     'Support for double underscores will be removed in the future.', AiidaDeprecationWarning
                 )  # pylint: disable=no-member
-                namespaces = label.split('__')
+                namespaces = label.split(self._namespace_separator)
                 try:
                     return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)
                 except TypeError as exc:
@@ -141,6 +147,26 @@ class NodeLinksManager:
             raise NotExistentAttributeError(
                 f"Node<{self._node.pk}> does not have an {prefix} with link label '{name}'"
             ) from exception
+
+    def __contains__(self, key):
+        """Override the operator of the base class to emit deprecation warning if double underscore is used in key."""
+        if self._namespace_separator in key:
+            warnings.warn(
+                'The use of double underscores in keys is deprecated. Please expand the namespaces manually:\n'
+                'instead of `nested__key in node.inputs`, use `nested in node.inputs and `key in node.inputs.nested`.',
+                AiidaDeprecationWarning
+            )
+            namespaces = key.split(self._namespace_separator)
+            leaf = namespaces.pop()
+            subdictionary = self
+            for namespace in namespaces:
+                try:
+                    subdictionary = subdictionary[namespace]
+                except KeyError:
+                    return False
+            return leaf in subdictionary
+
+        return key in self._get_keys()
 
     def __getitem__(self, name):
         """
@@ -185,7 +211,7 @@ class AttributeManager:
         # Possibly add checks here
         # We cannot set `self._node` because it would go through the __setattr__ method
         # which uses said _node by calling `self._node.set_attribute(name, value)`.
-        # Instead, we need to manually set it through the `self.__dict__` property.
+        # Instead, we need to manually set it through the `self.__dict__` property.
         self.__dict__['_node'] = node
 
     def __dir__(self):

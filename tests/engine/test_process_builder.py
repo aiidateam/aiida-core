@@ -346,3 +346,37 @@ class TestProcessBuilder(AiidaTestCase):
         # Perform same test but passing the dictionary in as keyword arguments
         builder._merge(**{'nested': {'namespace': {'int': 5}}})
         self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 2.0}}})
+
+    def test_instance_interference(self):
+        """Test that two builder instances do not interact through the class.
+
+        This is a regression test for #4420.
+        """
+
+        class ProcessOne(Process):
+            """Process with nested required ports to check the update functionality."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('port', valid_type=int, default=1)
+
+        class ProcessTwo(Process):
+            """Process with nested required ports to check the update functionality."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('port', valid_type=int, default=2)
+
+        builder_one = ProcessOne.get_builder()
+        assert builder_one.port == 1
+        assert isinstance(builder_one, ProcessBuilderNamespace)
+
+        # Create a second builder and check its only port has the correct default, but also that the original builder
+        # still has its original port default and hasn't been affected by the second builder because the share a port
+        # name.
+        builder_two = ProcessTwo.get_builder()
+        assert isinstance(builder_two, ProcessBuilderNamespace)
+        assert builder_two.port == 2
+        assert builder_one.port == 1

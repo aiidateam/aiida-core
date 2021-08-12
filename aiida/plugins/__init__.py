@@ -32,6 +32,7 @@ __all__ = (
     'WorkflowFactory',
     'load_entry_point',
     'load_entry_point_from_string',
+    'parse_entry_point',
 )
 
 # yapf: enable

@@ -1952,18 +1952,12 @@ class QueryBuilder:
 
         ################ LAST BUT NOT LEAST ############################
         # pop the entity that I added to start the query
-        self._query._entities.pop(0)  # pylint: disable=protected-access
+        self._query._raw_columns.pop(0)
 
-        # Dirty solution coming up:
-        # Sqlalchemy is by default de-duplicating results if possible.
-        # This can lead to strange results, as shown in:
-        # https://github.com/aiidateam/aiida-core/issues/1600
-        # essentially qb.count() != len(qb.all()) in some cases.
-        # We also addressed this with sqlachemy:
-        # https://github.com/sqlalchemy/sqlalchemy/issues/4395#event-2002418814
-        # where the following solution was sanctioned:
-        self._query._has_mapper_entities = False  # pylint: disable=protected-access
-        # We should monitor SQLAlchemy, for when a solution is officially supported by the API!
+        # Note: according to https://github.com/sqlalchemy/sqlalchemy/commit/0d1efeec475621b5c2c2aca0632b02edef54c1a6
+        # automatic uniquing of rows is turned off for the new 2.0 style of ORM querying,
+        # so this sqlalchemy < 1.4 hack is no longer necessary
+        # self._query._has_mapper_entities = False
 
         # Make a list that helps the projection postprocessing
         self._attrkeys_as_in_sql_result = {

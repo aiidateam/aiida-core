@@ -38,7 +38,7 @@ def create_sqlalchemy_engine(profile, **kwargs):
         name=profile.database_name
     )
     return create_engine(
-        engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8', **kwargs
+        engine_url, json_serializer=json.dumps, json_deserializer=json.loads, encoding='utf-8', future=True, **kwargs
     )
 
 

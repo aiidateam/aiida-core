@@ -24,6 +24,23 @@ from aiida.manage import configuration
 @pytest.mark.usefixtures('clear_database_before_test')
 class TestQueryBuilder:
 
+    def test_single_node_count(self):
+        """Test the count method for single entity."""
+        orm.Data().store()
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data)
+        self.assertEqual(builder.count(), 1)
+
+    def test_joined_node_count(self):
+        """Test the count method for joined nodes."""
+        node1 = orm.Data().store()
+        node2 = orm.Data().store()
+        node1.backend_entity.add_incoming(node2.backend_entity, link_type=LinkType.INPUT_CALC, link_label='link_1')
+        builder = orm.QueryBuilder()
+        builder.append(orm.Data)
+        builder.append(orm.Data)
+        self.assertEqual(builder.count(), 1)
+
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
         from aiida.common import timezone

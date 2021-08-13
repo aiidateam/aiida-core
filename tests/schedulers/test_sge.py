@@ -356,3 +356,16 @@ class TestCommand(unittest.TestCase):
         # the seconds since epoch, as suggested on stackoverflow:
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
+
+    def test_job_name_cleaning(self):
+        """Test that invalid characters are cleaned from job name."""
+        from aiida.schedulers.datastructures import JobTemplate
+
+        scheduler = SgeScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = scheduler.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
+        job_tmpl.job_name = 'Some/job:name@with*invalid-characters.'
+
+        header = scheduler._get_submit_script_header(job_tmpl)
+        self.assertTrue('#$ -N Somejobnamewithinvalid-characters.' in header, header)

@@ -88,7 +88,7 @@ class InterruptableFuture(concurrent.Future):
         # Wait for one of the two to finish, if it's us that finishes we expect that it was
         # because of an exception that will have been raised automatically
         wait_iterator = gen.WaitIterator(yieldable, self)
-        result = yield wait_iterator.next()  # pylint: disable=stop-iteration-return
+        result = yield wait_iterator.next()  # pylint: disable=stop-iteration-return,not-callable
         if not wait_iterator.current_index == 0:
             raise RuntimeError(f"This interruptible future had it's result set unexpectedly to {result}")
 

@@ -1,6 +1,21 @@
 # Changelog
 
-## v1.5.2
+## v1.5.3 - 2021-08-13
+
+### Dependencies
+
+- Pin `sqlalchemy` to minor version 1.3 since `sqlalchemy==1.4` breaks our compatibility
+- Put upper limit on `psycopg2-binary` since `psycopg2-binary==2.9` breaks out test environment
+- Fix `pymatgen` imports since top-level imports were removed in v2021.3.4
+
+### Developers
+
+- CI: switch from `postgresql-10` to the default
+- Docs: add statements to nitpick-ignore
+- Dependencies: put upper limit for `pylint-django`
+
+
+## v1.5.2 - 2020-12-07
 
 Note: release `v1.5.1` was skipped due to a problem with the uploaded files to PyPI.
 
@@ -16,7 +31,7 @@ Note: release `v1.5.1` was skipped due to a problem with the uploaded files to P
 - CI: manually install `numpy` to prevent incompatible releases [[#4615]](https://github.com/aiidateam/aiida-core/pull/4615)
 
 
-## v1.5.0
+## v1.5.0 - 2020-11-13
 
 In this minor version release, support for Python 3.9 is added [[#4301]](https://github.com/aiidateam/aiida-core/pull/4301), while support for Python 3.5 is dropped [[#4386]](https://github.com/aiidateam/aiida-core/pull/4386).
 This version is compatible with all current Python versions that are not end-of-life:

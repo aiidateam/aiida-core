@@ -54,7 +54,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:10
+        image: postgres
         env:
           POSTGRES_DB: test_${{ matrix.backend }}
           POSTGRES_PASSWORD: ''
@@ -83,7 +83,7 @@ jobs:
       run: |
         sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt install postgresql graphviz
 
     - name: Upgrade pip
       run: |

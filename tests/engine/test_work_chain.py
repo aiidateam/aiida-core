@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use
+# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use,no-member
 """Tests for the `WorkChain` class."""
 import inspect
 import unittest
@@ -827,8 +827,8 @@ class TestWorkchain(AiidaTestCase):
         wc = ExitCodeWorkChain()
 
         # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
-        self.assertEqual(wc.exit_codes(status).status, status)
-        self.assertEqual(wc.exit_codes(label).status, status)
+        self.assertEqual(wc.exit_codes(status).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes(label).status, status)  # pylint: disable=too-many-function-args
         self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)
 
         with self.assertRaises(AttributeError):

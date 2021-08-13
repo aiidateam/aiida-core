@@ -26,8 +26,14 @@ py:class IO
 
 # issues with order of object processing and type hinting
 py:class WorkChainSpec
+py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
 py:class aiida.tools.importexport.dbexport.ExportReport
 py:class aiida.tools.importexport.dbexport.ArchiveData
+py:obj aiida.orm.entities.EntityType
+py:obj aiida.orm.implementation.entities.EntityType
+py:obj aiida.orm.implementation.django.entities.ModelType
+py:obj aiida.orm.implementation.sql.backends.ModelType
+py:obj aiida.orm.implementation.sqlalchemy.entities.ModelType
 
 py:class EntityType
 py:class aiida.tools.groups.paths.WalkNodeResult

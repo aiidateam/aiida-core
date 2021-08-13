@@ -14,6 +14,7 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
+from .daemon import *
 from .exceptions import *
 from .launch import *
 from .persistence import *
@@ -30,6 +31,7 @@ __all__ = (
     'CalcJob',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
+    'DaemonClient',
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',

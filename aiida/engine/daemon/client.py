@@ -7,10 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Controls the daemon
-"""
-
+"""Client to interact with the daemon."""
 import enum
 import os
 import shutil
@@ -30,6 +27,8 @@ VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 # see https://github.com/python/typing/issues/182
 JsonDictType = Dict[str, Any]
+
+__all__ = ('DaemonClient',)
 
 
 class ControllerProtocol(enum.Enum):

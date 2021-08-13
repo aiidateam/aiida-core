@@ -49,18 +49,14 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
 def print_last_process_state_change(process_type=None):
     """
     Print the last time that a process of the specified type has changed its state.
-    This function will also print a warning if the daemon is not running.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
-    from aiida.cmdline.utils.echo import echo_info, echo_warning
+    from aiida.cmdline.utils.echo import echo_info
     from aiida.common import timezone
     from aiida.common.utils import str_timedelta
-    from aiida.engine.daemon.client import get_daemon_client
     from aiida.engine.utils import get_process_state_change_timestamp
-
-    client = get_daemon_client()
 
     timestamp = get_process_state_change_timestamp(process_type)
 
@@ -71,9 +67,6 @@ def print_last_process_state_change(process_type=None):
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
         echo_info(f'last time an entry changed state: {relative} ({formatted})')
-
-    if not client.is_daemon_running:
-        echo_warning('the daemon is not running', bold=True)
 
 
 def get_node_summary(node):
@@ -476,8 +469,8 @@ def get_num_workers():
                 raise CircusCallError
         try:
             return response['numprocesses']
-        except KeyError:
-            raise CircusCallError('Circus did not return the number of daemon processes')
+        except KeyError as exc:
+            raise CircusCallError('Circus did not return the number of daemon processes') from exc
 
 
 def check_worker_load(active_slots):
@@ -511,3 +504,7 @@ def check_worker_load(active_slots):
             echo.echo('')  # New line
             echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
             echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")
+        else:
+            echo.echo_info(f'Using {percent_load * 100:.0f}% of the available daemon worker slots')
+    else:
+        echo.echo_info('No active daemon workers')

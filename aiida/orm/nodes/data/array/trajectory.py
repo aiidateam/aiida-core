@@ -703,7 +703,7 @@ class TrajectoryData(ArrayData):
             point given results in the point being given as a multiples of lattice vectors
             Than take the integer of the rows to find how many times you have to shift
             the point back"""
-            invcell = np.matrix(cell).T.I
+            invcell = np.matrix(cell).T.I  # pylint: disable=no-member
             # point in crystal coordinates
             points_in_crystal = np.dot(invcell, point).tolist()[0]
             #point collapsed into unit cell

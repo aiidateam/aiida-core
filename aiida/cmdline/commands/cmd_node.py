@@ -289,7 +289,7 @@ def tree(nodes, depth):
     from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
 
     for node in nodes:
-        NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))
+        NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))  # pylint: disable=no-member
 
         if len(nodes) > 1:
             echo.echo('')

@@ -33,16 +33,16 @@ def devel_check_load_time():
     """
     from aiida.manage.manager import get_manager
 
-    aiida_modules = [key for key in sys.modules.keys() if key.startswith("aiida.")]
-    aiida_modules_str = "\n- ".join(sorted(aiida_modules))
-    echo.echo(f"aiida modules loaded:\n- {aiida_modules_str}")
+    aiida_modules = [key for key in sys.modules.keys() if key.startswith('aiida.')]
+    aiida_modules_str = '\n- '.join(sorted(aiida_modules))
+    echo.echo(f'aiida modules loaded:\n- {aiida_modules_str}')
 
     manager = get_manager()
 
     if manager.backend_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    allowed = ("aiida.backends", "aiida.cmdline", "aiida.common", "aiida.manage", "aiida.plugins", "aiida.restapi")
+    allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
     for loaded in aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(

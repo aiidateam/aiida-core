@@ -30,7 +30,7 @@ def devel_check_load_time(verbose):
     Known pathways that increase load time:
 
         * the database environment is loaded when it doesn't need to be
-        * the `aiida.orm` module is imported when it doesn't need to be
+        * Only expected `aiida.*` modules are imported
 
     If either of these conditions are true, the command will raise a critical error
     """

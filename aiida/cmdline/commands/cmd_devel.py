@@ -37,8 +37,8 @@ def devel_check_load_time(verbose):
     from aiida.manage.manager import get_manager
 
     aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
+    aiida_modules_str = '\n- '.join(sorted(aiida_modules))
     if verbose:
-        aiida_modules_str = '\n- '.join(sorted(aiida_modules))
         echo.echo(f'aiida modules loaded:\n- {aiida_modules_str}')
 
     manager = get_manager()

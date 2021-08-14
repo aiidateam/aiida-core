@@ -547,7 +547,7 @@ class LazyConfigureGroup(click.Group):
     def list_commands(self, ctx):
         return list(get_entry_point_names('aiida.transports'))
 
-    def get_command(self, ctx, name):
+    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
         from aiida.transports import cli as transport_cli
         return transport_cli.create_configure_cmd(name)
 
@@ -569,6 +569,7 @@ def computer_configure():
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
+    from aiida.transports import cli as transport_cli
 
     transport_cls = computer.get_transport_class()
     option_list = [

@@ -167,3 +167,4 @@ py:class Session
 py:class Query
 py:class BackendQueryBuilder
 py:class importlib_metadata.EntryPoint
+py:class Command

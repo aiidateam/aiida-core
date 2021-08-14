@@ -13,6 +13,7 @@ import sys
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -22,7 +23,7 @@ def verdi_devel():
 
 
 @verdi_devel.command('check-load-time')
-@click.option('-v', '--verbose', is_flag=True, help='Increase verbosity')
+@options.VERBOSE()
 def devel_check_load_time(verbose):
     """Check for common indicators that slowdown `verdi`.
 
@@ -30,14 +31,14 @@ def devel_check_load_time(verbose):
     Known pathways that increase load time:
 
         * the database environment is loaded when it doesn't need to be
-        * Only expected `aiida.*` modules are imported
+        * Unexpected `aiida.*` modules are imported
 
     If either of these conditions are true, the command will raise a critical error
     """
     from aiida.manage.manager import get_manager
 
-    aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
-    aiida_modules_str = '\n- '.join(sorted(aiida_modules))
+    loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
+    aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
     if verbose:
         echo.echo(f'aiida modules loaded:\n- {aiida_modules_str}')
 
@@ -47,7 +48,7 @@ def devel_check_load_time(verbose):
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
     allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
-    for loaded in aiida_modules:
+    for loaded in loaded_aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(
                 f'potential `verdi` speed problem: `{loaded}` module is imported which is not in: {allowed}'

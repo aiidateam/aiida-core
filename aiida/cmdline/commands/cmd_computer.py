@@ -541,9 +541,6 @@ def computer_delete(computer):
 class LazyConfigureGroup(click.Group):
     """A click group that will lazily load the subcommands for each transport plugin."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def list_commands(self, ctx):
         return list(get_entry_point_names('aiida.transports'))
 

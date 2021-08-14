@@ -19,7 +19,7 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import ValidationError, EntryPointError
 from aiida.plugins.entry_point import get_entry_point_names
 
 
@@ -542,11 +542,17 @@ class LazyConfigureGroup(click.Group):
     """A click group that will lazily load the subcommands for each transport plugin."""
 
     def list_commands(self, ctx):
-        return list(get_entry_point_names('aiida.transports'))
+        subcommands = super().list_commands(ctx)
+        subcommands.extend(get_entry_point_names('aiida.transports'))
+        return subcommands
 
     def get_command(self, ctx, name):  # pylint: disable=arguments-differ
         from aiida.transports import cli as transport_cli
-        return transport_cli.create_configure_cmd(name)
+        try:
+            command = transport_cli.create_configure_cmd(name)
+        except EntryPointError:
+            command = super().get_command(ctx, name)
+        return command
 
 
 @verdi_computer.group('configure', cls=LazyConfigureGroup)

@@ -209,9 +209,9 @@ class BaseResource(Resource):
 
 class QueryBuilder(BaseResource):
     """
-    Representation of a QueryBuilder REST API resource (instantiated with a queryhelp JSON).
+    Representation of a QueryBuilder REST API resource (instantiated with a serialised QueryBuilder instance).
 
-    It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.queryhelp`
+    It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.as_dict`
     objects and returning the :py:class:`~aiida.orm.querybuilder.QueryBuilder` result accordingly.
     """
     from aiida.restapi.translator.nodes.node import NodeTranslator
@@ -230,7 +230,7 @@ class QueryBuilder(BaseResource):
         data = {
             'message': (
                 'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
-                'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
+                'POST JSON data, which MUST be a valid QueryBuilder.as_dict() dictionary as a JSON object. '
                 'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
                 'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
             ),
@@ -255,7 +255,8 @@ class QueryBuilder(BaseResource):
         """
         POST method to pass query help JSON.
 
-        If the posted JSON is not a valid QueryBuilder queryhelp, the request will fail with an internal server error.
+        If the posted JSON is not a valid QueryBuilder serialisation,
+        the request will fail with an internal server error.
 
         This uses the NodeTranslator in order to best return Nodes according to the general AiiDA
         REST API data format, while still allowing the return of other AiiDA entities.
@@ -265,9 +266,9 @@ class QueryBuilder(BaseResource):
         # pylint: disable=protected-access
         self.trans._query_help = request.get_json(force=True)
         # While the data may be correct JSON, it MUST be a single JSON Object,
-        # equivalent of a QuieryBuilder.queryhelp dictionary.
+        # equivalent of a QueryBuilder.as_dict() dictionary.
         assert isinstance(self.trans._query_help, dict), (
-            'POSTed data MUST be a valid QueryBuilder.queryhelp dictionary. '
+            'POSTed data MUST be a valid QueryBuilder.as_dict() dictionary. '
             f'Got instead (type: {type(self.trans._query_help)}): {self.trans._query_help}'
         )
         self.trans.__label__ = self.trans._result_type = self.trans._query_help['path'][-1]['tag']
@@ -287,7 +288,7 @@ class QueryBuilder(BaseResource):
                 pass
 
         if empty_projections_counter == number_projections:
-            # No projections have been specified in the queryhelp.
+            # No projections have been specified in the dictionary.
             # To be true to the QueryBuilder response, the last entry in path
             # is the only entry to be returned, all without edges/links.
             self.trans._query_help['project'][self.trans.__label__] = self.trans._default

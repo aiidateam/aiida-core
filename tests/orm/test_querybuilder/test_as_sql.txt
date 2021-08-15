@@ -1,0 +1,5 @@
+SELECT db_dbnode_1.id, db_dbnode_1.uuid, db_dbnode_1.node_type, db_dbnode_1.process_type, db_dbnode_1.label, db_dbnode_1.description, db_dbnode_1.ctime, db_dbnode_1.mtime, db_dbnode_1.attributes, db_dbnode_1.extras, db_dbnode_1.repository_metadata, db_dbnode_1.user_id, db_dbnode_1.dbcomputer_id 
+FROM db_dbnode AS db_dbnode_1 
+WHERE CAST(db_dbnode_1.node_type AS VARCHAR) LIKE %(param_1)s AND CASE WHEN (jsonb_typeof((db_dbnode_1.extras #> %(extras_1)s)) = %(param_2)s) THEN (db_dbnode_1.extras #>> %(extras_1)s) = %(param_3)s ELSE %(param_4)s END
+
+{'param_1': '%', 'extras_1': ('tag4',), 'param_2': 'string', 'param_3': 'appl_pecoal', 'param_4': False}

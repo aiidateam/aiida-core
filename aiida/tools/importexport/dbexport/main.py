@@ -326,7 +326,7 @@ def _get_starting_node_ids(entities: List[Any]) -> Tuple[DefaultDict[str, Set[st
                     }
                 },
                 tag='groups',
-            ).queryhelp
+            ).as_dict()
         )
         node_query = orm.QueryBuilder(**qh_groups).append(orm.Node, project=['id', 'uuid'], with_group='groups')
         node_count = node_query.count()

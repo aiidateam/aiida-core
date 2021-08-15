@@ -10,6 +10,7 @@
 # pylint: disable=attribute-defined-outside-init,invalid-name,no-self-use,missing-docstring,too-many-lines,unused-argument
 """Tests for the QueryBuilder."""
 from collections import defaultdict
+import copy
 from datetime import date, datetime, timedelta
 from itertools import chain
 import warnings
@@ -22,7 +23,7 @@ from aiida.manage import configuration
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-class TestQueryBuilder:
+class TestBasic:
 
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
@@ -546,6 +547,19 @@ class TestQueryBuilder:
         # So this should work now:
         qb.append(orm.StructureData, tag='s').limit(2).dict()
 
+    def test_tuples(self):
+        """Test appending ``cls`` tuples."""
+        orm.Group(label='helloworld').store()
+
+        qb = orm.QueryBuilder().append(orm.Group, filters={'label': 'helloworld'})
+        assert qb.count() == 1
+
+        qb = orm.QueryBuilder().append((orm.Group,), filters={'label': 'helloworld'})
+        assert qb.count() == 1
+
+        qb = orm.QueryBuilder().append(cls=(orm.Group,))
+        assert qb.count() == 1
+
     def test_tags(self):
         qb = orm.QueryBuilder()
         qb.append(orm.Node, tag='n1')
@@ -628,7 +642,7 @@ class TestQueryBuilder:
         qb.append(orm.Data, with_incoming='c1', tag='d2or4')
         qb.append(orm.CalculationNode, tag='c2', with_incoming='d2or4')
         qb.append(orm.Data, tag='d3', with_incoming='c2', project='id')
-        qh = qb.queryhelp  # saving query for later
+        qh = qb.as_dict()  # saving query for later
         qb.append(orm.Data, direction=-4, project='id')
         res1 = {item[1] for item in qb.all()}
         assert res1 == {d1.id}
@@ -681,16 +695,58 @@ class TestMultipleProjections:
         assert isinstance(result[1], orm.Data)
 
 
-class TestQueryHelp:
+class TestRepresentations:
+    """Test representing the query in different formats."""
 
     @pytest.fixture(autouse=True)
-    def init_db(self, clear_database_before_test, aiida_localhost):
-        self.computer = aiida_localhost
+    def init_db(self, clear_database_before_test, data_regression, file_regression):
+        self.regress_dict = data_regression.check
+        self.regress_str = file_regression.check
 
-    def test_queryhelp(self):
+    def test_str(self):
+        """Test ``str(qb)`` returns the correct string."""
+        qb = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
+        self.regress_str(str(qb))
+
+    def test_as_sql(self):
+        """Test ``qb.as_sql(inline=False)`` returns the correct string."""
+        qb = orm.QueryBuilder()
+        qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
+        self.regress_str(qb.as_sql(inline=False))
+
+    def test_as_sql_inline(self):
+        """Test ``qb.as_sql(inline=True)`` returns the correct string."""
+        qb = orm.QueryBuilder()
+        qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
+        self.regress_str(qb.as_sql(inline=True))
+
+    def test_as_dict(self):
+        """Test ``qb.as_dict()`` returns the correct dict."""
+        qb = orm.QueryBuilder()
+        qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
+        self.regress_dict(qb.as_dict())
+
+    def test_round_trip(self):
+        """Test recreating a QueryBuilder from the ``as_dict`` representation
+
+        We test appending a Data node and a Process node for variety, as well
+        as a generic Node specifically because it translates to `entity_type`
+        as an empty string (which can potentially cause problems).
         """
-        Here I test the queryhelp by seeing whether results are the same as using the append method.
-        I also check passing of tuples.
+        qb1 = orm.QueryBuilder()
+        qb1.append(orm.Node)
+        qb1.append(orm.Data)
+        qb1.append(orm.CalcJobNode)
+
+        qb2 = orm.QueryBuilder.from_dict(qb1.as_dict())
+        assert qb1.as_dict() == qb2.as_dict()
+
+        qb3 = copy.deepcopy(qb1)
+        assert qb1.as_dict() == qb3.as_dict()
+
+    def test_round_trip_append(self):
+        """Test the `as_dict` and `from_dict` methods,
+        by seeing whether results are the same as using the append method.
         """
         g = orm.Group(label='helloworld').store()
         for cls in (orm.StructureData, orm.Dict, orm.Data):
@@ -714,44 +770,10 @@ class TestQueryHelp:
             qb.append(cls, filters={'attributes.foo-qh2': 'bar'}, subclassing=subclassing, project='uuid')
             assert qb.count() == expected_count
 
-            qh = qb.queryhelp
-            qb_new = orm.QueryBuilder(**qh)
+            dct = qb.as_dict()
+            qb_new = orm.QueryBuilder.from_dict(dct)
             assert qb_new.count() == expected_count
             assert sorted([uuid for uuid, in qb.all()]) == sorted([uuid for uuid, in qb_new.all()])
-
-        qb = orm.QueryBuilder().append(orm.Group, filters={'label': 'helloworld'})
-        assert qb.count() == 1
-
-        qb = orm.QueryBuilder().append((orm.Group,), filters={'label': 'helloworld'})
-        assert qb.count() == 1
-
-        # populate computer
-        self.computer  # pylint:disable=pointless-statement
-        qb = orm.QueryBuilder().append(orm.Computer,)
-        assert qb.count() == 1
-
-        qb = orm.QueryBuilder().append(cls=(orm.Computer,))
-        assert qb.count() == 1
-
-    def test_recreate_from_queryhelp(self):
-        """Test recreating a QueryBuilder from the Query Help
-
-        We test appending a Data node and a Process node for variety, as well
-        as a generic Node specifically because it translates to `entity_type`
-        as an empty string (which can potentially cause problems).
-        """
-        import copy
-
-        qb1 = orm.QueryBuilder()
-        qb1.append(orm.Node)
-        qb1.append(orm.Data)
-        qb1.append(orm.CalcJobNode)
-
-        qb2 = orm.QueryBuilder(**qb1.queryhelp)
-        assert qb1.queryhelp == qb2.queryhelp
-
-        qb3 = copy.deepcopy(qb1)
-        assert qb1.queryhelp == qb3.queryhelp
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -1434,7 +1456,7 @@ class TestDoubleStar:
         res = list(qb.dict()[0].values())[0]
         assert res == expected_dict
 
-        # Ask the same query as above using queryhelp
+        # Ask the same query as above using QueryBuilder.as_dict()
         qh = {'project': {'computer': ['**']}, 'path': [{'tag': 'computer', 'cls': orm.Computer}]}
         qb = orm.QueryBuilder(**qh)
         # We expect one result

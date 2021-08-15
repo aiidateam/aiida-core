@@ -211,6 +211,8 @@ class CalcJob(Process):
                  'inserted before any non-scheduler command')
         spec.input('metadata.options.queue_name', valid_type=str, required=False,
             help='Set the name of the queue on the remote computer')
+        spec.input('metadata.options.rerunnable', valid_type=bool, required=False,
+            help='Determines if the calculation can be requeued / rerun.')
         spec.input('metadata.options.account', valid_type=str, required=False,
             help='Set the account to use in for the queue on the remote computer')
         spec.input('metadata.options.qos', valid_type=str, required=False,
@@ -526,7 +528,7 @@ class CalcJob(Process):
         job_tmpl = JobTemplate()
         job_tmpl.shebang = computer.get_shebang()
         job_tmpl.submit_as_hold = False
-        job_tmpl.rerunnable = False
+        job_tmpl.rerunnable = self.options.get('rerunnable', False)
         job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = f'aiida-{self.node.pk}'

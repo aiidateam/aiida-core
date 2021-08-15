@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods,redefined-outer-name
 """Test for the `CalcJob` process sub class."""
+import json
 from copy import deepcopy
 from functools import partial
 import io
@@ -387,6 +388,23 @@ class TestCalcJob(AiidaTestCase):
         # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
         for filename in self.local_code.list_object_names():
             self.assertTrue(filename in uploaded_files)
+
+    @pytest.mark.usefixtures('dry_run_in_tmp')
+    def test_rerunnable(self):
+        """Test that setting `rerunnable` in the options results in it being set in the job template."""
+        inputs = deepcopy(self.inputs)
+        inputs['code'] = self.local_code
+        inputs['metadata']['computer'] = self.computer
+        inputs['metadata']['dry_run'] = True
+        inputs['metadata']['options']['rerunnable'] = True
+
+        _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+        job_tmpl_file = os.path.join(node.dry_run_info['folder'], '.aiida', 'job_tmpl.json')
+
+        with open(job_tmpl_file, mode='r') as in_f:
+            job_tmpl = json.load(in_f)
+
+        assert job_tmpl['rerunnable']
 
     @pytest.mark.usefixtures('dry_run_in_tmp')
     def test_provenance_exclude_list(self):

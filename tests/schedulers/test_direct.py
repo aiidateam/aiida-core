@@ -86,3 +86,17 @@ class TestParserGetJobList(unittest.TestCase):
 
         job_ids = [job.job_id for job in result]
         self.assertIn('11383', job_ids)
+
+
+def test_submit_script_rerunnable(aiida_caplog):
+    """Test that setting the `rerunnable` option gives a warning."""
+    from aiida.schedulers.datastructures import JobTemplate
+
+    direct = DirectScheduler()
+    job_tmpl = JobTemplate()
+
+    job_tmpl.rerunnable = True
+    direct._get_submit_script_header(job_tmpl)
+
+    assert 'rerunnable' in aiida_caplog.text
+    assert 'has no effect' in aiida_caplog.text

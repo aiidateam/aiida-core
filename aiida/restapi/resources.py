@@ -232,7 +232,7 @@ class QueryBuilder(BaseResource):
                 'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
                 'POST JSON data, which MUST be a valid QueryBuilder.as_dict() dictionary as a JSON object. '
                 'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
-                'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
+                'database.html?highlight=QueryBuilder for more information.'
             ),
         }
 

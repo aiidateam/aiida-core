@@ -166,6 +166,11 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             lines.append('# ENVIRONMENT VARIABLES  END  ###')
             lines.append(empty_line)
 
+        if job_tmpl.rerunnable:
+            self.logger.warning(
+                "The 'rerunnable' option is set to 'True', but has no effect when using the direct scheduler."
+            )
+
         lines.append(empty_line)
 
         ## The following code is not working as there's an empty line

@@ -33,7 +33,6 @@ from sqlalchemy.dialects.postgresql import array
 
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
-from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
 from . import comments
@@ -46,6 +45,7 @@ from . import convert
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Query  # pylint: disable=ungrouped-imports
+    from sqlalchemy.sql.compiler import SQLCompiler
     from aiida.orm.implementation import Backend  # pylint: disable=ungrouped-imports
 
 __all__ = ('QueryBuilder',)
@@ -491,25 +491,55 @@ class QueryBuilder:
         if order_by:
             self.order_by(order_by)
 
+    def as_dict(self) -> Dict[str, Any]:
+        """Convert to a JSON serialisable dictionary representation of the query."""
+        return copy.deepcopy({
+            'path': self._path,
+            'filters': self._filters,
+            'project': self._projections,
+            'order_by': self._order_by,
+            'limit': self._limit,
+            'offset': self._offset,
+        })
+
+    @property
+    def queryhelp(self) -> Dict[str, Any]:
+        """"Legacy name for ``as_dict`` method."""
+        # TODO deprecate?
+        return self.as_dict()
+
+    @classmethod
+    def from_dict(cls, dct: dict) -> 'QueryBuilder':
+        """Create an instance from a dictionary representation of the query."""
+        return cls(**dct)
+
+    @staticmethod
+    def _compile_query(query: 'Query', literal_binds: bool = False) -> 'SQLCompiler':
+        """Compile the query to the SQL executable.
+
+        :params literal_binds: Inline bound parameters (this is normally handled by the Python DBAPI).
+        """
+        dialect = query.session.bind.dialect
+        return query.statement.compile(compile_kwargs={'literal_binds': literal_binds}, dialect=dialect)
+
+    def as_sql(self, inline: bool = False) -> str:
+        """Convert the query to an SQL string representation.
+        
+        :params inline: Inline bound parameters (this is normally handled by the Python DBAPI).
+        """
+        compiled = self._compile_query(self.get_query(), literal_binds=inline)
+        if inline:
+            return compiled.string
+        return f"{compiled.string},\n{compiled.params!r}"
+
     def __str__(self) -> str:
-        """
-        When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
-        I want to print the SQL-query. Because it looks cool...
-        """
-        from aiida.manage.configuration import get_config
+        """Return a string representation of the instance."""
+        params = ", ".join(f"{key}={value!r}" for key, value in self.as_dict().items())
+        return f"QueryBuilder({params})"
 
-        config = get_config()
-        engine = config.current_profile.database_engine
-
-        if engine.startswith('mysql'):
-            from sqlalchemy.dialects import mysql as mydialect
-        elif engine.startswith('postgre'):
-            from sqlalchemy.dialects import postgresql as mydialect
-        else:
-            raise ConfigurationError(f'Unknown DB engine: {engine}')
-
-        que = self.get_query()
-        return str(que.statement.compile(compile_kwargs={'literal_binds': True}, dialect=mydialect.dialect()))
+    def __deepcopy__(self, memo) -> 'QueryBuilder':
+        """Create deep copy of the instance."""
+        return type(self)(**self.as_dict())
 
     def _get_ormclass(self, cls, ormclass_type_string):
         """
@@ -1802,34 +1832,6 @@ class QueryBuilder:
         raise ValueError(
             f'Key {self._get_tag_from_specification(joining_value)} value is not a string:\n{joining_value}'
         )
-
-    @property
-    def queryhelp(self):
-        """queryhelp dictionary correspondig to QueryBuilder instance.
-
-        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
-
-            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
-            qb2 = QueryBuilder(**qb.queryhelp)
-
-            # The following is True if no change has been made to the database.
-            # Note that such a comparison can only be True if the order of results is enforced
-            qb.all() == qb2.all()
-
-        :return: a queryhelp dictionary
-        """
-        return copy.deepcopy({
-            'path': self._path,
-            'filters': self._filters,
-            'project': self._projections,
-            'order_by': self._order_by,
-            'limit': self._limit,
-            'offset': self._offset,
-        })
-
-    def __deepcopy__(self, memo):
-        """Create deep copy of QueryBuilder instance."""
-        return type(self)(**self.queryhelp)
 
     def _build_order(self, alias, entitytag, entityspec):
         """

@@ -19,9 +19,8 @@ from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import ValidationError
+from aiida.common.exceptions import ValidationError, EntryPointError
 from aiida.plugins.entry_point import get_entry_point_names
-from aiida.transports import cli as transport_cli
 
 
 @verdi.group('computer')
@@ -539,7 +538,24 @@ def computer_delete(computer):
     echo.echo_success(f"Computer '{label}' deleted.")
 
 
-@verdi_computer.group('configure')
+class LazyConfigureGroup(click.Group):
+    """A click group that will lazily load the subcommands for each transport plugin."""
+
+    def list_commands(self, ctx):
+        subcommands = super().list_commands(ctx)
+        subcommands.extend(get_entry_point_names('aiida.transports'))
+        return subcommands
+
+    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
+        from aiida.transports import cli as transport_cli
+        try:
+            command = transport_cli.create_configure_cmd(name)
+        except EntryPointError:
+            command = super().get_command(ctx, name)
+        return command
+
+
+@verdi_computer.group('configure', cls=LazyConfigureGroup)
 def computer_configure():
     """Configure the Authinfo details for a computer (and user)."""
 
@@ -556,6 +572,7 @@ def computer_configure():
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
+    from aiida.transports import cli as transport_cli
 
     transport_cls = computer.get_transport_class()
     option_list = [
@@ -595,7 +612,3 @@ def computer_config_show(computer, user, defaults, as_option_string):
             else:
                 table.append((f'* {name}', '-'))
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
-
-
-for ep_name in get_entry_point_names('aiida.transports'):
-    computer_configure.add_command(transport_cli.create_configure_cmd(ep_name))

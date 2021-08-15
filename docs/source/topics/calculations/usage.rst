@@ -555,6 +555,13 @@ The full list of available options are documented below as part of the ``CalcJob
     :expand-namespaces:
 
 
+The ``rerunnable`` option enables the scheduler to re-launch the calculation if it has failed, for example due to node failure or a failure to launch the job. It corresponds to the ``--requeue`` option in SLURM, and the ``-r`` option in SGE, LSF, and PBS. The following two conditions must be met in order for this to work well with AiiDA:
+
+- the scheduler assigns the same job-id to the restarted job
+- the code produces the same results if it has already partially run before (not every scheduler may produce this situation)
+
+Because this depends on the scheduler, its configuration, and the code used, we cannot say conclusively when it will work -- do your own testing! It has been tested on a cluster using SLURM, but that does not guarantee other SLURM clusters behave in the same way.
+
 .. _topics:calculations:usage:calcjobs:launch:
 
 Launch

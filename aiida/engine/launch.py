@@ -101,8 +101,9 @@ def submit(process: TYPE_SUBMIT_PROCESS, **inputs: Any) -> ProcessNode:
     process_inited = instantiate_process(runner, process, **inputs)
 
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
-    # instead of raising, because in this way the user does not have to change the launcher when testing.
-    if process_inited.metadata.get('dry_run', False):
+    # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
+    # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
+    if process_inited.metadata.get('dry_run', False) or 'remote_folder' in inputs:
         _, node = run_get_node(process_inited)
         return node
 

@@ -11,6 +11,7 @@
 import sys
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -20,26 +21,36 @@ def verdi_devel():
 
 
 @verdi_devel.command('check-load-time')
-def devel_check_load_time():
+@options.VERBOSE()
+def devel_check_load_time(verbose):
     """Check for common indicators that slowdown `verdi`.
 
     Check for environment properties that negatively affect the responsiveness of the `verdi` command line interface.
     Known pathways that increase load time:
 
         * the database environment is loaded when it doesn't need to be
-        * the `aiida.orm` module is imported when it doesn't need to be
+        * Unexpected `aiida.*` modules are imported
 
     If either of these conditions are true, the command will raise a critical error
     """
     from aiida.manage.manager import get_manager
+
+    loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
+    aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
+    if verbose:
+        echo.echo(f'aiida modules loaded:\n- {aiida_modules_str}')
 
     manager = get_manager()
 
     if manager.backend_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    if 'aiida.orm' in sys.modules:
-        echo.echo_critical('potential `verdi` speed problem: `aiida.orm` module is imported.')
+    allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    for loaded in loaded_aiida_modules:
+        if not any(loaded.startswith(mod) for mod in allowed):
+            echo.echo_critical(
+                f'potential `verdi` speed problem: `{loaded}` module is imported which is not in: {allowed}'
+            )
 
     echo.echo_success('no issues detected')
 

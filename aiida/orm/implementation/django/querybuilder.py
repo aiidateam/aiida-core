@@ -27,11 +27,11 @@ class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(jsonb_array_length)
-def compile(element, compiler: TypeCompiler, **_kw):  # pylint: disable=function-redefined, redefined-builtin
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined, redefined-builtin
     """
     Get length of array defined in a JSONB column
     """
-    return f'jsonb_array_length({compiler.process(element.clauses, **_kw)})'
+    return f'jsonb_array_length({compiler.process(element.clauses, **kwargs)})'
 
 
 class array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -39,11 +39,11 @@ class array_length(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(array_length)
-def compile(element, compiler: TypeCompiler, **_kw):  # pylint: disable=function-redefined
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return f'array_length({compiler.process(element.clauses, **_kw)})'
+    return f'array_length({compiler.process(element.clauses, **kwargs)})'
 
 
 class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
@@ -51,11 +51,11 @@ class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(jsonb_typeof)
-def compile(element, compiler: TypeCompiler, **_kw):  # pylint: disable=function-redefined
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return f'jsonb_typeof({compiler.process(element.clauses, **_kw)})'
+    return f'jsonb_typeof({compiler.process(element.clauses, **kwargs)})'
 
 
 class DjangoQueryBuilder(BackendQueryBuilder):

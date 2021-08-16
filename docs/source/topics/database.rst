@@ -316,7 +316,7 @@ To do this, you have to specify:
             from aiida.orm import TrajectoryData
             from aiida_quantumespresso.calculations.pw import PwCalculation
             from aiida.orm import Dict
-            qd1 = {
+            query_dict_1 = {
                 'path': [
                     {
                         'cls':PwCalculation
@@ -333,7 +333,7 @@ To do this, you have to specify:
 
             # returns same query as:
 
-            qd2 = {
+            query_dict_2 = {
                 'path':[
                     {
                         'cls':PwCalculation
@@ -350,7 +350,7 @@ To do this, you have to specify:
 
             # Shorter version:
 
-            qd3 = {
+            query_dict_3 = {
                 'path':[
                     Dict,
                     PwCalculation,

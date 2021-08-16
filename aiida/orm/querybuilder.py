@@ -564,7 +564,7 @@ class QueryBuilder:
 
         .. warning::
 
-            This method should be used for debugging puposes only,
+            This method should be used for debugging purposes only,
             since normally sqlalchemy will handle this process internally.
 
         :params inline: Inline bound parameters (this is normally handled by the Python DBAPI).
@@ -2146,6 +2146,9 @@ class QueryBuilder:
 
     def first(self) -> Optional[List[RowType]]:
         """Executes the query, asking for the first row of results.
+
+        Note, this may change if several rows are valid for the query,
+        as persistent ordering is not guaranteed unless explicitly specified.
 
         :returns: One row of results as a list, or None if no result returned.
         """

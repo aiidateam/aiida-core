@@ -515,7 +515,6 @@ class QueryBuilder:
     @property
     def queryhelp(self) -> QueryDict:
         """"Legacy name for ``as_dict`` method."""
-        # deprecate?
         return self.as_dict()
 
     @classmethod
@@ -582,7 +581,7 @@ class QueryBuilder:
         """Create deep copy of the instance."""
         return type(self)(**self.as_dict())  # type: ignore[arg-type]
 
-    def _get_ormclass(self, cls, ormclass_type_string: str):
+    def _get_ormclass(self, cls, ormclass_type_string):
         """
         Get ORM classifiers from either class(es) or ormclass_type_string(s).
 

@@ -1215,6 +1215,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         This should return with 405 Method Not Allowed.
         Otherwise, a "conventional" JSON response should be returned with a helpful message.
         """
+        from aiida.restapi.resources import QueryBuilder as qb_api
+
         with self.app.test_client() as client:
             response_value = client.get(f'{self.get_url_prefix()}/querybuilder')
             response = response_value.json
@@ -1224,14 +1226,7 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         self.assertEqual('GET', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
-
-        message = (
-            'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
-            'POST JSON data, which MUST be a valid QueryBuilder.as_dict() dictionary as a JSON object. '
-            'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
-            'database.html?highlight=QueryBuilder for more information.'
-        )
-        self.assertEqual(message, response.get('data', {}).get('message', ''))
+        self.assertEqual(qb_api.GET_MESSAGE, response.get('data', {}).get('message', ''))
 
     def test_querybuilder_user(self):
         """Retrieve a User through the use of the /querybuilder endpoint

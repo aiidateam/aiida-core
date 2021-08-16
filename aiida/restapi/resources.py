@@ -218,6 +218,14 @@ class QueryBuilder(BaseResource):
 
     _translator_class = NodeTranslator
 
+    GET_MESSAGE = (
+        'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
+        'POST JSON data, which MUST be a valid QueryBuilder.as_dict() dictionary as a JSON object. '
+        'See the documentation at '
+        'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/database.html'
+        '#converting-the-querybuilder-to-from-a-dictionary for more information.'
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -227,15 +235,6 @@ class QueryBuilder(BaseResource):
 
     def get(self):  # pylint: disable=arguments-differ
         """Static return to state information about this endpoint."""
-        data = {
-            'message': (
-                'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
-                'POST JSON data, which MUST be a valid QueryBuilder.as_dict() dictionary as a JSON object. '
-                'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
-                'database.html?highlight=QueryBuilder for more information.'
-            ),
-        }
-
         headers = self.utils.build_headers(url=request.url, total_count=1)
         return self.utils.build_response(
             status=405,  # Method Not Allowed
@@ -247,7 +246,7 @@ class QueryBuilder(BaseResource):
                 'path': unquote(request.path),
                 'query_string': request.query_string.decode('utf-8'),
                 'resource_type': self.__class__.__name__,
-                'data': data,
+                'data': {'message': self.GET_MESSAGE},
             },
         )
 

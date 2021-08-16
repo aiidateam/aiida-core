@@ -73,6 +73,32 @@ jobs:
         pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip freeze
 
+  create-conda-environment:
+    # Verify that we can create a valid conda environment from the environment.yml file.
+
+    needs: [validate-dependency-specification]
+    if: github.repository == 'aiidateam/aiida-core'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Conda
+      uses: s-weigand/setup-conda@v1
+      with:
+        python-version: 3.9
+        update-conda: false
+        conda-channels: conda-forge
+
+    - run: conda --version
+    - run: python --version
+    - run: which python
+
+    - name: Test conda environment
+      run: |
+        conda env create --dry-run -f environment.yml -n test-environment
+
   install-with-pip:
 
     if: github.repository == 'aiidateam/aiida-core'
@@ -107,12 +133,18 @@ jobs:
         python -c "import aiida"
 
   install-with-conda:
+    # Verify that we can install AiiDA with conda.
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
-    name: install-with-conda
+    # Currently the installation for Python 3.7 fails in combination with
+    # ubuntu-20.04 due to an incompatibility with glibc.
+    runs-on: ubuntu-18.04
+    timeout-minutes: 10
 
-    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -120,7 +152,7 @@ jobs:
     - name: Setup Conda
       uses: s-weigand/setup-conda@v1
       with:
-        python-version: 3.9
+        python-version: ${{ matrix.python-version }}
         update-conda: false
         conda-channels: conda-forge
     - run: conda --version
@@ -129,20 +161,11 @@ jobs:
 
     - name: Test direct installation
       run: |
-        conda create -n test-install aiida-core
-        source activate test-install
-        python -c "import aiida"
-
-    - name: Test conda environment
-      run: |
-        conda env create -f environment.yml -n test-environment
-        source activate test-environment
-        python -m pip install --no-deps -e .
-        python -c "import aiida"
+        conda create --dry-run -n test-install aiida-core python=${{ matrix.python-version }}
 
   tests:
 
-    needs: [install-with-pip, install-with-conda]
+    needs: [install-with-pip]
     runs-on: ubuntu-latest
     timeout-minutes: 35
 

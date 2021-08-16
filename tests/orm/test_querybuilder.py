@@ -20,6 +20,7 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.manage import configuration
+from aiida.manage.tests import get_test_backend_name
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -712,13 +713,13 @@ class TestRepresentations:
         """Test ``qb.as_sql(inline=False)`` returns the correct string."""
         qb = orm.QueryBuilder()
         qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
-        self.regress_str(qb.as_sql(inline=False))
+        self.regress_str(qb.as_sql(inline=False), basename=f"test_as_sql_{get_test_backend_name()}")
 
     def test_as_sql_inline(self):
         """Test ``qb.as_sql(inline=True)`` returns the correct string."""
         qb = orm.QueryBuilder()
         qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
-        self.regress_str(qb.as_sql(inline=True))
+        self.regress_str(qb.as_sql(inline=True), basename=f"test_as_sql_inline_{get_test_backend_name()}")
 
     def test_as_dict(self):
         """Test ``qb.as_dict()`` returns the correct dict."""

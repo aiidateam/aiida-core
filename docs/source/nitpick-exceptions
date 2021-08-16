@@ -168,3 +168,8 @@ py:class Query
 py:class BackendQueryBuilder
 py:class importlib_metadata.EntryPoint
 py:class Command
+
+py:class BooleanClauseList
+py:class SQLCompiler
+py:class aiida.orm.querybuilder.QueryDict
+py:class sqlalchemy.sql.compiler.TypeCompiler

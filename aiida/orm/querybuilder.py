@@ -543,8 +543,8 @@ class QueryBuilder:
         """
         compiled = self._compile_query(self.get_query(), literal_binds=inline)
         if inline:
-            return compiled.string
-        return f'{compiled.string}\n\n{compiled.params!r}'
+            return compiled.string + '\n'
+        return f'{compiled.string!r} % {compiled.params!r}\n'
 
     def __str__(self) -> str:
         """Return a string representation of the instance."""
@@ -2098,6 +2098,23 @@ class QueryBuilder:
         """
         self._query = self.get_query().distinct()
         return self
+
+    def analyze_query(self, execute: bool = True, verbose: bool = False) -> str:
+        """Return the query plan, i.e. a list of SQL statements that will be executed.
+
+        See: https://www.postgresql.org/docs/11/sql-explain.html
+
+        :params execute: Carry out the command and show actual run times and other statistics.
+        :params verbose: Display additional information regarding the plan.
+        """
+        query = self.get_query()
+        if query.session.bind.dialect.name != 'postgresql':
+            raise NotImplementedError('Only PostgreSQL is supported for this method')
+        compiled = self._compile_query(query, literal_binds=True)
+        options = ', '.join((['ANALYZE'] if execute else []) + (['VERBOSE'] if verbose else []))
+        options = f' ({options})' if options else ''
+        rows = self._impl.get_session().execute(f'EXPLAIN{options} {compiled.string}').fetchall()
+        return '\n'.join(row.values()[0] for row in rows)
 
     def first(self) -> Optional[List[RowType]]:
         """Executes the query, asking for the first row of results.

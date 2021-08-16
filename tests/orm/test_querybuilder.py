@@ -777,6 +777,15 @@ class TestRepresentations:
             assert sorted([uuid for uuid, in qb.all()]) == sorted([uuid for uuid, in qb_new.all()])
 
 
+def test_analyze_query(clear_database_before_test):
+    """Test the query plan is correctly generated."""
+    qb = orm.QueryBuilder()
+    qb.append(orm.Data)
+    analysis_str = qb.analyze_query(verbose=True)
+    assert isinstance(analysis_str, str), analysis_str
+    assert 'uuid' in analysis_str, analysis_str
+
+
 @pytest.mark.usefixtures('clear_database_before_test')
 class TestQueryBuilderCornerCases:
     """

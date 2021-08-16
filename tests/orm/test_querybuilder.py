@@ -782,6 +782,15 @@ class TestRepresentations:
             assert sorted([uuid for uuid, in qb.all()]) == sorted([uuid for uuid, in qb_new.all()])
 
 
+@pytest.mark.parametrize('appends', [[], [{'cls': orm.Node}], [{'cls': orm.Node}, {'cls': orm.Node}]])
+def test_dict_validation(clear_database_before_test, appends):
+    """Test the ``QueryBuilder.validate_dict`` against dicts output by ``QueryBuilder.as_dict``"""
+    qb = orm.QueryBuilder()
+    for append in appends:
+        qb.append(**append)
+    orm.QueryBuilder.validate_dict(qb.as_dict())
+
+
 def test_analyze_query(clear_database_before_test):
     """Test the query plan is correctly generated."""
     qb = orm.QueryBuilder()

@@ -21,11 +21,15 @@ when instantiated by the user.
 """
 import copy
 from datetime import date, datetime, timedelta
+from functools import lru_cache
+from importlib import resources
 from inspect import isclass as inspect_isclass
+import json
 import logging
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, Union, TYPE_CHECKING
 import warnings
 
+import jsonschema
 from sqlalchemy import and_, or_, not_, func as sa_func, select, join
 from sqlalchemy.types import Integer
 from sqlalchemy.orm import aliased
@@ -43,6 +47,7 @@ from . import logs
 from . import users
 from . import entities
 from . import convert
+from . import schema as schema_module
 
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
@@ -96,6 +101,12 @@ try:
 except ImportError:
     PathItemType = Dict[str, Any]  # type: ignore
     QueryDict = Dict[str, Any]  # type: ignore
+
+
+@lru_cache(1)
+def query_schema() -> Dict[str, Any]:
+    """Return the configuration schema."""
+    return json.loads(resources.read_text(schema_module, 'querybuilder.json', encoding='utf8'))
 
 
 def get_querybuilder_classifiers_from_cls(cls, query):  # pylint: disable=invalid-name
@@ -519,9 +530,21 @@ class QueryBuilder:
         return self.as_dict()
 
     @classmethod
-    def from_dict(cls, dct: QueryDict) -> 'QueryBuilder':
+    def validate_dict(cls, query_dict: QueryDict) -> None:
+        """Validate a query dictionary.
+
+        .. note::
+
+            This validation is strictly against the format of dict output by ``QueryBuilder.as_dict``.
+            ``QueryBuilder.from_dict`` is more permissive, since it will coerce values to the required format.
+
+        """
+        jsonschema.validate(instance=query_dict, schema=query_schema())
+
+    @classmethod
+    def from_dict(cls, dct: Dict[str, Any]) -> 'QueryBuilder':
         """Create an instance from a dictionary representation of the query."""
-        return cls(**dct)  # type: ignore[arg-type]
+        return cls(**dct)
 
     @staticmethod
     def _compile_query(query: 'Query', literal_binds: bool = False) -> 'SQLCompiler':
@@ -582,7 +605,7 @@ class QueryBuilder:
         """Create deep copy of the instance."""
         return type(self)(**self.as_dict())  # type: ignore[arg-type]
 
-    def _get_ormclass(self, cls, ormclass_type_string: str):
+    def _get_ormclass(self, cls, ormclass_type_string):
         """
         Get ORM classifiers from either class(es) or ormclass_type_string(s).
 

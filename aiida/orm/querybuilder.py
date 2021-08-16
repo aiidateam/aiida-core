@@ -240,8 +240,6 @@ def get_node_type_filter(classifiers: dict, subclassing: bool) -> dict:
     :param subclassing: if True, allow for subclasses of the ormclass
 
     :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
-    :rtype: dict
-
     """
     from aiida.orm.utils.node import get_query_type_from_type_string
     from aiida.common.escaping import escape_for_sql_like
@@ -268,8 +266,6 @@ def get_process_type_filter(classifiers: dict, subclassing: bool) -> dict:
 
 
     :returns: dictionary in QueryBuilder filter language to pass into {"process_type": ... }
-    :rtype: dict
-
     """
     from aiida.common.escaping import escape_for_sql_like
     from aiida.common.warnings import AiidaEntryPointWarning
@@ -331,7 +327,6 @@ def get_group_type_filter(classifiers: dict, subclassing: bool) -> dict:
     :param subclassing: if True, allow for subclasses of the ormclass
 
     :returns: dictionary in QueryBuilder filter language to pass into {'type_string': ... }
-    :rtype: dict
     """
     from aiida.common.escaping import escape_for_sql_like
 
@@ -587,7 +582,7 @@ class QueryBuilder:
         """Create deep copy of the instance."""
         return type(self)(**self.as_dict())  # type: ignore[arg-type]
 
-    def _get_ormclass(self, cls, ormclass_type_string):
+    def _get_ormclass(self, cls, ormclass_type_string: str):
         """
         Get ORM classifiers from either class(es) or ormclass_type_string(s).
 

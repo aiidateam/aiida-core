@@ -1,0 +1,83 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "description": "Schema for dictionaries output from `Querybuilder.as_dict`",
+    "type": "object",
+    "properties": {
+        "path": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tag": {
+                        "type": "string"
+                    },
+                    "entity_type": {
+                        "type": "string"
+                    },
+                    "edge_tag": {
+                        "type": ["string", "null"]
+                    },
+                    "joining_keyword": {
+                        "type": ["string", "null"]
+                    },
+                    "joining_value": {
+                        "type": ["string", "null"]
+                    },
+                    "outerjoin": {
+                        "type": "boolean",
+                        "default": false
+                    }
+                }
+            }
+        },
+        "filters": {
+            "description": "The filters to apply, by path item tag and field",
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "type": "object"
+                }
+            }
+        },
+        "project": {
+            "description": "The projections to apply, by path item tag",
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "func": {
+                                "type": "string"
+                            },
+                            "cast": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "order_by": {
+            "description": "How to order the results",
+            "type": "array",
+            "items": {
+                "description": "Map of path item tag to fields",
+                "type": "object"
+            }
+        },
+        "offset": {
+            "description": "Offset to start the results from",
+            "type": ["null", "integer"],
+            "minimum": 0,
+            "default": null
+        },
+        "limit": {
+            "description": "Maximum number of results to return",
+            "type": ["null", "integer"],
+            "minimum": 0,
+            "default": null
+        }
+    }
+}

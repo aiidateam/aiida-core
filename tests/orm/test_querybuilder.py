@@ -20,7 +20,6 @@ import pytest
 from aiida import orm, plugins
 from aiida.common.links import LinkType
 from aiida.manage import configuration
-from aiida.manage.tests import get_test_backend_name
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

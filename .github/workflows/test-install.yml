@@ -34,7 +34,44 @@ jobs:
       run: pip install -r utils/requirements.txt
 
     - name: Validate
-      run: python ./utils/dependency_management.py validate-all
+      run: |
+        python ./utils/dependency_management.py check-requirements
+        python ./utils/dependency_management.py validate-all
+
+  resolve-pip-dependencies:
+    # Check whether the environments defined in the requirements/* files are
+    # resolvable.
+    #
+    # This job should use the planned `pip resolve` command once released:
+    # https://github.com/pypa/pip/issues/7819
+
+    needs: [validate-dependency-specification]
+    if: github.repository == 'aiidateam/aiida-core'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Upgrade pip and setuptools
+      run: |
+        pip install --upgrade pip setuptools
+        pip --version
+
+    - name: Create environment from requirements file.
+      run: |
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip freeze
 
   install-with-pip:
 

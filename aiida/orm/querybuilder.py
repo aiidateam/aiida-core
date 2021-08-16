@@ -89,7 +89,7 @@ try:
         path: List[PathItemType]
         filters: Dict[str, FilterType]
         project: Dict[str, ProjectType]
-        order_by: List[str]
+        order_by: List[dict]
         offset: Optional[int]
         limit: Optional[int]
 

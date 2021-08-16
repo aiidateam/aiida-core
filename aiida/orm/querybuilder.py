@@ -2062,6 +2062,7 @@ class QueryBuilder:
         need_to_build = True
         query_hash = make_hash(self.as_dict())
         if self._hash is None:
+            # this is the first time the query has been built
             need_to_build = True
         elif self._injected:
             need_to_build = False

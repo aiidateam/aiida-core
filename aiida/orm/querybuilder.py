@@ -19,8 +19,9 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
-from inspect import isclass as inspect_isclass
 import copy
+from datetime import date, datetime, timedelta
+from inspect import isclass as inspect_isclass
 import logging
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, Union, TYPE_CHECKING
 import warnings
@@ -534,10 +535,37 @@ class QueryBuilder:
         :params literal_binds: Inline bound parameters (this is normally handled by the Python DBAPI).
         """
         dialect = query.session.bind.dialect
-        return query.statement.compile(compile_kwargs={'literal_binds': literal_binds}, dialect=dialect)
+
+        class _Compiler(dialect.statement_compiler):  # type: ignore[name-defined]
+            """Override the compiler with additional literal value renderers."""
+
+            def render_literal_value(self, value, type_):
+                """Render the value of a bind parameter as a quoted literal.
+
+                See https://www.postgresql.org/docs/current/functions-json.html for serialisation specs
+                """
+                try:
+                    return super().render_literal_value(value, type_)
+                except NotImplementedError:
+                    if isinstance(value, list):
+                        values = ','.join(self.render_literal_value(item, type_) for item in value)
+                        return f"'[{values}]'"
+                    if isinstance(value, int):
+                        return str(value)
+                    if isinstance(value, (str, date, datetime, timedelta)):
+                        escaped = str(value).replace('"', '\\"')
+                        return f'"{escaped}"'
+                    raise
+
+        return _Compiler(dialect, query.statement, compile_kwargs=dict(literal_binds=literal_binds))
 
     def as_sql(self, inline: bool = False) -> str:
         """Convert the query to an SQL string representation.
+
+        .. warning::
+
+            This method should be used for debugging puposes only,
+            since normally sqlalchemy will handle this process internally.
 
         :params inline: Inline bound parameters (this is normally handled by the Python DBAPI).
         """

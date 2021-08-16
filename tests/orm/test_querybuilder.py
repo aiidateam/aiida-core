@@ -17,7 +17,7 @@ import warnings
 
 import pytest
 
-from aiida import orm
+from aiida import orm, plugins
 from aiida.common.links import LinkType
 from aiida.manage import configuration
 from aiida.manage.tests import get_test_backend_name
@@ -712,14 +712,20 @@ class TestRepresentations:
     def test_as_sql(self):
         """Test ``qb.as_sql(inline=False)`` returns the correct string."""
         qb = orm.QueryBuilder()
-        qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
-        self.regress_str(qb.as_sql(inline=False), basename=f'test_as_sql_{get_test_backend_name()}')
+        qb.append(orm.Node, project=['uuid'], filters={'extras.tag4': 'appl_pecoal'})
+        self.regress_str(qb.as_sql(inline=False))
 
     def test_as_sql_inline(self):
         """Test ``qb.as_sql(inline=True)`` returns the correct string."""
         qb = orm.QueryBuilder()
-        qb.append(orm.Node, filters={'extras.tag4': 'appl_pecoal'})
-        self.regress_str(qb.as_sql(inline=True), basename=f'test_as_sql_inline_{get_test_backend_name()}')
+        qb.append(orm.Node, project=['uuid'], filters={'extras.tag4': 'appl_pecoal'})
+        self.regress_str(qb.as_sql(inline=True))
+
+    def test_as_sql_literal_quote(self):
+        """Test that literal values can be rendered."""
+        qb = orm.QueryBuilder()
+        qb.append(plugins.DataFactory('structure'), project=['uuid'], filters={'extras.elements': {'contains': ['Si']}})
+        self.regress_str(qb.as_sql(inline=True))
 
     def test_as_dict(self):
         """Test ``qb.as_dict()`` returns the correct dict."""
@@ -780,7 +786,8 @@ class TestRepresentations:
 def test_analyze_query(clear_database_before_test):
     """Test the query plan is correctly generated."""
     qb = orm.QueryBuilder()
-    qb.append(orm.Data)
+    # include literal values in test
+    qb.append(orm.Data, filters={'extras.key': {'contains': ['x', 1]}})
     analysis_str = qb.analyze_query(verbose=True)
     assert isinstance(analysis_str, str), analysis_str
     assert 'uuid' in analysis_str, analysis_str

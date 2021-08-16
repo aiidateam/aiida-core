@@ -574,10 +574,14 @@ class QueryBuilder:
             return compiled.string + '\n'
         return f'{compiled.string!r} % {compiled.params!r}\n'
 
-    def __str__(self) -> str:
-        """Return a string representation of the instance."""
+    def __repr__(self) -> str:
+        """Return an unambiguous string representation of the instance."""
         params = ', '.join(f'{key}={value!r}' for key, value in self.as_dict().items())
         return f'QueryBuilder({params})'
+
+    def __str__(self) -> str:
+        """Return a readable string representation of the instance."""
+        return repr(self)
 
     def __deepcopy__(self, memo) -> 'QueryBuilder':
         """Create deep copy of the instance."""

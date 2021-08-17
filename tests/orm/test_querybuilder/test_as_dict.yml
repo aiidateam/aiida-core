@@ -1,0 +1,17 @@
+filters:
+  node_1:
+    extras.tag4: appl_pecoal
+    node_type:
+      like: '%'
+limit: null
+offset: null
+order_by: []
+path:
+- edge_tag: null
+  entity_type: ''
+  joining_keyword: null
+  joining_value: null
+  outerjoin: false
+  tag: node_1
+project:
+  node_1: []

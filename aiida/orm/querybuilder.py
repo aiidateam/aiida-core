@@ -19,8 +19,9 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
-from inspect import isclass as inspect_isclass
 import copy
+from datetime import date, datetime, timedelta
+from inspect import isclass as inspect_isclass
 import logging
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, Union, TYPE_CHECKING
 import warnings
@@ -33,7 +34,6 @@ from sqlalchemy.dialects.postgresql import array
 
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
-from aiida.common.exceptions import ConfigurationError
 
 from . import authinfos
 from . import comments
@@ -44,9 +44,18 @@ from . import users
 from . import entities
 from . import convert
 
+try:
+    from typing import TypedDict  # pylint: disable=ungrouped-imports
+except ImportError:
+    # Python <3.8 backport
+    from typing_extensions import TypedDict
+
 if TYPE_CHECKING:
-    from sqlalchemy.orm import Query  # pylint: disable=ungrouped-imports
-    from aiida.orm.implementation import Backend  # pylint: disable=ungrouped-imports
+    # pylint: disable=ungrouped-imports
+    from sqlalchemy.orm import Query
+    from sqlalchemy.sql.compiler import SQLCompiler
+    from sqlalchemy.sql.elements import BooleanClauseList
+    from aiida.orm.implementation import Backend
 
 __all__ = ('QueryBuilder',)
 
@@ -66,21 +75,27 @@ ProjectType = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=in
 FilterType = Dict[str, Any]  # pylint: disable=invalid-name
 RowType = Any  # pylint: disable=invalid-name
 
-try:
-    # new in python 3.8
-    from typing import TypedDict  # pylint: disable=ungrouped-imports
 
-    class PathItemType(TypedDict):
-        """An item on the query path"""
+class PathItemType(TypedDict):
+    """An item on the query path"""
 
-        entity_type: Any
-        tag: str
-        joining_keyword: str
-        joining_value: str
-        outerjoin: bool
-        edge_tag: str
-except ImportError:
-    PathItemType = Dict[str, Any]  # type: ignore
+    entity_type: Any
+    tag: str
+    joining_keyword: str
+    joining_value: str
+    outerjoin: bool
+    edge_tag: str
+
+
+class QueryDict(TypedDict, total=False):
+    """A JSON serialisable representation of a ``QueryBuilder`` instance"""
+
+    path: List[PathItemType]
+    filters: Dict[str, FilterType]
+    project: Dict[str, ProjectType]
+    order_by: List[dict]
+    offset: Optional[int]
+    limit: Optional[int]
 
 
 def get_querybuilder_classifiers_from_cls(cls, query):  # pylint: disable=invalid-name
@@ -225,8 +240,6 @@ def get_node_type_filter(classifiers: dict, subclassing: bool) -> dict:
     :param subclassing: if True, allow for subclasses of the ormclass
 
     :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
-    :rtype: dict
-
     """
     from aiida.orm.utils.node import get_query_type_from_type_string
     from aiida.common.escaping import escape_for_sql_like
@@ -253,8 +266,6 @@ def get_process_type_filter(classifiers: dict, subclassing: bool) -> dict:
 
 
     :returns: dictionary in QueryBuilder filter language to pass into {"process_type": ... }
-    :rtype: dict
-
     """
     from aiida.common.escaping import escape_for_sql_like
     from aiida.common.warnings import AiidaEntryPointWarning
@@ -316,7 +327,6 @@ def get_group_type_filter(classifiers: dict, subclassing: bool) -> dict:
     :param subclassing: if True, allow for subclasses of the ormclass
 
     :returns: dictionary in QueryBuilder filter language to pass into {'type_string': ... }
-    :rtype: dict
     """
     from aiida.common.escaping import escape_for_sql_like
 
@@ -439,7 +449,7 @@ class QueryBuilder:
         # is used twice. In that case, the user has to provide a tag!
         self._cls_to_tag_map: Dict[Any, str] = {}
 
-        # Hashing the internal queryhelp avoids rebuild a query
+        # Hashing the internal query representation avoids rebuilding a query
         self._hash: Optional[str] = None
 
         # The hash being None implies that the query will be build (Check the code in .get_query
@@ -491,25 +501,85 @@ class QueryBuilder:
         if order_by:
             self.order_by(order_by)
 
+    def as_dict(self) -> QueryDict:
+        """Convert to a JSON serialisable dictionary representation of the query."""
+        return copy.deepcopy({  # type: ignore[return-value]
+            'path': self._path,
+            'filters': self._filters,
+            'project': self._projections,
+            'order_by': self._order_by,
+            'limit': self._limit,
+            'offset': self._offset,
+        })
+
+    @property
+    def queryhelp(self) -> QueryDict:
+        """"Legacy name for ``as_dict`` method."""
+        return self.as_dict()
+
+    @classmethod
+    def from_dict(cls, dct: QueryDict) -> 'QueryBuilder':
+        """Create an instance from a dictionary representation of the query."""
+        return cls(**dct)  # type: ignore[arg-type]
+
+    @staticmethod
+    def _compile_query(query: 'Query', literal_binds: bool = False) -> 'SQLCompiler':
+        """Compile the query to the SQL executable.
+
+        :params literal_binds: Inline bound parameters (this is normally handled by the Python DBAPI).
+        """
+        dialect = query.session.bind.dialect
+
+        class _Compiler(dialect.statement_compiler):  # type: ignore[name-defined]
+            """Override the compiler with additional literal value renderers."""
+
+            def render_literal_value(self, value, type_):
+                """Render the value of a bind parameter as a quoted literal.
+
+                See https://www.postgresql.org/docs/current/functions-json.html for serialisation specs
+                """
+                try:
+                    return super().render_literal_value(value, type_)
+                except NotImplementedError:
+                    if isinstance(value, list):
+                        values = ','.join(self.render_literal_value(item, type_) for item in value)
+                        return f"'[{values}]'"
+                    if isinstance(value, int):
+                        return str(value)
+                    if isinstance(value, (str, date, datetime, timedelta)):
+                        escaped = str(value).replace('"', '\\"')
+                        return f'"{escaped}"'
+                    raise
+
+        return _Compiler(dialect, query.statement, compile_kwargs=dict(literal_binds=literal_binds))
+
+    def as_sql(self, inline: bool = False) -> str:
+        """Convert the query to an SQL string representation.
+
+        .. warning::
+
+            This method should be used for debugging purposes only,
+            since normally sqlalchemy will handle this process internally.
+
+        :params inline: Inline bound parameters (this is normally handled by the Python DBAPI).
+        """
+        compiled = self._compile_query(self.get_query(), literal_binds=inline)
+        if inline:
+            return compiled.string + '\n'
+        return f'{compiled.string!r} % {compiled.params!r}\n'
+
+    def __repr__(self) -> str:
+        """Return an unambiguous string representation of the instance."""
+        params = ', '.join(f'{key}={value!r}' for key, value in self.as_dict().items())
+        return f'QueryBuilder({params})'
+
     def __str__(self) -> str:
-        """
-        When somebody hits: print(QueryBuilder) or print(str(QueryBuilder))
-        I want to print the SQL-query. Because it looks cool...
-        """
-        from aiida.manage.configuration import get_config
+        """Return a readable string representation of the instance."""
+        return repr(self)
 
-        config = get_config()
-        engine = config.current_profile.database_engine
-
-        if engine.startswith('mysql'):
-            from sqlalchemy.dialects import mysql as mydialect
-        elif engine.startswith('postgre'):
-            from sqlalchemy.dialects import postgresql as mydialect
-        else:
-            raise ConfigurationError(f'Unknown DB engine: {engine}')
-
-        que = self.get_query()
-        return str(que.statement.compile(compile_kwargs={'literal_binds': True}, dialect=mydialect.dialect()))
+    def __deepcopy__(self, memo) -> 'QueryBuilder':
+        """Create deep copy of the instance."""
+        return type(self)(**self.as_dict())  # type: ignore[arg-type]
 
     def _get_ormclass(self, cls, ormclass_type_string):
         """
@@ -1338,14 +1408,14 @@ class QueryBuilder:
         self._offset = offset
         return self
 
-    def _build_filters(self, alias, filter_spec):
+    def _build_filters(self, alias: str, filter_spec: FilterType) -> 'BooleanClauseList':
         """
         Recurse through the filter specification and apply filter operations.
 
         :param alias: The alias of the ORM class the filter will be applied on
-        :param filter_spec: the specification as given by the queryhelp
+        :param filter_spec: the specification of the filter
 
-        :returns: an instance of *sqlalchemy.sql.elements.BinaryExpression*.
+        :returns: an sqlalchemy expression.
         """
         expressions = []
         for path_spec, filter_operation_dict in filter_spec.items():
@@ -1463,7 +1533,9 @@ class QueryBuilder:
         ).join(entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin)
         return aliased_edge
 
-    def _join_descendants_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, expand_path=False):
+    def _join_descendants_recursive(
+        self, joined_entity, entity_to_join, isouterjoin, filter_dict: FilterType, expand_path=False
+    ):
         """
         joining descendants using the recursive functionality
         :TODO: Move the filters to be done inside the recursive query (for example on depth)
@@ -1522,7 +1594,9 @@ class QueryBuilder:
                                        )
         return descendants_recursive.c
 
-    def _join_ancestors_recursive(self, joined_entity, entity_to_join, isouterjoin, filter_dict, expand_path=False):
+    def _join_ancestors_recursive(
+        self, joined_entity, entity_to_join, isouterjoin, filter_dict: FilterType, expand_path=False
+    ):
         """
         joining ancestors using the recursive functionality
         :TODO: Move the filters to be done inside the recursive query (for example on depth)
@@ -1768,9 +1842,6 @@ class QueryBuilder:
 
     def _get_connecting_node(self, index: int, joining_keyword: str, joining_value: str, **_: Any):
         """
-        :param querydict:
-            A dictionary specifying how the current node
-            is linked to other nodes.
         :param index: Index of this node within the path specification
         :param joining_keyword: the relation on which to join
         :param joining_value: the tag of the nodes to be joined
@@ -1802,34 +1873,6 @@ class QueryBuilder:
         raise ValueError(
             f'Key {self._get_tag_from_specification(joining_value)} value is not a string:\n{joining_value}'
         )
-
-    @property
-    def queryhelp(self):
-        """queryhelp dictionary correspondig to QueryBuilder instance.
-
-        The queryhelp can be used to create a copy of the QueryBuilder instance like so::
-
-            qb = QueryBuilder(limit=3).append(StructureData, project='id').order_by({StructureData:'id'})
-            qb2 = QueryBuilder(**qb.queryhelp)
-
-            # The following is True if no change has been made to the database.
-            # Note that such a comparison can only be True if the order of results is enforced
-            qb.all() == qb2.all()
-
-        :return: a queryhelp dictionary
-        """
-        return copy.deepcopy({
-            'path': self._path,
-            'filters': self._filters,
-            'project': self._projections,
-            'order_by': self._order_by,
-            'limit': self._limit,
-            'offset': self._offset,
-        })
-
-    def __deepcopy__(self, memo):
-        """Create deep copy of QueryBuilder instance."""
-        return type(self)(**self.queryhelp)
 
     def _build_order(self, alias, entitytag, entityspec):
         """
@@ -1864,7 +1907,7 @@ class QueryBuilder:
         # JOINS ################################
         for index, verticespec in enumerate(self._path[1:], start=1):
             alias = self.tag_to_alias_map[verticespec['tag']]
-            # looping through the queryhelp
+            # looping through the query path
             # ~ if index:
             # There is nothing to join if that is the first table
             toconnectwith, connection_func = self._get_connecting_node(index, **verticespec)
@@ -2006,46 +2049,34 @@ class QueryBuilder:
                 given_tags.append(path['edge_tag'])
         return given_tags
 
-    def get_query(self):
-        """
-        Instantiates and manipulates a sqlalchemy.orm.Query instance if this is needed.
-        First,  I check if the query instance is still valid by hashing the queryhelp.
-        In this way, if a user asks for the same query twice, I am not recreating an instance.
+    def get_query(self) -> 'Query':
+        """Return the sqlalchemy.orm.Query instance for the current query specification.
 
-        :returns: an instance of sqlalchemy.orm.Query that is specific to the backend used.
+        To avoid unnecessary re-builds of the query, the hashed dictionary representation of this instance
+        is compared to the last query returned, which is cached by its hash.
         """
         from aiida.common.hashing import make_hash
 
-        # Need_to_build is True by default.
-        # It describes whether the current query
-        # which is an attribute _query of this instance is still valid
-        # The queryhelp_hash is used to determine
-        # whether the query is still valid
-
-        queryhelp_hash = make_hash(self.queryhelp)
-        # if self._hash (which is None if this function has not been invoked
-        # and is a string (hash) if it has) is the same as the queryhelp
-        # I can use the query again:
-        # If the query was injected I never build:
+        need_to_build = True
+        query_hash = make_hash(self.as_dict())
         if self._hash is None:
+            # this is the first time the query has been built
             need_to_build = True
         elif self._injected:
             need_to_build = False
-        elif self._hash == queryhelp_hash:
+        elif self._hash == query_hash:
             need_to_build = False
-        else:
-            need_to_build = True
 
         if need_to_build:
             query = self._build()
-            self._hash = queryhelp_hash
+            self._hash = query_hash
         else:
             try:
                 query = self._query
             except AttributeError:
                 _LOGGER.warning('AttributeError thrown even though I should have _query as an attribute')
                 query = self._build()
-                self._hash = queryhelp_hash
+                self._hash = query_hash
         return query
 
     @staticmethod
@@ -2095,16 +2126,30 @@ class QueryBuilder:
         self._query = self.get_query().distinct()
         return self
 
-    def first(self) -> Optional[List[RowType]]:
+    def analyze_query(self, execute: bool = True, verbose: bool = False) -> str:
+        """Return the query plan, i.e. a list of SQL statements that will be executed.
+
+        See: https://www.postgresql.org/docs/11/sql-explain.html
+
+        :params execute: Carry out the command and show actual run times and other statistics.
+        :params verbose: Display additional information regarding the plan.
         """
-        Executes query asking for one instance.
-        Use as follows::
+        query = self.get_query()
+        if query.session.bind.dialect.name != 'postgresql':
+            raise NotImplementedError('Only PostgreSQL is supported for this method')
+        compiled = self._compile_query(query, literal_binds=True)
+        options = ', '.join((['ANALYZE'] if execute else []) + (['VERBOSE'] if verbose else []))
+        options = f' ({options})' if options else ''
+        rows = self._impl.get_session().execute(f'EXPLAIN{options} {compiled.string}').fetchall()
+        return '\n'.join(row.values()[0] for row in rows)
 
-            qb = QueryBuilder(**queryhelp)
-            qb.first()
+    def first(self) -> Optional[List[RowType]]:
+        """Executes the query, asking for the first row of results.
 
-        :returns:
-            One row of results as a list
+        Note, this may change if several rows are valid for the query,
+        as persistent ordering is not guaranteed unless explicitly specified.
+
+        :returns: One row of results as a list, or None if no result returned.
         """
         query = self.get_query()
         result = self._impl.first(query)

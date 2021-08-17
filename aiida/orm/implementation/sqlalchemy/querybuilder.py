@@ -13,6 +13,7 @@ from sqlalchemy import and_, or_, not_
 from sqlalchemy.types import Float, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.expression import case, FunctionElement
+from sqlalchemy.sql.compiler import TypeCompiler
 from sqlalchemy.ext.compiler import compiles
 
 from aiida.common.exceptions import NotExistent
@@ -24,11 +25,11 @@ class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(jsonb_array_length)
-def compile(element, compiler, **_kw):  # pylint: disable=function-redefined, redefined-builtin
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined, redefined-builtin
     """
     Get length of array defined in a JSONB column
     """
-    return f'jsonb_array_length({compiler.process(element.clauses)})'
+    return f'jsonb_array_length({compiler.process(element.clauses, **kwargs)})'
 
 
 class array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -36,11 +37,11 @@ class array_length(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(array_length)
-def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return f'array_length({compiler.process(element.clauses)})'
+    return f'array_length({compiler.process(element.clauses, **kwargs)})'
 
 
 class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
@@ -48,11 +49,11 @@ class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(jsonb_typeof)
-def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return f'jsonb_typeof({compiler.process(element.clauses)})'
+    return f'jsonb_typeof({compiler.process(element.clauses, **kwargs)})'
 
 
 class SqlaQueryBuilder(BackendQueryBuilder):
@@ -64,7 +65,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     # pylint: disable=redefined-outer-name,too-many-public-methods
 
     def __init__(self, backend):
-        BackendQueryBuilder.__init__(self, backend)
+        super().__init__(backend)
 
         self.outer_to_inner_schema['db_dbcomputer'] = {'metadata': '_metadata'}
         self.outer_to_inner_schema['db_dblog'] = {'metadata': '_metadata'}

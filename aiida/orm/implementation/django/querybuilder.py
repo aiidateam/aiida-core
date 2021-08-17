@@ -7,13 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Django query builder"""
+"""Django query builder implementation"""
 from aldjemy import core
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module, import-error
 from sqlalchemy import and_, or_, not_, case
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.compiler import TypeCompiler
 from sqlalchemy.sql.expression import FunctionElement
 from sqlalchemy.types import Float, Boolean
 
@@ -26,11 +27,11 @@ class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(jsonb_array_length)
-def compile(element, compiler, **_kw):  # pylint: disable=function-redefined, redefined-builtin
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined, redefined-builtin
     """
     Get length of array defined in a JSONB column
     """
-    return f'jsonb_array_length({compiler.process(element.clauses)})'
+    return f'jsonb_array_length({compiler.process(element.clauses, **kwargs)})'
 
 
 class array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -38,11 +39,11 @@ class array_length(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(array_length)
-def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return f'array_length({compiler.process(element.clauses)})'
+    return f'array_length({compiler.process(element.clauses, **kwargs)})'
 
 
 class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
@@ -50,20 +51,17 @@ class jsonb_typeof(FunctionElement):  # pylint: disable=invalid-name
 
 
 @compiles(jsonb_typeof)
-def compile(element, compiler, **_kw):  # pylint: disable=function-redefined
+def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
     """
     Get length of array defined in a JSONB column
     """
-    return f'jsonb_typeof({compiler.process(element.clauses)})'
+    return f'jsonb_typeof({compiler.process(element.clauses, **kwargs)})'
 
 
 class DjangoQueryBuilder(BackendQueryBuilder):
     """Django query builder"""
 
     # pylint: disable=too-many-public-methods,no-member
-
-    def __init__(self, backend):
-        BackendQueryBuilder.__init__(self, backend)
 
     @property
     def Node(self):

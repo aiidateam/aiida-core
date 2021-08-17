@@ -1166,11 +1166,11 @@ class RESTApiTestSuite(RESTApiTestCase):
 
     ############### querybuilder ###############
     def test_querybuilder(self):
-        """Test POSTing a queryhelp dictionary as JSON to /querybuilder
+        """Test POSTing a QueryBuilder dictionary as JSON to /querybuilder
 
         This also checks that `full_type` is _not_ included in the result no matter the entity.
         """
-        queryhelp = orm.QueryBuilder().append(
+        query_dict = orm.QueryBuilder().append(
             orm.CalculationNode,
             tag='calc',
             project=['id', 'uuid', 'user_id'],
@@ -1180,7 +1180,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                     'order': 'desc'
                 }
             }]
-        }).queryhelp
+        }).as_dict()
 
         expected_node_uuids = []
         # dummy data already ordered 'desc' by 'id'
@@ -1189,7 +1189,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                 expected_node_uuids.append(calc['uuid'])
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
@@ -1215,6 +1215,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         This should return with 405 Method Not Allowed.
         Otherwise, a "conventional" JSON response should be returned with a helpful message.
         """
+        from aiida.restapi.resources import QueryBuilder as qb_api
+
         with self.app.test_client() as client:
             response_value = client.get(f'{self.get_url_prefix()}/querybuilder')
             response = response_value.json
@@ -1224,21 +1226,14 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         self.assertEqual('GET', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
-
-        message = (
-            'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
-            'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
-            'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
-            'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
-        )
-        self.assertEqual(message, response.get('data', {}).get('message', ''))
+        self.assertEqual(qb_api.GET_MESSAGE, response.get('data', {}).get('message', ''))
 
     def test_querybuilder_user(self):
         """Retrieve a User through the use of the /querybuilder endpoint
 
         This also checks that `full_type` is _not_ included in the result no matter the entity.
         """
-        queryhelp = orm.QueryBuilder().append(
+        query_dict = orm.QueryBuilder().append(
             orm.CalculationNode,
             tag='calc',
             project=['id', 'user_id'],
@@ -1253,7 +1248,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                     'order': 'desc'
                 }
             }]
-        }).queryhelp
+        }).as_dict()
 
         expected_user_ids = []
         for calc in self.get_dummy_data()['calculations']:
@@ -1261,7 +1256,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                 expected_user_ids.append(calc['user_id'])
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
@@ -1290,7 +1285,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Here "project" will use the wildcard (*).
         This should result in both CalculationNodes and Data to be returned.
         """
-        queryhelp = orm.QueryBuilder().append(
+        builder = orm.QueryBuilder().append(
             orm.CalculationNode,
             tag='calc',
             project='*',
@@ -1307,14 +1302,14 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         expected_calc_uuids = []
         expected_data_uuids = []
-        for calc, data in queryhelp.all():
+        for calc, data in builder.all():
             expected_calc_uuids.append(calc.uuid)
             expected_data_uuids.append(data.uuid)
 
-        queryhelp = queryhelp.queryhelp
+        query_dict = builder.as_dict()
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
@@ -1348,7 +1343,7 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         Here "project" will be an empty list, resulting in only the Data node being returned.
         """
-        queryhelp = orm.QueryBuilder().append(orm.CalculationNode, tag='calc').append(
+        builder = orm.QueryBuilder().append(orm.CalculationNode, tag='calc').append(
             orm.Data,
             tag='data',
             with_incoming='calc',
@@ -1359,13 +1354,13 @@ class RESTApiTestSuite(RESTApiTestCase):
         }]})
 
         expected_data_uuids = []
-        for data in queryhelp.all(flat=True):
+        for data in builder.all(flat=True):
             expected_data_uuids.append(data.uuid)
 
-        queryhelp = queryhelp.queryhelp
+        query_dict = builder.as_dict()
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))

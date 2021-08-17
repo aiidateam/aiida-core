@@ -44,6 +44,12 @@ from . import users
 from . import entities
 from . import convert
 
+try:
+    from typing import TypedDict  # pylint: disable=ungrouped-imports
+except ImportError:
+    # Python <3.8 backport
+    from typing_extensions import TypedDict
+
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
     from sqlalchemy.orm import Query
@@ -69,33 +75,27 @@ ProjectType = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=in
 FilterType = Dict[str, Any]  # pylint: disable=invalid-name
 RowType = Any  # pylint: disable=invalid-name
 
-try:
-    # new in python 3.8
-    from typing import TypedDict  # pylint: disable=ungrouped-imports
 
-    class PathItemType(TypedDict):
-        """An item on the query path"""
+class PathItemType(TypedDict):
+    """An item on the query path"""
 
-        entity_type: Any
-        tag: str
-        joining_keyword: str
-        joining_value: str
-        outerjoin: bool
-        edge_tag: str
+    entity_type: Any
+    tag: str
+    joining_keyword: str
+    joining_value: str
+    outerjoin: bool
+    edge_tag: str
 
-    class QueryDict(TypedDict, total=False):
-        """A JSON serialisable representation of a ``QueryBuilder`` instance"""
 
-        path: List[PathItemType]
-        filters: Dict[str, FilterType]
-        project: Dict[str, ProjectType]
-        order_by: List[dict]
-        offset: Optional[int]
-        limit: Optional[int]
+class QueryDict(TypedDict, total=False):
+    """A JSON serialisable representation of a ``QueryBuilder`` instance"""
 
-except ImportError:
-    PathItemType = Dict[str, Any]  # type: ignore
-    QueryDict = Dict[str, Any]  # type: ignore
+    path: List[PathItemType]
+    filters: Dict[str, FilterType]
+    project: Dict[str, ProjectType]
+    order_by: List[dict]
+    offset: Optional[int]
+    limit: Optional[int]
 
 
 def get_querybuilder_classifiers_from_cls(cls, query):  # pylint: disable=invalid-name

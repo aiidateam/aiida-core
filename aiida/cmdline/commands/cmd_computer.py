@@ -463,7 +463,7 @@ def computer_test(user, print_traceback, computer):
         with transport:
             num_tests += 1
 
-            echo.echo_highlight('[OK]', color='success')
+            echo.echo('[OK]', fg='green')
 
             scheduler.set_transport(transport)
 
@@ -486,16 +486,16 @@ def computer_test(user, print_traceback, computer):
                 if not success:
                     num_failures += 1
                     if message:
-                        echo.echo_highlight('[Failed]: ', color='error', nl=False)
+                        echo.echo('[Failed]: ', fg='red', nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo_highlight('[Failed]', color='error')
+                        echo.echo('[Failed]', fg='red')
                 else:
                     if message:
-                        echo.echo_highlight('[OK]: ', color='success', nl=False)
+                        echo.echo('[OK]: ', fg='green', nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo_highlight('[OK]', color='success')
+                        echo.echo('[OK]', fg='green')
 
         if num_failures:
             echo.echo_warning(f'{num_failures} out of {num_tests} tests failed')
@@ -503,7 +503,7 @@ def computer_test(user, print_traceback, computer):
             echo.echo_success(f'all {num_tests} tests succeeded')
 
     except Exception as exception:  # pylint:disable=broad-except
-        echo.echo_highlight('[FAILED]: ', color='error', nl=False)
+        echo.echo('[FAILED]: ', fg='red', nl=False)
         message = 'Error while trying to connect to the computer'
 
         if print_traceback:

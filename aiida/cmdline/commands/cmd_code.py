@@ -177,7 +177,7 @@ def show(code, verbose):
     if verbose:
         table.append(['Calculations', len(code.get_outgoing().all())])
 
-    click.echo(tabulate.tabulate(table))
+    echo.echo(tabulate.tabulate(table))
 
 
 @verdi_code.command()

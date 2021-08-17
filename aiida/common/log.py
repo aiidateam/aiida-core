@@ -48,6 +48,30 @@ LOG_LEVELS = {
 AIIDA_LOGGER = logging.getLogger('aiida')
 
 
+class ClickHandler(logging.Handler):
+    """Handler for writing to the console using click."""
+
+    def emit(self, record):
+        """Emit log record via click.
+        Can make use of special attributes 'nl' (whether to add newline) and 'err' (whether to print to stderr), which
+        can be set via the 'extra' dictionary parameter of the logging methods.
+        """
+        import click
+        try:
+            msg = self.format(record)
+            try:
+                nl = record.nl
+            except AttributeError:
+                nl = True
+            try:
+                err = record.err
+            except AttributeError:
+                err = False
+            click.echo(msg, err=err, nl=nl)
+        except Exception:  # pylint: disable=broad-except
+            self.handleError(record)
+
+
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
 def get_logging_config():
@@ -68,15 +92,21 @@ def get_logging_config():
         },
         'handlers': {
             'console': {
-                'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
             },
+            'click': {
+                'class': 'aiida.common.log.ClickHandler',
+            }
         },
         'loggers': {
             'aiida': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.aiida_loglevel'),
+                'propagate': False,
+            },
+            'aiida.cmdline': {
+                'handlers': ['click'],
                 'propagate': False,
             },
             'plumpy': {

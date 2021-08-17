@@ -48,11 +48,11 @@ def remote_ls(ls_long, path, datum):
                 stat.filemode(metadata['attributes'].st_mode), metadata['attributes'].st_size,
                 mtime.strftime('%d %b %Y %H:%M')
             )
-            click.echo(pre_line, nl=False)
+            echo.echo(pre_line, nl=False)
         if metadata['isdir']:
-            click.echo(click.style(metadata['name'], fg='blue'))
+            echo.echo(metadata['name'], fg='blue')
         else:
-            click.echo(metadata['name'])
+            echo.echo(metadata['name'])
 
 
 @remote.command('cat')
@@ -83,7 +83,5 @@ def remote_cat(datum, path):
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
 def remote_show(datum):
     """Show information for a RemoteData object."""
-    click.echo('- Remote computer name:')
-    click.echo(f'  {datum.computer.label}')
-    click.echo('- Remote folder full path:')
-    click.echo(f'  {datum.get_remote_path()}')
+    echo.echo(f'- Remote computer name: {datum.computer.label}')
+    echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')

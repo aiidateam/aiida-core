@@ -20,9 +20,19 @@ __all__ = ('AIIDA_LOGGER', 'override_log_level', 'override_log_formatter')
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
 # the value 25 is already reserved for SUBWARNING by the multiprocessing module.
-
 LOG_LEVEL_REPORT = 23
+
+# Add the custom log level to the :mod:`logging` module and add a corresponding report logging method.
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
+
+
+def report(self, msg, *args, **kwargs):
+    """Log a message at the ``REPORT`` level."""
+    self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
+
+
+setattr(logging, 'REPORT', LOG_LEVEL_REPORT)
+setattr(logging.Logger, 'report', report)
 
 # Convenience dictionary of available log level names and their log level integer
 LOG_LEVELS = {
@@ -35,16 +45,7 @@ LOG_LEVELS = {
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
 
-# The AiiDA logger
 AIIDA_LOGGER = logging.getLogger('aiida')
-
-
-# A logging filter that can be used to disable logging
-class NotInTestingFilter(logging.Filter):
-
-    def filter(self, record):
-        from aiida.manage import configuration
-        return not configuration.PROFILE.is_test_profile
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction
@@ -65,17 +66,11 @@ def get_logging_config():
                 'datefmt': '%m/%d/%Y %I:%M:%S %p',
             },
         },
-        'filters': {
-            'testing': {
-                '()': NotInTestingFilter
-            }
-        },
         'handlers': {
             'console': {
                 'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
-                'filters': ['testing']
             },
         },
         'loggers': {

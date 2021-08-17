@@ -40,6 +40,8 @@ good-names = [
     "j",
     "k",
     "pk",
+    "fg",
+    "nl",
     "TemplatereplacerCalculation",
     "ArithmeticAddCalculation",
     "MultiplyAddWorkChain"

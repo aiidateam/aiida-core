@@ -27,6 +27,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 from aiida.backends.general.migrations.utils import dumps_json
+from aiida.cmdline.utils import echo
 from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.
@@ -152,11 +153,11 @@ def export_and_clean_workflow_logs(connection):
         return
 
     if not configuration.PROFILE.is_test_profile:
-        click.echo(
+        echo.echo_warning(
             'We found {} log records that correspond to legacy workflows and {} log records to correspond '
             'to an unknown entity.'.format(lwf_no_number, other_number)
         )
-        click.echo(
+        echo.echo_warning(
             'These records will be removed from the database and exported to JSON files to the current directory).'
         )
         proceed = click.confirm('Would you like to proceed?', default=True)
@@ -178,7 +179,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo(f'Exported legacy workflow logs to {filename}')
+                echo.echo(f'Exported legacy workflow logs to {filename}')
 
         # Now delete the records
         connection.execute(
@@ -203,7 +204,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo(f'Exported unexpected entity logs to {filename}')
+                echo.echo(f'Exported unexpected entity logs to {filename}')
 
         # Now delete the records
         connection.execute(
@@ -228,7 +229,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
+                echo.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
 
         # Now delete the records
         connection.execute(

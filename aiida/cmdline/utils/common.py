@@ -8,13 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common utility functions for command line commands."""
-# pylint: disable=import-error
-
 import os
 import sys
 
-import click
 from tabulate import tabulate
+
+from . import echo
 
 
 def get_env_with_venv_bin():
@@ -383,10 +382,10 @@ def print_process_info(process):
     if not docstring:
         docstring = ['No description available']
 
-    click.secho('Description:\n', fg='red', bold=True)
+    echo.echo('Description:\n', fg='red', bold=True)
     for line in docstring:
-        click.echo(f'	{line.lstrip()}')
-    click.echo()
+        echo.echo(f'    {line.lstrip()}')
+    echo.echo()
 
     print_process_spec(process.spec())
 
@@ -426,26 +425,26 @@ def print_process_spec(process_spec):
     max_width_type = max([len(entry[2]) for entry in inputs + outputs]) + 2
 
     if process_spec.inputs:
-        click.secho('Inputs:', fg='red', bold=True)
+        echo.echo('Inputs:', fg='red', bold=True)
     for entry in inputs:
         if entry[1] == 'required':
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
         else:
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.outputs:
-        click.secho('Outputs:', fg='red', bold=True)
+        echo.echo('Outputs:', fg='red', bold=True)
     for entry in outputs:
         if entry[1] == 'required':
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
         else:
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.exit_codes:
-        click.secho('Exit codes:', fg='red', bold=True)
+        echo.echo('Exit codes:', fg='red', bold=True)
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
         message = exit_code.message.capitalize()
-        click.secho('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
+        echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
 
 
 def get_num_workers():
@@ -483,7 +482,6 @@ def check_worker_load(active_slots):
 
     :param active_slots: the number of currently active worker slots
     """
-    from aiida.cmdline.utils import echo
     from aiida.common.exceptions import CircusCallError
     from aiida.manage.configuration import get_config
 

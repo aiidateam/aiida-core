@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions for command line commands related to the daemon."""
-import click
 from tabulate import tabulate
 
 from aiida.cmdline.utils import echo
@@ -29,20 +28,20 @@ def print_client_response_status(response):
         return 1
 
     if response['status'] == 'active':
-        click.secho('RUNNING', fg='green', bold=True)
+        echo.echo('RUNNING', fg='green', bold=True)
         return 0
     if response['status'] == 'ok':
-        click.secho('OK', fg='green', bold=True)
+        echo.echo('OK', fg='green', bold=True)
         return 0
     if response['status'] == DaemonClient.DAEMON_ERROR_NOT_RUNNING:
-        click.secho('FAILED', fg='red', bold=True)
-        click.echo('Try to run \'verdi daemon start --foreground\' to potentially see the exception')
+        echo.echo('FAILED', fg='red', bold=True)
+        echo.echo('Try to run `verdi daemon start --foreground` to potentially see the exception')
         return 2
     if response['status'] == DaemonClient.DAEMON_ERROR_TIMEOUT:
-        click.secho('TIMEOUT', fg='red', bold=True)
+        echo.echo('TIMEOUT', fg='red', bold=True)
         return 3
     # Unknown status, I will consider it as failed
-    click.echo(response['status'])
+    echo.echo_critical(response['status'])
     return -1
 
 

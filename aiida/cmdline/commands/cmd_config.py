@@ -12,17 +12,17 @@ import textwrap
 
 import click
 
-from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi, VerdiCommandGroup
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
 
-class _DeprecateConfigCommandsGroup(click.Group):
+class _DeprecateConfigCommandsGroup(VerdiCommandGroup):
     """Overloads the get_command with one that identifies deprecated commands."""
 
     def get_command(self, ctx, cmd_name):
         """Override the default click.Group get_command with one that identifies deprecated commands."""
-        cmd = click.Group.get_command(self, ctx, cmd_name)
+        cmd = super().get_command(ctx, cmd_name)
 
         if cmd is not None:
             return cmd
@@ -37,7 +37,7 @@ class _DeprecateConfigCommandsGroup(click.Group):
             'autofill.user.institution'
         ]:
             ctx.obj.deprecated_name = cmd_name
-            cmd = click.Group.get_command(self, ctx, '_deprecated')
+            cmd = super().get_command(ctx, '_deprecated')
             return cmd
 
         ctx.fail(f"'{cmd_name}' is not a verdi config command.")

@@ -11,6 +11,8 @@
 import click
 import pytest
 
+from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
+
 
 @pytest.fixture
 def run_cli_command():
@@ -30,6 +32,11 @@ def run_cli_command():
         :return: test result
         """
         import traceback
+
+        # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic
+        # of the ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module
+        # which circumvents this machinery.
+        command = VerdiCommandGroup.add_verbosity_option(command)
 
         runner = click.testing.CliRunner()
         result = runner.invoke(command, options or [])

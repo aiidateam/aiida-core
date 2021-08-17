@@ -14,7 +14,7 @@ from functools import partial
 import click
 import tabulate
 
-from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi, VerdiCommandGroup
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
@@ -538,7 +538,7 @@ def computer_delete(computer):
     echo.echo_success(f"Computer '{label}' deleted.")
 
 
-class LazyConfigureGroup(click.Group):
+class LazyConfigureGroup(VerdiCommandGroup):
     """A click group that will lazily load the subcommands for each transport plugin."""
 
     def list_commands(self, ctx):

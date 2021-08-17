@@ -184,7 +184,9 @@ Below is a list with all available subcommands.
       Inspect, create and manage data nodes.
 
     Options:
-      --help  Show this message and exit.
+      -v, --verbosity [notset|debug|info|report|warning|error|critical]
+                                      Set the verbosity of the output.
+      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-database:

@@ -12,6 +12,7 @@ import click
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 from ...utils import defaults, echo
 from .. import types
@@ -30,7 +31,7 @@ __all__ = (
     'PROCESS_LABEL', 'PROCESS_STATE', 'PROFILE', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PROJECT', 'RAW',
     'REPOSITORY_PATH', 'SCHEDULER', 'SILENT', 'TIMEOUT', 'TRAJECTORY_INDEX', 'TRANSPORT', 'TRAVERSAL_RULE_HELP_STRING',
     'TYPE_STRING', 'USER', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_INSTITUTION', 'USER_LAST_NAME', 'VERBOSE',
-    'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states',
+    'VERBOSITY', 'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states',
     'graph_traversal_rules', 'valid_calc_job_states', 'valid_process_states'
 )
 
@@ -88,6 +89,53 @@ def graph_traversal_rules(rules):
 
     return decorator
 
+
+def set_log_level(ctx, __, value):
+    """Set the log level for the global ``AIIDA_LOGGER``.
+
+    Note that we cannot use the most obvious approach of directly setting the level on the ``AIIDA_LOGGER``. The reason
+    is that after this callback is finished, the :meth:`aiida.common.log.configure_logging` method can be called again,
+    for example when the database backend is loaded, and this will undo this change. So instead, we change the value of
+    the ``logging.aiida_loglevel`` option of the profile that is currently loaded, which is the profile that was
+    selected for this CLI call and is stored in memory. If the logging is reconfigured, the correct log level will be
+    retrieved from the current profile and set on the loggers.
+    """
+    if value is None:
+        return
+
+    try:
+        log_level = value.upper()
+    except AttributeError:
+        raise click.BadParameter(f'`{value}` is not a string.')
+
+    if log_level not in LOG_LEVELS:
+        raise click.BadParameter(f'`{log_level}` is not a valid log level.')
+
+    try:
+        profile = ctx.obj.profile
+    except AttributeError:
+        # This can occur when the command is not invoked from the command line but directly, for example during testing,
+        # which won't go through the actual ``verdi`` command which is what initializes the ``obj`` attribute and sets
+        # the profile on it.
+        from aiida.manage.configuration import get_profile
+        profile = get_profile()
+
+    if profile is not None:
+        profile.set_option('logging.aiida_loglevel', log_level)
+        # Make sure the value is currently loaded, even if it may be undone in the future by another call to this method
+        configure_logging()
+
+    return log_level
+
+
+VERBOSITY = OverridableOption(
+    '-v',
+    '--verbosity',
+    type=click.Choice(tuple(map(str.lower, LOG_LEVELS.keys())), case_sensitive=False),
+    callback=set_log_level,
+    expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
+    help='Set the verbosity of the output.'
+)
 
 PROFILE = OverridableOption(
     '-p',

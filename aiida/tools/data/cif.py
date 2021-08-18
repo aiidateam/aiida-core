@@ -162,7 +162,6 @@ def refine_inline(node):
 
     .. note:: can be used as inline calculation.
     """
-    # pylint: disable=unsubscriptable-object
     from aiida.orm.nodes.data.structure import StructureData, ase_refine_cell
 
     if len(node.values.keys()) > 1:
@@ -192,15 +191,15 @@ def refine_inline(node):
 
     # Remove all existing symmetry tags before overwriting:
     for tag in symmetry_tags:
-        cif.values[name].RemoveCifItem(tag)
+        cif.values[name].RemoveCifItem(tag)  # pylint: disable=unsubscriptable-object
 
-    cif.values[name]['_symmetry_space_group_name_H-M'] = symmetry['hm']
-    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
-    cif.values[name]['_symmetry_Int_Tables_number'] = symmetry['tables']
-    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = \
-        [symop_string_from_symop_matrix_tr(symmetry['rotations'][i],
-                                           symmetry['translations'][i])
-         for i in range(len(symmetry['rotations']))]
+    cif.values[name]['_symmetry_space_group_name_H-M'] = symmetry['hm']  # pylint: disable=unsubscriptable-object
+    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']  # pylint: disable=unsubscriptable-object
+    cif.values[name]['_symmetry_Int_Tables_number'] = symmetry['tables']  # pylint: disable=unsubscriptable-object
+    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = [  # pylint: disable=unsubscriptable-object
+        symop_string_from_symop_matrix_tr(symmetry['rotations'][i], symmetry['translations'][i])
+        for i in range(len(symmetry['rotations']))
+    ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
     cif.values[name]['_chemical_formula_sum'] = \

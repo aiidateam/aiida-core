@@ -401,7 +401,7 @@ def _gather_imports(archives, webpages) -> List[Tuple[str, bool]]:
     if webpages is not None:
         for webpage in webpages:
             try:
-                echo.echo_info(f'retrieving archive URLS from {webpage}')
+                echo.echo_report(f'retrieving archive URLS from {webpage}')
                 urls = get_valid_import_links(webpage)
             except Exception as error:
                 echo.echo_critical(
@@ -434,7 +434,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
         archive_path = archive
 
         if web_based:
-            echo.echo_info(f'downloading archive: {archive}')
+            echo.echo_report(f'downloading archive: {archive}')
             try:
                 with urllib.request.urlopen(archive) as response:
                     temp_folder.create_file_from_filelike(response, 'downloaded_archive.zip')
@@ -444,13 +444,13 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
             archive_path = temp_folder.get_abs_path('downloaded_archive.zip')
             echo.echo_success('archive downloaded, proceeding with import')
 
-        echo.echo_info(f'starting import: {archive}')
+        echo.echo_report(f'starting import: {archive}')
         try:
             import_data(archive_path, **import_kwargs)
         except IncompatibleArchiveVersionError as exception:
             if try_migration:
 
-                echo.echo_info(f'incompatible version detected for {archive}, trying migration')
+                echo.echo_report(f'incompatible version detected for {archive}, trying migration')
                 try:
                     migrator = get_migrator(detect_archive_type(archive_path))(archive_path)
                     archive_path = migrator.migrate(
@@ -459,7 +459,7 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
                 except Exception as exception:
                     _echo_exception(f'an exception occurred while migrating the archive {archive}', exception)
 
-                echo.echo_info('proceeding with import of migrated archive')
+                echo.echo_report('proceeding with import of migrated archive')
                 try:
                     import_data(archive_path, **import_kwargs)
                 except Exception as exception:

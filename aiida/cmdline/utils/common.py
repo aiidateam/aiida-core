@@ -52,7 +52,7 @@ def print_last_process_state_change(process_type=None):
     :param process_type: optional process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
-    from aiida.cmdline.utils.echo import echo_info
+    from aiida.cmdline.utils.echo import echo_report
     from aiida.common import timezone
     from aiida.common.utils import str_timedelta
     from aiida.engine.utils import get_process_state_change_timestamp
@@ -60,12 +60,12 @@ def print_last_process_state_change(process_type=None):
     timestamp = get_process_state_change_timestamp(process_type)
 
     if timestamp is None:
-        echo_info('last time an entry changed state: never')
+        echo_report('last time an entry changed state: never')
     else:
         timedelta = timezone.delta(timestamp, timezone.now())
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
-        echo_info(f'last time an entry changed state: {relative} ({formatted})')
+        echo_report(f'last time an entry changed state: {relative} ({formatted})')
 
 
 def get_node_summary(node):
@@ -385,7 +385,7 @@ def print_process_info(process):
     echo.echo('Description:\n', fg='red', bold=True)
     for line in docstring:
         echo.echo(f'    {line.lstrip()}')
-    echo.echo()
+    echo.echo('')
 
     print_process_spec(process.spec())
 
@@ -503,6 +503,6 @@ def check_worker_load(active_slots):
             echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
             echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")
         else:
-            echo.echo_info(f'Using {percent_load * 100:.0f}% of the available daemon worker slots')
+            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots')
     else:
-        echo.echo_info('No active daemon workers')
+        echo.echo_report('No active daemon workers')

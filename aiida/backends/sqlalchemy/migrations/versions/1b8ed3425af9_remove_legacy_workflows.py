@@ -91,7 +91,7 @@ def export_workflow_data(connection):
 
     # If delete_on_close is False, we are running for the user and add additional message of file location
     if not delete_on_close:
-        echo.echo_info(f'Exported workflow data to {filename}')
+        echo.echo_report(f'Exported workflow data to {filename}')
 
 
 def upgrade():

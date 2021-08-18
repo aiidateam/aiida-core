@@ -533,7 +533,7 @@ def comment_show(user, nodes):
             if not comments:
                 valid_users = ', '.join(set(comment.user.email for comment in all_comments))
                 echo.echo_warning(f'no comments found for user {user}')
-                echo.echo_info(f'valid users found for Node<{node.pk}>: {valid_users}')
+                echo.echo_report(f'valid users found for Node<{node.pk}>: {valid_users}')
 
         else:
             comments = all_comments
@@ -548,7 +548,7 @@ def comment_show(user, nodes):
             echo.echo('\n'.join(comment_msg))
 
         if not comments:
-            echo.echo_info('no comments found')
+            echo.echo_report('no comments found')
 
 
 @verdi_comment.command('remove')

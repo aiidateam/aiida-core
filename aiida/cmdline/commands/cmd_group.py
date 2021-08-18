@@ -107,7 +107,7 @@ def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules
     if not (force or dry_run):
         click.confirm(f'Are you sure you want to delete {group}?', abort=True)
     elif dry_run:
-        echo.echo_info(f'Would have deleted {group}.')
+        echo.echo_report(f'Would have deleted {group}.')
 
     if delete_nodes:
 
@@ -341,10 +341,10 @@ def group_list(
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
     if not all_entries:
-        echo.echo_info('To show groups of all types, use the `-a/--all` option.')
+        echo.echo_report('To show groups of all types, use the `-a/--all` option.')
 
     if not table:
-        echo.echo_info('No groups found matching the specified criteria.')
+        echo.echo_report('No groups found matching the specified criteria.')
     else:
         echo.echo(tabulate(table, headers=projection_header))
 
@@ -361,7 +361,7 @@ def group_create(group_label):
     if created:
         echo.echo_success(f"Group created with PK = {group.pk} and label '{group.label}'.")
     else:
-        echo.echo_info(f"Group with label '{group.label}' already exists: {group}.")
+        echo.echo_report(f"Group with label '{group.label}' already exists: {group}.")
 
 
 @verdi_group.command('copy')

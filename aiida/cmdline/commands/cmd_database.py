@@ -132,7 +132,7 @@ def detect_duplicate_uuid(table, apply_patch):
         echo.echo_critical(f'integrity check failed: {str(exception)}')
     else:
         for message in messages:
-            echo.echo_info(message)
+            echo.echo_report(message)
 
         if apply_patch:
             echo.echo_success('integrity patch completed')

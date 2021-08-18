@@ -236,8 +236,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_info(f'  verdi computer configure {computer.transport_type} {computer.label}')
+    echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+    echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('duplicate')
@@ -289,8 +289,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     is_configured = computer.is_user_configured(orm.User.objects.get_default())
 
     if not is_configured:
-        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info(f'  verdi computer configure {computer.transport_type} {computer.label}')
+        echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('enable')
@@ -308,9 +308,11 @@ def computer_enable(computer, user):
 
     if not authinfo.enabled:
         authinfo.enabled = True
-        echo.echo_info(f"Computer '{computer.label}' enabled for user {user.get_full_name()}.")
+        echo.echo_report(f"Computer '{computer.label}' enabled for user {user.get_full_name()}.")
     else:
-        echo.echo_info(f"Computer '{computer.label}' was already enabled for user {user.first_name} {user.last_name}.")
+        echo.echo_report(
+            f"Computer '{computer.label}' was already enabled for user {user.first_name} {user.last_name}."
+        )
 
 
 @verdi_computer.command('disable')
@@ -330,9 +332,11 @@ def computer_disable(computer, user):
 
     if authinfo.enabled:
         authinfo.enabled = False
-        echo.echo_info(f"Computer '{computer.label}' disabled for user {user.get_full_name()}.")
+        echo.echo_report(f"Computer '{computer.label}' disabled for user {user.get_full_name()}.")
     else:
-        echo.echo_info(f"Computer '{computer.label}' was already disabled for user {user.first_name} {user.last_name}.")
+        echo.echo_report(
+            f"Computer '{computer.label}' was already disabled for user {user.first_name} {user.last_name}."
+        )
 
 
 @verdi_computer.command('list')
@@ -344,14 +348,14 @@ def computer_list(all_entries, raw):
     from aiida.orm import Computer, User
 
     if not raw:
-        echo.echo_info('List of configured computers')
-        echo.echo_info("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
+        echo.echo_report('List of configured computers')
+        echo.echo_report("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
 
     computers = Computer.objects.all()
     user = User.objects.get_default()
 
     if not computers:
-        echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
+        echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
 
     sort = lambda computer: computer.label
     highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
@@ -432,7 +436,7 @@ def computer_test(user, print_traceback, computer):
     if user is None:
         user = orm.User.objects.get_default()
 
-    echo.echo_info(f'Testing computer<{computer.label}> for user<{user.email}>...')
+    echo.echo_report(f'Testing computer<{computer.label}> for user<{user.email}>...')
 
     try:
         authinfo = computer.get_authinfo(user)

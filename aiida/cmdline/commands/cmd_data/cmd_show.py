@@ -66,7 +66,7 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
             subprocess.check_output([exec_name, handle.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -97,7 +97,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
             subprocess.check_output([exec_name, '--xsf', tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -159,7 +159,7 @@ def _show_vesta(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(
@@ -190,7 +190,7 @@ def _show_vmd(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
                 echo.echo_critical(

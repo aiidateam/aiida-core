@@ -141,7 +141,7 @@ class InteractiveOption(ConditionalOption):
 
     def ctrl_help(self):
         """control behaviour when help is requested from the prompt"""
-        echo.echo_info(self.format_help_message())
+        echo.echo(self.format_help_message())
 
     def format_help_message(self):
         """
@@ -199,8 +199,8 @@ class InteractiveOption(ConditionalOption):
     def simple_prompt_loop(self, ctx, param, value):
         """Prompt until successful conversion. dispatch control sequences."""
         if not hasattr(ctx, 'prompt_loop_info_printed'):
-            echo.echo_info(f'enter "{self.CHARACTER_PROMPT_HELP}" for help')
-            echo.echo_info(f'enter "{self.CHARACTER_IGNORE_DEFAULT}" to ignore the default and set no value')
+            echo.echo_report(f'enter "{self.CHARACTER_PROMPT_HELP}" for help')
+            echo.echo_report(f'enter "{self.CHARACTER_IGNORE_DEFAULT}" to ignore the default and set no value')
             ctx.prompt_loop_info_printed = True
 
         while 1:

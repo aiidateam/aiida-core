@@ -38,6 +38,7 @@ class CalcJobNode(CalculationNode):
     # pylint: disable=too-many-public-methods
 
     CALC_JOB_STATE_KEY = 'state'
+    IMMIGRATED_KEY = 'imported'
     REMOTE_WORKDIR_KEY = 'remote_workdir'
     RETRIEVE_LIST_KEY = 'retrieve_list'
     RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
@@ -89,6 +90,7 @@ class CalcJobNode(CalculationNode):
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
+            cls.IMMIGRATED_KEY,
             cls.REMOTE_WORKDIR_KEY,
             cls.RETRIEVE_LIST_KEY,
             cls.RETRIEVE_TEMPORARY_LIST_KEY,
@@ -150,6 +152,11 @@ class CalcJobNode(CalculationNode):
         builder = super().get_builder_restart()
         builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
         return builder
+
+    @property
+    def is_imported(self) -> bool:
+        """Return whether the calculation job was imported instead of being an actual run."""
+        return self.get_attribute(self.IMMIGRATED_KEY, None) is True
 
     def get_option(self, name: str) -> Optional[Any]:
         """

@@ -17,12 +17,12 @@ from importlib_metadata import EntryPoint
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
-    'BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory', 'OrbitalFactory',
-    'ParserFactory', 'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
+    'BaseFactory', 'CalculationFactory', 'CalcJobImporterFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory',
+    'OrbitalFactory', 'ParserFactory', 'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
 )
 
 if TYPE_CHECKING:
-    from aiida.engine import CalcJob, WorkChain
+    from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
@@ -100,6 +100,25 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Optional[Uni
         isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, CalcJob)) or
         (is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode)
     ):
+        return entry_point
+
+    raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
+
+
+def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'CalcJobImporter']]:
+    """Return the plugin registered under the given entry point.
+
+    :param entry_point_name: the entry point name.
+    :return: the loaded :class:`~aiida.engine.processes.calcjobs.importer.CalcJobImporter` plugin.
+    :raises ``aiida.common.InvalidEntryPointTypeError``: if the type of the loaded entry point is invalid.
+    """
+    from aiida.engine import CalcJobImporter
+
+    entry_point_group = 'aiida.calculations.importers'
+    entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
+    valid_classes = (CalcJobImporter,)
+
+    if isclass(entry_point) and issubclass(entry_point, CalcJobImporter):  # type: ignore[arg-type]
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

@@ -189,7 +189,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         # `('___', '_')`, where the first element is the matched group of consecutive underscores.
         consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
 
-        if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
+        if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
             raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
     def serialize(self, mapping: Optional[Dict[str, Any]], breadcrumbs: Sequence[str] = ()) -> Optional[Dict[str, Any]]:

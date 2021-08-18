@@ -152,7 +152,7 @@ class KpointsData(ArrayData):
             raise ValueError('The input must contain an integer index, to map the labels into the kpoint list')
         labels = [str(i[1]) for i in value]
 
-        if any([i > len(self.get_kpoints()) - 1 for i in label_numbers]):
+        if any(i > len(self.get_kpoints()) - 1 for i in label_numbers):
             raise ValueError('Index of label exceeding the list of kpoints')
 
         self.set_attribute('label_numbers', label_numbers)

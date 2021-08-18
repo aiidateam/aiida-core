@@ -24,7 +24,7 @@ def collect_usage_pieces(self, ctx):
 
     # If the command contains a `MultipleValueOption` make sure to add `[--]` to the help string before the
     # arguments, which hints the use of the optional `endopts` marker
-    if any([isinstance(param, MultipleValueOption) for param in self.get_params(ctx)]):
+    if any(isinstance(param, MultipleValueOption) for param in self.get_params(ctx)):
         result.append('[--]')
 
     for param in self.get_params(ctx):

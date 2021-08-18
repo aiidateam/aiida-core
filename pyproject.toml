@@ -29,8 +29,7 @@ disable = [
     "too-many-instance-attributes",
     # added in pylint v2.9.4
     "deprecated-decorator",
-    "raise-missing-from",
-    "use-a-generator"
+    "raise-missing-from"
 ]
 
 [tool.pylint.basic]

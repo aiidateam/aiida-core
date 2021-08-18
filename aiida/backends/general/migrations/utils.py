@@ -55,7 +55,7 @@ class LazyFile(File):
         if key is not None and not isinstance(key, (str, LazyOpener)):
             raise TypeError('key should be `None` or a string.')
 
-        if objects is not None and any([not isinstance(obj, self.__class__) for obj in objects.values()]):
+        if objects is not None and any(not isinstance(obj, self.__class__) for obj in objects.values()):
             raise TypeError('objects should be `None` or a dictionary of `File` instances.')
 
         if file_type == FileType.DIRECTORY and key is not None:

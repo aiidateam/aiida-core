@@ -39,7 +39,7 @@ class TrajectoryData(ArrayData):
 
         if not isinstance(symbols, collections.abc.Iterable):
             raise TypeError('TrajectoryData.symbols must be of type list')
-        if any([not isinstance(i, str) for i in symbols]):
+        if any(not isinstance(i, str) for i in symbols):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError('TrajectoryData.positions must be a numpy array of floats')

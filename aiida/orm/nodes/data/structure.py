@@ -741,7 +741,7 @@ class StructureData(Data):
 
         super().__init__(**kwargs)
 
-        if any([ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]]):
+        if any(ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]):
 
             if ase is not None:
                 self.set_ase(ase)
@@ -1864,7 +1864,7 @@ class StructureData(Data):
         species = []
         additional_kwargs = {}
 
-        if (kwargs.pop('add_spin', False) and any([n.endswith('1') or n.endswith('2') for n in self.get_kind_names()])):
+        if (kwargs.pop('add_spin', False) and any(n.endswith('1') or n.endswith('2') for n in self.get_kind_names())):
             # case when spins are defined -> no partial occupancy allowed
             from pymatgen.core.periodic_table import Specie
             oxidation_state = 0  # now I always set the oxidation_state to zero
@@ -1884,10 +1884,10 @@ class StructureData(Data):
             for site in self.sites:
                 kind = self.get_kind(site.kind_name)
                 species.append(dict(zip(kind.symbols, kind.weights)))
-            if any([
+            if any(
                 create_automatic_kind_name(self.get_kind(name).symbols,
                                            self.get_kind(name).weights) != name for name in self.get_site_kindnames()
-            ]):
+            ):
                 # add "kind_name" as a properties to each site, whenever
                 # the kind_name cannot be automatically obtained from the symbols
                 additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}

@@ -352,7 +352,7 @@ class RealhydrogenOrbital(Orbital):
         """
         orbital_name = [
             orbital for orbital, data in CONVERSION_DICT.items()
-            if any([values['angular_momentum'] == angular_momentum for values in data.values()])
+            if any(values['angular_momentum'] == angular_momentum for values in data.values())
         ]
         if not orbital_name:
             raise ValueError(f'No orbital name corresponding to the angular_momentum {angular_momentum} could be found')

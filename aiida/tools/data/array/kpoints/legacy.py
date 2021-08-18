@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tool to automatically determine k-points for a given structure using legacy custom implementation."""
-# pylint: disable=too-many-lines,fixme,invalid-name,too-many-arguments,too-many-locals,eval-used
+# pylint: disable=too-many-lines,fixme,invalid-name,too-many-arguments,too-many-locals,eval-used,use-a-generator
 import numpy
 
 _default_epsilon_length = 1e-5

@@ -164,7 +164,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         if not isinstance(nodes, (list, tuple)):
             raise TypeError('nodes has to be a list or tuple')
 
-        if any([not isinstance(node, BackendNode) for node in nodes]):
+        if any(not isinstance(node, BackendNode) for node in nodes):
             raise TypeError(f'nodes have to be of type {BackendNode}')
 
     def remove_nodes(self, nodes):
@@ -180,7 +180,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         if not isinstance(nodes, (list, tuple)):
             raise TypeError('nodes has to be a list or tuple')
 
-        if any([not isinstance(node, BackendNode) for node in nodes]):
+        if any(not isinstance(node, BackendNode) for node in nodes):
             raise TypeError(f'nodes have to be of type {BackendNode}')
 
     def __repr__(self):

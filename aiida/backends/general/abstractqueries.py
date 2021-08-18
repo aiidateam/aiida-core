@@ -137,12 +137,12 @@ class AbstractQueryManager(abc.ABC):
 
         if args.element is not None:
             all_symbols = [_['symbols'][0] for _ in akinds]
-            if not any([s in args.element for s in all_symbols]):
+            if not any(s in args.element for s in all_symbols):
                 return None
 
         if args.element_only is not None:
             all_symbols = [_['symbols'][0] for _ in akinds]
-            if not all([s in all_symbols for s in args.element_only]):
+            if not all(s in all_symbols for s in args.element_only):
                 return None
 
         # We want only the StructureData that have attributes

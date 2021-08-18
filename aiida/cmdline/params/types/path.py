@@ -99,7 +99,8 @@ class PathOrUrl(click.Path):
     def checks_url(self, url, param, ctx):
         """Check whether URL is reachable within timeout."""
         try:
-            urllib.request.urlopen(url, timeout=self.timeout_seconds)  # pylint: disable=consider-using-with
+            with urllib.request.urlopen(url, timeout=self.timeout_seconds):
+                pass
         except (urllib.error.URLError, urllib.error.HTTPError, timeout):
             self.fail(
                 '{0} "{1}" could not be reached within {2} s.\n'

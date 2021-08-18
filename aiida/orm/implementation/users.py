@@ -42,8 +42,8 @@ class BackendUser(BackendEntity):
         :return: the email address
         """
 
-    @abc.abstractmethod
     @email.setter
+    @abc.abstractmethod
     def email(self, val):
         """
         Set the email address of the user
@@ -61,8 +61,8 @@ class BackendUser(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractmethod
     @first_name.setter
+    @abc.abstractmethod
     def first_name(self, val):
         """
         Set the user's first name
@@ -80,8 +80,8 @@ class BackendUser(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractmethod
     @last_name.setter
+    @abc.abstractmethod
     def last_name(self, val):
         """
         Set the user's last name
@@ -100,8 +100,8 @@ class BackendUser(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractmethod
     @institution.setter
+    @abc.abstractmethod
     def institution(self, val):
         """
         Set the user's institution

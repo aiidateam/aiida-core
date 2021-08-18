@@ -30,6 +30,7 @@ class BackendAuthInfo(BackendEntity):
         """
 
     @enabled.setter
+    @abc.abstractmethod
     def enabled(self, value):
         """Set the enabled state
 

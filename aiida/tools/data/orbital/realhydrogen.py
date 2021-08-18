@@ -351,8 +351,8 @@ class RealhydrogenOrbital(Orbital):
         angular_momentum=1 and magnetic_number=1 will return "Px"
         """
         orbital_name = [
-            x for x in CONVERSION_DICT
-            if any([CONVERSION_DICT[x][y]['angular_momentum'] == angular_momentum for y in CONVERSION_DICT[x]])
+            orbital for orbital, data in CONVERSION_DICT.items()
+            if any([values['angular_momentum'] == angular_momentum for values in data.values()])
         ]
         if not orbital_name:
             raise ValueError(f'No orbital name corresponding to the angular_momentum {angular_momentum} could be found')
@@ -379,7 +379,10 @@ class RealhydrogenOrbital(Orbital):
         of quantum numbers, the ones associated with "Px"
         """
         name = name.upper()
-        list_of_dicts = [CONVERSION_DICT[x][y] for x in CONVERSION_DICT for y in CONVERSION_DICT[x] if name in (y, x)]
+        list_of_dicts = [
+            subdata for orbital, data in CONVERSION_DICT.items() for suborbital, subdata in data.items()
+            if name in (suborbital, orbital)
+        ]
         if not list_of_dicts:
             raise ValueError('Invalid choice of projection name')
         return list_of_dicts

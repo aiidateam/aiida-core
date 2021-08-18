@@ -961,9 +961,9 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                for log_pk in self.to_check:
+                for log_pk, to_check_value in self.to_check.items():
                     log_entry = session.query(DbLog).filter(DbLog.id == log_pk).one()
-                    log_dbnode_id, node_type = self.to_check[log_pk]
+                    log_dbnode_id, node_type = to_check_value
 
                     self.assertEqual(
                         log_dbnode_id, log_entry.objpk,

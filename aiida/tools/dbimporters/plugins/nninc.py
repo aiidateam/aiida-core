@@ -47,11 +47,11 @@ class NnincDbImporter(DbImporter):
         :return: a string with HTTP GET statement.
         """
         get_parts = []
-        for key in self._keywords:
+        for key, value in self._keywords.items():
             if key in kwargs:
                 values = kwargs.pop(key)
-                if self._keywords[key][1] is not None:
-                    get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
+                if value[1] is not None:
+                    get_parts.append(value[1](self, value[0], key, values))
 
         if kwargs:
             raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")

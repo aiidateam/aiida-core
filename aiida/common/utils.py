@@ -129,8 +129,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
     s_tot = int(s_tot)
 
     if negative_to_zero:
-        if s_tot < 0:
-            s_tot = 0
+        s_tot = max(s_tot, 0)
 
     negative = (s_tot < 0)
     s_tot = abs(s_tot)

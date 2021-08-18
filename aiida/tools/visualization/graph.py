@@ -510,7 +510,7 @@ class Graph:
             return None
         if isinstance(link_types, str):
             link_types = [link_types]
-        link_types = tuple([getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types])
+        link_types = tuple(getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types)
         return link_types
 
     def add_incoming(self, node, link_types=(), annotate_links=None, return_pks=True):

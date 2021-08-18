@@ -29,10 +29,10 @@ def test_migrate_external(migrate_from_func):
                 )
 
             # Check new attributes were added successfully
-            for attr in new_attrs:
+            for attr, attr_value in new_attrs.items():
                 assert attr in attrs, f"key '{attr}' was not added to attributes for Node <pk={node_pk}>"
-                assert attrs[attr] == new_attrs[attr], (
-                    f"key '{attr}' should have had the value {new_attrs[attr]}, but did instead have {attrs[attr]}"
+                assert attrs[attr] == attr_value, (
+                    f"key '{attr}' should have had the value {attr_value}, but did instead have {attrs[attr]}"
                 )
 
     # Check Attribute and Link have been removed

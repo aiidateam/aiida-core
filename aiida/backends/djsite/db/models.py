@@ -16,7 +16,7 @@ from django.db import models as m
 from django.db.models.query import QuerySet
 from pytz import UTC
 
-import aiida.backends.djsite.db.migrations as migrations
+from aiida.backends.djsite.db import migrations
 from aiida.common import timezone
 from aiida.common.json import JSONEncoder
 from aiida.common.utils import get_new_uuid
@@ -413,7 +413,7 @@ def suppress_auto_now(list_of_models_fields):
     try:
         yield
     finally:
-        for model in _original_model_values:
-            for field in _original_model_values[model]:
-                field.auto_now = _original_model_values[model][field]['auto_now']
-                field.editable = _original_model_values[model][field]['editable']
+        for model, data in _original_model_values.items():
+            for field, value in data.items():
+                field.auto_now = value['auto_now']
+                field.editable = value['editable']

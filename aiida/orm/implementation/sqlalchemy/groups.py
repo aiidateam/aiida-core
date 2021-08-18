@@ -362,7 +362,7 @@ class SqlaGroupCollection(BackendGroupCollection):
             _LOGGER.warning("SQLA query doesn't support additional filters, ignoring '%s'", kwargs)
         groups = (session.query(DbGroup).filter(*filters).order_by(DbGroup.id).distinct().all())
 
-        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]
+        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]  # pylint: disable=no-member
 
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = sa.get_scoped_session()

@@ -109,7 +109,7 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
                     ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
                 warnings.warn(UserWarning(message))  # pylint: disable=no-member
 
-        super(InputPort, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_description(self) -> Dict[str, str]:
         """

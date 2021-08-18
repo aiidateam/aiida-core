@@ -88,10 +88,10 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
     aiida_profile.reset_db()
 
     import_data(filename)
-    for uuid in attrs:
+    for uuid, value in attrs.items():
         node = orm.load_node(uuid)
-        for k in attrs[uuid].keys():
-            assert attrs[uuid][k] == node.get_attribute(k)
+        for k in value.keys():
+            assert value[k] == node.get_attribute(k)
 
 
 def test_check_for_export_format_version(aiida_profile, tmp_path):

@@ -162,6 +162,7 @@ def refine_inline(node):
 
     .. note:: can be used as inline calculation.
     """
+    # pylint: disable=unsubscriptable-object
     from aiida.orm.nodes.data.structure import StructureData, ase_refine_cell
 
     if len(node.values.keys()) > 1:

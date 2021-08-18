@@ -121,7 +121,7 @@ def profile_delete(force, include_config, include_database, include_database_use
         }
 
         if not all(includes.values()):
-            excludes = [label for label in includes if not includes[label]]
+            excludes = [label for label, value in includes.items() if not value]
             message_suffix = f' excluding: {", ".join(excludes)}.'
         else:
             message_suffix = '.'

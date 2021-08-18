@@ -4,6 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
+# this currently fails with aiida.common.exceptions.ProfileConfigurationError: no profile has been loaded
+# we woud need a static settings module to use this
+# django-settings-module = "aiida.backends.djsite.settings"
 
 [tool.pylint.format]
 max-line-length = 120
@@ -13,7 +16,7 @@ disable = [
     "bad-continuation",
     "bad-option-value",
     "cyclic-import",
-    "django-not-available",
+    "django-not-configured",
     "duplicate-code",
     "import-outside-toplevel",
     "inconsistent-return-statements",
@@ -24,7 +27,12 @@ disable = [
     "too-many-ancestors",
     "too-many-arguments",
     "too-many-instance-attributes",
-    "useless-suppression",
+    # added in pylint v2.9.4
+    "consider-using-with",
+    "deprecated-decorator",
+    "raise-missing-from",
+    "use-a-generator",
+    "use-maxsplit-arg"
 ]
 
 [tool.pylint.basic]

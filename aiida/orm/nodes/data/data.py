@@ -59,6 +59,7 @@ class Data(Node):
 
         :returns: an unstored clone of this Data node
         """
+        # pylint: disable=no-member
         import copy
 
         backend_clone = self.backend_entity.clone()

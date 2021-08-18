@@ -32,7 +32,7 @@ class Pluginable(click.Group):
 
         return subcommands
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
+    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
         """Try to load a subcommand from entry points, else defer to super."""
         command = None
         if not self._exclude_external_plugins:

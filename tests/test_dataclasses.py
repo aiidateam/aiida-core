@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name
+# pylint: disable=too-many-lines,invalid-name,no-member
 """Tests for specific subclasses of Data."""
 import os
 import tempfile

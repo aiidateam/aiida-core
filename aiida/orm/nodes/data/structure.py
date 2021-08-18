@@ -2145,18 +2145,14 @@ class Kind:
             return (False, 'Different length of symbols list')
 
         # Check list of symbols
-        for i in range(len(self.symbols)):
-            if self.symbols[i] != other_kind.symbols[i]:
-                return (
-                    False, f'Symbol at position {i + 1:d} are different ({self.symbols[i]} vs. {other_kind.symbols[i]})'
-                )
+        for i, symbol in enumerate(self.symbols):
+            if symbol != other_kind.symbols[i]:
+                return (False, f'Symbol at position {i + 1:d} are different ({symbol} vs. {other_kind.symbols[i]})')
         # Check weights (assuming length of weights and of symbols have same
         # length, which should be always true
-        for i in range(len(self.weights)):
-            if self.weights[i] != other_kind.weights[i]:
-                return (
-                    False, f'Weight at position {i + 1:d} are different ({self.weights[i]} vs. {other_kind.weights[i]})'
-                )
+        for i, weight in enumerate(self.weights):
+            if weight != other_kind.weights[i]:
+                return (False, f'Weight at position {i + 1:d} are different ({weight} vs. {other_kind.weights[i]})')
         # Check masses
         if abs(self.mass - other_kind.mass) > _MASS_THRESHOLD:
             return (False, f'Masses are different ({self.mass} vs. {other_kind.mass})')

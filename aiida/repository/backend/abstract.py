@@ -111,7 +111,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        with self.open(key) as handle:
+        with self.open(key) as handle:  # pylint: disable=not-context-manager
             return handle.read()
 
     def get_object_hash(self, key: str) -> str:
@@ -125,7 +125,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        with self.open(key) as handle:
+        with self.open(key) as handle:  # pylint: disable=not-context-manager
             return chunked_file_hash(handle, hashlib.sha256)
 
     def delete_object(self, key: str):

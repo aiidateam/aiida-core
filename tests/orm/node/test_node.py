@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-self-use,too-many-public-methods
+# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods
 """Tests for the Node ORM class."""
 import logging
 import os

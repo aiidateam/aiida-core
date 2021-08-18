@@ -254,6 +254,7 @@ def migrate(input_file, output_file, force, in_place, archive_format, version, v
 
 class ExtrasImportCode(Enum):
     """Exit codes for the verdi command line."""
+    # pylint: disable=invalid-name
     keep_existing = 'kcl'
     update_existing = 'kcu'
     mirror = 'ncu'

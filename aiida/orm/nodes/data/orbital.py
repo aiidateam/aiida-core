@@ -50,7 +50,7 @@ class OrbitalData(Data):
         filter_dict.update(kwargs)
         # prevents KeyError from occuring
         orbital_dicts = [x for x in orbital_dicts if all([y in x for y in filter_dict])]
-        orbital_dicts = [x for x in orbital_dicts if all([x[y] == filter_dict[y] for y in filter_dict])]
+        orbital_dicts = [x for x in orbital_dicts if all([x[y] == z for y, z in filter_dict.items()])]
 
         list_of_outputs = []
         for orbital_dict in orbital_dicts:

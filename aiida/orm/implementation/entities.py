@@ -39,7 +39,8 @@ class BackendEntity(abc.ABC):
     def dbmodel(self):
         return self._dbmodel
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def id(self):  # pylint: disable=invalid-name
         """Return the id for this entity.
 
@@ -65,7 +66,8 @@ class BackendEntity(abc.ABC):
         Whether it is possible to call store more than once is delegated to the object itself
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_stored(self):
         """Return whether the entity is stored.
 
@@ -274,7 +276,8 @@ class BackendEntityAttributesMixin(abc.ABC):
         for key in self._dbmodel.attributes.keys():
             yield key
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_stored(self):
         """Return whether the entity is stored.
 
@@ -439,7 +442,8 @@ class BackendEntityExtrasMixin(abc.ABC):
         for key in self._dbmodel.extras.keys():
             yield key
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_stored(self):
         """Return whether the entity is stored.
 

@@ -24,7 +24,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     An AiiDA ORM implementation of group of nodes.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def label(self):
         """
         :return: the name of the group as a string
@@ -42,7 +43,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         :raises aiida.common.UniquenessError: if another group of same type and name already exists
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def description(self):
         """
         :return: the description of the group as a string
@@ -55,26 +57,30 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         :return: the description of the group as a string
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def type_string(self):
         """
         :return: the string defining the type of the group
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         """
         :return: a backend user object, representing the user associated to this group.
         :rtype: :class:`aiida.orm.implementation.BackendUser`
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def id(self):  # pylint: disable=invalid-name
         """
         :return: the principal key (the ID) as an integer, or None if the node was not stored yet
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def uuid(self):
         """
         :return: a string with the uuid
@@ -121,7 +127,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         :return: the integer pk of the node or None if not stored.
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_stored(self):
         """Return whether the group is stored.
 
@@ -132,7 +139,8 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     def store(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def nodes(self):
         """
         Return a generator/iterator that iterates over all nodes and returns

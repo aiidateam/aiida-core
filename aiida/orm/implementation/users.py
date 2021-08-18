@@ -33,7 +33,8 @@ class BackendUser(BackendEntity):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def email(self):
         """
         Get the email address of the user
@@ -50,7 +51,8 @@ class BackendUser(BackendEntity):
         :param val: the new email address
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def first_name(self):
         """
         Get the user's first name
@@ -68,7 +70,8 @@ class BackendUser(BackendEntity):
         :param val: the new first name
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def last_name(self):
         """
         Get the user's last name
@@ -87,7 +90,8 @@ class BackendUser(BackendEntity):
         :type val: str
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def institution(self):
         """
         Get the user's institution

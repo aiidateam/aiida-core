@@ -28,7 +28,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     and persistent. Persisting the key or mapping it onto a virtual file hierarchy is again up to the client upstream.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def uuid(self) -> typing.Optional[str]:
         """Return the unique identifier of the repository."""
 
@@ -39,7 +40,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :param kwargs: parameters for the initialisation.
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_initialised(self) -> bool:
         """Return whether the repository has been initialised."""
 

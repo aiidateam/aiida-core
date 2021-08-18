@@ -50,7 +50,8 @@ class BackendQueryBuilder:
         self.inner_to_outer_schema = dict()
         self.outer_to_inner_schema = dict()
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def Node(self):
         """
         Decorated as a property, returns the implementation for DbNode.
@@ -58,49 +59,57 @@ class BackendQueryBuilder:
         a corresponding dummy-model  must be written.
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def Link(self):
         """
         A property, decorated with @property. Returns the implementation for the DbLink
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def Computer(self):
         """
         A property, decorated with @property. Returns the implementation for the Computer
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def User(self):
         """
         A property, decorated with @property. Returns the implementation for the User
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def Group(self):
         """
         A property, decorated with @property. Returns the implementation for the Group
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def AuthInfo(self):
         """
         A property, decorated with @property. Returns the implementation for the AuthInfo
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def Comment(self):
         """
         A property, decorated with @property. Returns the implementation for the Comment
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def Log(self):
         """
         A property, decorated with @property. Returns the implementation for the Log
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def table_groups_nodes(self):
         """
         A property, decorated with @property. Returns the implementation for the many-to-many
@@ -128,7 +137,8 @@ class BackendQueryBuilder:
         This is important for the schema having attributes in a different table.
         """
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments
         """
         Returns an valid SQLAlchemy expression.
@@ -385,7 +395,8 @@ class BackendQueryBuilder:
             self.get_session().close()
             raise
 
-    @abc.abstractstaticmethod
+    @staticmethod
+    @abc.abstractmethod
     def get_table_name(aliased_class):
         """Returns the table name given an Aliased class."""
 

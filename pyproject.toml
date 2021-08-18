@@ -23,13 +23,11 @@ disable = [
     "locally-disabled",
     "logging-fstring-interpolation",
     "no-else-raise",
+    "raise-missing-from",
     "too-few-public-methods",
     "too-many-ancestors",
     "too-many-arguments",
-    "too-many-instance-attributes",
-    # added in pylint v2.9.4
-    "deprecated-decorator",
-    "raise-missing-from"
+    "too-many-instance-attributes"
 ]
 
 [tool.pylint.basic]

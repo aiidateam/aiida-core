@@ -48,6 +48,7 @@ py:class BackendEntity
 py:class BackendNode
 py:class AuthInfo
 py:class CalcJob
+py:class CalcJobImporter
 py:class CalcJobNode
 py:class Data
 py:class DbImporter

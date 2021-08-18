@@ -28,6 +28,7 @@ from ..ports import PortNamespace
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
 from .tasks import Waiting, UPLOAD_COMMAND
+from .importer import CalcJobImporter
 
 __all__ = ('CalcJob',)
 
@@ -51,9 +52,6 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
         # If the namespace no longer contains the `code` or `metadata.computer` ports we skip validation
         return None
 
-    code = inputs.get('code', None)
-    computer_from_code = code.computer
-    computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
     remote_folder = inputs.get('remote_folder', None)
 
     if remote_folder is not None:
@@ -61,6 +59,10 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
         # a `Code` nor a `Computer` are required. However, they are allowed to be specified but will not be explicitly
         # checked for consistency.
         return None
+
+    code = inputs.get('code', None)
+    computer_from_code = code.computer
+    computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
     if not computer_from_code and not computer_from_metadata:
         return 'no computer has been specified in `metadata.computer` nor via `code`.'
@@ -294,6 +296,27 @@ class CalcJob(Process):
         """
         return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
 
+    @classmethod
+    def get_importer(cls, entry_point_name: str = None) -> CalcJobImporter:
+        """Load the `CalcJobImporter` associated with this `CalcJob` if it exists.
+
+        By default an importer with the same entry point as the ``CalcJob`` will be loaded, however, this can be
+        overridden using the ``entry_point_name`` argument.
+
+        :param entry_point_name: optional entry point name of a ``CalcJobImporter`` to override the default.
+        :return: the loaded ``CalcJobImporter``.
+        :raises: if no importer class could be loaded.
+        """
+        from aiida.plugins import CalcJobImporterFactory
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        if entry_point_name is None:
+            _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
+            if entry_point is not None:
+                entry_point_name = entry_point.name  # type: ignore[attr-defined]
+
+        return CalcJobImporterFactory(entry_point_name)()
+
     @property
     def options(self) -> AttributeDict:
         """Return the options of the metadata that were specified when this process instance was launched.
@@ -412,6 +435,7 @@ class CalcJob(Process):
                     )
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
+                    self.node.set_attribute(orm.CalcJobNode.IMMIGRATED_KEY, True)
                     return self.parse(retrieved_temporary_folder.abspath)
 
     def parse(self, retrieved_temporary_folder: Optional[str] = None) -> ExitCode:
@@ -465,7 +489,16 @@ class CalcJob(Process):
 
     def parse_scheduler_output(self, retrieved: orm.Node) -> Optional[ExitCode]:
         """Parse the output of the scheduler if that functionality has been implemented for the plugin."""
-        scheduler = self.node.computer.get_scheduler()
+        computer = self.node.computer
+
+        if computer is None:
+            self.logger.info(
+                'no computer is defined for this calculation job which suggest that it is an imported job and so '
+                'scheduler output probably is not available or not in a format that can be reliably parsed, skipping..'
+            )
+            return None
+
+        scheduler = computer.get_scheduler()
         filename_stderr = self.node.get_option('scheduler_stderr')
         filename_stdout = self.node.get_option('scheduler_stdout')
 
@@ -553,12 +586,12 @@ class CalcJob(Process):
         from aiida.orm import load_node, Code, Computer
         from aiida.schedulers.datastructures import JobTemplate
 
-        computer = self.node.computer
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
 
         if not self.inputs.metadata.dry_run and self.node.has_cached_links():  # type: ignore[union-attr]
             raise InvalidOperation('calculation node has unstored links in cache')
 
+        computer = self.node.computer
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
 
         for code in codes:
@@ -576,17 +609,17 @@ class CalcJob(Process):
 
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)
-        scheduler = computer.get_scheduler()
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
-        job_tmpl.shebang = computer.get_shebang()
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = self.options.get('rerunnable', False)
         job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = f'aiida-{self.node.pk}'
         job_tmpl.sched_output_path = self.options.scheduler_stdout
+        if computer is not None:
+            job_tmpl.shebang = computer.get_shebang()
         if self.options.scheduler_stderr == self.options.scheduler_stdout:
             job_tmpl.sched_join_files = True
         else:
@@ -606,6 +639,13 @@ class CalcJob(Process):
         # Handle the retrieve_temporary_list
         retrieve_temporary_list = calc_info.retrieve_temporary_list or []
         self.node.set_retrieve_temporary_list(retrieve_temporary_list)
+
+        # If the inputs contain a ``remote_folder`` input node, we are in an import scenario and can skip the rest
+        if 'remote_folder' in inputs.all_link_labels():
+            return
+
+        # The remaining code is only necessary for actual runs, for example, creating the submission script
+        scheduler = computer.get_scheduler()
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:

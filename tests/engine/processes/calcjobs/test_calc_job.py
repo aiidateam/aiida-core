@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods,redefined-outer-name
+# pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use
 """Test for the `CalcJob` process sub class."""
 import json
 from copy import deepcopy
@@ -22,7 +22,7 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, LinkType, CalcJobState, StashMode
-from aiida.engine import launch, CalcJob, Process, ExitCode
+from aiida.engine import launch, CalcJob, Process, ExitCode, CalcJobImporter
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.plugins import CalculationFactory
@@ -471,6 +471,16 @@ class TestCalcJob(AiidaTestCase):
         # because the retrieved folder does not contain the output file it expects
         assert exit_code == process.exit_codes.ERROR_READING_OUTPUT_FILE
 
+    def test_get_importer(self):
+        """Test the ``CalcJob.get_importer`` method."""
+        assert isinstance(ArithmeticAddCalculation.get_importer(), CalcJobImporter)
+        assert isinstance(
+            ArithmeticAddCalculation.get_importer(entry_point_name='core.arithmetic.add'), CalcJobImporter
+        )
+
+        with pytest.raises(exceptions.MissingEntryPointError):
+            ArithmeticAddCalculation.get_importer(entry_point_name='non-existing')
+
 
 @pytest.fixture
 def generate_process(aiida_local_code_factory):
@@ -782,7 +792,6 @@ class TestImport(AiidaTestCase):
         super().setUpClass(*args, **kwargs)
         cls.computer.configure()  # pylint: disable=no-member
         cls.inputs = {
-            'code': orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store(),
             'x': orm.Int(1),
             'y': orm.Int(2),
             'metadata': {
@@ -814,6 +823,7 @@ class TestImport(AiidaTestCase):
             assert isinstance(node, orm.CalcJobNode)
             assert node.is_finished_ok
             assert node.is_sealed
+            assert node.is_imported
 
             # Verify the expected outputs are there
             assert 'retrieved' in results
@@ -843,6 +853,7 @@ class TestImport(AiidaTestCase):
             assert isinstance(node, orm.CalcJobNode)
             assert node.is_failed
             assert node.is_sealed
+            assert node.is_imported
             assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
 
             # Verify the expected outputs are there
@@ -874,6 +885,7 @@ class TestImport(AiidaTestCase):
             assert isinstance(node, orm.CalcJobNode)
             assert node.is_finished_ok
             assert node.is_sealed
+            assert node.is_imported
 
             # Verify the expected outputs are there
             assert 'retrieved' in results

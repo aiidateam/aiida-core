@@ -151,6 +151,15 @@ class LsfJobResource(JobResource):
         """
         return False
 
+    @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+
 
 class LsfScheduler(aiida.schedulers.Scheduler):
     """

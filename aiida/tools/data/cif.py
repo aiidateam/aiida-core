@@ -202,8 +202,9 @@ def refine_inline(node):
     ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
-    cif.values[name]['_chemical_formula_sum'] = \
+    cif.values[name]['_chemical_formula_sum'] = (  # pylint: disable=unsubscriptable-object
         StructureData(ase=original_atoms).get_formula(mode='hill', separator=' ')
+    )
 
     # If the number of reduced atoms multiplies the number of non-reduced
     # atoms, the new Z value can be calculated.
@@ -211,6 +212,6 @@ def refine_inline(node):
         old_Z = node.values[name]['_cell_formula_units_Z']
         if len(original_atoms) % len(refined_atoms):
             new_Z = old_Z * len(original_atoms) // len(refined_atoms)
-            cif.values[name]['_cell_formula_units_Z'] = new_Z
+            cif.values[name]['_cell_formula_units_Z'] = new_Z  # pylint: disable=unsubscriptable-object
 
     return {'cif': cif}

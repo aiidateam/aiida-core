@@ -130,7 +130,7 @@ def verdi_status(print_traceback, no_rmq):
         delete_stale_pid_file(client)
         daemon_status = get_daemon_status(client)
 
-        daemon_status = daemon_status.split('\n')[0]  # take only the first line
+        daemon_status = daemon_status.split('\n', maxsplit=1)[0]  # take only the first line
         if client.is_daemon_running:
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:

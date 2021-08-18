@@ -164,7 +164,7 @@ class TestVerdiImport(AiidaTestCase):
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
         archives = []
-        for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
+        for version in range(1, int(EXPORT_VERSION.rsplit('.', maxsplit=1)[-1]) - 1):
             archives.append((f'export_v0.{version}_simple.aiida', f'0.{version}'))
 
         for archive, version in archives:

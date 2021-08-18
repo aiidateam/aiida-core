@@ -145,7 +145,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_migrate_versions_old(self):
         """Migrating archives with a version older than the current should work."""
         archives = []
-        for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
+        for version in range(1, int(EXPORT_VERSION.rsplit('.', maxsplit=1)[-1]) - 1):
             archives.append(f'export_v0.{version}_simple.aiida')
 
         for archive in archives:
@@ -271,7 +271,7 @@ class TestVerdiExport(AiidaTestCase):
     def test_inspect(self):
         """Test the functionality of `verdi export inspect`."""
         archives = []
-        for version in range(1, int(EXPORT_VERSION.split('.')[-1])):
+        for version in range(1, int(EXPORT_VERSION.rsplit('.', maxsplit=1)[-1])):
             archives.append((f'export_v0.{version}_simple.aiida', f'0.{version}'))
 
         for archive, version_number in archives:

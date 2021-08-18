@@ -30,8 +30,7 @@ disable = [
     # added in pylint v2.9.4
     "deprecated-decorator",
     "raise-missing-from",
-    "use-a-generator",
-    "use-maxsplit-arg"
+    "use-a-generator"
 ]
 
 [tool.pylint.basic]

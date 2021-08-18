@@ -85,7 +85,8 @@ class MpodDbImporter(DbImporter):
         query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
-            response = urlopen(query).read()
+            with urlopen(query) as handle:
+                response = handle.read()
             this_results = re.findall(r'/datafiles/(\d+)\.mpod', response)
             if results is None:
                 results = this_results

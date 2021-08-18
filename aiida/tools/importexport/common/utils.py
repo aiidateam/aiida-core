@@ -85,9 +85,9 @@ def get_valid_import_links(url):
     Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
-    request = urllib.request.urlopen(url)
-    parser = HTMLGetLinksParser(filter_extension='aiida')
-    parser.feed(request.read().decode('utf8'))
+    with urllib.request.urlopen(url) as request:
+        parser = HTMLGetLinksParser(filter_extension='aiida')
+        parser.feed(request.read().decode('utf8'))
 
     return_urls = []
 

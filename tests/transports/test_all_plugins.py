@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,fixme
+# pylint: disable=too-many-lines,fixme,consider-using-with
 """
 This module contains a set of unittest test classes that can be loaded from
 the plugin.

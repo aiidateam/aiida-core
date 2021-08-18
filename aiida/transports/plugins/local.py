@@ -747,7 +747,7 @@ class LocalTransport(Transport):
 
         command = bash_commmand + escape_for_bash(command)
 
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # pylint: disable=consider-using-with
             command,
             shell=True,
             stdin=subprocess.PIPE,

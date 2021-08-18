@@ -220,7 +220,7 @@ def _show_xmgrace(exec_name, list_bands):
             'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % MAX_NUM_AGR_COLORS)
         )
         # write a tempfile
-        tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')
+        tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')  # pylint: disable=consider-using-with
         tempf.write(text)
         tempf.flush()
         list_files.append(tempf)

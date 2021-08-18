@@ -70,7 +70,8 @@ class NnincDbImporter(DbImporter):
         import re
 
         query = self.query_get(**kwargs)
-        response = urlopen(query).read()
+        with urlopen(query) as handle:
+            response = handle.read()
         results = re.findall(r'psp_files/([^\']+)\.UPF', response)
 
         elements = kwargs.get('element', None)

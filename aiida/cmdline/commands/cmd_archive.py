@@ -436,10 +436,11 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
         if web_based:
             echo.echo_info(f'downloading archive: {archive}')
             try:
-                response = urllib.request.urlopen(archive)
+                with urllib.request.urlopen(archive) as response:
+                    temp_folder.create_file_from_filelike(response, 'downloaded_archive.zip')
             except Exception as exception:
                 _echo_exception(f'downloading archive {archive} failed', exception)
-            temp_folder.create_file_from_filelike(response, 'downloaded_archive.zip')
+
             archive_path = temp_folder.get_abs_path('downloaded_archive.zip')
             echo.echo_success('archive downloaded, proceeding with import')
 

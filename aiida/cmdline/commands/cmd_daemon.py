@@ -158,7 +158,7 @@ def logshow():
 
     try:
         currenv = get_env_with_venv_bin()
-        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)
+        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)  # pylint: disable=consider-using-with
         process.wait()
     except KeyboardInterrupt:
         process.kill()

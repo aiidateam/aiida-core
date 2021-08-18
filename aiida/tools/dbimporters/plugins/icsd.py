@@ -586,9 +586,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             from urllib.request import urlopen
             import re
 
-            self.html = urlopen(
+            with urlopen(
                 self.db_parameters['server'] + self.db_parameters['db'] + '/' + self.query.format(str(self.page))
-            ).read()
+            ) as handle:
+                self.html = handle.read()
 
             self.soup = BeautifulSoup(self.html)
 
@@ -669,7 +670,8 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
 
         if self._contents is None:
             from hashlib import md5
-            self._contents = urllib.request.urlopen(self.source['uri']).read()
+            with urllib.request.urlopen(self.source['uri']) as handle:
+                self._contents = handle.read()
             self._contents = self._contents.decode('iso-8859-1').encode('utf8')
             self.source['source_md5'] = md5(self._contents).hexdigest()
 

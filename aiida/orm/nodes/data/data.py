@@ -59,13 +59,12 @@ class Data(Node):
 
         :returns: an unstored clone of this Data node
         """
-        # pylint: disable=no-member
         import copy
 
         backend_clone = self.backend_entity.clone()
         clone = self.__class__.from_backend_entity(backend_clone)
-        clone.reset_attributes(copy.deepcopy(self.attributes))
-        clone._repository.clone(self._repository)  # pylint: disable=protected-access
+        clone.reset_attributes(copy.deepcopy(self.attributes))  # pylint: disable=no-member
+        clone._repository.clone(self._repository)  # pylint: disable=no-member,protected-access
 
         return clone
 

@@ -114,7 +114,7 @@ class LsfJobResource(JobResource):
         :raises ValueError: if the resources are invalid or incomplete
         """
         from aiida.common.exceptions import ConfigurationError
-        
+
         resources = AttributeDict()
 
         resources.parallel_env = kwargs.pop('parallel_env', '')
@@ -136,9 +136,9 @@ class LsfJobResource(JobResource):
 
         if resources.tot_num_mpiprocs <= 0:
             raise ValueError('tot_num_mpiprocs must be >= 1')
-            
+
         return resources
-  
+
     def __init__(self, **kwargs):
         """
         Initialize the job resources from the passed arguments (the valid keys can be

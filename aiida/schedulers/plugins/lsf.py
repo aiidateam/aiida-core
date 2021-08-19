@@ -14,6 +14,7 @@ This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
+from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import (JobInfo, JobState, JobResource)
 
@@ -104,6 +105,40 @@ class LsfJobResource(JobResource):
         'default_mpiprocs_per_machine',
     )
 
+    @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        from aiida.common.exceptions import ConfigurationError
+        
+        resources = AttributeDict()
+
+        resources.parallel_env = kwargs.pop('parallel_env', '')
+        if not isinstance(resources.parallel_env, str):
+            raise TypeError("When specified, 'parallel_env' must be a string")
+
+        try:
+            resources.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
+        except (KeyError, ValueError) as exc:
+            raise TypeError('tot_num_mpiprocs must be specified and must be an integer') from exc
+
+        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
+        if default_mpiprocs_per_machine is not None:
+            raise ConfigurationError('default_mpiprocs_per_machine cannot be set for LSF scheduler')
+
+        num_machines = resources.pop('num_machines', None)
+        if num_machines is not None:
+            raise ConfigurationError('num_machines cannot be set for LSF scheduler')
+
+        if resources.tot_num_mpiprocs <= 0:
+            raise ValueError('tot_num_mpiprocs must be >= 1')
+            
+        return resources
+  
     def __init__(self, **kwargs):
         """
         Initialize the job resources from the passed arguments (the valid keys can be
@@ -114,28 +149,8 @@ class LsfJobResource(JobResource):
         :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
             computer, since LsfJobResource cannot accept this parameter.
         """
-        from aiida.common.exceptions import ConfigurationError
-        super().__init__()
-
-        self.parallel_env = kwargs.pop('parallel_env', '')
-        if not isinstance(self.parallel_env, str):
-            raise TypeError("When specified, 'parallel_env' must be a string")
-
-        try:
-            self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except (KeyError, ValueError) as exc:
-            raise TypeError('tot_num_mpiprocs must be specified and must be an integer') from exc
-
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
-        if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError('default_mpiprocs_per_machine cannot be set for LSF scheduler')
-
-        num_machines = kwargs.pop('num_machines', None)
-        if num_machines is not None:
-            raise ConfigurationError('num_machines cannot be set for LSF scheduler')
-
-        if self.tot_num_mpiprocs <= 0:
-            raise ValueError('tot_num_mpiprocs must be >= 1')
+        resources = self.validate_resources(**kwargs)
+        super().__init__(resources)
 
     def get_tot_num_mpiprocs(self):
         """
@@ -150,15 +165,6 @@ class LsfJobResource(JobResource):
         key, False otherwise.
         """
         return False
-
-    @classmethod
-    def validate_resources(cls, **kwargs):
-        """Validate the resources against the job resource class of this scheduler.
-
-        :param kwargs: dictionary of values to define the job resources
-        :return: attribute dictionary with the parsed parameters populated
-        :raises ValueError: if the resources are invalid or incomplete
-        """
 
 
 class LsfScheduler(aiida.schedulers.Scheduler):

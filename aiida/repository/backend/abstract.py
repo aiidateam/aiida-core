@@ -28,7 +28,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     and persistent. Persisting the key or mapping it onto a virtual file hierarchy is again up to the client upstream.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def uuid(self) -> typing.Optional[str]:
         """Return the unique identifier of the repository."""
 
@@ -39,7 +40,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :param kwargs: parameters for the initialisation.
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_initialised(self) -> bool:
         """Return whether the repository has been initialised."""
 
@@ -111,7 +113,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        with self.open(key) as handle:
+        with self.open(key) as handle:  # pylint: disable=not-context-manager
             return handle.read()
 
     def get_object_hash(self, key: str) -> str:
@@ -125,7 +127,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        with self.open(key) as handle:
+        with self.open(key) as handle:  # pylint: disable=not-context-manager
             return chunked_file_hash(handle, hashlib.sha256)
 
     def delete_object(self, key: str):

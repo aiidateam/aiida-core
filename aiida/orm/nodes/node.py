@@ -510,7 +510,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
 
-        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
+        if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node

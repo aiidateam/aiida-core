@@ -10,7 +10,7 @@
 """
 Module for custom click param type identifier
 """
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 
 import click
 
@@ -65,7 +65,8 @@ class IdentifierParamType(click.ParamType, ABC):
                 else:
                     self._entry_points.append(entry_point)
 
-    @abstractproperty
+    @property
+    @abstractmethod
     @with_dbenv()
     def orm_class_loader(self):
         """

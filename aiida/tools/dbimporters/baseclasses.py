@@ -223,7 +223,8 @@ class DbEntry:
             from urllib.request import urlopen
             from hashlib import md5
 
-            self._contents = urlopen(self.source['uri']).read().decode('utf-8')
+            with urlopen(self.source['uri']) as handle:
+                self._contents = handle.read().decode('utf-8')
             self.source['source_md5'] = md5(self._contents.encode('utf-8')).hexdigest()
         return self._contents
 

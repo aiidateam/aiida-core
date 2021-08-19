@@ -16,6 +16,11 @@ import sys
 import tempfile
 import time
 
+from workchains import (
+    ArithmeticAddBaseWorkChain, CalcFunctionRunnerWorkChain, DynamicDbInput, DynamicMixedInput, DynamicNonDbInput,
+    ListEcho, NestedInputNamespace, NestedWorkChain, SerializeWorkChain, WorkFunctionRunnerWorkChain
+)
+
 from aiida.common import exceptions, StashMode
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
@@ -25,10 +30,6 @@ from aiida.engine.processes import Process
 from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add_multiply, add
-from workchains import (
-    NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
-    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
-)
 
 from tests.utils.memory import get_instances  # pylint: disable=import-error
 

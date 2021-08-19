@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,no-member
 import copy
 import io
 import tempfile

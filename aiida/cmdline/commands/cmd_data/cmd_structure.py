@@ -72,7 +72,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # it will be pushed in the query.
         if elements is not None:
             all_symbols = [_['symbols'][0] for _ in akinds]
-            if not any([s in elements for s in all_symbols]):
+            if not any(s in elements for s in all_symbols):
                 continue
 
             if elements_only:

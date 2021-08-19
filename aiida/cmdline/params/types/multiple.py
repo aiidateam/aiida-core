@@ -37,6 +37,6 @@ class MultipleValueParamType(click.ParamType):
 
     def convert(self, value, param, ctx):
         try:
-            return tuple([self._param_type(entry) for entry in value])
+            return tuple(self._param_type(entry) for entry in value)
         except ValueError:
             self.fail(f'could not convert {value} into type {self._param_type}')

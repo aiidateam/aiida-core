@@ -315,7 +315,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     # Default cmd should not throw the warning as we are below the limit
     result = run_cli_command(cmd_process.process_list)
     warning_phrase = 'of the available daemon worker slots have been used!'
-    assert all([warning_phrase not in line for line in result.output_lines])
+    assert all(warning_phrase not in line for line in result.output_lines)
 
     # Add one more running node to put us over the limit
     calc = WorkFunctionNode()
@@ -325,7 +325,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     # Now the warning should fire
     result = run_cli_command(cmd_process.process_list)
     warning_phrase = '% of the available daemon worker slots have been used!'
-    assert any([warning_phrase in line for line in result.output_lines])
+    assert any(warning_phrase in line for line in result.output_lines)
 
 
 class TestVerdiProcessCallRoot(AiidaTestCase):

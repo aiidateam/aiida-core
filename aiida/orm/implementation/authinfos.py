@@ -21,7 +21,8 @@ class BackendAuthInfo(BackendEntity):
 
     METADATA_WORKDIR = 'workdir'
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def enabled(self):
         """Return whether this instance is enabled.
 
@@ -29,20 +30,23 @@ class BackendAuthInfo(BackendEntity):
         """
 
     @enabled.setter
+    @abc.abstractmethod
     def enabled(self, value):
         """Set the enabled state
 
         :param enabled: boolean, True to enable the instance, False to disable it
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def computer(self):
         """Return the computer associated with this instance.
 
         :return: :class:`aiida.orm.implementation.computers.BackendComputer`
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         """Return the user associated with this instance.
 

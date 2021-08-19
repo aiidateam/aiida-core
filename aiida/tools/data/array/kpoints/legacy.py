@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tool to automatically determine k-points for a given structure using legacy custom implementation."""
-# pylint: disable=too-many-lines,fixme,invalid-name,too-many-arguments,too-many-locals,eval-used
+# pylint: disable=too-many-lines,fixme,invalid-name,too-many-arguments,too-many-locals,eval-used,use-a-generator
 import numpy
 
 _default_epsilon_length = 1e-5
@@ -1950,17 +1950,15 @@ def get_kpoints_path(
         return [x[int(p)] for p in permutation]
 
     the_special_points = {}
-    for key in special_points:
+    for key, value in special_points.items():
         # NOTE: this originally returned the inverse of the permutation, but was later changed to permutation
-        the_special_points[key] = permute(special_points[key], permutation)
+        the_special_points[key] = permute(value, permutation)
 
     # output crystal or cartesian
     if cartesian:
         the_abs_special_points = {}
-        for key in the_special_points:
-            the_abs_special_points[key] = change_reference(
-                reciprocal_cell, numpy.array(the_special_points[key]), to_cartesian=True
-            )
+        for key, value in the_special_points.items():
+            the_abs_special_points[key] = change_reference(reciprocal_cell, numpy.array(value), to_cartesian=True)
 
         return the_abs_special_points, path, bravais_info
 

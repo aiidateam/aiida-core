@@ -54,10 +54,10 @@ class MpodDbImporter(DbImporter):
             elements = [elements]
 
         get_parts = []
-        for key in self._keywords:
+        for key, value in self._keywords.items():
             if key in kwargs:
                 values = kwargs.pop(key)
-                get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
+                get_parts.append(value[1](self, value[0], key, values))
 
         if kwargs:
             raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
@@ -85,7 +85,8 @@ class MpodDbImporter(DbImporter):
         query_statements = self.query_get(**kwargs)
         results = None
         for query in query_statements:
-            response = urlopen(query).read()
+            with urlopen(query) as handle:
+                response = handle.read()
             this_results = re.findall(r'/datafiles/(\d+)\.mpod', response)
             if results is None:
                 results = this_results

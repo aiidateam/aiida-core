@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
-from abc import abstractclassmethod
+from abc import abstractmethod
 from enum import Enum
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
@@ -261,7 +261,8 @@ class OrmEntityLoader:
         """
         raise NotImplementedError
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def _get_query_builder_label_identifier(cls, identifier, classes, operator='==', project='*'):
         """
         Return the query builder instance that attempts to map the identifier onto an entity of the orm class,

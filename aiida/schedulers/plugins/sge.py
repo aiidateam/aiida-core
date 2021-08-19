@@ -323,7 +323,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             raise SchedulerError('Error during joblist retrieval, no stdout produced')
 
         try:
-            first_child = xmldata.firstChild
+            first_child = xmldata.firstChild  # pylint: disable=no-member
             second_childs = first_child.childNodes
             tag_names_sec = [elem.tagName for elem in second_childs \
                              if elem.nodeType == 1]

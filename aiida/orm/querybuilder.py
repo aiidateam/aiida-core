@@ -1923,7 +1923,7 @@ class QueryBuilder:
                 # if so, I instruct the recursive function to build the path on the fly!
                 # The default is False, cause it's super expensive
                 expand_path = ((self._filters[edge_tag].get('path', None) is not None) or
-                               any(['path' in d.keys() for d in self._projections[edge_tag]]))
+                               any('path' in d.keys() for d in self._projections[edge_tag]))
                 aliased_edge = connection_func(
                     toconnectwith, alias, isouterjoin=isouterjoin, filter_dict=filter_dict, expand_path=expand_path
                 )

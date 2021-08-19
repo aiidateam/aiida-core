@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,protected-access
+# pylint: disable=redefined-outer-name,protected-access,no-member
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
 import io
 import pathlib

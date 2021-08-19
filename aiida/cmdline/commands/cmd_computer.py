@@ -546,7 +546,7 @@ class LazyConfigureGroup(click.Group):
         subcommands.extend(get_entry_point_names('aiida.transports'))
         return subcommands
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
+    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
         from aiida.transports import cli as transport_cli
         try:
             command = transport_cli.create_configure_cmd(name)

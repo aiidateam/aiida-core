@@ -39,7 +39,7 @@ class TrajectoryData(ArrayData):
 
         if not isinstance(symbols, collections.abc.Iterable):
             raise TypeError('TrajectoryData.symbols must be of type list')
-        if any([not isinstance(i, str) for i in symbols]):
+        if any(not isinstance(i, str) for i in symbols):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError('TrajectoryData.positions must be a numpy array of floats')
@@ -704,7 +704,7 @@ class TrajectoryData(ArrayData):
             point given results in the point being given as a multiples of lattice vectors
             Than take the integer of the rows to find how many times you have to shift
             the point back"""
-            invcell = np.matrix(cell).T.I
+            invcell = np.matrix(cell).T.I  # pylint: disable=no-member
             # point in crystal coordinates
             points_in_crystal = np.dot(invcell, point).tolist()[0]
             #point collapsed into unit cell

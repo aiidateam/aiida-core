@@ -90,7 +90,7 @@ def process_handler(
     if exit_codes is not None and not isinstance(exit_codes, list):
         exit_codes = [exit_codes]
 
-    if exit_codes and any([not isinstance(exit_code, ExitCode) for exit_code in exit_codes]):
+    if exit_codes and any(not isinstance(exit_code, ExitCode) for exit_code in exit_codes):
         raise TypeError('`exit_codes` keyword should be an instance of `ExitCode` or list thereof.')
 
     if not isinstance(enabled, bool):

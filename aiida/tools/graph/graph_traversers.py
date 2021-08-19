@@ -230,7 +230,7 @@ def traverse_graph(
     if not isinstance(starting_pks, Iterable):  # pylint: disable=isinstance-second-argument-not-valid-type
         raise TypeError(f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}')
 
-    if any([not isinstance(pk, int) for pk in starting_pks]):
+    if any(not isinstance(pk, int) for pk in starting_pks):
         raise TypeError(f'one of the starting_pks is not of type int:\n {starting_pks}')
     operational_set = set(starting_pks)
 

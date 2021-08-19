@@ -57,12 +57,14 @@ class OqmdDbImporter(DbImporter):
         import re
 
         query_statement = self.query_get(**kwargs)
-        response = urlopen(query_statement).read()
+        with urlopen(query_statement) as handle:
+            response = handle.read()
         entries = re.findall(r'(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
-            response = urlopen(f'{self._query_url}{entry}').read()
+            with urlopen(f'{self._query_url}{entry}') as handle:
+                response = handle.read()
             structures = re.findall(r'/materials/export/conventional/cif/(\d+)', response)
             for struct in structures:
                 results.append({'id': struct})

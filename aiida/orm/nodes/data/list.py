@@ -61,13 +61,13 @@ class List(Data, MutableSequence):
         if not self._using_list_reference():
             self.set_list(data)
 
-    def extend(self, value):  # pylint: disable=arguments-differ
+    def extend(self, value):  # pylint: disable=arguments-renamed
         data = self.get_list()
         data.extend(value)
         if not self._using_list_reference():
             self.set_list(data)
 
-    def insert(self, i, value):  # pylint: disable=arguments-differ
+    def insert(self, i, value):  # pylint: disable=arguments-renamed
         data = self.get_list()
         data.insert(i, value)
         if not self._using_list_reference():

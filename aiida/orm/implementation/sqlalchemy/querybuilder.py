@@ -70,7 +70,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def extra_init(self):
         """Additional logic to run on init.
-        
+
         We add this as a separate method to allow the `DjangoQueryBuilder` to override it.
         """
         self.outer_to_inner_schema['db_dbcomputer'] = {'metadata': '_metadata'}

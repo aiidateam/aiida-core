@@ -16,7 +16,7 @@ from aiida.orm.implementation.sqlalchemy.querybuilder import SqlaQueryBuilder
 
 class DjangoQueryBuilder(SqlaQueryBuilder):
     """Django query builder
-    
+
     With the Django backend, we actually still use SQLAlchemy, since Django does not support complex queries.
     We use aldjemy to generate SQLAlchemy models by introspecting the Django models.
     """

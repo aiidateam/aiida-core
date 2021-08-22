@@ -11,6 +11,9 @@ jobs:
     # upload the latest pot files to transifex services for team transilation.
     # https://www.transifex.com/aiidateam/aiida-core/dashboard/
 
+    # Only run this job on the main repository and not on forks
+    if: github.repository == 'aiidateam/aiida-core'
+
     name: Upload pot files to transifex
     runs-on: ubuntu-latest
     timeout-minutes: 30

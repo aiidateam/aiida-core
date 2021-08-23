@@ -10,6 +10,7 @@
 # pylint: disable=too-many-arguments,import-error,too-many-locals,broad-except
 """`verdi archive` command."""
 from enum import Enum
+import logging
 from typing import List, Tuple
 import traceback
 import urllib.request
@@ -22,6 +23,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.links import GraphTraversalRules
+from aiida.common.log import AIIDA_LOGGER
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none', 'ask']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -82,13 +84,6 @@ def inspect(archive, version, meta_data):
     type=click.Choice(['zip', 'zip-uncompressed', 'zip-lowmemory', 'tar.gz', 'null']),
 )
 @options.FORCE(help='Overwrite output file if it already exists.')
-@click.option(
-    '-v',
-    '--verbosity',
-    default='INFO',
-    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
-    help='Control the verbosity of console logging'
-)
 @options.graph_traversal_rules(GraphTraversalRules.EXPORT.value)
 @click.option(
     '--include-logs/--exclude-logs',
@@ -113,7 +108,7 @@ def inspect(archive, version, meta_data):
 @decorators.with_dbenv()
 def create(
     output_file, codes, computers, groups, nodes, archive_format, force, input_calc_forward, input_work_forward,
-    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs, verbosity
+    create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs
 ):
     """
     Export subsets of the provenance graph to file for sharing.
@@ -127,7 +122,7 @@ def create(
     # pylint: disable=too-many-branches
     from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
-    from aiida.tools.importexport import export, ExportFileFormat, EXPORT_LOGGER
+    from aiida.tools.importexport import export, ExportFileFormat
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
     entities = []
@@ -170,11 +165,10 @@ def create(
     elif archive_format == 'null':
         export_format = 'null'
 
-    if verbosity in ['DEBUG', 'INFO']:
-        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    if AIIDA_LOGGER.level <= logging.INFO:
+        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level == logging.DEBUG))
     else:
         set_progress_reporter(None)
-    EXPORT_LOGGER.setLevel(verbosity)
 
     try:
         with override_log_formatter_context('%(message)s'):
@@ -202,18 +196,12 @@ def create(
     # version inside the function when needed.
     help='Archive format version to migrate to (defaults to latest version).',
 )
-@click.option(
-    '--verbosity',
-    default='INFO',
-    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
-    help='Control the verbosity of console logging'
-)
-def migrate(input_file, output_file, force, in_place, archive_format, version, verbosity):
+def migrate(input_file, output_file, force, in_place, archive_format, version):
     """Migrate an export archive to a more recent format version."""
     from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import detect_archive_type, EXPORT_VERSION
-    from aiida.tools.importexport.archive.migrators import get_migrator, MIGRATE_LOGGER
+    from aiida.tools.importexport.archive.migrators import get_migrator
 
     if in_place:
         if output_file:
@@ -225,11 +213,10 @@ def migrate(input_file, output_file, force, in_place, archive_format, version, v
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
         )
 
-    if verbosity in ['DEBUG', 'INFO']:
-        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    if AIIDA_LOGGER.level <= logging.INFO:
+        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level == logging.DEBUG))
     else:
         set_progress_reporter(None)
-    MIGRATE_LOGGER.setLevel(verbosity)
 
     if version is None:
         version = EXPORT_VERSION
@@ -241,15 +228,14 @@ def migrate(input_file, output_file, force, in_place, archive_format, version, v
         with override_log_formatter_context('%(message)s'):
             migrator.migrate(version, output_file, force=force, out_compression=archive_format)
     except Exception as error:  # pylint: disable=broad-except
-        if verbosity == 'DEBUG':
+        if AIIDA_LOGGER.level <= logging.DEBUG:
             raise
         echo.echo_critical(
             'failed to migrate the archive file (use `--verbosity DEBUG` to see traceback): '
             f'{error.__class__.__name__}:{error}'
         )
 
-    if verbosity in ['DEBUG', 'INFO']:
-        echo.echo_success(f'migrated the archive to version {version}')
+    echo.echo_success(f'migrated the archive to version {version}')
 
 
 class ExtrasImportCode(Enum):
@@ -313,19 +299,11 @@ class ExtrasImportCode(Enum):
     show_default=True,
     help='Force migration of archive file archives, if needed.'
 )
-@click.option(
-    '-v',
-    '--verbosity',
-    default='INFO',
-    type=click.Choice(['DEBUG', 'INFO', 'WARNING', 'CRITICAL']),
-    help='Control the verbosity of console logging'
-)
 @options.NON_INTERACTIVE()
 @decorators.with_dbenv()
 @click.pass_context
 def import_archive(
-    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive,
-    verbosity
+    ctx, archives, webpages, group, extras_mode_existing, extras_mode_new, comment_mode, migration, non_interactive
 ):
     """Import data from an AiiDA archive file.
 
@@ -334,15 +312,11 @@ def import_archive(
     # pylint: disable=unused-argument
     from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
-    from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
-    from aiida.tools.importexport.archive.migrators import MIGRATE_LOGGER
 
-    if verbosity in ['DEBUG', 'INFO']:
-        set_progress_bar_tqdm(leave=(verbosity == 'DEBUG'))
+    if AIIDA_LOGGER.level <= logging.INFO:
+        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level == logging.DEBUG))
     else:
         set_progress_reporter(None)
-    IMPORT_LOGGER.setLevel(verbosity)
-    MIGRATE_LOGGER.setLevel(verbosity)
 
     all_archives = _gather_imports(archives, webpages)
 

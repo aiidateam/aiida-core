@@ -182,9 +182,9 @@ def tests_database_version(run_cli_command, manager):
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def tests_database_summary(aiida_localhost, run_cli_command):
-    """Test the ``verdi database summary -v`` command."""
+    """Test the ``verdi database summary`` command with the ``-verbosity`` option."""
     from aiida import orm
     node = orm.Dict().store()
-    result = run_cli_command(cmd_database.database_summary, ['--verbose'])
+    result = run_cli_command(cmd_database.database_summary, ['--verbosity', 'info'])
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output

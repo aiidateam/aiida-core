@@ -15,6 +15,9 @@ jobs:
 
   build-and-push:
 
+    # Only run this job on the main repository and not on forks
+    if: github.repository == 'aiidateam/aiida-core'
+
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

@@ -8,12 +8,27 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common utility functions for command line commands."""
+import logging
 import os
 import sys
 
 from tabulate import tabulate
 
 from . import echo
+
+__all__ = ('is_verbose',)
+
+
+def is_verbose():
+    """Return whether the configured logging verbosity is considered verbose, i.e., equal or lower to ``INFO`` level.
+
+    .. note:: This checks the effective logging level that is set on the ``CMDLINE_LOGGER``. This means that it will
+        consider the logging level set on the parent ``AIIDA_LOGGER`` if not explicitly set on itself. The level of the
+        main logger can be manipulated from the command line through the ``VERBOSITY`` option that is available for all
+        commands.
+
+    """
+    return echo.CMDLINE_LOGGER.getEffectiveLevel() <= logging.INFO
 
 
 def get_env_with_venv_bin():

@@ -104,7 +104,6 @@ __all__ = (
     'USER_FIRST_NAME',
     'USER_INSTITUTION',
     'USER_LAST_NAME',
-    'VERBOSE',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
     'WAIT',

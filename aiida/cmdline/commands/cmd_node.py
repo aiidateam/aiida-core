@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
-import logging
 import shutil
 import pathlib
 
@@ -280,12 +279,11 @@ def extras(nodes, keys, fmt, identifier, raw):
 
 @verdi_node.command('delete')
 @click.argument('identifier', nargs=-1, metavar='NODES')
-@options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
+def node_delete(identifier, dry_run, force, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
@@ -294,10 +292,7 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
     """
     from aiida.common.log import override_log_formatter_context
     from aiida.orm.utils.loaders import NodeEntityLoader
-    from aiida.tools import delete_nodes, DELETE_LOGGER
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
+    from aiida.tools import delete_nodes
 
     pks = []
 

@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
-import logging
 import click
 
 from aiida.common.exceptions import UniquenessError
@@ -93,16 +92,12 @@ def group_remove_nodes(group, nodes, clear, force):
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
-@options.VERBOSE()
 @with_dbenv()
-def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules):
+def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
     """Delete a group and (optionally) the nodes it contains."""
     from aiida.common.log import override_log_formatter_context
-    from aiida.tools import delete_group_nodes, DELETE_LOGGER
+    from aiida.tools import delete_group_nodes
     from aiida import orm
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
 
     if not (force or dry_run):
         click.confirm(f'Are you sure you want to delete {group}?', abort=True)

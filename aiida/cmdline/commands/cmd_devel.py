@@ -11,7 +11,6 @@
 import sys
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -21,8 +20,7 @@ def verdi_devel():
 
 
 @verdi_devel.command('check-load-time')
-@options.VERBOSE()
-def devel_check_load_time(verbose):
+def devel_check_load_time():
     """Check for common indicators that slowdown `verdi`.
 
     Check for environment properties that negatively affect the responsiveness of the `verdi` command line interface.
@@ -37,8 +35,7 @@ def devel_check_load_time(verbose):
 
     loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
     aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
-    if verbose:
-        echo.echo(f'aiida modules loaded:\n- {aiida_modules_str}')
+    echo.echo_info(f'aiida modules loaded:\n- {aiida_modules_str}')
 
     manager = get_manager()
 

@@ -30,8 +30,8 @@ __all__ = (
     'OLDER_THAN', 'ORDER_BY', 'ORDER_DIRECTION', 'PAST_DAYS', 'PAUSED', 'PORT', 'PREPEND_TEXT', 'PRINT_TRACEBACK',
     'PROCESS_LABEL', 'PROCESS_STATE', 'PROFILE', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PROJECT', 'RAW',
     'REPOSITORY_PATH', 'SCHEDULER', 'SILENT', 'TIMEOUT', 'TRAJECTORY_INDEX', 'TRANSPORT', 'TRAVERSAL_RULE_HELP_STRING',
-    'TYPE_STRING', 'USER', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_INSTITUTION', 'USER_LAST_NAME', 'VERBOSE',
-    'VERBOSITY', 'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states',
+    'TYPE_STRING', 'USER', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_INSTITUTION', 'USER_LAST_NAME', 'VERBOSITY',
+    'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states',
     'graph_traversal_rules', 'valid_calc_job_states', 'valid_process_states'
 )
 
@@ -552,8 +552,6 @@ USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), hel
 PORT = OverridableOption('-P', '--port', 'port', type=click.INT, help='Port number.')
 
 FREQUENCY = OverridableOption('-F', '--frequency', 'frequency', type=click.INT)
-
-VERBOSE = OverridableOption('-v', '--verbose', is_flag=True, default=False, help='Be more verbose in printing output.')
 
 TIMEOUT = OverridableOption(
     '-t',

@@ -137,6 +137,83 @@ class BackendQueryBuilder:
         This is important for the schema having attributes in a different table.
         """
 
+    @abc.abstractmethod
+    def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
+        """
+        Applies a filter on the alias given.
+        Expects the alias of the ORM-class on which to filter, and filter_spec.
+        Filter_spec contains the specification on the filter.
+        Expects:
+
+        :param operator: The operator to apply, see below for further details
+        :param value:
+            The value for the right side of the expression,
+            the value you want to compare with.
+
+        :param path: The path leading to the value
+
+        :param attr_key: Boolean, whether the value is in a json-column,
+            or in an attribute like table.
+
+
+        Implemented and valid operators:
+
+        *   for any type:
+            *   ==  (compare single value, eg: '==':5.0)
+            *   in    (compare whether in list, eg: 'in':[5, 6, 34]
+        *  for floats and integers:
+            *   >
+            *   <
+            *   <=
+            *   >=
+        *  for strings:
+            *   like  (case - sensitive), for example
+                'like':'node.calc.%'  will match node.calc.relax and
+                node.calc.RELAX and node.calc. but
+                not node.CALC.relax
+            *   ilike (case - unsensitive)
+                will also match node.CaLc.relax in the above example
+
+            .. note::
+                The character % is a reserved special character in SQL,
+                and acts as a wildcard. If you specifically
+                want to capture a ``%`` in the string, use: ``_%``
+
+        *   for arrays and dictionaries (only for the
+            SQLAlchemy implementation):
+
+            *   contains: pass a list with all the items that
+                the array should contain, or that should be among
+                the keys, eg: 'contains': ['N', 'H'])
+            *   has_key: pass an element that the list has to contain
+                or that has to be a key, eg: 'has_key':'N')
+
+        *  for arrays only (SQLAlchemy version):
+            *   of_length
+            *   longer
+            *   shorter
+
+        All the above filters invoke a negation of the
+        expression if preceded by **~**::
+
+            # first example:
+            filter_spec = {
+                'name' : {
+                    '~in':[
+                        'halle',
+                        'lujah'
+                    ]
+                } # Name not 'halle' or 'lujah'
+            }
+
+            # second example:
+            filter_spec =  {
+                'id' : {
+                    '~==': 2
+                }
+            } # id is not 2
+        """
+
     @classmethod
     @abc.abstractmethod
     def get_filter_expr_from_attributes(cls, operator, value, attr_key, column=None, column_name=None, alias=None):  # pylint: disable=too-many-arguments

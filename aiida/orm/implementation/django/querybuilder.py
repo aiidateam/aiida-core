@@ -21,7 +21,7 @@ class DjangoQueryBuilder(SqlaQueryBuilder):
     We use aldjemy to generate SQLAlchemy models by introspecting the Django models.
     """
 
-    def extra_init(self):
+    def set_field_mappings(self):
         pass
 
     @property

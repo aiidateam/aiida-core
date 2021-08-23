@@ -56,73 +56,48 @@ class BackendQueryBuilder:
         """
         Decorated as a property, returns the implementation for DbNode.
         It needs to return a subclass of sqlalchemy.Base, which means that for different ORM's
-        a corresponding dummy-model  must be written.
+        a corresponding dummy-model must be written.
         """
 
     @property
     @abc.abstractmethod
     def Link(self):
-        """
-        A property, decorated with @property. Returns the implementation for the DbLink
-        """
+        """Returns the implementation for the DbLink"""
 
     @property
     @abc.abstractmethod
     def Computer(self):
-        """
-        A property, decorated with @property. Returns the implementation for the Computer
-        """
+        """Returns the implementation for the Computer"""
 
     @property
     @abc.abstractmethod
     def User(self):
-        """
-        A property, decorated with @property. Returns the implementation for the User
-        """
+        """Returns the implementation for the User"""
 
     @property
     @abc.abstractmethod
     def Group(self):
-        """
-        A property, decorated with @property. Returns the implementation for the Group
-        """
+        """Returns the implementation for the Group"""
 
     @property
     @abc.abstractmethod
     def AuthInfo(self):
-        """
-        A property, decorated with @property. Returns the implementation for the AuthInfo
-        """
+        """Returns the implementation for the AuthInfo"""
 
     @property
     @abc.abstractmethod
     def Comment(self):
-        """
-        A property, decorated with @property. Returns the implementation for the Comment
-        """
+        """Returns the implementation for the Comment"""
 
     @property
     @abc.abstractmethod
     def Log(self):
-        """
-        A property, decorated with @property. Returns the implementation for the Log
-        """
+        """Returns the implementation for the Log"""
 
     @property
     @abc.abstractmethod
     def table_groups_nodes(self):
-        """
-        A property, decorated with @property. Returns the implementation for the many-to-many
-        relationship between group and nodes.
-        """
-
-    @property
-    def AiidaNode(self):
-        """
-        A property, decorated with @property. Returns the implementation for the AiiDA-class for Node
-        """
-        from aiida.orm import Node
-        return Node
+        """Returns the implementation for the many-to-many relationship between group and nodes."""
 
     def get_session(self) -> 'Session':
         """
@@ -266,52 +241,6 @@ class BackendQueryBuilder:
             # If it doesn't exist, it means that the given_property remains v
             return given_property
 
-    @classmethod
-    def get_filter_expr_from_column(cls, operator, value, column):
-        """
-        A method that returns an valid SQLAlchemy expression.
-
-        :param operator: The operator provided by the user ('==',  '>', ...)
-        :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
-        :param column: an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
-
-        :returns: An instance of sqlalchemy.sql.elements.BinaryExpression
-        """
-        # Label is used because it is what is returned for the
-        # 'state' column by the hybrid_column construct
-
-        # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-        # pylint: disable=no-name-in-module,import-error
-        from sqlalchemy.sql.elements import Cast, Label
-        from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-        from sqlalchemy.sql.expression import ColumnClause
-        from sqlalchemy.types import String
-
-        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
-            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
-        database_entity = column
-        if operator == '==':
-            expr = database_entity == value
-        elif operator == '>':
-            expr = database_entity > value
-        elif operator == '<':
-            expr = database_entity < value
-        elif operator == '>=':
-            expr = database_entity >= value
-        elif operator == '<=':
-            expr = database_entity <= value
-        elif operator == 'like':
-            # the like operator expects a string, so we cast to avoid problems
-            # with fields like UUID, which don't support the like operator
-            expr = database_entity.cast(String).like(value)
-        elif operator == 'ilike':
-            expr = database_entity.ilike(value)
-        elif operator == 'in':
-            expr = database_entity.in_(value)
-        else:
-            raise ValueError(f'Unknown operator {operator} for filters on columns')
-        return expr
-
     def get_projectable_attribute(self, alias, column_name, attrpath, cast=None, **kwargs):
         """
         :returns: An attribute store in a JSON field of the give column
@@ -333,7 +262,7 @@ class BackendQueryBuilder:
         elif cast == 'd':
             entity = entity.astext.cast(DateTime)
         else:
-            raise ValueError(f'Unkown casting key {cast}')
+            raise ValueError(f'Unknown casting key {cast}')
         return entity
 
     def get_aiida_res(self, res):
@@ -422,10 +351,11 @@ class BackendQueryBuilder:
             self.get_session().close()
             raise
 
-    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tag_to_alias_map):
+    def iterdict(self, query, batch_size, tag_to_projected_properties_dict, tags):
         """
         :returns: An iterator over all the results of a list of dictionaries.
         """
+        # pylint: disable=protected-access
         try:
             nr_items = sum(len(v) for v in tag_to_projected_properties_dict.values())
 
@@ -438,7 +368,7 @@ class BackendQueryBuilder:
                     yield {
                         tag: {
                             self.get_corresponding_property(
-                                self.get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
+                                self.get_table_name(tags._get_alias(self, tag)), attrkey, self.inner_to_outer_schema
                             ): self.get_aiida_res(this_result[index_in_sql_result])
                             for attrkey, index_in_sql_result in projected_entities_dict.items()
                         } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
@@ -451,7 +381,7 @@ class BackendQueryBuilder:
                         yield {
                             tag: {
                                 self.get_corresponding_property(
-                                    self.get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
+                                    self.get_table_name(tags._get_alias(self, tag)), attrkey, self.inner_to_outer_schema
                                 ): self.get_aiida_res(this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()
@@ -461,7 +391,7 @@ class BackendQueryBuilder:
                         yield {
                             tag: {
                                 self.get_corresponding_property(
-                                    self.get_table_name(tag_to_alias_map[tag]), attrkey, self.inner_to_outer_schema
+                                    self.get_table_name(tags._get_alias(self, tag)), attrkey, self.inner_to_outer_schema
                                 ): self.get_aiida_res(this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in tag_to_projected_properties_dict.items()

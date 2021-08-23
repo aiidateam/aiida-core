@@ -8,16 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Sqla query builder implementation"""
-# pylint: disable=no-name-in-module, import-error
+from typing import Any, Dict
+
 from sqlalchemy import and_, or_, not_
-from sqlalchemy.types import Float, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.sql.expression import case, FunctionElement
-from sqlalchemy.sql.compiler import TypeCompiler
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.orm.util import AliasedClass
+from sqlalchemy.sql.expression import case, ColumnClause, FunctionElement
+from sqlalchemy.sql.compiler import TypeCompiler
+from sqlalchemy.sql.elements import BooleanClauseList, Cast, BinaryExpression, Label
+from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
+from sqlalchemy.types import Boolean, Float, String
 
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import BackendQueryBuilder
+
+from .joiner import SqlaJoiner, JoinFuncType
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name
@@ -66,13 +72,65 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def __init__(self, backend):
         super().__init__(backend)
-        self.extra_init()
+        self._joiner = SqlaJoiner(self, self.build_filters)
+        self.set_field_mappings()
 
-    def extra_init(self):
-        """Additional logic to run on init.
+    def get_join_func(self, calling_entity: str, joining_keyword: str) -> JoinFuncType:
+        """Return the function to join two entities"""
+        return self._joiner.get_join_func(calling_entity, joining_keyword)
 
-        We add this as a separate method to allow the `DjangoQueryBuilder` to override it.
+    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> BooleanClauseList:
+        """Recurse through the filter specification and apply filter operations.
+
+        :param alias: The alias of the ORM class the filter will be applied on
+        :param filter_spec: the specification of the filter
+
+        :returns: an sqlalchemy expression.
         """
+        expressions = []
+        for path_spec, filter_operation_dict in filter_spec.items():
+            if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
+                subexpressions = [
+                    self.build_filters(alias, sub_filter_spec) for sub_filter_spec in filter_operation_dict
+                ]
+                if path_spec == 'and':
+                    expressions.append(and_(*subexpressions))
+                elif path_spec == 'or':
+                    expressions.append(or_(*subexpressions))
+                elif path_spec in ('~and', '!and'):
+                    expressions.append(not_(and_(*subexpressions)))
+                elif path_spec in ('~or', '!or'):
+                    expressions.append(not_(or_(*subexpressions)))
+            else:
+                column_name = path_spec.split('.')[0]
+
+                attr_key = path_spec.split('.')[1:]
+                is_attribute = (attr_key or column_name in ('attributes', 'extras'))
+                try:
+                    column = self.get_column(column_name, alias)
+                except (ValueError, TypeError):
+                    if is_attribute:
+                        column = None
+                    else:
+                        raise
+                if not isinstance(filter_operation_dict, dict):
+                    filter_operation_dict = {'==': filter_operation_dict}
+                for operator, value in filter_operation_dict.items():
+                    expressions.append(
+                        self.get_filter_expr(
+                            operator,
+                            value,
+                            attr_key,
+                            is_attribute=is_attribute,
+                            column=column,
+                            column_name=column_name,
+                            alias=alias
+                        )
+                    )
+        return and_(*expressions)
+
+    def set_field_mappings(self):
+        """Set conversions between the field names in the database and used by the `QueryBuilder`"""
         self.outer_to_inner_schema['db_dbcomputer'] = {'metadata': '_metadata'}
         self.outer_to_inner_schema['db_dblog'] = {'metadata': '_metadata'}
 
@@ -287,6 +345,42 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         else_=False)
         else:
             raise ValueError(f'Unknown operator {operator} for filters in JSON field')
+        return expr
+
+    @staticmethod
+    def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
+        """A method that returns an valid SQLAlchemy expression.
+
+        :param operator: The operator provided by the user ('==',  '>', ...)
+        :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
+        :param column: an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
+
+        """
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
+        database_entity = column
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+            # the like operator expects a string, so we cast to avoid problems
+            # with fields like UUID, which don't support the like operator
+            expr = database_entity.cast(String).like(value)
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value)
+        elif operator == 'in':
+            expr = database_entity.in_(value)
+        else:
+            raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
 
     @staticmethod

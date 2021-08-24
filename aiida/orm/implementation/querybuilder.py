@@ -76,7 +76,7 @@ class QueryDictType(TypedDict):
     filters: Dict[str, Dict[str, Union[Dict[str, List[Dict[str, Any]]], Dict[str, Any]]]]
     # mapping: tag -> [] -> field -> 'func' -> 'max' | 'min' | 'count'
     #                                'cast' -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
-    project: Dict[str, List[Dict[str, str]]]
+    project: Dict[str, List[Dict[str, Dict[str, Any]]]]
     # list of mappings: tag  -> [] -> field -> 'order' -> 'asc' | 'desc'
     #                                          'cast'  -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
     order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]]

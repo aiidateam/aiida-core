@@ -92,8 +92,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # populated on query build
         self._tag_to_projected_fields: Dict[str, Dict[str, int]] = {}
 
-        self.inner_to_outer_schema = dict()
-        self.outer_to_inner_schema = dict()
+        # table -> field -> field
+        self.inner_to_outer_schema: Dict[str, Dict[str, str]] = {}
+        self.outer_to_inner_schema: Dict[str, Dict[str, str]] = {}
         self.set_field_mappings()
 
         # data generated from front-end
@@ -324,7 +325,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise AssertionError('alias is not set')
         return alias
 
-    def _build(self):
+    def _build(self) -> Query:
         """
         build the query and return a sqlalchemy.Query instance
         """
@@ -383,8 +384,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if not any(self._data['project'].values()):
             # If user has not set projection,
             # I will simply project the last item specified!
-            # Don't change, path traversal querying
-            # relies on this behavior!
+            # Don't change, path traversal querying relies on this behavior!
             projection_count = self._build_projections(
                 self._data['path'][-1]['tag'], projection_count, items_to_project=[{
                     '*': {}
@@ -491,21 +491,25 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f"Unknown 'order' key: {order!r}, must be one of: 'asc', 'desc'")
         self._query = self._query.order_by(entity)
 
-    def _build_projections(self, tag, projection_count: int, items_to_project=None) -> int:
+    def _build_projections(
+        self, tag: str, projection_count: int, items_to_project: Optional[List[Dict[str, dict]]] = None
+    ) -> int:
         """Build the projections for a given tag."""
         if items_to_project is None:
-            items_to_project = self._data['project'].get(tag, [])
+            project_dict = self._data['project'].get(tag, [])
+        else:
+            project_dict = items_to_project
 
         # Return here if there is nothing to project, reduces number of key in return dictionary
-        QUERYBUILD_LOGGER.debug('projection for %s: %s', tag, items_to_project)
-        if not items_to_project:
+        QUERYBUILD_LOGGER.debug('projection for %s: %s', tag, project_dict)
+        if not project_dict:
             return projection_count
 
         alias = self._get_tag_alias(tag)
 
         self._tag_to_projected_fields[tag] = {}
 
-        for projectable_spec in items_to_project:
+        for projectable_spec in project_dict:
             for projectable_entity_name, extraspec in projectable_spec.items():
                 property_names = list()
                 if projectable_entity_name == '**':
@@ -526,7 +530,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         alias: AliasedClass,
         projectable_entity_name: str,
         cast: Optional[str] = None,
-        func: Optional[str] = None
+        func: Optional[str] = None,
+        **_kw: Any
     ) -> None:
         """
         :param alias: An alias for an ormclass
@@ -644,11 +649,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 column_name = path_spec.split('.')[0]
 
                 attr_key = path_spec.split('.')[1:]
-                is_attribute = (attr_key or column_name in ('attributes', 'extras'))
+                is_jsonb = (bool(attr_key) or column_name in ('attributes', 'extras'))
                 try:
                     column = self.get_column(column_name, alias)
                 except (ValueError, TypeError):
-                    if is_attribute:
+                    if is_jsonb:
                         column = None
                     else:
                         raise
@@ -660,7 +665,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             operator,
                             value,
                             attr_key,
-                            is_attribute=is_attribute,
+                            is_jsonb=is_jsonb,
                             column=column,
                             column_name=column_name,
                             alias=alias
@@ -668,7 +673,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                     )
         return and_(*expressions)
 
-    def modify_expansions(self, alias, expansions):
+    def modify_expansions(self, alias: AliasedClass, expansions: List[str]) -> List[str]:
         """Modify names of projections if `**` was specified.
 
         This is important for the schema having attributes in a different table.
@@ -685,7 +690,53 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return expansions
 
-    def get_filter_expr(self, operator, value, attr_key, is_attribute, alias=None, column=None, column_name=None):
+    @classmethod
+    def get_corresponding_properties(
+        cls, entity_table: str, given_properties: List[str], mapper: Dict[str, Dict[str, str]]
+    ):
+        """
+        This method returns a list of updated properties for a given list of properties.
+        If there is no update for the property, the given property is returned in the list.
+        """
+        if entity_table in mapper:
+            res = []
+            for given_property in given_properties:
+                res.append(cls.get_corresponding_property(entity_table, given_property, mapper))
+            return res
+
+        return given_properties
+
+    @classmethod
+    def get_corresponding_property(
+        cls, entity_table: str, given_property: str, mapper: Dict[str, Dict[str, str]]
+    ) -> str:
+        """
+        This method returns an updated property for a given a property.
+        If there is no update for the property, the given property is returned.
+        """
+        try:
+            # Get the mapping for the specific entity_table
+            property_mapping = mapper[entity_table]
+            try:
+                # Get the mapping for the specific property
+                return property_mapping[given_property]
+            except KeyError:
+                # If there is no mapping, the property remains unchanged
+                return given_property
+        except KeyError:
+            # If it doesn't exist, it means that the given_property remains v
+            return given_property
+
+    def get_filter_expr(
+        self,
+        operator: str,
+        value: Any,
+        attr_key: List[str],
+        is_jsonb: bool,
+        alias=None,
+        column=None,
+        column_name=None
+    ):
         """Applies a filter on the alias given.
 
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -699,8 +750,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         :param path: The path leading to the value
 
-        :param attr_key: Boolean, whether the value is in a json-column,
-            or in an attribute like table.
+        :param is_jsonb: Whether the value is in a json-column, or in an attribute like table.
 
 
         Implemented and valid operators:
@@ -795,7 +845,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             newoperator,
                             newvalue,
                             attr_key=attr_key,
-                            is_attribute=is_attribute,
+                            is_jsonb=is_jsonb,
                             alias=alias,
                             column=column,
                             column_name=column_name
@@ -807,8 +857,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 expr = or_(*expressions_for_this_path)
 
         if expr is None:
-            if is_attribute:
-                expr = self.get_filter_expr_from_attributes(
+            if is_jsonb:
+                expr = self.get_filter_expr_from_jsonb(
                     operator, value, attr_key, column=column, column_name=column_name, alias=alias
                 )
             else:
@@ -822,7 +872,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return not_(expr)
         return expr
 
-    def get_filter_expr_from_attributes(self, operator, value, attr_key, column=None, column_name=None, alias=None):
+    def get_filter_expr_from_jsonb(
+        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+    ):
         """Return a filter expression"""
 
         # pylint: disable=too-many-branches, too-many-arguments, too-many-statements
@@ -957,39 +1009,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         Given the backend specific alias, return the column names that correspond to the aliased table.
         """
         return [str(c).replace(f'{alias.__table__.name}.', '') for c in alias.__table__.columns]
-
-    @classmethod
-    def get_corresponding_properties(cls, entity_table, given_properties, mapper):
-        """
-        This method returns a list of updated properties for a given list of properties.
-        If there is no update for the property, the given property is returned in the list.
-        """
-        if entity_table in mapper.keys():
-            res = list()
-            for given_property in given_properties:
-                res.append(cls.get_corresponding_property(entity_table, given_property, mapper))
-            return res
-
-        return given_properties
-
-    @classmethod
-    def get_corresponding_property(cls, entity_table, given_property, mapper):
-        """
-        This method returns an updated property for a given a property.
-        If there is no update for the property, the given property is returned.
-        """
-        try:
-            # Get the mapping for the specific entity_table
-            property_mapping = mapper[entity_table]
-            try:
-                # Get the mapping for the specific property
-                return property_mapping[given_property]
-            except KeyError:
-                # If there is no mapping, the property remains unchanged
-                return given_property
-        except KeyError:
-            # If it doesn't exist, it means that the given_property remains v
-            return given_property
 
     def get_aiida_res(self, res) -> Any:
         """Ensure backend instances are converted to AiiDA instances (eg nodes).

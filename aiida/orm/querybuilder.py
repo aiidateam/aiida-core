@@ -135,8 +135,8 @@ class QueryBuilder:
         self._path: List[PathItemType] = []
         # map tags to filters
         self._filters: Dict[str, FilterType] = {}
-        # map tags to projections
-        self._projections: Dict[str, List[Dict[str, str]]] = {}
+        # map tags to projections: tag -> list(fields) -> func | cast -> value
+        self._projections: Dict[str, List[Dict[str, Dict[str, Any]]]] = {}
         # list of mappings: tag -> list(fields) -> 'order' | 'cast' -> value (str('asc' | 'desc'), str(cast_key))
         self._order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]] = []
         self._limit: Optional[int] = None

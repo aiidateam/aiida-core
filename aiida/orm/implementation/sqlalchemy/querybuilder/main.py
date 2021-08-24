@@ -92,9 +92,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # populated on query build
         self._tag_to_projected_fields: Dict[str, Dict[str, int]] = {}
 
-        self.set_field_mappings()
         self.inner_to_outer_schema = dict()
         self.outer_to_inner_schema = dict()
+        self.set_field_mappings()
 
         # data generated from front-end
         self._data: QueryDictType = {
@@ -462,7 +462,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # Set the calling entity - to allow for the correct join relation to be set
         calling_entity = self._data['path'][index]['orm_base']
         try:
-            func = self.get_join_func(calling_entity, joining_keyword)
+            func = self._joiner.get_join_func(calling_entity, joining_keyword)
         except KeyError:
             raise ValueError(f"'{joining_keyword}' is not a valid joining keyword for a '{calling_entity}' type entity")
 
@@ -617,10 +617,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 'Valid columns are:\n'
                 '{}'.format(colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys()))  # pylint: disable=protected-access
             ) from exc
-
-    def get_join_func(self, calling_entity: str, joining_keyword: str) -> JoinFuncType:
-        """Return the function to join two entities"""
-        return self._joiner.get_join_func(calling_entity, joining_keyword)
 
     def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> BooleanClauseList:
         """Recurse through the filter specification and apply filter operations.

@@ -46,7 +46,7 @@ COLORS = {
 def echo(message: str, fg: str = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
     """Log a message to the cmdline logger.
 
-    .. note:: The message will be logged at the ``REPORT`` level.
+    .. note:: The message will be logged at the ``REPORT`` level but always without the log level prefix.
 
     :param message: the message to log.
     :param fg: if provided this will become the foreground color.
@@ -55,11 +55,11 @@ def echo(message: str, fg: str = None, bold: bool = False, nl: bool = True, err:
     :param err: whether to log to stderr.
     """
     message = click.style(message, fg=fg, bold=bold)
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=False))
 
 
 def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
-    """Log a debug message to the cmdline logger, prefixed with 'Debug:'
+    """Log a debug message to the cmdline logger.
 
     :param message: the message to log.
     :param bold: whether to format the message in bold.
@@ -67,13 +67,12 @@ def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = Fa
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Debug: ', fg=COLORS['debug'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.debug(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.debug(message, extra=dict(nl=nl, err=err, prefix=prefix))
 
 
 def echo_info(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
-    """Log an info message to the cmdline logger, prefixed with 'Info:'
+    """Log an info message to the cmdline logger.
 
     :param message: the message to log.
     :param bold: whether to format the message in bold.
@@ -81,13 +80,12 @@ def echo_info(message: str, bold: bool = False, nl: bool = True, err: bool = Fal
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Info: ', fg=COLORS['info'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.info(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.info(message, extra=dict(nl=nl, err=err, prefix=prefix))
 
 
 def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
-    """Log an report message to the cmdline logger, prefixed with 'Report:'
+    """Log an report message to the cmdline logger.
 
     :param message: the message to log.
     :param bold: whether to format the message in bold.
@@ -95,13 +93,12 @@ def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = F
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Report: ', fg=COLORS['report'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=prefix))
 
 
 def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
-    """Log a success message to the cmdline logger, prefixed with 'Success:'
+    """Log a success message to the cmdline logger.
 
     :param message: the message to log.
     :param bold: whether to format the message in bold.
@@ -109,13 +106,12 @@ def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = 
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Success: ', fg=COLORS['success'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=prefix))
 
 
 def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
-    """Log a warning message to the cmdline logger, prefixed with 'Warning:'
+    """Log a warning message to the cmdline logger.
 
     :param message: the message to log.
     :param bold: whether to format the message in bold.
@@ -123,13 +119,12 @@ def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = 
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Warning: ', fg=COLORS['warning'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.warning(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.warning(message, extra=dict(nl=nl, err=err, prefix=prefix))
 
 
 def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
-    """Log an error message to the cmdline logger, prefixed with 'Error:'
+    """Log an error message to the cmdline logger.
 
     :param message: the message to log.
     :param bold: whether to format the message in bold.
@@ -137,13 +132,12 @@ def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = Tr
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Error: ', fg=COLORS['error'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.error(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.error(message, extra=dict(nl=nl, err=err, prefix=prefix))
 
 
 def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
-    """Log a critical error message to the cmdline logger, prefixed with 'Critical:' and exit with ``exit_status``.
+    """Log a critical error message to the cmdline logger and exit with ``exit_status``.
 
     This should be used to print messages for errors that cannot be recovered from and so the script should be directly
     terminated with a non-zero exit status to indicate that the command failed.
@@ -154,9 +148,8 @@ def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool =
     :param err: whether to log to stderr.
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
-    prefix = click.style('Critical: ', fg=COLORS['critical'], bold=True) if prefix else ''
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.critical(prefix + message, extra=dict(nl=nl, err=err))
+    CMDLINE_LOGGER.critical(message, extra=dict(nl=nl, err=err, prefix=prefix))
     sys.exit(ExitCode.CRITICAL)
 
 

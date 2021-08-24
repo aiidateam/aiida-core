@@ -48,30 +48,6 @@ LOG_LEVELS = {
 AIIDA_LOGGER = logging.getLogger('aiida')
 
 
-class ClickHandler(logging.Handler):
-    """Handler for writing to the console using click."""
-
-    def emit(self, record):
-        """Emit log record via click.
-        Can make use of special attributes 'nl' (whether to add newline) and 'err' (whether to print to stderr), which
-        can be set via the 'extra' dictionary parameter of the logging methods.
-        """
-        import click
-        try:
-            msg = self.format(record)
-            try:
-                nl = record.nl
-            except AttributeError:
-                nl = True
-            try:
-                err = record.err
-            except AttributeError:
-                err = False
-            click.echo(msg, err=err, nl=nl)
-        except Exception:  # pylint: disable=broad-except
-            self.handleError(record)
-
-
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
 def get_logging_config():
@@ -89,14 +65,18 @@ def get_logging_config():
                 'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
                 'datefmt': '%m/%d/%Y %I:%M:%S %p',
             },
+            'cli': {
+                'class': 'aiida.cmdline.utils.log.CliFormatter'
+            }
         },
         'handlers': {
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
             },
-            'click': {
-                'class': 'aiida.common.log.ClickHandler',
+            'cli': {
+                'class': 'aiida.cmdline.utils.log.CliHandler',
+                'formatter': 'cli',
             }
         },
         'loggers': {
@@ -106,7 +86,7 @@ def get_logging_config():
                 'propagate': False,
             },
             'aiida.cmdline': {
-                'handlers': ['click'],
+                'handlers': ['cli'],
                 'propagate': False,
             },
             'plumpy': {
@@ -167,7 +147,7 @@ def evaluate_logging_configuration(dictionary):
     return result
 
 
-def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
+def configure_logging(with_orm=False, daemon=False, daemon_log_file=None, cli=False):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
@@ -215,6 +195,10 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
                 logger['handlers'].remove('console')
             except ValueError:
                 pass
+
+    if cli is True:
+        for logger in config['loggers'].values():
+            logger['handlers'] = ['cli']
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

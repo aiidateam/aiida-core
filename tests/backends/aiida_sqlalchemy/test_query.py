@@ -19,10 +19,6 @@ class TestQueryBuilderSQLA(AiidaTestCase):
     def test_clsf_sqla(self):
         """Test SQLA classifiers"""
         from aiida.orm.querybuilder import _get_ormclass
-        from aiida.backends.sqlalchemy.models.node import DbNode
-        from aiida.backends.sqlalchemy.models.group import DbGroup
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
 
         for aiida_cls, orm_name in zip((Group, User, Computer, Node, Data, ProcessNode),
                                        ('group', 'user', 'computer', 'node', 'node', 'node')):

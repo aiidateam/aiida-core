@@ -29,6 +29,9 @@ except ImportError:  # Python <3.8 doesn't have `Protocol` in the stdlib
 
 
 class _EntityMapper(Protocol):
+    """Mapping of implemented entity types."""
+
+    # pylint: disable=invalid-name
 
     @property
     def Node(self) -> Type[Model]:

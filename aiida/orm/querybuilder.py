@@ -144,7 +144,7 @@ class QueryBuilder:
         self._distinct: bool = distinct
 
         # cache of tag mappings, populated during appends
-        self._tags = _QueryTagMap(self._impl)
+        self._tags = _QueryTagMap()
 
         # Set the debug level
         self.set_debug(debug)
@@ -271,6 +271,7 @@ class QueryBuilder:
         outerjoin: bool = False,
         joining_keyword: Optional[str] = None,
         joining_value: Optional[Any] = None,
+        orm_base: Optional[str] = None,  # pylint: disable=unused-argument
         **kwargs: Any
     ) -> 'QueryBuilder':
         """
@@ -429,7 +430,7 @@ class QueryBuilder:
         # pylint: disable=too-many-nested-blocks
         try:
             # Get the functions that are implemented:
-            spec_to_function_map = set(EntityRelationships[ormclass])
+            spec_to_function_map = set(EntityRelationships[ormclass.value])
             if ormclass == EntityTypes.NODE:
                 # 'direction 'was an old implementation, which is now converted below to with_outgoing or with_incoming
                 spec_to_function_map.add('direction')
@@ -531,6 +532,7 @@ class QueryBuilder:
         self._path.append(
             dict(
                 entity_type=path_type,
+                orm_base=ormclass.value,  # type: ignore[typeddict-item]
                 tag=tag,
                 # for the first item joining_keyword/joining_value can be None,
                 # but after they always default to 'with_incoming' of the previous item
@@ -1345,8 +1347,7 @@ def _get_process_type_filter(classifiers: Classifier, subclassing: bool) -> dict
 class _QueryTagMap:
     """Cache of tag mappings for a query."""
 
-    def __init__(self, implementation: BackendQueryBuilder):
-        self._implementation = implementation
+    def __init__(self):
         self._tag_to_type: Dict[str, Union[None, EntityTypes]] = {}
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.
@@ -1383,14 +1384,12 @@ class _QueryTagMap:
         if klasses:
             tag_key = tuple(klasses) if isinstance(klasses, (list, set)) else klasses
             self._cls_to_tag_map.setdefault(tag_key, set()).add(tag)
-        self._implementation.add_tag(tag, etype)
 
     def remove(self, tag: str) -> None:
         """Remove a tag."""
         self._tag_to_type.pop(tag, None)
         for tags in self._cls_to_tag_map.values():
             tags.discard(tag)
-        self._implementation.remove_tag(tag)
 
     def get(self, tag_or_cls: Union[str, EntityClsType]) -> str:
         """Return the tag or, given a class(es), map to a tag.

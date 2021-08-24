@@ -10,7 +10,7 @@
 # pylint: disable=too-many-lines
 """Sqla query builder implementation"""
 from functools import partial
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional
 import uuid
 
 from sqlalchemy import and_, or_, not_, func as sa_func
@@ -29,9 +29,7 @@ from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
 from sqlalchemy_utils.types.choice import Choice
 
 from aiida.common.exceptions import NotExistent
-from aiida.orm.implementation.querybuilder import (
-    BackendQueryBuilder, EntityTypes, QueryDictType, GROUP_ENTITY_TYPE_PREFIX, QUERYBUILD_LOGGER
-)
+from aiida.orm.implementation.querybuilder import (BackendQueryBuilder, EntityTypes, QueryDictType, QUERYBUILD_LOGGER)
 from .joiner import SqlaJoiner, JoinFuncType
 
 
@@ -301,25 +299,20 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return self._query
 
-    def add_tag(self, tag: str, etype: Union[None, EntityTypes] = None) -> None:
-        """Add a tag to the query"""
-        if etype is None:
-            self._tag_to_alias[tag] = None
-        else:
-            cls = {
-                EntityTypes.AUTHINFO: self.AuthInfo,
-                EntityTypes.COMMENT: self.Comment,
-                EntityTypes.COMPUTER: self.Computer,
-                EntityTypes.GROUP: self.Group,
-                EntityTypes.NODE: self.Node,
-                EntityTypes.LOG: self.Log,
-                EntityTypes.USER: self.User,
-            }[etype]
-            self._tag_to_alias[tag] = aliased(cls)
-
-    def remove_tag(self, tag: str) -> None:
-        """Remove a tag in the query"""
-        self._tag_to_alias.pop(tag, None)
+    def rebuild_aliases(self) -> None:
+        """Rebuild the mapping of `tag` -> `alias`"""
+        cls_map = {
+            EntityTypes.AUTHINFO.value: self.AuthInfo,
+            EntityTypes.COMMENT.value: self.Comment,
+            EntityTypes.COMPUTER.value: self.Computer,
+            EntityTypes.GROUP.value: self.Group,
+            EntityTypes.NODE.value: self.Node,
+            EntityTypes.LOG.value: self.Log,
+            EntityTypes.USER.value: self.User,
+        }
+        self._tag_to_alias = {}
+        for path in self._data['path']:
+            self._tag_to_alias[path['tag']] = aliased(cls_map[path['orm_base']])
 
     def _get_tag_alias(self, tag: str) -> AliasedClass:
         """Get the alias of a tag"""
@@ -333,7 +326,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         build the query and return a sqlalchemy.Query instance
         """
         # pylint: disable=too-many-branches
-
+        self.rebuild_aliases()
         # Starting the query by receiving a session
         # Every subclass needs to have _get_session and give me the right session
         firstalias = self._get_tag_alias(self._data['path'][0]['tag'])
@@ -464,16 +457,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         # pylint: disable=unused-argument
         # Set the calling entity - to allow for the correct join relation to be set
-        entity_type = self._data['path'][index]['entity_type']
-
-        if isinstance(entity_type, str) and entity_type.startswith(GROUP_ENTITY_TYPE_PREFIX):
-            calling_entity = 'group'
-        elif entity_type not in ['computer', 'user', 'comment', 'log']:
-            # entity types such as 'data.Data.' are all assumed to be nodes
-            calling_entity = 'node'
-        else:
-            calling_entity = entity_type
-
+        calling_entity = self._data['path'][index]['orm_base']
         try:
             func = self.get_join_func(calling_entity, joining_keyword)
         except KeyError:

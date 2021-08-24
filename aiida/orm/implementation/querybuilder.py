@@ -16,10 +16,10 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 
 try:
-    from typing import TypedDict  # pylint: disable=ungrouped-imports
+    from typing import Literal, TypedDict  # pylint: disable=ungrouped-imports
 except ImportError:
     # Python <3.8 backport
-    from typing_extensions import TypedDict
+    from typing_extensions import Literal, TypedDict  # type: ignore
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend
@@ -40,24 +40,26 @@ class EntityTypes(Enum):
     USER = 'user'
 
 
-EntityRelationships: Dict[EntityTypes, Set[str]] = {
-    EntityTypes.AUTHINFO: set(),
-    EntityTypes.COMMENT: {'with_node', 'with_user'},
-    EntityTypes.COMPUTER: {'with_node'},
-    EntityTypes.GROUP: {'with_node', 'with_user'},
-    EntityTypes.LOG: {'with_node'},
-    EntityTypes.NODE: {
+EntityRelationships: Dict[str, Set[str]] = {
+    'authinfo': set(),
+    'comment': {'with_node', 'with_user'},
+    'computer': {'with_node'},
+    'group': {'with_node', 'with_user'},
+    'log': {'with_node'},
+    'node': {
         'with_comment', 'with_log', 'with_incoming', 'with_outgoing', 'with_descendants', 'with_ancestors',
         'with_computer', 'with_user', 'with_group'
     },
-    EntityTypes.USER: {'with_comment', 'with_group', 'with_node'}
+    'user': {'with_comment', 'with_group', 'with_node'}
 }
 
 
 class PathItemType(TypedDict):
     """An item on the query path"""
 
-    entity_type: Any
+    entity_type: Union[str, List[str]]
+    # this can be derived from the entity_type, but it is more efficient to store
+    orm_base: Literal['node', 'group', 'authinfo', 'comment', 'computer', 'log', 'user']
     tag: str
     joining_keyword: str
     joining_value: str
@@ -140,14 +142,6 @@ class BackendQueryBuilder:
 
         :returns: an aiida-compatible instance
         """
-
-    @abc.abstractmethod
-    def add_tag(self, tag: str, etype: Union[None, EntityTypes] = None) -> None:
-        """Add a tag to the query"""
-
-    @abc.abstractmethod
-    def remove_tag(self, tag: str) -> None:
-        """Remove a tag in the query"""
 
     def as_sql(self, data: QueryDictType, inline: bool = False) -> str:
         """Convert the query to an SQL string representation.

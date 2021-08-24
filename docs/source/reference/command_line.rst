@@ -227,6 +227,7 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
+      run-sql                  Run a raw SQL command on the database.
       run_daemon               Run a daemon instance in the current interpreter.
       validate-plugins         Validate all plugins by checking they can be loaded.
 

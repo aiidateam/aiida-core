@@ -10,6 +10,8 @@
 """`verdi devel` commands."""
 import sys
 
+import click
+
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 
@@ -91,6 +93,21 @@ def devel_validate_plugins():
         echo.echo_critical(str(exception))
 
     echo.echo_success('all registered plugins could successfully loaded.')
+
+
+@verdi_devel.command('run-sql')
+@click.argument('sql', type=str)
+@decorators.with_dbenv()
+def devel_sql(sql):
+    """Run a raw SQL command on the database."""
+    from aiida.manage.manager import get_manager
+    manager = get_manager()
+    result = manager.get_backend().execute_raw(sql)
+    if isinstance(result, (list, tuple)):
+        for row in result:
+            echo.echo(str(row))
+    else:
+        echo.echo(str(result))
 
 
 @verdi_devel.command('play', hidden=True)

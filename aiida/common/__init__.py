@@ -81,7 +81,6 @@ __all__ = (
     'ValidationError',
     'create_callback',
     'get_progress_reporter',
-    'override_log_formatter',
     'override_log_level',
     'set_progress_bar_tqdm',
     'set_progress_reporter',

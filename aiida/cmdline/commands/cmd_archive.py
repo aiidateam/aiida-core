@@ -120,7 +120,6 @@ def create(
     You can modify some of those rules using options of this command.
     """
     # pylint: disable=too-many-branches
-    from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import export, ExportFileFormat
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
@@ -165,14 +164,13 @@ def create(
     elif archive_format == 'null':
         export_format = 'null'
 
-    if AIIDA_LOGGER.level <= logging.INFO:
+    if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
         set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level == logging.DEBUG))
     else:
         set_progress_reporter(None)
 
     try:
-        with override_log_formatter_context('%(message)s'):
-            export(entities, filename=output_file, file_format=export_format, **kwargs)
+        export(entities, filename=output_file, file_format=export_format, **kwargs)
     except ArchiveExportError as exception:
         echo.echo_critical(f'failed to write the archive file. Exception: {exception}')
     else:
@@ -198,7 +196,6 @@ def create(
 )
 def migrate(input_file, output_file, force, in_place, archive_format, version):
     """Migrate an export archive to a more recent format version."""
-    from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.importexport import detect_archive_type, EXPORT_VERSION
     from aiida.tools.importexport.archive.migrators import get_migrator
@@ -213,7 +210,7 @@ def migrate(input_file, output_file, force, in_place, archive_format, version):
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
         )
 
-    if AIIDA_LOGGER.level <= logging.INFO:
+    if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
         set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level == logging.DEBUG))
     else:
         set_progress_reporter(None)
@@ -225,8 +222,7 @@ def migrate(input_file, output_file, force, in_place, archive_format, version):
     migrator = migrator_cls(input_file)
 
     try:
-        with override_log_formatter_context('%(message)s'):
-            migrator.migrate(version, output_file, force=force, out_compression=archive_format)
+        migrator.migrate(version, output_file, force=force, out_compression=archive_format)
     except Exception as error:  # pylint: disable=broad-except
         if AIIDA_LOGGER.level <= logging.DEBUG:
             raise
@@ -310,10 +306,9 @@ def import_archive(
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
     # pylint: disable=unused-argument
-    from aiida.common.log import override_log_formatter_context
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
 
-    if AIIDA_LOGGER.level <= logging.INFO:
+    if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
         set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level == logging.DEBUG))
     else:
         set_progress_reporter(None)
@@ -332,9 +327,8 @@ def import_archive(
         'comment_mode': comment_mode,
     }
 
-    with override_log_formatter_context('%(message)s'):
-        for archive, web_based in all_archives:
-            _import_archive(archive, web_based, import_kwargs, migration)
+    for archive, web_based in all_archives:
+        _import_archive(archive, web_based, import_kwargs, migration)
 
 
 def _echo_exception(msg: str, exception, warn_only: bool = False):

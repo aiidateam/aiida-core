@@ -290,7 +290,6 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.common.log import override_log_formatter_context
     from aiida.orm.utils.loaders import NodeEntityLoader
     from aiida.tools import delete_nodes
 
@@ -309,8 +308,7 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
         return not click.confirm('Shall I continue?', abort=True)
 
-    with override_log_formatter_context('%(message)s'):
-        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+    _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
 
     if was_deleted:
         echo.echo_success('Finished deletion.')

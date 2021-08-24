@@ -26,8 +26,6 @@ from sqlalchemy.sql.elements import BooleanClauseList, Cast, BinaryExpression, L
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
 
-from sqlalchemy_utils.types.choice import Choice
-
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import (BackendQueryBuilder, EntityTypes, QueryDictType, QUERYBUILD_LOGGER)
 from .joiner import SqlaJoiner
@@ -203,7 +201,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if not self._projection_index_to_field or len(result) != len(self._projection_index_to_field):
             raise Exception('length of query result does not match the number of specified projections')
 
-        return [self.get_aiida_res(rowitem) for rowitem in result]
+        return [self.to_backend(rowitem) for rowitem in result]
 
     def iterall(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[List[Any]]:
         """Return an iterator over all the results of a list of lists."""
@@ -221,13 +219,13 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
                 if list(tag_to_index_dict.values()) == ['*']:
                     for rowitem in results:
-                        yield [self.get_aiida_res(rowitem)]
+                        yield [self.to_backend(rowitem)]
                 else:
                     for rowitem, in results:
-                        yield [self.get_aiida_res(rowitem)]
+                        yield [self.to_backend(rowitem)]
             elif len(tag_to_index_dict) > 1:
                 for resultrow in results:
-                    yield [self.get_aiida_res(rowitem) for rowitem in resultrow]
+                    yield [self.to_backend(rowitem) for rowitem in resultrow]
             else:
                 raise ValueError('Got an empty dictionary')
         except Exception:
@@ -250,7 +248,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         tag: {
                             self.get_corresponding_property(
                                 self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
-                            ): self.get_aiida_res(this_result[index_in_sql_result])
+                            ): self.to_backend(this_result[index_in_sql_result])
                             for attrkey, index_in_sql_result in projected_entities_dict.items()
                         } for tag, projected_entities_dict in self._tag_to_projected_fields.items()
                     }
@@ -263,7 +261,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             tag: {
                                 self.get_corresponding_property(
                                     self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(this_result)
+                                ): self.to_backend(this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in self._tag_to_projected_fields.items()
                         }
@@ -273,7 +271,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             tag: {
                                 self.get_corresponding_property(
                                     self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
-                                ): self.get_aiida_res(this_result)
+                                ): self.to_backend(this_result)
                                 for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in self._tag_to_projected_fields.items()
                         }
@@ -1010,16 +1008,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         return [str(c).replace(f'{alias.__table__.name}.', '') for c in alias.__table__.columns]
 
-    def get_aiida_res(self, res) -> Any:
-        """Ensure backend instances are converted to AiiDA instances (eg nodes).
+    def to_backend(self, res) -> Any:
+        """Convert results to return backend specific objects. 
+        
+        - convert `DbModel` instances to `BackendEntity` instances.
+        - convert UUIDs to strings
 
         :param res: the result returned by the query
 
-        :returns: an aiida-compatible instance
+        :returns:backend compatible instance
         """
-        if isinstance(res, Choice):
-            return res.value
-
         if isinstance(res, uuid.UUID):
             return str(res)
 

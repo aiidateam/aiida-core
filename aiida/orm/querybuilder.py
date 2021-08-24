@@ -437,7 +437,7 @@ class QueryBuilder:
             for key, val in kwargs.items():
                 if key not in spec_to_function_map:
                     raise ValueError(
-                        f"'{key}' is not a valid keyword for joining specification\n"
+                        f"'{key}' is not a valid keyword for {ormclass.value!r} joining specification\n"
                         f'Valid keywords are: {spec_to_function_map or []!r}'
                     )
                 if joining_keyword:

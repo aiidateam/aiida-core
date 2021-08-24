@@ -123,7 +123,7 @@ def set_log_level(ctx, __, value):
     if profile is not None:
         profile.set_option('logging.aiida_loglevel', log_level)
         # Make sure the value is currently loaded, even if it may be undone in the future by another call to this method
-        configure_logging()
+        configure_logging(cli=True)
 
     return log_level
 

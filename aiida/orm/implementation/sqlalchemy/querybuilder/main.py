@@ -193,7 +193,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             self.get_session().close()
             raise
 
-        if result is not None and not isinstance(result, (list, tuple)):
+        if result is None:
+            return result
+
+        if not isinstance(result, (list, tuple)):
             result = [result]
 
         if not self._projection_index_to_field or len(result) != len(self._projection_index_to_field):

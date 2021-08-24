@@ -30,7 +30,7 @@ from sqlalchemy_utils.types.choice import Choice
 
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation.querybuilder import (BackendQueryBuilder, EntityTypes, QueryDictType, QUERYBUILD_LOGGER)
-from .joiner import SqlaJoiner, JoinFuncType
+from .joiner import SqlaJoiner
 
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=invalid-name

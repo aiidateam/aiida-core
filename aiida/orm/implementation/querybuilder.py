@@ -134,15 +134,6 @@ class BackendQueryBuilder:
     def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
 
-    @abc.abstractmethod
-    def get_aiida_res(self, res) -> Any:
-        """Ensure backend instances are converted to AiiDA instances (eg nodes).
-
-        :param res: the result returned by the query
-
-        :returns: an aiida-compatible instance
-        """
-
     def as_sql(self, data: QueryDictType, inline: bool = False) -> str:
         """Convert the query to an SQL string representation.
 

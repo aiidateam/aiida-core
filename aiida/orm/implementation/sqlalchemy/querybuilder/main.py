@@ -203,7 +203,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if not self._projection_index_to_field or len(result) != len(self._projection_index_to_field):
             raise Exception('length of query result does not match the number of specified projections')
 
-        return result
+        return [self.get_aiida_res(rowitem) for rowitem in result]
 
     def iterall(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[List[Any]]:
         """Return an iterator over all the results of a list of lists."""
@@ -227,7 +227,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         yield [self.get_aiida_res(rowitem)]
             elif len(tag_to_index_dict) > 1:
                 for resultrow in results:
-                    yield [self.get_aiida_res(rowitem) for colindex, rowitem in enumerate(resultrow)]
+                    yield [self.get_aiida_res(rowitem) for rowitem in resultrow]
             else:
                 raise ValueError('Got an empty dictionary')
         except Exception:

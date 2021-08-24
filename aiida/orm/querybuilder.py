@@ -988,7 +988,7 @@ class QueryBuilder:
         if result is None:
             return None
 
-        return [self._get_aiida_entity_res(self._impl.get_aiida_res(rowitem)) for rowitem in result]
+        return [self._get_aiida_entity_res(rowitem) for rowitem in result]
 
     def count(self) -> int:
         """

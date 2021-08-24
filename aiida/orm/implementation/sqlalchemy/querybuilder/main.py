@@ -261,8 +261,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             tag: {
                                 self.get_corresponding_property(
                                     self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
-                                ): self.to_backend(this_result)
-                                for attrkey, position in projected_entities_dict.items()
+                                ): self.to_backend(this_result) for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in self._tag_to_projected_fields.items()
                         }
                 else:
@@ -271,8 +270,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             tag: {
                                 self.get_corresponding_property(
                                     self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
-                                ): self.to_backend(this_result)
-                                for attrkey, position in projected_entities_dict.items()
+                                ): self.to_backend(this_result) for attrkey, position in projected_entities_dict.items()
                             } for tag, projected_entities_dict in self._tag_to_projected_fields.items()
                         }
             else:
@@ -1009,8 +1007,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return [str(c).replace(f'{alias.__table__.name}.', '') for c in alias.__table__.columns]
 
     def to_backend(self, res) -> Any:
-        """Convert results to return backend specific objects. 
-        
+        """Convert results to return backend specific objects.
+
         - convert `DbModel` instances to `BackendEntity` instances.
         - convert UUIDs to strings
 

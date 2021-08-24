@@ -189,7 +189,6 @@ def delete(codes, dry_run, force):
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.common.log import override_log_formatter_context
     from aiida.tools import delete_nodes
 
     node_pks_to_delete = [code.pk for code in codes]
@@ -200,8 +199,7 @@ def delete(codes, dry_run, force):
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
         return not click.confirm('Shall I continue?', abort=True)
 
-    with override_log_formatter_context('%(message)s'):
-        _, was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
+    was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
 
     if was_deleted:
         echo.echo_success('Finished deletion.')

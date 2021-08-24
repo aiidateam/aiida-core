@@ -95,7 +95,6 @@ def group_remove_nodes(group, nodes, clear, force):
 @with_dbenv()
 def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
     """Delete a group and (optionally) the nodes it contains."""
-    from aiida.common.log import override_log_formatter_context
     from aiida.tools import delete_group_nodes
     from aiida import orm
 
@@ -112,8 +111,7 @@ def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
             echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
             return not click.confirm('Do you want to continue?', abort=True)
 
-        with override_log_formatter_context('%(message)s'):
-            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
         if not nodes_deleted:
             # don't delete the group if the nodes were not deleted
             return

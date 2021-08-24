@@ -100,6 +100,8 @@ def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = F
 def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
     """Log a success message to the cmdline logger.
 
+    .. note:: The message will be logged at the ``REPORT`` level and always with the ``Success:`` prefix.
+
     :param message: the message to log.
     :param bold: whether to format the message in bold.
     :param nl: whether to add a newline at the end of the message.
@@ -107,7 +109,11 @@ def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = 
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=prefix))
+
+    if prefix:
+        message = click.style('Success: ', bold=True, fg=COLORS['success']) + message
+
+    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=False))
 
 
 def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:

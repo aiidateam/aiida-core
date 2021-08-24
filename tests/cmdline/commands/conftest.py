@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Pytest fixtures for command line interface tests."""
+import pathlib
+
 import click
 import pytest
 
@@ -33,13 +35,17 @@ def run_cli_command():
         """
         import traceback
 
+        # Convert any ``pathlib.Path`` objects in the ``options`` to their absolute filepath string representation.
+        # This is necessary because the ``invoke`` command does not support these path objects.
+        options = [str(option) if isinstance(option, pathlib.Path) else option for option in options or []]
+
         # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic
         # of the ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module
         # which circumvents this machinery.
         command = VerdiCommandGroup.add_verbosity_option(command)
 
         runner = click.testing.CliRunner()
-        result = runner.invoke(command, options or [])
+        result = runner.invoke(command, options)
 
         if raises:
             assert result.exception is not None, result.output

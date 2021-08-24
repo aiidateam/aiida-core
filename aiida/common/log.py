@@ -9,13 +9,11 @@
 ###########################################################################
 """Module for all logging methods/classes that don't need the ORM."""
 import collections
-import copy
+import contextlib
 import logging
 import types
-from contextlib import contextmanager
-from wrapt import decorator
 
-__all__ = ('AIIDA_LOGGER', 'override_log_level', 'override_log_formatter')
+__all__ = ('AIIDA_LOGGER', 'override_log_level')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
@@ -214,7 +212,7 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None, cli=Fa
     dictConfig(config)
 
 
-@contextmanager
+@contextlib.contextmanager
 def override_log_level(level=logging.CRITICAL):
     """Temporarily adjust the log-level of logger."""
     logging.disable(level=level)
@@ -222,38 +220,3 @@ def override_log_level(level=logging.CRITICAL):
         yield
     finally:
         logging.disable(level=logging.NOTSET)
-
-
-@contextmanager
-def override_log_formatter_context(fmt: str):
-    """Temporarily use a different formatter for all handlers.
-
-    NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
-    """
-    temp_formatter = logging.Formatter(fmt=fmt)
-    cached_formatters = {}
-
-    for handler in AIIDA_LOGGER.handlers:
-        # Need a copy here so we keep the original one should the handler's formatter be changed during the yield
-        cached_formatters[handler] = copy.copy(handler.formatter)
-        handler.setFormatter(temp_formatter)
-
-    yield
-
-    for handler, formatter in cached_formatters.items():
-        handler.setFormatter(formatter)
-
-
-def override_log_formatter(fmt: str):
-    """Temporarily use a different formatter for all handlers.
-
-    NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
-    Be aware! This may fail if the number of handlers is changed within the decorated function/method.
-    """
-
-    @decorator
-    def wrapper(wrapped, instance, args, kwargs):  # pylint: disable=unused-argument
-        with override_log_formatter_context(fmt=fmt):
-            return wrapped(*args, **kwargs)
-
-    return wrapper

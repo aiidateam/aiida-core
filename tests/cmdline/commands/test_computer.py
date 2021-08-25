@@ -243,7 +243,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         options = generate_setup_options(options_dict)
         result = self.cli_runner.invoke(computer_setup, options)
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("'unknown_transport' is not valid", result.output)
+        self.assertIn("Entry point 'unknown_transport' not found in group 'aiida.transports'", result.output)
 
     def test_noninteractive_wrong_scheduler_fail(self):
         """
@@ -255,7 +255,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("'unknown_scheduler' is not valid", result.output)
+        self.assertIn("Entry point 'unknown_scheduler' not found in group 'aiida.schedulers'", result.output)
 
     def test_noninteractive_invalid_shebang_fail(self):
         """

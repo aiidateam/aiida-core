@@ -8,14 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Click parameter type for AiiDA Plugins."""
+import functools
 
 import click
 
 from aiida.cmdline.utils import decorators
 from aiida.common import exceptions
+from aiida.plugins import factories
 from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_PREFIX, EntryPointFormat
 from aiida.plugins.entry_point import format_entry_point_string, get_entry_point_string_format
 from aiida.plugins.entry_point import get_entry_point, get_entry_points, get_entry_point_groups
+
 from .strings import EntryPointType
 
 __all__ = ('PluginParamType',)
@@ -39,6 +42,18 @@ class PluginParamType(EntryPointType):
 
     """
     name = 'plugin'
+
+    _factory_mapping = {
+        'aiida.calculations': factories.CalculationFactory,
+        'aiida.data': factories.DataFactory,
+        'aiida.groups': factories.GroupFactory,
+        'aiida.parsers': factories.ParserFactory,
+        'aiida.schedulers': factories.SchedulerFactory,
+        'aiida.transports': factories.TransportFactory,
+        'aiida.tools.dbimporters': factories.DbImporterFactory,
+        'aiida.tools.data.orbitals': factories.OrbitalFactory,
+        'aiida.workflows': factories.WorkflowFactory,
+    }
 
     def __init__(self, group=None, load=False, *args, **kwargs):
         """
@@ -172,6 +187,11 @@ class PluginParamType(EntryPointType):
             if group not in self.groups:
                 raise ValueError('entry point group {} is not supported by this parameter')
 
+        elif entry_point_format == EntryPointFormat.MINIMAL and len(self.groups) == 1:
+
+            name = entry_point_string
+            group = self.groups[0]
+
         elif entry_point_format == EntryPointFormat.MINIMAL:
 
             name = entry_point_string
@@ -187,18 +207,22 @@ class PluginParamType(EntryPointType):
                     "entry point '{}' is not valid for any of the allowed "
                     'entry point groups: {}'.format(name, ' '.join(self.groups))
                 )
-            else:
-                group = matching_groups[0]
+
+            group = matching_groups[0]
 
         else:
             ValueError(f'invalid entry point string format: {entry_point_string}')
 
+        # If there is a factory for the entry point group, use that, otherwise use ``get_entry_point``
         try:
-            entry_point = get_entry_point(group, name)
+            get_entry_point_partial = functools.partial(self._factory_mapping[group], load=False)
+        except KeyError:
+            get_entry_point_partial = functools.partial(get_entry_point, group)
+
+        try:
+            return get_entry_point_partial(name)
         except exceptions.EntryPointError as exception:
             raise ValueError(exception)
-
-        return entry_point
 
     @decorators.with_dbenv()
     def convert(self, value, param, ctx):

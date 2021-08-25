@@ -197,7 +197,8 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
         options = ['-A', '-a', '-o', '--input-plugin=core.arithmetic.add', f'--computer={self.computer.label}']
         result = self.cli_runner.invoke(code_list, options)
-        self.assertIsNone(result.exception, result.output)
+        import traceback
+        self.assertIsNone(result.exception, traceback.format_exception(*result.exc_info))
         self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
         self.assertTrue('code2' not in result.output, 'label of second code should not be included')
         self.assertTrue('comp' in result.output, 'computer name should be included')

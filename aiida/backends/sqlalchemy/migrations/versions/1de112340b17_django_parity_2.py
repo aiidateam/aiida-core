@@ -71,7 +71,8 @@ def upgrade():
     op.alter_column('db_dbnode', 'node_type', existing_type=sa.String(255), nullable=False)
     op.alter_column('db_dbnode', 'uuid', existing_type=UUID(as_uuid=True), nullable=False)
 
-    op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
+    # TODO this causes the migration to hang
+    # op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
 
     op.alter_column('db_dbuser', 'email', existing_type=sa.String(254), nullable=False)
     op.alter_column('db_dbuser', 'first_name', existing_type=sa.String(254), nullable=False)

@@ -90,6 +90,7 @@ check_untyped_defs = true
 scripts_are_modules = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+no_warn_no_return = true
 
 [[tool.mypy.overrides]]
 module = 'aiida.*'

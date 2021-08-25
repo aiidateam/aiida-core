@@ -50,12 +50,15 @@ py:class AuthInfo
 py:class CalcJob
 py:class CalcJobNode
 py:class Data
+py:class DbImporter
 py:class ExitCode
 py:class File
 py:class FolderData
+py:class Group
 py:class JobInfo
 py:class JobState
 py:class Node
+py:class Orbital
 py:class Parser
 py:class PersistenceError
 py:class Process
@@ -66,8 +69,10 @@ py:class Port
 py:class PortNamespace
 py:class Repository
 py:class Runner
+py:class Scheduler
 py:class Transport
 py:class TransportQueue
+py:class WorkChain
 py:class WorkChainSpec
 
 py:class kiwipy.communications.Communicator

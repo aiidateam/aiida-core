@@ -76,6 +76,7 @@ repos:
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
                 aiida/plugins/entry_point.py|
+                aiida/plugins/factories.py|
                 aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|

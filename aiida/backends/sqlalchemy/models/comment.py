@@ -27,14 +27,14 @@ class DbComment(Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False)
 
-    ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
-    content = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False)
+    content = Column(Text, default='', nullable=False)
 
     dbnode = relationship('DbNode', backref='dbcomments')
     user = relationship('DbUser')

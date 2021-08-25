@@ -26,15 +26,15 @@ class DbLog(Base):
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    time = Column(DateTime(timezone=True), default=timezone.now)
-    loggername = Column(String(255), index=True)
-    levelname = Column(String(255), index=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
+    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    loggername = Column(String(255), default="", index=True, nullable=False)
+    levelname = Column(String(255), default="", index=True, nullable=False)
     dbnode_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
     )
-    message = Column(Text(), nullable=True)
-    _metadata = Column('metadata', JSONB)
+    message = Column(Text(), default="", nullable=False)
+    _metadata = Column('metadata', JSONB, default=dict, nullable=False)
 
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
 

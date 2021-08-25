@@ -26,19 +26,19 @@ class DbAuthInfo(Base):
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
     aiidauser_id = Column(
-        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED')
+        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
     )
     dbcomputer_id = Column(
-        Integer, ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED')
+        Integer, ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
     )
 
     aiidauser = relationship('DbUser', backref='authinfos')
     dbcomputer = relationship('DbComputer', backref='authinfos')
 
-    _metadata = Column('metadata', JSONB)
-    auth_params = Column(JSONB)
+    _metadata = Column('metadata', JSONB, default=dict, nullable=False)
+    auth_params = Column(JSONB, default=dict, nullable=False)
 
-    enabled = Column(Boolean, default=True)
+    enabled = Column(Boolean, default=True, nullable=False)
 
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 

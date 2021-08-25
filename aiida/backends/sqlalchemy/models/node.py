@@ -30,15 +30,15 @@ class DbNode(Base):
     __tablename__ = 'db_dbnode'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    node_type = Column(String(255), index=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
+    node_type = Column(String(255), default="", index=True, nullable=False)
     process_type = Column(String(255), index=True)
     label = Column(
-        String(255), index=True, nullable=True, default=''
+        String(255), index=True, nullable=False, default=''
     )  # Does it make sense to be nullable and have a default?
-    description = Column(Text(), nullable=True, default='')
-    ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+    description = Column(Text(), nullable=False, default='')
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
     attributes = Column(JSONB)
     extras = Column(JSONB)
     repository_metadata = Column(JSONB, nullable=False, default=dict, server_default='{}')
@@ -160,7 +160,7 @@ class DbLink(Base):
     output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id')
 
     label = Column(String(255), index=True, nullable=False)
-    type = Column(String(255), index=True)
+    type = Column(String(255), index=True, nullable=False)
 
     # A calculation can have both a 'return' and a 'create' link to
     # a single data output node, which would violate the unique constraint

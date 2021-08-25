@@ -21,10 +21,10 @@ class DbUser(Base):
     __tablename__ = 'db_dbuser'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    email = Column(String(254), unique=True, index=True)
-    first_name = Column(String(254), nullable=True)
-    last_name = Column(String(254), nullable=True)
-    institution = Column(String(254), nullable=True)
+    email = Column(String(254), unique=True, index=True, nullable=False)
+    first_name = Column(String(254), default="", nullable=False)
+    last_name = Column(String(254), default="", nullable=False)
+    institution = Column(String(254), default="", nullable=False)
 
     def __init__(self, email, first_name='', last_name='', institution='', **kwargs):
         """Set additional class attributes with respect to the base class."""

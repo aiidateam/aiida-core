@@ -22,13 +22,13 @@ class DbComputer(Base):
     __tablename__ = 'db_dbcomputer'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
     label = Column(String(255), unique=True, nullable=False)
-    hostname = Column(String(255))
-    description = Column(Text, nullable=True)
-    scheduler_type = Column(String(255))
-    transport_type = Column(String(255))
-    _metadata = Column('metadata', JSONB)
+    hostname = Column(String(255), default='', nullable=False)
+    description = Column(Text, default='', nullable=False)
+    scheduler_type = Column(String(255), default='', nullable=False)
+    transport_type = Column(String(255), default='', nullable=False)
+    _metadata = Column('metadata', JSONB, default=dict, nullable=False)
 
     def __init__(self, *args, **kwargs):
         """Provide _metadata and description attributes to the class."""

@@ -79,6 +79,14 @@ def upgrade():
     op.alter_column('db_dbuser', 'last_name', existing_type=sa.String(254), nullable=False)
     op.alter_column('db_dbuser', 'institution', existing_type=sa.String(254), nullable=False)
 
+    op.create_index(
+        'db_dbnode_node_type_like',
+        'db_dbnode', ['node_type'],
+        unique=False,
+        postgresql_using='btree',
+        postgresql_ops={'data': 'varchar_pattern_ops'}
+    )
+
 
 def downgrade():
     op.alter_column('db_dbuser', 'institution', existing_type=sa.String(254), nullable=True)
@@ -130,3 +138,10 @@ def downgrade():
     op.alter_column('db_dbauthinfo', 'enabled', existing_type=sa.BOOLEAN(), nullable=True)
     op.alter_column('db_dbauthinfo', 'auth_params', existing_type=JSONB, nullable=True)
     op.alter_column('db_dbauthinfo', 'metadata', existing_type=JSONB, nullable=True)
+
+    op.drop_index(
+        'db_dbnode_node_type_like',
+        table_name='db_dbnode',
+        postgresql_using='btree',
+        postgresql_ops={'data': 'varchar_pattern_ops'}
+    )

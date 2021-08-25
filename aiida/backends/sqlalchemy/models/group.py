@@ -45,11 +45,13 @@ class DbGroup(Base):
     type_string = Column(String(255), default='', index=True, nullable=False)
 
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    description = Column(Text, default="", nullable=False)
+    description = Column(Text, default='', nullable=False)
 
     extras = Column(JSONB, default=dict, nullable=False)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False)
+    user_id = Column(
+        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+    )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref='dbgroups', lazy='dynamic')

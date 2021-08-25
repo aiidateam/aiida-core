@@ -29,7 +29,9 @@ class DbAuthInfo(Base):
         Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
     )
     dbcomputer_id = Column(
-        Integer, ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+        Integer,
+        ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        nullable=False
     )
 
     aiidauser = relationship('DbUser', backref='authinfos')

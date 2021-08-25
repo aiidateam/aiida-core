@@ -2076,7 +2076,7 @@ class TestDjangoParity(TestMigrationsSQLA):
             session.add(comment)
             session.commit()
 
-            computer = DbComputer(label="label", description=None, hostname=None, metadata=None, scheduler_type=None, transport_type=None, uuid=None)
+            computer = DbComputer(label='label', description=None, hostname=None, metadata=None, scheduler_type=None, transport_type=None, uuid=None)
             session.add(computer)
             session.commit()
 
@@ -2084,7 +2084,7 @@ class TestDjangoParity(TestMigrationsSQLA):
             session.add(group)
             session.commit()
 
-            link = DbLink(label="label", type=None)
+            link = DbLink(label='label', type=None)
             session.add(link)
             session.commit()
 
@@ -2096,7 +2096,7 @@ class TestDjangoParity(TestMigrationsSQLA):
             session.add(log)
             session.commit()
 
-            setting = DbSetting(key="key", description="", time=None)
+            setting = DbSetting(key='key', description='', time=None)
             session.add(setting)
             session.commit()
             self.setting_id = setting.id
@@ -2113,7 +2113,7 @@ class TestDjangoParity(TestMigrationsSQLA):
         DbSetting = self.get_current_table('db_dbsetting')
         DbUser = self.get_current_table('db_dbuser')
         with self.get_session() as session:
-            
+
             authinfo = session.query(DbAuthInfo).one()
             assert authinfo.auth_params is not None
             assert authinfo.enabled is not None

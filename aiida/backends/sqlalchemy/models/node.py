@@ -10,9 +10,10 @@
 # pylint: disable=import-error,no-name-in-module
 """Module to manage nodes for the SQLA backend."""
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, text
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import Column
+from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import Integer, String, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
@@ -31,7 +32,7 @@ class DbNode(Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
-    node_type = Column(String(255), default="", index=True, nullable=False)
+    node_type = Column(String(255), default='', index=True, nullable=False)
     process_type = Column(String(255), index=True)
     label = Column(
         String(255), index=True, nullable=False, default=''
@@ -79,6 +80,15 @@ class DbNode(Base):
         backref=backref('inputs_q', passive_deletes=True, lazy='dynamic'),
         lazy='dynamic',
         passive_deletes=True
+    )
+
+    __tableargs__ = (
+        Index(
+            'db_dbnode_node_type_like',
+            node_type,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
     )
 
     def __init__(self, *args, **kwargs):

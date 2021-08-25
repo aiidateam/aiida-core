@@ -9,6 +9,7 @@
 ###########################################################################
 """AiiDA Group entites"""
 from abc import ABCMeta
+from typing import ClassVar, Optional
 import warnings
 
 from aiida.common import exceptions
@@ -66,6 +67,9 @@ class GroupMeta(ABCMeta):
 
 class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
+
+    # added by metaclass
+    _type_string = ClassVar[Optional[str]]
 
     class Collection(entities.Collection):
         """Collection of Groups"""

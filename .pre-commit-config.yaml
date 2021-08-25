@@ -70,6 +70,8 @@ repos:
                 aiida/manage/manager.py|
                 aiida/manage/database/delete/nodes.py|
                 aiida/orm/querybuilder.py|
+                aiida/orm/implementation/querybuilder.py|
+                aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
                 aiida/orm/nodes/data/jsonable.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|

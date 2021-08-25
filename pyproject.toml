@@ -110,6 +110,7 @@ module = [
     'ruamel.*',
     'scipy.*',
     'sqlalchemy.*',
+    'sqlalchemy_utils.*',
     'tqdm.*',
     'wrapt.*',
 ]

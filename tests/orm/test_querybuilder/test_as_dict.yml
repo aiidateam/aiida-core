@@ -1,3 +1,4 @@
+distinct: false
 filters:
   node_1:
     extras.tag4: appl_pecoal
@@ -11,6 +12,7 @@ path:
   entity_type: ''
   joining_keyword: null
   joining_value: null
+  orm_base: node
   outerjoin: false
   tag: node_1
 project:

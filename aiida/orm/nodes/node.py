@@ -14,7 +14,7 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -60,8 +60,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
-
     # pylint: disable=too-many-public-methods
+
+    # added by metaclass
+    _plugin_type_string: ClassVar[str]
+    _query_type_string: ClassVar[str]
 
     class Collection(EntityCollection):
         """The collection of nodes."""

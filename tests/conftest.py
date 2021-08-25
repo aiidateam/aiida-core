@@ -368,8 +368,8 @@ def with_daemon():
 
 
 @pytest.fixture(scope='function')
-def dry_run_in_tmp(request, tmpdir):
-    """change to the tmp directory to do the dry run, then change back to the calling directory to avoid side-effects"""
-    os.chdir(tmpdir)
+def chdir_tmp_path(request, tmp_path):
+    """Change to a temporary directory before running the test and reverting to original working directory."""
+    os.chdir(tmp_path)
     yield
     os.chdir(request.config.invocation_dir)

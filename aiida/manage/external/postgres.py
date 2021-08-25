@@ -120,7 +120,7 @@ class Postgres(PGSU):
             return dbuser, not self.dbuser_exists(dbuser)
         create = True
         while create and self.dbuser_exists(dbuser):
-            echo.echo_info(f'Database user "{dbuser}" already exists!')
+            echo.echo_warning(f'Database user "{dbuser}" already exists!')
             if not click.confirm('Use it? '):
                 dbuser = click.prompt('New database user name: ', type=str, default=dbuser)
             else:
@@ -169,7 +169,7 @@ class Postgres(PGSU):
             return dbname, not self.db_exists(dbname)
         create = True
         while create and self.db_exists(dbname):
-            echo.echo_info(f'database {dbname} already exists!')
+            echo.echo_warning(f'database {dbname} already exists!')
             if not click.confirm('Use it (make sure it is not used by another profile)?'):
                 dbname = click.prompt('new name', type=str, default=dbname)
             else:

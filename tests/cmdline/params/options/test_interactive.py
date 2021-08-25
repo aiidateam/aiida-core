@@ -368,7 +368,7 @@ class InteractiveOptionTest(unittest.TestCase):
         self.assertIn('Invalid value', result.output)
         self.assertIn('invalid', result.output)
 
-    def test_after_callback_wrong_typ(self):
+    def test_after_callback_wrong_type(self):
         """
         scenario: InteractiveOption with a user callback
         action: invoke with invalid value of wrong type

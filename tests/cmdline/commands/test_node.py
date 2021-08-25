@@ -16,6 +16,7 @@ import tempfile
 import gzip
 
 from click.testing import CliRunner
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
@@ -597,55 +598,37 @@ class TestVerdiRehash(AiidaTestCase):
         self.assertIsNotNone(result.exception)
 
 
-class TestVerdiDelete(AiidaTestCase):
+@pytest.mark.parametrize(
+    'options', (
+        ['--verbosity', 'info'],
+        ['--verbosity', 'info', '--force'],
+        ['--create-forward'],
+        ['--call-calc-forward'],
+        ['--call-work-forward'],
+        ['--force'],
+    )
+)
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_node_delete_basics(run_cli_command, options):
     """
-    Tests for the ``verdi node delete`` command.
-    These test do not test the delete functionality, just that the command internal
-    logic does not create any problems before the call to the function.
-    For the actual functionality, see:
-    * source: manage.database.delete.nodes.py
-    * test: backends.tests.test_nodes.py
+    Testing the correct translation for the `--force` and `--verbosity` options.
+    This just checks that the calls do not except and that in all cases with the
+    force flag there is no messages.
     """
+    from aiida.common.exceptions import NotExistent
 
-    def setUp(self):
-        self.cli_runner = CliRunner()
+    node = orm.Data().store()
+    pk = node.pk
 
-    def test_basics(self):
-        """
-        Testing the correct translation for the `--force` and `--verbose` options.
-        This just checks that the calls do not except and that in all cases with the
-        force flag there is no messages.
-        """
-        from aiida.common.exceptions import NotExistent
+    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'])
 
-        newnode = orm.Data().store()
-        newnodepk = newnode.pk
-        options_list = []
-        options_list.append(['--create-forward'])
-        options_list.append(['--call-calc-forward'])
-        options_list.append(['--call-work-forward'])
-        options_list.append(['--force'])
-        options_list.append(['--verbose'])
-        options_list.append(['--verbose', '--force'])
+    # To delete the created node
+    run_cli_command(cmd_node.node_delete, [str(pk), '--force'])
 
-        for options in options_list:
-            run_options = [str(newnodepk)]
-            run_options.append('--dry-run')
-            for an_option in options:
-                run_options.append(an_option)
-            result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
-            self.assertClickResultNoException(result)
+    with pytest.raises(NotExistent):
+        orm.load_node(pk)
 
-        # To delete the created node
-        run_options = [str(newnodepk)]
-        run_options.append('--force')
-        result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
-        self.assertClickResultNoException(result)
 
-        with self.assertRaises(NotExistent):
-            orm.load_node(newnodepk)
-
-    def test_missing_pk(self):
-        """Check that no exception is raised when a non-existent pk is given (just warns)."""
-        result = self.cli_runner.invoke(cmd_node.node_delete, ['999'])
-        self.assertClickResultNoException(result)
+def test_node_delete_missing_pk(run_cli_command):
+    """Check that no exception is raised when a non-existent pk is given (just warns)."""
+    run_cli_command(cmd_node.node_delete, ['999'])

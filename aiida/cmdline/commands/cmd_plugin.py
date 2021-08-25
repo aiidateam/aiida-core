@@ -34,12 +34,12 @@ def plugin_list(entry_point_group, entry_point):
     from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 
     if entry_point_group is None:
-        echo.echo_info('Available entry point groups:')
+        echo.echo_report('Available entry point groups:')
         for group in sorted(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()):
             echo.echo(f'* {group}')
 
         echo.echo('')
-        echo.echo_info('Pass one of the groups as an additional argument to show the registered plugins')
+        echo.echo_report('Pass one of the groups as an additional argument to show the registered plugins')
         return
 
     if entry_point:
@@ -63,6 +63,6 @@ def plugin_list(entry_point_group, entry_point):
                 echo.echo(f'* {registered_entry_point}')
 
             echo.echo('')
-            echo.echo_info('Pass the entry point as an argument to display detailed information')
+            echo.echo_report('Pass the entry point as an argument to display detailed information')
         else:
             echo.echo_error(f'No plugins found for group {entry_point_group}')

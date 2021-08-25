@@ -108,8 +108,7 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('dry_run_in_tmp')
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
@@ -138,8 +137,7 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('dry_run_in_tmp')
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('calcjob_withmpi', [True, False])
 def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
     """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
@@ -373,7 +371,7 @@ class TestCalcJob(AiidaTestCase):
 
         self.assertIn('exception occurred in presubmit call', str(context.exception))
 
-    @pytest.mark.usefixtures('dry_run_in_tmp')
+    @pytest.mark.usefixtures('chdir_tmp_path')
     def test_run_local_code(self):
         """Run a dry-run with local code."""
         inputs = deepcopy(self.inputs)
@@ -389,7 +387,7 @@ class TestCalcJob(AiidaTestCase):
         for filename in self.local_code.list_object_names():
             self.assertTrue(filename in uploaded_files)
 
-    @pytest.mark.usefixtures('dry_run_in_tmp')
+    @pytest.mark.usefixtures('chdir_tmp_path')
     def test_rerunnable(self):
         """Test that setting `rerunnable` in the options results in it being set in the job template."""
         inputs = deepcopy(self.inputs)
@@ -406,7 +404,7 @@ class TestCalcJob(AiidaTestCase):
 
         assert job_tmpl['rerunnable']
 
-    @pytest.mark.usefixtures('dry_run_in_tmp')
+    @pytest.mark.usefixtures('chdir_tmp_path')
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
         import tempfile

@@ -71,7 +71,7 @@ def verdi_status(print_traceback, no_rmq):
 
     if profile is None:
         print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
-        echo.echo_info('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+        echo.echo_report('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
         return
 
     try:
@@ -155,8 +155,8 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    click.secho(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    click.secho(f"{service + ':':12s} {msg}")
+    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
+    echo.echo(f"{service + ':':12s} {msg}")
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

@@ -250,7 +250,7 @@ def export(
             )
         else:
             exported_entity_pks = defaultdict(set)
-            EXPORT_LOGGER.info('No entities were found to export')
+            EXPORT_LOGGER.report('No entities were found to export')
 
         # write mappings of groups to the nodes they contain
         if exported_entity_pks[GROUP_ENTITY_NAME]:
@@ -270,14 +270,14 @@ def export(
                 writer=writer_context
             )
 
-        EXPORT_LOGGER.info('Finalizing Export...')
+        EXPORT_LOGGER.report('Finalizing Export...')
 
     # summarize export
     export_summary = '\n  - '.join(f'{name:<6}: {len(pks)}' for name, pks in exported_entity_pks.items())
     if exported_entity_pks:
-        EXPORT_LOGGER.info('Exported Entities:\n  - ' + export_summary + '\n')
+        EXPORT_LOGGER.report('Exported Entities:\n  - ' + export_summary + '\n')
     # TODO
-    # EXPORT_LOGGER.info('Writer Information:\n %s', writer.export_info)
+    # EXPORT_LOGGER.report('Writer Information:\n %s', writer.export_info)
 
     return writer
 

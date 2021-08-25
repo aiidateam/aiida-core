@@ -124,7 +124,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         if out_compression not in allowed_compressions:
             raise ValueError(f'Output compression must be in: {allowed_compressions}')
 
-        MIGRATE_LOGGER.info('Reading archive version')
+        MIGRATE_LOGGER.report('Reading archive version')
         current_version = self._retrieve_version()
 
         # compute the migration pathway
@@ -141,10 +141,10 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
             prev_version = MIGRATE_FUNCTIONS[prev_version][0]
 
         if not pathway:
-            MIGRATE_LOGGER.info('No migration required')
+            MIGRATE_LOGGER.report('No migration required')
             return None
 
-        MIGRATE_LOGGER.info('Migration pathway: %s', ' -> '.join(pathway + [version]))
+        MIGRATE_LOGGER.report('Migration pathway: %s', ' -> '.join(pathway + [version]))
 
         # perform migrations
         if work_dir is not None:
@@ -162,7 +162,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         """Perform the migration(s) in the work directory, compress (if necessary),
         then move to the out_path (if not None).
         """
-        MIGRATE_LOGGER.info('Extracting archive to work directory')
+        MIGRATE_LOGGER.report('Extracting archive to work directory')
 
         extracted = Path(work_dir) / 'extracted'
         extracted.mkdir(parents=True)
@@ -185,7 +185,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
 
         # re-compress archive
         if out_compression != 'none':
-            MIGRATE_LOGGER.info(f"Re-compressing archive as '{out_compression}'")
+            MIGRATE_LOGGER.report(f"Re-compressing archive as '{out_compression}'")
             migrated = work_dir / 'compressed'
         else:
             migrated = extracted
@@ -199,7 +199,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
 
         if out_path is not None:
             # move to final location
-            MIGRATE_LOGGER.info('Moving archive to: %s', out_path)
+            MIGRATE_LOGGER.report('Moving archive to: %s', out_path)
             self._move_file(migrated, Path(out_path))
 
         return Path(out_path) if out_path else migrated

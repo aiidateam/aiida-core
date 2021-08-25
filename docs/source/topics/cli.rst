@@ -102,6 +102,45 @@ Note that the specified profile will be used for this and *only* this command.
 Use ``verdi profile setdefault`` in order to permanently change the default profile.
 
 
+.. _topics:cli:verbosity:
+
+Verbosity
+=========
+All ``verdi`` commands have the ``-v/--verbosity`` option, which allows to control the verbosity of the output that is printed by the command.
+The option takes a value that is known as the log level and all messages that are emitted with an inferior log level will be suppressed.
+The valid values in order of increasing log level are: `NOTSET`, `DEBUG`, `INFO`, `REPORT`, `WARNING`, `ERROR` and `CRITICAL`.
+For example, if the log level is set to ``ERROR``, only messages with the ``ERROR`` and ``CRITICAL`` level will be shown.
+The choice for these log level values comes directly from `Python's built-in logging module <https://docs.python.org/3/library/logging.html>`_.
+The ``REPORT`` level is a log level that is defined and added by AiiDA that sits between the ``INFO`` and ``WARNING`` level, and is the default log level.
+
+The verbosity option is case-insensitive, i.e., ``--verbosity debug`` and ``--verbosity DEBUG`` are identical.
+The option can be passed at any subcommand level, for example:
+
+.. code:: console
+
+    verdi process list --verbosity debug
+
+is identical to
+
+.. code:: console
+
+    verdi --verbosity debug process list
+
+When the option is specified multiple times, only the last value will be considered.
+The default value for the logging level can be changed permanently through the configuration system.
+For example, to set the default log level to ``WARNING``,
+
+.. code:: console
+
+    verdi config set logging.aiida_loglevel WARNING
+
+This is identical to passing ``--verbosity WARNING`` manually to each invoked command.
+
+.. warning:: Setting the configuration option does not just affect the verbosity of the command line, but the logging for all of AiiDA.
+    For example, it also affects the verbosity of process reports, such as those of work chains.
+    If the log level is set above ``REPORT``, the reports of work chains will no longer be logged.
+
+
 .. _topics:cli:identifiers:
 
 Identifiers

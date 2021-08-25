@@ -7,24 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Commandline utility functions."""
-# AUTO-GENERATED
+"""Tests for ``verdi devel``."""
+from aiida.cmdline.commands import cmd_devel
+from aiida.orm import Node
 
-# AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
-
-from .ascii_vis import *
-from .common import *
-from .decorators import *
-
-__all__ = (
-    'dbenv',
-    'format_call_graph',
-    'is_verbose',
-    'only_if_daemon_running',
-    'with_dbenv',
-)
-
-# yapf: enable
+def test_run_sql(run_cli_command):
+    """Test ``verdi devel run-sql``."""
+    options = ['SELECT COUNT(*) FROM db_dbnode;']
+    result = run_cli_command(cmd_devel.devel_run_sql, options)
+    assert str(Node.objects.count()) in result.output, result.output

@@ -132,7 +132,7 @@ def detect_duplicate_uuid(table, apply_patch):
         echo.echo_critical(f'integrity check failed: {str(exception)}')
     else:
         for message in messages:
-            echo.echo_info(message)
+            echo.echo_report(message)
 
         if apply_patch:
             echo.echo_success('integrity patch completed')
@@ -197,28 +197,28 @@ def detect_invalid_nodes():
 
 
 @verdi_database.command('summary')
-@options.VERBOSE()
-def database_summary(verbose):
+def database_summary():
     """Summarise the entities in the database."""
+    from aiida.cmdline import is_verbose
     from aiida.orm import QueryBuilder, Node, Group, Computer, Comment, Log, User
     data = {}
 
     # User
     query_user = QueryBuilder().append(User, project=['email'])
     data['Users'] = {'count': query_user.count()}
-    if verbose:
+    if is_verbose():
         data['Users']['emails'] = query_user.distinct().all(flat=True)
 
     # Computer
     query_comp = QueryBuilder().append(Computer, project=['label'])
     data['Computers'] = {'count': query_comp.count()}
-    if verbose:
+    if is_verbose():
         data['Computers']['labels'] = query_comp.distinct().all(flat=True)
 
     # Node
     count = QueryBuilder().append(Node).count()
     data['Nodes'] = {'count': count}
-    if verbose:
+    if is_verbose():
         node_types = QueryBuilder().append(Node, project=['node_type']).distinct().all(flat=True)
         data['Nodes']['node_types'] = node_types
         process_types = QueryBuilder().append(Node, project=['process_type']).distinct().all(flat=True)
@@ -227,7 +227,7 @@ def database_summary(verbose):
     # Group
     query_group = QueryBuilder().append(Group, project=['type_string'])
     data['Groups'] = {'count': query_group.count()}
-    if verbose:
+    if is_verbose():
         data['Groups']['type_strings'] = query_group.distinct().all(flat=True)
 
     # Comment

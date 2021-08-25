@@ -10,8 +10,9 @@
 """`verdi devel` commands."""
 import sys
 
+import click
+
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -21,8 +22,7 @@ def verdi_devel():
 
 
 @verdi_devel.command('check-load-time')
-@options.VERBOSE()
-def devel_check_load_time(verbose):
+def devel_check_load_time():
     """Check for common indicators that slowdown `verdi`.
 
     Check for environment properties that negatively affect the responsiveness of the `verdi` command line interface.
@@ -37,8 +37,7 @@ def devel_check_load_time(verbose):
 
     loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
     aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
-    if verbose:
-        echo.echo(f'aiida modules loaded:\n- {aiida_modules_str}')
+    echo.echo_info(f'aiida modules loaded:\n- {aiida_modules_str}')
 
     manager = get_manager()
 
@@ -96,9 +95,23 @@ def devel_validate_plugins():
     echo.echo_success('all registered plugins could successfully loaded.')
 
 
+@verdi_devel.command('run-sql')
+@click.argument('sql', type=str)
+@decorators.with_dbenv()
+def devel_run_sql(sql):
+    """Run a raw SQL command on the database."""
+    from aiida.manage.manager import get_manager
+    manager = get_manager()
+    result = manager.get_backend().execute_raw(sql)
+    if isinstance(result, (list, tuple)):
+        for row in result:
+            echo.echo(str(row))
+    else:
+        echo.echo(str(result))
+
+
 @verdi_devel.command('play', hidden=True)
 def devel_play():
     """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
-
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')

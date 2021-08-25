@@ -98,7 +98,7 @@ def devel_validate_plugins():
 @verdi_devel.command('run-sql')
 @click.argument('sql', type=str)
 @decorators.with_dbenv()
-def devel_sql(sql):
+def devel_run_sql(sql):
     """Run a raw SQL command on the database."""
     from aiida.manage.manager import get_manager
     manager = get_manager()
@@ -114,5 +114,4 @@ def devel_sql(sql):
 def devel_play():
     """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
-
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')

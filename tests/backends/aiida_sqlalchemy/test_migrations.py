@@ -2042,3 +2042,128 @@ class TestEntryPointCorePrefixMigration(TestMigrationsSQLA):
 
             finally:
                 session.close()
+
+
+class TestDjangoParity(TestMigrationsSQLA):
+    """Test migrations to bring parity with with Django backend (rev: 0048)."""
+
+    migrate_from = '535039300e4a'
+    migrate_to = '1de112340b17'
+
+    def setUpBeforeMigration(self):
+        """Generate an initial database."""
+        DbAuthInfo = self.get_current_table('db_dbauthinfo')
+        DbComment = self.get_current_table('db_dbcomment')
+        DbComputer = self.get_current_table('db_dbcomputer')
+        DbGroup = self.get_current_table('db_dbgroup')
+        DbLink = self.get_current_table('db_dblink')
+        DbLog = self.get_current_table('db_dblog')
+        DbNode = self.get_current_table('db_dbnode')
+        DbSetting = self.get_current_table('db_dbsetting')
+        DbUser = self.get_current_table('db_dbuser')
+        with self.get_session() as session:
+
+            user = DbUser(email=None, first_name=None, last_name=None, institution=None)
+            session.add(user)
+            session.commit()
+            self.user_id = user.id
+
+            authinfo = DbAuthInfo(metadata=None, auth_params=None, enabled=None)
+            session.add(authinfo)
+            session.commit()
+
+            comment = DbComment(content=None, ctime=None, mtime=None, uuid=None)
+            session.add(comment)
+            session.commit()
+
+            computer = DbComputer(label="label", description=None, hostname=None, metadata=None, scheduler_type=None, transport_type=None, uuid=None)
+            session.add(computer)
+            session.commit()
+
+            group = DbGroup(extras={}, description=None, label=None, time=None, type_string=None, uuid=None)
+            session.add(group)
+            session.commit()
+
+            link = DbLink(label="label", type=None)
+            session.add(link)
+            session.commit()
+
+            node = DbNode(user_id=user.id, label=None, description=None, node_type=None, ctime=None, mtime=None, uuid=None)
+            session.add(node)
+            session.commit()
+
+            log = DbLog(dbnode_id=node.id, levelname=None, loggername=None, message=None, metadata=None, time=None, uuid=None)
+            session.add(log)
+            session.commit()
+
+            setting = DbSetting(key="key", description="", time=None)
+            session.add(setting)
+            session.commit()
+            self.setting_id = setting.id
+
+    def test_migration(self):
+        """Verify that the column was successfully renamed."""
+        DbAuthInfo = self.get_current_table('db_dbauthinfo')
+        DbComment = self.get_current_table('db_dbcomment')
+        DbComputer = self.get_current_table('db_dbcomputer')
+        DbGroup = self.get_current_table('db_dbgroup')
+        DbLink = self.get_current_table('db_dblink')
+        DbLog = self.get_current_table('db_dblog')
+        DbNode = self.get_current_table('db_dbnode')
+        DbSetting = self.get_current_table('db_dbsetting')
+        DbUser = self.get_current_table('db_dbuser')
+        with self.get_session() as session:
+            
+            authinfo = session.query(DbAuthInfo).one()
+            assert authinfo.auth_params is not None
+            assert authinfo.enabled is not None
+            assert authinfo.metadata is not None
+
+            comment = session.query(DbComment).one()
+            assert comment.content is not None
+            assert comment.ctime is not None
+            assert comment.mtime is not None
+            assert comment.uuid is not None
+
+            computer = session.query(DbComputer).one()
+            assert computer.description is not None
+            assert computer.hostname is not None
+            assert computer.metadata is not None
+            assert computer.scheduler_type is not None
+            assert computer.transport_type is not None
+            assert computer.uuid is not None
+
+            group = session.query(DbGroup).one()
+            assert group.description is not None
+            assert group.label is not None
+            assert group.time is not None
+            assert group.type_string is not None
+            assert group.uuid is not None
+
+            link = session.query(DbLink).one()
+            assert link.type is not None
+
+            log = session.query(DbLog).one()
+            assert log.levelname is not None
+            assert log.loggername is not None
+            assert log.message is not None
+            assert log.metadata is not None
+            assert log.time is not None
+            assert log.uuid is not None
+
+            node = session.query(DbNode).one()
+            assert node.description is not None
+            assert node.label is not None
+            assert node.node_type is not None
+            assert node.ctime is not None
+            assert node.mtime is not None
+            assert node.uuid is not None
+
+            setting = session.query(DbSetting).filter(DbSetting.id == self.setting_id).one()
+            assert setting.time is not None
+
+            user = session.query(DbUser).filter(DbUser.id == self.user_id).one()
+            assert user.email is not None
+            assert user.first_name is not None
+            assert user.last_name is not None
+            assert user.institution is not None

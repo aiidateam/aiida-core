@@ -445,7 +445,11 @@ def get_duplicate_uuids(table):
     """
     from aiida.manage.manager import get_manager
     backend = get_manager().get_backend()
-    return backend.query_manager.get_duplicate_uuids(table=table)
+    query = f"""
+        SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {table})
+        AS s WHERE c > 1
+        """
+    return backend.execute_raw(query)
 
 
 def verify_uuid_uniqueness(table):
@@ -473,7 +477,10 @@ def apply_new_uuid_mapping(table, mapping):
     """
     from aiida.manage.manager import get_manager
     backend = get_manager().get_backend()
-    backend.query_manager.apply_new_uuid_mapping(table, mapping)
+    for pk, uuid in mapping.items():
+        query = f"""UPDATE {table} SET uuid = '{uuid}' WHERE id = {pk}"""
+        with backend.cursor() as cursor:
+            cursor.execute(query)
 
 
 def deduplicate_uuids(table=None):

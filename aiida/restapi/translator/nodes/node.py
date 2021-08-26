@@ -594,9 +594,7 @@ class NodeTranslator(BaseTranslator):
 
     def get_statistics(self, user_pk=None):
         """Return statistics for a given node"""
-
-        qmanager = self._backend.query_manager
-        return qmanager.get_creation_statistics(user_pk=user_pk)
+        return self._backend.query().get_creation_statistics(user_pk=user_pk)
 
     @staticmethod
     def get_namespace(user_pk=None, count_nodes=False):

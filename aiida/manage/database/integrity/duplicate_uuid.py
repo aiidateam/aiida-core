@@ -10,7 +10,6 @@
 """Generic functions to verify the integrity of the database and optionally apply patches to fix problems."""
 
 from aiida.common import exceptions
-from aiida.manage.manager import get_manager
 
 __all__ = ('verify_uuid_uniqueness', 'get_duplicate_uuids', 'deduplicate_uuids', 'TABLES_UUID_DEDUPLICATION')
 
@@ -23,8 +22,8 @@ def get_duplicate_uuids(table):
     :param table: database table with uuid column, e.g. 'db_dbnode'
     :return: list of tuples of (id, uuid) of rows with duplicate UUIDs
     """
-    backend = get_manager().get_backend()
-    return backend.query_manager.get_duplicate_uuids(table=table)
+    from aiida.backends.general.migrations.utils import get_duplicate_uuids as func
+    return func(table=table)
 
 
 def verify_uuid_uniqueness(table):
@@ -50,8 +49,8 @@ def apply_new_uuid_mapping(table, mapping):
     :param table: database table with uuid column, e.g. 'db_dbnode'
     :param mapping: dictionary of UUIDs mapped onto a pk
     """
-    backend = get_manager().get_backend()
-    backend.query_manager.apply_new_uuid_mapping(table, mapping)
+    from aiida.backends.general.migrations.utils import apply_new_uuid_mapping as func
+    return func(table=table, mapping=mapping)
 
 
 def deduplicate_uuids(table=None, dry_run=True):

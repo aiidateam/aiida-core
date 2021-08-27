@@ -80,11 +80,12 @@ class ModelWrapper:
             self._flush(fields=fields)
 
     def is_saved(self):
-        """Retun whether the wrapped model instance is saved in the database.
+        """Return whether the wrapped model instance is saved in the database.
 
         :return: boolean, True if the model is saved in the database, False otherwise
         """
-        return self._model.id is not None
+        with self._model.session.no_autoflush:
+            return self._model.id is not None
 
     def save(self):
         """Store the model instance.

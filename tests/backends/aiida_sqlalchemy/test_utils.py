@@ -50,9 +50,9 @@ def database_exists(url):
     url = copy(make_url(url))
     database = url.database
     if url.drivername.startswith('postgresql'):
-        url.database = 'template1'
+        url = url.set(database='template1')
     else:
-        url.database = None
+        url = url.set(database=None)
 
     engine = sa.create_engine(url)  # pylint: disable=no-member
 
@@ -89,7 +89,7 @@ def create_database(url, encoding='utf8'):
     database = url.database
 
     # A default PostgreSQL database to connect
-    url.database = 'template1'
+    url = url.set(database='template1')
 
     engine = sa.create_engine(url)  # pylint: disable=no-member
 

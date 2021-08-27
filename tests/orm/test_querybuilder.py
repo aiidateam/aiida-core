@@ -372,7 +372,7 @@ class TestBasic:
         assert qb.count() == 1
 
         # Test the hashing:
-        query1 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
+        query1 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
         assert qb.count() == 0
 
@@ -381,8 +381,8 @@ class TestBasic:
         with pytest.raises(MultipleObjectsError):
             orm.QueryBuilder().append(orm.Node).one()
 
-        query2 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
-        query3 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
+        query2 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
+        query3 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
 
         assert id(query1) != id(query2)
         assert id(query2) == id(query3)
@@ -905,7 +905,7 @@ class TestAttributes:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-class QueryBuilderLimitOffsetsTest:
+class TestQueryBuilderLimitOffsets:
 
     def test_ordering_limits_offsets_of_results_general(self):
         # Creating 10 nodes with an attribute that can be ordered
@@ -973,7 +973,7 @@ class QueryBuilderLimitOffsetsTest:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-class QueryBuilderJoinsTests:
+class TestQueryBuilderJoins:
 
     def test_joins1(self):
         # Creating n1, who will be a parent:

@@ -15,6 +15,7 @@ import os
 
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import column
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.general.migrations import utils
@@ -836,11 +837,11 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
                 # Get the node id of the log record referencing the node and verify that it is the correct one
                 dbnode_id_1 = session.query(DbLog).filter(
-                    DbLog.id == self.to_check['CalculationNode'][1]).with_entities('dbnode_id').one()[0]
+                    DbLog.id == self.to_check['CalculationNode'][1]).with_entities(column('dbnode_id')).one()[0]
                 self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], 'The the referenced node is not '
                                  'the expected one')
                 dbnode_id_2 = session.query(DbLog).filter(
-                    DbLog.id == self.to_check['CalculationNode'][3]).with_entities('dbnode_id').one()[0]
+                    DbLog.id == self.to_check['CalculationNode'][3]).with_entities(column('dbnode_id')).one()[0]
                 self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], 'The the referenced node is not '
                                  'the expected one')
             finally:

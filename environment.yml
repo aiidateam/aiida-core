@@ -14,7 +14,7 @@ dependencies:
 - click-completion~=0.5.1
 - click-config-file~=0.6.0
 - click-spinner~=0.1.8
-- click~=7.1
+- click>=8.0.3,~=8.0
 - disk-objectstore~=0.6.0
 - django~=2.2
 - python-graphviz~=0.13

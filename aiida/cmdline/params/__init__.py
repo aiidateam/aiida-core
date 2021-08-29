@@ -40,7 +40,6 @@ __all__ = (
     'ProcessParamType',
     'ProfileParamType',
     'ShebangParamType',
-    'TestModuleParamType',
     'UserParamType',
     'WorkflowParamType',
 )

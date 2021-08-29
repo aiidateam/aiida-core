@@ -9,7 +9,6 @@
 ###########################################################################
 """`verdi run` command."""
 import contextlib
-import functools
 import os
 import sys
 
@@ -38,14 +37,14 @@ def update_environment(argv):
         sys.path = _path
 
 
-def validate_entrypoint_string(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
+def validate_entry_point_strings(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
     """Validate that `value` is a valid entrypoint string."""
     from aiida.orm import autogroup
 
     try:
         autogroup.Autogroup.validate(value)
-    except Exception as exc:
-        raise click.BadParameter(f'{str(exc)} ({value})')
+    except (TypeError, ValueError) as exc:
+        raise click.BadParameter(f'{str(exc)}: `{value}`')
 
     return value
 
@@ -65,18 +64,20 @@ def validate_entrypoint_string(ctx, param, value):  # pylint: disable=unused-arg
 @click.option(
     '-e',
     '--exclude',
+    type=str,
     cls=MultipleValueOption,
     default=None,
     help='Exclude these classes from auto grouping (use full entrypoint strings).',
-    callback=functools.partial(validate_entrypoint_string)
+    callback=validate_entry_point_strings
 )
 @click.option(
     '-i',
     '--include',
+    type=str,
     cls=MultipleValueOption,
     default=None,
-    help='Include these classes from auto grouping  (use full entrypoint strings or "all").',
-    callback=validate_entrypoint_string
+    help='Include these classes from auto grouping (use full entrypoint strings or "all").',
+    callback=validate_entry_point_strings
 )
 @decorators.with_dbenv()
 def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, include):

@@ -11,8 +11,8 @@
 import functools
 
 import click
+from importlib_metadata import EntryPoint
 
-from aiida.cmdline.utils import decorators
 from aiida.common import exceptions
 from aiida.plugins import factories
 from aiida.plugins.entry_point import (
@@ -191,13 +191,7 @@ class PluginParamType(EntryPointType):
             if entry_point_format == EntryPointFormat.PARTIAL:
                 group = ENTRY_POINT_GROUP_PREFIX + group
 
-            if group not in self.groups:
-                raise ValueError('entry point group {} is not supported by this parameter')
-
-        elif entry_point_format == EntryPointFormat.MINIMAL and len(self.groups) == 1:
-
-            name = entry_point_string
-            group = self.groups[0]
+            self.validate_entry_point_group(group)
 
         elif entry_point_format == EntryPointFormat.MINIMAL:
 
@@ -231,19 +225,29 @@ class PluginParamType(EntryPointType):
         except exceptions.EntryPointError as exception:
             raise ValueError(exception)
 
-    @decorators.with_dbenv()
+    def validate_entry_point_group(self, group):
+        if group not in self.groups:
+            raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
+
     def convert(self, value, param, ctx):
         """
         Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
-        value = super().convert(value, param, ctx)
+        # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
+        # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
+        if isinstance(value, EntryPoint):
+            try:
+                self.validate_entry_point_group(value.group)
+            except ValueError as exception:
+                raise click.BadParameter(str(exception))
+            return value
 
-        if not value:
-            raise click.BadParameter('plugin name cannot be empty')
+        value = super().convert(value, param, ctx)
 
         try:
             entry_point = self.get_entry_point_from_string(value)
+            self.validate_entry_point_group(entry_point.group)
         except ValueError as exception:
             raise click.BadParameter(str(exception))
 

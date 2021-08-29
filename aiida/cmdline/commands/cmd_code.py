@@ -128,8 +128,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
     code_builder = ctx.code_builder
     for key, value in kwargs.items():
-        if value is not None:
-            setattr(code_builder, key, value)
+        setattr(code_builder, key, value)
     new_code = code_builder.new()
 
     try:

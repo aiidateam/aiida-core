@@ -324,7 +324,7 @@
                     "type": "object",
                     "default": {
                         "heartbeat": 600,
-                        "consumer_timeout": false
+                        "consumer_timeout": 1
                     },
                     "properties": {
                         "heartbeat": {
@@ -336,7 +336,7 @@
                          "consumer_timeout": {
                             "description": "A timeout for a daemon to complete a task",
                             "type": ["boolean", "integer"],
-                            "default": false,
+                            "default": 1,
                             "minimum": 0
                         }
                     }

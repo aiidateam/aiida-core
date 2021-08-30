@@ -323,13 +323,20 @@
                     "description": "RabbitMQ arguments that will be encoded as query parameters",
                     "type": "object",
                     "default": {
-                        "heartbeat": 600
+                        "heartbeat": 600,
+                        "consumer_timeout": false
                     },
                     "properties": {
                         "heartbeat": {
                             "description": "After how many seconds the peer TCP connection should be considered unreachable",
                             "type": "integer",
                             "default": 600,
+                            "minimum": 0
+                        },
+                         "consumer_timeout": {
+                            "description": "A timeout for a daemon to complete a task",
+                            "type": ["boolean", "integer"],
+                            "default": false,
                             "minimum": 0
                         }
                     }

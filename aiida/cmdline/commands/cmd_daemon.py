@@ -61,7 +61,7 @@ def start(foreground, number):
 
     client = get_daemon_client()
 
-    echo.echo('Starting the daemon... ', nl=False)
+    echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
 
     if foreground:
         command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground', str(number)]

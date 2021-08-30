@@ -13,8 +13,6 @@ import pathlib
 import click
 import pytest
 
-from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
-
 
 @pytest.fixture
 def run_cli_command():
@@ -35,6 +33,14 @@ def run_cli_command():
         """
         import traceback
 
+        from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
+        from aiida.common import AttributeDict
+        from aiida.manage.configuration import get_config, get_profile
+
+        config = get_config()
+        profile = get_profile()
+        obj = AttributeDict({'config': config, 'profile': profile})
+
         # Convert any ``pathlib.Path`` objects in the ``options`` to their absolute filepath string representation.
         # This is necessary because the ``invoke`` command does not support these path objects.
         options = [str(option) if isinstance(option, pathlib.Path) else option for option in options or []]
@@ -45,7 +51,7 @@ def run_cli_command():
         command = VerdiCommandGroup.add_verbosity_option(command)
 
         runner = click.testing.CliRunner()
-        result = runner.invoke(command, options)
+        result = runner.invoke(command, options, obj=obj)
 
         if raises:
             assert result.exception is not None, result.output

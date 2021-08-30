@@ -152,6 +152,32 @@ def generate_calculation_node():
 
 
 @pytest.fixture
+def isolated_config(monkeypatch):
+    """Return a copy of the currently loaded config and set that as the loaded config.
+
+    This allows a test to change the config during the test, and after the test the original config will be restored
+    making the changes of the test fully temporary. In addition, the ``Config._backup`` method is monkeypatched to be a
+    no-op in order to prevent that backup files are written to disk when the config is stored. Storing the config after
+    changing it in tests maybe necessary if a command is invoked that will be reading the config from disk in another
+    Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
+    """
+    import copy
+    from aiida.manage import configuration
+
+    monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
+
+    current_config = configuration.CONFIG
+    configuration.CONFIG = copy.deepcopy(current_config)
+    configuration.CONFIG.set_default_profile(configuration.PROFILE.name, overwrite=True)
+
+    try:
+        yield configuration.CONFIG
+    finally:
+        configuration.CONFIG = current_config
+        configuration.CONFIG.store()
+
+
+@pytest.fixture
 def empty_config(tmp_path) -> Config:
     """Create a temporary configuration instance.
 
@@ -365,6 +391,20 @@ def with_daemon():
 
     # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
     os.kill(daemon.pid, signal.SIGTERM)
+
+
+@pytest.fixture
+def daemon_client():
+    """Return a daemon client instance and stop any daemon instances running for the test profile after the test."""
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.manage.configuration import get_profile
+
+    client = DaemonClient(get_profile())
+
+    try:
+        yield client
+    finally:
+        client.stop_daemon(wait=True)
 
 
 @pytest.fixture(scope='function')

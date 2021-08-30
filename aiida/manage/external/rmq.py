@@ -71,7 +71,7 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
 
     if 'heartbeat' not in kwargs:
         kwargs['heartbeat'] = BROKER_DEFAULTS.heartbeat
-        
+
     kwargs = {'heartbeat': 600, 'consumer_timeout': 1}
 
     scheme = protocol or BROKER_DEFAULTS.protocol

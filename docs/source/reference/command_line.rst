@@ -80,24 +80,6 @@ Below is a list with all available subcommands.
       show       Display detailed information for a code.
 
 
-.. _reference:command-line:verdi-completioncommand:
-
-``verdi completioncommand``
----------------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS]
-
-      Return the code to activate bash completion.
-
-      This command is mainly for back-compatibility.
-      You should rather use: eval "$(_VERDI_COMPLETE=source verdi)"
-
-    Options:
-      --help  Show this message and exit.
-
-
 .. _reference:command-line:verdi-computer:
 
 ``verdi computer``

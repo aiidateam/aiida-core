@@ -120,6 +120,7 @@ py:class click.types.StringParamType
 py:class click.types.Path
 py:class click.types.File
 py:meth  click.Option.get_default
+py:meth  fail
 
 py:class concurrent.futures._base.TimeoutError
 

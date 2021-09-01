@@ -3,8 +3,9 @@
 import contextlib
 import os
 import shutil
-import typing
 import uuid
+
+from typing import Optional, Iterator, BinaryIO, List, Iterable
 
 from .abstract import AbstractRepositoryBackend
 
@@ -16,7 +17,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     def __init__(self):
         from aiida.common.folders import SandboxFolder
-        self._sandbox: typing.Optional[SandboxFolder] = None
+        self._sandbox: Optional[SandboxFolder] = None
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
@@ -29,7 +30,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         self.erase()
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository.
 
         .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
@@ -70,7 +71,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
             finally:
                 self._sandbox = None
 
-    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -85,16 +86,15 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
         return key
 
-    def has_object(self, key: str) -> bool:
-        """Return whether the repository has an object with the given key.
-
-        :param key: fully qualified identifier for the object within the repository.
-        :return: True if the object exists, False otherwise.
-        """
-        return key in os.listdir(self.sandbox.abspath)
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        result = list()
+        dirlist = os.listdir(self.sandbox.abspath)
+        for key in keys:
+            result.append(key in dirlist)
+        return result
 
     @contextlib.contextmanager
-    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
+    def open(self, key: str) -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -110,12 +110,10 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle
 
-    def delete_object(self, key: str):
-        """Delete the object from the repository.
+    def delete_objects(self, keys: List[str]) -> None:
+        super().delete_objects(keys)
+        for key in keys:
+            os.remove(os.path.join(self.sandbox.abspath, key))
 
-        :param key: fully qualified identifier for the object within the repository.
-        :raise FileNotFoundError: if the file does not exist.
-        :raise OSError: if the file could not be deleted.
-        """
-        super().delete_object(key)
-        os.remove(os.path.join(self.sandbox.abspath, key))
+    def list_objects(self) -> Iterable[str]:
+        return self.sandbox.get_content_list()

@@ -15,7 +15,8 @@ import io
 import os
 import pathlib
 import re
-import typing
+
+from typing import Union, Optional, Dict, List, Iterable
 
 from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
@@ -42,8 +43,8 @@ class LazyFile(File):
         self,
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
-        key: typing.Union[str, None, LazyOpener] = None,
-        objects: typing.Dict[str, 'File'] = None
+        key: Union[str, None, LazyOpener] = None,
+        objects: Dict[str, 'File'] = None
     ):
         # pylint: disable=super-init-not-called
         if not isinstance(name, str):
@@ -86,7 +87,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     """
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository.
 
         .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
@@ -94,35 +95,25 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         return None
 
     def initialise(self, **kwargs) -> None:
-        """Initialise the repository if it hasn't already been initialised.
-
-        :param kwargs: parameters for the initialisation.
-        """
         raise NotImplementedError()
 
     @property
     def is_initialised(self) -> bool:
-        """Return whether the repository has been initialised."""
         return True
 
     def erase(self):
         raise NotImplementedError()
 
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
-        """Store the byte contents of a file in the repository.
-
-        :param handle: filelike object with the byte content to be stored.
-        :return: the generated fully qualified identifier for the object within the repository.
-        :raises TypeError: if the handle is not a byte stream.
-        """
         return LazyOpener(handle.name)
 
-    def has_object(self, key: str) -> bool:
-        """Return whether the repository has an object with the given key.
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        raise NotImplementedError()
 
-        :param key: fully qualified identifier for the object within the repository.
-        :return: True if the object exists, False otherwise.
-        """
+    def delete_objects(self, keys: List[str]) -> None:
+        raise NotImplementedError()
+
+    def list_objects(self) -> Iterable[str]:
         raise NotImplementedError()
 
 

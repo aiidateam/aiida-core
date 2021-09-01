@@ -10,7 +10,8 @@ import contextlib
 import hashlib
 import io
 import pathlib
-import typing
+
+from typing import Union, Optional, Iterator, BinaryIO, List, Iterable
 
 from aiida.common.hashing import chunked_file_hash
 
@@ -30,7 +31,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository."""
 
     @abc.abstractmethod
@@ -58,7 +59,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def is_readable_byte_stream(handle) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
 
-    def put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def put_object_from_filelike(self, handle: BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -70,10 +71,10 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         return self._put_object_from_filelike(handle)
 
     @abc.abstractmethod
-    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         pass
 
-    def put_object_from_file(self, filepath: typing.Union[str, pathlib.Path]) -> str:
+    def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
 
         :param filepath: absolute path of file whose contents to copy to the repository.
@@ -84,15 +85,33 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return self.put_object_from_filelike(handle)
 
     @abc.abstractmethod
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        """Return whether the repository has an object with the given key.
+
+        :param keys:
+            list of fully qualified identifiers for objects within the repository.
+        :return:
+            list of logicals, in the same order as the keys provided, with value True if the respective
+            object exists and False otherwise.
+        """
+
     def has_object(self, key: str) -> bool:
         """Return whether the repository has an object with the given key.
 
         :param key: fully qualified identifier for the object within the repository.
         :return: True if the object exists, False otherwise.
         """
+        return self.has_objects([key])[0]
+
+    @abc.abstractmethod
+    def list_objects(self) -> Iterable[str]:
+        """Return iterable that yeilds all available objects by key.
+
+        :return: An iterable for all the available object keys.
+        """
 
     @contextlib.contextmanager
-    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
+    def open(self, key: str) -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -130,12 +149,27 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         with self.open(key) as handle:  # pylint: disable=not-context-manager
             return chunked_file_hash(handle, hashlib.sha256)
 
-    def delete_object(self, key: str):
+    @abc.abstractmethod
+    def delete_objects(self, keys: List[str]) -> None:
+        """Delete the objects from the repository.
+
+        :param keys: list of fully qualified identifiers for the objects within the repository.
+        :raise FileNotFoundError: if any of the files does not exist.
+        :raise OSError: if any of the files could not be deleted.
+        """
+        keys_exist = self.has_objects(keys)
+        if not all(keys_exist):
+            error_message = 'some of the keys provided do not correspond to any object in the repository:\n'
+            for indx, key_exists in enumerate(keys_exist):
+                if not key_exists:
+                    error_message += f' > object with key `{keys[indx]}` does not exist.\n'
+            raise FileNotFoundError(error_message)
+
+    def delete_object(self, key: str) -> None:
         """Delete the object from the repository.
 
         :param key: fully qualified identifier for the object within the repository.
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be deleted.
         """
-        if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+        return self.delete_objects([key])

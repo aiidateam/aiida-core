@@ -3,7 +3,8 @@
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
 import io
 import tempfile
-import typing
+
+from typing import Optional, BinaryIO, List, Iterable
 
 import pytest
 
@@ -17,7 +18,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
         return True
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         return None
 
     def initialise(self, **kwargs) -> None:
@@ -30,7 +31,16 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def is_initialised(self) -> bool:
         return True
 
-    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+        pass
+
+    def delete_objects(self, keys: List[str]) -> None:
+        pass
+
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        pass
+
+    def list_objects(self) -> Iterable[str]:
         pass
 
 

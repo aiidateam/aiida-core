@@ -179,7 +179,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
         For the :py:class:`~aiida.orm.Node` base class, this check is always valid.
         Subclasses can override this method to perform additional checks
-        and should usually call ``super()._validate()``!
+        and should usually call ``super()._validate()`` first!
 
         This method is called automatically before storing the node in the DB.
         Therefore, use :py:meth:`~aiida.orm.entities.Entity.get_attribute()` and similar methods that automatically

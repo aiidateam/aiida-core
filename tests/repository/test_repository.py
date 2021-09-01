@@ -281,17 +281,17 @@ def test_list_objects(repository, generate_directory):
 
     objects = repository.list_objects()
     assert len(objects) == 3
-    assert all([isinstance(obj, File) for obj in objects])
+    assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['file_a', 'path', 'relative']
 
     objects = repository.list_objects('path')
     assert len(objects) == 1
-    assert all([isinstance(obj, File) for obj in objects])
+    assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['sub']
 
     objects = repository.list_objects('relative')
     assert len(objects) == 1
-    assert all([isinstance(obj, File) for obj in objects])
+    assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['file_b']
 
 

@@ -18,6 +18,7 @@ import warnings
 import pytest
 
 from aiida import orm, plugins
+from aiida.orm.querybuilder import _get_ormclass
 from aiida.common.links import LinkType
 from aiida.manage import configuration
 
@@ -40,52 +41,49 @@ class TestBasic:
         """
         This tests the classifications of the QueryBuilder
         """
-        # pylint: disable=protected-access
         from aiida.common.exceptions import DbContentError
-
-        qb = orm.QueryBuilder()
 
         # Asserting that improper declarations of the class type raise an error
         with pytest.raises(DbContentError):
-            qb._get_ormclass(None, 'data')
+            _get_ormclass(None, 'data')
         with pytest.raises(DbContentError):
-            qb._get_ormclass(None, 'data.Data')
+            _get_ormclass(None, 'data.Data')
         with pytest.raises(DbContentError):
-            qb._get_ormclass(None, '.')
+            _get_ormclass(None, '.')
 
         # Asserting that the query type string and plugin type string are returned:
         for _cls, classifiers in (
-            qb._get_ormclass(orm.StructureData, None),
-            qb._get_ormclass(None, 'data.structure.StructureData.'),
+            _get_ormclass(orm.StructureData, None),
+            _get_ormclass(None, 'data.core.structure.StructureData.'),
         ):
-            assert classifiers['ormclass_type_string'] == orm.StructureData._plugin_type_string  # pylint: disable=no-member
+            assert classifiers[0].ormclass_type_string == orm.StructureData._plugin_type_string  # pylint: disable=no-member,protected-access
 
         for _cls, classifiers in (
-            qb._get_ormclass(orm.Group, None),
-            qb._get_ormclass(None, 'group.core'),
-            qb._get_ormclass(None, 'Group.core'),
+            _get_ormclass(orm.Group, None),
+            _get_ormclass(None, 'group.core'),
+            _get_ormclass(None, 'Group.core'),
         ):
-            assert classifiers['ormclass_type_string'].startswith('group')
+            assert classifiers[0].ormclass_type_string.startswith('group')
 
         for _cls, classifiers in (
-            qb._get_ormclass(orm.User, None),
-            qb._get_ormclass(None, 'user'),
-            qb._get_ormclass(None, 'User'),
+            _get_ormclass(orm.User, None),
+            _get_ormclass(None, 'user'),
+            _get_ormclass(None, 'User'),
         ):
-            assert classifiers['ormclass_type_string'] == 'user'
+            assert classifiers[0].ormclass_type_string == 'user'
 
         for _cls, classifiers in (
-            qb._get_ormclass(orm.Computer, None),
-            qb._get_ormclass(None, 'computer'),
-            qb._get_ormclass(None, 'Computer'),
+            _get_ormclass(orm.Computer, None),
+            _get_ormclass(None, 'computer'),
+            _get_ormclass(None, 'Computer'),
         ):
-            assert classifiers['ormclass_type_string'] == 'computer'
+            assert classifiers[0].ormclass_type_string == 'computer'
 
         for _cls, classifiers in (
-            qb._get_ormclass(orm.Data, None),
-            qb._get_ormclass(None, 'data.Data.'),
+            _get_ormclass(orm.Data, None),
+            _get_ormclass(None, 'data.Data.'),
         ):
-            assert classifiers['ormclass_type_string'] == orm.Data._plugin_type_string  # pylint: disable=no-member
+            assert classifiers[0].ormclass_type_string == orm.Data._plugin_type_string  # pylint: disable=no-member,protected-access
 
     def test_process_type_classification(self):
         """
@@ -94,43 +92,39 @@ class TestBasic:
         from aiida.engine import WorkChain
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAdd = CalculationFactory('arithmetic.add')
-
-        qb = orm.QueryBuilder()
-
-        # pylint: disable=protected-access
+        ArithmeticAdd = CalculationFactory('core.arithmetic.add')
 
         # When passing a WorkChain class, it should return the type of the corresponding Node
         # including the appropriate filter on the process_type
-        _cls, classifiers = qb._get_ormclass(WorkChain, None)
-        assert classifiers['ormclass_type_string'] == 'process.workflow.workchain.WorkChainNode.'
-        assert classifiers['process_type_string'] == 'aiida.engine.processes.workchains.workchain.WorkChain'
+        _cls, classifiers = _get_ormclass(WorkChain, None)
+        assert classifiers[0].ormclass_type_string == 'process.workflow.workchain.WorkChainNode.'
+        assert classifiers[0].process_type_string == 'aiida.engine.processes.workchains.workchain.WorkChain'
 
         # When passing a WorkChainNode, no process_type filter is applied
-        _cls, classifiers = qb._get_ormclass(orm.WorkChainNode, None)
-        assert classifiers['ormclass_type_string'] == 'process.workflow.workchain.WorkChainNode.'
-        assert classifiers['process_type_string'] is None
+        _cls, classifiers = _get_ormclass(orm.WorkChainNode, None)
+        assert classifiers[0].ormclass_type_string == 'process.workflow.workchain.WorkChainNode.'
+        assert classifiers[0].process_type_string is None
 
         # Same tests for a calculation
-        _cls, classifiers = qb._get_ormclass(ArithmeticAdd, None)
-        assert classifiers['ormclass_type_string'] == 'process.calculation.calcjob.CalcJobNode.'
-        assert classifiers['process_type_string'] == 'aiida.calculations:arithmetic.add'
+        _cls, classifiers = _get_ormclass(ArithmeticAdd, None)
+        assert classifiers[0].ormclass_type_string == 'process.calculation.calcjob.CalcJobNode.'
+        assert classifiers[0].process_type_string == 'aiida.calculations:core.arithmetic.add'
 
     def test_get_group_type_filter(self):
         """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
-        from aiida.orm.querybuilder import get_group_type_filter
+        from aiida.orm.querybuilder import _get_group_type_filter, Classifier
 
-        classifiers = {'ormclass_type_string': 'group.core'}
-        assert get_group_type_filter(classifiers, False) == {'==': 'core'}
-        assert get_group_type_filter(classifiers, True) == {'like': '%'}
+        classifiers = Classifier('group.core')
+        assert _get_group_type_filter(classifiers, False) == {'==': 'core'}
+        assert _get_group_type_filter(classifiers, True) == {'like': '%'}
 
-        classifiers = {'ormclass_type_string': 'group.core.auto'}
-        assert get_group_type_filter(classifiers, False) == {'==': 'core.auto'}
-        assert get_group_type_filter(classifiers, True) == {'like': 'core.auto%'}
+        classifiers = Classifier('group.core.auto')
+        assert _get_group_type_filter(classifiers, False) == {'==': 'core.auto'}
+        assert _get_group_type_filter(classifiers, True) == {'like': 'core.auto%'}
 
-        classifiers = {'ormclass_type_string': 'group.pseudo.family'}
-        assert get_group_type_filter(classifiers, False) == {'==': 'pseudo.family'}
-        assert get_group_type_filter(classifiers, True) == {'like': 'pseudo.family%'}
+        classifiers = Classifier('group.pseudo.family')
+        assert _get_group_type_filter(classifiers, False) == {'==': 'pseudo.family'}
+        assert _get_group_type_filter(classifiers, True) == {'like': 'pseudo.family%'}
 
     # Tracked in issue #4281
     @pytest.mark.flaky(reruns=2)
@@ -378,7 +372,7 @@ class TestBasic:
         assert qb.count() == 1
 
         # Test the hashing:
-        query1 = qb.get_query()
+        query1 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
         assert qb.count() == 0
 
@@ -387,8 +381,8 @@ class TestBasic:
         with pytest.raises(MultipleObjectsError):
             orm.QueryBuilder().append(orm.Node).one()
 
-        query2 = qb.get_query()
-        query3 = qb.get_query()
+        query2 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
+        query3 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
 
         assert id(query1) != id(query2)
         assert id(query2) == id(query3)
@@ -463,7 +457,8 @@ class TestBasic:
         qb = orm.QueryBuilder().append(cls=(orm.StructureData, orm.Dict), filters={'attributes.cat': 'miau'})
         assert qb.count() == 2
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.dict.Dict.'), filters={'attributes.cat': 'miau'}
+            entity_type=('data.core.structure.StructureData.', 'data.core.dict.Dict.'),
+            filters={'attributes.cat': 'miau'}
         )
         assert qb.count() == 2
         qb = orm.QueryBuilder().append(
@@ -476,13 +471,13 @@ class TestBasic:
         )
         assert qb.count() == 3
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.dict.Dict.'),
+            entity_type=('data.core.structure.StructureData.', 'data.core.dict.Dict.'),
             filters={'attributes.cat': 'miau'},
             subclassing=False
         )
         assert qb.count() == 2
         qb = orm.QueryBuilder().append(
-            entity_type=('data.structure.StructureData.', 'data.Data.'),
+            entity_type=('data.core.structure.StructureData.', 'data.Data.'),
             filters={'attributes.cat': 'miau'},
             subclassing=False
         )
@@ -541,9 +536,10 @@ class TestBasic:
         # pylint: disable=protected-access
         assert 's' not in qb._projections
         assert 's' not in qb._filters
-        assert 's' not in qb.tag_to_alias_map
+        assert 's' not in qb._tags
         assert len(qb._path) == 0
-        assert orm.StructureData not in qb._cls_to_tag_map
+        with pytest.raises(ValueError):
+            qb._tags.get(orm.StructureData)
         # So this should work now:
         qb.append(orm.StructureData, tag='s').limit(2).dict()
 
@@ -723,7 +719,11 @@ class TestRepresentations:
     def test_as_sql_literal_quote(self):
         """Test that literal values can be rendered."""
         qb = orm.QueryBuilder()
-        qb.append(plugins.DataFactory('structure'), project=['uuid'], filters={'extras.elements': {'contains': ['Si']}})
+        qb.append(
+            plugins.DataFactory('core.structure'), project=['uuid'], filters={'extras.elements': {
+                'contains': ['Si']
+            }}
+        )
         self.regress_str(qb.as_sql(inline=True))
 
     def test_as_dict(self):

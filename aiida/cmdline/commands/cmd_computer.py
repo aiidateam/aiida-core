@@ -14,7 +14,7 @@ from functools import partial
 import click
 import tabulate
 
-from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.commands.cmd_verdi import verdi, VerdiCommandGroup
 from aiida.cmdline.params import options, arguments
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
@@ -236,8 +236,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_info(f'  verdi computer configure {computer.transport_type} {computer.label}')
+    echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+    echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('duplicate')
@@ -289,8 +289,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     is_configured = computer.is_user_configured(orm.User.objects.get_default())
 
     if not is_configured:
-        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info(f'  verdi computer configure {computer.transport_type} {computer.label}')
+        echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('enable')
@@ -308,9 +308,11 @@ def computer_enable(computer, user):
 
     if not authinfo.enabled:
         authinfo.enabled = True
-        echo.echo_info(f"Computer '{computer.label}' enabled for user {user.get_full_name()}.")
+        echo.echo_report(f"Computer '{computer.label}' enabled for user {user.get_full_name()}.")
     else:
-        echo.echo_info(f"Computer '{computer.label}' was already enabled for user {user.first_name} {user.last_name}.")
+        echo.echo_report(
+            f"Computer '{computer.label}' was already enabled for user {user.first_name} {user.last_name}."
+        )
 
 
 @verdi_computer.command('disable')
@@ -330,9 +332,11 @@ def computer_disable(computer, user):
 
     if authinfo.enabled:
         authinfo.enabled = False
-        echo.echo_info(f"Computer '{computer.label}' disabled for user {user.get_full_name()}.")
+        echo.echo_report(f"Computer '{computer.label}' disabled for user {user.get_full_name()}.")
     else:
-        echo.echo_info(f"Computer '{computer.label}' was already disabled for user {user.first_name} {user.last_name}.")
+        echo.echo_report(
+            f"Computer '{computer.label}' was already disabled for user {user.first_name} {user.last_name}."
+        )
 
 
 @verdi_computer.command('list')
@@ -344,14 +348,14 @@ def computer_list(all_entries, raw):
     from aiida.orm import Computer, User
 
     if not raw:
-        echo.echo_info('List of configured computers')
-        echo.echo_info("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
+        echo.echo_report('List of configured computers')
+        echo.echo_report("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
 
     computers = Computer.objects.all()
     user = User.objects.get_default()
 
     if not computers:
-        echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
+        echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
 
     sort = lambda computer: computer.label
     highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
@@ -432,7 +436,7 @@ def computer_test(user, print_traceback, computer):
     if user is None:
         user = orm.User.objects.get_default()
 
-    echo.echo_info(f'Testing computer<{computer.label}> for user<{user.email}>...')
+    echo.echo_report(f'Testing computer<{computer.label}> for user<{user.email}>...')
 
     try:
         authinfo = computer.get_authinfo(user)
@@ -463,7 +467,7 @@ def computer_test(user, print_traceback, computer):
         with transport:
             num_tests += 1
 
-            echo.echo_highlight('[OK]', color='success')
+            echo.echo('[OK]', fg='green')
 
             scheduler.set_transport(transport)
 
@@ -486,16 +490,16 @@ def computer_test(user, print_traceback, computer):
                 if not success:
                     num_failures += 1
                     if message:
-                        echo.echo_highlight('[Failed]: ', color='error', nl=False)
+                        echo.echo('[Failed]: ', fg='red', nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo_highlight('[Failed]', color='error')
+                        echo.echo('[Failed]', fg='red')
                 else:
                     if message:
-                        echo.echo_highlight('[OK]: ', color='success', nl=False)
+                        echo.echo('[OK]: ', fg='green', nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo_highlight('[OK]', color='success')
+                        echo.echo('[OK]', fg='green')
 
         if num_failures:
             echo.echo_warning(f'{num_failures} out of {num_tests} tests failed')
@@ -503,7 +507,7 @@ def computer_test(user, print_traceback, computer):
             echo.echo_success(f'all {num_tests} tests succeeded')
 
     except Exception as exception:  # pylint:disable=broad-except
-        echo.echo_highlight('[FAILED]: ', color='error', nl=False)
+        echo.echo('[FAILED]: ', fg='red', nl=False)
         message = 'Error while trying to connect to the computer'
 
         if print_traceback:
@@ -538,7 +542,7 @@ def computer_delete(computer):
     echo.echo_success(f"Computer '{label}' deleted.")
 
 
-class LazyConfigureGroup(click.Group):
+class LazyConfigureGroup(VerdiCommandGroup):
     """A click group that will lazily load the subcommands for each transport plugin."""
 
     def list_commands(self, ctx):
@@ -546,7 +550,7 @@ class LazyConfigureGroup(click.Group):
         subcommands.extend(get_entry_point_names('aiida.transports'))
         return subcommands
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
+    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
         from aiida.transports import cli as transport_cli
         try:
             command = transport_cli.create_configure_cmd(name)

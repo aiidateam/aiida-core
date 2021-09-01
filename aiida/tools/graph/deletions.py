@@ -70,7 +70,7 @@ def delete_nodes(pks: Iterable[int],
     pks_set_to_delete = get_nodes_delete(pks, get_links=False, missing_callback=_missing_callback,
                                          **traversal_rules)['nodes']
 
-    DELETE_LOGGER.info('%s Node(s) marked for deletion', len(pks_set_to_delete))
+    DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
     if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
         builder = QueryBuilder().append(
@@ -87,20 +87,20 @@ def delete_nodes(pks: Iterable[int],
             DELETE_LOGGER.debug(f'   {uuid} {pk} {short_type_string} {label}')
 
     if dry_run is True:
-        DELETE_LOGGER.info('This was a dry run, exiting without deleting anything')
+        DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
         return (pks_set_to_delete, False)
 
     # confirm deletion
     if callable(dry_run) and dry_run(pks_set_to_delete):
-        DELETE_LOGGER.info('This was a dry run, exiting without deleting anything')
+        DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
         return (pks_set_to_delete, False)
 
     if not pks_set_to_delete:
         return (pks_set_to_delete, True)
 
-    DELETE_LOGGER.info('Starting node deletion...')
+    DELETE_LOGGER.report('Starting node deletion...')
     delete_nodes_and_connections(pks_set_to_delete)
-    DELETE_LOGGER.info('Deletion of nodes completed.')
+    DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)
 

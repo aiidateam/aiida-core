@@ -391,10 +391,10 @@ The process builder is essentially a tool that helps you build the inputs for th
 To get a *builder* for a particular ``CalcJob`` or a ``WorkChain`` implementation, all you need is the class itself, which can be loaded through the :py:class:`~aiida.plugins.factories.CalculationFactory` and :py:class:`~aiida.plugins.factories.WorkflowFactory`, respectively.
 Let's take the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` as an example::
 
-    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
     builder = ArithmeticAddCalculation.get_builder()
 
-The string ``arithmetic.add`` is the entry point of the ``ArithmeticAddCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
+The string ``core.arithmetic.add`` is the entry point of the ``ArithmeticAddCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
 Calling the ``get_builder`` method on that class will return an instance of the :py:class:`~aiida.engine.processes.builder.ProcessBuilder` class that is tailored for the ``ArithmeticAddCalculation``.
 The builder will help you in defining the inputs that the ``ArithmeticAddCalculation`` requires and has a few handy tools to simplify this process.
 

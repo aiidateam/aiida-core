@@ -21,7 +21,7 @@
         "name": "theospc14-direct",
         "description": "theospc14 (N. Mounet's PC) with direct scheduler",
         "hostname": "theospc14.epfl.ch",
-        "transport_type": "ssh",
+        "transport_type": "core.ssh",
         "metadata": {
           "default_mpiprocs_per_machine": 8,
           "workdir": "/scratch/{username}/aiida_run/",
@@ -29,7 +29,7 @@
           "prepend_text": "",
           "mpirun_command": ["mpirun", "-np", "{tot_num_mpiprocs}"]
         },
-        "scheduler_type": "direct",
+        "scheduler_type": "core.direct",
         "uuid": "fb7729ff-8254-4bc0-bbec-acbdb573cfe2"
       }
     },

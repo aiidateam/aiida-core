@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     setup(
         packages=find_packages(include=['aiida', 'aiida.*']),
-        long_description=open(os.path.join(THIS_FOLDER, 'README.md')).read(),
+        long_description=open(os.path.join(THIS_FOLDER, 'README.md')).read(),  # pylint: disable=consider-using-with
         long_description_content_type='text/markdown',
         **SETUP_JSON
     )

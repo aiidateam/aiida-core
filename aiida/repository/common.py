@@ -50,7 +50,7 @@ class File():
         if key is not None and not isinstance(key, str):
             raise TypeError('key should be `None` or a string.')
 
-        if objects is not None and any([not isinstance(obj, self.__class__) for obj in objects.values()]):
+        if objects is not None and any(not isinstance(obj, self.__class__) for obj in objects.values()):
             raise TypeError('objects should be `None` or a dictionary of `File` instances.')
 
         if file_type == FileType.DIRECTORY and key is not None:
@@ -122,9 +122,9 @@ class File():
         if not isinstance(other, self.__class__):
             return False
 
-        equal_attributes = all([getattr(self, key) == getattr(other, key) for key in ['name', 'file_type', 'key']])
+        equal_attributes = all(getattr(self, key) == getattr(other, key) for key in ['name', 'file_type', 'key'])
         equal_object_keys = sorted(self.objects) == sorted(other.objects)
-        equal_objects = equal_object_keys and all([obj == other.objects[key] for key, obj in self.objects.items()])
+        equal_objects = equal_object_keys and all(obj == other.objects[key] for key, obj in self.objects.items())
 
         return equal_attributes and equal_objects
 

@@ -31,7 +31,7 @@ class TestIdentifierParamType(AiidaTestCase):
         The sub_classes keyword argument should expect a tuple
         """
         with self.assertRaises(TypeError):
-            NodeParamType(sub_classes='aiida.data:structure')
+            NodeParamType(sub_classes='aiida.data:core.structure')
 
         with self.assertRaises(TypeError):
             NodeParamType(sub_classes=(None,))
@@ -55,7 +55,7 @@ class TestIdentifierParamType(AiidaTestCase):
         node_int = Int(1).store()
 
         param_type_normal = NodeParamType()
-        param_type_scoped = NodeParamType(sub_classes=('aiida.data:bool', 'aiida.data:float'))
+        param_type_scoped = NodeParamType(sub_classes=('aiida.data:core.bool', 'aiida.data:core.float'))
 
         # For the base NodeParamType all node types should be matched
         self.assertEqual(param_type_normal.convert(str(node_bool.pk), None, None).uuid, node_bool.uuid)

@@ -8,19 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin aware click command Group."""
-import click
-
 from aiida.common import exceptions
+from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
 from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
 
 
-class Pluginable(click.Group):
+class Pluginable(VerdiCommandGroup):
     """A click command group that finds and loads plugin commands lazily."""
 
     def __init__(self, *args, **kwargs):
         """Initialize with entry point group."""
         self._exclude_external_plugins = False  # Default behavior is of course to include external plugins
-        self._entry_point_group = kwargs.pop('entry_point_group')
+        self._entry_point_group = kwargs.pop('entry_point_group', None)
         super().__init__(*args, **kwargs)
 
     def list_commands(self, ctx):
@@ -32,7 +31,7 @@ class Pluginable(click.Group):
 
         return subcommands
 
-    def get_command(self, ctx, name):  # pylint: disable=arguments-differ
+    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
         """Try to load a subcommand from entry points, else defer to super."""
         command = None
         if not self._exclude_external_plugins:

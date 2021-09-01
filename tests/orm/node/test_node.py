@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-self-use,too-many-public-methods
+# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods
 """Tests for the Node ORM class."""
 import logging
 import os
@@ -32,8 +32,8 @@ class TestNode:
             label='localhost',
             description='localhost computer set up by test manager',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         self.computer.store()
 

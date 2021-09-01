@@ -62,7 +62,9 @@ class TestSessionSqla(AiidaTestCase):
         session.add(user.dbmodel)
         session.commit()
 
-        defaults = dict(label='localhost', hostname='localhost', transport_type='local', scheduler_type='pbspro')
+        defaults = dict(
+            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+        )
         computer = self.backend.computers.create(**defaults)
         session.add(computer.dbmodel)
         session.commit()
@@ -86,7 +88,9 @@ class TestSessionSqla(AiidaTestCase):
         session.add(user.dbmodel)
         session.commit()
 
-        defaults = dict(label='localhost', hostname='localhost', transport_type='local', scheduler_type='pbspro')
+        defaults = dict(
+            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+        )
         computer = self.backend.computers.create(**defaults)
         computer.store()
 
@@ -107,7 +111,9 @@ class TestSessionSqla(AiidaTestCase):
         session.add(user.dbmodel)
         session.commit()
 
-        defaults = dict(label='localhost', hostname='localhost', transport_type='local', scheduler_type='pbspro')
+        defaults = dict(
+            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+        )
         computer = self.backend.computers.create(**defaults)
         session.add(computer.dbmodel)
         session.commit()
@@ -131,7 +137,9 @@ class TestSessionSqla(AiidaTestCase):
         session.add(user.dbmodel)
         session.commit()
 
-        defaults = dict(label='localhost', hostname='localhost', transport_type='local', scheduler_type='pbspro')
+        defaults = dict(
+            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+        )
         computer = self.backend.computers.create(**defaults)
         computer.store()
 

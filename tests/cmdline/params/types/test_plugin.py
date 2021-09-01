@@ -56,21 +56,21 @@ class TestPluginParamType(AiidaTestCase):
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
         param = PluginParamType(group='transports')
-        entry_point = get_entry_point_from_string('aiida.transports:ssh')
+        entry_point = get_entry_point_from_string('aiida.transports:core.ssh')
 
         # Invalid entry point strings
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiida.transport:ssh')
+            param.get_entry_point_from_string('aiida.transport:core.ssh')
 
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiid.transports:ssh')
+            param.get_entry_point_from_string('aiid.transports:core.ssh')
 
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiida..transports:ssh')
+            param.get_entry_point_from_string('aiida..transports:core.ssh')
 
         # Unsupported entry points for all formats
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('aiida.data:structure')
+            param.get_entry_point_from_string('aiida.data:core.structure')
 
         with self.assertRaises(ValueError):
             param.get_entry_point_from_string('data:structure')
@@ -89,9 +89,9 @@ class TestPluginParamType(AiidaTestCase):
             param.get_entry_point_from_string('not_existent')
 
         # Valid entry point strings
-        self.assertEqual(param.get_entry_point_from_string('aiida.transports:ssh').name, entry_point.name)
-        self.assertEqual(param.get_entry_point_from_string('transports:ssh').name, entry_point.name)
-        self.assertEqual(param.get_entry_point_from_string('ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('aiida.transports:core.ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('transports:core.ssh').name, entry_point.name)
+        self.assertEqual(param.get_entry_point_from_string('core.ssh').name, entry_point.name)
 
     def test_get_entry_point_from_ambiguous(self):
         """
@@ -99,15 +99,17 @@ class TestPluginParamType(AiidaTestCase):
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
         param = PluginParamType(group=('aiida.calculations', 'aiida.parsers'))
-        entry_point = get_entry_point_from_string('aiida.calculations:arithmetic.add')
+        entry_point = get_entry_point_from_string('aiida.calculations:core.arithmetic.add')
 
         # Both groups contain entry point `arithmetic.add` so passing only name is ambiguous and should raise
         with self.assertRaises(ValueError):
-            param.get_entry_point_from_string('arithmetic.add')
+            param.get_entry_point_from_string('core.arithmetic.add')
 
         # Passing PARTIAL or FULL should allow entry point to be returned
-        self.assertEqual(param.get_entry_point_from_string('aiida.calculations:arithmetic.add').name, entry_point.name)
-        self.assertEqual(param.get_entry_point_from_string('calculations:arithmetic.add').name, entry_point.name)
+        self.assertEqual(
+            param.get_entry_point_from_string('aiida.calculations:core.arithmetic.add').name, entry_point.name
+        )
+        self.assertEqual(param.get_entry_point_from_string('calculations:core.arithmetic.add').name, entry_point.name)
 
     def test_convert(self):
         """
@@ -115,29 +117,23 @@ class TestPluginParamType(AiidaTestCase):
         """
         param = PluginParamType(group=('transports', 'data'))
 
-        entry_point = param.convert('aiida.transports:ssh', None, None)
-        self.assertEqual(entry_point.name, 'ssh')
-        # self.assertTrue(isinstance(entry_point, EntryPoint))
+        entry_point = param.convert('aiida.transports:core.ssh', None, None)
+        self.assertEqual(entry_point.name, 'core.ssh')
 
-        entry_point = param.convert('transports:ssh', None, None)
-        self.assertEqual(entry_point.name, 'ssh')
-        # self.assertTrue(isinstance(entry_point, EntryPoint))
+        entry_point = param.convert('transports:core.ssh', None, None)
+        self.assertEqual(entry_point.name, 'core.ssh')
 
-        entry_point = param.convert('ssh', None, None)
-        self.assertEqual(entry_point.name, 'ssh')
-        # self.assertTrue(isinstance(entry_point, EntryPoint))
+        entry_point = param.convert('core.ssh', None, None)
+        self.assertEqual(entry_point.name, 'core.ssh')
 
-        entry_point = param.convert('aiida.data:structure', None, None)
-        self.assertEqual(entry_point.name, 'structure')
-        # self.assertTrue(isinstance(entry_point, EntryPoint))
+        entry_point = param.convert('aiida.data:core.structure', None, None)
+        self.assertEqual(entry_point.name, 'core.structure')
 
-        entry_point = param.convert('data:structure', None, None)
-        self.assertEqual(entry_point.name, 'structure')
-        # self.assertTrue(isinstance(entry_point, EntryPoint))
+        entry_point = param.convert('data:core.structure', None, None)
+        self.assertEqual(entry_point.name, 'core.structure')
 
-        entry_point = param.convert('structure', None, None)
-        self.assertEqual(entry_point.name, 'structure')
-        # self.assertTrue(isinstance(entry_point, EntryPoint))
+        entry_point = param.convert('core.structure', None, None)
+        self.assertEqual(entry_point.name, 'core.structure')
 
         with self.assertRaises(click.BadParameter):
             param.convert('not_existent', None, None)
@@ -147,25 +143,25 @@ class TestPluginParamType(AiidaTestCase):
         Test that the convert method returns the loaded entry point if load=True at construction time of parameter
         """
         param = PluginParamType(group=('transports', 'data'), load=True)
-        entry_point_ssh = get_entry_point_from_string('aiida.transports:ssh')
-        entry_point_structure = get_entry_point_from_string('aiida.data:structure')
+        entry_point_ssh = get_entry_point_from_string('aiida.transports:core.ssh')
+        entry_point_structure = get_entry_point_from_string('aiida.data:core.structure')
 
-        entry_point = param.convert('aiida.transports:ssh', None, None)
+        entry_point = param.convert('aiida.transports:core.ssh', None, None)
         self.assertTrue(entry_point, entry_point_ssh)
 
-        entry_point = param.convert('transports:ssh', None, None)
+        entry_point = param.convert('transports:core.ssh', None, None)
         self.assertTrue(entry_point, entry_point_ssh)
 
-        entry_point = param.convert('ssh', None, None)
+        entry_point = param.convert('core.ssh', None, None)
         self.assertTrue(entry_point, entry_point_ssh)
 
-        entry_point = param.convert('aiida.data:structure', None, None)
+        entry_point = param.convert('aiida.data:core.structure', None, None)
         self.assertTrue(entry_point, entry_point_structure)
 
-        entry_point = param.convert('data:structure', None, None)
+        entry_point = param.convert('data:core.structure', None, None)
         self.assertTrue(entry_point, entry_point_structure)
 
-        entry_point = param.convert('structure', None, None)
+        entry_point = param.convert('core.structure', None, None)
         self.assertTrue(entry_point, entry_point_structure)
 
         with self.assertRaises(click.BadParameter):
@@ -178,26 +174,26 @@ class TestPluginParamType(AiidaTestCase):
         when the user decides to user either a FULL or PARTIAL string anyway, the completion should match that syntax
         """
         param = PluginParamType(group=('transports'))
-        entry_point_minimal = 'ssh'
-        entry_point_partial = 'transports:ssh'
-        entry_point_full = 'aiida.transports:ssh'
+        entry_point_minimal = 'core.ssh'
+        entry_point_partial = 'transports:core.ssh'
+        entry_point_full = 'aiida.transports:core.ssh'
 
-        options = [item[0] for item in param.complete(None, 'ss')]
+        options = [item[0] for item in param.complete(None, 'core.ss')]
         self.assertIn(entry_point_minimal, options)
 
-        options = [item[0] for item in param.complete(None, 'ssh')]
+        options = [item[0] for item in param.complete(None, 'core.ssh')]
         self.assertIn(entry_point_minimal, options)
 
-        options = [item[0] for item in param.complete(None, 'transports:ss')]
+        options = [item[0] for item in param.complete(None, 'transports:core.ss')]
         self.assertIn(entry_point_partial, options)
 
-        options = [item[0] for item in param.complete(None, 'transports:ssh')]
+        options = [item[0] for item in param.complete(None, 'transports:core.ssh')]
         self.assertIn(entry_point_partial, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.transports:ss')]
+        options = [item[0] for item in param.complete(None, 'aiida.transports:core.ss')]
         self.assertIn(entry_point_full, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.transports:ssh')]
+        options = [item[0] for item in param.complete(None, 'aiida.transports:core.ssh')]
         self.assertIn(entry_point_full, options)
 
     def test_complete_amibguity(self):
@@ -207,34 +203,34 @@ class TestPluginParamType(AiidaTestCase):
         possibilites in the FULL entry point string format. When the user tries to autocomplete
         """
         param = PluginParamType(group=('aiida.calculations', 'aiida.parsers'))
-        entry_point_full_calculations = 'aiida.calculations:arithmetic.add'
-        entry_point_full_parsers = 'aiida.parsers:arithmetic.add'
+        entry_point_full_calculations = 'aiida.calculations:core.arithmetic.add'
+        entry_point_full_parsers = 'aiida.parsers:core.arithmetic.add'
 
-        options = [item[0] for item in param.complete(None, 'aiida.calculations:arith')]
+        options = [item[0] for item in param.complete(None, 'aiida.calculations:core.arith')]
         self.assertIn(entry_point_full_calculations, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.calculations:arithmetic.add')]
+        options = [item[0] for item in param.complete(None, 'aiida.calculations:core.arithmetic.add')]
         self.assertIn(entry_point_full_calculations, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.parsers:arith')]
+        options = [item[0] for item in param.complete(None, 'aiida.parsers:core.arith')]
         self.assertIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'aiida.parsers:arithmetic.add')]
+        options = [item[0] for item in param.complete(None, 'aiida.parsers:core.arithmetic.add')]
         self.assertIn(entry_point_full_parsers, options)
 
         # PARTIAL or MINIMAL string formats will not be autocompleted
-        options = [item[0] for item in param.complete(None, 'parsers:arith')]
+        options = [item[0] for item in param.complete(None, 'parsers:core.arith')]
         self.assertNotIn(entry_point_full_calculations, options)
         self.assertNotIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'parsers:arithmetic.add')]
+        options = [item[0] for item in param.complete(None, 'parsers:core.arithmetic.add')]
         self.assertNotIn(entry_point_full_calculations, options)
         self.assertNotIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'arith')]
+        options = [item[0] for item in param.complete(None, 'core.arith')]
         self.assertNotIn(entry_point_full_calculations, options)
         self.assertNotIn(entry_point_full_parsers, options)
 
-        options = [item[0] for item in param.complete(None, 'arithmetic.add')]
+        options = [item[0] for item in param.complete(None, 'core.arithmetic.add')]
         self.assertNotIn(entry_point_full_calculations, options)
         self.assertNotIn(entry_point_full_parsers, options)

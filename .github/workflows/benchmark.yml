@@ -11,7 +11,8 @@ jobs:
 
   run-and-upload:
 
-    if: ${{ github.event_name == 'push' }}
+    # Only run on pushes and when the job is on the main repository and not on forks
+    if: ${{ github.event_name == 'push' && github.repository == 'aiidateam/aiida-core' }}
 
     strategy:
       fail-fast: false

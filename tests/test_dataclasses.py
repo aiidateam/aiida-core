@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name
+# pylint: disable=too-many-lines,invalid-name,no-member
 """Tests for specific subclasses of Data."""
 import os
 import tempfile
@@ -3414,7 +3414,7 @@ class TestSeekpathExplicitPath(AiidaTestCase):
 
         from aiida.tools import get_explicit_kpoints_path
 
-        structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure = DataFactory('core.structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
         structure.append_atom(symbols='Ba', position=[0, 0, 0])
         structure.append_atom(symbols='Ti', position=[2, 2, 3])
         structure.append_atom(symbols='O', position=[2, 2, 0])
@@ -3496,7 +3496,7 @@ class TestSeekpathPath(AiidaTestCase):
         from aiida.plugins import DataFactory
         from aiida.tools import get_kpoints_path
 
-        structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure = DataFactory('core.structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
         structure.append_atom(symbols='Ba', position=[0, 0, 0])
         structure.append_atom(symbols='Ti', position=[2, 2, 3])
         structure.append_atom(symbols='O', position=[2, 2, 0])

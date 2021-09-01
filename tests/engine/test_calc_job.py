@@ -26,7 +26,7 @@ from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.plugins import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
 def raise_exception(exception):
@@ -108,14 +108,13 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('dry_run_in_tmp')
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
 
     inputs = {
-        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
         'parallel_run': orm.Bool(parallel_run),
         'metadata': {
             'dry_run': True,
@@ -138,14 +137,13 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('dry_run_in_tmp')
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('calcjob_withmpi', [True, False])
 def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
     """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
 
     inputs = {
-        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
         'parallel_run': orm.Bool(False),
         'metadata': {
             'dry_run': True,
@@ -191,7 +189,7 @@ class TestCalcJob(AiidaTestCase):
         manager = get_manager()
         runner = manager.get_runner()
 
-        process_class = CalculationFactory('arithmetic.add')
+        process_class = CalculationFactory('core.arithmetic.add')
         process = instantiate_process(runner, process_class, **inputs)
         process.node.set_state(state)
 
@@ -277,7 +275,7 @@ class TestCalcJob(AiidaTestCase):
         """Test launching a `CalcJob` with an unstored computer which should raise."""
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
-        inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct')
+        inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'core.local', 'core.direct')
 
         with self.assertRaises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
@@ -293,7 +291,9 @@ class TestCalcJob(AiidaTestCase):
 
         # Setting explicitly a computer that is not the same as that of the `code` should raise
         with self.assertRaises(ValueError):
-            inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'local', 'direct').store()
+            inputs['metadata']['computer'] = orm.Computer(
+                'different', 'localhost', 'desc', 'core.local', 'core.direct'
+            ).store()
             process = ArithmeticAddCalculation(inputs=inputs)
 
         # Setting the same computer as that of the `code` effectively accomplishes nothing but should be fine
@@ -345,7 +345,7 @@ class TestCalcJob(AiidaTestCase):
         scheduler that is defined does not actually support it, for example SGE or LSF.
         """
         inputs = deepcopy(self.inputs)
-        computer = orm.Computer('sge_computer', 'localhost', 'desc', 'local', 'sge').store()
+        computer = orm.Computer('sge_computer', 'localhost', 'desc', 'core.local', 'core.sge').store()
         computer.set_default_mpiprocs_per_machine(1)
 
         inputs['code'] = orm.Code(remote_computer_exec=(computer, '/bin/bash')).store()
@@ -373,7 +373,7 @@ class TestCalcJob(AiidaTestCase):
 
         self.assertIn('exception occurred in presubmit call', str(context.exception))
 
-    @pytest.mark.usefixtures('dry_run_in_tmp')
+    @pytest.mark.usefixtures('chdir_tmp_path')
     def test_run_local_code(self):
         """Run a dry-run with local code."""
         inputs = deepcopy(self.inputs)
@@ -389,7 +389,7 @@ class TestCalcJob(AiidaTestCase):
         for filename in self.local_code.list_object_names():
             self.assertTrue(filename in uploaded_files)
 
-    @pytest.mark.usefixtures('dry_run_in_tmp')
+    @pytest.mark.usefixtures('chdir_tmp_path')
     def test_rerunnable(self):
         """Test that setting `rerunnable` in the options results in it being set in the job template."""
         inputs = deepcopy(self.inputs)
@@ -406,12 +406,13 @@ class TestCalcJob(AiidaTestCase):
 
         assert job_tmpl['rerunnable']
 
-    @pytest.mark.usefixtures('dry_run_in_tmp')
+    @pytest.mark.usefixtures('chdir_tmp_path')
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
         import tempfile
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')
@@ -481,7 +482,7 @@ def generate_process(aiida_local_code_factory):
     def _generate_process(inputs=None):
 
         base_inputs = {
-            'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+            'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
             'x': orm.Int(1),
             'y': orm.Int(2),
             'metadata': {
@@ -495,7 +496,7 @@ def generate_process(aiida_local_code_factory):
         manager = get_manager()
         runner = manager.get_runner()
 
-        process_class = CalculationFactory('arithmetic.add')
+        process_class = CalculationFactory('core.arithmetic.add')
         process = instantiate_process(runner, process_class, **base_inputs)
         process.node.set_state(CalcJobState.PARSING)
 
@@ -680,11 +681,11 @@ def test_parse_exit_code_priority(
     monkeypatch.setattr(CalcJob, 'parse_retrieved_output', parse_retrieved_output)
 
     inputs = {
-        'code': aiida_local_code_factory('arithmetic.add', '/bin/bash'),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
         'x': Int(1),
         'y': Int(2),
     }
-    process = generate_calc_job(fixture_sandbox, 'arithmetic.add', inputs, return_process=True)
+    process = generate_calc_job(fixture_sandbox, 'core.arithmetic.add', inputs, return_process=True)
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 

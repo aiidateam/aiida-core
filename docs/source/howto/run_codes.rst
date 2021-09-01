@@ -173,7 +173,7 @@ Some compute resources, particularly large supercomputing centers, may not toler
 
     .. code-block:: bash
 
-      verdi computer configure ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+      verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
 
 .. important::
 
@@ -361,7 +361,7 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
     .. code-block:: bash
 
-        verdi plugin list aiida.calculations arithmetic.add
+        verdi plugin list aiida.calculations core.arithmetic.add
 
  * Write a ``submit.py`` script:
 
@@ -485,8 +485,8 @@ Besides the on/off switch set by ``caching.default_enabled``, caching can be con
 
 .. code-block:: console
 
-    $ verdi config set caching.disabled_for aiida.calculations:templatereplacer
-    Success: 'caching.disabled_for' set to ['aiida.calculations:templatereplacer'] for 'quicksetup' profile
+    $ verdi config set caching.disabled_for aiida.calculations:core.templatereplacer
+    Success: 'caching.disabled_for' set to ['aiida.calculations:core.templatereplacer'] for 'quicksetup' profile
     $ verdi config set caching.enabled_for aiida.calculations:quantumespresso.pw
     Success: 'caching.enabled_for' set to ['aiida.calculations:quantumespresso.pw'] for 'quicksetup' profile
     $ verdi config set --append caching.enabled_for aiida.calculations:other
@@ -495,11 +495,11 @@ Besides the on/off switch set by ``caching.default_enabled``, caching can be con
     name                     source    value
     -----------------------  --------  -------------------------------------
     caching.default_enabled  profile   True
-    caching.disabled_for     profile   aiida.calculations:templatereplacer
+    caching.disabled_for     profile   aiida.calculations:core.templatereplacer
     caching.enabled_for      profile   aiida.calculations:quantumespresso.pw
                                     aiida.calculations:other
 
-In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:templatereplacer`` entry point string.
+In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:core.templatereplacer`` entry point string.
 It also shows how to enable caching for particular calculations (which has no effect here due to the profile-wide default).
 
 .. tip:: To set multiple entry-points at once, use a ``,`` delimiter.
@@ -509,12 +509,12 @@ For the available entry-points in your environment, you can list which are enabl
 .. code-block:: console
 
     $ verdi config caching
-    aiida.calculations:arithmetic.add
+    aiida.calculations:core.arithmetic.add
     aiida.calculations:core.transfer
-    aiida.workflows:arithmetic.add_multiply
-    aiida.workflows:arithmetic.multiply_add
+    aiida.workflows:core.arithmetic.add_multiply
+    aiida.workflows:core.arithmetic.multiply_add
     $ verdi config caching --disabled
-    aiida.calculations:templatereplacer
+    aiida.calculations:core.templatereplacer
 
 For calculations which do not have an entry point, you need to specify the fully qualified Python name instead.
 For example, the ``seekpath_structure_analysis`` calcfunction defined in ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis`` is labelled as ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis.seekpath_structure_analysis``.
@@ -528,33 +528,33 @@ For example, the following configuration disables caching for all calculation en
     $ verdi config set caching.disabled_for 'aiida.calculations:*'
     Success: 'caching.disabled_for' set to ['aiida.calculations:*'] for 'quicksetup' profile
     $ verdi config caching
-    aiida.workflows:arithmetic.add_multiply
-    aiida.workflows:arithmetic.multiply_add
+    aiida.workflows:core.arithmetic.add_multiply
+    aiida.workflows:core.arithmetic.multiply_add
     $ verdi config caching --disabled
-    aiida.calculations:arithmetic.add
+    aiida.calculations:core.arithmetic.add
     aiida.calculations:core.transfer
-    aiida.calculations:templatereplacer
+    aiida.calculations:core.templatereplacer
 
 Any entry with a wildcard is overridden by a more specific entry.
 The following configuration disables caching for all ``aiida.calculation`` entry points, except those of ``arithmetic``:
 
 .. code-block:: console
 
-    $ verdi config set caching.enabled_for 'aiida.calculations:arithmetic.*'
-    Success: 'caching.enabled_for' set to ['aiida.calculations:arithmetic.*'] for 'quicksetup' profile
+    $ verdi config set caching.enabled_for 'aiida.calculations:core.arithmetic.*'
+    Success: 'caching.enabled_for' set to ['aiida.calculations:core.arithmetic.*'] for 'quicksetup' profile
     $ verdi config list caching
     name                     source    value
     -----------------------  --------  -------------------------------
     caching.default_enabled  profile   True
     caching.disabled_for     profile   aiida.calculations:*
-    caching.enabled_for      profile   aiida.calculations:arithmetic.*
+    caching.enabled_for      profile   aiida.calculations:core.arithmetic.*
     $ verdi config caching
-    aiida.calculations:arithmetic.add
-    aiida.workflows:arithmetic.add_multiply
-    aiida.workflows:arithmetic.multiply_add
+    aiida.calculations:core.arithmetic.add
+    aiida.workflows:core.arithmetic.add_multiply
+    aiida.workflows:core.arithmetic.multiply_add
     $ verdi config caching --disabled
     aiida.calculations:core.transfer
-    aiida.calculations:templatereplacer
+    aiida.calculations:core.templatereplacer
 
 Instance level
 ..............
@@ -565,7 +565,7 @@ Caching can be enabled or disabled on a case-by-case basis by using the :class:`
 
     from aiida.engine import run
     from aiida.manage.caching import enable_caching
-    with enable_caching(identifier='aiida.calculations:templatereplacer'):
+    with enable_caching(identifier='aiida.calculations:core.templatereplacer'):
         run(...)
 
 .. warning::

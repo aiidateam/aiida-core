@@ -154,7 +154,7 @@ class TestVerdiImport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_archive.import_archive, options)
             self.assertIsNone(result.exception, result.output)
             self.assertTrue(
-                any([re.fullmatch(r'Comment rules[\s]*{}'.format(mode), line) for line in result.output.split('\n')]),
+                any(re.fullmatch(r'Comment rules[\s]*{}'.format(mode), line) for line in result.output.split('\n')),
                 msg=f'Mode: {mode}. Output: {result.output}'
             )
             self.assertEqual(result.exit_code, 0, result.output)
@@ -164,7 +164,7 @@ class TestVerdiImport(AiidaTestCase):
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
         archives = []
-        for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
+        for version in range(1, int(EXPORT_VERSION.rsplit('.', maxsplit=1)[-1]) - 1):
             archives.append((f'export_v0.{version}_simple.aiida', f'0.{version}'))
 
         for archive, version in archives:

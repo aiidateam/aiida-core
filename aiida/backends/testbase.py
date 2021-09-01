@@ -189,8 +189,8 @@ class AiidaTestCase(unittest.TestCase):
             created, computer = orm.Computer.objects.get_or_create(
                 label='localhost',
                 hostname='localhost',
-                transport_type='local',
-                scheduler_type='direct',
+                transport_type='core.local',
+                scheduler_type='core.direct',
                 workdir='/tmp/aiida',
             )
             if created:

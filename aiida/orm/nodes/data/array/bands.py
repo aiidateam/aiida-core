@@ -305,7 +305,7 @@ class BandsData(KpointsData):
         if labels is not None:
             if isinstance(labels, str):
                 the_labels = [str(labels)]
-            elif isinstance(labels, (tuple, list)) and all([isinstance(_, str) for _ in labels]):
+            elif isinstance(labels, (tuple, list)) and all(isinstance(_, str) for _ in labels):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(

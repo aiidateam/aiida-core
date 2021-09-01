@@ -2,8 +2,8 @@
 label: localhost
 description: localhost
 hostname: localhost
-transport: local
-scheduler: direct
+transport: core.local
+scheduler: core.direct
 shebang: '#!/usr/bin/env bash'
 work_dir: PLACEHOLDER_WORK_DIR
 mpirun_command: ' '

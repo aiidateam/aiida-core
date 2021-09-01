@@ -9,20 +9,28 @@
 ###########################################################################
 """Module for all logging methods/classes that don't need the ORM."""
 import collections
-import copy
+import contextlib
 import logging
 import types
-from contextlib import contextmanager
-from wrapt import decorator
 
-__all__ = ('AIIDA_LOGGER', 'override_log_level', 'override_log_formatter')
+__all__ = ('AIIDA_LOGGER', 'override_log_level')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
 # the value 25 is already reserved for SUBWARNING by the multiprocessing module.
-
 LOG_LEVEL_REPORT = 23
+
+# Add the custom log level to the :mod:`logging` module and add a corresponding report logging method.
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
+
+
+def report(self, msg, *args, **kwargs):
+    """Log a message at the ``REPORT`` level."""
+    self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
+
+
+setattr(logging, 'REPORT', LOG_LEVEL_REPORT)
+setattr(logging.Logger, 'report', report)
 
 # Convenience dictionary of available log level names and their log level integer
 LOG_LEVELS = {
@@ -35,16 +43,7 @@ LOG_LEVELS = {
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
 
-# The AiiDA logger
 AIIDA_LOGGER = logging.getLogger('aiida')
-
-
-# A logging filter that can be used to disable logging
-class NotInTestingFilter(logging.Filter):
-
-    def filter(self, record):
-        from aiida.manage import configuration
-        return not configuration.PROFILE.is_test_profile
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction
@@ -64,24 +63,28 @@ def get_logging_config():
                 'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
                 'datefmt': '%m/%d/%Y %I:%M:%S %p',
             },
-        },
-        'filters': {
-            'testing': {
-                '()': NotInTestingFilter
+            'cli': {
+                'class': 'aiida.cmdline.utils.log.CliFormatter'
             }
         },
         'handlers': {
             'console': {
-                'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
-                'filters': ['testing']
             },
+            'cli': {
+                'class': 'aiida.cmdline.utils.log.CliHandler',
+                'formatter': 'cli',
+            }
         },
         'loggers': {
             'aiida': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.aiida_loglevel'),
+                'propagate': False,
+            },
+            'aiida.cmdline': {
+                'handlers': ['cli'],
                 'propagate': False,
             },
             'plumpy': {
@@ -142,7 +145,7 @@ def evaluate_logging_configuration(dictionary):
     return result
 
 
-def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
+def configure_logging(with_orm=False, daemon=False, daemon_log_file=None, cli=False):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
@@ -191,6 +194,10 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
             except ValueError:
                 pass
 
+    if cli is True:
+        for logger in config['loggers'].values():
+            logger['handlers'] = ['cli']
+
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:
 
@@ -205,7 +212,7 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     dictConfig(config)
 
 
-@contextmanager
+@contextlib.contextmanager
 def override_log_level(level=logging.CRITICAL):
     """Temporarily adjust the log-level of logger."""
     logging.disable(level=level)
@@ -213,38 +220,3 @@ def override_log_level(level=logging.CRITICAL):
         yield
     finally:
         logging.disable(level=logging.NOTSET)
-
-
-@contextmanager
-def override_log_formatter_context(fmt: str):
-    """Temporarily use a different formatter for all handlers.
-
-    NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
-    """
-    temp_formatter = logging.Formatter(fmt=fmt)
-    cached_formatters = {}
-
-    for handler in AIIDA_LOGGER.handlers:
-        # Need a copy here so we keep the original one should the handler's formatter be changed during the yield
-        cached_formatters[handler] = copy.copy(handler.formatter)
-        handler.setFormatter(temp_formatter)
-
-    yield
-
-    for handler, formatter in cached_formatters.items():
-        handler.setFormatter(formatter)
-
-
-def override_log_formatter(fmt: str):
-    """Temporarily use a different formatter for all handlers.
-
-    NOTE: One can _only_ set `fmt` (not `datefmt` or `style`).
-    Be aware! This may fail if the number of handlers is changed within the decorated function/method.
-    """
-
-    @decorator
-    def wrapper(wrapped, instance, args, kwargs):  # pylint: disable=unused-argument
-        with override_log_formatter_context(fmt=fmt):
-            return wrapped(*args, **kwargs)
-
-    return wrapper

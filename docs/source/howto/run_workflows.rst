@@ -13,10 +13,10 @@ The recommended method for loading a workflow is using the ``WorkflowFactory``, 
 .. code-block:: python
 
     from aiida.plugins import WorkflowFactory
-    add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    add_and_multiply = WorkflowFactory('core.arithmetic.add_multiply')
+    MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
-This is essentially the same as importing the workflow from its respective module, but using the ``WorkflowFactory`` has the advantage that the so called *entry point* (e.g. ``'arithmetic.multiply_add'``) will not change when the packages or plugins are reorganised.
+This is essentially the same as importing the workflow from its respective module, but using the ``WorkflowFactory`` has the advantage that the so called *entry point* (e.g. ``'core.arithmetic.multiply_add'``) will not change when the packages or plugins are reorganised.
 This means your code is less likely to break when updating AiiDA or the plugin that supplies the workflow.
 
 The list of installed plugins can be easily accessed via the verdi CLI:
@@ -35,7 +35,7 @@ By further specifying the entry point of the workflow, you can see its descripti
 
 .. code-block:: console
 
-    $ verdi plugin list aiida.workflows arithmetic.multiply_add
+    $ verdi plugin list aiida.workflows core.arithmetic.multiply_add
 
 Work functions
 --------------
@@ -45,8 +45,8 @@ Running a work function is as simple as calling a typical Python function: simpl
 .. code-block:: python
 
     from aiida.plugins import WorkflowFactory, DataFactory
-    add_and_multiply = WorkflowFactory('arithmetic.add_multiply')
-    Int = DataFactory('int')
+    add_and_multiply = WorkflowFactory('core.arithmetic.add_multiply')
+    Int = DataFactory('core.int')
 
     result = add_and_multiply(Int(2), Int(3), Int(5))
 
@@ -71,8 +71,8 @@ When "running the work chain" (using the ``run`` function), it will be executed 
 
     from aiida.engine import run
     from aiida.plugins import WorkflowFactory, DataFactory
-    Int = DataFactory('int')
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    Int = DataFactory('core.int')
+    MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
     add_code = load_code(label='add')
 
@@ -101,8 +101,8 @@ So, it is advisable to *submit* more complex or longer work chains to the daemon
 
     from aiida.engine import submit
     from aiida.plugins import WorkflowFactory, DataFactory
-    Int = DataFactory('int')
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    Int = DataFactory('core.int')
+    MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
     add_code = load_code(label='add')
     inputs = {'x': Int(1), 'y': Int(2), 'z': Int(3), 'code': add_code}
@@ -124,8 +124,8 @@ This can be obtained by using the ``get_builder()`` method, which is implemented
 .. code-block:: ipython
 
     In [1]: from aiida.plugins import WorkflowFactory, DataFactory
-       ...: Int = DataFactory('int')
-       ...: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+       ...: Int = DataFactory('core.int')
+       ...: MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
        ...: builder = MultiplyAddWorkChain.get_builder()
 
 To explore the inputs of the work chain, you can use tab autocompletion by typing ``builder.`` and then hitting ``TAB``.

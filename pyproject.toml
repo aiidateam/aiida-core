@@ -4,6 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.pylint.master]
 load-plugins = "pylint_django"
+# this currently fails with aiida.common.exceptions.ProfileConfigurationError: no profile has been loaded
+# we woud need a static settings module to use this
+# django-settings-module = "aiida.backends.djsite.settings"
 
 [tool.pylint.format]
 max-line-length = 120
@@ -13,18 +16,18 @@ disable = [
     "bad-continuation",
     "bad-option-value",
     "cyclic-import",
-    "django-not-available",
+    "django-not-configured",
     "duplicate-code",
     "import-outside-toplevel",
     "inconsistent-return-statements",
     "locally-disabled",
     "logging-fstring-interpolation",
     "no-else-raise",
+    "raise-missing-from",
     "too-few-public-methods",
     "too-many-ancestors",
     "too-many-arguments",
-    "too-many-instance-attributes",
-    "useless-suppression",
+    "too-many-instance-attributes"
 ]
 
 [tool.pylint.basic]
@@ -37,6 +40,8 @@ good-names = [
     "j",
     "k",
     "pk",
+    "fg",
+    "nl",
     "TemplatereplacerCalculation",
     "ArithmeticAddCalculation",
     "MultiplyAddWorkChain"
@@ -85,6 +90,7 @@ check_untyped_defs = true
 scripts_are_modules = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+no_warn_no_return = true
 
 [[tool.mypy.overrides]]
 module = 'aiida.*'
@@ -105,6 +111,7 @@ module = [
     'ruamel.*',
     'scipy.*',
     'sqlalchemy.*',
+    'sqlalchemy_utils.*',
     'tqdm.*',
     'wrapt.*',
 ]

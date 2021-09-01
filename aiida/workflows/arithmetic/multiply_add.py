@@ -14,7 +14,7 @@ from aiida.orm import Code, Int
 from aiida.engine import calcfunction, WorkChain, ToContext
 from aiida.plugins.factories import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 @calcfunction

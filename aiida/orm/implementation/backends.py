@@ -30,31 +30,38 @@ class Backend(abc.ABC):
     def migrate(self):
         """Migrate the database to the latest schema generation or version."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def authinfos(self) -> 'BackendAuthInfoCollection':
         """Return the collection of authorisation information objects"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def comments(self) -> 'BackendCommentCollection':
         """Return the collection of comments"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def computers(self) -> 'BackendComputerCollection':
         """Return the collection of computers"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def groups(self) -> 'BackendGroupCollection':
         """Return the collection of groups"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def logs(self) -> 'BackendLogCollection':
         """Return the collection of logs"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def nodes(self) -> 'BackendNodeCollection':
         """Return the collection of nodes"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def query_manager(self) -> 'AbstractQueryManager':
         """Return the query manager for the objects stored in the backend"""
 
@@ -62,7 +69,8 @@ class Backend(abc.ABC):
     def query(self) -> 'BackendQueryBuilder':
         """Return an instance of a query builder implementation for this backend"""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def users(self) -> 'BackendUserCollection':
         """Return the collection of users"""
 

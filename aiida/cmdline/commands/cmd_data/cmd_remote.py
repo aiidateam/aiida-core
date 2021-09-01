@@ -29,7 +29,7 @@ def remote():
 
 
 @remote.command('ls')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.remote',)))
 @click.option('-l', '--long', 'ls_long', is_flag=True, default=False, help='Display also file metadata.')
 @click.option('-p', '--path', type=click.STRING, default='.', help='The folder to list.')
 def remote_ls(ls_long, path, datum):
@@ -48,15 +48,15 @@ def remote_ls(ls_long, path, datum):
                 stat.filemode(metadata['attributes'].st_mode), metadata['attributes'].st_size,
                 mtime.strftime('%d %b %Y %H:%M')
             )
-            click.echo(pre_line, nl=False)
+            echo.echo(pre_line, nl=False)
         if metadata['isdir']:
-            click.echo(click.style(metadata['name'], fg='blue'))
+            echo.echo(metadata['name'], fg='blue')
         else:
-            click.echo(metadata['name'])
+            echo.echo(metadata['name'])
 
 
 @remote.command('cat')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.remote',)))
 @click.argument('path', type=click.STRING)
 def remote_cat(datum, path):
     """Show content of a file in a RemoteData object."""
@@ -80,10 +80,8 @@ def remote_cat(datum, path):
 
 
 @remote.command('show')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:remote',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.remote',)))
 def remote_show(datum):
     """Show information for a RemoteData object."""
-    click.echo('- Remote computer name:')
-    click.echo(f'  {datum.computer.label}')
-    click.echo('- Remote folder full path:')
-    click.echo(f'  {datum.get_remote_path()}')
+    echo.echo(f'- Remote computer name: {datum.computer.label}')
+    echo.echo(f'- Remote folder full path: {datum.get_remote_path()}')

@@ -293,7 +293,7 @@ def process_watch(processes):
         echo.echo(f'Process<{sender}> [{subject}|{correlation_id}]: {body}')
 
     communicator = get_manager().get_communicator()
-    echo.echo_info('watching for broadcasted messages, press CTRL+C to stop...')
+    echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
 
     for process in processes:
 
@@ -309,7 +309,7 @@ def process_watch(processes):
             sleep(2)
     except (SystemExit, KeyboardInterrupt):
         echo.echo('')  # add a new line after the interrupt character
-        echo.echo_info('received interrupt, exiting...')
+        echo.echo_report('received interrupt, exiting...')
         try:
             communicator.close()
         except RuntimeError:
@@ -373,7 +373,7 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
                     echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
 
         if wait and scheduled:
-            echo.echo_info(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
+            echo.echo_report(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
 
             for future in futures.as_completed(scheduled.keys(), timeout=timeout):
                 process = scheduled[future]

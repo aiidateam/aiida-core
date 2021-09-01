@@ -46,7 +46,7 @@ def non_interactive_editor(request):
         else:
             environ = None
         try:
-            process = subprocess.Popen(
+            process = subprocess.Popen(  # pylint: disable=consider-using-with
                 f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
@@ -354,7 +354,7 @@ def with_daemon():
     env['PYTHONPATH'] = ':'.join(sys.path)
 
     profile = get_config().current_profile
-    daemon = subprocess.Popen(
+    daemon = subprocess.Popen(  # pylint: disable=consider-using-with
         DaemonClient(profile).cmd_string.split(),
         stderr=sys.stderr,
         stdout=sys.stdout,
@@ -368,8 +368,8 @@ def with_daemon():
 
 
 @pytest.fixture(scope='function')
-def dry_run_in_tmp(request, tmpdir):
-    """change to the tmp directory to do the dry run, then change back to the calling directory to avoid side-effects"""
-    os.chdir(tmpdir)
+def chdir_tmp_path(request, tmp_path):
+    """Change to a temporary directory before running the test and reverting to original working directory."""
+    os.chdir(tmp_path)
     yield
     os.chdir(request.config.invocation_dir)

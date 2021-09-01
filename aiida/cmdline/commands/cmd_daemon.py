@@ -72,7 +72,7 @@ def start(foreground, number):
         currenv = get_env_with_venv_bin()
         subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
-        click.secho('FAILED', fg='red', bold=True)
+        echo.echo('FAILED', fg='red', bold=True)
         echo.echo_critical(str(exception))
 
     # We add a small timeout to give the pid-file a chance to be created
@@ -105,8 +105,8 @@ def status(all_profiles):
     for profile in profiles:
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
-        click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho(f'{profile.name}', bold=True)
+        echo.echo('Profile: ', fg='red', bold=True, nl=False)
+        echo.echo(f'{profile.name}', bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
         daemons_running.append(client.is_daemon_running)
@@ -158,7 +158,7 @@ def logshow():
 
     try:
         currenv = get_env_with_venv_bin()
-        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)
+        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)  # pylint: disable=consider-using-with
         process.wait()
     except KeyboardInterrupt:
         process.kill()
@@ -185,8 +185,8 @@ def stop(no_wait, all_profiles):
 
         client = get_daemon_client(profile.name)
 
-        click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho(f'{profile.name}', bold=True)
+        echo.echo('Profile: ', fg='red', bold=True, nl=False)
+        echo.echo(f'{profile.name}', bold=True)
 
         if not client.is_daemon_running:
             echo.echo('Daemon was not running')
@@ -205,7 +205,7 @@ def stop(no_wait, all_profiles):
 
         if wait:
             if response['status'] == client.DAEMON_ERROR_NOT_RUNNING:
-                click.echo('The daemon was not running.')
+                echo.echo('The daemon was not running.')
             else:
                 retcode = print_client_response_status(response)
                 if retcode:

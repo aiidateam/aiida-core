@@ -327,7 +327,7 @@ Usage: The scheduler is used in the familiar way by entering 'myscheduler' as th
 ``aiida.transports``
 --------------------
 
-``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``ssh`` and ``local`` (stub for when the remote computer is actually the same).
+``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh`` and ``core.local`` (stub for when the remote computer is actually the same).
 We recommend naming the plugin package after the mode of transport (e.g. ``aiida-mytransport``), so that the entry point name can simply equal the name of the transport:
 
 Spec::

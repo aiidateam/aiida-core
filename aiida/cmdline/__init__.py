@@ -46,6 +46,7 @@ __all__ = (
     'WorkflowParamType',
     'dbenv',
     'format_call_graph',
+    'is_verbose',
     'only_if_daemon_running',
     'with_dbenv',
 )

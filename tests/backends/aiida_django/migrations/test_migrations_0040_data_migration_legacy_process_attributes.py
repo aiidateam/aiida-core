@@ -53,7 +53,7 @@ class TestLegacyProcessAttributeDataMigration(TestMigrations):
         # Note that `Data` nodes should not have these attributes in real databases but the migration explicitly
         # excludes data nodes, which is what this test is verifying, by checking they are not deleted
         node_data = self.DbNode(
-            node_type='data.dict.Dict.',
+            node_type='data.core.dict.Dict.',
             user_id=self.default_user.id,
             attributes={
                 '_sealed': True,

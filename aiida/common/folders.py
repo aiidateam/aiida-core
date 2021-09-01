@@ -282,7 +282,9 @@ class Folder:
         if 'b' in mode:
             encoding = None
 
-        return open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
+        return open(  # pylint: disable=consider-using-with
+            self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding
+        )
 
     @property
     def abspath(self):

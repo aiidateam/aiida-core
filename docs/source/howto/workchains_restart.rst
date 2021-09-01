@@ -85,7 +85,7 @@ We start by importing the relevant base classes and create a subclass:
     from aiida.engine import BaseRestartWorkChain
     from aiida.plugins import CalculationFactory
 
-    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
     class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
 

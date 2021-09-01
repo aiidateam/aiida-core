@@ -414,8 +414,8 @@ class Basket():
 
     def __add__(self, other):
         new_dict = {}
-        for key in self._dict:
-            new_dict[key] = self._dict[key] + other.dict[key]
+        for key, value in self._dict.items():
+            new_dict[key] = value + other.dict[key]
         return Basket(**new_dict)
 
     def __iadd__(self, other):

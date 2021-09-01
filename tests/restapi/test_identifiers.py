@@ -117,17 +117,17 @@ def test_full_type_unregistered(process_class, restapi_server, server_url):
         server.shutdown()
 
     # All nodes = only processes
-    # The main branch for all nodes does not currently return a queryable full_type
+    # The main branch for all nodes does not currently return a queryable full_type
     current_namespace = type_count_response.json()['data']
     assert len(current_namespace['subspaces']) == 1
 
-    # All processes = only one kind of process (Calculation/Workflow)
+    # All processes = only one kind of process (Calculation/Workflow)
     current_namespace = current_namespace['subspaces'][0]
     query_all = orm.QueryBuilder().append(orm.Node, filters=get_full_type_filters(current_namespace['full_type']))
     assert len(current_namespace['subspaces']) == 1
     assert query_all.count() == 3
 
-    # All subprocesses = only one kind of subprocess (calcfunc/workfunc or calcjob/workchain)
+    # All subprocesses = only one kind of subprocess (calcfunc/workfunc or calcjob/workchain)
     current_namespace = current_namespace['subspaces'][0]
     query_all = orm.QueryBuilder().append(orm.Node, filters=get_full_type_filters(current_namespace['full_type']))
     assert len(current_namespace['subspaces']) == 1
@@ -141,7 +141,7 @@ def test_full_type_unregistered(process_class, restapi_server, server_url):
     assert query_all.count() == 3
 
     # There are only two  process types: unregistered_type1 (1) and unregistered_type2 (2)
-    # The unregistered branch does not currently return a queryable full_type
+    # The unregistered branch does not currently return a queryable full_type
     current_namespace = current_namespace['subspaces'][0]
     assert len(current_namespace['subspaces']) == 2
 
@@ -201,26 +201,17 @@ def test_full_type_backwards_compatibility(node_class, restapi_server, server_ur
         server.shutdown()
 
     # All nodes (contains either a process branch or data branch)
-    # The main branch for all nodes does not currently return a queryable full_type
+    # The main branch for all nodes does not currently return a queryable full_type
     current_namespace = type_count_response.json()['data']
     assert len(current_namespace['subspaces']) == 1
 
-    # All subnodes (contains a workflow, calculation or data_type branch)
+    # All subnodes (contains a workflow, calculation or data_type branch)
     current_namespace = current_namespace['subspaces'][0]
     query_all = orm.QueryBuilder().append(orm.Node, filters=get_full_type_filters(current_namespace['full_type']))
     assert len(current_namespace['subspaces']) == 1
     assert query_all.count() == 2
 
-    # If this is a process node, there is an extra branch before the leaf
-    # (calcfunction, workfunction, calcjob or workchain)
-    if issubclass(node_class, orm.ProcessNode):
-        current_namespace = current_namespace['subspaces'][0]
-        query_all = orm.QueryBuilder().append(orm.Node, filters=get_full_type_filters(current_namespace['full_type']))
-        assert len(current_namespace['subspaces']) == 1
-        assert query_all.count() == 2
-
-    # This will be the last leaf: the specific data type or the empty process_type
     current_namespace = current_namespace['subspaces'][0]
     query_all = orm.QueryBuilder().append(orm.Node, filters=get_full_type_filters(current_namespace['full_type']))
-    assert len(current_namespace['subspaces']) == 0
+    assert len(current_namespace['subspaces']) == 1
     assert query_all.count() == 2

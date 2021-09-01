@@ -364,8 +364,8 @@ With the entry points set up, you are ready to launch your first calculation wit
 
     .. code-block:: console
 
-        $ verdi computer setup -L localhost -H localhost -T local -S direct -w `echo $PWD/work` -n
-        $ verdi computer configure local localhost --safe-interval 5 -n
+        $ verdi computer setup -L localhost -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
+        $ verdi computer configure core.local localhost --safe-interval 5 -n
 
  *  Create the input files for our calculation
 

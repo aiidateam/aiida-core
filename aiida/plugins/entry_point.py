@@ -40,9 +40,9 @@ class EntryPointFormat(enum.Enum):
 
     Under these definitions a potentially valid entry point string may have the following formats:
 
-        * FULL:    prefixed group plus entry point name     aiida.transports:ssh
-        * PARTIAL: unprefixed group plus entry point name   transports:ssh
-        * MINIMAL: no group but only entry point name:      ssh
+        * FULL:    prefixed group plus entry point name     aiida.transports:core.ssh
+        * PARTIAL: unprefixed group plus entry point name   transports:core.ssh
+        * MINIMAL: no group but only entry point name:      core.ssh
 
     Note that the MINIMAL format can potentially lead to ambiguity if the name appears in multiple
     entry point groups.
@@ -309,7 +309,7 @@ def get_entry_point_string_from_class(class_module: str, class_name: str) -> Opt
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 
     if group and entry_point:
-        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])
+        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])  # type: ignore[attr-defined]
     return None
 
 

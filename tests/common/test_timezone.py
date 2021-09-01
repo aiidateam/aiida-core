@@ -13,7 +13,7 @@ import datetime
 import unittest
 import time
 
-import aiida.common.timezone as timezone
+from aiida.common import timezone
 
 
 class TimezoneTest(unittest.TestCase):

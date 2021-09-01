@@ -34,10 +34,10 @@ def profile_list():
         # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
         # they can at least verify that it is correctly set.
         from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-        echo.echo_info(f'configuration folder: {AIIDA_CONFIG_FOLDER}')
+        echo.echo_report(f'configuration folder: {AIIDA_CONFIG_FOLDER}')
         echo.echo_critical(str(exception))
     else:
-        echo.echo_info(f'configuration folder: {config.dirpath}')
+        echo.echo_report(f'configuration folder: {config.dirpath}')
 
     if not config.profiles:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')
@@ -55,7 +55,7 @@ def profile_show(profile):
     if profile is None:
         echo.echo_critical('no profile to show')
 
-    echo.echo_info(f'Profile: {profile.name}')
+    echo.echo_report(f'Profile: {profile.name}')
     data = sorted([(k.lower(), v) for k, v in profile.dictionary.items()])
     echo.echo(tabulate.tabulate(data))
 
@@ -121,7 +121,7 @@ def profile_delete(force, include_config, include_database, include_database_use
         }
 
         if not all(includes.values()):
-            excludes = [label for label in includes if not includes[label]]
+            excludes = [label for label, value in includes.items() if not value]
             message_suffix = f' excluding: {", ".join(excludes)}.'
         else:
             message_suffix = '.'
@@ -130,7 +130,7 @@ def profile_delete(force, include_config, include_database, include_database_use
         echo.echo_warning('this operation cannot be undone, ', nl=False)
 
         if not force and not click.confirm('are you sure you want to continue?'):
-            echo.echo_info(f'deleting of `{profile.name} cancelled.')
+            echo.echo_report(f'deleting of `{profile.name} cancelled.')
             continue
 
         get_config().delete_profile(

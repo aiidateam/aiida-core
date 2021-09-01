@@ -43,7 +43,7 @@ class PluginTestCase1(PluginTestCase):
         Return some Dict
         """
         from aiida.plugins import DataFactory
-        data = DataFactory('dict')(dict={'data': 'test'})
+        data = DataFactory('core.dict')(dict={'data': 'test'})
         data.store()
         return data
 
@@ -58,8 +58,8 @@ class PluginTestCase1(PluginTestCase):
             label='localhost',
             hostname='localhost',
             description='my computer',
-            transport_type='local',
-            scheduler_type='direct',
+            transport_type='core.local',
+            scheduler_type='core.direct',
             workdir=temp_dir,
             backend=cls.backend
         ).store()

@@ -109,7 +109,7 @@ class TestPluginVersionProvider(AiidaTestCase):
 
     def test_calc_job(self):
         """Test the mapper for a `CalcJob`."""
-        AddArithmeticCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        AddArithmeticCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
         expected_version = {'version': {'core': version_core, 'plugin': version_core}}
         self.assertEqual(self.provider.get_version_info(AddArithmeticCalculation), expected_version)

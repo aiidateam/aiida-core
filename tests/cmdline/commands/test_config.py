@@ -131,13 +131,13 @@ class TestVerdiConfig:
         assert result.output.strip() == ''
 
         result = run_cli_command(cmd_verdi.verdi, ['config', 'caching', '--disabled'])
-        assert 'arithmetic.add' in result.output.strip()
+        assert 'core.arithmetic.add' in result.output.strip()
 
         config = get_config()
         config.set_option('caching.default_enabled', True, scope=config.current_profile.name)
 
         result = run_cli_command(cmd_verdi.verdi, ['config', 'caching'])
-        assert 'arithmetic.add' in result.output.strip()
+        assert 'core.arithmetic.add' in result.output.strip()
 
         result = run_cli_command(cmd_verdi.verdi, ['config', 'caching', '--disabled'])
         assert result.output.strip() == ''

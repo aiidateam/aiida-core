@@ -43,8 +43,8 @@ def generate_setup_options_dict(replace_args=None, non_interactive=True):
     valid_noninteractive_options['label'] = 'noninteractive_computer'
     valid_noninteractive_options['hostname'] = 'localhost'
     valid_noninteractive_options['description'] = 'my description'
-    valid_noninteractive_options['transport'] = 'local'
-    valid_noninteractive_options['scheduler'] = 'direct'
+    valid_noninteractive_options['transport'] = 'core.local'
+    valid_noninteractive_options['scheduler'] = 'core.direct'
     valid_noninteractive_options['shebang'] = '#!/bin/bash'
     valid_noninteractive_options['work-dir'] = '/scratch/{username}/aiida_run'
     valid_noninteractive_options['mpirun-command'] = 'mpirun -np {tot_num_mpiprocs}'
@@ -243,7 +243,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         options = generate_setup_options(options_dict)
         result = self.cli_runner.invoke(computer_setup, options)
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("'unknown_transport' is not valid", result.output)
+        self.assertIn("Entry point 'unknown_transport' not found in group 'aiida.transports'", result.output)
 
     def test_noninteractive_wrong_scheduler_fail(self):
         """
@@ -255,7 +255,7 @@ class TestVerdiComputerSetup(AiidaTestCase):
         result = self.cli_runner.invoke(computer_setup, options)
 
         self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn("'unknown_scheduler' is not valid", result.output)
+        self.assertIn("Entry point 'unknown_scheduler' not found in group 'aiida.schedulers'", result.output)
 
     def test_noninteractive_invalid_shebang_fail(self):
         """
@@ -289,8 +289,8 @@ class TestVerdiComputerSetup(AiidaTestCase):
             handle.write(f"""---
 label: {label}
 hostname: myhost
-transport: local
-scheduler: direct
+transport: core.local
+scheduler: core.direct
 """)
             handle.flush()
 
@@ -312,7 +312,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
         self.comp_builder.hostname = 'localhost'
         self.comp_builder.description = 'Test Computer'
-        self.comp_builder.scheduler = 'direct'
+        self.comp_builder.scheduler = 'core.direct'
         self.comp_builder.work_dir = '/tmp/aiida'
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
@@ -323,20 +323,20 @@ class TestVerdiComputerConfigure(AiidaTestCase):
     def test_top_help(self):
         """Test help option of verdi computer configure."""
         result = self.cli_runner.invoke(computer_configure, ['--help'], catch_exceptions=False)
-        self.assertIn('ssh', result.output)
-        self.assertIn('local', result.output)
+        self.assertIn('core.ssh', result.output)
+        self.assertIn('core.local', result.output)
 
     def test_reachable(self):  # pylint: disable=no-self-use
         """Test reachability of top level and sub commands."""
         import subprocess as sp
         sp.check_output(['verdi', 'computer', 'configure', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'local', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'ssh', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
 
     def test_local_ni_empty(self):
         """
-        Test verdi computer configure local <comp>
+        Test verdi computer configure core.local <comp>
 
         Test twice, with comp setup for local or ssh.
 
@@ -344,35 +344,35 @@ class TestVerdiComputerConfigure(AiidaTestCase):
          * with computer setup for ssh: should fail
         """
         self.comp_builder.label = 'test_local_ni_empty'
-        self.comp_builder.transport = 'local'
+        self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['local', comp.label, '--non-interactive', '--safe-interval', '0']
+        options = ['core.local', comp.label, '--non-interactive', '--safe-interval', '0']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
 
-        options = ['local', comp_mismatch.label, '--non-interactive']
+        options = ['core.local', comp_mismatch.label, '--non-interactive']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
-        self.assertIn('ssh', result.output)
-        self.assertIn('local', result.output)
+        self.assertIn('core.ssh', result.output)
+        self.assertIn('core.local', result.output)
 
     def test_local_interactive(self):
         """Test computer configuration for local transports."""
         self.comp_builder.label = 'test_local_interactive'
-        self.comp_builder.transport = 'local'
+        self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
         comp.store()
 
         command_input = ('{use_login_shell}\n{safe_interval}\n').format(use_login_shell='False', safe_interval='1.0')
         result = self.cli_runner.invoke(
-            computer_configure, ['local', comp.label], input=command_input, catch_exceptions=False
+            computer_configure, ['core.local', comp.label], input=command_input, catch_exceptions=False
         )
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
@@ -390,7 +390,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         We are here therefore only checking some of them.
         """
         self.comp_builder.label = 'test_ssh_interactive'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -410,7 +410,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         )
 
         result = self.cli_runner.invoke(
-            computer_configure, ['ssh', comp.label], input=command_input, catch_exceptions=False
+            computer_configure, ['core.ssh', comp.label], input=command_input, catch_exceptions=False
         )
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
@@ -424,7 +424,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         """Test configuring a computer from a config file"""
         label = 'test_local_from_config'
         self.comp_builder.label = label
-        self.comp_builder.transport = 'local'
+        self.comp_builder.transport = 'core.local'
         computer = self.comp_builder.new()
         computer.store()
 
@@ -436,7 +436,7 @@ safe_interval: {interval}
 """)
             handle.flush()
 
-            options = ['local', computer.label, '--config', os.path.realpath(handle.name)]
+            options = ['core.local', computer.label, '--config', os.path.realpath(handle.name)]
             result = self.cli_runner.invoke(computer_configure, options)
 
         self.assertClickResultNoException(result)
@@ -444,7 +444,7 @@ safe_interval: {interval}
 
     def test_ssh_ni_empty(self):
         """
-        Test verdi computer configure ssh <comp>
+        Test verdi computer configure core.ssh <comp>
 
         Test twice, with comp setup for ssh or local.
 
@@ -452,34 +452,34 @@ safe_interval: {interval}
          * with computer setup for local: should fail
         """
         self.comp_builder.label = 'test_ssh_ni_empty'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['ssh', comp.label, '--non-interactive', '--safe-interval', '1']
+        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
 
         self.comp_builder.label = 'test_ssh_ni_empty_mismatch'
-        self.comp_builder.transport = 'local'
+        self.comp_builder.transport = 'core.local'
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
 
-        options = ['ssh', comp_mismatch.label, '--non-interactive']
+        options = ['core.ssh', comp_mismatch.label, '--non-interactive']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertIsNotNone(result.exception)
-        self.assertIn('local', result.output)
-        self.assertIn('ssh', result.output)
+        self.assertIn('core.local', result.output)
+        self.assertIn('core.ssh', result.output)
 
     def test_ssh_ni_username(self):
-        """Test verdi computer configure ssh <comp> --username=<username>."""
+        """Test verdi computer configure core.ssh <comp> --username=<username>."""
         self.comp_builder.label = 'test_ssh_ni_username'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         username = 'TEST'
-        options = ['ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
+        options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result.output)
         self.assertEqual(
@@ -490,7 +490,7 @@ safe_interval: {interval}
     def test_show(self):
         """Test verdi computer configure show <comp>."""
         self.comp_builder.label = 'test_show'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -504,7 +504,7 @@ safe_interval: {interval}
         )
         self.assertIn('--username=', result.output)
 
-        config_cmd = ['ssh', comp.label, '--non-interactive']
+        config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
         result_config = self.cli_runner.invoke(computer_configure, config_cmd, catch_exceptions=False)
         self.assertTrue(comp.is_user_configured(self.user), msg=result_config.output)
@@ -531,8 +531,8 @@ class TestVerdiComputerCommands(AiidaTestCase):
         cls.comp = orm.Computer(
             label=cls.computer_name,
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct',
+            transport_type='core.local',
+            scheduler_type='core.direct',
             workdir='/tmp/aiida'
         )
         cls.comp.set_default_mpiprocs_per_machine(1)
@@ -546,7 +546,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
         """
         self.user = orm.User.objects.get_default()
 
-        # I need to configure the computer here; being 'local',
+        # I need to configure the computer here; being 'core.local',
         # there should not be any options asked here
         self.comp.configure()
 
@@ -660,8 +660,8 @@ class TestVerdiComputerCommands(AiidaTestCase):
         orm.Computer(
             label='computer_for_test_delete',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct',
+            transport_type='core.local',
+            scheduler_type='core.direct',
             workdir='/tmp/aiida'
         ).store()
 

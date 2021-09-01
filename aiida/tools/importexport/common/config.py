@@ -15,7 +15,7 @@ from aiida.orm import Computer, Group, Node, User, Log, Comment
 __all__ = ('EXPORT_VERSION',)
 
 # Current export version
-EXPORT_VERSION = '0.12'
+EXPORT_VERSION = '0.13'
 
 
 class ExportFileFormat(str, Enum):

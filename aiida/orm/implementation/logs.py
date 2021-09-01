@@ -20,7 +20,8 @@ class BackendLog(BackendEntity):
     Backend Log interface
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def uuid(self):
         """
         Get the UUID of the log entry
@@ -29,7 +30,8 @@ class BackendLog(BackendEntity):
         :rtype: uuid.UUID
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def time(self):
         """
         Get the time corresponding to the entry
@@ -38,7 +40,8 @@ class BackendLog(BackendEntity):
         :rtype: :class:`!datetime.datetime`
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def loggername(self):
         """
         The name of the logger that created this entry
@@ -47,7 +50,8 @@ class BackendLog(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def levelname(self):
         """
         The name of the log level
@@ -56,7 +60,8 @@ class BackendLog(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def dbnode_id(self):
         """
         Get the id of the object that created the log entry
@@ -65,7 +70,8 @@ class BackendLog(BackendEntity):
         :rtype: int
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def message(self):
         """
         Get the message corresponding to the entry
@@ -74,7 +80,8 @@ class BackendLog(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def metadata(self):
         """
         Get the metadata corresponding to the entry

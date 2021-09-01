@@ -244,7 +244,7 @@ class TestSubmitScript:
             submit_script_text = scheduler.get_submit_script(job_tmpl)
 
             # This tests if the implementation correctly chooses the default:
-            assert submit_script_text.split('\n')[0] == expected_first_line
+            assert submit_script_text.split('\n', maxsplit=1)[0] == expected_first_line
 
     def test_submit_script_with_num_cores_per_machine(self):  # pylint: disable=invalid-name
         """

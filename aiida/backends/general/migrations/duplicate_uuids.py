@@ -61,7 +61,7 @@ def _apply_new_uuid_mapping(table, mapping):
             cursor.execute(query)
 
 
-def deduplicate_uuids(table=None, dry_run=False):
+def deduplicate_uuids(table=None, dry_run=True):
     """Detect and solve entities with duplicate UUIDs in a given database table.
 
     Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the node table in the database

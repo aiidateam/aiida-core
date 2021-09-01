@@ -12,7 +12,7 @@ import textwrap
 
 import click
 
-from aiida.cmdline.commands.cmd_verdi import verdi, VerdiCommandGroup
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 

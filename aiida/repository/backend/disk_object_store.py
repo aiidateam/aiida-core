@@ -118,3 +118,53 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         if self.container.hash_type != 'sha256':
             return super().get_object_hash(key)
         return key
+
+    def maintain(self, full: bool = False, **kwargs) -> dict:
+        # By default it will do only pack_loose if full=False or all operations
+        # if full=True. Then each can be overriden by the respective kwarg.
+        pack_loose = kwargs.get('override_pack_loose', True)
+        do_repack = kwargs.get('override_do_repack', full)
+        clean_storage = kwargs.get('override_clean_storage', full)
+        do_vacuum = kwargs.get('override_do_vacuum', full)
+
+        operation_results = {}
+
+        if pack_loose:
+            self.container.pack_all_loose()
+            operation_results['pack_loose'] = {'decription': 'Packed all loose files.'}
+
+        if do_repack:
+            self.container.repack()
+            operation_results['repack'] = {'decription': 'Repacked all packages for optimal access.'}
+
+        if clean_storage:
+            self.container.clean_storage(vacuum=do_vacuum)
+            operation_results['clean_storage'] = {'decription': 'Cleaned up the internal repo database.'}
+
+        return operation_results
+
+    def get_info(self, statistics=False, **kwargs) -> dict:
+        bytes_to_mb = 9.53674316E-7
+
+        output_info = {}
+        output_info['SHA-hash algorithm'] = self.container.hash_type
+        output_info['Compression algorithm'] = self.container.compression_algorithm
+
+        if not statistics:
+            return output_info
+
+        files_data = self.container.count_objects()
+        size_data = self.container.get_total_size()
+
+        output_info['Packs'] = files_data['pack_files']  # type: ignore
+
+        output_info['Objects'] = {  # type: ignore
+            'unpacked': files_data['loose'],
+            'packed': files_data['packed'],
+        }
+        output_info['Size (MB)'] = {  # type: ignore
+            'unpacked': size_data['total_size_loose'] * bytes_to_mb,
+            'packed': size_data['total_size_packfiles_on_disk'] * bytes_to_mb,
+            'other': size_data['total_size_packindexes_on_disk'] * bytes_to_mb,
+        }
+        return output_info

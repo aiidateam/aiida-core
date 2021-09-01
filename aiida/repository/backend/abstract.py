@@ -119,6 +119,23 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return: An iterable for all the available object keys.
         """
 
+    def get_info(self, statistics=False, **kwargs) -> dict:  # pylint: disable=unused-argument,no-self-use
+        """Returns relevant information about the content of the repository.
+
+        :return: a dictionary with the information.
+        """
+        return {}
+
+    def maintain(self, full: bool = False, **kwargs) -> dict:  # pylint: disable=unused-argument,no-self-use
+        """Performs maintenance operations.
+
+        :param full:
+            a flag to perform operations that require to stop using the maintained profile.
+        :return:
+            a dictionary with information on the operations performed.
+        """
+        return {}
+
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given key.

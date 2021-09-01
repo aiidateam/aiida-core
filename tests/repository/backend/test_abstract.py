@@ -14,11 +14,11 @@ class RepositoryBackend(AbstractRepositoryBackend):
     """Concrete implementation of ``AbstractRepositoryBackend``."""
 
     @property
-    def uuid(self) -> Optional[str]:
+    def key_format(self) -> Optional[str]:
         return None
 
     @property
-    def key_format(self) -> Optional[str]:
+    def uuid(self) -> Optional[str]:
         return None
 
     def initialise(self, **kwargs) -> None:
@@ -35,7 +35,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
         pass
 
     # pylint useless-super-delegation needs to be disabled here because it refuses to
-    # recognize that this is an abstract method and thus has to be overriden. See the
+    # recognize that this is an abstract method and thus has to be overwritten. See the
     # following issue: https://github.com/PyCQA/pylint/issues/1594
     def delete_objects(self, keys: List[str]) -> None:  # pylint: disable=useless-super-delegation
         super().delete_objects(keys)
@@ -103,7 +103,7 @@ def test_put_object_from_file(repository, generate_directory):
 
 
 def test_passes_to_batch(repository, monkeypatch):
-    """Checks that the single object operations call the batch operations"""
+    """Checks that the single object operations call the batch operations."""
 
     def mock_batch_operation(self, keys):
         raise NotImplementedError('this method was intentionally not implemented')
@@ -122,7 +122,7 @@ def test_passes_to_batch(repository, monkeypatch):
 
 
 def test_delete_objects_test(repository, monkeypatch):
-    """Checks that the super of delete_objects will check for existence of the files"""
+    """Checks that the super of delete_objects will check for existence of the files."""
 
     def has_objects_mock(self, keys):  # pylint: disable=unused-argument
         return [False for key in keys]
@@ -132,3 +132,11 @@ def test_delete_objects_test(repository, monkeypatch):
         repository.delete_objects(['object_key'])
     assert 'exist' in str(execinfo.value)
     assert 'object_key' in str(execinfo.value)
+
+
+def test_default_methods(repository):
+    """Checks the behaviour of the default methods."""
+    assert repository.get_info() == {}
+    assert repository.get_info(statistics=True) == {}
+    assert repository.maintain() == {}
+    assert repository.maintain(full=True) == {}

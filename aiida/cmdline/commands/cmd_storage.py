@@ -85,7 +85,67 @@ def storage_integrity():
 def storage_info(statistics):
     """Summarise the contents of the storage."""
     from aiida.cmdline.utils.common import get_database_summary
+    from aiida.repository.control import repository_info
     from aiida.orm import QueryBuilder
 
-    data = get_database_summary(QueryBuilder, statistics)
+    data = {}
+    data['database'] = get_database_summary(QueryBuilder, statistics)
+    data['repository'] = repository_info(statistics=statistics)
+
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
+
+
+@verdi_storage.command('maintain')
+@click.option(
+    '--full',
+    is_flag=True,
+    help='Performs maintenance tasks that are safe to run while other AiiDA instances are working with the profile.'
+)
+@click.option(
+    '--dry-run',
+    is_flag=True,
+    help='Performs maintenance tasks that are safe to run while other AiiDA instances are working with the profile.'
+)
+def storage_maintain(full, dry_run):
+    """Performs maintenance tasks on the repository."""
+    from aiida.repository.control import get_repository_report, repository_maintain
+
+    if dry_run and full:
+        echo.echo_critical('You cannot request both `--dry-run` and `--full` at the same time.')
+
+    if dry_run:
+        maintainance_report = get_repository_report()['user_info']
+        click.echo('Repository:')
+        click.echo(maintainance_report)
+        return
+
+    if full:
+
+        click.echo(
+            '\nIn order to safely perform the full maintenance operations on the internal storage, no other '
+            'process should be using the AiiDA profile being maintained. '
+            'This includes daemon workers, verdi shells, scripts with the profile loaded, etc). '
+            'Please make sure there is nothing like this currently running and that none is started until '
+            'these procedures conclude. '
+            'For performing maintanance operations that are safe to run while actively using AiiDA, just run '
+            '`verdi storage maintain`, without the `--full` flag.\n'
+        )
+
+    else:
+
+        click.echo(
+            '\nThis command will perform all maintenance operations on the internal storage that can be safely '
+            'executed while still running AiiDA. '
+            'However, not all operations that are required to fully optimize disk usage and future performance '
+            'can be done in this way. '
+            'Whenever you find the time or opportunity, please consider running `verdi repository maintenance '
+            '--full` for a more complete optimization.\n'
+        )
+
+    if not click.confirm('Are you sure you want continue in this mode?'):
+        return
+
+    maintainance_report = repository_maintain(full=full)
+    click.echo('\nMaintainance procedures finished:\n')
+    if 'user_info' in maintainance_report:
+        click.echo(maintainance_report['user_info'])

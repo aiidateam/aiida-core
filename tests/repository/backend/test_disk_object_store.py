@@ -21,6 +21,30 @@ def repository(tmp_path):
     yield DiskObjectStoreRepositoryBackend(container=container)
 
 
+@pytest.fixture(scope='function')
+def populated_repository(repository):
+    """Initializes the storage and database with minimal population."""
+    from io import BytesIO
+    repository.initialise()
+
+    content = BytesIO(b'Packed file number 1')
+    repository.put_object_from_filelike(content)
+
+    content = BytesIO(b'Packed file number 2')
+    repository.put_object_from_filelike(content)
+
+    repository.maintain(full=True)
+
+    content = BytesIO(b'Packed file number 3 (also loose)')
+    repository.put_object_from_filelike(content)
+
+    repository.maintain(full=False)
+
+    content = BytesIO(b'Unpacked file')
+    repository.put_object_from_filelike(content)
+    yield repository
+
+
 def test_str(repository):
     """Test the ``__str__`` method."""
     assert str(repository)
@@ -184,3 +208,71 @@ def test_key_format(repository):
     """Test the ``key_format`` property."""
     repository.initialise()
     assert repository.key_format == repository.container.hash_type
+
+
+def test_get_info(populated_repository):
+    """Test the ``get_info`` method."""
+    repository_info = populated_repository.get_info()
+    assert 'SHA-hash algorithm' in repository_info
+    assert 'Compression algorithm' in repository_info
+    assert repository_info['SHA-hash algorithm'] == 'sha256'
+    assert repository_info['Compression algorithm'] == 'zlib+1'
+
+    repository_info = populated_repository.get_info(statistics=True)
+    assert 'SHA-hash algorithm' in repository_info
+    assert 'Compression algorithm' in repository_info
+    assert repository_info['SHA-hash algorithm'] == 'sha256'
+    assert repository_info['Compression algorithm'] == 'zlib+1'
+
+    assert 'Packs' in repository_info
+    assert repository_info['Packs'] == 1
+
+    assert 'Objects' in repository_info
+    assert 'unpacked' in repository_info['Objects']
+    assert 'packed' in repository_info['Objects']
+    assert repository_info['Objects']['unpacked'] == 2
+    assert repository_info['Objects']['packed'] == 3
+
+    assert 'Size (MB)' in repository_info
+    assert 'unpacked' in repository_info['Size (MB)']
+    assert 'packed' in repository_info['Size (MB)']
+    assert 'other' in repository_info['Size (MB)']
+
+
+#yapf: disable
+@pytest.mark.parametrize(('kwargs', 'output_keys', 'output_info'), (
+    (
+        {'full': False},
+        ['pack_loose'],
+        {'unpacked': 2, 'packed': 4}
+    ),
+    (
+        {'full': True},
+        ['pack_loose', 'repack', 'clean_storage'],
+        {'unpacked': 0, 'packed': 4}
+    ),
+    (
+        {
+            'full': True,
+            'override_pack_loose': False,
+            'override_do_repack': False,
+            'override_clean_storage': False,
+            'override_do_vacuum': False,
+        },
+        [],
+        {'unpacked': 2, 'packed': 3}
+    ),
+))
+# yapf: enable
+def test_maintain(populated_repository, kwargs, output_keys, output_info):
+    """Test the ``maintain`` method."""
+    maintainance_info = populated_repository.maintain(**kwargs)
+    repository_info = populated_repository.get_info(statistics=True)
+
+    for output_key in output_keys:
+        assert output_key in maintainance_info
+        maintainance_info.pop(output_key)
+    assert len(maintainance_info) == 0
+
+    assert repository_info['Objects']['unpacked'] == output_info['unpacked']
+    assert repository_info['Objects']['packed'] == output_info['packed']

@@ -103,3 +103,35 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     assert result.exc_info[0] is SystemExit
     assert 'Critical:' in result.output
     assert 'passed error message' in result.output
+
+
+def tests_storage_maintain_full_dry(run_cli_command):
+    """Test that ``verdi storage migrate`` detects the cancelling of the interactive prompt."""
+    result = run_cli_command(cmd_storage.storage_maintain, options=['--full', '--dry-run'], raises=True)
+    assert '--dry-run' in result.output.lower()
+    assert '--full' in result.output.lower()
+
+
+def tests_storage_maintain_text(run_cli_command, monkeypatch):
+    """Test all the information and cases of the storage maintain command."""
+    from aiida.repository import control
+
+    def reporter_mock(**kwargs):
+        return {'user_info': 'Underlying message'}
+
+    monkeypatch.setattr(control, 'get_repository_report', reporter_mock)
+    monkeypatch.setattr(control, 'repository_maintain', reporter_mock)
+
+    result = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
+    assert 'repository:' in result.output.lower()
+    assert 'Underlying message' in result.output
+
+    result = run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
+    assert 'no other process should be using the aiida profile' in result.output.lower()
+    assert 'finished' in result.output.lower()
+    assert 'Underlying message' in result.output
+
+    result = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
+    assert 'can be safely executed while still running aiida' in result.output.lower()
+    assert 'finished' in result.output.lower()
+    assert 'Underlying message' in result.output

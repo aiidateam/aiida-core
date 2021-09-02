@@ -178,13 +178,15 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         self._incoming_cache = list()
 
     def _validate(self) -> bool:
-        """Check if the attributes and files retrieved from the database are valid.
+        """Validate information stored in Node object.
 
-        Must be able to work even before storing: therefore, use the `get_attr` and similar methods that automatically
-        read either from the DB or from the internal attribute cache.
+        For the :py:class:`~aiida.orm.Node` base class, this check is always valid.
+        Subclasses can override this method to perform additional checks
+        and should usually call ``super()._validate()`` first!
 
-        For the base class, this is always valid. Subclasses will reimplement this.
-        In the subclass, always call the super()._validate() method first!
+        This method is called automatically before storing the node in the DB.
+        Therefore, use :py:meth:`~aiida.orm.entities.EntityAttributesMixin.get_attribute()` and similar methods that
+        automatically read either from the DB or from the internal attribute cache.
         """
         # pylint: disable=no-self-use
         return True

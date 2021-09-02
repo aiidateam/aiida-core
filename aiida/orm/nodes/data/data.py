@@ -25,7 +25,7 @@ class Data(Node):
 
     Architecture note:
     Calculation plugins are responsible for converting raw output data from simulation codes to Data nodes.
-    Data nodes are responsible for validating their content (see _validate method).
+    Nodes are responsible for validating their content (see _validate method).
     """
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version', 'extras', 'source_md5', 'description', 'license']
 
@@ -351,23 +351,3 @@ class Data(Node):
         valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)]
         valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
-
-    def _validate(self):
-        """
-        Perform validation of the Data object.
-
-        .. note:: validation of data source checks license and requires
-            attribution to be provided in field 'description' of source in
-            the case of any CC-BY* license. If such requirement is too
-            strict, one can remove/comment it out.
-        """
-        # Validation of ``source`` is commented out due to Issue #9
-        # (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9/)
-        # super()._validate()
-        # if self.source is not None and \
-        #    self.source.get('license', None) and \
-        #    self.source['license'].startswith('CC-BY') and \
-        #    self.source.get('description', None) is None:
-        #     raise ValidationError("License of the object ({}) requires "
-        #                           "attribution, while none is given in the "
-        #                           "description".format(self.source['license']))

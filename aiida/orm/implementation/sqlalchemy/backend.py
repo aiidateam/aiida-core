@@ -11,7 +11,6 @@
 from contextlib import contextmanager
 
 from aiida.backends.sqlalchemy.models import base
-from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 
 from ..sql.backends import SqlBackend
@@ -39,7 +38,6 @@ class SqlaBackend(SqlBackend[base.Base]):
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
-        self._query_manager = SqlaQueryManager(self)
         self._schema_manager = SqlaBackendManager()
         self._users = users.SqlaUserCollection(self)
 
@@ -69,10 +67,6 @@ class SqlaBackend(SqlBackend[base.Base]):
     @property
     def nodes(self):
         return self._nodes
-
-    @property
-    def query_manager(self):
-        return self._query_manager
 
     def query(self):
         return querybuilder.SqlaQueryBuilder(self)

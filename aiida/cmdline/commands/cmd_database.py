@@ -15,7 +15,7 @@ from aiida.common import exceptions
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
-from aiida.manage.database.integrity.duplicate_uuid import TABLES_UUID_DEDUPLICATION
+from aiida.backends.general.migrations.duplicate_uuids import TABLES_UUID_DEDUPLICATION
 
 
 @verdi.group('database')
@@ -120,7 +120,7 @@ def detect_duplicate_uuid(table, apply_patch):
     duplicate UUIDs in an inconsistent state. This command will run an analysis to detect duplicate UUIDs in a given
     table and solve it by generating new UUIDs. Note that it will not delete or merge any rows.
     """
-    from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids
+    from aiida.backends.general.migrations.duplicate_uuids import deduplicate_uuids
     from aiida.manage.manager import get_manager
 
     manager = get_manager()

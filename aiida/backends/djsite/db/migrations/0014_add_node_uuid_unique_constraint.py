@@ -27,7 +27,7 @@ def verify_node_uuid_uniqueness(_, __):
 
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.
     """
-    from aiida.backends.general.migrations.utils import verify_uuid_uniqueness
+    from aiida.backends.general.migrations.duplicate_uuids import verify_uuid_uniqueness
     verify_uuid_uniqueness(table='db_dbnode')
 
 

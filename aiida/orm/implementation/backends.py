@@ -18,7 +18,6 @@ if TYPE_CHECKING:
         BackendAuthInfoCollection, BackendCommentCollection, BackendComputerCollection, BackendGroupCollection,
         BackendLogCollection, BackendNodeCollection, BackendQueryBuilder, BackendUserCollection
     )
-    from aiida.backends.general.abstractqueries import AbstractQueryManager
 
 __all__ = ('Backend',)
 
@@ -59,11 +58,6 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def nodes(self) -> 'BackendNodeCollection':
         """Return the collection of nodes"""
-
-    @property
-    @abc.abstractmethod
-    def query_manager(self) -> 'AbstractQueryManager':
-        """Return the query manager for the objects stored in the backend"""
 
     @abc.abstractmethod
     def query(self) -> 'BackendQueryBuilder':

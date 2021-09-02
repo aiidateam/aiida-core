@@ -1130,10 +1130,22 @@ class QueryBuilderPath:
     def init_db(self, clear_database_before_test, backend):
         self.backend = backend
 
+    @staticmethod
+    def get_all_parents(node_pks, return_values=('id',)):
+        """Get all the parents of given nodes
+
+        :param node_pks: one node pk or an iterable of node pks
+        :return: a list of aiida objects with all the parents of the nodes"""
+        from aiida.orm import Node, QueryBuilder
+
+        q_build = QueryBuilder()
+        q_build.append(Node, tag='low_node', filters={'id': {'in': node_pks}})
+        q_build.append(Node, with_descendants='low_node', project=return_values)
+        return q_build.all()
+
     def test_query_path(self):
         # pylint: disable=too-many-statements
 
-        q = self.backend.query_manager
         n1 = orm.Data()
         n1.label = 'n1'
         n2 = orm.CalculationNode()
@@ -1168,13 +1180,13 @@ class QueryBuilderPath:
             node.store()
 
         # There are no parents to n9, checking that
-        assert set([]) == set(q.get_all_parents([n9.pk]))
+        assert set([]) == set(self.get_all_parents([n9.pk]))
         # There is one parent to n6
-        assert {(_,) for _ in (n6.pk,)} == {tuple(_) for _ in q.get_all_parents([n7.pk])}
+        assert {(_,) for _ in (n6.pk,)} == {tuple(_) for _ in self.get_all_parents([n7.pk])}
         # There are several parents to n4
-        assert {(_.pk,) for _ in (n1, n2)} == {tuple(_) for _ in q.get_all_parents([n4.pk])}
+        assert {(_.pk,) for _ in (n1, n2)} == {tuple(_) for _ in self.get_all_parents([n4.pk])}
         # There are several parents to n5
-        assert {(_.pk,) for _ in (n1, n2, n3, n4)} == {tuple(_) for _ in q.get_all_parents([n5.pk])}
+        assert {(_.pk,) for _ in (n1, n2, n3, n4)} == {tuple(_) for _ in self.get_all_parents([n5.pk])}
 
         # Yet, no links from 1 to 8
         assert orm.QueryBuilder().append(orm.Node, filters={
@@ -1376,7 +1388,7 @@ class TestManager:
             statistics['types'][n._plugin_type_string] += 1  # pylint: disable=no-member
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
-        qmanager = self.backend.query_manager
+        qmanager = self.backend.query()
         current_db_statistics = qmanager.get_creation_statistics()
         types = defaultdict(int)
         types.update(current_db_statistics['types'])
@@ -1413,7 +1425,7 @@ class TestManager:
             statistics['types'][n._plugin_type_string] += 1  # pylint: disable=no-member,protected-access
             statistics['ctime_by_day'][n.ctime.strftime('%Y-%m-%d')] += 1
 
-        current_db_statistics = self.backend.query_manager.get_creation_statistics()
+        current_db_statistics = self.backend.query().get_creation_statistics()
         types = defaultdict(int)
         types.update(current_db_statistics['types'])
         ctime_by_day = defaultdict(int)
@@ -1426,7 +1438,7 @@ class TestManager:
         store_and_add(orm.Dict(), expected_db_statistics)
         store_and_add(orm.CalculationNode(), expected_db_statistics)
 
-        new_db_statistics = self.backend.query_manager.get_creation_statistics()
+        new_db_statistics = self.backend.query().get_creation_statistics()
         # I only check a few fields
         new_db_statistics = {k: v for k, v in new_db_statistics.items() if k in expected_db_statistics}
 

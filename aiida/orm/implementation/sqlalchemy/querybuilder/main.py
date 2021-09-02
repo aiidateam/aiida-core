@@ -1072,3 +1072,34 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         options = f' ({options})' if options else ''
         rows = self.get_session().execute(f'EXPLAIN{options} {compiled.string}').fetchall()
         return '\n'.join(row.values()[0] for row in rows)
+
+    def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
+        session = self.get_session()
+        retdict = {}
+
+        total_query = session.query(self.Node)
+        types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))  # pylint: disable=no-member
+        stat_query = session.query(
+            sa_func.date_trunc('day', self.Node.ctime).label('cday'),  # pylint: disable=no-member
+            sa_func.count(self.Node.id)  # pylint: disable=no-member
+        )
+
+        if user_pk is not None:
+            total_query = total_query.filter(self.Node.user_id == user_pk)
+            types_query = types_query.filter(self.Node.user_id == user_pk)
+            stat_query = stat_query.filter(self.Node.user_id == user_pk)
+
+        # Total number of nodes
+        retdict['total'] = total_query.count()
+
+        # Nodes per type
+        retdict['types'] = dict(types_query.group_by('typestring').all())
+
+        # Nodes created per day
+        stat = stat_query.group_by('cday').order_by('cday').all()
+
+        ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
+        retdict['ctime_by_day'] = ctime_by_day
+
+        return retdict
+        # Still not containing all dates

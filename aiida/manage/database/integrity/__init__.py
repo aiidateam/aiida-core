@@ -14,14 +14,9 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
-from .duplicate_uuid import *
 from .utils import *
 
 __all__ = (
-    'TABLES_UUID_DEDUPLICATION',
-    'deduplicate_uuids',
-    'get_duplicate_uuids',
-    'verify_uuid_uniqueness',
     'write_database_integrity_violation',
 )
 

@@ -34,7 +34,8 @@ tables = ['db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbworkflow']
 def verify_uuid_uniqueness(table):
     """Check whether the database contains duplicate UUIDS.
 
-    Note that we have to redefine this method from aiida.manage.database.integrity.verify_uuid_uniqueness
+    Note that we have to redefine this method from
+    aiida.backends.general.migrations.duplicate_uuids.verify_uuid_uniqueness
     because that uses the default database connection, while here the one created by Alembic should be used instead.
 
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.

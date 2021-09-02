@@ -13,7 +13,6 @@ from contextlib import contextmanager
 # pylint: disable=import-error,no-name-in-module
 from django.db import models, transaction
 
-from aiida.backends.djsite.queries import DjangoQueryManager
 from aiida.backends.djsite.manager import DjangoBackendManager
 
 from ..sql.backends import SqlBackend
@@ -41,7 +40,6 @@ class DjangoBackend(SqlBackend[models.Model]):
         self._groups = groups.DjangoGroupCollection(self)
         self._logs = logs.DjangoLogCollection(self)
         self._nodes = nodes.DjangoNodeCollection(self)
-        self._query_manager = DjangoQueryManager(self)
         self._backend_manager = DjangoBackendManager()
         self._users = users.DjangoUserCollection(self)
 
@@ -71,10 +69,6 @@ class DjangoBackend(SqlBackend[models.Model]):
     @property
     def nodes(self):
         return self._nodes
-
-    @property
-    def query_manager(self):
-        return self._query_manager
 
     def query(self):
         return querybuilder.DjangoQueryBuilder(self)

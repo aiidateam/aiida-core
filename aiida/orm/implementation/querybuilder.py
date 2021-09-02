@@ -94,7 +94,7 @@ class QueryDictType(TypedDict):
 GROUP_ENTITY_TYPE_PREFIX = 'group.'
 
 
-class BackendQueryBuilder:
+class BackendQueryBuilder(abc.ABC):
     """Backend query builder interface"""
 
     def __init__(self, backend: 'Backend'):
@@ -155,3 +155,24 @@ class BackendQueryBuilder:
         :params verbose: Display additional information regarding the plan.
         """
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
+        """Return a dictionary with the statistics of node creation, summarized by day.
+
+        :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.
+
+        :param user_pk: If None (default), return statistics for all users.
+            If user pk is specified, return only the statistics for the given user.
+
+        :return: a dictionary as follows::
+
+                {
+                   "total": TOTAL_NUM_OF_NODES,
+                   "types": {TYPESTRING1: count, TYPESTRING2: count, ...},
+                   "ctime_by_day": {'YYYY-MMM-DD': count, ...}
+                }
+
+            where in `ctime_by_day` the key is a string in the format 'YYYY-MM-DD' and the value is
+            an integer with the number of nodes created that day.
+        """

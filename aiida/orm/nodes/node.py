@@ -185,7 +185,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         and should usually call ``super()._validate()`` first!
 
         This method is called automatically before storing the node in the DB.
-        Therefore, use :py:meth:`~aiida.orm.entities.Entity.get_attribute()` and similar methods that automatically
+        Therefore, use :py:meth:`~aiida.orm.entities.EntityAttributesMixin.get_attribute()` and similar methods that automatically
         read either from the DB or from the internal attribute cache.
         """
         # pylint: disable=no-self-use

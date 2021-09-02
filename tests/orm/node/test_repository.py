@@ -11,6 +11,7 @@ from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
 from aiida.orm import load_node, CalcJobNode, Data
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
+from aiida.repository.common import File, FileType
 
 
 @pytest.fixture
@@ -148,6 +149,42 @@ def test_sealed():
 
     with pytest.raises(exceptions.ModificationNotAllowed):
         node.put_object_from_filelike(io.BytesIO(b'content'), 'path')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_get_object_raises():
+    """Test the ``NodeRepositoryMixin.get_object`` method when it is supposed to raise."""
+    node = Data()
+
+    with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
+        node.get_object('/absolute/path')
+
+    with pytest.raises(FileNotFoundError, match=r'object with path `.*` does not exist.'):
+        node.get_object('non_existing_folder/file_a')
+
+    with pytest.raises(FileNotFoundError, match=r'object with path `.*` does not exist.'):
+        node.get_object('non_existant')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_get_object():
+    """Test the ``NodeRepositoryMixin.get_object`` method."""
+    node = CalcJobNode()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/file_b')
+
+    file_object = node.get_object(None)
+    assert isinstance(file_object, File)
+    assert file_object.file_type == FileType.DIRECTORY
+
+    file_object = node.get_object('relative')
+    assert isinstance(file_object, File)
+    assert file_object.file_type == FileType.DIRECTORY
+    assert file_object.name == 'relative'
+
+    file_object = node.get_object('relative/file_b')
+    assert isinstance(file_object, File)
+    assert file_object.file_type == FileType.FILE
+    assert file_object.name == 'file_b'
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

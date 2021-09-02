@@ -130,6 +130,16 @@ class NodeRepositoryMixin:
             else:
                 yield handle
 
+    def get_object(self, path: FilePath = None) -> File:
+        """Return the object at the given path.
+
+        :param path: the relative path where to store the object in the repository.
+        :return: the `File` representing the object located at the given relative path.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path.
+        """
+        return self._repository.get_object(path)
+
     def get_object_content(self, path: str, mode='r') -> Union[str, bytes]:
         """Return the content of a object identified by key.
 

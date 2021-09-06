@@ -293,8 +293,7 @@ class DbMultipleValueAttributeBaseClass:
             raise ValidationError('The key cannot be an empty string.')
         if AIIDA_ATTRIBUTE_SEP in key:
             raise ValidationError(
-                "The separator symbol '{}' cannot be present "
-                'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP)
+                f"The separator symbol '{AIIDA_ATTRIBUTE_SEP}' cannot be present in the key of attributes, extras, etc."
             )
 
     @classmethod

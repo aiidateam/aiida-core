@@ -97,7 +97,7 @@ class CodDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, float):
                 raise ValueError(f"incorrect value for keyword '{alias}' only integers and floats are accepted")
-        return ' OR '.join('{} BETWEEN {} AND {}'.format(key, d - precision, d + precision) for d in values)
+        return ' OR '.join(f'{key} BETWEEN {d - precision} AND {d + precision}' for d in values)
 
     length_precision = 0.001
     angle_precision = 0.001

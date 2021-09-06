@@ -251,12 +251,12 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None, origina
 
     if mainitem['datatype'] in ['none', 'bool', 'int', 'float', 'txt']:
         if subitems:
-            raise DeserializationException("'{}' is of a base type, " 'but has subitems!'.format(mainitem.key))
+            raise DeserializationException(f"'{mainitem.key}' is of a base type, but has subitems!")
         return _deserialize_basic_type(mainitem)
 
     if mainitem['datatype'] == 'date':
         if subitems:
-            raise DeserializationException("'{}' is of a base type, " 'but has subitems!'.format(mainitem.key))
+            raise DeserializationException(f"'{mainitem.key}' is of a base type, but has subitems!")
         if is_naive(mainitem['dval']):
             return make_aware(mainitem['dval'], get_current_timezone())
         return mainitem['dval']
@@ -396,8 +396,7 @@ class ModelModifierV0025:
             raise ValidationError('The key cannot be an empty string.')
         if AIIDA_ATTRIBUTE_SEP in key:
             raise ValidationError(
-                "The separator symbol '{}' cannot be present "
-                'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP)
+                f"The separator symbol '{AIIDA_ATTRIBUTE_SEP}' cannot be present in the key of attributes, extras, etc."
             )
 
     def get_value_for_node(self, dbnode, key):

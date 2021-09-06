@@ -56,7 +56,7 @@ class VerdiCommandGroup(click.Group):
             matches = [c for c in sorted(self.list_commands(ctx)) if c.startswith(cmd_name)][:3]
 
         if matches:
-            formatted = '\n'.join('\t{}'.format(m) for m in sorted(matches))
+            formatted = '\n'.join(f'\t{m}' for m in sorted(matches))
             ctx.fail(f'`{cmd_name}` is not a {self.name} command.\n\nThe most similar commands are:\n{formatted}')
         else:
             ctx.fail(f'`{cmd_name}` is not a {self.name} command.\n\nNo similar commands found.')

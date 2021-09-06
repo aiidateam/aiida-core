@@ -144,7 +144,7 @@ def import_data_dj(
             raise exceptions.DanglingLinkError(
                 'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
                 'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
-                ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
+                ''.format(len(unknown_nodes)) + '\n'.join(f'* {uuid}' for uuid in unknown_nodes)
             )
 
         ###################################

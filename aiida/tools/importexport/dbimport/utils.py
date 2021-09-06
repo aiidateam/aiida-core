@@ -75,8 +75,7 @@ def merge_comment(incoming_comment, comment_mode):
     # Invalid comment_mode
     else:
         raise exceptions.ImportValidationError(
-            'Unknown comment_mode value: {}. Should be '
-            "either 'newest' or 'overwrite'".format(comment_mode)
+            f"Unknown comment_mode value: {comment_mode}. Should be either 'newest' or 'overwrite'"
         )
 
 

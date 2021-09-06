@@ -33,6 +33,8 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
 
     # Setup and configure local computer.
     computer_name=localhost
+    cpu_count=`python -c 'import psutil; print(psutil.cpu_count(logical=False))'`
+
     verdi computer show ${computer_name} || verdi computer setup   \
         --non-interactive                                          \
         --label "${computer_name}"                                 \
@@ -42,7 +44,7 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
         --scheduler core.direct                                    \
         --work-dir /home/aiida/aiida_run/                          \
         --mpirun-command "mpirun -np {tot_num_mpiprocs}"           \
-        --mpiprocs-per-machine 1 &&                                \
+        --mpiprocs-per-machine ${MPI_PROCS_PER_MACHINE:-${cpu_count}} && \
     verdi computer configure core.local "${computer_name}"              \
         --non-interactive                                          \
         --safe-interval 0.0

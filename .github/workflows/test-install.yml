@@ -65,7 +65,7 @@ jobs:
 
     - name: Upgrade pip and setuptools
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip "setuptools<58.0.2"
         pip --version
 
     - name: Create environment from requirements file.

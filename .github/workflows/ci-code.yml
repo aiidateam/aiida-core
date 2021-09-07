@@ -91,7 +91,7 @@ jobs:
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip "setuptools<58.0.2"
         pip --version
 
     - name: Install aiida-core

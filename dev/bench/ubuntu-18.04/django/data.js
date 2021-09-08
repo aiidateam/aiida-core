@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1631070408363,
+  "lastUpdate": 1631118058761,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -48681,6 +48681,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.014203",
             "group": "node",
             "extra": "mean: 22.760 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.11",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "42c5ab101c77a7e278bddb87d0055b907db42dc3",
+          "message": "CLI: rework the logging verbosity implementation (#5119)\n\nThe intended behavior of logging of the system when invoked through the\r\ncommand line interface `verdi` is as follows:\r\n\r\n * The verbosity of output produced by invoked CLI commands can be\r\n   controlled through a single `-v/--verbosity` option that is accepted\r\n   by the CLI at every command level.\r\n * It takes the values of the log levels of Python's logging system,\r\n   including AiiDA's custom `REPORT` level.\r\n * The verbosity level should be applied to all logging messages, so not\r\n   just those messages that are logged directly by the command itself,\r\n   but also any messages logged by module code that is indirectly called\r\n   in the stack.\r\n\r\nGiven that the implementation is built on top of the logging system, the\r\nlog level set by the verbosity option has to be added to the logging\r\nconfiguration somehow. The logging is configured by invoking the method\r\n`aiida.common.log.configure_logging` which consumes a dictionary with\r\nthe logging configuration that has certain fields that are dynamically\r\ndetermined from the loaded profile. Unfortunately, this method can be\r\ncalled by module code as well, therefore, the verbosity option can not\r\nrely on using this method to configure the logging. Because once the\r\ncallback is finished, any other code invoked by the command that calls\r\nthis same method, will undo the changes of the verbosity option.\r\n\r\nThe original implementation attempted to solve this problem by storing\r\nthe selected log level through the verbosity option, in the profile\r\ninstance loaded in memory. Since the log level would be read dynamically\r\nfrom the profile in the `configure_logging` method, even when it would\r\nbe recalled, the correct log level would be configured.\r\n\r\nThis approach had various disadvantages, however. It tied the option\r\nclosely to the concept of a profile. Even though all `verdi` commands\r\nhave the profile option added by default and therefore this does not\r\nreally pose a problem, it made the verbosity option useless in any other\r\ncontext. The tight coupling also made the logic more difficult to\r\nunderstand. Finally, even though the change of the profile setting was\r\nonly made in memory and so in principle the change should be temporary\r\nwithin the scope of the CLI command, if the command decided to store the\r\nprofile, which can for example happen in commands that are designed to\r\nchange the profile, the change in log level option would also be written\r\nto disk, causing an undesirable side effect of this implementation.\r\n\r\nHere, we change the implementation by fully decoupling the verbosity\r\noption from the profile and simply having the callback write the\r\nselected log level to a global constant in the `aiida.common.log` module\r\ncalled `CLI_LOG_LEVEL`. The `configure_logging` module will check this\r\nconstant and when set, will configure all loggers with the `cli` handler\r\nwith the correspondig log level. This design still has a downside in\r\nthat it hard-couples the generic `aiida.common.log` module to the more\r\nspecific `aiida.cmdline` module, but it is not obvious to get the CLI\r\ndependent log level injected into this module some other way.\r\n\r\nFinally, the original implementation allowed a default value for the\r\nverbosity option to be configured through the config by setting the\r\n`logging.aiida_loglevel` option. However, since that also determines the\r\nlog level for AiiDA when not run through the CLI, i.e. during normal\r\noperations, this could have undesirable side-effects. For example, if\r\nthe option was set to `WARNING` to temporarily limit the number of logs\r\nfrom processes when being run, certain CLI commands would also no longer\r\nreport any output.",
+          "timestamp": "2021-09-08T18:12:42+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/42c5ab101c77a7e278bddb87d0055b907db42dc3",
+          "distinct": true,
+          "tree_id": "6964081d63cce0e19ec3465ce17adaee4d06c08a"
+        },
+        "date": 1631118055078,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 4.172175408898224,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0092396",
+            "group": "engine",
+            "extra": "mean: 239.68 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.9304517011535721,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053048",
+            "group": "engine",
+            "extra": "mean: 1.0747 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 1.0846837407455998,
+            "unit": "iter/sec",
+            "range": "stddev: 0.047628",
+            "group": "engine",
+            "extra": "mean: 921.93 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.21250925548546656,
+            "unit": "iter/sec",
+            "range": "stddev: 0.089940",
+            "group": "engine",
+            "extra": "mean: 4.7057 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.25072752794426356,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13132",
+            "group": "engine",
+            "extra": "mean: 3.9884 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 3.1942472506516286,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0098560",
+            "group": "engine",
+            "extra": "mean: 313.06 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.7080469493595066,
+            "unit": "iter/sec",
+            "range": "stddev: 0.056082",
+            "group": "engine",
+            "extra": "mean: 1.4123 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.7110851750220382,
+            "unit": "iter/sec",
+            "range": "stddev: 0.36984",
+            "group": "engine",
+            "extra": "mean: 1.4063 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1897522539225847,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13322",
+            "group": "engine",
+            "extra": "mean: 5.2700 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.2248136230565831,
+            "unit": "iter/sec",
+            "range": "stddev: 0.099397",
+            "group": "engine",
+            "extra": "mean: 4.4481 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 3.0068571685933576,
+            "unit": "iter/sec",
+            "range": "stddev: 0.045916",
+            "group": "import-export",
+            "extra": "mean: 332.57 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.9026550915573157,
+            "unit": "iter/sec",
+            "range": "stddev: 0.043154",
+            "group": "import-export",
+            "extra": "mean: 344.51 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 2.0071805385069896,
+            "unit": "iter/sec",
+            "range": "stddev: 0.037857",
+            "group": "import-export",
+            "extra": "mean: 498.21 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.983999558409307,
+            "unit": "iter/sec",
+            "range": "stddev: 0.049225",
+            "group": "import-export",
+            "extra": "mean: 504.03 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 1493.3278538146262,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000033010",
+            "group": "node",
+            "extra": "mean: 669.65 usec\nrounds: 245"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 309.49241173933723,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000062720",
+            "group": "node",
+            "extra": "mean: 3.2311 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 126.82285887586254,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00074630",
+            "group": "node",
+            "extra": "mean: 7.8850 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 289.73194646444244,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025307",
+            "group": "node",
+            "extra": "mean: 3.4515 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 52.26254817104578,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010068",
+            "group": "node",
+            "extra": "mean: 19.134 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 49.2920251007378,
+            "unit": "iter/sec",
+            "range": "stddev: 0.011565",
+            "group": "node",
+            "extra": "mean: 20.287 msec\nrounds: 100"
           }
         ]
       }

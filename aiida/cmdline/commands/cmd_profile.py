@@ -26,7 +26,6 @@ def verdi_profile():
 @verdi_profile.command('list')
 def profile_list():
     """Display a list of all available profiles."""
-
     try:
         config = get_config()
     except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:

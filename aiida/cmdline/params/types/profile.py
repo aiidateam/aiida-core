@@ -30,6 +30,7 @@ class ProfileParamType(LabelStringType):
 
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
+        from aiida.common import extendeddicts
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
         from aiida.manage.configuration import get_config, load_profile, Profile
 
@@ -50,6 +51,12 @@ class ProfileParamType(LabelStringType):
 
         if self._load_profile:
             load_profile(profile.name)
+
+        if ctx.obj is None:
+            ctx.obj = extendeddicts.AttributeDict()
+
+        ctx.obj.config = config
+        ctx.obj.profile = profile
 
         return profile
 

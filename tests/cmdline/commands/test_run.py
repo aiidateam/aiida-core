@@ -16,6 +16,7 @@ import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_run
+from aiida.common.log import override_log_level
 
 
 class TestVerdiRun(AiidaTestCase):
@@ -281,7 +282,8 @@ class TestAutoGroups(AiidaTestCase):
                 fhandle.flush()
 
                 options = ['--auto-group'] + flags + ['--', fhandle.name, str(idx)]
-                result = self.cli_runner.invoke(cmd_run.run, options)
+                with override_log_level():
+                    result = self.cli_runner.invoke(cmd_run.run, options)
                 self.assertClickResultNoException(result)
 
                 pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output.split()

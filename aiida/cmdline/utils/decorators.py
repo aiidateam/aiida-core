@@ -37,7 +37,6 @@ def load_backend_if_not_loaded():
     If no profile has been loaded yet, the default profile will be loaded first. A spinner will be shown during both
     actions to indicate that the function is working and has not crashed, since loading can take a second.
     """
-    from aiida.common.log import configure_logging
     from aiida.manage.configuration import get_profile, load_profile
     from aiida.manage.manager import get_manager
 
@@ -47,10 +46,6 @@ def load_backend_if_not_loaded():
         with spinner():
             load_profile()  # This will load the default profile if no profile has already been loaded
             manager.get_backend()  # This will load the backend of the loaded profile, if not already loaded
-            # Loading the backend will have reconfigured the logging (see ``Manager._load_backend`` which calls the
-            # ``aiida.common.log.configure_logging`` function but with the default ``cli=False``), so here we have to
-            # call it again to ensure that the correct CLI handlers and formatters are configured.
-            configure_logging(with_orm=True, cli=True)
 
 
 def with_dbenv():

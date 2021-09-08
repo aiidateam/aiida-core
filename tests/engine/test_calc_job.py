@@ -29,7 +29,7 @@ from aiida.plugins import CalculationFactory
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
-def raise_exception(exception):
+def raise_exception(exception, *args, **kwargs):
     """Raise an exception of the specified class.
 
     :param exception: exception class to raise

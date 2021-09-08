@@ -44,6 +44,7 @@ LOG_LEVELS = {
 }
 
 AIIDA_LOGGER = logging.getLogger('aiida')
+CLI_LOG_LEVEL = None
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction
@@ -81,7 +82,7 @@ def get_logging_config():
             'aiida': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.aiida_loglevel'),
-                'propagate': False,
+                'propagate': True,
             },
             'aiida.cmdline': {
                 'handlers': ['cli'],
@@ -145,7 +146,7 @@ def evaluate_logging_configuration(dictionary):
     return result
 
 
-def configure_logging(with_orm=False, daemon=False, daemon_log_file=None, cli=False):
+def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     """
     Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
@@ -194,9 +195,9 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None, cli=Fa
             except ValueError:
                 pass
 
-    if cli is True:
-        for logger in config['loggers'].values():
-            logger['handlers'] = ['cli']
+    if CLI_LOG_LEVEL is not None:
+        config['loggers']['aiida']['handlers'] = ['cli']
+        config['loggers']['aiida']['level'] = CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

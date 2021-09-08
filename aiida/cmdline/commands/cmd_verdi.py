@@ -104,25 +104,10 @@ class VerdiCommandGroup(click.Group):
 
 
 @click.command(cls=VerdiCommandGroup, context_settings={'help_option_names': ['--help']})
-@options.PROFILE(type=types.ProfileParamType(load_profile=True))
-@options.VERBOSITY(expose_value=True)
+@options.PROFILE(type=types.ProfileParamType(load_profile=True), expose_value=False)
+@options.VERBOSITY()
 # Note, __version__ should always be passed explicitly here,
 # because click does not retrieve a dynamic version when installed in editable mode
 @click.version_option(__version__, '--version', message='AiiDA version %(version)s')
-@click.pass_context
-def verdi(ctx, profile, verbosity):
+def verdi():
     """The command line interface of AiiDA."""
-    from aiida.common import extendeddicts
-    from aiida.manage.configuration import get_config
-
-    if ctx.obj is None:
-        ctx.obj = extendeddicts.AttributeDict()
-
-    ctx.obj.config = get_config()
-    ctx.obj.profile = profile
-
-    # Manually set the log level on the profile if both are defined. Normally this is done automatically by the callback
-    # of the verbosity option, but for the top level `verdi` command, when the callback is invoked, the profile has not
-    # been parsed and set yet.
-    if profile is not None and verbosity is not None:
-        ctx.obj.profile.set_option('logging.aiida_loglevel', verbosity)

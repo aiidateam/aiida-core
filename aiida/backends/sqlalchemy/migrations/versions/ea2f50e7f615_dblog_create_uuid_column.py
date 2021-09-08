@@ -46,7 +46,7 @@ def set_new_uuid(connection):
         uuids.add(get_new_uuid())
 
     # Create the key/value pairs
-    key_values = ','.join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
+    key_values = ','.join(f"({curr_id}, '{curr_uuid}')" for curr_id, curr_uuid in zip(ids, uuids))
 
     update_stm = f"""
         UPDATE db_dblog as t SET

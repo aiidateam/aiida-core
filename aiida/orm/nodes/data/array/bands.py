@@ -38,7 +38,7 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
     for label in plot_info['raw_labels']:
         filetext.append(f'\t{label[1]}\t{label[0]:.8f}')
 
-    return '\n'.join('{} {}'.format(comment_char, line) for line in filetext)
+    return '\n'.join(f'{comment_char} {line}' for line in filetext)
 
 
 def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
@@ -1024,7 +1024,7 @@ class BandsData(KpointsData):
         # first prepare the xy coordinates of the sets
         raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
 
-        xtics_string = ', '.join('"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
+        xtics_string = ', '.join(f'"{label}" {pos}' for pos, label in plot_info['labels'])
 
         script = []
         # Start with some useful comments

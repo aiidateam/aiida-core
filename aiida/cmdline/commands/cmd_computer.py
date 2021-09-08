@@ -483,7 +483,7 @@ def computer_test(user, print_traceback, computer):
 
                     if print_traceback:
                         message += '\n  Full traceback:\n'
-                        message += '\n'.join(['  {}'.format(l) for l in traceback.format_exc().splitlines()])
+                        message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
                     else:
                         message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
@@ -512,7 +512,7 @@ def computer_test(user, print_traceback, computer):
 
         if print_traceback:
             message += '\n  Full traceback:\n'
-            message += '\n'.join(['  {}'.format(l) for l in traceback.format_exc().splitlines()])
+            message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
         else:
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 

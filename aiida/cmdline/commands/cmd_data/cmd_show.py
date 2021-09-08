@@ -69,10 +69,7 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
             echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -100,10 +97,7 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
             echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -162,10 +156,7 @@ def _show_vesta(exec_name, structure_list):
             echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -193,10 +184,7 @@ def _show_vmd(exec_name, structure_list):
             echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 

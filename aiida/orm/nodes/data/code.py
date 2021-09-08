@@ -282,8 +282,7 @@ class Code(Data):
                 )
             if self.get_local_executable() not in self.list_object_names():
                 raise exceptions.ValidationError(
-                    "The local executable '{}' is not in the list of "
-                    'files of this code'.format(self.get_local_executable())
+                    f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
                 )
         else:
             if self.list_object_names():

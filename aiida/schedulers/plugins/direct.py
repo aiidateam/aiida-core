@@ -224,10 +224,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         filtered_stderr = '\n'.join(l for l in stderr.split('\n'))
         if filtered_stderr.strip():
-            self.logger.warning(
-                'Warning in _parse_joblist_output, non-empty '
-                "(filtered) stderr='{}'".format(filtered_stderr)
-            )
+            self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
                 raise SchedulerError('Error during direct execution parsing (_parse_joblist_output function)')
 
@@ -243,10 +240,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             this_job.job_id = job[0]
 
             if len(job) < 3:
-                raise SchedulerError(
-                    'Unexpected output from the scheduler, '
-                    "not enough fields in line '{}'".format(line)
-                )
+                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
 
             try:
                 job_state_string = job[1][0]  # I just check the first character
@@ -258,10 +252,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                     this_job.job_state = \
                         _MAP_STATUS_PS[job_state_string]
                 except KeyError:
-                    self.logger.warning(
-                        "Unrecognized job_state '{}' for job "
-                        'id {}'.format(job_state_string, this_job.job_id)
-                    )
+                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
 
             try:

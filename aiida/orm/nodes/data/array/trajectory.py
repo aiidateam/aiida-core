@@ -440,7 +440,7 @@ class TrajectoryData(ArrayData):
         for idx in indices:
             return_string += f'PRIMVEC {idx + 1}\n'
             for cell_vector in cells[idx]:
-                return_string += ' '.join(['{:18.5f}'.format(i) for i in cell_vector])
+                return_string += ' '.join([f'{i:18.5f}' for i in cell_vector])
                 return_string += '\n'
             return_string += f'PRIMCOORD {idx + 1}\n'
             return_string += f'{nat} 1\n'

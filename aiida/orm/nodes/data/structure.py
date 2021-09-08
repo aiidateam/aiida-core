@@ -955,10 +955,7 @@ class StructureData(Data):
         counts = Counter([k.name for k in kinds])
         for count in counts:
             if counts[count] != 1:
-                raise ValidationError(
-                    "Kind with name '{}' appears {} times "
-                    'instead of only one'.format(count, counts[count])
-                )
+                raise ValidationError(f"Kind with name '{count}' appears {counts[count]} times instead of only one")
 
         try:
             # This will try to create the sites objects
@@ -987,7 +984,7 @@ class StructureData(Data):
 
         return_string = 'CRYSTAL\nPRIMVEC 1\n'
         for cell_vector in self.cell:
-            return_string += ' '.join(['%18.10f' % i for i in cell_vector])
+            return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
         return_string += f'{int(len(sites))} 1\n'
@@ -1373,8 +1370,7 @@ class StructureData(Data):
 
         if site.kind_name not in [kind.name for kind in self.kinds]:
             raise ValueError(
-                "No kind with name '{}', available kinds are: "
-                '{}'.format(site.kind_name, [kind.name for kind in self.kinds])
+                f"No kind with name '{site.kind_name}', available kinds are: {[kind.name for kind in self.kinds]}"
             )
 
         # If here, no exceptions have been raised, so I add the site.

@@ -260,15 +260,9 @@ def are_dir_trees_equal(dir1, dir2):
     # If the directories contain the same files, compare the common files
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
     if mismatch:
-        return (
-            False, 'The following files in the directories {} and {} '
-            "don't match: {}".format(dir1, dir2, mismatch)
-        )
+        return (False, f"The following files in the directories {dir1} and {dir2} don't match: {mismatch}")
     if errors:
-        return (
-            False, 'The following files in the directories {} and {} '
-            "aren't regular: {}".format(dir1, dir2, errors)
-        )
+        return (False, f"The following files in the directories {dir1} and {dir2} aren't regular: {errors}")
 
     for common_dir in dirs_cmp.common_dirs:
         new_dir1 = os.path.join(dir1, common_dir)

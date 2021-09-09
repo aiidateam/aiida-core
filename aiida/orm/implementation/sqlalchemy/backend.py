@@ -131,10 +131,11 @@ class SqlaBackend(SqlBackend[base.Base]):
         :param query: a string containing a raw SQL statement
         :return: the result of the query
         """
+        from sqlalchemy import text
         from sqlalchemy.exc import ResourceClosedError  # pylint: disable=import-error,no-name-in-module
 
         with self.transaction() as session:
-            queryset = session.execute(query)
+            queryset = session.execute(text(query))
 
             try:
                 results = queryset.fetchall()

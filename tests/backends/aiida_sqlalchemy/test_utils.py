@@ -58,7 +58,7 @@ def database_exists(url):
 
     try:
         if engine.dialect.name == 'postgresql':
-            text = f"SELECT 1 FROM pg_database WHERE datname='{database}'"
+            text = sa.text(f"SELECT 1 FROM pg_database WHERE datname='{database}'")
             return bool(engine.execute(text).scalar())
         raise Exception('Only PostgreSQL is supported.')
 
@@ -98,7 +98,7 @@ def create_database(url, encoding='utf8'):
             from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
             engine.raw_connection().set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
-            text = f"CREATE DATABASE {quote(engine, database)} ENCODING '{encoding}'"
+            text = sa.text(f"CREATE DATABASE {quote(engine, database)} ENCODING '{encoding}'")
 
             engine.execute(text)
 

@@ -1,3 +1,3 @@
-SELECT db_dbnode_1.uuid 
+SELECT db_dbnode_1.id, db_dbnode_1.uuid 
 FROM db_dbnode AS db_dbnode_1 
 WHERE CAST(db_dbnode_1.node_type AS VARCHAR) LIKE '%%' AND CASE WHEN (jsonb_typeof((db_dbnode_1.extras #> '{tag4}')) = 'string') THEN (db_dbnode_1.extras #>> '{tag4}') = 'appl_pecoal' ELSE false END

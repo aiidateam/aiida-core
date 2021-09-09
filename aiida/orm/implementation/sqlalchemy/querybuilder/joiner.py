@@ -190,7 +190,7 @@ class SqlaJoiner:
         selection_walk_list = [
             link1.input_id.label('ancestor_id'),
             link1.output_id.label('descendant_id'),
-            type_cast(0, Integer).label('depth'),
+            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
         ]
         if expand_path:
             selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
@@ -207,7 +207,7 @@ class SqlaJoiner:
         selection_union_list = [
             aliased_walk.c.ancestor_id.label('ancestor_id'),
             link2.output_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth')
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth')  # type: ignore[type-var]
         ]
         if expand_path:
             selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
@@ -254,7 +254,7 @@ class SqlaJoiner:
         selection_walk_list = [
             link1.input_id.label('ancestor_id'),
             link1.output_id.label('descendant_id'),
-            type_cast(0, Integer).label('depth'),
+            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
         ]
         if expand_path:
             selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
@@ -268,7 +268,7 @@ class SqlaJoiner:
         selection_union_list = [
             link2.input_id.label('ancestor_id'),
             aliased_walk.c.descendant_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),  # type: ignore[type-var]
         ]
         if expand_path:
             selection_union_list.append((aliased_walk.c.path + array((link2.input_id,))).label('path'))

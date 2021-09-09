@@ -184,3 +184,5 @@ py:class Command
 
 py:class BooleanClauseList
 py:class SQLCompiler
+py:class sqlalchemy.orm.decl_api.Model
+py:class sqlalchemy.sql.elements.ColumnElement

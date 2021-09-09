@@ -8,8 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django query builder implementation"""
-from aldjemy import core
-
 from aiida.backends.djsite.db import models
 from aiida.orm.implementation.sqlalchemy.querybuilder import SqlaQueryBuilder
 
@@ -58,7 +56,7 @@ class DjangoQueryBuilder(SqlaQueryBuilder):
 
     @property
     def table_groups_nodes(self):
-        return core.Cache.meta.tables['db_dbgroup_dbnodes']
+        return models.DbGroup.sa.table.metadata.tables['db_dbgroup_dbnodes']  # pylint: disable=no-member
 
     def modify_expansions(self, alias, expansions):
         """

@@ -106,16 +106,6 @@ class BackendQueryBuilder(abc.ABC):
         self._backend = backend
 
     @abc.abstractmethod
-    def yield_per(self, data: QueryDictType, batch_size: int):
-        """
-        :param int batch_size: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
-
-    @abc.abstractmethod
     def count(self, data: QueryDictType) -> int:
         """Return the number of results of the query"""
 

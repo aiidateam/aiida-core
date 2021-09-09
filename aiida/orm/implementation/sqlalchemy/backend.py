@@ -83,7 +83,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        nested = session.transaction.nested
+        nested = session.in_nested_transaction()
         try:
             session.begin_nested()
             yield session

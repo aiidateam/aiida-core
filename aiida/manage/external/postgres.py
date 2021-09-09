@@ -91,7 +91,7 @@ class Postgres(PGSU):
         """
         return bool(self.execute(_USER_EXISTS_COMMAND.format(dbuser)))
 
-    def create_dbuser(self, dbuser, dbpass, priviliges=""):
+    def create_dbuser(self, dbuser, dbpass, priviliges=''):
         """
         Create a database user in postgres
 

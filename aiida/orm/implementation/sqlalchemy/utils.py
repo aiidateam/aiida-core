@@ -84,6 +84,8 @@ class ModelWrapper:
 
         :return: boolean, True if the model is saved in the database, False otherwise
         """
+        # we should not flush here since it may lead to IntegrityErrors
+        # which are handled later in the save method
         with self._model.session.no_autoflush:
             return self._model.id is not None
 

@@ -44,7 +44,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         :param kwargs: parameters for the initialisation.
         """
-        self.container.init_container(**kwargs)
+        with self.container as container:
+            container.init_container(**kwargs)
 
     @property
     def is_initialised(self) -> bool:
@@ -69,10 +70,20 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        return self.container.add_streamed_object(handle)
+        with self.container as container:
+            return container.add_streamed_object(handle)
 
     def has_objects(self, keys: List[str]) -> List[bool]:
         return self.container.has_objects(keys)
+
+    def has_object(self, key: str) -> bool:
+        """Return whether the repository has an object with the given key.
+
+        :param key: fully qualified identifier for the object within the repository.
+        :return: True if the object exists, False otherwise.
+        """
+        with self.container as container:
+            return container.has_object(key)
 
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
@@ -88,8 +99,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         super().open(key)
 
-        with self.container.get_object_stream(key) as handle:
-            yield handle  # type: ignore[misc]
+        with self.container as container:
+            with container.get_object_stream(key) as handle:
+                yield handle  # type: ignore[misc]
 
     def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
         with self.container.get_objects_stream_and_meta(keys) as triplets:
@@ -99,7 +111,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     def delete_objects(self, keys: List[str]) -> None:
         super().delete_objects(keys)
-        self.container.delete_objects(keys)
+        with self.container as container:
+            self.container.delete_objects(keys)
 
     def list_objects(self) -> Iterable[str]:
         return self.container.list_all_objects()

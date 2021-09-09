@@ -137,7 +137,7 @@ class SqlaComputerCollection(BackendComputerCollection):
     def delete(self, pk):
         try:
             session = get_scoped_session()
-            session.query(DbComputer).get(pk).delete()
+            session.get(DbComputer, pk).delete()
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(

@@ -22,7 +22,7 @@ from aiida.cmdline.utils import echo
 
 __all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
-_CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
+_CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\' {}'
 _DROP_USER_COMMAND = 'DROP USER "{}"'
 _CREATE_DB_COMMAND = (
     'CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
@@ -91,7 +91,7 @@ class Postgres(PGSU):
         """
         return bool(self.execute(_USER_EXISTS_COMMAND.format(dbuser)))
 
-    def create_dbuser(self, dbuser, dbpass):
+    def create_dbuser(self, dbuser, dbpass, priviliges=""):
         """
         Create a database user in postgres
 
@@ -100,7 +100,7 @@ class Postgres(PGSU):
         :raises: psycopg2.errors.DuplicateObject if user already exists and
             self.connection_mode == PostgresConnectionMode.PSYCOPG
         """
-        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass))
+        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, priviliges))
 
     def drop_dbuser(self, dbuser):
         """
@@ -220,7 +220,7 @@ def manual_setup_instructions(dbuser, dbname):
         'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
         '',
         '\t$ psql template1',
-        f'	==> {_CREATE_USER_COMMAND.format(dbuser, dbpass)}',
+        f'	==> {_CREATE_USER_COMMAND.format(dbuser, dbpass, "")}',
         f'	==> {_CREATE_DB_COMMAND.format(dbname, dbuser)}',
         f'	==> {_GRANT_PRIV_COMMAND.format(dbname, dbuser)}',
     ])

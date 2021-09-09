@@ -22,6 +22,7 @@ from aiida.cmdline.utils import echo
 
 __all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
+# The last placeholder is for adding privileges of the user
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\' {}'
 _DROP_USER_COMMAND = 'DROP USER "{}"'
 _CREATE_DB_COMMAND = (
@@ -91,7 +92,7 @@ class Postgres(PGSU):
         """
         return bool(self.execute(_USER_EXISTS_COMMAND.format(dbuser)))
 
-    def create_dbuser(self, dbuser, dbpass, priviliges=''):
+    def create_dbuser(self, dbuser, dbpass, privileges=''):
         """
         Create a database user in postgres
 
@@ -100,7 +101,7 @@ class Postgres(PGSU):
         :raises: psycopg2.errors.DuplicateObject if user already exists and
             self.connection_mode == PostgresConnectionMode.PSYCOPG
         """
-        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, priviliges))
+        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, privileges))
 
     def drop_dbuser(self, dbuser):
         """

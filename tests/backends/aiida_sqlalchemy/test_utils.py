@@ -59,7 +59,7 @@ def database_exists(url):
     try:
         if engine.dialect.name == 'postgresql':
             text = sa.text(f"SELECT 1 FROM pg_database WHERE datname='{database}'")
-            return bool(engine.execute(text).scalar())
+            return bool(engine.connect().execute(text).scalar())
         raise Exception('Only PostgreSQL is supported.')
 
     finally:
@@ -99,8 +99,8 @@ def create_database(url, encoding='utf8'):
             engine.raw_connection().set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
             text = sa.text(f"CREATE DATABASE {quote(engine, database)} ENCODING '{encoding}'")
-
-            engine.execute(text)
+            with engine.begin() as connection:
+                connection.execute(text)
 
         else:
             raise Exception('Only PostgreSQL with the psycopg2 driver is supported.')

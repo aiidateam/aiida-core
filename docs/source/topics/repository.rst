@@ -165,5 +165,57 @@ Note that these methods can only be used to read content from the repository and
 To write files to the repository, use the methods that are described in the section on :ref:`writing to the repository <topics:repository:writing>`.
 
 
+.. _topics:repository:copying:
+
+Copying from the repository
+===========================
+
+If you want to copy specific files from a node's repository, the section on :ref:`reading from the repository<topics:repository:reading>` shows how to read their content which can then be written elsewhere.
+However, sometimes you want to copy the entire contents of the node's repository, or a subdirectory of it.
+The :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.copy_tree` method makes this easy and can be used as follows:
+
+.. code:: python
+
+    node.copy_tree('/some/target/directory')
+
+which will write the entire repository content of ``node`` to the directory ``/some/target/directory`` on the local file system.
+If you only want to copy a particular subdirectory of the repository, you can pass this as the second ``path`` argument:
+
+.. code:: python
+
+    node.copy_tree('/some/target/directory', path='sub/directory')
+
+This method, combined with :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_tree`, makes it easy to copy the entire repository content (or a subdirectory) from one node to another:
+
+.. code:: python
+
+    import tempfile
+    node_source = load_node(<PK>)
+    node_target = Node()
+
+    with tempfile.TemporaryDirectory() as dirpath:
+        node_source.copy_tree(dirpath)
+        node_target.put_object_from_tree(dirpath)
+
+Note that this method is not the most efficient as the files are first written from ``node_a`` to a temporary directory on disk, before they are read in memory again and written to the repository of ``node_b``.
+There is a more efficient method which requires a bit more code and that directly uses the :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.walk` method explained in the section on :ref:`listing repository content <topics:repository:listing>`.
+
+.. code:: python
+
+    node_source = load_node(<PK>)
+    node_target = Node()
+
+    for root, dirnames, filenames in node_source.walk():
+        for filename in filenames:
+            filepath = root / filename
+            with node_source.open(filepath) as handle:
+                node_target.put_object_from_filelike(handle, filepath)
+
+.. note:: In the example above, only the files are explicitly copied over.
+    Any intermediate nested directories will be automatically created in the virtual hierarchy.
+    However, currently it is not possible to create a directory explicitly.
+    Empty directories are not yet supported.
+
+
 .. |os.walk| replace:: ``os.walk`` method of the Python standard library
 .. _os.walk: https://docs.python.org/3/library/os.html#os.walk

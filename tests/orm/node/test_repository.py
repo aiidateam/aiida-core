@@ -213,3 +213,18 @@ def test_walk():
         (pathlib.Path('.'), ['relative'], []),
         (pathlib.Path('relative'), [], ['path']),
     ]
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_copy_tree(tmp_path):
+    """Test the ``Repository.copy_tree`` method."""
+    node = Data()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+
+    node.copy_tree(tmp_path)
+    dirpath = pathlib.Path(tmp_path / 'relative')
+    filepath = dirpath / 'path'
+    assert dirpath.is_dir()
+    assert filepath.is_file()
+    with node.open('relative/path', 'rb') as handle:
+        assert filepath.read_bytes() == handle.read()

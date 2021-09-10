@@ -318,8 +318,10 @@ class TemporaryProfileManager(ProfileManager):
         if self.pg_cluster is None:
             self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.dbinfo)
-        # note: not using postgres.create_dbuser_db_safe here since we don't want prompts
-        self.postgres.create_dbuser(self.profile_info['database_username'], self.profile_info['database_password'])
+        # Note: We give the user CREATEDB privileges here, only since they are required for the migration tests
+        self.postgres.create_dbuser(
+            self.profile_info['database_username'], self.profile_info['database_password'], 'CREATEDB'
+        )
         self.postgres.create_db(self.profile_info['database_username'], self.profile_info['database_name'])
         self.dbinfo = self.postgres.dbinfo
         self.profile_info['database_hostname'] = self.postgres.host_for_psycopg2

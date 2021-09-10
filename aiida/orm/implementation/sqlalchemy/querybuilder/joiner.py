@@ -79,7 +79,8 @@ class SqlaJoiner:
     """A class containing the logic for SQLAlchemy entities joining entities."""
 
     def __init__(
-        self, entity_mapper: _EntityMapper, filter_builder: Callable[[AliasedClass, FilterType], BooleanClauseList]
+        self, entity_mapper: _EntityMapper, filter_builder: Callable[[AliasedClass, FilterType],
+                                                                     Optional[BooleanClauseList]]
     ):
         """Initialise the class"""
         self._entities = entity_mapper
@@ -185,7 +186,13 @@ class SqlaJoiner:
         link1 = aliased(self._entities.Link)
         link2 = aliased(self._entities.Link)
         node1 = aliased(self._entities.Node)
+
+        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
         in_recursive_filters = self._build_filters(node1, filter_dict)
+        if in_recursive_filters is None:
+            filters = link_filters
+        else:
+            filters = and_(in_recursive_filters, link_filters)
 
         selection_walk_list = [
             link1.input_id.label('ancestor_id'),
@@ -195,12 +202,8 @@ class SqlaJoiner:
         if expand_path:
             selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
 
-        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)).where(
-            and_(
-                in_recursive_filters,  # I apply filters for speed here
-                link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # I follow input and create links
-            )
-        ).cte(recursive=True)
+        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)
+                                                        ).where(filters).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 
@@ -248,7 +251,13 @@ class SqlaJoiner:
         link1 = aliased(self._entities.Link)
         link2 = aliased(self._entities.Link)
         node1 = aliased(self._entities.Node)
+
+        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
         in_recursive_filters = self._build_filters(node1, filter_dict)
+        if in_recursive_filters is None:
+            filters = link_filters
+        else:
+            filters = and_(in_recursive_filters, link_filters)
 
         selection_walk_list = [
             link1.input_id.label('ancestor_id'),
@@ -258,9 +267,8 @@ class SqlaJoiner:
         if expand_path:
             selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
 
-        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)).where(
-            and_(in_recursive_filters, link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
-        ).cte(recursive=True)
+        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)
+                                                        ).where(filters).cte(recursive=True)
 
         aliased_walk = aliased(walk)
 

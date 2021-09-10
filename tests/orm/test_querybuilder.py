@@ -798,7 +798,7 @@ class TestQueryBuilderCornerCases:
     In this class corner cases of QueryBuilder are added.
     """
 
-    def test_computer_json(self):  # pylint: disable=no-self-use
+    def test_computer_json(self):
         """
         In this test we check the correct behavior of QueryBuilder when
         retrieving the _metadata with no content.
@@ -817,6 +817,14 @@ class TestQueryBuilderCornerCases:
         qb.append(orm.CalculationNode, project=['id'], tag='calc')
         qb.append(orm.Computer, project=['id', 'metadata'], outerjoin=True, with_node='calc')
         qb.all()
+
+    def test_empty_filters(self):
+        """Test that an empty filter is correctly handled."""
+        orm.Data().store()
+        qb = orm.QueryBuilder().append(orm.Data, filters={})
+        assert qb.count() == 1
+        qb = orm.QueryBuilder().append(orm.Data, filters={'or': [{}, {}]})
+        assert qb.count() == 1
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

@@ -366,7 +366,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 alias = self._get_tag_alias(tag)
             except KeyError:
                 raise ValueError(f'Unknown tag {tag!r} in filters, known: {list(self._tag_to_alias)}')
-            self._query = self._query.filter(self.build_filters(alias, filter_specs))
+            filters = self.build_filters(alias, filter_specs)
+            if filters is not None:
+                self._query = self._query.filter(filters)
 
         # PROJECTIONS ##########################
 
@@ -601,7 +603,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 '{}'.format(colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys()))  # pylint: disable=protected-access
             ) from exc
 
-    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> BooleanClauseList:
+    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> Optional[BooleanClauseList]:  # pylint: disable=too-many-branches
         """Recurse through the filter specification and apply filter operations.
 
         :param alias: The alias of the ORM class the filter will be applied on
@@ -612,17 +614,20 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         expressions: List[Any] = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
-                subexpressions = [
-                    self.build_filters(alias, sub_filter_spec) for sub_filter_spec in filter_operation_dict
-                ]
-                if path_spec == 'and':
-                    expressions.append(and_(*subexpressions))
-                elif path_spec == 'or':
-                    expressions.append(or_(*subexpressions))
-                elif path_spec in ('~and', '!and'):
-                    expressions.append(not_(and_(*subexpressions)))
-                elif path_spec in ('~or', '!or'):
-                    expressions.append(not_(or_(*subexpressions)))
+                subexpressions = []
+                for sub_filter_spec in filter_operation_dict:
+                    filters = self.build_filters(alias, sub_filter_spec)
+                    if filters is not None:
+                        subexpressions.append(filters)
+                if subexpressions:
+                    if path_spec == 'and':
+                        expressions.append(and_(*subexpressions))
+                    elif path_spec == 'or':
+                        expressions.append(or_(*subexpressions))
+                    elif path_spec in ('~and', '!and'):
+                        expressions.append(not_(and_(*subexpressions)))
+                    elif path_spec in ('~or', '!or'):
+                        expressions.append(not_(or_(*subexpressions)))
             else:
                 column_name = path_spec.split('.')[0]
 
@@ -650,7 +655,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             alias=alias
                         )
                     )
-        return and_(*expressions)
+        return and_(*expressions) if expressions else None
 
     def modify_expansions(self, alias: AliasedClass, expansions: List[str]) -> List[str]:
         """Modify names of projections if `**` was specified.

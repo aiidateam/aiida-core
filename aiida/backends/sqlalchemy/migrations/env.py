@@ -30,20 +30,19 @@ def run_migrations_online():
     from aiida.backends.sqlalchemy.models.base import Base
     config = context.config  # pylint: disable=no-member
 
-    connectable = config.attributes.get('connection', None)
+    connection = config.attributes.get('connection', None)
 
-    if connectable is None:
+    if connection is None:
         from aiida.common.exceptions import ConfigurationError
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
 
-    with connectable.connect() as connection:
-        context.configure(  # pylint: disable=no-member
-            connection=connection,
-            target_metadata=Base.metadata,
-            transaction_per_migration=True,
-        )
+    context.configure(  # pylint: disable=no-member
+        connection=connection,
+        target_metadata=Base.metadata,
+        transaction_per_migration=True,
+    )
 
-        context.run_migrations()  # pylint: disable=no-member
+    context.run_migrations()  # pylint: disable=no-member
 
 
 try:

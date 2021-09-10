@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
+# pylint: disable=invalid-name,no-member,import-error,no-name-in-module,protected-access
 """This migration cleans the log records from non-Node entity records.
 It removes from the DbLog table the legacy workflow records and records
 that correspond to an unknown entity and places them to corresponding files.
@@ -95,7 +95,7 @@ def get_serialized_legacy_workflow_logs(connection):
     )
     res = list()
     for row in query:
-        res.append(dict(list(zip(row.keys(), row))))
+        res.append(row._asdict())
     return dumps_json(res)
 
 
@@ -114,7 +114,7 @@ def get_serialized_unknown_entity_logs(connection):
     )
     res = list()
     for row in query:
-        res.append(dict(list(zip(row.keys(), row))))
+        res.append(row._asdict())
     return dumps_json(res)
 
 
@@ -133,7 +133,7 @@ def get_serialized_logs_with_no_nodes(connection):
     )
     res = list()
     for row in query:
-        res.append(dict(list(zip(row.keys(), row))))
+        res.append(row._asdict())
     return dumps_json(res)
 
 

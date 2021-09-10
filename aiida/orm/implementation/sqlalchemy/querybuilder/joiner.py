@@ -195,7 +195,7 @@ class SqlaJoiner:
         if expand_path:
             selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
 
-        walk = select(selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)).where(
+        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)).where(
             and_(
                 in_recursive_filters,  # I apply filters for speed here
                 link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # I follow input and create links
@@ -214,13 +214,12 @@ class SqlaJoiner:
 
         descendants_recursive = aliased(
             aliased_walk.union_all(
-                select(selection_union_list).select_from(
-                    join(
-                        aliased_walk,
-                        link2,
-                        link2.input_id == aliased_walk.c.descendant_id,
-                    )
-                ).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                select(*selection_union_list
+                       ).select_from(join(
+                           aliased_walk,
+                           link2,
+                           link2.input_id == aliased_walk.c.descendant_id,
+                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
             )
         )  # .alias()
 
@@ -259,7 +258,7 @@ class SqlaJoiner:
         if expand_path:
             selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
 
-        walk = select(selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)).where(
+        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)).where(
             and_(in_recursive_filters, link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
         ).cte(recursive=True)
 
@@ -275,13 +274,12 @@ class SqlaJoiner:
 
         ancestors_recursive = aliased(
             aliased_walk.union_all(
-                select(selection_union_list).select_from(
-                    join(
-                        aliased_walk,
-                        link2,
-                        link2.output_id == aliased_walk.c.ancestor_id,
-                    )
-                ).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                select(*selection_union_list
+                       ).select_from(join(
+                           aliased_walk,
+                           link2,
+                           link2.output_id == aliased_walk.c.ancestor_id,
+                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
                 # I can't follow RETURN or CALL links
             )
         )

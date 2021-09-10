@@ -45,7 +45,7 @@ def upgrade():
     )
 
     profile = get_profile()
-    node_count = connection.execute(select([func.count()]).select_from(DbNode)).scalar()
+    node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()
     missing_repo_folder = []
     shard_count = 256
 

@@ -83,18 +83,13 @@ class SqlaBackend(SqlBackend[base.Base]):
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        nested = session.in_nested_transaction()
-        try:
-            session.begin_nested()
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            if not nested:
-                # Make sure to commit the outermost session
-                session.commit()
+        if session.in_transaction():
+            with session.begin_nested():
+                yield session
+        else:
+            with session.begin():
+                with session.begin_nested():
+                    yield session
 
     @staticmethod
     def get_session():

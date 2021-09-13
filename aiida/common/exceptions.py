@@ -190,6 +190,14 @@ class DatabaseMigrationError(AiidaException):
     """Raised if a critical error is encountered during a database migration."""
 
 
+class LockedProfileError(AiidaException):
+    """Raised if attempting to load a locked profile."""
+
+
+class LockingProfileError(AiidaException):
+    """Raised if the profile can`t be locked."""
+
+
 class DbContentError(AiidaException):
     """
     Raised when the content of the DB is not valid.

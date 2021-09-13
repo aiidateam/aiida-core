@@ -10,6 +10,7 @@
 """Module for settings and utilities to determine and set the database schema versions."""
 import abc
 import collections
+from contextlib import contextmanager
 
 from aiida.common import exceptions
 
@@ -60,7 +61,31 @@ First install `aiida-core~={aiida_core_version_reset}` and migrate the database 
 After the database schema is migrated to version `{schema_version_reset}` you can reinstall this version of `aiida-core` and migrate the schema generation.
 """
 
+TEMPLATE_LOCKED_PROFILE = """\n
+Profile {profile_name} is locked due to process {locking_pid} running some critical operations on the database and/or repository.
+If you suspect this may be a mistake, one posible check is to manually run the following psql command:
+
+    SELECT pid, client_port FROM pg_stat_activity WHERE datname='REPLACE_WITH_DB_NAME' and pid != pg_backend_pid();
+
+This should show process {locking_pid} as the only one connected to the database.
+If you are sure you want to proceed, you can run the following command to force the unlock of the profile:
+
+    verdi -p {profile_name} profile unlock
+"""
+
+TEMPLATE_MULTIPLE_DBACCESS = """\n
+This profile can`t be locked due to the following processes accessing the database: {access_pidlist}.
+
+You should be able to verify this by manually running the following psql command:
+
+    SELECT pid, client_port FROM pg_stat_activity WHERE datname='REPLACE_WITH_DB_NAME' and pid != pg_backend_pid();
+
+Please make sure you stop all daemons and exit all shells that are accessing this profile before proceeding.
+"""
+
 REPOSITORY_UUID_KEY = 'repository|uuid'
+
+PROFILE_LOCK_KEY = 'locking_pid'
 
 Setting = collections.namedtuple('Setting', ['key', 'value', 'description', 'time'])
 
@@ -95,7 +120,7 @@ class SettingsManager:
         """
 
 
-class BackendManager:
+class BackendManager:  # pylint: disable=too-many-public-methods
     """Class to manage the database schema and environment."""
 
     _settings_manager = None
@@ -107,7 +132,7 @@ class BackendManager:
         :return: `SettingsManager`
         """
 
-    def load_backend_environment(self, profile, validate_schema=True, **kwargs):
+    def load_backend_environment(self, profile, validate_schema=True, verify_lock=True, **kwargs):
         """Load the backend environment.
 
         :param profile: the profile whose backend environment to load
@@ -116,8 +141,69 @@ class BackendManager:
         """
         self._load_backend_environment(**kwargs)
 
+        if verify_lock:
+            locking_pid = self.get_locking_pid()
+            if locking_pid is not None:
+                raise exceptions.LockedProfileError(
+                    TEMPLATE_LOCKED_PROFILE.format(locking_pid=locking_pid, profile_name=profile.name)
+                )
+
         if validate_schema:
             self.validate_schema(profile)
+
+    def get_locking_pid(self):
+        """Returns the locking process id (or None if there is no current lock)"""
+        try:
+            locking_pid = self.get_settings_manager().get(PROFILE_LOCK_KEY).value
+            if isinstance(locking_pid, list):
+                return locking_pid[0]
+            return locking_pid
+
+        except exceptions.NotExistent:
+            return None
+
+    @contextmanager
+    def get_locking_context(self):
+        """Context manager to work with a locked profile"""
+        from aiida.backends.utils import list_database_connections, get_database_pid
+
+        settings_manager = self.get_settings_manager()
+
+        # Query for DB connections to make sure this is the only one
+        connection_list = list_database_connections()
+        if len(connection_list) > 0:
+            access_pidlist = ', '.join(map(str, connection_list))
+            raise exceptions.LockingProfileError(TEMPLATE_MULTIPLE_DBACCESS.format(access_pidlist=access_pidlist))
+
+        # Atomic add of the profile locking PID to DbSetting.
+        # If the transaction fails, it means someone else acquired a lock.
+        try:
+            process_id = get_database_pid()
+            settings_manager.set(PROFILE_LOCK_KEY, process_id)
+
+        except Exception as exc0:
+
+            try:
+                locking_pid = settings_manager.get(PROFILE_LOCK_KEY)
+
+            except Exception as exc1:
+                raise Exception('Profile locking failed but there is no other lock in place.') from exc1
+
+            raise Exception(f'Profile locking failed because PID={locking_pid} already has a lock.') from exc0
+
+        # In case another process called load_profile/dbenv at the same time, check connections again before yielding.
+        try:
+            connection_list = list_database_connections()
+            if len(connection_list) > 0:
+                raise exceptions.LockingProfileError(TEMPLATE_MULTIPLE_DBACCESS.format(access_pidlist=connection_list))
+            yield
+        finally:
+            settings_manager.delete(PROFILE_LOCK_KEY)
+
+    def force_unlock(self):
+        """Unlocks the profile (by force)"""
+        settings_manager = self.get_settings_manager()
+        settings_manager.delete(PROFILE_LOCK_KEY)
 
     @abc.abstractmethod
     def _load_backend_environment(self, **kwargs):

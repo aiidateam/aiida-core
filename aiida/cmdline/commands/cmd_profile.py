@@ -139,3 +139,38 @@ def profile_delete(force, include_config, include_database, include_database_use
             include_repository=include_repository
         )
         echo.echo_success(f'profile `{profile.name}` was deleted{message_suffix}.')
+
+
+@verdi_profile.command('unlock')
+def profile_unlock():
+    """Forces the unlocking of the profile."""
+    from aiida.manage.manager import get_manager
+
+    backend_manager = get_manager().get_backend_manager(locking_check=False)
+
+    process_id = backend_manager.get_locking_pid()
+
+    if process_id is None:
+        echo.echo_warning('There is no process locking the profile.')
+        return
+
+    message = f'Are you sure you want to release the lock from process {process_id}?'
+    message += ' If this process is still running critical operations, this could result in corruption of the database.'
+    click.confirm(message, abort=True)
+    backend_manager.force_unlock()
+
+
+@verdi_profile.command('lock')
+@click.argument('locking_seconds', default=10, type=int)
+def profile_lock(locking_seconds):
+    """Locks the profile from access through daemons or shells"""
+    import time
+    from tqdm import tqdm
+    from aiida.manage.manager import get_manager
+
+    backend_manager = get_manager().get_backend_manager()
+
+    with backend_manager.get_locking_context():
+        print(f'Locking the profile for {locking_seconds} seconds')
+        for _ in tqdm(range(locking_seconds)):
+            time.sleep(1)

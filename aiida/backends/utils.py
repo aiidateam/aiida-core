@@ -58,3 +58,27 @@ def delete_nodes_and_connections(pks):
         raise Exception(f'unknown backend {configuration.PROFILE.database_backend}')
 
     delete_nodes_backend(pks)
+
+
+def list_database_connections():
+    """Lists all other connections to the database (ignores self)"""
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    backend = manager.get_backend()
+    dbname = manager.get_profile().database_name
+
+    sqlstm = f"SELECT pid, client_port FROM pg_stat_activity WHERE datname='{dbname}' AND pid != pg_backend_pid();"
+    connections = [pid for pid, client_port in backend.execute_raw(sqlstm)]
+
+    return connections
+
+
+def get_database_pid():
+    """Returns the process id of the connection to the database"""
+    from aiida.manage.manager import get_manager
+
+    sqlstm = 'SELECT pg_backend_pid();'
+    process_id = get_manager().get_backend().execute_raw(sqlstm)[0]
+
+    return process_id

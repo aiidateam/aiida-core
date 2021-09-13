@@ -84,7 +84,7 @@ class DjangoBackendManager(BackendManager):
         from django.db.utils import ProgrammingError
         from aiida.manage.manager import get_manager
 
-        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
+        backend = get_manager()._load_backend(schema_check=False, repository_check=False, locking_check=False)  # pylint: disable=protected-access
 
         try:
             result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'schema_generation';""")

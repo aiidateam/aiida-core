@@ -99,7 +99,9 @@ class Manager:
         manager.reset_backend_environment()
         self._backend = None
 
-    def _load_backend(self, schema_check: bool = True, repository_check: bool = True) -> 'Backend':
+    def _load_backend(
+        self, schema_check: bool = True, repository_check: bool = True, locking_check: bool = True
+    ) -> 'Backend':
         """Load the backend for the currently configured profile and return it.
 
         .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
@@ -129,7 +131,7 @@ class Manager:
 
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            backend_manager.load_backend_environment(profile, validate_schema=schema_check)
+            backend_manager.load_backend_environment(profile, validate_schema=schema_check, verify_lock=locking_check)
             configuration.BACKEND_UUID = profile.uuid
 
         # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
@@ -173,7 +175,7 @@ class Manager:
         """
         return self._backend is not None
 
-    def get_backend_manager(self) -> 'BackendManager':
+    def get_backend_manager(self, locking_check: bool = True) -> 'BackendManager':
         """Return the database backend manager.
 
         .. note:: this is not the actual backend, but a manager class that is necessary for database operations that
@@ -188,7 +190,7 @@ class Manager:
         if self._backend_manager is None:
 
             if self._backend is None:
-                self._load_backend()
+                self._load_backend(locking_check=locking_check)
 
             profile = self.get_profile()
             if profile is None:

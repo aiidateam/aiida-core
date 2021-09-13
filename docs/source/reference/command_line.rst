@@ -362,8 +362,10 @@ Below is a list with all available subcommands.
     Commands:
       delete      Delete one or more profiles.
       list        Display a list of all available profiles.
+      lock        Locks the profile from access through daemons or shells
       setdefault  Set a profile as the default one.
       show        Show details for a profile.
+      unlock      Forces the unlocking of the profile.
 
 
 .. _reference:command-line:verdi-quicksetup:

@@ -1808,7 +1808,7 @@ def get_bands_and_parents_structure(args):
         A list of sublists, each latter containing (in order):
             pk as string, formula as string, creation date, bandsdata-label
     """
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-branches
 
     import datetime
     from aiida.common import timezone
@@ -1821,21 +1821,27 @@ def get_bands_and_parents_structure(args):
         q_build.append(orm.User, tag='creator')
 
     group_filters = {}
+    with_args = {}
 
     if args.group_name is not None:
-        group_filters.update({'name': {'in': args.group_name}})
+        group_filters.update({'label': {'in': args.group_name}})
     if args.group_pk is not None:
         group_filters.update({'id': {'in': args.group_pk}})
 
-    q_build.append(orm.Group, tag='group', filters=group_filters, with_user='creator')
+    if group_filters:
+        q_build.append(orm.Group, tag='group', filters=group_filters, with_user='creator')
+        with_args = {'with_group': 'group'}
+    else:
+        # Note: This is a workaround for the QB constraint of not allowing multiple ``with_*`` criteria. Correctly we
+        # would like to specify with_user always on the ``BandsData`` directly and optionally add with_group. Until this
+        # is resolved, add the ``with_user`` on the group if specified and on the ``BandsData`` if not.
+        with_args = {'with_user': 'creator'}
 
     bdata_filters = {}
     if args.past_days is not None:
         bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
 
-    q_build.append(
-        orm.BandsData, tag='bdata', with_group='group', filters=bdata_filters, project=['id', 'label', 'ctime']
-    )
+    q_build.append(orm.BandsData, tag='bdata', filters=bdata_filters, project=['id', 'label', 'ctime'], **with_args)
     bands_list_data = q_build.all()
 
     q_build.append(

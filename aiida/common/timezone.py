@@ -10,7 +10,7 @@
 """Utility functions to operate on datetime objects."""
 
 from datetime import datetime
-import dateutil
+import dateutil.parser
 
 
 def get_current_timezone():

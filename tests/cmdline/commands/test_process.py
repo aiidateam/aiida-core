@@ -81,6 +81,14 @@ class TestVerdiProcess(AiidaTestCase):
         super().setUp()
         self.cli_runner = CliRunner()
 
+    def test_list_non_raw(self):
+        """Test the list command as the user would run it (e.g. without -r)."""
+
+        result = self.cli_runner.invoke(cmd_process.process_list)
+        self.assertIsNone(result.exception, result.output)
+        self.assertIn('Total results:', result.output)
+        self.assertIn('last time an entry changed state', result.output)
+
     def test_list(self):
         """Test the list command."""
         # pylint: disable=too-many-branches

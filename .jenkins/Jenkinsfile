@@ -48,10 +48,10 @@ pipeline {
                     // this folder is mounted from a volume so will have wrong permissions
                     sh 'sudo chown root:root /home/jenkins/.cache'
                     // prepare environment (install python dependencies etc)
-                    sh 'pip install -r requirements/requirements-py-3.7.txt --cache-dir /home/jenkins/.cache/pip'
+                    sh 'pip install -r requirements/requirements-py-3.8.txt --cache-dir /home/jenkins/.cache/pip'
                     sh 'pip install --no-deps .'
                     // for some reason if we don't change permissions here then python can't import the modules
-                    sh 'sudo chmod -R a+rwX /opt/conda/lib/python3.7/site-packages/'
+                    sh 'sudo chmod -R a+rwX /opt/conda/lib/python3.8/site-packages/'
                 }
             }
         stage('Test') {

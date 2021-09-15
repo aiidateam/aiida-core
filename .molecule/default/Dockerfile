@@ -1,4 +1,4 @@
-FROM aiidateam/aiida-prerequisites:0.3.0
+FROM aiidateam/aiida-prerequisites:0.4.0
 
 # allow for collection of query statistics
 # (must also be intialised on each database)

@@ -19,8 +19,7 @@ from sqlalchemy import and_, or_, not_, func as sa_func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import aliased, loading
-from sqlalchemy.orm.context import ORMCompileState, QueryContext
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.util import AliasedClass
@@ -70,35 +69,6 @@ def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=funct
     Get length of array defined in a JSONB column
     """
     return f'jsonb_typeof({compiler.process(element.clauses, **kwargs)})'
-
-
-def _orm_setup_cursor_result(
-    session,
-    statement,
-    params,
-    execution_options,
-    bind_arguments,
-    result,
-):
-    """Patched class method."""
-    execution_context = result.context
-    compile_state = execution_context.compiled.compile_state
-
-    # this is the patch required for turning off de-duplication of results
-    compile_state._has_mapper_entities = False  # pylint: disable=protected-access
-
-    load_options = execution_options.get('_sa_orm_load_options', QueryContext.default_load_options)
-
-    querycontext = QueryContext(
-        compile_state,
-        statement,
-        params,
-        session,
-        load_options,
-        execution_options,
-        bind_arguments,
-    )
-    return loading.instances(result, querycontext)
 
 
 class SqlaQueryBuilder(BackendQueryBuilder):
@@ -229,7 +199,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """Return an iterator over all the results of a list of lists."""
         with self.use_query(data) as query:
 
-            for resultrow in query.yield_per(batch_size):  # type: ignore[arg-type] # pylint: disable=not-an-iterable
+            stmt = query.statement.execution_options(yield_per=batch_size)
+
+            for resultrow in self.get_session().execute(stmt):
                 # we discard the first item of the result row,
                 # which is what the query was initialised with
                 # and not one of the requested projection (see self._build)
@@ -240,7 +212,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """Return an iterator over all the results of a list of dictionaries."""
         with self.use_query(data) as query:
 
-            for row in query.yield_per(batch_size):  # type: ignore[arg-type] # pylint: disable=not-an-iterable
+            stmt = query.statement.execution_options(yield_per=batch_size)
+
+            for row in self.get_session().execute(stmt):
                 # build the yield result
                 yield_result: Dict[str, Dict[str, Any]] = {}
                 for tag, projected_entities_dict in self._tag_to_projected_fields.items():
@@ -255,20 +229,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     @contextmanager
     def use_query(self, data: QueryDictType) -> Iterator[Query]:
         """Yield the built query."""
-        # Currently, a monkey-patch is required to turn off de-duplication of results,
-        # carried out in the `use_query` method
-        # see: https://github.com/sqlalchemy/sqlalchemy/issues/4395#issuecomment-907293360
-        # THIS CAN BE REMOVED WHEN MOVING TO THE VERSION 2 API
-        existing_func = ORMCompileState.orm_setup_cursor_result
-        ORMCompileState.orm_setup_cursor_result = _orm_setup_cursor_result  # type: ignore[assignment]
         query = self._update_query(data)
         try:
             yield query
         except Exception:
             self.get_session().close()
             raise
-        finally:
-            ORMCompileState.orm_setup_cursor_result = existing_func  # type: ignore[assignment]
 
     def _update_query(self, data: QueryDictType) -> Query:
         """Return the sqlalchemy.orm.Query instance for the current query specification.

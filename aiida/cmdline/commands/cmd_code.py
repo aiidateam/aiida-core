@@ -61,6 +61,7 @@ def set_code_builder(ctx, param, value):
 @verdi_code.command('setup')
 @options_code.LABEL()
 @options_code.DESCRIPTION()
+@options_code.BIND_TO_INPUT_PLUGIN()
 @options_code.INPUT_PLUGIN()
 @options_code.ON_COMPUTER()
 @options_code.COMPUTER()

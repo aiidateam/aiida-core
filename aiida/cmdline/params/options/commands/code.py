@@ -16,6 +16,7 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 
 
 def is_on_computer(ctx):
+    import ipdb; ipdb.set_trace()
     return bool(ctx.params.get('on_computer'))
 
 
@@ -31,6 +32,19 @@ ON_COMPUTER = OverridableOption(
     prompt='Installed on target computer?',
     help='Whether the code is installed on the target computer, or should be copied to the target computer each time '
     'from a local path.'
+)
+
+def is_bind_to_input_plugin(ctx):
+    return bool(ctx.params.get('bind_to_input_plugin'))
+
+BIND_TO_INPUT_PLUGIN = OverridableOption(
+    '--bind-to-input-plugin',
+    is_eager=False,
+    default=True,
+    is_flag=True,
+    cls=InteractiveOption,
+    prompt='Bind to a input plugin?',
+    help="Whether to set a input plugin for the code.",
 )
 
 REMOTE_ABS_PATH = OverridableOption(
@@ -80,6 +94,8 @@ DESCRIPTION = options.DESCRIPTION.clone(
 INPUT_PLUGIN = options.INPUT_PLUGIN.clone(
     prompt='Default calculation input plugin',
     cls=InteractiveOption,
+    required_fn=is_bind_to_input_plugin,
+    prompt_fn=is_bind_to_input_plugin,
     help="Entry point name of the default calculation plugin (as listed in 'verdi plugin list aiida.calculations')."
 )
 

@@ -247,3 +247,6 @@ class PluginParamType(EntryPointType):
                 raise click.BadParameter(str(exception))
         else:
             return entry_point
+
+    def __repr__(self):
+        return 'PLUGINPARAM'

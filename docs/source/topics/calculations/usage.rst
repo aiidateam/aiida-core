@@ -229,11 +229,11 @@ File lists
 
 Local copy list
 ~~~~~~~~~~~~~~~
-The local copy list takes tuples of length three, each of which represents a file to be copied, defined through the following items:
+The local copy list takes tuples of length three, each of which represents a file or directory to be copied, defined through the following items:
 
     * `node uuid`: the node whose repository contains the file, typically a ``SinglefileData`` or ``FolderData`` node
-    * `source relative path`: the relative path of the file within the node repository
-    * `target relative path`: the relative path within the working directory to which to copy the file
+    * `source relative path`: the relative path of the file or directory within the node repository
+    * `target relative path`: the relative path within the working directory to which to copy the file or directory contents
 
 As an example, consider a ``CalcJob`` implementation that receives a ``SinglefileData`` node as input with the name ``pseudopotential``, to copy its contents one can specify:
 
@@ -250,6 +250,43 @@ If instead, you need to transfer a specific file from a ``FolderData``, you can 
 
 Note that the filenames in the relative source and target path need not be the same.
 This depends fully on how the files are stored in the node's repository and what files need to be written to the working directory.
+
+To copy the contents of a directory of the source node, simply define it as the `source relative path`.
+For example, imagine we have a `FolderData` node that is passed as the `folder` input, which has the following repository virtual hierarchy:
+
+.. code:: bash
+
+    ├─ sub
+    │  └─ file_b.txt
+    └─ file_a.txt
+
+If the entire content needs to be copied over, specify the `local_copy_list` as follows:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, '.', None)]
+
+The ``'.'`` here indicates that the entire contents need to be copied over.
+Alternatively, one can specify a sub directory, e.g.:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, 'sub', None)]
+
+Finally, the `target relative path` can be used to write the contents of the source repository to a particular sub directory in the working directory.
+For example, the following statement:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, 'sub', 'relative/target')]
+
+will result in the following file hierarchy in the working directory of the calculation:
+
+.. code:: bash
+
+    └─ relative
+       └─ target
+           └─ file_b.txt
 
 One might think what the purpose of the list is, when one could just as easily use normal the normal API to write the file to the ``folder`` sandbox folder.
 It is true, that in this way the file will be copied to the working directory, however, then it will *also* be copied into the repository of the calculation node.

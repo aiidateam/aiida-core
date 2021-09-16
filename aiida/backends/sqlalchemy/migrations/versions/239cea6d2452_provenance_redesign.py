@@ -41,7 +41,7 @@ def migrate_infer_calculation_entry_point(connection):
         column('process_type', String)
     )
 
-    query_set = connection.execute(select([DbNode.c.type]).where(DbNode.c.type.like('calculation.%'))).fetchall()
+    query_set = connection.execute(select(DbNode.c.type).where(DbNode.c.type.like('calculation.%'))).fetchall()
     type_strings = set(entry[0] for entry in query_set)
     mapping_node_type_to_entry_point = infer_calculation_entry_point(type_strings=type_strings)
 
@@ -54,7 +54,7 @@ def migrate_infer_calculation_entry_point(connection):
         # All affected entries should be logged to file that the user can consult.
         if ENTRY_POINT_STRING_SEPARATOR not in entry_point_string:
             query_set = connection.execute(
-                select([DbNode.c.uuid]).where(DbNode.c.type == op.inline_literal(type_string))
+                select(DbNode.c.uuid).where(DbNode.c.type == op.inline_literal(type_string))
             ).fetchall()
 
             uuids = [str(entry.uuid) for entry in query_set]

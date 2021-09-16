@@ -43,7 +43,7 @@ def upgrade():
                    column('attributes', JSONB))
 
     nodes = connection.execute(
-        select([DbNode.c.id, DbNode.c.uuid]).where(
+        select(DbNode.c.id, DbNode.c.uuid).where(
             DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
 
     for pk, uuid in nodes:
@@ -61,11 +61,11 @@ def downgrade():
                    column('attributes', JSONB))
 
     nodes = connection.execute(
-        select([DbNode.c.id, DbNode.c.uuid]).where(
+        select(DbNode.c.id, DbNode.c.uuid).where(
             DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
 
     for pk, uuid in nodes:
-        attributes = connection.execute(select([DbNode.c.attributes]).where(DbNode.c.id == pk)).fetchone()
+        attributes = connection.execute(select(DbNode.c.attributes).where(DbNode.c.id == pk)).fetchone()
         symbols = numpy.array(attributes['symbols'])
         utils.store_numpy_array_in_repository(uuid, 'symbols', symbols)
         key = op.inline_literal('{"array|symbols"}')

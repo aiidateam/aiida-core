@@ -367,5 +367,5 @@ class SqlaGroupCollection(BackendGroupCollection):
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = sa.get_scoped_session()
 
-        session.query(DbGroup).get(id).delete()
+        session.get(DbGroup, id).delete()
         session.commit()

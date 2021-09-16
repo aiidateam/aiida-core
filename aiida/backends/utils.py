@@ -38,14 +38,14 @@ def create_sqlalchemy_engine(profile, **kwargs):
         name=profile.database_name
     )
     return create_engine(
-        engine_url, json_serializer=json.dumps, json_deserializer=json.loads, future=False, encoding='utf-8', **kwargs
+        engine_url, json_serializer=json.dumps, json_deserializer=json.loads, future=True, encoding='utf-8', **kwargs
     )
 
 
 def create_scoped_session_factory(engine, **kwargs):
     """Create scoped SQLAlchemy session factory"""
     from sqlalchemy.orm import scoped_session, sessionmaker
-    return scoped_session(sessionmaker(bind=engine, **kwargs))
+    return scoped_session(sessionmaker(bind=engine, future=True, **kwargs))
 
 
 def delete_nodes_and_connections(pks):

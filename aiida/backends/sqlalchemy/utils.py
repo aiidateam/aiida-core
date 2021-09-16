@@ -60,6 +60,8 @@ def install_tc(session):
     """
     Install the transitive closure table with SqlAlchemy.
     """
+    from sqlalchemy import text
+
     links_table_name = 'db_dblink'
     links_table_input_field = 'input_id'
     links_table_output_field = 'output_id'
@@ -68,9 +70,11 @@ def install_tc(session):
     closure_table_child_field = 'child_id'
 
     session.execute(
-        get_pg_tc(
-            links_table_name, links_table_input_field, links_table_output_field, closure_table_name,
-            closure_table_parent_field, closure_table_child_field
+        text(
+            get_pg_tc(
+                links_table_name, links_table_input_field, links_table_output_field, closure_table_name,
+                closure_table_parent_field, closure_table_child_field
+            )
         )
     )
 

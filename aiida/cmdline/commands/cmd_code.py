@@ -82,6 +82,8 @@ def setup_code(non_interactive, **kwargs):
     else:
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
+    kwargs.pop('bind_to_input_plugin')
+
     code_builder = CodeBuilder(**kwargs)
 
     try:

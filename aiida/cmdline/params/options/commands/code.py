@@ -16,7 +16,6 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 
 
 def is_on_computer(ctx):
-    import ipdb; ipdb.set_trace()
     return bool(ctx.params.get('on_computer'))
 
 

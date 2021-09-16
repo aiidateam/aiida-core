@@ -406,6 +406,7 @@ DESCRIPTION = OverridableOption(
 INPUT_PLUGIN = OverridableOption(
     '-P',
     '--input-plugin',
+    required=False,
     type=types.PluginParamType(group='calculations', load=False),
     help='Calculation input plugin string.'
 )

@@ -111,6 +111,46 @@ class TestVerdiCodeSetup(AiidaTestCase):
 
             self.assertClickResultNoException(result)
             self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
+    def test_from_config_no_input_plugin(self):
+        """Test setting up a code from a config file without set the input plugin.
+
+        Try loading from local file and from URL.
+        """
+        import tempfile
+
+        config_file_template = dedent(
+            """
+                    ---
+                    label: {label}                    
+                    bind_to_input_plugin: no
+                    computer: {computer}
+                    remote_abs_path: /remote/abs/path
+                    """
+        )
+
+        # local file
+        label = 'noninteractive_config'
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write(config_file_template.format(label=label, computer=self.computer.label))
+            handle.flush()
+            result = self.cli_runner.invoke(
+                setup_code,
+                ['--non-interactive', '--config', os.path.realpath(handle.name)]
+            )
+        self.assertClickResultNoException(result)
+        self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
+
+        # url
+        label = 'noninteractive_config_url'
+        fake_url = 'https://my.url.com'
+        with mock.patch(
+            'urllib.request.urlopen',
+            return_value=config_file_template.format(label=label, computer=self.computer.label)
+        ):
+            result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', fake_url])
+
+            self.assertClickResultNoException(result)
+            self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
 
 
 class TestVerdiCodeCommands(AiidaTestCase):
@@ -251,7 +291,7 @@ def test_interactive_remote(clear_database_before_test, aiida_localhost, non_int
     """Test interactive remote code setup."""
     label = 'interactive_remote'
     user_input = '\n'.join([
-        label, 'description', 'core.arithmetic.add', 'yes', aiida_localhost.label, '/remote/abs/path'
+        label, 'description', 'yes', 'core.arithmetic.add', 'yes', aiida_localhost.label, '/remote/abs/path'
     ])
     result = CliRunner().invoke(setup_code, input=user_input)
     assert result.exception is None
@@ -264,7 +304,7 @@ def test_interactive_upload(clear_database_before_test, aiida_localhost, non_int
     label = 'interactive_upload'
     dirname = os.path.dirname(__file__)
     basename = os.path.basename(__file__)
-    user_input = '\n'.join([label, 'description', 'core.arithmetic.add', 'no', dirname, basename])
+    user_input = '\n'.join([label, 'description', 'yes', 'core.arithmetic.add', 'no', dirname, basename])
     result = CliRunner().invoke(setup_code, input=user_input)
     assert result.exception is None
     assert isinstance(orm.Code.get_from_string(f'{label}'), orm.Code)
@@ -276,7 +316,7 @@ def test_mixed(clear_database_before_test, aiida_localhost, non_interactive_edit
     from aiida.orm import Code
     label = 'mixed_remote'
     options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-    user_input = '\n'.join([label, 'core.arithmetic.add', aiida_localhost.label])
+    user_input = '\n'.join([label, 'yes', 'core.arithmetic.add', aiida_localhost.label])
     result = CliRunner().invoke(setup_code, options, input=user_input)
     assert result.exception is None
     assert isinstance(Code.get_from_string(f'{label}@{aiida_localhost.label}'), Code)

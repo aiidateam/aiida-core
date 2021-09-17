@@ -33,8 +33,10 @@ ON_COMPUTER = OverridableOption(
     'from a local path.'
 )
 
+
 def is_bind_to_input_plugin(ctx):
     return bool(ctx.params.get('bind_to_input_plugin'))
+
 
 BIND_TO_INPUT_PLUGIN = OverridableOption(
     '--bind-to-input-plugin',
@@ -43,7 +45,7 @@ BIND_TO_INPUT_PLUGIN = OverridableOption(
     is_flag=True,
     cls=InteractiveOption,
     prompt='Bind to a input plugin?',
-    help="Whether to set a input plugin for the code.",
+    help='Whether to set a input plugin for the code.',
 )
 
 REMOTE_ABS_PATH = OverridableOption(

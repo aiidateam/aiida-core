@@ -111,6 +111,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
 
             self.assertClickResultNoException(result)
             self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
+
     def test_from_config_no_input_plugin(self):
         """Test setting up a code from a config file without set the input plugin.
 
@@ -121,7 +122,7 @@ class TestVerdiCodeSetup(AiidaTestCase):
         config_file_template = dedent(
             """
                     ---
-                    label: {label}                    
+                    label: {label}
                     bind_to_input_plugin: no
                     computer: {computer}
                     remote_abs_path: /remote/abs/path

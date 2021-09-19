@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 __all__ = ('BackendQueryBuilder',)
 
-QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('export')
+QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('orm.querybuilder')
 
 
 class EntityTypes(Enum):

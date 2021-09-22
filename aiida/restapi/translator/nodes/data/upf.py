@@ -25,7 +25,7 @@ class UpfDataTranslator(DataTranslator):
     from aiida.orm import UpfData
     _aiida_class = UpfData
     # The string name of the AiiDA class
-    _aiida_type = 'data.upf.UpfData'
+    _aiida_type = 'data.core.upf.UpfData'
 
     _result_type = __label__
 

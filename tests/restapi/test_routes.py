@@ -112,23 +112,23 @@ class RESTApiTestCase(AiidaTestCase):
         dummy_computers = [{
             'label': 'test1',
             'hostname': 'test1.epfl.ch',
-            'transport_type': 'ssh',
-            'scheduler_type': 'pbspro',
+            'transport_type': 'core.ssh',
+            'scheduler_type': 'core.pbspro',
         }, {
             'label': 'test2',
             'hostname': 'test2.epfl.ch',
-            'transport_type': 'ssh',
-            'scheduler_type': 'torque',
+            'transport_type': 'core.ssh',
+            'scheduler_type': 'core.torque',
         }, {
             'label': 'test3',
             'hostname': 'test3.epfl.ch',
-            'transport_type': 'local',
-            'scheduler_type': 'slurm',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.slurm',
         }, {
             'label': 'test4',
             'hostname': 'test4.epfl.ch',
-            'transport_type': 'ssh',
-            'scheduler_type': 'slurm',
+            'transport_type': 'core.ssh',
+            'scheduler_type': 'core.slurm',
         }]
 
         for dummy_computer in dummy_computers:
@@ -523,7 +523,10 @@ class RESTApiTestSuite(RESTApiTestCase):
         list
         """
         RESTApiTestCase.process_test(
-            self, 'computers', '/computers?transport_type="local"&label="test3"&orderby=+id', expected_list_ids=[3]
+            self,
+            'computers',
+            '/computers?transport_type="core.local"&label="test3"&orderby=+id',
+            expected_list_ids=[3]
         )
 
     ############### list orderby ########################
@@ -587,7 +590,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?transport_type=\"ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
+            f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
             expected_list_ids=[1, 4, 2]
         )
 
@@ -600,7 +603,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?transport_type=\"ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
+            f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
             expected_list_ids=[1, 4, 2]
         )
 
@@ -613,7 +616,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?pk>{str(node_pk)}&transport_type=\"ssh\"&orderby=-scheduler_type",
+            f"/computers?pk>{str(node_pk)}&transport_type=\"core.ssh\"&orderby=-scheduler_type",
             expected_list_ids=[2, 4, 1]
         )
 
@@ -694,7 +697,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"ssh\"",
+            f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"core.ssh\"",
             empty_list=True
         )
 
@@ -725,7 +728,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         RESTApiTestCase.process_test(
             self,
             'computers',
-            f"/computers?id>={str(node_pk)}&transport_type=\"ssh\"&orderby=-id&limit=2",
+            f"/computers?id>={str(node_pk)}&transport_type=\"core.ssh\"&orderby=-id&limit=2",
             expected_list_ids=[4, 2]
         )
 
@@ -783,7 +786,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         node_uuid = self.get_dummy_data()['calculations'][1]['uuid']
         self.process_test(
             'nodes',
-            f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.dict.Dict.\"",
+            f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.core.dict.Dict.\"",
             expected_list_ids=[3],
             uuid=node_uuid,
             result_node_type='data',
@@ -1158,19 +1161,19 @@ class RESTApiTestSuite(RESTApiTestCase):
             response_value = client.get(url)
             response = json.loads(response_value.data)
 
-            for key in ['data.structure.StructureData.|', 'data.cif.CifData.|']:
+            for key in ['data.core.structure.StructureData.|', 'data.core.cif.CifData.|']:
                 self.assertIn(key, response['data'].keys())
             for key in ['cif', 'xsf', 'xyz']:
-                self.assertIn(key, response['data']['data.structure.StructureData.|'])
-            self.assertIn('cif', response['data']['data.cif.CifData.|'])
+                self.assertIn(key, response['data']['data.core.structure.StructureData.|'])
+            self.assertIn('cif', response['data']['data.core.cif.CifData.|'])
 
     ############### querybuilder ###############
     def test_querybuilder(self):
-        """Test POSTing a queryhelp dictionary as JSON to /querybuilder
+        """Test POSTing a QueryBuilder dictionary as JSON to /querybuilder
 
         This also checks that `full_type` is _not_ included in the result no matter the entity.
         """
-        queryhelp = orm.QueryBuilder().append(
+        query_dict = orm.QueryBuilder().append(
             orm.CalculationNode,
             tag='calc',
             project=['id', 'uuid', 'user_id'],
@@ -1180,7 +1183,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                     'order': 'desc'
                 }
             }]
-        }).queryhelp
+        }).as_dict()
 
         expected_node_uuids = []
         # dummy data already ordered 'desc' by 'id'
@@ -1189,7 +1192,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                 expected_node_uuids.append(calc['uuid'])
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
@@ -1215,6 +1218,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         This should return with 405 Method Not Allowed.
         Otherwise, a "conventional" JSON response should be returned with a helpful message.
         """
+        from aiida.restapi.resources import QueryBuilder as qb_api
+
         with self.app.test_client() as client:
             response_value = client.get(f'{self.get_url_prefix()}/querybuilder')
             response = response_value.json
@@ -1224,21 +1229,14 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         self.assertEqual('GET', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
-
-        message = (
-            'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
-            'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
-            'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
-            'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
-        )
-        self.assertEqual(message, response.get('data', {}).get('message', ''))
+        self.assertEqual(qb_api.GET_MESSAGE, response.get('data', {}).get('message', ''))
 
     def test_querybuilder_user(self):
         """Retrieve a User through the use of the /querybuilder endpoint
 
         This also checks that `full_type` is _not_ included in the result no matter the entity.
         """
-        queryhelp = orm.QueryBuilder().append(
+        query_dict = orm.QueryBuilder().append(
             orm.CalculationNode,
             tag='calc',
             project=['id', 'user_id'],
@@ -1253,7 +1251,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                     'order': 'desc'
                 }
             }]
-        }).queryhelp
+        }).as_dict()
 
         expected_user_ids = []
         for calc in self.get_dummy_data()['calculations']:
@@ -1261,7 +1259,7 @@ class RESTApiTestSuite(RESTApiTestCase):
                 expected_user_ids.append(calc['user_id'])
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
@@ -1290,7 +1288,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         Here "project" will use the wildcard (*).
         This should result in both CalculationNodes and Data to be returned.
         """
-        queryhelp = orm.QueryBuilder().append(
+        builder = orm.QueryBuilder().append(
             orm.CalculationNode,
             tag='calc',
             project='*',
@@ -1307,14 +1305,14 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         expected_calc_uuids = []
         expected_data_uuids = []
-        for calc, data in queryhelp.all():
+        for calc, data in builder.all():
             expected_calc_uuids.append(calc.uuid)
             expected_data_uuids.append(data.uuid)
 
-        queryhelp = queryhelp.queryhelp
+        query_dict = builder.as_dict()
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))
@@ -1348,7 +1346,7 @@ class RESTApiTestSuite(RESTApiTestCase):
 
         Here "project" will be an empty list, resulting in only the Data node being returned.
         """
-        queryhelp = orm.QueryBuilder().append(orm.CalculationNode, tag='calc').append(
+        builder = orm.QueryBuilder().append(orm.CalculationNode, tag='calc').append(
             orm.Data,
             tag='data',
             with_incoming='calc',
@@ -1359,13 +1357,13 @@ class RESTApiTestSuite(RESTApiTestCase):
         }]})
 
         expected_data_uuids = []
-        for data in queryhelp.all(flat=True):
+        for data in builder.all(flat=True):
             expected_data_uuids.append(data.uuid)
 
-        queryhelp = queryhelp.queryhelp
+        query_dict = builder.as_dict()
 
         with self.app.test_client() as client:
-            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=queryhelp).json
+            response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
         self.assertEqual('POST', response.get('method', ''))
         self.assertEqual('QueryBuilder', response.get('resource_type', ''))

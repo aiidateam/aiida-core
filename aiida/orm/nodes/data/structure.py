@@ -741,7 +741,7 @@ class StructureData(Data):
 
         super().__init__(**kwargs)
 
-        if any([ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]]):
+        if any(ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]):
 
             if ase is not None:
                 self.set_ase(ase)
@@ -955,10 +955,7 @@ class StructureData(Data):
         counts = Counter([k.name for k in kinds])
         for count in counts:
             if counts[count] != 1:
-                raise ValidationError(
-                    "Kind with name '{}' appears {} times "
-                    'instead of only one'.format(count, counts[count])
-                )
+                raise ValidationError(f"Kind with name '{count}' appears {counts[count]} times instead of only one")
 
         try:
             # This will try to create the sites objects
@@ -987,7 +984,7 @@ class StructureData(Data):
 
         return_string = 'CRYSTAL\nPRIMVEC 1\n'
         for cell_vector in self.cell:
-            return_string += ' '.join(['%18.10f' % i for i in cell_vector])
+            return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
         return_string += f'{int(len(sites))} 1\n'
@@ -1373,8 +1370,7 @@ class StructureData(Data):
 
         if site.kind_name not in [kind.name for kind in self.kinds]:
             raise ValueError(
-                "No kind with name '{}', available kinds are: "
-                '{}'.format(site.kind_name, [kind.name for kind in self.kinds])
+                f"No kind with name '{site.kind_name}', available kinds are: {[kind.name for kind in self.kinds]}"
             )
 
         # If here, no exceptions have been raised, so I add the site.
@@ -1864,7 +1860,7 @@ class StructureData(Data):
         species = []
         additional_kwargs = {}
 
-        if (kwargs.pop('add_spin', False) and any([n.endswith('1') or n.endswith('2') for n in self.get_kind_names()])):
+        if (kwargs.pop('add_spin', False) and any(n.endswith('1') or n.endswith('2') for n in self.get_kind_names())):
             # case when spins are defined -> no partial occupancy allowed
             from pymatgen.core.periodic_table import Specie
             oxidation_state = 0  # now I always set the oxidation_state to zero
@@ -1884,10 +1880,10 @@ class StructureData(Data):
             for site in self.sites:
                 kind = self.get_kind(site.kind_name)
                 species.append(dict(zip(kind.symbols, kind.weights)))
-            if any([
+            if any(
                 create_automatic_kind_name(self.get_kind(name).symbols,
                                            self.get_kind(name).weights) != name for name in self.get_site_kindnames()
-            ]):
+            ):
                 # add "kind_name" as a properties to each site, whenever
                 # the kind_name cannot be automatically obtained from the symbols
                 additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
@@ -2145,18 +2141,14 @@ class Kind:
             return (False, 'Different length of symbols list')
 
         # Check list of symbols
-        for i in range(len(self.symbols)):
-            if self.symbols[i] != other_kind.symbols[i]:
-                return (
-                    False, f'Symbol at position {i + 1:d} are different ({self.symbols[i]} vs. {other_kind.symbols[i]})'
-                )
+        for i, symbol in enumerate(self.symbols):
+            if symbol != other_kind.symbols[i]:
+                return (False, f'Symbol at position {i + 1:d} are different ({symbol} vs. {other_kind.symbols[i]})')
         # Check weights (assuming length of weights and of symbols have same
         # length, which should be always true
-        for i in range(len(self.weights)):
-            if self.weights[i] != other_kind.weights[i]:
-                return (
-                    False, f'Weight at position {i + 1:d} are different ({self.weights[i]} vs. {other_kind.weights[i]})'
-                )
+        for i, weight in enumerate(self.weights):
+            if weight != other_kind.weights[i]:
+                return (False, f'Weight at position {i + 1:d} are different ({weight} vs. {other_kind.weights[i]})')
         # Check masses
         if abs(self.mass - other_kind.mass) > _MASS_THRESHOLD:
             return (False, f'Masses are different ({self.mass} vs. {other_kind.mass})')

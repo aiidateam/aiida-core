@@ -176,11 +176,11 @@ class AiiDADumper(yaml.Dumper):
         return super().represent_data(data)
 
 
-class AiiDALoader(yaml.UnsafeLoader):
+class AiiDALoader(yaml.Loader):
     """AiiDA specific yaml loader
 
-    .. note:: The `AiiDALoader` should only be used on trusted input, because it uses the `yaml.UnsafeLoader`. When
-        importing a shared database, we strip all process node checkpoints to avoid this being a security risk.
+    .. note:: The `AiiDALoader` should only be used on trusted input, since it uses the `yaml.Loader` which is not safe.
+        When importing a shared database, we strip all process node checkpoints to avoid this being a security risk.
     """
 
 
@@ -220,8 +220,7 @@ def serialize(data, encoding=None):
 def deserialize_unsafe(serialized):
     """Deserialize a yaml dump that represents a serialized data structure.
 
-    .. note:: This function should not be used on untrusted input, because
-        it is built upon `yaml.UnsafeLoader`.
+    .. note:: This function should not be used on untrusted input, since it is built upon `yaml.Loader` which is unsafe.
 
     :param serialized: a yaml serialized string representation
     :return: the deserialized data structure

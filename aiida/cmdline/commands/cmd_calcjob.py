@@ -46,7 +46,7 @@ def calcjob_gotocomputer(calcjob):
         echo.echo_critical('no remote work directory for this calcjob, maybe the daemon did not submit it yet')
 
     command = transport.gotocomputer_command(remote_workdir)
-    echo.echo_info('going to the remote work directory...')
+    echo.echo_report('going to the remote work directory...')
     os.system(command)
 
 

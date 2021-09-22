@@ -15,6 +15,8 @@ from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
 
+__all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
+
 ase_loops = {
     '_atom_site': [
         '_atom_site_label',
@@ -706,7 +708,7 @@ class CifData(SinglefileData):
                 if tag in self.values[datablock].keys():
                     coords.extend(self.values[datablock][tag])
 
-        return not all([coord == '?' for coord in coords])
+        return not all(coord == '?' for coord in coords)
 
     @property
     def has_unknown_species(self):
@@ -731,7 +733,7 @@ class CifData(SinglefileData):
                 return None
 
             species = parse_formula(formula).keys()
-            if any([specie not in known_species for specie in species]):
+            if any(specie not in known_species for specie in species):
                 return True
 
         return False

@@ -22,10 +22,7 @@ class NnincDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str):
-            raise ValueError(
-                "incorrect value for keyword '{}' -- only "
-                'strings and integers are accepted'.format(alias)
-            )
+            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
         return f'{key}={values}'
 
     _keywords = {
@@ -47,11 +44,11 @@ class NnincDbImporter(DbImporter):
         :return: a string with HTTP GET statement.
         """
         get_parts = []
-        for key in self._keywords:
+        for key, value in self._keywords.items():
             if key in kwargs:
                 values = kwargs.pop(key)
-                if self._keywords[key][1] is not None:
-                    get_parts.append(self._keywords[key][1](self, self._keywords[key][0], key, values))
+                if value[1] is not None:
+                    get_parts.append(value[1](self, value[0], key, values))
 
         if kwargs:
             raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
@@ -70,7 +67,8 @@ class NnincDbImporter(DbImporter):
         import re
 
         query = self.query_get(**kwargs)
-        response = urlopen(query).read()
+        with urlopen(query) as handle:
+            response = handle.read()
         results = re.findall(r'psp_files/([^\']+)\.UPF', response)
 
         elements = kwargs.get('element', None)

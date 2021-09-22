@@ -83,8 +83,8 @@ class TestCode(AiidaTestCase):
         othercomputer = orm.Computer(
             label='another_localhost',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
             workdir='/tmp/aiida'
         ).store()
         self.assertFalse(code.can_run_on(othercomputer))

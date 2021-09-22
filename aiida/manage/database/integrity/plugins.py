@@ -96,8 +96,7 @@ def infer_calculation_entry_point(type_strings):
     :param type_strings: a set of type strings whose entry point is to be inferred
     :return: a mapping of current node type string to the inferred entry point name
     """
-    from reentry.entrypoint import EntryPoint
-    from aiida.plugins.entry_point import get_entry_points
+    from aiida.plugins.entry_point import get_entry_points, parse_entry_point
 
     prefix_calc_job = 'calculation.job.'
     entry_point_group = 'aiida.calculations'
@@ -109,7 +108,9 @@ def infer_calculation_entry_point(type_strings):
     # from the aiida-registry. Note that if entry points with the same name are found in both sets, the entry point
     # from the local environment is kept as leading.
     entry_points_local = get_entry_points(group=entry_point_group)
-    entry_points_registry = [EntryPoint.parse(entry_point) for entry_point in registered_calculation_entry_points]
+    entry_points_registry = [
+        parse_entry_point(entry_point_group, entry_point) for entry_point in registered_calculation_entry_points
+    ]
 
     entry_points = entry_points_local
     entry_point_names = [entry_point.name for entry_point in entry_points]

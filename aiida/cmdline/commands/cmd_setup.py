@@ -77,7 +77,7 @@ def setup(
     echo.echo_success(f'created new profile `{profile.name}`.')
 
     # Migrate the database
-    echo.echo_info('migrating the database.')
+    echo.echo_report('migrating the database.')
     manager = get_manager()
     backend = manager._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 

@@ -94,7 +94,7 @@ class TestProcessBuilder(AiidaTestCase):
     def setUp(self):
         super().setUp()
         self.assertIsNone(Process.current())
-        self.process_class = CalculationFactory('templatereplacer')
+        self.process_class = CalculationFactory('core.templatereplacer')
         self.builder = self.process_class.get_builder()
         self.builder_workchain = ExampleWorkChain.get_builder()
         self.inputs = {
@@ -264,7 +264,7 @@ class TestProcessBuilder(AiidaTestCase):
     def test_calc_job_node_get_builder_restart(self):
         """Test the `CalcJobNode.get_builder_restart` method."""
         original = orm.CalcJobNode(
-            computer=self.computer, process_type='aiida.calculations:arithmetic.add', label='original'
+            computer=self.computer, process_type='aiida.calculations:core.arithmetic.add', label='original'
         )
         original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         original.set_option('max_wallclock_seconds', 1800)
@@ -288,7 +288,7 @@ class TestProcessBuilder(AiidaTestCase):
         code = orm.Code()
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.label = 'test_code'
-        code.set_input_plugin_name('templatereplacer')
+        code.set_input_plugin_name('core.templatereplacer')
         code.store()
 
         # Check that I can get a builder
@@ -346,3 +346,37 @@ class TestProcessBuilder(AiidaTestCase):
         # Perform same test but passing the dictionary in as keyword arguments
         builder._merge(**{'nested': {'namespace': {'int': 5}}})
         self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 2.0}}})
+
+    def test_instance_interference(self):
+        """Test that two builder instances do not interact through the class.
+
+        This is a regression test for #4420.
+        """
+
+        class ProcessOne(Process):
+            """Process with nested required ports to check the update functionality."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('port', valid_type=int, default=1)
+
+        class ProcessTwo(Process):
+            """Process with nested required ports to check the update functionality."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('port', valid_type=int, default=2)
+
+        builder_one = ProcessOne.get_builder()
+        assert builder_one.port == 1
+        assert isinstance(builder_one, ProcessBuilderNamespace)
+
+        # Create a second builder and check its only port has the correct default, but also that the original builder
+        # still has its original port default and hasn't been affected by the second builder because the share a port
+        # name.
+        builder_two = ProcessTwo.get_builder()
+        assert isinstance(builder_two, ProcessBuilderNamespace)
+        assert builder_two.port == 2
+        assert builder_one.port == 1

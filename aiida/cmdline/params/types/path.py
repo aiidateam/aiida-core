@@ -15,6 +15,8 @@ import urllib.error
 from socket import timeout
 import click
 
+__all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
+
 URL_TIMEOUT_SECONDS = 10
 
 
@@ -97,7 +99,8 @@ class PathOrUrl(click.Path):
     def checks_url(self, url, param, ctx):
         """Check whether URL is reachable within timeout."""
         try:
-            urllib.request.urlopen(url, timeout=self.timeout_seconds)
+            with urllib.request.urlopen(url, timeout=self.timeout_seconds):
+                pass
         except (urllib.error.URLError, urllib.error.HTTPError, timeout):
             self.fail(
                 '{0} "{1}" could not be reached within {2} s.\n'
@@ -141,7 +144,7 @@ class FileOrUrl(click.File):
     def get_url(self, url, param, ctx):
         """Retrieve file from URL."""
         try:
-            return urllib.request.urlopen(url, timeout=self.timeout_seconds)
+            return urllib.request.urlopen(url, timeout=self.timeout_seconds)  # pylint: disable=consider-using-with
         except (urllib.error.URLError, urllib.error.HTTPError, timeout):
             self.fail(
                 '"{0}" could not be reached within {1} s.\n'

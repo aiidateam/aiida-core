@@ -152,7 +152,7 @@ def import_data_sqla(
             raise exceptions.DanglingLinkError(
                 'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
                 'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
-                ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
+                ''.format(len(unknown_nodes)) + '\n'.join(f'* {uuid}' for uuid in unknown_nodes)
             )
 
         ###################################
@@ -523,7 +523,7 @@ def _store_entity_data(
                     import_entry_uuid = str(node.uuid)
                     import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
-                    pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
+                    pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-', maxsplit=1)[0]} - "
                     progress.set_description_str(f'{pbar_node_base_str}Extras', refresh=False)
                     progress.update()
 

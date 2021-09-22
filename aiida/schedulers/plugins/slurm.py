@@ -530,10 +530,7 @@ stderr='{stderr.strip()}'"""
             try:
                 job_state_string = _MAP_STATUS_SLURM[job_state_raw]
             except KeyError:
-                self.logger.warning(
-                    "Unrecognized job_state '{}' for job "
-                    'id {}'.format(job_state_raw, this_job.job_id)
-                )
+                self.logger.warning(f"Unrecognized job_state '{job_state_raw}' for job id {this_job.job_id}")
                 job_state_string = JobState.UNDETERMINED
             # QUEUED_HELD states are not specific states in SLURM;
             # they are instead set with state QUEUED, and then the

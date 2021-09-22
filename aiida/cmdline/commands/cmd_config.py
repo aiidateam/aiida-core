@@ -17,35 +17,7 @@ from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 
 
-class _DeprecateConfigCommandsGroup(click.Group):
-    """Overloads the get_command with one that identifies deprecated commands."""
-
-    def get_command(self, ctx, cmd_name):
-        """Override the default click.Group get_command with one that identifies deprecated commands."""
-        cmd = click.Group.get_command(self, ctx, cmd_name)
-
-        if cmd is not None:
-            return cmd
-
-        if cmd_name in [
-            'daemon.default_workers', 'logging.plumpy_loglevel', 'daemon.timeout', 'logging.sqlalchemy_loglevel',
-            'daemon.worker_process_slots', 'logging.tornado_loglevel', 'db.batch_size', 'runner.poll.interval',
-            'logging.aiida_loglevel', 'user.email', 'logging.alembic_loglevel', 'user.first_name',
-            'logging.circus_loglevel', 'user.institution', 'logging.db_loglevel', 'user.last_name',
-            'logging.kiwipy_loglevel', 'verdi.shell.auto_import', 'logging.paramiko_loglevel',
-            'warnings.showdeprecations', 'autofill.user.email', 'autofill.user.first_name', 'autofill.user.last_name',
-            'autofill.user.institution'
-        ]:
-            ctx.obj.deprecated_name = cmd_name
-            cmd = click.Group.get_command(self, ctx, '_deprecated')
-            return cmd
-
-        ctx.fail(f"'{cmd_name}' is not a verdi config command.")
-
-        return None
-
-
-@verdi.group('config', cls=_DeprecateConfigCommandsGroup)
+@verdi.group('config')
 def verdi_config():
     """Manage the AiiDA configuration."""
 

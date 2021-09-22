@@ -128,7 +128,7 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
-        return ' OR '.join("{} LIKE '%{}%'".format(key, s) for s in values)
+        return ' OR '.join(f"{key} LIKE '%{s}%'" for s in values)
 
     def _composition_clause(self, key, alias, values):  # pylint: disable=unused-argument
         """
@@ -152,7 +152,7 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, float):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and floats are accepted')
-        return ' OR '.join('{} BETWEEN {} AND {}'.format(key, d - precision, d + precision) for d in values)
+        return ' OR '.join(f'{key} BETWEEN {d - precision} AND {d + precision}' for d in values)
 
     def _crystal_system_clause(self, key, alias, values):
         """
@@ -586,9 +586,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             from urllib.request import urlopen
             import re
 
-            self.html = urlopen(
+            with urlopen(
                 self.db_parameters['server'] + self.db_parameters['db'] + '/' + self.query.format(str(self.page))
-            ).read()
+            ) as handle:
+                self.html = handle.read()
 
             self.soup = BeautifulSoup(self.html)
 
@@ -669,7 +670,8 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
 
         if self._contents is None:
             from hashlib import md5
-            self._contents = urllib.request.urlopen(self.source['uri']).read()
+            with urllib.request.urlopen(self.source['uri']) as handle:
+                self._contents = handle.read()
             self._contents = self._contents.decode('iso-8859-1').encode('utf8')
             self.source['source_md5'] = md5(self._contents).hexdigest()
 

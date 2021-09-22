@@ -41,6 +41,7 @@ def _get_cif_ase_inline(struct, parameters):
     cif = CifData(ase=struct.get_ase(**kwargs))
     formula = struct.get_formula(mode='hill', separator=' ')
     for i in cif.values.keys():
+        # pylint: disable=unsubscriptable-object
         cif.values[i]['_symmetry_space_group_name_H-M'] = 'P 1'
         cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
         cif.values[i]['_symmetry_Int_Tables_number'] = 1

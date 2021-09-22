@@ -28,7 +28,7 @@ class TestSealUnsealedProcessesMigration(TestMigrations):
         self.node_process_id = node_process.id
 
         node_data = self.DbNode(
-            node_type='data.dict.Dict.',
+            node_type='data.core.dict.Dict.',
             user_id=self.default_user.id,
         )
         node_data.save()

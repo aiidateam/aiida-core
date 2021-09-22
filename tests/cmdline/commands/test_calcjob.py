@@ -37,7 +37,11 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.engine import ProcessState
 
         cls.computer = orm.Computer(
-            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
         ).store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
@@ -49,7 +53,7 @@ class TestVerdiCalculation(AiidaTestCase):
         authinfo = orm.AuthInfo(computer=cls.computer, user=user)
         authinfo.store()
 
-        process_class = CalculationFactory('templatereplacer')
+        process_class = CalculationFactory('core.templatereplacer')
         process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
 
         # Create 5 CalcJobNodes (one for each CalculationState)
@@ -94,7 +98,7 @@ class TestVerdiCalculation(AiidaTestCase):
         import_archive('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
         print(cls.arithmetic_job.repository_metadata)
@@ -266,7 +270,7 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Import old archive of ArithmeticAddCalculation
         import_archive('calcjob/arithmetic.add_old.aiida')
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
         for job in calculations:
             if job[0].uuid == self.arithmetic_job.uuid:

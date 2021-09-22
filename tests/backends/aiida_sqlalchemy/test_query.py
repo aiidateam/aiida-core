@@ -18,17 +18,13 @@ class TestQueryBuilderSQLA(AiidaTestCase):
 
     def test_clsf_sqla(self):
         """Test SQLA classifiers"""
-        from aiida.backends.sqlalchemy.models.node import DbNode
-        from aiida.backends.sqlalchemy.models.group import DbGroup
-        from aiida.backends.sqlalchemy.models.user import DbUser
-        from aiida.backends.sqlalchemy.models.computer import DbComputer
+        from aiida.orm.querybuilder import _get_ormclass
 
-        q_b = QueryBuilder()
-        for aiida_cls, orm_cls in zip((Group, User, Computer, Node, Data, ProcessNode),
-                                      (DbGroup, DbUser, DbComputer, DbNode, DbNode, DbNode)):
-            cls, _ = q_b._get_ormclass(aiida_cls, None)  # pylint: disable=protected-access
+        for aiida_cls, orm_name in zip((Group, User, Computer, Node, Data, ProcessNode),
+                                       ('group', 'user', 'computer', 'node', 'node', 'node')):
+            cls, _ = _get_ormclass(aiida_cls, None)
 
-            self.assertEqual(cls, orm_cls)
+            self.assertEqual(cls.value, orm_name)
 
 
 class QueryBuilderLimitOffsetsTestSQLA(AiidaTestCase):

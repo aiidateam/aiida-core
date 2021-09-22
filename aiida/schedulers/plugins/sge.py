@@ -168,8 +168,9 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             lines.append(f'#$ -h {job_tmpl.submit_as_hold}')
 
         if job_tmpl.rerunnable:
-            # if isinstance(job_tmpl.rerunnable, str):
-            lines.append(f'#$ -r {job_tmpl.rerunnable}')
+            lines.append('#$ -r yes')
+        else:
+            lines.append('#$ -r no')
 
         if job_tmpl.email:
             # If not specified, but email events are set, PBSPro
@@ -322,7 +323,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             raise SchedulerError('Error during joblist retrieval, no stdout produced')
 
         try:
-            first_child = xmldata.firstChild
+            first_child = xmldata.firstChild  # pylint: disable=no-member
             second_childs = first_child.childNodes
             tag_names_sec = [elem.tagName for elem in second_childs \
                              if elem.nodeType == 1]
@@ -365,9 +366,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 self.logger.error(f'Error in sge._parse_joblist_output:no job id is given, stdout={stdout}')
                 raise SchedulerError('Error in sge._parse_joblist_output: no job id is given')
             except IndexError:
-                self.logger.error("No 'job_number' given for job index {} in "
-                                  'job list, stdout={}'.format(jobs.index(job) \
-                                                               , stdout))
+                self.logger.error(f"No 'job_number' given for job index {jobs.index(job)} in job list, stdout={stdout}")
                 raise IndexError('Error in sge._parse_joblist_output: no job id is given')
 
             try:
@@ -377,13 +376,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 try:
                     this_job.job_state = _MAP_STATUS_SGE[job_state_string]
                 except KeyError:
-                    self.logger.warning(
-                        "Unrecognized job_state '{}' for job "
-                        'id {}'.format(job_state_string, this_job.job_id)
-                    )
+                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
             except IndexError:
-                self.logger.warning("No 'job_state' field for job id {} in" 'stdout={}'.format(this_job.job_id, stdout))
+                self.logger.warning(f"No 'job_state' field for job id {this_job.job_id} instdout={stdout}")
                 this_job.job_state = JobState.UNDETERMINED
 
             try:
@@ -431,9 +427,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                         )
                 except IndexError:
                     self.logger.warning(
-                        "No 'JB_submission_time' and no "
-                        "'JAT_start_time' field for job "
-                        'id {}'.format(this_job.job_id)
+                        f"No 'JB_submission_time' and no 'JAT_start_time' field for job id {this_job.job_id}"
                     )
 
             # There is also cpu_usage, mem_usage, io_usage information available:

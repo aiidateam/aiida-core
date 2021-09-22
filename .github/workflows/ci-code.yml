@@ -22,8 +22,8 @@ jobs:
       with:
         python-version: 3.8
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Check requirements files
       id: check_reqs
@@ -98,7 +98,6 @@ jobs:
       run: |
         pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip install --use-feature=2020-resolver --no-deps -e .
-        reentry scan
         pip freeze
 
     - name: Setup environment
@@ -110,6 +109,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+        SQLALCHEMY_WARN_20: 1
       run:
         .github/workflows/tests.sh
 
@@ -125,15 +125,20 @@ jobs:
   verdi:
 
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: ${{ matrix.python-version }}
 
     - name: Install python dependencies
       run: pip install -e .

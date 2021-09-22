@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name, import-error, no-name-in-module
+# pylint: disable=invalid-name
 """
 This file contains the majority of the migration tests that are too short to
 go to a separate file.
@@ -76,7 +76,7 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
     def setUpBeforeMigration(self):
         from aiida.common.utils import get_new_uuid
-        from aiida.backends.general.migrations.utils import deduplicate_uuids, verify_uuid_uniqueness
+        from aiida.backends.general.migrations.duplicate_uuids import deduplicate_uuids, verify_uuid_uniqueness
         self.file_name = 'test.temp'
         self.file_content = '#!/bin/bash\n\necho test run\n'
 
@@ -85,23 +85,23 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
         self.n_bool_duplicates = 2
         self.n_int_duplicates = 4
 
-        node_bool = self.DbNode(type='data.bool.Bool.', user_id=self.default_user.id, uuid=get_new_uuid())
+        node_bool = self.DbNode(type='data.core.bool.Bool.', user_id=self.default_user.id, uuid=get_new_uuid())
         node_bool.save()
 
-        node_int = self.DbNode(type='data.int.Int.', user_id=self.default_user.id, uuid=get_new_uuid())
+        node_int = self.DbNode(type='data.core.int.Int.', user_id=self.default_user.id, uuid=get_new_uuid())
         node_int.save()
 
         self.nodes_boolean.append(node_bool)
         self.nodes_integer.append(node_int)
 
         for _ in range(self.n_bool_duplicates):
-            node = self.DbNode(type='data.bool.Bool.', user_id=self.default_user.id, uuid=node_bool.uuid)
+            node = self.DbNode(type='data.core.bool.Bool.', user_id=self.default_user.id, uuid=node_bool.uuid)
             node.save()
             utils.put_object_from_string(node.uuid, self.file_name, self.file_content)
             self.nodes_boolean.append(node)
 
         for _ in range(self.n_int_duplicates):
-            node = self.DbNode(type='data.int.Int.', user_id=self.default_user.id, uuid=node_int.uuid)
+            node = self.DbNode(type='data.core.int.Int.', user_id=self.default_user.id, uuid=node_int.uuid)
             node.save()
             utils.put_object_from_string(node.uuid, self.file_name, self.file_content)
             self.nodes_integer.append(node)
@@ -112,12 +112,12 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
 
         # Now run the function responsible for solving duplicate UUIDs which would also be called by the user
         # through the `verdi database integrity detect-duplicate-uuid` command
-        deduplicate_uuids(table='db_dbnode')
+        deduplicate_uuids(table='db_dbnode', dry_run=False)
 
     def test_deduplicated_uuids(self):
         """Verify that after the migration, all expected nodes are still there with unique UUIDs."""
         # If the duplicate UUIDs were successfully fixed, the following should not raise.
-        from aiida.backends.general.migrations.utils import verify_uuid_uniqueness
+        from aiida.backends.general.migrations.duplicate_uuids import verify_uuid_uniqueness
 
         verify_uuid_uniqueness(table='db_dbnode')
 
@@ -314,7 +314,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
 
         # Creating the needed nodes & workflows
         calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
-        param = DbNode(type='data.dict.Dict.', user_id=self.default_user.id)
+        param = DbNode(type='data.core.dict.Dict.', user_id=self.default_user.id)
         leg_workf = DbWorkflow(label='Legacy WorkflowNode', user_id=self.default_user.id)
         calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=self.default_user.id)
 
@@ -764,8 +764,8 @@ class TestTextFieldToJSONFieldMigration(TestMigrations):  # pylint: disable=too-
         self.computer_kwargs = {
             'name': 'localhost_testing',
             'hostname': 'localhost',
-            'transport_type': 'local',
-            'scheduler_type': 'direct',
+            'transport_type': 'core.local',
+            'scheduler_type': 'core.direct',
             'metadata': json.dumps(self.computer_metadata),
         }
         self.computer = self.DbComputer(**self.computer_kwargs)

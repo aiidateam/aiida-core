@@ -23,7 +23,7 @@ from aiida.cmdline.utils import decorators
 @click.argument('expression', type=click.STRING, required=False)
 @click.option('-d', '--daemon', is_flag=True, help='Submit the workchains to the daemon.')
 @options.CODE(
-    type=types.CodeParamType(entry_point='arithmetic.add'),
+    type=types.CodeParamType(entry_point='core.arithmetic.add'),
     required=False,
     help='Code to perform the add operations with. Required if -C flag is specified'
 )

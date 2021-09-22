@@ -13,6 +13,8 @@ jobs:
 
   check-release-tag:
 
+    # Only run this job on the main repository and not on forks
+    if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
 
     steps:
@@ -85,7 +87,6 @@ jobs:
         pip install --upgrade pip setuptools
         pip install -r requirements/requirements-py-3.8.txt
         pip install --no-deps -e .
-        reentry scan
     - name: Run sub-set of test suite
       run: pytest -sv -k 'requires_rmq'
 

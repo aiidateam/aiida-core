@@ -24,7 +24,11 @@ class TestComputer(AiidaTestCase):
         import tempfile
 
         new_comp = orm.Computer(
-            label='bbb', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='bbb',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
         ).store()
 
         # Configure the computer - no parameters for local transport
@@ -43,7 +47,11 @@ class TestComputer(AiidaTestCase):
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
         new_comp = orm.Computer(
-            label='aaa', hostname='aaa', transport_type='local', scheduler_type='pbspro', workdir='/tmp/aiida'
+            label='aaa',
+            hostname='aaa',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
+            workdir='/tmp/aiida'
         ).store()
 
         comp_pk = new_comp.pk
@@ -65,7 +73,7 @@ class TestComputerConfigure(AiidaTestCase):
         from aiida.orm.utils.builders.computer import ComputerBuilder
 
         self.comp_builder = ComputerBuilder(label='test', description='computer', hostname='localhost')
-        self.comp_builder.scheduler = 'direct'
+        self.comp_builder.scheduler = 'core.direct'
         self.comp_builder.work_dir = '/tmp/aiida'
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
@@ -77,7 +85,7 @@ class TestComputerConfigure(AiidaTestCase):
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""
         self.comp_builder.label = 'test_configure_local'
-        self.comp_builder.transport = 'local'
+        self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -87,7 +95,7 @@ class TestComputerConfigure(AiidaTestCase):
     def test_configure_ssh(self):
         """Configure a computer for ssh transport and check it is configured."""
         self.comp_builder.label = 'test_configure_ssh'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -97,7 +105,7 @@ class TestComputerConfigure(AiidaTestCase):
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
         self.comp_builder.label = 'test_configure_ssh_invalid'
-        self.comp_builder.transport = 'ssh'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -107,7 +115,7 @@ class TestComputerConfigure(AiidaTestCase):
     def test_non_configure_error(self):
         """Configure a computer for local transport and check it is configured."""
         self.comp_builder.label = 'test_non_configure_error'
-        self.comp_builder.transport = 'local'
+        self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
         comp.store()
 

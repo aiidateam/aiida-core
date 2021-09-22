@@ -23,7 +23,7 @@ class CifDataTranslator(DataTranslator):
     from aiida.orm import CifData
     _aiida_class = CifData
     # The string name of the AiiDA class
-    _aiida_type = 'data.cif.CifData'
+    _aiida_type = 'data.core.cif.CifData'
 
     _result_type = __label__
 

@@ -21,8 +21,8 @@ from aiida.parsers import Parser
 from aiida.plugins import CalculationFactory, ParserFactory
 from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
-ArithmeticAddParser = ParserFactory('arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
 class CustomCalcJob(CalcJob):

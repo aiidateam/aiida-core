@@ -45,12 +45,12 @@ class PcodDbImporter(CodDbImporter):
         :return: string containing a SQL statement.
         """
         sql_parts = []
-        for key in self._keywords:
+        for key, value in self._keywords.items():
             if key in kwargs:
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
                     values = [values]
-                sql_parts.append(f'({self._keywords[key][1](self, self._keywords[key][0], key, values)})')
+                sql_parts.append(f'({value[1](self, value[0], key, values)})')
         if kwargs:
             raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 

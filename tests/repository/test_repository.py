@@ -4,6 +4,7 @@
 import contextlib
 import io
 import pathlib
+import typing as t
 
 import pytest
 
@@ -55,6 +56,20 @@ def repository_uninitialised(request, tmp_path_factory) -> Repository:
     with request.param(tmp_path_factory.mktemp('container')) as backend:
         repository = Repository(backend=backend)
         yield repository
+
+
+@pytest.fixture(scope='function', params=[True, False])
+def tmp_path_parametrized(request, tmp_path_factory) -> t.Union[str, pathlib.Path]:
+    """Indirect parametrized fixture that returns temporary path both as ``str`` and as ``pathlib.Path``.
+
+    This is a useful fixture to automatically parametrize a test for a method that accepts both types.
+    """
+    tmp_path = tmp_path_factory.mktemp('target')
+
+    if request.param:
+        tmp_path = str(tmp_path)
+
+    yield tmp_path
 
 
 def test_uuid(repository_uninitialised):
@@ -281,17 +296,17 @@ def test_list_objects(repository, generate_directory):
 
     objects = repository.list_objects()
     assert len(objects) == 3
-    assert all([isinstance(obj, File) for obj in objects])
+    assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['file_a', 'path', 'relative']
 
     objects = repository.list_objects('path')
     assert len(objects) == 1
-    assert all([isinstance(obj, File) for obj in objects])
+    assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['sub']
 
     objects = repository.list_objects('relative')
     assert len(objects) == 1
-    assert all([isinstance(obj, File) for obj in objects])
+    assert all(isinstance(obj, File) for obj in objects)
     assert [obj.name for obj in objects] == ['file_b']
 
 
@@ -564,6 +579,42 @@ def test_walk(repository, generate_directory):
         (pathlib.Path('relative'), ['sub'], ['file_b']),
         (pathlib.Path('relative/sub'), [], ['file_c']),
     ]
+
+
+@pytest.mark.parametrize('path', ('.', 'relative'))
+def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path):
+    """Test the ``Repository.copy_tree`` method."""
+    directory = generate_directory({'file_a': None, 'relative': {'file_b': None, 'sub': {'file_c': None}}})
+    repository.put_object_from_tree(str(directory))
+
+    repository.copy_tree(tmp_path_parametrized, path=path)
+    for root, dirnames, filenames in repository.walk(path):
+        for dirname in dirnames:
+            assert pathlib.Path(tmp_path_parametrized / root / dirname).is_dir()
+        for filename in filenames:
+            filepath = pathlib.Path(tmp_path_parametrized / root / filename)
+            assert filepath.is_file()
+            with repository.open(root / filename) as handle:
+                assert filepath.read_bytes() == handle.read()
+
+
+@pytest.mark.parametrize(('argument', 'value', 'exception', 'match'), (
+    ('target', None, TypeError, r'path .* is not of type `str` nor `pathlib.Path`.'),
+    ('target', 'relative/path', TypeError, r'provided target `.*` is not an absolute path.'),
+    ('target', pathlib.Path('.'), TypeError, r'provided target `.*` is not an absolute path.'),
+    ('path', pathlib.Path('file_a'), NotADirectoryError, r'object with path `.*` is not a directory.'),
+))
+def test_copy_tree_invalid(tmp_path, repository, generate_directory, argument, value, exception, match):
+    """Test the ``Repository.copy_tree`` method for invalid input."""
+    directory = generate_directory({'file_a': None})
+    repository.put_object_from_tree(str(directory))
+
+    if argument == 'target':
+        with pytest.raises(exception, match=match):
+            repository.copy_tree(target=value)
+    else:
+        with pytest.raises(exception, match=match):
+            repository.copy_tree(target=tmp_path, path=value)
 
 
 def test_clone(repository, generate_directory):

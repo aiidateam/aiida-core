@@ -150,21 +150,36 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
+        env_lines = []
+
+        if job_tmpl.job_resource and job_tmpl.job_resource.num_cores_per_mpiproc:
+            # since this was introduced after the environment injection below,
+            # it is intentionally put before it to avoid breaking current users script by overruling
+            # any explicit OMP_NUM_THREADS they may have set in their job_environment
+            env_lines.append(f'export OMP_NUM_THREADS={job_tmpl.job_resource.num_cores_per_mpiproc}')
+
         # Job environment variables are to be set on one single line.
         # This is a tough job due to the escaping of commas, etc.
         # moreover, I am having issues making it work.
         # Therefore, I assume that this is bash and export variables by
         # and.
-
         if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
             if not isinstance(job_tmpl.job_environment, dict):
                 raise ValueError('If you provide job_environment, it must be a dictionary')
             for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
+                env_lines.append(f'export {key.strip()}={escape_for_bash(value)}')
+
+        if env_lines:
+            lines.append(empty_line)
+            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
+            lines += env_lines
             lines.append('# ENVIRONMENT VARIABLES  END  ###')
             lines.append(empty_line)
+
+        if job_tmpl.rerunnable:
+            self.logger.warning(
+                "The 'rerunnable' option is set to 'True', but has no effect when using the direct scheduler."
+            )
 
         lines.append(empty_line)
 
@@ -219,10 +234,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         filtered_stderr = '\n'.join(l for l in stderr.split('\n'))
         if filtered_stderr.strip():
-            self.logger.warning(
-                'Warning in _parse_joblist_output, non-empty '
-                "(filtered) stderr='{}'".format(filtered_stderr)
-            )
+            self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
                 raise SchedulerError('Error during direct execution parsing (_parse_joblist_output function)')
 
@@ -238,10 +250,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             this_job.job_id = job[0]
 
             if len(job) < 3:
-                raise SchedulerError(
-                    'Unexpected output from the scheduler, '
-                    "not enough fields in line '{}'".format(line)
-                )
+                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
 
             try:
                 job_state_string = job[1][0]  # I just check the first character
@@ -253,10 +262,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                     this_job.job_state = \
                         _MAP_STATUS_PS[job_state_string]
                 except KeyError:
-                    self.logger.warning(
-                        "Unrecognized job_state '{}' for job "
-                        'id {}'.format(job_state_string, this_job.job_id)
-                    )
+                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
 
             try:

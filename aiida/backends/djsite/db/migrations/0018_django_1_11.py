@@ -33,7 +33,7 @@ def _verify_uuid_uniqueness(apps, schema_editor):
     :raises: IntegrityError if database contains rows with duplicate UUIDS.
     """
     # pylint: disable=unused-argument
-    from aiida.manage.database.integrity.duplicate_uuid import verify_uuid_uniqueness
+    from aiida.backends.general.migrations.duplicate_uuids import verify_uuid_uniqueness
 
     for table in tables:
         verify_uuid_uniqueness(table=table)

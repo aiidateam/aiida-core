@@ -9,10 +9,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
-
 import alembic
 import click
 
+from aiida.cmdline import is_verbose
 from aiida.cmdline.params import options
 
 
@@ -51,18 +51,18 @@ def alembic_revision(message):
 
 
 @alembic_cli.command('current')
-@options.VERBOSE()
-def alembic_current(verbose):
+@options.VERBOSITY()
+def alembic_current():
     """Show the current revision."""
-    execute_alembic_command('current', verbose=verbose)
+    execute_alembic_command('current', verbose=is_verbose())
 
 
 @alembic_cli.command('history')
 @click.option('-r', '--rev-range')
-@options.VERBOSE()
-def alembic_history(rev_range, verbose):
+@options.VERBOSITY()
+def alembic_history(rev_range):
     """Show the history for the given revision range."""
-    execute_alembic_command('history', rev_range=rev_range, verbose=verbose)
+    execute_alembic_command('history', rev_range=rev_range, verbose=is_verbose())
 
 
 @alembic_cli.command('upgrade')

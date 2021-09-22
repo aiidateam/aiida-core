@@ -50,16 +50,16 @@ def database_exists(url):
     url = copy(make_url(url))
     database = url.database
     if url.drivername.startswith('postgresql'):
-        url.database = 'template1'
+        url = url.set(database='template1')
     else:
-        url.database = None
+        url = url.set(database=None)
 
     engine = sa.create_engine(url)  # pylint: disable=no-member
 
     try:
         if engine.dialect.name == 'postgresql':
-            text = f"SELECT 1 FROM pg_database WHERE datname='{database}'"
-            return bool(engine.execute(text).scalar())
+            text = sa.text(f"SELECT 1 FROM pg_database WHERE datname='{database}'")
+            return bool(engine.connect().execute(text).scalar())
         raise Exception('Only PostgreSQL is supported.')
 
     finally:
@@ -89,7 +89,7 @@ def create_database(url, encoding='utf8'):
     database = url.database
 
     # A default PostgreSQL database to connect
-    url.database = 'template1'
+    url = url.set(database='template1')
 
     engine = sa.create_engine(url)  # pylint: disable=no-member
 
@@ -98,9 +98,9 @@ def create_database(url, encoding='utf8'):
             from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
             engine.raw_connection().set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
-            text = f"CREATE DATABASE {quote(engine, database)} ENCODING '{encoding}'"
-
-            engine.execute(text)
+            text = sa.text(f"CREATE DATABASE {quote(engine, database)} ENCODING '{encoding}'")
+            with engine.begin() as connection:
+                connection.execute(text)
 
         else:
             raise Exception('Only PostgreSQL with the psycopg2 driver is supported.')

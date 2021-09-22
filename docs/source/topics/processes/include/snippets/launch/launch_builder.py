@@ -2,7 +2,7 @@
 from aiida import orm
 from aiida.engine import submit
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 builder = ArithmeticAddCalculation.get_builder()
 builder.x = orm.Int(1)

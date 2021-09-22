@@ -11,6 +11,7 @@
 import os
 import contextlib
 
+import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
@@ -149,8 +150,7 @@ class SqlaSettingsManager(SettingsManager):
 
         :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
         """
-        from sqlalchemy.engine import reflection
-        inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
+        inspector = sqlalchemy.inspect(get_scoped_session().bind)
         if self.table_name not in inspector.get_table_names():
             raise NotExistent('the settings table does not exist')
 

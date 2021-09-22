@@ -8,13 +8,27 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common utility functions for command line commands."""
-# pylint: disable=import-error
-
+import logging
 import os
 import sys
 
-import click
 from tabulate import tabulate
+
+from . import echo
+
+__all__ = ('is_verbose',)
+
+
+def is_verbose():
+    """Return whether the configured logging verbosity is considered verbose, i.e., equal or lower to ``INFO`` level.
+
+    .. note:: This checks the effective logging level that is set on the ``CMDLINE_LOGGER``. This means that it will
+        consider the logging level set on the parent ``AIIDA_LOGGER`` if not explicitly set on itself. The level of the
+        main logger can be manipulated from the command line through the ``VERBOSITY`` option that is available for all
+        commands.
+
+    """
+    return echo.CMDLINE_LOGGER.getEffectiveLevel() <= logging.INFO
 
 
 def get_env_with_venv_bin():
@@ -49,31 +63,24 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
 def print_last_process_state_change(process_type=None):
     """
     Print the last time that a process of the specified type has changed its state.
-    This function will also print a warning if the daemon is not running.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
         Valid process types are either 'calculation' or 'work'.
     """
-    from aiida.cmdline.utils.echo import echo_info, echo_warning
+    from aiida.cmdline.utils.echo import echo_report
     from aiida.common import timezone
     from aiida.common.utils import str_timedelta
-    from aiida.engine.daemon.client import get_daemon_client
     from aiida.engine.utils import get_process_state_change_timestamp
-
-    client = get_daemon_client()
 
     timestamp = get_process_state_change_timestamp(process_type)
 
     if timestamp is None:
-        echo_info('last time an entry changed state: never')
+        echo_report('last time an entry changed state: never')
     else:
         timedelta = timezone.delta(timestamp, timezone.now())
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
-        echo_info(f'last time an entry changed state: {relative} ({formatted})')
-
-    if not client.is_daemon_running:
-        echo_warning('the daemon is not running', bold=True)
+        echo_report(f'last time an entry changed state: {relative} ({formatted})')
 
 
 def get_node_summary(node):
@@ -390,10 +397,10 @@ def print_process_info(process):
     if not docstring:
         docstring = ['No description available']
 
-    click.secho('Description:\n', fg='red', bold=True)
+    echo.echo('Description:\n', fg='red', bold=True)
     for line in docstring:
-        click.echo(f'	{line.lstrip()}')
-    click.echo()
+        echo.echo(f'    {line.lstrip()}')
+    echo.echo('')
 
     print_process_spec(process.spec())
 
@@ -433,26 +440,26 @@ def print_process_spec(process_spec):
     max_width_type = max([len(entry[2]) for entry in inputs + outputs]) + 2
 
     if process_spec.inputs:
-        click.secho('Inputs:', fg='red', bold=True)
+        echo.echo('Inputs:', fg='red', bold=True)
     for entry in inputs:
         if entry[1] == 'required':
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
         else:
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.outputs:
-        click.secho('Outputs:', fg='red', bold=True)
+        echo.echo('Outputs:', fg='red', bold=True)
     for entry in outputs:
         if entry[1] == 'required':
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
         else:
-            click.secho(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.exit_codes:
-        click.secho('Exit codes:', fg='red', bold=True)
+        echo.echo('Exit codes:', fg='red', bold=True)
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
         message = exit_code.message
-        click.secho('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
+        echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
 
 
 def get_num_workers():
@@ -476,8 +483,8 @@ def get_num_workers():
                 raise CircusCallError
         try:
             return response['numprocesses']
-        except KeyError:
-            raise CircusCallError('Circus did not return the number of daemon processes')
+        except KeyError as exc:
+            raise CircusCallError('Circus did not return the number of daemon processes') from exc
 
 
 def check_worker_load(active_slots):
@@ -490,7 +497,6 @@ def check_worker_load(active_slots):
 
     :param active_slots: the number of currently active worker slots
     """
-    from aiida.cmdline.utils import echo
     from aiida.common.exceptions import CircusCallError
     from aiida.manage.configuration import get_config
 
@@ -511,3 +517,7 @@ def check_worker_load(active_slots):
             echo.echo('')  # New line
             echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
             echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")
+        else:
+            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots')
+    else:
+        echo.echo_report('No active daemon workers')

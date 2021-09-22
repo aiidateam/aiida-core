@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
+# pylint: disable=invalid-name,no-member,import-error,no-name-in-module,protected-access
 """This migration cleans the log records from non-Node entity records.
 It removes from the DbLog table the legacy workflow records and records
 that correspond to an unknown entity and places them to corresponding files.
@@ -27,6 +27,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 from aiida.backends.general.migrations.utils import dumps_json
+from aiida.cmdline.utils import echo
 from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.
@@ -94,7 +95,7 @@ def get_serialized_legacy_workflow_logs(connection):
     )
     res = list()
     for row in query:
-        res.append(dict(list(zip(row.keys(), row))))
+        res.append(row._asdict())
     return dumps_json(res)
 
 
@@ -113,7 +114,7 @@ def get_serialized_unknown_entity_logs(connection):
     )
     res = list()
     for row in query:
-        res.append(dict(list(zip(row.keys(), row))))
+        res.append(row._asdict())
     return dumps_json(res)
 
 
@@ -132,7 +133,7 @@ def get_serialized_logs_with_no_nodes(connection):
     )
     res = list()
     for row in query:
-        res.append(dict(list(zip(row.keys(), row))))
+        res.append(row._asdict())
     return dumps_json(res)
 
 
@@ -152,11 +153,11 @@ def export_and_clean_workflow_logs(connection):
         return
 
     if not configuration.PROFILE.is_test_profile:
-        click.echo(
+        echo.echo_warning(
             'We found {} log records that correspond to legacy workflows and {} log records to correspond '
             'to an unknown entity.'.format(lwf_no_number, other_number)
         )
-        click.echo(
+        echo.echo_warning(
             'These records will be removed from the database and exported to JSON files to the current directory).'
         )
         proceed = click.confirm('Would you like to proceed?', default=True)
@@ -178,7 +179,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo(f'Exported legacy workflow logs to {filename}')
+                echo.echo(f'Exported legacy workflow logs to {filename}')
 
         # Now delete the records
         connection.execute(
@@ -203,7 +204,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo(f'Exported unexpected entity logs to {filename}')
+                echo.echo(f'Exported unexpected entity logs to {filename}')
 
         # Now delete the records
         connection.execute(
@@ -228,7 +229,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                click.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
+                echo.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
 
         # Now delete the records
         connection.execute(

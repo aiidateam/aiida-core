@@ -9,6 +9,7 @@
 ###########################################################################
 """AiiDA Group entites"""
 from abc import ABCMeta
+from typing import ClassVar, Optional
 import warnings
 
 from aiida.common import exceptions
@@ -51,11 +52,12 @@ class GroupMeta(ABCMeta):
 
         newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
 
-        entry_point_group, entry_point = get_entry_point_from_class(namespace['__module__'], name)
+        mod = namespace['__module__']
+        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
             newcls._type_string = None
-            message = f'no registered entry point for `{name}` so its instances will not be storable.'
+            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
             warnings.warn(message)  # pylint: disable=no-member
         else:
             newcls._type_string = entry_point.name  # pylint: disable=protected-access
@@ -65,6 +67,9 @@ class GroupMeta(ABCMeta):
 
 class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
+
+    # added by metaclass
+    _type_string = ClassVar[Optional[str]]
 
     class Collection(entities.Collection):
         """Collection of Groups"""

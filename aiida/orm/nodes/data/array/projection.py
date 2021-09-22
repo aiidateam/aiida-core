@@ -18,6 +18,8 @@ from ..orbital import OrbitalData
 from .array import ArrayData
 from .bands import BandsData
 
+__all__ = ('ProjectionData',)
+
 
 class ProjectionData(OrbitalData, ArrayData):
     """
@@ -218,7 +220,7 @@ class ProjectionData(OrbitalData, ArrayData):
             required_length, raises exception using array_name if there is
             a failure
             """
-            if not all([isinstance(_, np.ndarray) for _ in array_list]):
+            if not all(isinstance(_, np.ndarray) for _ in array_list):
                 raise exceptions.ValidationError(f'{array_name} was not composed entirely of ndarrays')
             if len(array_list) != orb_length:
                 raise exceptions.ValidationError(f'{array_name} did not have the same length as the list of orbitals')
@@ -283,7 +285,7 @@ class ProjectionData(OrbitalData, ArrayData):
             except IndexError:
                 return exceptions.ValidationError('tags must be a list')
 
-            if not all([isinstance(_, str) for _ in tags]):
+            if not all(isinstance(_, str) for _ in tags):
                 raise exceptions.ValidationError('Tags must set a list of strings')
             self.set_attribute('tags', tags)
 

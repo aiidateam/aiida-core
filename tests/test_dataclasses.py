@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name
+# pylint: disable=too-many-lines,invalid-name,no-member
 """Tests for specific subclasses of Data."""
 import os
 import tempfile
@@ -428,10 +428,10 @@ _tag                                    '[value]'
         """Tests CifData - check that long lines (longer than 2048 characters) are supported.
         Should not raise any error."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write('''
+            tmpf.write(f'''
 data_0
-_tag   {}
- '''.format('a' * 5000))
+_tag   {'a' * 5000}
+ ''')
             tmpf.flush()
             _ = CifData(file=tmpf.name)
 
@@ -707,7 +707,7 @@ _tag   {}
         for test_string, result in tests:
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
                 handle.write(
-                    """
+                    f"""
                     data_test
                     loop_
                     _atom_site_label
@@ -715,8 +715,8 @@ _tag   {}
                     _atom_site_fract_y
                     _atom_site_fract_z
                     _atom_site_occupancy
-                    {}
-                """.format(test_string)
+                    {test_string}
+                """
                 )
                 handle.flush()
                 cif = CifData(file=handle.name)
@@ -734,8 +734,8 @@ _tag   {}
 
         for formula, result in tests:
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
-                formula_string = "_chemical_formula_sum '{}'".format(formula) if formula else '\n'
-                handle.write("""data_test\n{}\n""".format(formula_string))
+                formula_string = f"_chemical_formula_sum '{formula}'" if formula else '\n'
+                handle.write(f"""data_test\n{formula_string}\n""")
                 handle.flush()
                 cif = CifData(file=handle.name)
                 self.assertEqual(cif.has_unknown_species, result, formula_string)
@@ -752,8 +752,8 @@ _tag   {}
         for test_string, result in tests:
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
                 base = 'loop_\n_atom_site_label\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z'
-                atomic_site_string = '{}\n{}'.format(base, test_string) if test_string else ''
-                handle.write("""data_test\n{}\n""".format(atomic_site_string))
+                atomic_site_string = f'{base}\n{test_string}' if test_string else ''
+                handle.write(f"""data_test\n{atomic_site_string}\n""")
                 handle.flush()
                 cif = CifData(file=handle.name)
                 self.assertEqual(cif.has_undefined_atomic_sites, result)
@@ -2182,7 +2182,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             elif isinstance(left, float):
                 testing.assert_almost_equal(left, right)
             else:
-                assert left == right, '{} is not {}'.format(value, right)
+                assert left == right, f'{value} is not {right}'
 
         recursively_compare_values(dict1, dict2)
 
@@ -3414,7 +3414,7 @@ class TestSeekpathExplicitPath(AiidaTestCase):
 
         from aiida.tools import get_explicit_kpoints_path
 
-        structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure = DataFactory('core.structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
         structure.append_atom(symbols='Ba', position=[0, 0, 0])
         structure.append_atom(symbols='Ti', position=[2, 2, 3])
         structure.append_atom(symbols='O', position=[2, 2, 0])
@@ -3496,7 +3496,7 @@ class TestSeekpathPath(AiidaTestCase):
         from aiida.plugins import DataFactory
         from aiida.tools import get_kpoints_path
 
-        structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure = DataFactory('core.structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
         structure.append_atom(symbols='Ba', position=[0, 0, 0])
         structure.append_atom(symbols='Ti', position=[2, 2, 3])
         structure.append_atom(symbols='O', position=[2, 2, 0])

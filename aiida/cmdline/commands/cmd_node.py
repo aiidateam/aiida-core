@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
-import logging
 import shutil
 import pathlib
 
@@ -280,24 +279,19 @@ def extras(nodes, keys, fmt, identifier, raw):
 
 @verdi_node.command('delete')
 @click.argument('identifier', nargs=-1, metavar='NODES')
-@options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
+def node_delete(identifier, dry_run, force, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.common.log import override_log_formatter_context
     from aiida.orm.utils.loaders import NodeEntityLoader
-    from aiida.tools import delete_nodes, DELETE_LOGGER
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
+    from aiida.tools import delete_nodes
 
     pks = []
 
@@ -314,8 +308,7 @@ def node_delete(identifier, dry_run, verbose, force, **traversal_rules):
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
         return not click.confirm('Shall I continue?', abort=True)
 
-    with override_log_formatter_context('%(message)s'):
-        _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+    _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
 
     if was_deleted:
         echo.echo_success('Finished deletion.')
@@ -533,7 +526,7 @@ def comment_show(user, nodes):
             if not comments:
                 valid_users = ', '.join(set(comment.user.email for comment in all_comments))
                 echo.echo_warning(f'no comments found for user {user}')
-                echo.echo_info(f'valid users found for Node<{node.pk}>: {valid_users}')
+                echo.echo_report(f'valid users found for Node<{node.pk}>: {valid_users}')
 
         else:
             comments = all_comments
@@ -548,7 +541,7 @@ def comment_show(user, nodes):
             echo.echo('\n'.join(comment_msg))
 
         if not comments:
-            echo.echo_info('no comments found')
+            echo.echo_report('no comments found')
 
 
 @verdi_comment.command('remove')

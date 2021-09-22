@@ -8,9 +8,6 @@ set -x
 # Environment.
 export SHELL=/bin/bash
 
-# Update the list of installed aiida plugins.
-reentry scan
-
 # Setup AiiDA autocompletion.
 grep _VERDI_COMPLETE /home/${SYSTEM_USER}/.bashrc &> /dev/null || echo 'eval "$(_VERDI_COMPLETE=source verdi)"' >> /home/${SYSTEM_USER}/.bashrc
 
@@ -41,12 +38,12 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
         --label "${computer_name}"                                 \
         --description "this computer"                              \
         --hostname "${computer_name}"                              \
-        --transport local                                          \
-        --scheduler direct                                         \
+        --transport core.local                                          \
+        --scheduler core.direct                                    \
         --work-dir /home/aiida/aiida_run/                          \
         --mpirun-command "mpirun -np {tot_num_mpiprocs}"           \
         --mpiprocs-per-machine 1 &&                                \
-    verdi computer configure local "${computer_name}"              \
+    verdi computer configure core.local "${computer_name}"              \
         --non-interactive                                          \
         --safe-interval 0.0
 fi

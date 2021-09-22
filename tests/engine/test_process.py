@@ -186,7 +186,7 @@ class TestProcess(AiidaTestCase):
 
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
         exit_codes = ArithmeticAddCalculation.exit_codes
         self.assertIsInstance(exit_codes, ExitCodesNamespace)
@@ -264,7 +264,7 @@ class TestProcess(AiidaTestCase):
             }
         }
 
-        entry_point = 'templatereplacer'
+        entry_point = 'core.templatereplacer'
         process_class = CalculationFactory(entry_point)
         process = process_class(inputs=inputs)
 

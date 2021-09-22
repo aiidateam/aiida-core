@@ -25,22 +25,6 @@ For example, if the code is available through a Git repository:
     $ cd aiida-diff
     $ pip install .
 
-.. important::
-
-    Each time when you install a new plugin package you should make sure to run the following command to let AiiDA know about the new plugins that come with it:
-
-    .. code-block:: console
-
-        $ reentry scan
-
-    If you forget to run this command, AiiDA will not be able to find the plugins.
-    The reentry cache can also be updated from python when access to the commandline is not available (e.g. in Jupyter notebooks).
-
-    .. code-block:: python
-
-        from reentry import manager
-        manager.scan(group_re='aiida')
-
 .. warning::
 
     If your daemon was running when installing or updating a plugin package, make sure to restart it with the ``--reset`` flag for changes to take effect:
@@ -48,8 +32,6 @@ For example, if the code is available through a Git repository:
     .. code-block:: console
 
         $ verdi daemon restart --reset
-
-    This needs to be done *after* the command ``reentry scan`` is called.
 
 To verify which plugins are currently installed, use the command:
 

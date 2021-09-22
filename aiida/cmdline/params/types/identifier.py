@@ -10,12 +10,14 @@
 """
 Module for custom click param type identifier
 """
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
+
+__all__ = ('IdentifierParamType',)
 
 
 class IdentifierParamType(click.ParamType, ABC):
@@ -63,7 +65,8 @@ class IdentifierParamType(click.ParamType, ABC):
                 else:
                     self._entry_points.append(entry_point)
 
-    @abstractproperty
+    @property
+    @abstractmethod
     @with_dbenv()
     def orm_class_loader(self):
         """

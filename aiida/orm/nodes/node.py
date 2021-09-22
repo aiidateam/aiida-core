@@ -14,7 +14,7 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -60,8 +60,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
-
     # pylint: disable=too-many-public-methods
+
+    # added by metaclass
+    _plugin_type_string: ClassVar[str]
+    _query_type_string: ClassVar[str]
 
     class Collection(EntityCollection):
         """The collection of nodes."""
@@ -175,13 +178,15 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         self._incoming_cache = list()
 
     def _validate(self) -> bool:
-        """Check if the attributes and files retrieved from the database are valid.
+        """Validate information stored in Node object.
 
-        Must be able to work even before storing: therefore, use the `get_attr` and similar methods that automatically
-        read either from the DB or from the internal attribute cache.
+        For the :py:class:`~aiida.orm.Node` base class, this check is always valid.
+        Subclasses can override this method to perform additional checks
+        and should usually call ``super()._validate()`` first!
 
-        For the base class, this is always valid. Subclasses will reimplement this.
-        In the subclass, always call the super()._validate() method first!
+        This method is called automatically before storing the node in the DB.
+        Therefore, use :py:meth:`~aiida.orm.entities.EntityAttributesMixin.get_attribute()` and similar methods that
+        automatically read either from the DB or from the internal attribute cache.
         """
         # pylint: disable=no-self-use
         return True
@@ -199,8 +204,8 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
             raise exceptions.StoringNotAllowed(
                 f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
-                'Consider running `reentry scan`. If the issue persists, check that the corresponding plugin is '
-                'installed and that the entry point shows up in `verdi plugin list`.'
+                'Check that the corresponding plugin is installed '
+                'and that the entry point shows up in `verdi plugin list`.'
             )
 
     @classproperty
@@ -510,7 +515,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
 
-        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
+        if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node

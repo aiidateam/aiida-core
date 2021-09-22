@@ -10,7 +10,9 @@
 # pylint: disable=redefined-outer-name
 """Configuration file for pytest tests."""
 import os
+import pathlib
 
+import click
 import pytest
 
 from aiida.manage.configuration import Config, Profile, get_config, load_profile
@@ -37,7 +39,6 @@ def non_interactive_editor(request):
 
     def edit_file(self, filename):
         import subprocess
-        import click
 
         editor = self.get_editor()
         if self.env:
@@ -46,7 +47,7 @@ def non_interactive_editor(request):
         else:
             environ = None
         try:
-            process = subprocess.Popen(
+            process = subprocess.Popen(  # pylint: disable=consider-using-with
                 f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
@@ -149,6 +150,32 @@ def generate_calculation_node():
         return node
 
     return _generate_calculation_node
+
+
+@pytest.fixture
+def isolated_config(monkeypatch):
+    """Return a copy of the currently loaded config and set that as the loaded config.
+
+    This allows a test to change the config during the test, and after the test the original config will be restored
+    making the changes of the test fully temporary. In addition, the ``Config._backup`` method is monkeypatched to be a
+    no-op in order to prevent that backup files are written to disk when the config is stored. Storing the config after
+    changing it in tests maybe necessary if a command is invoked that will be reading the config from disk in another
+    Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
+    """
+    import copy
+    from aiida.manage import configuration
+
+    monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
+
+    current_config = configuration.CONFIG
+    configuration.CONFIG = copy.deepcopy(current_config)
+    configuration.CONFIG.set_default_profile(configuration.PROFILE.name, overwrite=True)
+
+    try:
+        yield configuration.CONFIG
+    finally:
+        configuration.CONFIG = current_config
+        configuration.CONFIG.store()
 
 
 @pytest.fixture
@@ -320,20 +347,22 @@ def skip_if_not_sqlalchemy(backend):
 
 
 @pytest.fixture(scope='function')
-def override_logging():
-    """Return a `SandboxFolder`."""
+def override_logging(isolated_config):
+    """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.
+
+    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and ``logging.db_loglevel``.
+    To ensure the changes are temporary, the are made on an isolated temporary configuration.
+    """
     from aiida.common.log import configure_logging
 
-    config = get_config()
-
     try:
-        config.set_option('logging.aiida_loglevel', 'DEBUG')
-        config.set_option('logging.db_loglevel', 'DEBUG')
+        isolated_config.set_option('logging.aiida_loglevel', 'DEBUG')
+        isolated_config.set_option('logging.db_loglevel', 'DEBUG')
         configure_logging(with_orm=True)
         yield
     finally:
-        config.unset_option('logging.aiida_loglevel')
-        config.unset_option('logging.db_loglevel')
+        isolated_config.unset_option('logging.aiida_loglevel')
+        isolated_config.unset_option('logging.db_loglevel')
         configure_logging(with_orm=True)
 
 
@@ -354,7 +383,7 @@ def with_daemon():
     env['PYTHONPATH'] = ':'.join(sys.path)
 
     profile = get_config().current_profile
-    daemon = subprocess.Popen(
+    daemon = subprocess.Popen(  # pylint: disable=consider-using-with
         DaemonClient(profile).cmd_string.split(),
         stderr=sys.stderr,
         stdout=sys.stdout,
@@ -365,3 +394,93 @@ def with_daemon():
 
     # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
     os.kill(daemon.pid, signal.SIGTERM)
+
+
+@pytest.fixture
+def daemon_client():
+    """Return a daemon client instance and stop any daemon instances running for the test profile after the test."""
+    from aiida.engine.daemon.client import DaemonClient
+    from aiida.manage.configuration import get_profile
+
+    client = DaemonClient(get_profile())
+
+    try:
+        yield client
+    finally:
+        client.stop_daemon(wait=True)
+
+
+@pytest.fixture(scope='function')
+def chdir_tmp_path(request, tmp_path):
+    """Change to a temporary directory before running the test and reverting to original working directory."""
+    os.chdir(tmp_path)
+    yield
+    os.chdir(request.config.invocation_dir)
+
+
+@pytest.fixture
+def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
+    """Run a `click` command with the given options.
+
+    The call will raise if the command triggered an exception or the exit code returned is non-zero.
+    """
+    from click.testing import Result
+
+    def _run_cli_command(command: click.Command, options: list = None, raises: bool = False) -> Result:
+        """Run the command and check the result.
+
+        .. note:: the `output_lines` attribute is added to return value containing list of stripped output lines.
+
+        :param options: the list of command line options to pass to the command invocation
+        :param raises: whether the command is expected to raise an exception
+        :return: test result
+        """
+        import traceback
+
+        from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
+        from aiida.common import AttributeDict
+        from aiida.manage.configuration import get_profile
+
+        config = get_config()
+        profile = get_profile()
+        obj = AttributeDict({'config': config, 'profile': profile})
+
+        # Convert any ``pathlib.Path`` objects in the ``options`` to their absolute filepath string representation.
+        # This is necessary because the ``invoke`` command does not support these path objects.
+        options = [str(option) if isinstance(option, pathlib.Path) else option for option in options or []]
+
+        # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic
+        # of the ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module
+        # which circumvents this machinery.
+        command = VerdiCommandGroup.add_verbosity_option(command)
+
+        runner = click.testing.CliRunner()
+        result = runner.invoke(command, options, obj=obj)
+
+        if raises:
+            assert result.exception is not None, result.output
+            assert result.exit_code != 0
+        else:
+            assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
+            assert result.exit_code == 0, result.output
+
+        result.output_lines = [line.strip() for line in result.output.split('\n') if line.strip()]
+
+        return result
+
+    return _run_cli_command
+
+
+@pytest.fixture
+def reset_log_level():
+    """Reset the `aiida.common.log.CLI_LOG_LEVEL` global and reconfigure the logging.
+
+    This fixture should be used by tests that will change the ``CLI_LOG_LEVEL`` global, for example, through the
+    :class:`~aiida.cmdline.params.options.main.VERBOSITY` option in a CLI command invocation.
+    """
+    from aiida.common import log
+    try:
+        yield
+    finally:
+        log.CLI_LOG_LEVEL = None
+        log.configure_logging()

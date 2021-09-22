@@ -458,7 +458,7 @@ def print_process_spec(process_spec):
     if process_spec.exit_codes:
         echo.echo('Exit codes:', fg='red', bold=True)
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
-        message = exit_code.message.capitalize()
+        message = exit_code.message
         echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
 
 

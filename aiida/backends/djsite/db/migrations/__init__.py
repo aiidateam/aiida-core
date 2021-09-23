@@ -67,6 +67,7 @@ def _upgrade_schema_generation(version, apps, _):
 
 
 def upgrade_schema_version(up_revision, down_revision):
+    """Run migrations, to translate the database schema."""
     from functools import partial
 
     from django.db import migrations

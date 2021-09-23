@@ -24,10 +24,10 @@ repos:
     rev: 5.9.3
     hooks:
     - id: isort
-       files: >-
-          (?x)^(
+      files: >-
+         (?x)^(
             aiida/tools/groups/paths.py
-          )$
+         )$
             
 -   repo: https://github.com/ikamensh/flynt/
     rev: '0.66'

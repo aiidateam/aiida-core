@@ -235,7 +235,7 @@ class CalcJob(Process):
             help='Set the account to use in for the queue on the remote computer')
         spec.input('metadata.options.qos', valid_type=str, required=False,
             help='Set the quality of service to use in for the queue on the remote computer')
-        spec.input('metadata.options.withmpi', valid_type=bool, default=False,
+        spec.input('metadata.options.withmpi', valid_type=bool, required=False,
             help='Set the calculation to use mpi',)
         spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=lambda: [],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
@@ -689,17 +689,22 @@ class CalcJob(Process):
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
             this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
-            # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
-            # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
+            # To determine whether this code should be run with MPI enabled, we first check the value defined as
+            # the code attribute. This value has the lowest priority and can be overridden further.
+            # Next we check the value that was set in the inputs of the entire process. If it is present, it overrides
+            # the variable. Finally, it can be overwritten by the value from the `CodeInfo`. This allows plugins
             # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
             # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
             # multiple codes always have to be executed without MPI.
 
-            this_withmpi = self.node.get_option('withmpi')
+            this_withmpi = this_code.get_withmpi()  # Low priority value.
+
+            input_withmpi = self.node.get_option('withmpi')  # Medium priority value.
+            this_withmpi = this_withmpi if input_withmpi is None else input_withmpi
 
             # Override the value of `withmpi` with that of the `CodeInfo` if and only if it is set
             if code_info.withmpi is not None:
-                this_withmpi = code_info.withmpi
+                this_withmpi = code_info.withmpi  # High priority value.
 
             if this_withmpi:
                 this_argv = (

@@ -64,3 +64,23 @@ def test_database_incompatible(run_cli_command, monkeypatch):
     result = run_cli_command(cmd_status.verdi_status, raises=True)
     assert 'Database schema version is incompatible with the code: run `verdi database migrate`.' in result.output
     assert result.exit_code is ExitCode.CRITICAL
+
+
+def test_database_unable_to_connect(run_cli_command, monkeypatch):
+    """Test `verdi status` when there is an unknown error while connecting to the database."""
+    from aiida.manage.manager import get_manager
+
+    profile = get_manager().get_profile()
+
+    def get_backend():
+        raise RuntimeError()
+
+    monkeypatch.setattr(get_manager(), 'get_backend', get_backend)
+
+    result = run_cli_command(cmd_status.verdi_status, raises=True)
+    assert 'Unable to connect to database' in result.output
+    assert profile.database_name in result.output
+    assert profile.database_username in result.output
+    assert profile.database_hostname in result.output
+    assert str(profile.database_port) in result.output
+    assert result.exit_code is ExitCode.CRITICAL

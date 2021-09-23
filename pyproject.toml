@@ -75,6 +75,11 @@ markers = [
     "sphinx: set parameters for the sphinx `app` fixture"
 ]
 
+[tool.isort]
+# this configuration is compatible with yapf
+multi_line_output = 3
+include_trailing_comma = true
+
 [tool.yapf]
 based_on_style = "google"
 column_limit = 120

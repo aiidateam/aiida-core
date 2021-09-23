@@ -10,6 +10,7 @@
 """`Data` sub class to represent a list."""
 from collections.abc import MutableSequence
 
+from .base import to_aiida_type
 from .data import Data
 
 __all__ = ('List',)
@@ -139,3 +140,8 @@ class List(Data, MutableSequence):
         :rtype: bool
         """
         return not self.is_stored
+
+
+@to_aiida_type.register(list)
+def _(value):
+    return List(list=value)

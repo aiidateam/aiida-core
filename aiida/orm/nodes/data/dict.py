@@ -70,6 +70,12 @@ class Dict(Data):
     def __setitem__(self, key, value):
         self.set_attribute(key, value)
 
+    def __eq__(self, other):
+        if isinstance(other, dict):
+            return self.get_dict() == other
+
+        return self is other
+
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.
 

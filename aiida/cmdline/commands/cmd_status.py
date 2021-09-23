@@ -94,7 +94,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.UP, 'repository', repository_status)
 
     # Getting the postgres status by trying to get a database cursor
-    database_data = [profile.database_username, profile.database_hostname, profile.database_port]
+    database_data = [profile.database_name, profile.database_username, profile.database_hostname, profile.database_port]
     try:
         with override_log_level():  # temporarily suppress noisy logging
             backend = manager.get_backend()
@@ -104,11 +104,11 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.DOWN, 'postgres', message)
         exit_code = ExitCode.CRITICAL
     except Exception as exc:
-        message = 'Unable to connect as {}@{}:{}'.format(*database_data)
+        message = 'Unable to connect to database `{}` as {}@{}:{}'.format(*database_data)
         print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
+        print_status(ServiceStatus.UP, 'postgres', 'Connected to database `{}` as {}@{}:{}'.format(*database_data))
 
     # Getting the rmq status
     if not no_rmq:

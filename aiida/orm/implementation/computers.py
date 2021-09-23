@@ -12,7 +12,7 @@
 import abc
 import logging
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
 

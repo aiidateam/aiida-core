@@ -18,6 +18,7 @@ Create Date: 2017-10-17 10:30:23.327195
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.orm.session import Session
+
 from aiida.backends.sqlalchemy.utils import install_tc
 
 # revision identifiers, used by Alembic.

@@ -9,8 +9,8 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 from aiida.common import exceptions
-from aiida.common.links import LinkType
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 
 from ..node import Node
 

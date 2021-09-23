@@ -15,8 +15,7 @@ from datetime import datetime
 from uuid import UUID
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import timezone
-from aiida.common import exceptions
+from aiida.common import exceptions, timezone
 
 
 class TestBackendNode(AiidaTestCase):

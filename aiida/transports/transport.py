@@ -9,11 +9,11 @@
 ###########################################################################
 """Transport interface."""
 import abc
+from collections import OrderedDict
+import fnmatch
 import os
 import re
-import fnmatch
 import sys
-from collections import OrderedDict
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty

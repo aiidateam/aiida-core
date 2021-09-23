@@ -15,9 +15,9 @@ import os
 import pytest
 
 from aiida import orm
-from aiida.tools.importexport import import_data, export
-
+from aiida.tools.importexport import export, import_data
 from tests.utils.configuration import with_temp_dir
+
 from . import AiidaArchiveTestCase
 
 
@@ -94,6 +94,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         """ Column `process_type` added to `Node` entity DB table """
         from aiida.engine import run_get_node
         from tests.utils.processes import AddProcess
+
         # Node types
         node_type = 'process.workflow.WorkflowNode.'
         node_process_type = 'tests.utils.processes.AddProcess'
@@ -199,6 +200,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         as the type_string content for the relevant Groups.
         """
         from aiida.orm.nodes.data.upf import upload_upf_family
+
         # To be saved
         groups_label = ['Users', 'UpfData']
         upf_filename = 'Al.test_file.UPF'

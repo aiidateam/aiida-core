@@ -10,7 +10,8 @@
 # pylint: disable=invalid-name
 """ Configuration file for AiiDA Import/Export module """
 from enum import Enum
-from aiida.orm import Computer, Group, Node, User, Log, Comment
+
+from aiida.orm import Comment, Computer, Group, Log, Node, User
 
 __all__ = ('EXPORT_VERSION',)
 

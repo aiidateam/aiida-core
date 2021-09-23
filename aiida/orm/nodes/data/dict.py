@@ -12,8 +12,9 @@
 import copy
 
 from aiida.common import exceptions
-from .data import Data
+
 from .base import to_aiida_type
+from .data import Data
 
 __all__ = ('Dict',)
 

@@ -12,7 +12,8 @@
 This migration is necessary after the `core.` prefix was added to entry points shipped with `aiida-core`.
 """
 from aiida.tools.importexport.archive.common import CacheFolder
-from .utils import verify_metadata_version, update_metadata
+
+from .utils import update_metadata, verify_metadata_version
 
 MAPPING_DATA = {
     'data.array.ArrayData.': 'data.core.array.ArrayData.',

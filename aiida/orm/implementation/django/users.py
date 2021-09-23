@@ -14,8 +14,8 @@ import functools
 from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbUser
 from aiida.orm.implementation.users import BackendUser, BackendUserCollection
-from . import entities
-from . import utils
+
+from . import entities, utils
 
 __all__ = ('DjangoUser', 'DjangoUserCollection')
 
@@ -91,6 +91,7 @@ class DjangoUserCollection(BackendUserCollection):
         """
         # Constructing the default query
         import operator
+
         from django.db.models import Q  # pylint: disable=import-error, no-name-in-module
         query_list = []
 

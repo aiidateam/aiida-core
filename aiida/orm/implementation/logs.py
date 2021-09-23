@@ -10,7 +10,7 @@
 """Backend group module"""
 import abc
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendLog', 'BackendLogCollection')
 

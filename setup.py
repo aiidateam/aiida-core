@@ -18,7 +18,7 @@ except ImportError:
     # This should only occur when building the package, i.e. when
     # executing 'python setup.py sdist' or 'python setup.py bdist_wheel'
     pass
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 if __name__ == '__main__':
     THIS_FOLDER = os.path.split(os.path.abspath(__file__))[0]

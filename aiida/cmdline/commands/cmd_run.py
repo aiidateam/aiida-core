@@ -9,8 +9,8 @@
 ###########################################################################
 """`verdi run` command."""
 import contextlib
-import os
 import functools
+import os
 import sys
 
 import click

@@ -16,7 +16,7 @@ import re
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
 # This maps SLURM state codes to our own status list
 
@@ -680,8 +680,8 @@ stderr='{stderr.strip()}'"""
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

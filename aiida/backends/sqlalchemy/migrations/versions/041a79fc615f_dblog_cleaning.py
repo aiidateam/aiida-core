@@ -20,9 +20,8 @@ Create Date: 2018-12-28 15:53:14.596810
 """
 import sys
 
-import click
-
 from alembic import op
+import click
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 

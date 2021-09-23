@@ -11,7 +11,7 @@
 # pylint: disable=invalid-name
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import verify_metadata_version, update_metadata
+from .utils import update_metadata, verify_metadata_version
 
 
 def migrate_v9_to_v10(folder: CacheFolder):

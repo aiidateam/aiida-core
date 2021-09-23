@@ -15,16 +15,8 @@ from django.db import models, transaction
 
 from aiida.backends.djsite.manager import DjangoBackendManager
 
+from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from ..sql.backends import SqlBackend
-from . import authinfos
-from . import comments
-from . import computers
-from . import convert
-from . import groups
-from . import logs
-from . import nodes
-from . import querybuilder
-from . import users
 
 __all__ = ('DjangoBackend',)
 
@@ -133,6 +125,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         """
         # pylint: disable=import-error,no-name-in-module
         from django.db import connection
+
         # For now we just return the global but if we ever support multiple Django backends
         # being loaded this should be specific to this backend
         return connection

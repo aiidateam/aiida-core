@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """"Implementation of `DbImporter` for the COD database."""
-from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults, CifEntry)
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class CodDbImporter(DbImporter):

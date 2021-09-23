@@ -14,7 +14,7 @@ from collections.abc import Mapping, MutableMapping
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
-from aiida.engine import WorkChain, Process, ProcessBuilderNamespace
+from aiida.engine import Process, ProcessBuilderNamespace, WorkChain
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256

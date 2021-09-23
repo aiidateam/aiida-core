@@ -14,32 +14,43 @@ from collections.abc import Mapping
 import enum
 import inspect
 import logging
-from uuid import UUID
 import traceback
 from types import TracebackType
 from typing import (
-    Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union, TYPE_CHECKING
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
 )
+from uuid import UUID
 
 from aio_pika.exceptions import ConnectionClosed
+from kiwipy.communications import UnroutableError
 import plumpy.exceptions
 import plumpy.futures
-import plumpy.processes
 import plumpy.persistence
-from plumpy.process_states import ProcessState, Finished
-from kiwipy.communications import UnroutableError
+from plumpy.process_states import Finished, ProcessState
+import plumpy.processes
 
 from aiida import orm
-from aiida.orm.utils import serialize
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm.utils import serialize
 
-from .exit_code import ExitCode, ExitCodesNamespace
 from .builder import ProcessBuilder
-from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
+from .exit_code import ExitCode, ExitCodesNamespace
+from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
 
 if TYPE_CHECKING:

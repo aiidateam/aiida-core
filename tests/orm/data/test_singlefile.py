@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for the `SinglefileData` class."""
 
-import os
 import io
-import tempfile
+import os
 import pathlib
+import tempfile
 
 import pytest
 

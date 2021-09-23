@@ -10,8 +10,8 @@
 """Comment objects and functions"""
 
 from aiida.manage.manager import get_manager
-from . import entities
-from . import users
+
+from . import entities, users
 
 __all__ = ('Comment',)
 

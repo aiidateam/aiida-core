@@ -115,6 +115,7 @@ def delete_stale_pid_file(client):
     :param client: the `DaemonClient`
     """
     import os
+
     import psutil
 
     class StartCircusNotFound(Exception):

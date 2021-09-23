@@ -10,10 +10,10 @@
 """Module for the `AuthInfo` ORM class."""
 
 from aiida.common import exceptions
-from aiida.plugins import TransportFactory
 from aiida.manage.manager import get_manager
-from . import entities
-from . import users
+from aiida.plugins import TransportFactory
+
+from . import entities, users
 
 __all__ = ('AuthInfo',)
 

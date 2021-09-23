@@ -11,7 +11,7 @@
 """"Implementation of `DbImporter` for the CISD database."""
 import io
 
-from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, CifEntry
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class IcsdImporterExp(Exception):
@@ -582,9 +582,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             self._disconnect_db()
 
         else:
-            from bs4 import BeautifulSoup  # pylint: disable=import-error
-            from urllib.request import urlopen
             import re
+            from urllib.request import urlopen
+
+            from bs4 import BeautifulSoup  # pylint: disable=import-error
 
             with urlopen(
                 self.db_parameters['server'] + self.db_parameters['db'] + '/' + self.query.format(str(self.page))

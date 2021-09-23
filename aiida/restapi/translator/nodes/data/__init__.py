@@ -11,9 +11,9 @@
 Translator for data node
 """
 
-from aiida.restapi.translator.nodes.node import NodeTranslator
-from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.common.exceptions import LicensingException
+from aiida.restapi.common.exceptions import RestInputValidationError
+from aiida.restapi.translator.nodes.node import NodeTranslator
 
 
 class DataTranslator(NodeTranslator):

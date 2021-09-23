@@ -2,6 +2,7 @@
 from aiida.engine import calcfunction, workfunction
 from aiida.orm import Int
 
+
 @workfunction
 def add_and_multiply(x, y, z):
     sum = Int(x + y)

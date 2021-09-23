@@ -10,9 +10,9 @@
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
 import pytest
 
+from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine.processes.builder import ProcessBuilder
-from aiida import orm
 
 
 def test_access_methods():

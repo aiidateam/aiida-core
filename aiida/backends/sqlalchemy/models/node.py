@@ -11,16 +11,16 @@
 """Module to manage nodes for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, String, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import Column
+from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
 

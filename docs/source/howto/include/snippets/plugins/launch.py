@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Launch a calculation using the 'diff-tutorial' plugin"""
 from pathlib import Path
-from aiida import orm, engine
+
+from aiida import engine, orm
 from aiida.common.exceptions import NotExistent
 
 INPUT_DIR = Path(__file__).resolve().parent / 'input_files'

@@ -167,7 +167,7 @@ class TestBackendLog(AiidaTestCase):
         """
         Test the order_by option of log.find
         """
-        from aiida.orm.logs import OrderSpecifier, ASCENDING, DESCENDING
+        from aiida.orm.logs import ASCENDING, DESCENDING, OrderSpecifier
 
         node_ids = []
         for _ in range(10):
@@ -218,7 +218,7 @@ class TestBackendLog(AiidaTestCase):
         by firing a log message through the regular logging module
         attached to a calculation node
         """
-        from aiida.orm.logs import OrderSpecifier, ASCENDING
+        from aiida.orm.logs import ASCENDING, OrderSpecifier
 
         message = 'Testing logging of critical failure'
         node = orm.CalculationNode()

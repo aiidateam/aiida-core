@@ -8,17 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
-import re
-import keyword
-from enum import Enum
 from collections import namedtuple
 from contextlib import contextmanager, suppress
+from enum import Enum
+import keyword
+import re
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.manage.configuration import get_config_option
-
-from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
+from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP, ENTRY_POINT_STRING_SEPARATOR
 
 __all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
 

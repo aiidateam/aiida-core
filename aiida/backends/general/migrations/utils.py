@@ -17,9 +17,9 @@ import pathlib
 import re
 import typing
 
-import numpy
 from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
+import numpy
 
 from aiida.common import exceptions, json
 from aiida.repository.backend import AbstractRepositoryBackend

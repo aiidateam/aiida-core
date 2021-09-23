@@ -872,8 +872,8 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test to verify if scripts works fine with default options
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         s = TorqueScheduler()
 
@@ -900,8 +900,8 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = TorqueScheduler()
 
@@ -930,8 +930,8 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if scripts works fine if we pass only
         num_cores_per_mpiproc value
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = TorqueScheduler()
 
@@ -962,8 +962,8 @@ class TestSubmitScript(unittest.TestCase):
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = TorqueScheduler()
 
@@ -1006,8 +1006,8 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
         """Test the `rerunnable` option of the submit script."""
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = TorqueScheduler()
 

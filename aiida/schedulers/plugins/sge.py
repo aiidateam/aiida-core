@@ -14,13 +14,13 @@ This has been tested on GE 6.2u3.
 Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
-import xml.parsers.expat
 import xml.dom.minidom
+import xml.parsers.expat
 
 from aiida.common.escaping import escape_for_bash
 import aiida.schedulers
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, ParEnvJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, ParEnvJobResource
 
 # 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
 # Jobs Status:
@@ -469,8 +469,8 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

@@ -10,8 +10,18 @@
 # pylint: disable=invalid-name
 """Work chain implementations for testing purposes."""
 from aiida.common import AttributeDict
-from aiida.engine import calcfunction, workfunction, WorkChain, ToContext, append_, while_, ExitCode
-from aiida.engine import BaseRestartWorkChain, process_handler, ProcessHandlerReport
+from aiida.engine import (
+    BaseRestartWorkChain,
+    ExitCode,
+    ProcessHandlerReport,
+    ToContext,
+    WorkChain,
+    append_,
+    calcfunction,
+    process_handler,
+    while_,
+    workfunction,
+)
 from aiida.engine.persistence import ObjectLoader
 from aiida.orm import Int, List, Str
 from aiida.plugins import CalculationFactory

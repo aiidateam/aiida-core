@@ -23,6 +23,7 @@ from aiida.backends.sqlalchemy import manager
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.backends.testbase import AiidaTestCase
+
 from .test_utils import new_database
 
 
@@ -267,6 +268,7 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
     def setUp(self):
         from sqlalchemydiff.util import get_temporary_uri
+
         from aiida.backends.sqlalchemy.migrations import versions
 
         self.migr_method_dir_path = os.path.dirname(os.path.realpath(manager.__file__))
@@ -646,7 +648,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
     def setUpBeforeMigration(self):
         # pylint: disable=too-many-locals,too-many-statements
         import importlib
+
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.utils import dumps_json
 
         log_migration = importlib.import_module(
@@ -1288,6 +1292,7 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
 
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
         self.state_mapping = STATE_MAPPING
@@ -1353,6 +1358,7 @@ class TestResetHash(TestMigrationsSQLA):
 
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
         self.state_mapping = STATE_MAPPING

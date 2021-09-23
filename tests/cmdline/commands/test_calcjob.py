@@ -19,7 +19,6 @@ from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
-
 from tests.utils.archives import import_archive
 
 

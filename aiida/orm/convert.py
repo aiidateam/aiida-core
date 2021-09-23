@@ -9,11 +9,18 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Module for converting backend entities into frontend, ORM, entities"""
-from collections.abc import Mapping, Iterator, Sized
+from collections.abc import Iterator, Mapping, Sized
 from functools import singledispatch
 
-from aiida.orm.implementation import BackendComputer, BackendGroup, BackendUser, BackendAuthInfo, BackendComment, \
-    BackendLog, BackendNode
+from aiida.orm.implementation import (
+    BackendAuthInfo,
+    BackendComment,
+    BackendComputer,
+    BackendGroup,
+    BackendLog,
+    BackendNode,
+    BackendUser,
+)
 
 
 @singledispatch

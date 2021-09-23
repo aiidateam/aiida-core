@@ -17,7 +17,8 @@ from string import Template
 import numpy
 
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import prettify_labels, join_labels
+from aiida.common.utils import join_labels, prettify_labels
+
 from .kpoints import KpointsData
 
 __all__ = ('BandsData', 'find_bandgap')
@@ -861,9 +862,9 @@ class BandsData(KpointsData):
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import os
-        import tempfile
         import subprocess
         import sys
+        import tempfile
 
         from aiida.common import json
 
@@ -912,9 +913,9 @@ class BandsData(KpointsData):
         """
         import json
         import os
-        import tempfile
         import subprocess
         import sys
+        import tempfile
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -1132,6 +1133,7 @@ class BandsData(KpointsData):
         )
 
         import math
+
         # load the x and y of every set
         if color_number > MAX_NUM_AGR_COLORS:
             raise ValueError(f'Color number is too high (should be less than {MAX_NUM_AGR_COLORS})')
@@ -1811,8 +1813,9 @@ def get_bands_and_parents_structure(args):
     # pylint: disable=too-many-locals,too-many-branches
 
     import datetime
-    from aiida.common import timezone
+
     from aiida import orm
+    from aiida.common import timezone
 
     q_build = orm.QueryBuilder()
     if args.all_users is False:
@@ -1905,7 +1908,7 @@ def _extract_formula(akinds, asites, args):
 
     :return: a string with formula if the formula is found
     """
-    from aiida.orm.nodes.data.structure import (get_formula, get_symbols_string)
+    from aiida.orm.nodes.data.structure import get_formula, get_symbols_string
 
     if args.element is not None:
         all_symbols = [_['symbols'][0] for _ in akinds]

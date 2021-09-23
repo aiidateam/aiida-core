@@ -16,17 +16,17 @@ Create Date: 2019-04-03 17:11:44.073582
 
 """
 import sys
-import click
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-member,import-error,no-name-in-module
 from alembic import op
+import click
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql import table, select, func
+from sqlalchemy.sql import func, select, table
 
-from aiida.common import json
 from aiida.cmdline.utils import echo
+from aiida.common import json
 from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.
@@ -38,7 +38,7 @@ depends_on = None
 
 def json_serializer(obj):
     """JSON serializer for objects not serializable by default json code"""
-    from datetime import datetime, date
+    from datetime import date, datetime
     from uuid import UUID
 
     if isinstance(obj, UUID):

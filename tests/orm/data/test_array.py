@@ -12,7 +12,7 @@ import numpy
 import pytest
 
 from aiida.manage.manager import get_manager
-from aiida.orm import load_node, ArrayData
+from aiida.orm import ArrayData, load_node
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

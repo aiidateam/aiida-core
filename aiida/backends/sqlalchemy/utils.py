@@ -17,8 +17,8 @@ def delete_nodes_and_connections_sqla(pks_to_delete):  # pylint: disable=invalid
     :param pks_to_delete: A list, tuple or set of pks that should be deleted.
     """
     # pylint: disable=no-value-for-parameter
-    from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
     from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+    from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
     from aiida.manage.manager import get_manager
 
     backend = get_manager().get_backend()
@@ -48,6 +48,7 @@ def flag_modified(instance, key):
     derefence the model instance if the passed instance is actually wrapped in the ModelWrapper.
     """
     from sqlalchemy.orm.attributes import flag_modified as flag_modified_sqla
+
     from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
 
     if isinstance(instance, ModelWrapper):

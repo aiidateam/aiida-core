@@ -17,18 +17,18 @@ import plumpy.ports
 import plumpy.process_states
 
 from aiida import orm
-from aiida.common import exceptions, AttributeDict
+from aiida.common import AttributeDict, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
-from aiida.common.lang import override, classproperty
+from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
-from .tasks import Waiting, UPLOAD_COMMAND
 from .importer import CalcJobImporter
+from .tasks import UPLOAD_COMMAND, Waiting
 
 __all__ = ('CalcJob',)
 
@@ -579,11 +579,11 @@ class CalcJob(Process):
 
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        from aiida.common.exceptions import PluginInternalError, ValidationError, InvalidOperation, InputValidationError
         from aiida.common import json
-        from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.orm import load_node, Code, Computer
+        from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
+        from aiida.common.utils import validate_list_of_string_tuples
+        from aiida.orm import Code, Computer, load_node
         from aiida.schedulers.datastructures import JobTemplate
 
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)

@@ -9,15 +9,15 @@
 ###########################################################################
 # pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods
 """Tests for the Node ORM class."""
+from decimal import Decimal
 import logging
 import os
 import tempfile
-from decimal import Decimal
 
 import pytest
 
-from aiida.common import exceptions, LinkType
-from aiida.orm import Computer, Data, Log, Node, User, CalculationNode, WorkflowNode, load_node
+from aiida.common import LinkType, exceptions
+from aiida.orm import CalculationNode, Computer, Data, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -802,8 +802,8 @@ class TestNodeDelete:
     @pytest.mark.usefixtures('clear_database_before_test')
     def test_delete_through_utility_method(self):
         """Test deletion works correctly through the `aiida.backends.utils.delete_nodes_and_connections`."""
-        from aiida.common import timezone
         from aiida.backends.utils import delete_nodes_and_connections
+        from aiida.common import timezone
 
         data_one = Data().store()
         data_two = Data().store()

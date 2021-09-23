@@ -16,8 +16,9 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.log import override_log_level
 from aiida.common.exceptions import IncompatibleDatabaseSchema
+from aiida.common.log import override_log_level
+
 from ..utils.echo import ExitCode
 
 
@@ -56,10 +57,10 @@ def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements,too-many-branches
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
+    from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
-    from aiida.manage.manager import get_manager
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
 

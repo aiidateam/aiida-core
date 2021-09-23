@@ -14,7 +14,7 @@ import logging
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, MachineInfo, NodeNumberJobResource
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -677,8 +677,8 @@ class PbsBaseClass(Scheduler):
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

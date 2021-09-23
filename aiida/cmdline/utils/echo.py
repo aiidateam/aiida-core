@@ -11,9 +11,9 @@
 import collections
 import enum
 import sys
-import yaml
 
 import click
+import yaml
 
 from aiida.common.log import AIIDA_LOGGER
 
@@ -212,6 +212,7 @@ def _format_dictionary_json_date(dictionary, sort_keys=True):
     def default_jsondump(data):
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""
         import datetime
+
         from aiida.common import timezone
 
         if isinstance(data, datetime.datetime):

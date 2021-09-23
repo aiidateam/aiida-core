@@ -11,6 +11,7 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
+
 from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
@@ -59,7 +60,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     :param ase: ASE "images"
     :return: array of CIF datablocks
     """
-    from numpy import arccos, pi, dot
+    from numpy import arccos, dot, pi
     from numpy.linalg import norm
 
     if not isinstance(ase, (list, tuple)):
@@ -371,6 +372,7 @@ class CifData(SinglefileData):
             from the DB.
         """
         import os
+
         from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):

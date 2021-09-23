@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aiida.engine import run
-from aiida.orm import load_code, Int
+from aiida.orm import Int, load_code
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')

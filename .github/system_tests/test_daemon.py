@@ -17,20 +17,27 @@ import tempfile
 import time
 
 from workchains import (
-    ArithmeticAddBaseWorkChain, CalcFunctionRunnerWorkChain, DynamicDbInput, DynamicMixedInput, DynamicNonDbInput,
-    ListEcho, NestedInputNamespace, NestedWorkChain, SerializeWorkChain, WorkFunctionRunnerWorkChain
+    ArithmeticAddBaseWorkChain,
+    CalcFunctionRunnerWorkChain,
+    DynamicDbInput,
+    DynamicMixedInput,
+    DynamicNonDbInput,
+    ListEcho,
+    NestedInputNamespace,
+    NestedWorkChain,
+    SerializeWorkChain,
+    WorkFunctionRunnerWorkChain,
 )
 
-from aiida.common import exceptions, StashMode
+from aiida.common import StashMode, exceptions
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage.caching import enable_caching
 from aiida.engine.processes import Process
-from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
+from aiida.manage.caching import enable_caching
+from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
 from aiida.plugins import CalculationFactory, WorkflowFactory
-from aiida.workflows.arithmetic.add_multiply import add_multiply, add
-
+from aiida.workflows.arithmetic.add_multiply import add, add_multiply
 from tests.utils.memory import get_instances  # pylint: disable=import-error
 
 CODENAME_ADD = 'add@localhost'

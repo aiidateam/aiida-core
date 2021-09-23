@@ -11,8 +11,8 @@ import pathlib
 
 from alembic import op
 from sqlalchemy import Integer, cast
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.sql import table, column, select, func, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.sql import column, func, select, table, text
 
 from aiida.backends.general.migrations import utils
 from aiida.cmdline.utils import echo
@@ -29,10 +29,11 @@ def upgrade():
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     import json
     from tempfile import NamedTemporaryFile
+
     from disk_objectstore import Container
 
     from aiida.common import exceptions
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, get_progress_reporter, set_progress_reporter
+    from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.configuration import get_profile
 
     connection = op.get_bind()

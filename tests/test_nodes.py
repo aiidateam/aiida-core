@@ -20,7 +20,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.tools import delete_nodes, delete_group_nodes
+from aiida.tools import delete_group_nodes, delete_nodes
 
 
 class TestNodeIsStorable(AiidaTestCase):
@@ -551,8 +551,8 @@ class TestNodeBasic(AiidaTestCase):
         Similar as test_files, but I manipulate a tree of folders
         """
         import os
-        import shutil
         import random
+        import shutil
         import string
 
         a = orm.Data()
@@ -972,8 +972,9 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from datetime import timedelta
-        from aiida.common import timezone
         from time import sleep
+
+        from aiida.common import timezone
 
         user = orm.User.objects.get_default()
 
@@ -1009,7 +1010,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks that the method Code.get_from_string works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
         code1 = orm.Code()
@@ -1056,7 +1057,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks that the method Code.get(pk) works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
         code1 = orm.Code()

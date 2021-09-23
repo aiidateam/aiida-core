@@ -14,11 +14,12 @@ from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-mod
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.rmq import BROKER_DEFAULTS
-from ...utils import defaults, echo
+
 from .. import types
+from ...utils import defaults, echo
+from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
-from .config import ConfigFileOption
 
 __all__ = (
     'ALL', 'ALL_STATES', 'ALL_USERS', 'APPEND_TEXT', 'ARCHIVE_FORMAT', 'BROKER_HOST', 'BROKER_PASSWORD', 'BROKER_PORT',

@@ -11,6 +11,7 @@
 """Add a uniqueness constraint to the uuid column of DbNode table."""
 
 from django.db import migrations, models
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.common.utils import get_new_uuid
 

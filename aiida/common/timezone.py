@@ -9,6 +9,7 @@
 ###########################################################################
 """Utility functions to operate on datetime objects."""
 from datetime import datetime
+
 import dateutil.parser
 
 
@@ -33,6 +34,7 @@ def now():
     :return: datetime object represeting current time
     """
     import pytz
+
     from aiida.manage.configuration import settings
 
     if getattr(settings, 'USE_TZ', None):

@@ -14,12 +14,11 @@ import zipfile
 
 from archive_path import TarPath, ZipPath
 
-from aiida.common.exceptions import NotExistent
 from aiida.common import json
+from aiida.common.exceptions import NotExistent
 from aiida.tools.importexport.archive import CacheFolder
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from aiida.tools.importexport.archive.migrations.v03_to_v04 import migrate_v3_to_v4
-
 from tests.utils.archives import get_archive_file, read_json_files
 
 

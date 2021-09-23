@@ -9,10 +9,10 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use
 """Test for the `CalcJob` process sub class."""
-import json
 from copy import deepcopy
 from functools import partial
 import io
+import json
 import os
 import tempfile
 from unittest.mock import patch
@@ -21,10 +21,10 @@ import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions, LinkType, CalcJobState, StashMode
-from aiida.engine import launch, CalcJob, Process, ExitCode, CalcJobImporter
-from aiida.engine.processes.ports import PortNamespace
+from aiida.common import CalcJobState, LinkType, StashMode, exceptions
+from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
+from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name

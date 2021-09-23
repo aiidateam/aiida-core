@@ -377,7 +377,7 @@ class TrajectoryData(ArrayData):
           meaning that the strings in the ``symbols`` array must be valid
           chemical symbols.
         """
-        from aiida.orm.nodes.data.structure import StructureData, Kind, Site
+        from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 
         # ignore step, time, and velocities
         _, _, cell, symbols, positions, _ = self.get_step_data(index)
@@ -456,9 +456,8 @@ class TrajectoryData(ArrayData):
         """
         Write the given trajectory to a string of format CIF.
         """
-        from aiida.orm.nodes.data.cif \
-            import ase_loops, cif_from_ase, pycifrw_from_cif
         from aiida.common.utils import Capturing
+        from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
 
         cif = ''
         indices = list(range(self.numsteps))
@@ -525,9 +524,10 @@ class TrajectoryData(ArrayData):
             t.importfile('some-calc/AIIDA-PROJECT-pos-1.xyz', 'xyz_pos')
         """
 
+        from numpy import array
+
         from aiida.common.exceptions import ValidationError
         from aiida.tools.data.structure import xyz_parser_iterator
-        from numpy import array
 
         numsteps = self.numsteps
         if numsteps == 0:
@@ -559,9 +559,10 @@ class TrajectoryData(ArrayData):
             :py:meth:`._parse_xyz_pos`
         """
 
+        from numpy import array
+
         from aiida.common.exceptions import ValidationError
         from aiida.tools.data.structure import xyz_parser_iterator
-        from numpy import array
 
         numsteps = self.numsteps
         if numsteps == 0:
@@ -692,8 +693,8 @@ class TrajectoryData(ArrayData):
                 'and requires that you already installed the python numpy '
                 'package, as well as the vtk package'
             )
-        from ase.data.colors import jmol_colors
         from ase.data import atomic_numbers
+        from ase.data.colors import jmol_colors
 
         # pylint: disable=invalid-name
 

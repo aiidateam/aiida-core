@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
+from datetime import datetime
 import filecmp
 import inspect
 import io
@@ -15,7 +16,7 @@ import os
 import re
 import sys
 from uuid import UUID
-from datetime import datetime
+
 from .lang import classproperty
 
 

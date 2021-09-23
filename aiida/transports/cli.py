@@ -8,15 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common cli utilities for transport plugins."""
-import inspect
 from functools import partial
+import inspect
 
 import click
 
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 from aiida.manage.manager import get_manager
 

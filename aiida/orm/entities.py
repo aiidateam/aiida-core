@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
-import typing
 import abc
 import copy
+import typing
 
-from plumpy.base.utils import super_check, call_with_super_check
+from plumpy.base.utils import call_with_super_check, super_check
 
 from aiida.common import datastructures, exceptions
 from aiida.common.lang import classproperty, type_check

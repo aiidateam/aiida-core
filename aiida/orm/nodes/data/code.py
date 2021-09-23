@@ -11,6 +11,7 @@
 import os
 
 from aiida.common import exceptions
+
 from .data import Data
 
 __all__ = ('Code',)
@@ -159,9 +160,9 @@ class Code(Data):
         :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
         from aiida.orm.computers import Computer
+        from aiida.orm.querybuilder import QueryBuilder
 
         query = QueryBuilder()
         query.append(cls, filters={'label': label}, project='*', tag='code')
@@ -233,7 +234,7 @@ class Code(Data):
         :raise TypeError: if code_string is not of string type
 
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         try:
             label, _, machinename = code_string.partition('@')

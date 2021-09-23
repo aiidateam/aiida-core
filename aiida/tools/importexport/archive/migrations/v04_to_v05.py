@@ -26,7 +26,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 # pylint: disable=invalid-name
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import verify_metadata_version, update_metadata, remove_fields
+from .utils import remove_fields, update_metadata, verify_metadata_version
 
 
 def migration_drop_node_columns_nodeversion_public(metadata, data):

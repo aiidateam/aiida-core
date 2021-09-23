@@ -10,9 +10,9 @@
 """A module containing the logic for creating joined queries."""
 from typing import Any, Callable, Dict, NamedTuple, Optional, Type
 
-from sqlalchemy import and_, select, join
+from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
-from sqlalchemy.orm import aliased, Query
+from sqlalchemy.orm import Query, aliased
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql.elements import BooleanClauseList
 from sqlalchemy.sql.expression import cast as type_cast

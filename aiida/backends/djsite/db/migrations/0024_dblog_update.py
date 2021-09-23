@@ -11,15 +11,16 @@
 # pylint: disable=invalid-name
 """Migration for the update of the DbLog table. Addition of uuids"""
 import sys
-import click
 
+import click
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations, models
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.backends.general.migrations.utils import dumps_json
-from aiida.common.utils import get_new_uuid
 from aiida.cmdline.utils import echo
+from aiida.common.utils import get_new_uuid
 from aiida.manage import configuration
 
 REVISION = '1.0.24'

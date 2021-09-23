@@ -25,8 +25,9 @@ def write_database_integrity_violation(results, headers, reason_message, action_
     """
     # pylint: disable=duplicate-string-formatting-argument
     from datetime import datetime
-    from tabulate import tabulate
     from tempfile import NamedTemporaryFile
+
+    from tabulate import tabulate
 
     from aiida.cmdline.utils import echo
     from aiida.manage import configuration

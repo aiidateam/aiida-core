@@ -9,24 +9,23 @@
 ###########################################################################
 """Archive reader classes."""
 from abc import ABC, abstractmethod
+from distutils.version import StrictVersion
 import json
 from pathlib import Path
 import tarfile
 from types import TracebackType
-from typing import Any, Callable, cast, Dict, Iterator, List, Optional, Set, Tuple, Type
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, cast
 import zipfile
 
-from distutils.version import StrictVersion
 from archive_path import TarPath, ZipPath, read_file_in_tar, read_file_in_zip
 from disk_objectstore import Container
 
-from aiida.common.log import AIIDA_LOGGER
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.folders import SandboxFolder
-from aiida.tools.importexport.common.config import EXPORT_VERSION, ExportFileFormat
-from aiida.tools.importexport.common.exceptions import (CorruptArchive, IncompatibleArchiveVersionError)
-from aiida.tools.importexport.archive.common import (ArchiveMetadata, null_callback)
-from aiida.tools.importexport.common.config import NODE_ENTITY_NAME, GROUP_ENTITY_NAME
+from aiida.common.log import AIIDA_LOGGER
+from aiida.tools.importexport.archive.common import ArchiveMetadata, null_callback
+from aiida.tools.importexport.common.config import EXPORT_VERSION, GROUP_ENTITY_NAME, NODE_ENTITY_NAME, ExportFileFormat
+from aiida.tools.importexport.common.exceptions import CorruptArchive, IncompatibleArchiveVersionError
 
 __all__ = (
     'ArchiveReaderAbstract',

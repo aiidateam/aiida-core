@@ -20,6 +20,11 @@ repos:
     -   id: check-yaml
 
 
+-   repo: https://github.com/pycqa/isort
+    rev: 5.9.3
+    hooks:
+    - id: isort
+
 -   repo: https://github.com/ikamensh/flynt/
     rev: '0.66'
     hooks:

@@ -8,8 +8,8 @@ import typing as t
 
 import pytest
 
-from aiida.repository import Repository, File, FileType
-from aiida.repository.backend import SandboxRepositoryBackend, DiskObjectStoreRepositoryBackend
+from aiida.repository import File, FileType, Repository
+from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
 
 @contextlib.contextmanager

@@ -16,10 +16,10 @@ Create Date: 2019-07-01 19:39:33.605457
 
 """
 from alembic import op
-
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from sqlalchemy.sql import text
+
 from aiida.cmdline.utils import echo
 
 # revision identifiers, used by Alembic.

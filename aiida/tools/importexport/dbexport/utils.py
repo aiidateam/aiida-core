@@ -8,13 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """ Utility functions for export of AiiDA entities """
-# pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
-from aiida.orm import QueryBuilder, ProcessNode
 from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
-
+# pylint: disable=too-many-locals,too-many-branches,too-many-nested-blocks
+from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
-    file_fields_to_model_fields, entity_names_to_entities, get_all_fields_info
+    entity_names_to_entities,
+    file_fields_to_model_fields,
+    get_all_fields_info,
 )
 
 EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
@@ -104,8 +105,9 @@ def fill_in_query(partial_query, originating_entity_str, current_entity_str, tag
 
 def check_licenses(node_licenses, allowed_licenses, forbidden_licenses):
     """Check licenses"""
-    from aiida.common.exceptions import LicensingException
     from inspect import isfunction
+
+    from aiida.common.exceptions import LicensingException
 
     for pk, license_ in node_licenses:
         if allowed_licenses is not None:
@@ -148,8 +150,9 @@ def serialize_field(data, track_conversion=False):
         import
     """
     import datetime
-    import pytz
     from uuid import UUID
+
+    import pytz
 
     if isinstance(data, dict):
         ret_data = {}

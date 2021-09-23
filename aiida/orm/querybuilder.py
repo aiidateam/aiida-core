@@ -22,29 +22,38 @@ when instantiated by the user.
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
 from typing import (
-    Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple, Type, Union, TYPE_CHECKING, cast
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
 )
 import warnings
 
 from aiida.manage.manager import get_manager
 from aiida.orm.implementation.querybuilder import (
-    BackendQueryBuilder, EntityTypes, EntityRelationships, PathItemType, QueryDictType, GROUP_ENTITY_TYPE_PREFIX
+    GROUP_ENTITY_TYPE_PREFIX,
+    BackendQueryBuilder,
+    EntityRelationships,
+    EntityTypes,
+    PathItemType,
+    QueryDictType,
 )
 
-from . import authinfos
-from . import comments
-from . import computers
-from . import groups
-from . import logs
-from . import nodes
-from . import users
-from . import entities
-from . import convert
+from . import authinfos, comments, computers, convert, entities, groups, logs, nodes, users
 
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
-    from aiida.orm.implementation import Backend
     from aiida.engine import Process
+    from aiida.orm.implementation import Backend
 
 __all__ = ('QueryBuilder',)
 
@@ -1263,8 +1272,8 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
     """
-    from aiida.orm.utils.node import get_query_type_from_type_string
     from aiida.common.escaping import escape_for_sql_like
+    from aiida.orm.utils.node import get_query_type_from_type_string
     value = classifiers.ormclass_type_string
 
     if not subclassing:

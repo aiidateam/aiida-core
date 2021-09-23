@@ -12,25 +12,14 @@
 from collections import defaultdict
 import os
 import tempfile
-from typing import (
-    Any,
-    Callable,
-    DefaultDict,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Callable, DefaultDict, Dict, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
 from aiida import get_version, orm
-from aiida.common.links import GraphTraversalRules
 from aiida.common.lang import type_check
-from aiida.common.progress_reporter import get_progress_reporter, create_callback
+from aiida.common.links import GraphTraversalRules
+from aiida.common.progress_reporter import create_callback, get_progress_reporter
+from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
+from aiida.tools.importexport.archive.writers import ArchiveMetadata, ArchiveWriterAbstract, get_writer
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.common.config import (
     COMMENT_ENTITY_NAME,
@@ -45,8 +34,6 @@ from aiida.tools.importexport.common.config import (
     get_all_fields_info,
     model_fields_to_file_fields,
 )
-from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
-from aiida.tools.importexport.archive.writers import ArchiveMetadata, ArchiveWriterAbstract, get_writer
 from aiida.tools.importexport.dbexport.utils import (
     EXPORT_LOGGER,
     check_licenses,
@@ -578,6 +565,7 @@ def _write_node_repositories(
 
         with tempfile.TemporaryDirectory() as temp:
             from disk_objectstore import Container
+
             from aiida.manage.manager import get_manager
 
             dirpath = os.path.join(temp, 'container')

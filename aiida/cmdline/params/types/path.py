@@ -9,10 +9,11 @@
 ###########################################################################
 """Click parameter types for paths."""
 import os
+from socket import timeout
+import urllib.error
 # See https://stackoverflow.com/a/41217363/1069467
 import urllib.request
-import urllib.error
-from socket import timeout
+
 import click
 
 __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')

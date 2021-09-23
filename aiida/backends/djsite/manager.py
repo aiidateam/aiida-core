@@ -11,10 +11,12 @@
 """Utilities and configuration of the Django database schema."""
 
 import os
+
 import django
 
 from aiida.common import NotExistent
-from ..manager import BackendManager, SettingsManager, Setting, SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
+
+from ..manager import SCHEMA_VERSION_DESCRIPTION, SCHEMA_VERSION_KEY, BackendManager, Setting, SettingsManager
 
 # The database schema version required to perform schema reset for a given code schema generation
 SCHEMA_VERSION_RESET = {'1': None}
@@ -82,6 +84,7 @@ class DjangoBackendManager(BackendManager):
         :return: `distutils.version.StrictVersion` with schema version of the database
         """
         from django.db.utils import ProgrammingError
+
         from aiida.manage.manager import get_manager
 
         backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
@@ -104,6 +107,7 @@ class DjangoBackendManager(BackendManager):
         :return: `distutils.version.StrictVersion` with schema version of the database
         """
         from django.db.utils import ProgrammingError
+
         from aiida.manage.manager import get_manager
 
         backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access

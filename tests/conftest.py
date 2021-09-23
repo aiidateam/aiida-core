@@ -32,6 +32,7 @@ def non_interactive_editor(request):
     :param request: the command to set for the editor that is to be called
     """
     from unittest.mock import patch
+
     from click._termui_impl import Editor
 
     os.environ['EDITOR'] = request.param
@@ -163,6 +164,7 @@ def isolated_config(monkeypatch):
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
     import copy
+
     from aiida.manage import configuration
 
     monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
@@ -189,7 +191,7 @@ def empty_config(tmp_path) -> Config:
     """
     from aiida.common.utils import Capturing
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings, reset_profile
+    from aiida.manage.configuration import reset_profile, settings
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
@@ -369,12 +371,12 @@ def override_logging(isolated_config):
 @pytest.fixture
 def with_daemon():
     """Starts the daemon process and then makes sure to kill it once the test is done."""
-    import sys
     import signal
     import subprocess
+    import sys
 
-    from aiida.engine.daemon.client import DaemonClient
     from aiida.cmdline.utils.common import get_env_with_venv_bin
+    from aiida.engine.daemon.client import DaemonClient
 
     # Add the current python path to the environment that will be used for the daemon sub process.
     # This is necessary to guarantee the daemon can also import all the classes that are defined

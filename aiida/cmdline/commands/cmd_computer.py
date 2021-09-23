@@ -14,12 +14,12 @@ from functools import partial
 import click
 import tabulate
 
-from aiida.cmdline.commands.cmd_verdi import verdi, VerdiCommandGroup
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import ValidationError, EntryPointError
+from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
 
 
@@ -116,9 +116,9 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: tuple of boolean indicating success or failure and an optional string message
     """
-    import tempfile
     import datetime
     import os
+    import tempfile
 
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
     workdir = authinfo.get_workdir().format(username=transport.whoami())
@@ -429,6 +429,7 @@ def computer_test(user, print_traceback, computer):
     to perform other tests.
     """
     import traceback
+
     from aiida import orm
     from aiida.common.exceptions import NotExistent
 
@@ -529,8 +530,8 @@ def computer_delete(computer):
 
     Note that it is not possible to delete the computer if there are calculations that are using it.
     """
-    from aiida.common.exceptions import InvalidOperation
     from aiida import orm
+    from aiida.common.exceptions import InvalidOperation
 
     label = computer.label
 

@@ -13,8 +13,8 @@ import logging
 import click
 import pytest
 
-from aiida.cmdline.utils import echo
 from aiida.cmdline.params import options
+from aiida.cmdline.utils import echo
 from aiida.common.log import AIIDA_LOGGER, LOG_LEVELS
 
 

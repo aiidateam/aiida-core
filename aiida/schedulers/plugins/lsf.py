@@ -99,11 +99,7 @@ class LsfJobResource(JobResource):
     See https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_command_ref/bsub.1.dita?lang=en
     for more details about the parallel environment definition (the -m option of bsub).
     """
-    _default_fields = (
-        'parallel_env',
-        'tot_num_mpiprocs',
-        'default_mpiprocs_per_machine',
-    )
+    _default_fields = ('parallel_env', 'tot_num_mpiprocs', 'default_mpiprocs_per_machine', 'num_machines')
 
     @classmethod
     def validate_resources(cls, **kwargs):
@@ -121,6 +117,24 @@ class LsfJobResource(JobResource):
         if not isinstance(resources.parallel_env, str):
             raise TypeError("When specified, 'parallel_env' must be a string")
 
+        resources.use_num_machines = kwargs.pop('use_num_machines', False)
+        num_machines = kwargs.pop('num_machines', None)
+
+        if resources.use_num_machines and num_machines is not None:
+            try:
+                resources.num_machines = int(num_machines)
+            except (KeyError, ValueError):
+                raise TypeError('num_machines must be an integer')
+
+        elif resources.use_num_machines and num_machines is None:
+            raise ConfigurationError('must set num_machines when use_num_machines is set to true')
+
+        elif not resources.use_num_machines and num_machines is not None:
+            raise ConfigurationError(
+                'num_machines cannot be set for LSF scheduler unless'
+                ' use_num_machines is set to true'
+            )
+
         try:
             resources.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError) as exc:
@@ -129,10 +143,6 @@ class LsfJobResource(JobResource):
         default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
         if default_mpiprocs_per_machine is not None:
             raise ConfigurationError('default_mpiprocs_per_machine cannot be set for LSF scheduler')
-
-        num_machines = resources.pop('num_machines', None)
-        if num_machines is not None:
-            raise ConfigurationError('num_machines cannot be set for LSF scheduler')
 
         if resources.tot_num_mpiprocs <= 0:
             raise ValueError('tot_num_mpiprocs must be >= 1')
@@ -157,6 +167,18 @@ class LsfJobResource(JobResource):
         Return the total number of cpus of this job resource.
         """
         return self.tot_num_mpiprocs
+
+    def get_num_machines(self):
+        """
+        Return the total number of machines of this job resource.
+        """
+        return self.num_machines
+
+    def get_use_num_machines(self):
+        """
+        Return whether to use num_machines when submitting job resources.
+        """
+        return self.use_num_machines
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
@@ -387,11 +409,14 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         if not job_tmpl.job_resource:
             raise ValueError('Job resources (as the tot_num_mpiprocs) are required for the LSF scheduler plugin')
 
-        lines.append(f'#BSUB -n {job_tmpl.job_resource.get_tot_num_mpiprocs()}')
-        # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT
-        # defined in lsb.params (you can check with the output of bparams -l).
-        # Note: the -n option of bsub can also contain a maximum number of
-        # procs to be used
+        if job_tmpl.job_resource.use_num_machines:
+            lines.append(f'#BSUB -nnodes {job_tmpl.job_resource.get_num_machines()}')
+        else:
+            lines.append(f'#BSUB -n {job_tmpl.job_resource.get_tot_num_mpiprocs()}')
+            # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT
+            # defined in lsb.params (you can check with the output of bparams -l).
+            # Note: the -n option of bsub can also contain a maximum number of
+            # procs to be used
         if job_tmpl.job_resource.parallel_env:
             lines.append(f'#BSUB -m "{job_tmpl.job_resource.parallel_env}"')
 

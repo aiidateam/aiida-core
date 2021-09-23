@@ -26,7 +26,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 # pylint: disable=invalid-name
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import verify_metadata_version, update_metadata
+from .utils import update_metadata, verify_metadata_version
 
 
 def data_migration_legacy_process_attributes(data):
@@ -54,8 +54,8 @@ def data_migration_legacy_process_attributes(data):
         the ProcessNode is in an active state, i.e. `process_state` is one of ('created', 'running', 'waiting').
         A log-file, listing all illegal ProcessNodes, will be produced in the current directory.
     """
-    from aiida.tools.importexport.common.exceptions import CorruptArchive
     from aiida.manage.database.integrity import write_database_integrity_violation
+    from aiida.tools.importexport.common.exceptions import CorruptArchive
 
     attrs_to_remove = ['_sealed', '_finished', '_failed', '_aborted', '_do_abort']
     active_states = {'created', 'running', 'waiting'}

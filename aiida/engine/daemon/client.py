@@ -13,7 +13,7 @@ import os
 import shutil
 import socket
 import tempfile
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile

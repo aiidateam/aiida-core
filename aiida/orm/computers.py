@@ -16,8 +16,7 @@ from aiida.manage.manager import get_manager
 from aiida.orm.implementation import Backend
 from aiida.plugins import SchedulerFactory, TransportFactory
 
-from . import entities
-from . import users
+from . import entities, users
 
 __all__ = ('Computer',)
 

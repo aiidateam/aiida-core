@@ -19,9 +19,9 @@ Create Date: 2018-12-04 21:14:15.250247
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from alembic import op
-from sqlalchemy import String, Integer
-from sqlalchemy.sql import table, column, select, text
+from sqlalchemy import Integer, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import column, select, table, text
 
 # revision identifiers, used by Alembic.
 revision = '239cea6d2452'

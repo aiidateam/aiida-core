@@ -15,13 +15,15 @@ import os
 import shutil
 
 from aiida.tools.importexport.archive.common import CacheFolder
-from .utils import verify_metadata_version, update_metadata
+
+from .utils import update_metadata, verify_metadata_version
 
 
 def migrate_repository(metadata, data, folder):
     """Migrate the file repository to a disk object store container."""
     from disk_objectstore import Container
-    from aiida.repository import Repository, File
+
+    from aiida.repository import File, Repository
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
     container = Container(os.path.join(folder.get_path(), 'container'))

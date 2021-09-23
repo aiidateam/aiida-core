@@ -11,7 +11,7 @@
 import enum
 import functools
 import traceback
-from typing import Any, Optional, List, Sequence, Set, Tuple
+from typing import Any, List, Optional, Sequence, Set, Tuple
 
 # importlib.metadata was introduced into the standard library in python 3.8,
 # but was then updated in python 3.10 to use an improved API.
@@ -19,7 +19,7 @@ from typing import Any, Optional, List, Sequence, Set, Tuple
 from importlib_metadata import EntryPoint, EntryPoints
 from importlib_metadata import entry_points as _eps
 
-from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
 

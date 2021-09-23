@@ -363,6 +363,7 @@ class DbMultipleValueAttributeBaseClass:
                 transaction.savepoint_commit(sid)
         except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
+
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
@@ -406,7 +407,7 @@ class DbMultipleValueAttributeBaseClass:
         import datetime
 
         from aiida.common import json
-        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
+        from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:

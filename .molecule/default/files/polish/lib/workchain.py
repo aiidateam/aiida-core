@@ -13,8 +13,8 @@ import collections
 import hashlib
 import os
 from pathlib import Path
-
 from string import Template
+
 from .expression import OPERATORS  # pylint: disable=relative-beyond-top-level
 
 INDENTATION_WIDTH = 4

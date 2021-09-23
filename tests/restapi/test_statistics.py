@@ -10,8 +10,8 @@
 """Unit tests for REST API statistics."""
 from threading import Thread
 
-import requests
 import pytest
+import requests
 
 
 def linearize_namespace(tree_namespace, linear_namespace=None):

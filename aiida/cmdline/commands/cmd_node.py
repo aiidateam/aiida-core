@@ -8,19 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
-import shutil
 import pathlib
+import shutil
 
 import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common import exceptions
-from aiida.common import timezone
+from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
 
 
@@ -40,9 +39,9 @@ def verdi_node_repo():
 @with_dbenv()
 def repo_cat(node, relative_path):
     """Output the content of a file in the node repository folder."""
+    import errno
     from shutil import copyfileobj
     import sys
-    import errno
 
     try:
         with node.open(relative_path, mode='rb') as fhandle:
@@ -201,9 +200,9 @@ def node_show(nodes, print_groups):
         echo.echo(get_node_info(node))
 
         if print_groups:
-            from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.groups import Group
             from aiida.orm import Node  # pylint: disable=redefined-outer-name
+            from aiida.orm.groups import Group
+            from aiida.orm.querybuilder import QueryBuilder
 
             # pylint: disable=invalid-name
             qb = QueryBuilder()

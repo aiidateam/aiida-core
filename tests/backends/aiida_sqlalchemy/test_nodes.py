@@ -10,9 +10,9 @@
 # pylint: disable=import-error,no-name-in-module
 """Tests for nodes, attributes and links."""
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Data
-from aiida import orm
 
 
 class TestNodeBasicSQLA(AiidaTestCase):
@@ -20,13 +20,14 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
     def test_settings(self):
         """Test the settings table (similar to Attributes, but without the key."""
-        from aiida.backends.sqlalchemy.models.settings import DbSetting
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
         session = get_scoped_session()
 
         from pytz import UTC
-        from aiida.common import timezone
         from sqlalchemy.exc import IntegrityError
+
+        from aiida.common import timezone
 
         DbSetting.set_value(key='pippo', value=[1, 2, 3])
 
@@ -50,8 +51,8 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
     def test_load_nodes(self):
         """Test for load_node() function."""
-        from aiida.orm import load_node
         from aiida.backends.sqlalchemy import get_scoped_session
+        from aiida.orm import load_node
 
         a_obj = Data()
         a_obj.store()
@@ -104,9 +105,9 @@ class TestNodeBasicSQLA(AiidaTestCase):
         (and subsequently committed) when a user is in the session.
         It tests the fix for the issue #234
         """
+        import aiida.backends.sqlalchemy
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.common.utils import get_new_uuid
-        import aiida.backends.sqlalchemy
 
         backend = self.backend
 

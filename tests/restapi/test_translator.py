@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `aiida.restapi.translator` module."""
+from aiida.orm import Data
 # pylint: disable=invalid-name
 from aiida.restapi.translator.nodes.node import NodeTranslator
-from aiida.orm import Data
 
 
 def test_get_all_download_formats():

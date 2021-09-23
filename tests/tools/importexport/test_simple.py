@@ -17,7 +17,7 @@ from aiida.common import json
 from aiida.common.exceptions import LicensingException
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport import export, import_data
 from aiida.tools.importexport.common import exceptions
 
 

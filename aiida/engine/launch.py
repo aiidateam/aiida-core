@@ -13,9 +13,10 @@ from typing import Any, Dict, Tuple, Type, Union
 from aiida.common import InvalidOperation
 from aiida.manage import manager
 from aiida.orm import ProcessNode
+
 from .processes.functions import FunctionProcess
 from .processes.process import Process, ProcessBuilder
-from .utils import is_process_scoped, instantiate_process
+from .utils import instantiate_process, is_process_scoped
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
 

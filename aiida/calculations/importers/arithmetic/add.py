@@ -2,11 +2,11 @@
 """Importer for the :class:`aiida.calculations.arithmetic.add.ArithmeticAddCalculation` plugin."""
 from pathlib import Path
 from re import match
-from typing import Dict, Union
 from tempfile import NamedTemporaryFile
+from typing import Dict, Union
 
 from aiida.engine import CalcJobImporter
-from aiida.orm import Node, Int, RemoteData
+from aiida.orm import Int, Node, RemoteData
 
 
 class ArithmeticAddCalculationImporter(CalcJobImporter):

@@ -12,9 +12,8 @@
 #from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ValidationError
-from aiida.tools.data.orbital import Orbital
-
 from aiida.plugins import OrbitalFactory
+from aiida.tools.data.orbital import Orbital
 
 
 class TestOrbital(AiidaTestCase):

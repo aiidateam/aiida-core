@@ -11,8 +11,7 @@
 
 import click
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.commands.cmd_data.cmd_show import show_options
@@ -34,8 +33,9 @@ def trajectory():
 @decorators.with_dbenv()
 def trajectory_list(raw, past_days, groups, all_users):
     """List TrajectoryData objects stored in the database."""
-    from aiida.orm import TrajectoryData
     from tabulate import tabulate
+
+    from aiida.orm import TrajectoryData
 
     elements = None
     elements_only = False

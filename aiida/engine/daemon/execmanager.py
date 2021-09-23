@@ -19,13 +19,15 @@ import os
 import pathlib
 import shutil
 from tempfile import NamedTemporaryFile
-from typing import Any, List, Optional, Mapping as MappingType, Tuple, Union
+from typing import Any, List
+from typing import Mapping as MappingType
+from typing import Optional, Tuple, Union
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import load_node, CalcJobNode, Code, FolderData, Node, RemoteData
+from aiida.orm import CalcJobNode, Code, FolderData, Node, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState

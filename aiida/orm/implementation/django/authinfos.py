@@ -13,9 +13,8 @@ from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 
+from . import entities, utils
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
-from . import entities
-from . import utils
 
 
 class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
@@ -30,8 +29,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
         :return: an :class:`aiida.orm.implementation.authinfos.BackendAuthInfo` instance
         """
-        from . import computers
-        from . import users
+        from . import computers, users
         super().__init__(backend)
         type_check(user, users.DjangoUser)
         type_check(computer, computers.DjangoComputer)
@@ -146,7 +144,7 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
         :raise aiida.common.exceptions.MultipleObjectsError: if multiple entries exist for the computer/user pair
         """
         # pylint: disable=import-error,no-name-in-module
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+        from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 
         try:
             authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from aiida.engine import CalcJob
 
+
 class ArithmeticAddCalculation(CalcJob):
     """Implementation of CalcJob to add two numbers for testing and demonstration purposes."""
 

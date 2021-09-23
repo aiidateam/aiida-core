@@ -10,6 +10,7 @@
 """Tests for the `OrbitalData` class."""
 
 import copy
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import ValidationError
 from aiida.orm import OrbitalData

@@ -11,8 +11,7 @@
 
 from aiida.common.exceptions import InputValidationError, InvalidOperation
 from aiida.orm.querybuilder import QueryBuilder
-from aiida.restapi.common.exceptions import RestValidationError, \
-    RestInputValidationError
+from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
 from aiida.restapi.common.utils import PK_DBSYNONYM
 
 

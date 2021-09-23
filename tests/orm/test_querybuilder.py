@@ -18,9 +18,9 @@ import warnings
 import pytest
 
 from aiida import orm, plugins
-from aiida.orm.querybuilder import _get_ormclass
 from aiida.common.links import LinkType
 from aiida.manage import configuration
+from aiida.orm.querybuilder import _get_ormclass
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -112,7 +112,7 @@ class TestBasic:
 
     def test_get_group_type_filter(self):
         """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
-        from aiida.orm.querybuilder import _get_group_type_filter, Classifier
+        from aiida.orm.querybuilder import Classifier, _get_group_type_filter
 
         classifiers = Classifier('group.core')
         assert _get_group_type_filter(classifiers, False) == {'==': 'core'}
@@ -133,8 +133,8 @@ class TestBasic:
         """
         Test querying for a process class.
         """
-        from aiida.engine import run, WorkChain, if_, return_, ExitCode
         from aiida.common.warnings import AiidaEntryPointWarning
+        from aiida.engine import ExitCode, WorkChain, if_, return_, run
 
         class PotentialFailureWorkChain(WorkChain):
             EXIT_STATUS = 1

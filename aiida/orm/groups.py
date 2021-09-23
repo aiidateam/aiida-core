@@ -16,9 +16,7 @@ from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.manage.manager import get_manager
 
-from . import convert
-from . import entities
-from . import users
+from . import convert, entities, users
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 

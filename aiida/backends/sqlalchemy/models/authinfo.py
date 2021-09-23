@@ -11,10 +11,10 @@
 """Module to manage authentification information for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint
-from sqlalchemy.types import Integer, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import Boolean, Integer
 
 from .base import Base
 

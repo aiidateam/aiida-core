@@ -10,7 +10,7 @@
 """SQL statements that test the integrity of the database with respect to nodes."""
 
 from aiida.common.extendeddicts import AttributeDict
-from aiida.orm import Data, CalculationNode, WorkflowNode
+from aiida.orm import CalculationNode, Data, WorkflowNode
 
 
 def format_type_string_regex(node_class):

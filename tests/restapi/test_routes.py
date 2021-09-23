@@ -9,8 +9,8 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Unittests for REST API."""
-import io
 from datetime import date
+import io
 
 from flask_cors.core import ACL_ORIGIN
 
@@ -81,6 +81,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         # create log message for calcjob
         import logging
+
         from aiida.common.log import LOG_LEVEL_REPORT
         from aiida.common.timezone import now
         from aiida.orm import Log

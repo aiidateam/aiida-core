@@ -21,8 +21,9 @@ class DBLogHandler(logging.Handler):
             # https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
             self.format(record)
 
-        from aiida import orm
         from django.core.exceptions import ImproperlyConfigured  # pylint: disable=no-name-in-module, import-error
+
+        from aiida import orm
 
         try:
             try:

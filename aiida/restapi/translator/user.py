@@ -9,8 +9,8 @@
 ###########################################################################
 """Translator for user"""
 
-from aiida.restapi.translator.base import BaseTranslator
 from aiida import orm
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class UserTranslator(BaseTranslator):

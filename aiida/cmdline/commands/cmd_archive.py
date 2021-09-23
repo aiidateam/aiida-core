@@ -11,8 +11,8 @@
 """`verdi archive` command."""
 from enum import Enum
 import logging
-from typing import List, Tuple
 import traceback
+from typing import List, Tuple
 import urllib.request
 
 import click
@@ -46,6 +46,7 @@ def inspect(archive, version, meta_data):
     information is displayed.
     """
     import dataclasses
+
     from aiida.tools.importexport import CorruptArchive, detect_archive_type, get_reader
 
     reader_cls = get_reader(detect_archive_type(archive))
@@ -121,7 +122,7 @@ def create(
     """
     # pylint: disable=too-many-branches
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
-    from aiida.tools.importexport import export, ExportFileFormat
+    from aiida.tools.importexport import ExportFileFormat, export
     from aiida.tools.importexport.common.exceptions import ArchiveExportError
 
     entities = []
@@ -197,7 +198,7 @@ def create(
 def migrate(input_file, output_file, force, in_place, archive_format, version):
     """Migrate an export archive to a more recent format version."""
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
-    from aiida.tools.importexport import detect_archive_type, EXPORT_VERSION
+    from aiida.tools.importexport import EXPORT_VERSION, detect_archive_type
     from aiida.tools.importexport.archive.migrators import get_migrator
 
     if in_place:
@@ -393,7 +394,10 @@ def _import_archive(archive: str, web_based: bool, import_kwargs: dict, try_migr
     """
     from aiida.common.folders import SandboxFolder
     from aiida.tools.importexport import (
-        detect_archive_type, EXPORT_VERSION, import_data, IncompatibleArchiveVersionError
+        EXPORT_VERSION,
+        IncompatibleArchiveVersionError,
+        detect_archive_type,
+        import_data,
     )
     from aiida.tools.importexport.archive.migrators import get_migrator
 

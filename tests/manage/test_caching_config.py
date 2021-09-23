@@ -15,11 +15,11 @@ import contextlib
 import json
 from pathlib import Path
 
-import yaml
 import pytest
+import yaml
 
 from aiida.common import exceptions
-from aiida.manage.caching import get_use_cache, enable_caching, disable_caching
+from aiida.manage.caching import disable_caching, enable_caching, get_use_cache
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def test_merge_deprecated_yaml(tmp_path):
     """
     from aiida.common.warnings import AiidaDeprecationWarning
     from aiida.manage import configuration
-    from aiida.manage.configuration import settings, load_profile, reset_profile, get_config_option
+    from aiida.manage.configuration import get_config_option, load_profile, reset_profile, settings
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG

@@ -51,6 +51,7 @@ import shutil
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
+
 from . import options
 
 CONFIG = None
@@ -115,6 +116,7 @@ def load_config(create=False):
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from aiida.common import exceptions
+
     from .config import Config
 
     filepath = get_config_path()
@@ -278,7 +280,9 @@ def load_documentation_profile():
     the documentation to be built without having to install and configure AiiDA nor having an actual database present.
     """
     import tempfile
+
     from aiida.manage.manager import get_manager
+
     from .config import Config
     from .profile import Profile
 

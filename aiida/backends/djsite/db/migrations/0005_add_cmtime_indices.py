@@ -9,9 +9,10 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Database migration."""
-from django.db import models, migrations
-import aiida.common.timezone
+from django.db import migrations, models
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+import aiida.common.timezone
 
 REVISION = '1.0.5'
 DOWN_REVISION = '1.0.4'

@@ -9,7 +9,7 @@ import pytest
 from aiida.common import exceptions
 from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
-from aiida.orm import load_node, CalcJobNode, Data
+from aiida.orm import CalcJobNode, Data, load_node
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 from aiida.repository.common import File, FileType
 

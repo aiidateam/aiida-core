@@ -11,8 +11,7 @@
 
 import click
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.params import arguments, options, types
@@ -41,8 +40,9 @@ def bands():
 @options.FORMULA_MODE()
 def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, groups, all_users):
     """List BandsData objects."""
-    from tabulate import tabulate
     from argparse import Namespace
+
+    from tabulate import tabulate
 
     from aiida.orm.nodes.data.array.bands import get_bands_and_parents_structure
 

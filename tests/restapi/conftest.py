@@ -42,7 +42,7 @@ def restapi_server():
 
 @pytest.fixture
 def server_url():
-    from aiida.restapi.common.config import CLI_DEFAULTS, API_CONFIG
+    from aiida.restapi.common.config import API_CONFIG, CLI_DEFAULTS
 
     return f"http://{CLI_DEFAULTS['HOST_NAME']}:{CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"
 

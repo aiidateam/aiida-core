@@ -63,8 +63,8 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        from urllib.request import urlopen
         import re
+        from urllib.request import urlopen
 
         query = self.query_get(**kwargs)
         with urlopen(query) as handle:

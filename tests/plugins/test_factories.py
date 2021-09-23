@@ -12,14 +12,14 @@
 import pytest
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
-from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain, CalcJobImporter
-from aiida.orm import Data, Node, CalcFunctionNode, WorkFunctionNode
+from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
+from aiida.orm import CalcFunctionNode, Data, Node, WorkFunctionNode
 from aiida.parsers import Parser
 from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
-from aiida.transports import Transport
 from aiida.tools.data.orbital import Orbital
 from aiida.tools.dbimporters import DbImporter
+from aiida.transports import Transport
 
 
 def custom_load_entry_point(group, name):

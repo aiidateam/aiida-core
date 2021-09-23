@@ -15,8 +15,14 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
     from aiida.orm.implementation import (
-        BackendAuthInfoCollection, BackendCommentCollection, BackendComputerCollection, BackendGroupCollection,
-        BackendLogCollection, BackendNodeCollection, BackendQueryBuilder, BackendUserCollection
+        BackendAuthInfoCollection,
+        BackendCommentCollection,
+        BackendComputerCollection,
+        BackendGroupCollection,
+        BackendLogCollection,
+        BackendNodeCollection,
+        BackendQueryBuilder,
+        BackendUserCollection,
     )
 
 __all__ = ('Backend',)

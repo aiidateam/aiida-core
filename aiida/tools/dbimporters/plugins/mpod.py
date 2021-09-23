@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """"Implementation of `DbImporter` for the MPOD database."""
-from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults, CifEntry)
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class MpodDbImporter(DbImporter):
@@ -79,8 +79,8 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        from urllib.request import urlopen
         import re
+        from urllib.request import urlopen
 
         query_statements = self.query_get(**kwargs)
         results = None

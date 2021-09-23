@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from inspect import isclass
-from typing import Any, Callable, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Union
 
 from importlib_metadata import EntryPoint
 
@@ -26,14 +26,15 @@ if TYPE_CHECKING:
     from aiida.orm import Data, Group
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
-    from aiida.transports import Transport
-    from aiida.tools.dbimporters import DbImporter
     from aiida.tools.data.orbital import Orbital
+    from aiida.tools.dbimporters import DbImporter
+    from aiida.transports import Transport
 
 
 def warn_deprecated_entry_point(entry_point_name: str, deprecated_entry_points: List[str]) -> str:
     """If the ``entry_point_name`` is part of the list of ``deprecated_entry_points``, raise a warning."""
     from warnings import warn
+
     from aiida.common.warnings import AiidaDeprecationWarning
 
     if entry_point_name in deprecated_entry_points:
@@ -70,7 +71,7 @@ def BaseFactory(group: str, name: str, load: bool = True) -> Union[EntryPoint, A
     :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
-    from .entry_point import load_entry_point, get_entry_point
+    from .entry_point import get_entry_point, load_entry_point
 
     if load is True:
         return load_entry_point(group, name)

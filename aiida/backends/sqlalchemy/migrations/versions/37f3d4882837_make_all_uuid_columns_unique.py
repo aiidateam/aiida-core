@@ -41,6 +41,7 @@ def verify_uuid_uniqueness(table):
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.
     """
     from sqlalchemy.sql import text
+
     from aiida.common.exceptions import IntegrityError
 
     query = text(

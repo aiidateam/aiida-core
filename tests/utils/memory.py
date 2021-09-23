@@ -9,6 +9,7 @@
 ###########################################################################
 """Utilities for testing memory leakage."""
 import asyncio
+
 from pympler import muppy
 
 

@@ -12,11 +12,11 @@ Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.common.extendeddicts import AttributeDict
+import aiida.schedulers
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, JobResource)
+from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
 # This maps LSF status codes to our own state list
 #
@@ -308,8 +308,8 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         :param job_tmpl: an JobTemplate instance with relevant parameters set.
         """
         # pylint: disable=too-many-statements,too-many-branches
-        import string
         import re
+        import string
 
         empty_line = ''
 

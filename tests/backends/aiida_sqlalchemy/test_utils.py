@@ -43,9 +43,10 @@ def database_exists(url):
     Performs backend-specific testing to quickly determine if a database
     exists on the server."""
 
-    from sqlalchemy.engine.url import make_url
     from copy import copy
+
     import sqlalchemy as sa
+    from sqlalchemy.engine.url import make_url
 
     url = copy(make_url(url))
     database = url.database
@@ -79,10 +80,11 @@ def create_database(url, encoding='utf8'):
     It currently supports only PostgreSQL and the psycopg2 driver.
     """
 
+    from copy import copy
+
+    import sqlalchemy as sa
     from sqlalchemy.engine.url import make_url
     from sqlalchemy_utils.functions.orm import quote
-    from copy import copy
-    import sqlalchemy as sa
 
     url = copy(make_url(url))
 

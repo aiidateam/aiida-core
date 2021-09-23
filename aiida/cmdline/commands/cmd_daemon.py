@@ -11,8 +11,8 @@
 
 import os
 import subprocess
-import time
 import sys
+import time
 
 import click
 from click_spinner import spinner
@@ -20,8 +20,12 @@ from click_spinner import spinner
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
-from aiida.cmdline.utils.daemon import get_daemon_status, \
-    print_client_response_status, delete_stale_pid_file, _START_CIRCUS_COMMAND
+from aiida.cmdline.utils.daemon import (
+    _START_CIRCUS_COMMAND,
+    delete_stale_pid_file,
+    get_daemon_status,
+    print_client_response_status,
+)
 from aiida.manage.configuration import get_config
 
 

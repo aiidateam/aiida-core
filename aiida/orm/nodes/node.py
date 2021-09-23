@@ -14,24 +14,23 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
-from aiida.common.hashing import make_hash, _HASH_EXTRA_KEY
+from aiida.common.hashing import _HASH_EXTRA_KEY, make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
+from aiida.orm import autogroup
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
-from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
-from ..entities import Entity, EntityExtrasMixin, EntityAttributesMixin
 from ..entities import Collection as EntityCollection
+from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .repository import NodeRepositoryMixin

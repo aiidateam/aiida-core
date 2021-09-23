@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Backend-agnostic utility functions"""
-from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
+from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.manage import configuration
 
 AIIDA_ATTRIBUTE_SEP = '.'
@@ -22,6 +22,7 @@ def create_sqlalchemy_engine(profile, **kwargs):
         more info.
     """
     from sqlalchemy import create_engine
+
     from aiida.common import json
 
     # The hostname may be `None`, which is a valid value in the case of peer authentication for example. In this case

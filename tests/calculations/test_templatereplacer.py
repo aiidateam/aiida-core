@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for the `TemplatereplacerCalculation` plugin."""
 import io
+
 import pytest
 
 from aiida import orm

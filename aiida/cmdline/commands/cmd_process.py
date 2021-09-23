@@ -10,7 +10,6 @@
 # pylint: disable=too-many-arguments
 """`verdi process` command."""
 import click
-
 from kiwipy import communications
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -53,7 +52,8 @@ def process_list(
     to show also the finished ones."""
     # pylint: disable=too-many-locals
     from tabulate import tabulate
-    from aiida.cmdline.utils.common import print_last_process_state_change, check_worker_load
+
+    from aiida.cmdline.utils.common import check_worker_load, print_last_process_state_change
     from aiida.engine.daemon.client import get_daemon_client
 
     relationships = {}
@@ -144,8 +144,8 @@ def process_call_root(processes):
 @decorators.with_dbenv()
 def process_report(processes, levelname, indent_size, max_depth):
     """Show the log report for one or multiple processes."""
-    from aiida.cmdline.utils.common import get_calcjob_report, get_workchain_report, get_process_function_report
-    from aiida.orm import CalcJobNode, WorkChainNode, CalcFunctionNode, WorkFunctionNode
+    from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
+    from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
 
     for process in processes:
         if isinstance(process, CalcJobNode):
@@ -280,6 +280,7 @@ def process_play(processes, all_entries, timeout, wait):
 def process_watch(processes):
     """Watch the state transitions for a process."""
     from time import sleep
+
     from kiwipy import BroadcastFilter
 
     def _print(communicator, body, sender, subject, correlation_id):  # pylint: disable=unused-argument
@@ -341,9 +342,10 @@ def process_actions(futures_map, infinitive, present, past, wait=False, timeout=
     :type timeout: float
     """
     # pylint: disable=too-many-branches
+    from concurrent import futures
+
     import kiwipy
     from plumpy.futures import unwrap_kiwi_future
-    from concurrent import futures
 
     from aiida.manage.external.rmq import CommunicationTimeout
 

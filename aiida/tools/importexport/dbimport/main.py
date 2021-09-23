@@ -66,8 +66,8 @@ def import_data(in_path, group=None, **kwargs):
     :raises `~aiida.tools.importexport.common.exceptions.ArchiveImportError`: if there are any internal errors when
         importing.
     """
-    from aiida.manage import configuration
     from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+    from aiida.manage import configuration
     from aiida.tools.importexport.common.exceptions import ArchiveImportError
 
     backend = configuration.PROFILE.database_backend

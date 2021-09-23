@@ -14,7 +14,7 @@ from collections.abc import Mapping
 import logging
 import traceback
 
-from kiwipy import communications, Future
+from kiwipy import Future, communications
 import pamqp.encode
 import plumpy
 
@@ -175,7 +175,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         """
         from aiida.common import exceptions
         from aiida.engine.exceptions import PastException
-        from aiida.orm import load_node, Data
+        from aiida.orm import Data, load_node
         from aiida.orm.utils import serialize
 
         try:

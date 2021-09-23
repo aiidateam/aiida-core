@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-import time
 import asyncio
 from concurrent.futures import Future
+import time
 
 from click.testing import CliRunner
 import kiwipy
@@ -21,8 +21,7 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm import CalcJobNode, WorkflowNode, WorkFunctionNode, WorkChainNode
-
+from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils import processes as test_processes
 
 
@@ -303,7 +302,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     that the warning message is displayed to the user when running `verdi process list`
     """
     from aiida.cmdline.utils import common
-    from aiida.engine import ProcessState, DaemonClient
+    from aiida.engine import DaemonClient, ProcessState
     from aiida.manage.configuration import get_config
 
     monkeypatch.setattr(common, 'get_num_workers', lambda: 1)
@@ -396,9 +395,9 @@ def test_pause_play_kill(cmd_try_all, run_cli_command):
     Test the pause/play/kill commands
     """
     # pylint: disable=no-member, too-many-locals
-    from aiida.cmdline.commands.cmd_process import process_pause, process_play, process_kill
-    from aiida.manage.manager import get_manager
+    from aiida.cmdline.commands.cmd_process import process_kill, process_pause, process_play
     from aiida.engine import ProcessState
+    from aiida.manage.manager import get_manager
     from aiida.orm import load_node
 
     runner = get_manager().create_runner(rmq_submit=True)

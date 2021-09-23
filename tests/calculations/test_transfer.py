@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for the `TransferCalculation` plugin."""
 import os
+
 import pytest
 
 from aiida import orm
@@ -143,8 +144,8 @@ def test_validate_instructions():
 
 def test_validate_transfer_inputs(aiida_localhost, tmp_path, temp_dir):
     """Test the `TransferCalculation` validators."""
-    from aiida.orm import Computer
     from aiida.calculations.transfer import check_node_type, validate_transfer_inputs
+    from aiida.orm import Computer
 
     fake_localhost = Computer(
         label='localhost-fake',

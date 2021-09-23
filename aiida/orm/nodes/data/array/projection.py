@@ -9,6 +9,7 @@
 ###########################################################################
 """Data plugin to represet arrays of projected wavefunction components."""
 import copy
+
 import numpy as np
 
 from aiida.common import exceptions

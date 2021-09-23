@@ -11,7 +11,7 @@
 
 import abc
 
-from .entities import BackendEntity, BackendCollection, BackendEntityAttributesMixin, BackendEntityExtrasMixin
+from .entities import BackendCollection, BackendEntity, BackendEntityAttributesMixin, BackendEntityExtrasMixin
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 

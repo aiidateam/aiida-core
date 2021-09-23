@@ -12,6 +12,7 @@ import json
 import re
 
 from upf_to_json import upf_to_json
+
 from .singlefile import SinglefileData
 
 __all__ = ('UpfData',)
@@ -46,7 +47,7 @@ def get_pseudos_from_structure(structure, family_name):
     :raise aiida.common.MultipleObjectsError: if more than one UPF for the same element is found in the group.
     :raise aiida.common.NotExistent: if no UPF for an element in the group is found in the group.
     """
-    from aiida.common.exceptions import NotExistent, MultipleObjectsError
+    from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
     pseudo_list = {}
     family_pseudos = {}
@@ -188,8 +189,8 @@ def parse_upf(fname, check_filename=True):
     # pylint: disable=too-many-branches
     import os
 
-    from aiida.common.exceptions import ParsingError
     from aiida.common import AIIDA_LOGGER
+    from aiida.common.exceptions import ParsingError
     from aiida.orm.nodes.data.structure import _valid_symbols
 
     parsed_data = {}
@@ -276,6 +277,7 @@ class UpfData(SinglefileData):
         :return: tuple of `UpfData` and boolean indicating whether it was created.
         """
         import os
+
         from aiida.common.files import md5_file
 
         if not os.path.isabs(filepath):
@@ -375,8 +377,7 @@ class UpfData(SinglefileData):
 
     def get_upf_family_names(self):
         """Get the list of all upf family names to which the pseudo belongs."""
-        from aiida.orm import UpfFamily
-        from aiida.orm import QueryBuilder
+        from aiida.orm import QueryBuilder, UpfFamily
 
         query = QueryBuilder()
         query.append(UpfFamily, tag='group', project='label')
@@ -470,9 +471,7 @@ class UpfData(SinglefileData):
             If defined, it should be either a `User` instance or the user email.
         :return: list of `Group` entities of type UPF.
         """
-        from aiida.orm import UpfFamily
-        from aiida.orm import QueryBuilder
-        from aiida.orm import User
+        from aiida.orm import QueryBuilder, UpfFamily, User
 
         builder = QueryBuilder()
         builder.append(UpfFamily, tag='group', project='*')

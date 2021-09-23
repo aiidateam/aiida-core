@@ -11,8 +11,7 @@
 
 import click
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
@@ -34,8 +33,9 @@ def cif():
 @decorators.with_dbenv()
 def cif_list(raw, formula_mode, past_days, groups, all_users):
     """List store CifData objects."""
-    from aiida.orm import CifData
     from tabulate import tabulate
+
+    from aiida.orm import CifData
 
     elements = None
     elements_only = False

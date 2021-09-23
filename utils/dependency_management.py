@@ -9,18 +9,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
-import os
-import sys
-import re
-import json
-import subprocess
-from pathlib import Path
 from collections import OrderedDict, defaultdict
-from pkg_resources import Requirement, parse_requirements
-from packaging.utils import canonicalize_name
-from packaging.version import parse
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
 
 import click
+from packaging.utils import canonicalize_name
+from packaging.version import parse
+from pkg_resources import Requirement, parse_requirements
 import requests
 import yaml
 

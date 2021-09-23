@@ -11,7 +11,7 @@
 """AiiDA manager for global settings"""
 import asyncio
 import functools
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -19,11 +19,11 @@ if TYPE_CHECKING:
 
     from aiida.backends.manager import BackendManager
     from aiida.engine.daemon.client import DaemonClient
+    from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
     from aiida.orm.implementation import Backend
-    from aiida.engine.persistence import AiiDAPersister
 
 __all__ = ('get_manager', 'reset_manager')
 
@@ -246,9 +246,10 @@ class Manager:
         :return: the communicator instance
 
         """
+        import kiwipy.rmq
+
         from aiida.common import ConfigurationError
         from aiida.manage.external import rmq
-        import kiwipy.rmq
 
         profile = self.get_profile()
         if profile is None:
@@ -376,6 +377,7 @@ class Manager:
 
         """
         from plumpy.persistence import LoadSaveContext
+
         from aiida.engine import persistence
         from aiida.manage.external import rmq
 

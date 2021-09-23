@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the ORM Backend class."""
-from aiida.backends.testbase import AiidaTestCase
 from aiida import orm
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 
 

@@ -15,9 +15,9 @@ import os
 import pytest
 
 from aiida import orm
-from aiida.tools.importexport import import_data, export
-
+from aiida.tools.importexport import export, import_data
 from tests.utils.configuration import with_temp_dir
+
 from .. import AiidaArchiveTestCase
 
 
@@ -28,8 +28,8 @@ class TestCalculations(AiidaArchiveTestCase):
     @with_temp_dir
     def test_calcfunction(self, temp_dir):
         """Test @calcfunction"""
-        from aiida.engine import calcfunction
         from aiida.common.exceptions import NotExistent
+        from aiida.engine import calcfunction
 
         @calcfunction
         def add(a, b):

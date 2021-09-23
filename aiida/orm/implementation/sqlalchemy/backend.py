@@ -10,19 +10,11 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 
-from aiida.backends.sqlalchemy.models import base
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
+from aiida.backends.sqlalchemy.models import base
 
+from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from ..sql.backends import SqlBackend
-from . import authinfos
-from . import comments
-from . import computers
-from . import convert
-from . import groups
-from . import logs
-from . import nodes
-from . import querybuilder
-from . import users
 
 __all__ = ('SqlaBackend',)
 

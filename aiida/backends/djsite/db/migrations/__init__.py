@@ -11,8 +11,12 @@
 """Module that contains the db migrations."""
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
-from aiida.backends.manager import SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
+from aiida.backends.manager import (
+    SCHEMA_GENERATION_DESCRIPTION,
+    SCHEMA_GENERATION_KEY,
+    SCHEMA_VERSION_DESCRIPTION,
+    SCHEMA_VERSION_KEY,
+)
 from aiida.common.exceptions import AiidaException, DbContentError
 from aiida.manage.configuration import get_config_option
 
@@ -64,6 +68,7 @@ def _upgrade_schema_generation(version, apps, _):
 
 def upgrade_schema_version(up_revision, down_revision):
     from functools import partial
+
     from django.db import migrations
 
     return migrations.RunPython(
@@ -247,7 +252,7 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None, origina
     :raise aiida.backends.djsite.db.migrations.DeserializationException: if an error occurs"""
 
     from aiida.common import json
-    from aiida.common.timezone import (is_naive, make_aware, get_current_timezone)
+    from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
     if mainitem['datatype'] in ['none', 'bool', 'int', 'float', 'txt']:
         if subitems:
@@ -653,6 +658,7 @@ class ModelModifierV0025:
                 transaction.savepoint_commit(sid)
         except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
+
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
@@ -716,7 +722,7 @@ class ModelModifierV0025:
         import datetime
 
         from aiida.common import json
-        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
+        from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
         other_attribs = other_attribs if other_attribs is not None else {}
 

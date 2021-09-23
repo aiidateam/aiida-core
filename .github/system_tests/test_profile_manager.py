@@ -9,15 +9,15 @@
 ###########################################################################
 """Unittests for TestManager"""
 import os
+import sys
 import unittest
 import warnings
-import sys
 
 from pgtest import pgtest
 import pytest
 
-from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 from aiida.common.utils import Capturing
+from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 
 
 class TemporaryProfileManagerTestCase(unittest.TestCase):

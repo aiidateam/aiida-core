@@ -32,7 +32,8 @@ import numpy as np
 from aiida.common import json
 from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.common.exceptions import ArchiveMigrationError
-from .utils import verify_metadata_version, update_metadata, remove_fields
+
+from .utils import remove_fields, update_metadata, verify_metadata_version
 
 
 def migration_base_data_plugin_type_string(data):
@@ -119,8 +120,8 @@ def migration_provenance_redesign(data):  # pylint: disable=too-many-locals,too-
     """Apply migration: 0020 - REV. 1.0.20
     Provenance redesign
     """
-    from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.manage.database.integrity import write_database_integrity_violation
+    from aiida.manage.database.integrity.plugins import infer_calculation_entry_point
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR
 
     fallback_cases = []

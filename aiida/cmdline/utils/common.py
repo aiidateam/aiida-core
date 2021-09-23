@@ -90,6 +90,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
+
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
@@ -141,8 +142,8 @@ def get_node_info(node, include_summary=True):
     :param include_summary: boolean, if True, also include a summary of node properties
     :return: a string summary of the node including a description of all its links and log messages
     """
-    from aiida.common.links import LinkType
     from aiida import orm
+    from aiida.common.links import LinkType
 
     if include_summary:
         result = get_node_summary(node)
@@ -205,6 +206,7 @@ def format_nested_links(links, headers):
     :return: nested formatted string
     """
     from collections.abc import Mapping
+
     import tabulate as tb
 
     tb.PRESERVE_WHITESPACE = True
@@ -313,6 +315,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     """
     # pylint: disable=too-many-locals
     import itertools
+
     from aiida import orm
     from aiida.common.log import LOG_LEVELS
 

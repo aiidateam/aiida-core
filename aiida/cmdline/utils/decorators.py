@@ -191,8 +191,9 @@ def deprecated_command(message):
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """Echo a deprecation warning before doing anything else."""
-        from aiida.cmdline.utils import templates
         from textwrap import wrap
+
+        from aiida.cmdline.utils import templates
 
         template = templates.env.get_template('deprecated.tpl')
         width = 80

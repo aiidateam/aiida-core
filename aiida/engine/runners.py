@@ -18,19 +18,18 @@ from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 import uuid
 
 import kiwipy
+from plumpy.communications import wrap_communicator
+from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
 from plumpy.process_comms import RemoteProcessThreadController
-from plumpy.events import set_event_loop_policy, reset_event_loop_policy
-from plumpy.communications import wrap_communicator
 
 from aiida.common import exceptions
-from aiida.orm import load_node, ProcessNode
+from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 
-from .processes import futures, Process, ProcessBuilder, ProcessState
+from . import transports, utils
+from .processes import Process, ProcessBuilder, ProcessState, futures
 from .processes.calcjobs import manager
-from . import transports
-from . import utils
 
 __all__ = ('Runner',)
 

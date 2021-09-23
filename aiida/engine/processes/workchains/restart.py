@@ -11,14 +11,14 @@
 import functools
 from inspect import getmembers
 from types import FunctionType
-from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from aiida import orm
 from aiida.common import AttributeDict
 
 from .context import ToContext, append_
-from .workchain import WorkChain
 from .utils import ProcessHandlerReport, process_handler
+from .workchain import WorkChain
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec

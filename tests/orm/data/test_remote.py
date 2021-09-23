@@ -14,7 +14,7 @@ import shutil
 import tempfile
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import RemoteData, User, AuthInfo
+from aiida.orm import AuthInfo, RemoteData, User
 
 
 class TestRemoteData(AiidaTestCase):

@@ -152,8 +152,8 @@ class TestSessionSqla(AiidaTestCase):
         to node.description will immediately be seen.
 
         Tests for bug #1372"""
-        from aiida.common import timezone
         import aiida.backends.sqlalchemy as sa
+        from aiida.common import timezone
 
         session = sessionmaker(bind=sa.ENGINE)
         custom_session = session()

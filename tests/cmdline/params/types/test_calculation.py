@@ -11,7 +11,7 @@
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import CalculationParamType
-from aiida.orm import CalculationNode, CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
+from aiida.orm import CalcFunctionNode, CalcJobNode, CalculationNode, WorkChainNode, WorkFunctionNode
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 

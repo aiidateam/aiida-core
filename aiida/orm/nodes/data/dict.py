@@ -76,6 +76,12 @@ class Dict(Data):
 
         return self is other
 
+     def __ne__(self, other):
+        if isinstance(other, dict):
+            return self.get_dict() != other.value
+ 
+        return self is not other
+ 
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.
 

@@ -26,7 +26,7 @@ repos:
     - id: isort
       files: >-
          (?x)^(
-            aiida/tools/groups/paths.py
+            aiida/common/.*py|
          )$
 
 -   repo: https://github.com/ikamensh/flynt/

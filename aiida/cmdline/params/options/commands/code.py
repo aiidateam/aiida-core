@@ -137,6 +137,15 @@ COMPUTER = options.COMPUTER.clone(
     help='Name of the computer, on which the code is installed.'
 )
 
+WITHMPI = OverridableOption(
+    '--withmpi/--withoutmpi',
+    is_eager=False,
+    default=True,
+    cls=InteractiveOption,
+    prompt='MPI support',
+    help='Specify whether the code has been compiled with MPI support.',
+)
+
 PREPEND_TEXT = OverridableOption(
     '--prepend-text',
     cls=TemplateInteractiveOption,

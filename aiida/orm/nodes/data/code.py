@@ -351,6 +351,19 @@ class Code(Data):
         """
         return self.get_attribute('input_plugin', None)
 
+    def set_withmpi(self, withmpi):
+        """
+        Set whether a code is compiled with mpi support or not, to be used
+        for the automatic generation of a new calculation.
+        """
+        self.set_attribute('withmpi', bool(withmpi))
+
+    def get_withmpi(self):
+        """
+        Return whether a code is compiled with mpi support (True, default) or not (False).
+        """
+        return self.get_attribute('withmpi', True)
+
     def set_append_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script after the

@@ -69,6 +69,7 @@ def set_code_builder(ctx, param, value):
 @options_code.LABEL()
 @options_code.DESCRIPTION()
 @options_code.INPUT_PLUGIN()
+@options_code.WITHMPI()
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
@@ -136,6 +137,7 @@ def code_test(code):
 @options_code.LABEL(contextual_default=partial(get_default, 'label'))
 @options_code.DESCRIPTION(contextual_default=partial(get_default, 'description'))
 @options_code.INPUT_PLUGIN(contextual_default=partial(get_default, 'input_plugin'))
+@options_code.WITHMPI(contextual_default=partial(get_default, 'withmpi'))
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
@@ -202,7 +204,7 @@ def show(code):
         table.append(['Type', 'remote'])
         table.append(['Remote machine', code.get_remote_computer().label])
         table.append(['Remote absolute path', code.get_remote_exec_path()])
-
+    table.append(['With MPI support', code.get_withmpi()])
     table.append(['Prepend text', code.get_prepend_text()])
     table.append(['Append text', code.get_append_text()])
 

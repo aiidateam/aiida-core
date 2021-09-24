@@ -491,12 +491,13 @@ def get_num_workers():
 
 
 def check_worker_load(active_slots):
-    """
-    Check if the percentage usage of the daemon worker slots exceeds a threshold.
-    If it does, print a warning.
+    """Log a message with information on the current daemon worker load.
 
-    The purpose of this check is to warn the user if they are close to running out of worker slots
-    which could lead to their processes becoming stuck indefinitely.
+    If there are daemon workers active, it logs the current load. If that exceeds 90%, a warning is included with the
+    suggestion to run ``verdi daemon incr``.
+
+    The purpose of this check is to warn the user if they are close to running out of worker slots which could lead to
+    their processes becoming stuck indefinitely.
 
     :param active_slots: the number of currently active worker slots
     """
@@ -511,16 +512,16 @@ def check_worker_load(active_slots):
     try:
         active_workers = get_num_workers()
     except CircusCallError:
-        echo.echo_critical('Could not contact Circus to get the number of active workers')
+        echo.echo_critical('Could not contact Circus to get the number of active workers.')
 
     if active_workers is not None:
         available_slots = active_workers * slots_per_worker
         percent_load = 1.0 if not available_slots else (active_slots / available_slots)
         if percent_load > warning_threshold:
             echo.echo('')  # New line
-            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
-            echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")
+            echo.echo_warning(f'{percent_load * 100:.0f}%% of the available daemon worker slots have been used!')
+            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
         else:
-            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots')
+            echo.echo_report(f'Using {percent_load * 100:.0f}%% of the available daemon worker slots.')
     else:
-        echo.echo_report('No active daemon workers')
+        echo.echo_report('No active daemon workers.')

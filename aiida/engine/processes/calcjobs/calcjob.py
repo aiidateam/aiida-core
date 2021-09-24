@@ -691,8 +691,8 @@ class CalcJob(Process):
 
             # To determine whether this code should be run with MPI enabled, we first check the value defined as
             # the code attribute. This value has the lowest priority and can be overridden further.
-            # Next we check the value that was set in the inputs of the entire process. If it is present, it overrides
-            # the variable. Finally, it can be overwritten by the value from the `CodeInfo`. This allows plugins
+            # Next, we check the value that was set in the inputs of the entire process. If it is present, it overrides
+            # the variable. Finally, the variable can be modified by the value from the `CodeInfo`. This allows plugins
             # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
             # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
             # multiple codes always have to be executed without MPI.

@@ -15,8 +15,7 @@ import io
 import os
 import pathlib
 import re
-
-from typing import Union, Optional, Dict, List, Iterable
+from typing import Dict, Iterable, List, Optional, Union
 
 from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener

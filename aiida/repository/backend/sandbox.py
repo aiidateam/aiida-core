@@ -3,9 +3,8 @@
 import contextlib
 import os
 import shutil
+from typing import BinaryIO, Iterable, Iterator, List, Optional
 import uuid
-
-from typing import Optional, Iterator, BinaryIO, List, Iterable
 
 from .abstract import AbstractRepositoryBackend
 

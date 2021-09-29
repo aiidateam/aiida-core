@@ -2,8 +2,7 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
 import shutil
-
-from typing import Optional, Iterator, BinaryIO, List, Iterable
+from typing import BinaryIO, Iterable, Iterator, List, Optional
 
 from disk_objectstore import Container
 

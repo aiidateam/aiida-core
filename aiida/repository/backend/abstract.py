@@ -10,8 +10,7 @@ import contextlib
 import hashlib
 import io
 import pathlib
-
-from typing import Union, Optional, Iterator, BinaryIO, List, Iterable
+from typing import BinaryIO, Iterable, Iterator, List, Optional, Union
 
 from aiida.common.hashing import chunked_file_hash
 

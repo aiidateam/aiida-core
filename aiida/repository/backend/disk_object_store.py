@@ -63,7 +63,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        return self.container.add_object(handle.read())
+        return self.container.add_streamed_object(handle)
 
     def has_objects(self, keys: List[str]) -> List[bool]:
         return self.container.has_objects(keys)

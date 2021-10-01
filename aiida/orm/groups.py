@@ -9,15 +9,14 @@
 ###########################################################################
 """AiiDA Group entites"""
 from abc import ABCMeta
+from typing import ClassVar, Optional
 import warnings
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.manage.manager import get_manager
 
-from . import convert
-from . import entities
-from . import users
+from . import convert, entities, users
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -51,11 +50,12 @@ class GroupMeta(ABCMeta):
 
         newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
 
-        entry_point_group, entry_point = get_entry_point_from_class(namespace['__module__'], name)
+        mod = namespace['__module__']
+        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
             newcls._type_string = None
-            message = f'no registered entry point for `{name}` so its instances will not be storable.'
+            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
             warnings.warn(message)  # pylint: disable=no-member
         else:
             newcls._type_string = entry_point.name  # pylint: disable=protected-access
@@ -65,6 +65,9 @@ class GroupMeta(ABCMeta):
 
 class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
+
+    # added by metaclass
+    _type_string = ClassVar[Optional[str]]
 
     class Collection(entities.Collection):
         """Collection of Groups"""
@@ -135,13 +138,13 @@ class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
         super().__init__(model)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return (
+            f'<{self.__class__.__name__}: {self.label!r} '
+            f'[{"type " + self.type_string if self.type_string else "user-defined"}], of user {self.user.email}>'
+        )
 
     def __str__(self):
-        if self.type_string:
-            return f'"{self.label}" [type {self.type_string}], of user {self.user.email}'
-
-        return f'"{self.label}" [user-defined], of user {self.user.email}'
+        return f'{self.__class__.__name__}<{self.label}>'
 
     def store(self):
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""

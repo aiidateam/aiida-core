@@ -33,7 +33,7 @@ def set_new_uuid(connection):
     from aiida.common.utils import get_new_uuid
 
     # Exit if there are no rows - e.g. initial setup
-    id_query = connection.execute('SELECT db_dblog.id FROM db_dblog')
+    id_query = connection.execute(sa.text('SELECT db_dblog.id FROM db_dblog'))
     if id_query.rowcount == 0:
         return
 
@@ -46,13 +46,13 @@ def set_new_uuid(connection):
         uuids.add(get_new_uuid())
 
     # Create the key/value pairs
-    key_values = ','.join("({}, '{}')".format(curr_id, curr_uuid) for curr_id, curr_uuid in zip(ids, uuids))
+    key_values = ','.join(f"({curr_id}, '{curr_uuid}')" for curr_id, curr_uuid in zip(ids, uuids))
 
     update_stm = f"""
         UPDATE db_dblog as t SET
             uuid = uuid(c.uuid)
         from (values {key_values}) as c(id, uuid) where c.id = t.id"""
-    connection.execute(update_stm)
+    connection.execute(sa.text(update_stm))
 
 
 def upgrade():

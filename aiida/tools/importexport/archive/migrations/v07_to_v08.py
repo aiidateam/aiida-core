@@ -26,7 +26,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 # pylint: disable=invalid-name
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import verify_metadata_version, update_metadata
+from .utils import update_metadata, verify_metadata_version
 
 
 def migration_default_link_label(data: dict):

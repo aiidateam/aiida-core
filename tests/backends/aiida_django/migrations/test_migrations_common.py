@@ -10,8 +10,8 @@
 # pylint: disable=import-error,no-name-in-module,invalid-name
 """ The basic functionality for the migration tests"""
 from django.apps import apps
-from django.db.migrations.executor import MigrationExecutor
 from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.utils import Capturing

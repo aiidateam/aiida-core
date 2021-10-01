@@ -23,7 +23,7 @@ Very briefly, first create a new private/public keypair (``aiida``/``aiida.pub``
 
    $ ssh-keygen -t rsa -b 4096 -f ~/.ssh/aiida
 
-Copy the public key to the remote machine, normally this will add the public key to the rmote machine's ``~/.ssh/authorized_keys``:
+Copy the public key to the remote machine, normally this will add the public key to the remote machine's ``~/.ssh/authorized_keys``:
 
 .. code-block:: console
 
@@ -39,7 +39,7 @@ Add the following lines to your ``~/.ssh/config`` file (or create it, if it does
 
 .. note::
 
-  If your cluster needs you to connect to another computer *PROXY* first, you can use the ``proxy_command`` feature of ssh, see :ref:`how-to:ssh:proxy`.
+  If your cluster needs you to connect to another computer *PROXY* first, you can use the ``ProxyJump`` or ``ProxyCommand`` feature of SSH, see :ref:`how-to:ssh:proxy`.
 
 You should now be able to access the remote computer (without the need to type a password) *via*:
 
@@ -185,47 +185,79 @@ Connecting to a remote computer *via* a proxy server
 ====================================================
 
 Some compute clusters require you to connect to an intermediate server *PROXY*, from which you can then connect to the cluster *TARGET* on which you run your calculations.
-This section explains how to use the ``proxy_command`` feature of ``ssh`` in order to make this jump automatically.
+This section explains how to use the ``ProxyJump`` or ``ProxyCommand`` feature of ``ssh`` in order to make this jump automatically.
 
 .. tip::
 
-  This method can also be used to automatically tunnel into virtual private networks, if you have an account on a proxy/jumphost server with access to the network.
-
+  This method can also be used to avoid having to start a virtual private network (VPN) client if you have an SSH account on a proxy/jumphost server which is accessible from your current network **and** from which you can access the *TARGET* machine directly.
 
 
 SSH configuration
 ^^^^^^^^^^^^^^^^^
 
-Edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing) and add the following lines::
+To decide whether to use the ``ProxyJump`` (recommended) or the ``ProxyCommand`` directive, please check the version of your SSH client first with ``ssh -V``.
+The ``ProxyJump`` directive has been added in version 7.3 of OpenSSH, hence if you are using an older version of SSH (on your machine or the *PROXY*) you have to use the older ``ProxyCommand``.
+
+To setup the proxy configuration with ``ProxyJump``, edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing)
+and add the following lines::
 
   Host SHORTNAME_TARGET
       Hostname FULLHOSTNAME_TARGET
       User USER_TARGET
       IdentityFile ~/.ssh/aiida
-      ProxyCommand ssh -W %h:%p USER_PROXY@FULLHOSTNAME_PROXY
+      ProxyJump USER_PROXY@FULLHOSTNAME_PROXY
 
-replacing the ``..._TARGET`` and ``..._PROXY`` variables with the host/user names of the respective servers.
+  Host FULLHOSTNAME_PROXY
+      IdentityFile ~/.ssh/aiida
 
-This should allow you to directly connect to the *TARGET* server using
+Replace the ``..._TARGET`` and ``..._PROXY`` variables with the host/user names of the respective servers.
+
+.. dropdown:: :fa:`plus-circle` Alternative setup with ``ProxyCommand``
+
+   To setup the proxy configuration with ``ProxyCommand`` **instead**, edit the ``~/.ssh/config`` file on the computer on which you installed AiiDA (or create it if missing)
+   and add the following lines::
+
+    Host SHORTNAME_TARGET
+        Hostname FULLHOSTNAME_TARGET
+        User USER_TARGET
+        IdentityFile ~/.ssh/aiida
+        ProxyCommand ssh -W %h:%p USER_PROXY@FULLHOSTNAME_PROXY
+
+    Host FULLHOSTNAME_PROXY
+        IdentityFile ~/.ssh/aiida
+
+  Replace the ``..._TARGET`` and ``..._PROXY`` variables with the host/user names of the respective servers.
+
+In both cases, this should allow you to directly connect to the *TARGET* server using
 
 .. code-block:: console
 
    $ ssh SHORTNAME_TARGET
 
-For a *passwordless* connection, you need to follow the instructions :ref:`how-to:ssh:passwordless` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server.
 
-.. dropdown:: Specifying an SSH key for the proxy
 
-   If you need to specify a separate SSH key for the proxy, provide it *after* the ``-W`` directive, e.g.::
+.. note ::
 
-        ssh -W fidis.epfl.ch:22 -i /home/ubuntu/.ssh/proxy user@proxy.epfl.ch
+   If the user directory is not shared between the *PROXY* and the *TARGET* (in most supercomputing facilities your user directory is shared between the machines), you need to follow the :ref:`instructions for a passwordless connection <how-to:ssh:passwordless>` *twice*: once for the connection from your computer to the *PROXY* server, and once for the connection from the *PROXY* server to the *TARGET* server (e.g. the public key must be listed in the ``~/.ssh/authorized_keys`` file of both the *PROXY* and the *TARGET* server).
+
 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse the required information from your ``~/.ssh/config`` file.
+When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse most of required information from your ``~/.ssh/config`` file. A notable exception to this is the ``proxy_jump`` directive, which **must** be specified manually.
 
-.. dropdown:: Specifying the proxy_command manually
+Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``:
+
+.. code-block:: console
+
+   $ verdi computer configure core.ssh SHORTNAME_TARGET
+   ...
+   Allow ssh agent [True]:
+   SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY
+
+.. note:: A chain of proxies can be specified as a comma-separated list. If you need to specify a different username, you can so with ``USER_PROXY@...``. If no username is specified for the proxy the same username as for the *TARGET* is used.
+
+.. important:: Specifying the ``proxy_command`` manually
 
     When specifying or updating the ``proxy_command`` option via ``verdi computer configure ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
     AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.

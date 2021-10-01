@@ -13,6 +13,7 @@ import os
 import pathlib
 
 from aiida.common import exceptions
+
 from .data import Data
 
 __all__ = ('SinglefileData',)

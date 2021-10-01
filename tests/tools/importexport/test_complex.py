@@ -14,9 +14,9 @@ import os
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.tools.importexport import import_data, export
-
+from aiida.tools.importexport import export, import_data
 from tests.utils.configuration import with_temp_dir
+
 from . import AiidaArchiveTestCase
 
 
@@ -107,10 +107,11 @@ class TestComplex(AiidaArchiveTestCase):
            |___|     |___|        |___|
 
         """
-        import numpy as np
-        import string
-        import random
         from datetime import datetime
+        import random
+        import string
+
+        import numpy as np
 
         from aiida.common.hashing import make_hash
 

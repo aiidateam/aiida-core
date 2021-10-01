@@ -10,20 +10,11 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 
-from aiida.backends.sqlalchemy.models import base
-from aiida.backends.sqlalchemy.queries import SqlaQueryManager
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
+from aiida.backends.sqlalchemy.models import base
 
+from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from ..sql.backends import SqlBackend
-from . import authinfos
-from . import comments
-from . import computers
-from . import convert
-from . import groups
-from . import logs
-from . import nodes
-from . import querybuilder
-from . import users
 
 __all__ = ('SqlaBackend',)
 
@@ -39,7 +30,6 @@ class SqlaBackend(SqlBackend[base.Base]):
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
-        self._query_manager = SqlaQueryManager(self)
         self._schema_manager = SqlaBackendManager()
         self._users = users.SqlaUserCollection(self)
 
@@ -70,10 +60,6 @@ class SqlaBackend(SqlBackend[base.Base]):
     def nodes(self):
         return self._nodes
 
-    @property
-    def query_manager(self):
-        return self._query_manager
-
     def query(self):
         return querybuilder.SqlaQueryBuilder(self)
 
@@ -89,18 +75,13 @@ class SqlaBackend(SqlBackend[base.Base]):
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        nested = session.transaction.nested
-        try:
-            session.begin_nested()
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            if not nested:
-                # Make sure to commit the outermost session
-                session.commit()
+        if session.in_transaction():
+            with session.begin_nested():
+                yield session
+        else:
+            with session.begin():
+                with session.begin_nested():
+                    yield session
 
     @staticmethod
     def get_session():
@@ -137,10 +118,11 @@ class SqlaBackend(SqlBackend[base.Base]):
         :param query: a string containing a raw SQL statement
         :return: the result of the query
         """
+        from sqlalchemy import text
         from sqlalchemy.exc import ResourceClosedError  # pylint: disable=import-error,no-name-in-module
 
         with self.transaction() as session:
-            queryset = session.execute(query)
+            queryset = session.execute(text(query))
 
             try:
                 results = queryset.fetchall()

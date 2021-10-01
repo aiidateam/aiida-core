@@ -13,16 +13,15 @@ import os
 import tarfile
 
 from aiida import orm
-
 from aiida.common import json
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
-from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport import export, import_data
 from aiida.tools.importexport.common.exceptions import DanglingLinkError
-
-from tests.utils.configuration import with_temp_dir
 from tests.tools.importexport.utils import get_all_node_links
+from tests.utils.configuration import with_temp_dir
+
 from .. import AiidaArchiveTestCase
 
 
@@ -675,7 +674,7 @@ class TestLinks(AiidaArchiveTestCase):
         work_uuid = work.uuid
         before_links = get_all_node_links()
 
-        data_provenance = os.path.join(temp_dir, 'data.aiida')
+        data_provenance = os.path.join(temp_dir, 'data.core.aiida')
         all_provenance = os.path.join(temp_dir, 'all.aiida')
 
         export([data], filename=data_provenance, return_backward=False)

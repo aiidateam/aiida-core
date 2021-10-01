@@ -9,14 +9,13 @@
 ###########################################################################
 """Unit tests for the BackendLog and BackendLogCollection classes."""
 
-import logging
 from datetime import datetime
+import logging
 from uuid import UUID
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions
-from aiida.common import timezone
+from aiida.common import exceptions, timezone
 from aiida.common.log import LOG_LEVEL_REPORT
 
 

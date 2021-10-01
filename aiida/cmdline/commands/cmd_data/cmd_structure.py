@@ -11,8 +11,7 @@
 
 import click
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
@@ -55,8 +54,9 @@ def structure():
 @decorators.with_dbenv()
 def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     """List StructureData objects."""
-    from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
     from tabulate import tabulate
+
+    from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
 
     elements_only = False
     lst = data_list(
@@ -72,7 +72,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         # it will be pushed in the query.
         if elements is not None:
             all_symbols = [_['symbols'][0] for _ in akinds]
-            if not any([s in elements for s in all_symbols]):
+            if not any(s in elements for s in all_symbols):
                 continue
 
             if elements_only:
@@ -119,7 +119,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
 
 
 @structure.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:structure',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.structure',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='ase')
 @decorators.with_dbenv()
 def structure_show(data, fmt):
@@ -133,7 +133,7 @@ def structure_show(data, fmt):
 
 
 @structure.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:structure',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.structure',)))
 @options.EXPORT_FORMAT(
     type=click.Choice(EXPORT_FORMATS),
     default='xyz',

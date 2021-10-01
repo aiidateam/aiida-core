@@ -25,7 +25,7 @@ class BandsDataTranslator(DataTranslator):
     from aiida.orm import BandsData
     _aiida_class = BandsData
     # The string name of the AiiDA class
-    _aiida_type = 'data.array.bands.BandsData'
+    _aiida_type = 'data.core.array.bands.BandsData'
 
     _result_type = __label__
 

@@ -14,14 +14,13 @@ from functools import partial
 import click
 import tabulate
 
-from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import ValidationError
-from aiida.plugins.entry_point import get_entry_points
-from aiida.transports import cli as transport_cli
+from aiida.common.exceptions import EntryPointError, ValidationError
+from aiida.plugins.entry_point import get_entry_point_names
 
 
 @verdi.group('computer')
@@ -117,9 +116,9 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: tuple of boolean indicating success or failure and an optional string message
     """
-    import tempfile
     import datetime
     import os
+    import tempfile
 
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
     workdir = authinfo.get_workdir().format(username=transport.whoami())
@@ -237,8 +236,8 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_info(f'  verdi computer configure {computer.transport_type} {computer.label}')
+    echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+    echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('duplicate')
@@ -290,8 +289,8 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     is_configured = computer.is_user_configured(orm.User.objects.get_default())
 
     if not is_configured:
-        echo.echo_info('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_info(f'  verdi computer configure {computer.transport_type} {computer.label}')
+        echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
+        echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('enable')
@@ -309,9 +308,11 @@ def computer_enable(computer, user):
 
     if not authinfo.enabled:
         authinfo.enabled = True
-        echo.echo_info(f"Computer '{computer.label}' enabled for user {user.get_full_name()}.")
+        echo.echo_report(f"Computer '{computer.label}' enabled for user {user.get_full_name()}.")
     else:
-        echo.echo_info(f"Computer '{computer.label}' was already enabled for user {user.first_name} {user.last_name}.")
+        echo.echo_report(
+            f"Computer '{computer.label}' was already enabled for user {user.first_name} {user.last_name}."
+        )
 
 
 @verdi_computer.command('disable')
@@ -331,9 +332,11 @@ def computer_disable(computer, user):
 
     if authinfo.enabled:
         authinfo.enabled = False
-        echo.echo_info(f"Computer '{computer.label}' disabled for user {user.get_full_name()}.")
+        echo.echo_report(f"Computer '{computer.label}' disabled for user {user.get_full_name()}.")
     else:
-        echo.echo_info(f"Computer '{computer.label}' was already disabled for user {user.first_name} {user.last_name}.")
+        echo.echo_report(
+            f"Computer '{computer.label}' was already disabled for user {user.first_name} {user.last_name}."
+        )
 
 
 @verdi_computer.command('list')
@@ -345,14 +348,14 @@ def computer_list(all_entries, raw):
     from aiida.orm import Computer, User
 
     if not raw:
-        echo.echo_info('List of configured computers')
-        echo.echo_info("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
+        echo.echo_report('List of configured computers')
+        echo.echo_report("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
 
     computers = Computer.objects.all()
     user = User.objects.get_default()
 
     if not computers:
-        echo.echo_info("No computers configured yet. Use 'verdi computer setup'")
+        echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
 
     sort = lambda computer: computer.label
     highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
@@ -426,6 +429,7 @@ def computer_test(user, print_traceback, computer):
     to perform other tests.
     """
     import traceback
+
     from aiida import orm
     from aiida.common.exceptions import NotExistent
 
@@ -433,7 +437,7 @@ def computer_test(user, print_traceback, computer):
     if user is None:
         user = orm.User.objects.get_default()
 
-    echo.echo_info(f'Testing computer<{computer.label}> for user<{user.email}>...')
+    echo.echo_report(f'Testing computer<{computer.label}> for user<{user.email}>...')
 
     try:
         authinfo = computer.get_authinfo(user)
@@ -464,7 +468,7 @@ def computer_test(user, print_traceback, computer):
         with transport:
             num_tests += 1
 
-            echo.echo_highlight('[OK]', color='success')
+            echo.echo('[OK]', fg='green')
 
             scheduler.set_transport(transport)
 
@@ -480,23 +484,23 @@ def computer_test(user, print_traceback, computer):
 
                     if print_traceback:
                         message += '\n  Full traceback:\n'
-                        message += '\n'.join(['  {}'.format(l) for l in traceback.format_exc().splitlines()])
+                        message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
                     else:
                         message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
                 if not success:
                     num_failures += 1
                     if message:
-                        echo.echo_highlight('[Failed]: ', color='error', nl=False)
+                        echo.echo('[Failed]: ', fg='red', nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo_highlight('[Failed]', color='error')
+                        echo.echo('[Failed]', fg='red')
                 else:
                     if message:
-                        echo.echo_highlight('[OK]: ', color='success', nl=False)
+                        echo.echo('[OK]: ', fg='green', nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo_highlight('[OK]', color='success')
+                        echo.echo('[OK]', fg='green')
 
         if num_failures:
             echo.echo_warning(f'{num_failures} out of {num_tests} tests failed')
@@ -504,12 +508,12 @@ def computer_test(user, print_traceback, computer):
             echo.echo_success(f'all {num_tests} tests succeeded')
 
     except Exception as exception:  # pylint:disable=broad-except
-        echo.echo_highlight('[FAILED]: ', color='error', nl=False)
+        echo.echo('[FAILED]: ', fg='red', nl=False)
         message = 'Error while trying to connect to the computer'
 
         if print_traceback:
             message += '\n  Full traceback:\n'
-            message += '\n'.join(['  {}'.format(l) for l in traceback.format_exc().splitlines()])
+            message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
         else:
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
@@ -526,8 +530,8 @@ def computer_delete(computer):
 
     Note that it is not possible to delete the computer if there are calculations that are using it.
     """
-    from aiida.common.exceptions import InvalidOperation
     from aiida import orm
+    from aiida.common.exceptions import InvalidOperation
 
     label = computer.label
 
@@ -539,7 +543,24 @@ def computer_delete(computer):
     echo.echo_success(f"Computer '{label}' deleted.")
 
 
-@verdi_computer.group('configure')
+class LazyConfigureGroup(VerdiCommandGroup):
+    """A click group that will lazily load the subcommands for each transport plugin."""
+
+    def list_commands(self, ctx):
+        subcommands = super().list_commands(ctx)
+        subcommands.extend(get_entry_point_names('aiida.transports'))
+        return subcommands
+
+    def get_command(self, ctx, name):  # pylint: disable=arguments-renamed
+        from aiida.transports import cli as transport_cli
+        try:
+            command = transport_cli.create_configure_cmd(name)
+        except EntryPointError:
+            command = super().get_command(ctx, name)
+        return command
+
+
+@verdi_computer.group('configure', cls=LazyConfigureGroup)
 def computer_configure():
     """Configure the Authinfo details for a computer (and user)."""
 
@@ -556,6 +577,7 @@ def computer_configure():
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
+    from aiida.transports import cli as transport_cli
 
     transport_cls = computer.get_transport_class()
     option_list = [
@@ -595,7 +617,3 @@ def computer_config_show(computer, user, defaults, as_option_string):
             else:
                 table.append((f'* {name}', '-'))
         echo.echo(tabulate.tabulate(table, tablefmt='plain'))
-
-
-for ep in get_entry_points('aiida.transports'):
-    computer_configure.add_command(transport_cli.create_configure_cmd(ep.name))

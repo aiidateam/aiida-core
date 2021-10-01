@@ -11,16 +11,16 @@
 """Remove legacy workflow."""
 
 import sys
-import click
 
+import click
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from django.core import serializers
 from django.db import migrations
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
-from aiida.common import json
 from aiida.cmdline.utils import echo
+from aiida.common import json
 from aiida.manage import configuration
 
 REVISION = '1.0.32'
@@ -68,7 +68,7 @@ def export_workflow_data(apps, _):
 
     # If delete_on_close is False, we are running for the user and add additional message of file location
     if not delete_on_close:
-        echo.echo_info(f'Exported workflow data to {filename}')
+        echo.echo_report(f'Exported workflow data to {filename}')
 
 
 class Migration(migrations.Migration):

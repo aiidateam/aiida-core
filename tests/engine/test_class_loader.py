@@ -9,7 +9,6 @@
 ###########################################################################
 """A module to test class loader factories."""
 import aiida
-
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import Process
 from aiida.plugins import CalculationFactory
@@ -28,7 +27,7 @@ class TestCalcJob(AiidaTestCase):
 
     def test_class_loader(self):
         """Test that CalculationFactory works."""
-        process = CalculationFactory('templatereplacer')
+        process = CalculationFactory('core.templatereplacer')
         loader = aiida.engine.persistence.get_object_loader()
 
         class_name = loader.identify_object(process)

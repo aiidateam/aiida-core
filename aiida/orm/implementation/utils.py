@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
+from collections.abc import Iterable, Mapping
+from decimal import Decimal
 import math
 import numbers
-
-from collections.abc import Iterable, Mapping
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
@@ -63,7 +63,7 @@ def clean_value(value):
         It mainly checks that we don't store NaN or Inf.
         """
         # This is a whitelist of all the things we understand currently
-        if val is None or isinstance(val, (bool, str)):
+        if val is None or isinstance(val, (bool, str, Decimal)):
             return val
 
         # This fixes #2773 - in python3, ``numpy.int64(-1)`` cannot be json-serialized

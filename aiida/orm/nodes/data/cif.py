@@ -11,9 +11,12 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
+
 from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
+
+__all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
 
 ase_loops = {
     '_atom_site': [
@@ -57,7 +60,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     :param ase: ASE "images"
     :return: array of CIF datablocks
     """
-    from numpy import arccos, pi, dot
+    from numpy import arccos, dot, pi
     from numpy.linalg import norm
 
     if not isinstance(ase, (list, tuple)):
@@ -369,6 +372,7 @@ class CifData(SinglefileData):
             from the DB.
         """
         import os
+
         from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):
@@ -706,7 +710,7 @@ class CifData(SinglefileData):
                 if tag in self.values[datablock].keys():
                     coords.extend(self.values[datablock][tag])
 
-        return not all([coord == '?' for coord in coords])
+        return not all(coord == '?' for coord in coords)
 
     @property
     def has_unknown_species(self):
@@ -731,7 +735,7 @@ class CifData(SinglefileData):
                 return None
 
             species = parse_formula(formula).keys()
-            if any([specie not in known_species for specie in species]):
+            if any(specie not in known_species for specie in species):
                 return True
 
         return False

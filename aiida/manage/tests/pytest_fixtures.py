@@ -20,10 +20,11 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
 import asyncio
 import shutil
 import tempfile
+
 import pytest
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+from aiida.manage.tests import get_test_backend_name, get_test_profile_name, test_manager
 
 
 @pytest.fixture(scope='function')
@@ -122,8 +123,8 @@ def aiida_localhost(temp_dir):
     :return: The computer node
     :rtype: :py:class:`aiida.orm.Computer`
     """
-    from aiida.orm import Computer
     from aiida.common.exceptions import NotExistent
+    from aiida.orm import Computer
 
     label = 'localhost-test'
 
@@ -135,8 +136,8 @@ def aiida_localhost(temp_dir):
             description='localhost computer set up by test manager',
             hostname=label,
             workdir=temp_dir,
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         computer.store()
         computer.set_minimum_job_poll_interval(0.)

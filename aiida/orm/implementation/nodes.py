@@ -11,7 +11,7 @@
 
 import abc
 
-from .entities import BackendEntity, BackendCollection, BackendEntityAttributesMixin, BackendEntityExtrasMixin
+from .entities import BackendCollection, BackendEntity, BackendEntityAttributesMixin, BackendEntityExtrasMixin
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
@@ -112,7 +112,8 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttribut
         """
         self._dbmodel.repository_metadata = value
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def computer(self):
         """Return the computer of this node.
 
@@ -128,7 +129,8 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttribut
         :param computer: a `BackendComputer`
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         """Return the user of this node.
 

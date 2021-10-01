@@ -21,11 +21,11 @@ Once you are clear about what you want and how you can get it, the :class:`~aiid
 There are two ways of using the :class:`~aiida.orm.querybuilder.QueryBuilder`:
 
 #.  In the *appender* method, you construct your query step by step using the ``QueryBuilder.append()`` method.
-#.  In the *queryhelp* approach, you construct a dictionary that defines your query and pass it to the :class:`~aiida.orm.querybuilder.QueryBuilder`.
+#.  In the *dictionary* approach, you construct a dictionary that defines your query and pass it to the :class:`~aiida.orm.querybuilder.QueryBuilder`.
 
-Both APIs provide the same functionality - the appender method may be more suitable for interactive use, e.g., in the ``verdi shell``, whereas the queryhelp method can be useful in scripting.
+Both APIs provide the same functionality - the appender method may be more suitable for interactive use, e.g., in the ``verdi shell``, whereas the dictionary method can be useful in scripting.
 In this section we will focus on the basics of the appender method.
-For more advanced queries or more details on the queryhelp, see the :ref:`topics section on advanced querying <topics:database:advancedquery>`.
+For more advanced queries or more details on the query dictionary, see the :ref:`topics section on advanced querying <topics:database:advancedquery>`.
 
 .. _how-to:query:select:
 

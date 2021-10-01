@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,fixme
+# pylint: disable=too-many-lines,fixme,consider-using-with
 """
 This module contains a set of unittest test classes that can be loaded from
 the plugin.
@@ -17,10 +17,10 @@ Plugin specific tests will be written in the plugin itself.
 import io
 import os
 import random
-import tempfile
-import signal
 import shutil
+import signal
 import string
+import tempfile
 import time
 import unittest
 import uuid
@@ -1435,7 +1435,7 @@ class TestDirectScheduler(unittest.TestCase):
         # tests that follow each other) to overwrite the same destination
         script_fname = f'sleep-submit-{uuid.uuid4().hex}-{custom_transport.__class__.__name__}.sh'
 
-        scheduler = SchedulerFactory('direct')()
+        scheduler = SchedulerFactory('core.direct')()
         scheduler.set_transport(custom_transport)
         with custom_transport as transport:
             try:

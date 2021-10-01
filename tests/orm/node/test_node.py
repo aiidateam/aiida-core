@@ -7,16 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-self-use,too-many-public-methods
+# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods
 """Tests for the Node ORM class."""
+from decimal import Decimal
 import logging
 import os
 import tempfile
 
 import pytest
 
-from aiida.common import exceptions, LinkType
-from aiida.orm import Computer, Data, Log, Node, User, CalculationNode, WorkflowNode, load_node
+from aiida.common import LinkType, exceptions
+from aiida.orm import CalculationNode, Computer, Data, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -31,8 +32,8 @@ class TestNode:
             label='localhost',
             description='localhost computer set up by test manager',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         self.computer.store()
 
@@ -416,6 +417,13 @@ class TestNodeAttributesExtras:
         self.node.set_extra_many(extras)
         assert set(self.node.extras_keys()) == set(extras)
 
+    def test_attribute_decimal(self):
+        """Test that the `Node.set_attribute` method supports Decimal."""
+        self.node.set_attribute('a_val', Decimal('3.141'))
+        self.node.store()
+        # ensure the returned node is a float
+        assert self.node.get_attribute('a_val') == 3.141
+
 
 @pytest.mark.usefixtures('clear_database_before_test_class')
 class TestNodeLinks:
@@ -794,8 +802,8 @@ class TestNodeDelete:
     @pytest.mark.usefixtures('clear_database_before_test')
     def test_delete_through_utility_method(self):
         """Test deletion works correctly through the `aiida.backends.utils.delete_nodes_and_connections`."""
-        from aiida.common import timezone
         from aiida.backends.utils import delete_nodes_and_connections
+        from aiida.common import timezone
 
         data_one = Data().store()
         data_two = Data().store()

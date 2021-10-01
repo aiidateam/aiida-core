@@ -5,7 +5,7 @@ import logging
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobState, JobResource
+from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -9,13 +9,12 @@
 ###########################################################################
 """`verdi code` command."""
 from functools import partial
-import logging
 
 import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -144,10 +143,10 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
 @verdi_code.command()
 @arguments.CODE()
-@options.VERBOSE()
 @with_dbenv()
-def show(code, verbose):
+def show(code):
     """Display detailed information for a code."""
+    from aiida.cmdline import is_verbose
     from aiida.repository import FileType
 
     table = []
@@ -174,28 +173,23 @@ def show(code, verbose):
     table.append(['Prepend text', code.get_prepend_text()])
     table.append(['Append text', code.get_append_text()])
 
-    if verbose:
+    if is_verbose():
         table.append(['Calculations', len(code.get_outgoing().all())])
 
-    click.echo(tabulate.tabulate(table))
+    echo.echo(tabulate.tabulate(table))
 
 
 @verdi_code.command()
 @arguments.CODES()
-@options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @with_dbenv()
-def delete(codes, verbose, dry_run, force):
+def delete(codes, dry_run, force):
     """Delete a code.
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.common.log import override_log_formatter_context
-    from aiida.tools import delete_nodes, DELETE_LOGGER
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
+    from aiida.tools import delete_nodes
 
     node_pks_to_delete = [code.pk for code in codes]
 
@@ -205,8 +199,7 @@ def delete(codes, verbose, dry_run, force):
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
         return not click.confirm('Shall I continue?', abort=True)
 
-    with override_log_formatter_context('%(message)s'):
-        _, was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
+    was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
 
     if was_deleted:
         echo.echo_success('Finished deletion.')
@@ -257,8 +250,8 @@ def relabel(code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the available codes."""
-    from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
+    from aiida.orm import Code  # pylint: disable=redefined-outer-name
 
     qb_user_filters = dict()
     if not all_users:

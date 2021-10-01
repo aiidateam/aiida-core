@@ -10,6 +10,7 @@
 """Tests for the `Data` base class."""
 
 import os
+
 import numpy
 import pytest
 

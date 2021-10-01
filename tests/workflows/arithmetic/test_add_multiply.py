@@ -17,7 +17,7 @@ from aiida.workflows.arithmetic.add_multiply import add_multiply
 
 def test_factory():
     """Test that the work function can be loaded through the factory."""
-    loaded = WorkflowFactory('arithmetic.add_multiply')
+    loaded = WorkflowFactory('core.arithmetic.add_multiply')
     assert loaded.is_process_function
 
 

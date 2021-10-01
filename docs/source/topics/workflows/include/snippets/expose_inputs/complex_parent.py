@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+from child import ChildWorkChain
+
 from aiida.engine import ToContext, WorkChain, run
 
-from child import ChildWorkChain
 
 class ComplexParentWorkChain(WorkChain):
     @classmethod

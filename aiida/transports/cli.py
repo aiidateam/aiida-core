@@ -8,15 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common cli utilities for transport plugins."""
-import inspect
 from functools import partial
+import inspect
 
 import click
 
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.interactive import InteractiveOption
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 from aiida.manage.manager import get_manager
 
@@ -40,9 +40,9 @@ def configure_computer_main(computer, user, **kwargs):
 
     user = user or orm.User.objects.get_default()
 
-    echo.echo_info(f'Configuring computer {computer.label} for user {user.email}.')
+    echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
     if user.email != get_manager().get_profile().default_user:
-        echo.echo_info('Configuring different user, defaults may not be appropriate.')
+        echo.echo_report('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)
     echo.echo_success(f'{computer.label} successfully configured for {user.email}')

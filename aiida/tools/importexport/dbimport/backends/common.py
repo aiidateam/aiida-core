@@ -12,8 +12,8 @@ import copy
 from typing import Dict, List, Optional
 
 from aiida.common import timezone
-from aiida.common.progress_reporter import get_progress_reporter, create_callback
-from aiida.orm import Group, ImportGroup, Node, QueryBuilder, ProcessNode
+from aiida.common.progress_reporter import create_callback, get_progress_reporter
+from aiida.orm import Group, ImportGroup, Node, ProcessNode, QueryBuilder
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract
 from aiida.tools.importexport.common import exceptions
 from aiida.tools.importexport.dbimport.utils import IMPORT_LOGGER
@@ -63,7 +63,12 @@ def _copy_node_repositories(*, repository_metadatas: List[Dict], reader: Archive
 
     with get_progress_reporter()(total=len(hashkeys), desc='Importing repository files') as progress:
         callback = create_callback(progress)
-        container_export.export(set(hashkeys), container_profile, compress=True, callback=callback)
+        container_export.export(
+            set(hashkeys),  # type: ignore[arg-type]
+            container_profile,
+            compress=True,
+            callback=callback
+        )
 
 
 def _make_import_group(*, group: Optional[ImportGroup], node_pks: List[int]) -> ImportGroup:

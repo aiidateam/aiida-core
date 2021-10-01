@@ -12,7 +12,7 @@
 import abc
 import logging
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendComputer', 'BackendComputerCollection')
 
@@ -35,7 +35,8 @@ class BackendComputer(BackendEntity):
 
     _logger = logging.getLogger(__name__)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def is_stored(self):
         """
         Is the computer stored?
@@ -44,15 +45,18 @@ class BackendComputer(BackendEntity):
         :rtype: bool
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def label(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def description(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def hostname(self):
         pass
 

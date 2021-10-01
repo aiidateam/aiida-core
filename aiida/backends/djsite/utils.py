@@ -18,6 +18,7 @@ def delete_nodes_and_connections_django(pks_to_delete):  # pylint: disable=inval
     # pylint: disable=no-member,import-error,no-name-in-module
     from django.db import transaction
     from django.db.models import Q
+
     from aiida.backends.djsite.db import models
     with transaction.atomic():
         # This is fixed in pylint-django>=2, but this supports only py3

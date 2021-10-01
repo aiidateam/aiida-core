@@ -12,7 +12,7 @@
 import numpy as np
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import KpointsData, load_node, StructureData
+from aiida.orm import KpointsData, StructureData, load_node
 
 
 class TestKpoints(AiidaTestCase):

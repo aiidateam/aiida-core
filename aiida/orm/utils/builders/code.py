@@ -11,8 +11,9 @@
 import enum
 import os
 
+import importlib_metadata
+
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.common.utils import ErrorAccumulator
 
 
@@ -63,7 +64,7 @@ class CodeBuilder:
 
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
-        code.set_input_plugin_name(self._get_and_count('input_plugin', used).name)
+        code.set_input_plugin_name(self._get_and_count('input_plugin', used))
         code.set_prepend_text(self._get_and_count('prepend_text', used))
         code.set_append_text(self._get_and_count('append_text', used))
 
@@ -154,8 +155,7 @@ class CodeBuilder:
 
         Checks compatibility with other code attributes.
         """
-        # store only string of input plugin
-        if key == 'input_plugin' and isinstance(value, PluginParamType):
+        if key == 'input_plugin' and isinstance(value, importlib_metadata.EntryPoint):
             value = value.name
 
         backup = self._code_spec.copy()

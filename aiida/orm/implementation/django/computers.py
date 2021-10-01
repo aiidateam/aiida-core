@@ -15,9 +15,8 @@ from django.db import IntegrityError, transaction
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
 
-from ..computers import BackendComputerCollection, BackendComputer
-from . import entities
-from . import utils
+from . import entities, utils
+from ..computers import BackendComputer, BackendComputerCollection
 
 
 class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendComputer):

@@ -11,6 +11,7 @@
 import os
 
 from aiida.orm import AuthInfo
+
 from ..data import Data
 
 __all__ = ('RemoteData',)

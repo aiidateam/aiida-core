@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.engine import calcfunction, ExitCode
+from aiida.engine import ExitCode, calcfunction
 from aiida.orm import Int
+
 
 @calcfunction
 def divide(x, y):

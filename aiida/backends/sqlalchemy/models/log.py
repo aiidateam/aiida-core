@@ -11,10 +11,10 @@
 """Module to manage logs for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, String, Text
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common import timezone
@@ -38,21 +38,10 @@ class DbLog(Base):
 
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
 
-    def __init__(self, time, loggername, levelname, dbnode_id, **kwargs):
-        """Setup initial value for the class attributes."""
-        if 'uuid' in kwargs:
-            self.uuid = kwargs['uuid']
-        if 'message' in kwargs:
-            self.message = kwargs['message']
-        if 'metadata' in kwargs:
-            self._metadata = kwargs['metadata'] or {}
-        else:
-            self._metadata = {}
-
-        self.time = time
-        self.loggername = loggername
-        self.levelname = levelname
-        self.dbnode_id = dbnode_id
-
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
+
+    def __init__(self, *args, **kwargs):
+        """Construct new instance making sure the `_metadata` column is initialized to empty dict if `None`."""
+        super().__init__(*args, **kwargs)
+        self._metadata = kwargs.pop('metadata', {}) or {}

@@ -14,7 +14,6 @@ Validates consistency of setup.json and
 
  * environment.yml
  * version in aiida/__init__.py
- * reentry dependency in pyproject.toml
 
 """
 import collections
@@ -141,6 +140,7 @@ def cli():
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
     from click import Context
+
     from aiida.cmdline.commands.cmd_verdi import verdi
 
     width = 90  # The maximum width of the formatted help strings in characters

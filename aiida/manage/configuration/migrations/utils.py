@@ -10,6 +10,7 @@
 """Defines utilities for verifying the version of the configuration file and migrating it when necessary."""
 
 from aiida.common import exceptions
+
 from .migrations import _MIGRATION_LOOKUP, CURRENT_CONFIG_VERSION
 
 __all__ = ('check_and_migrate_config', 'config_needs_migrating', 'get_current_version')

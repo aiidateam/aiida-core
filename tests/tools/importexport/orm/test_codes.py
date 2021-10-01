@@ -13,10 +13,10 @@ import os
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.tools.importexport import import_data, export
-
-from tests.utils.configuration import with_temp_dir
+from aiida.tools.importexport import export, import_data
 from tests.tools.importexport.utils import get_all_node_links
+from tests.utils.configuration import with_temp_dir
+
 from .. import AiidaArchiveTestCase
 
 

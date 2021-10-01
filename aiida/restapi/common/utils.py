@@ -16,9 +16,9 @@ from flask.json import JSONEncoder
 from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
+from aiida.common.utils import DatetimePrecision
 from aiida.manage.manager import get_manager
-from aiida.restapi.common.exceptions import RestValidationError, \
-    RestInputValidationError
+from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
 
 # Important to match querybuilder keys
 PK_DBSYNONYM = 'id'
@@ -60,30 +60,6 @@ class CustomJSONEncoder(JSONEncoder):
 
         # If not returned yet, do it in the default way
         return JSONEncoder.default(self, o)
-
-
-class DatetimePrecision:
-    """
-    A simple class which stores a datetime object with its precision. No
-    internal check is done (cause itis not possible).
-
-    precision:  1 (only full date)
-                2 (date plus hour)
-                3 (date + hour + minute)
-                4 (dare + hour + minute +second)
-    """
-
-    def __init__(self, dtobj, precision):
-        """ Constructor to check valid datetime object and precision """
-
-        if not isinstance(dtobj, datetime):
-            raise TypeError('dtobj argument has to be a datetime object')
-
-        if not isinstance(precision, int):
-            raise TypeError('precision argument has to be an integer')
-
-        self.dtobj = dtobj
-        self.precision = precision
 
 
 class Utils:
@@ -690,16 +666,15 @@ class Utils:
         :return: parsed values for the querykeys
         """
 
-        from pyparsing import Word, alphas, nums, alphanums, printables, \
-            ZeroOrMore, OneOrMore, Suppress, Optional, Literal, Group, \
-            QuotedString, Combine, \
-            StringStart as SS, StringEnd as SE, \
-            WordEnd as WE, \
-            ParseException
-
-        from pyparsing import pyparsing_common as ppc
         from dateutil import parser as dtparser
         from psycopg2.tz import FixedOffsetTimezone
+        from pyparsing import Combine, Group, Literal, OneOrMore, Optional, ParseException, QuotedString
+        from pyparsing import StringEnd as SE
+        from pyparsing import StringStart as SS
+        from pyparsing import Suppress, Word
+        from pyparsing import WordEnd as WE
+        from pyparsing import ZeroOrMore, alphanums, alphas, nums, printables
+        from pyparsing import pyparsing_common as ppc
 
         ## Define grammar
         # key types

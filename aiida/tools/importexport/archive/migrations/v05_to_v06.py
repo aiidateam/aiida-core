@@ -28,7 +28,7 @@ from typing import Union
 
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import verify_metadata_version, update_metadata
+from .utils import update_metadata, verify_metadata_version
 
 
 def migrate_deserialized_datetime(data, conversion):

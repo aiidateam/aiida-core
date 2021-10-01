@@ -88,7 +88,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         super().open(key)
 
         with self.container.get_object_stream(key) as handle:
-            yield handle
+            yield handle  # type: ignore[misc]
 
     def delete_object(self, key: str):
         """Delete the object from the repository.

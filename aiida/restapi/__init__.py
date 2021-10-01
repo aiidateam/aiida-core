@@ -12,3 +12,7 @@ In this module, AiiDA provides REST API to access different
 AiiDA nodes stored in database. The REST API is implemented
 using Flask RESTFul framework.
 """
+
+# AUTO-GENERATED
+
+__all__ = ()

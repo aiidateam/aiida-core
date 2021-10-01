@@ -62,7 +62,8 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     """
     _default_fields = tuple()
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def validate_resources(cls, **kwargs):
         """Validate the resources against the job resource class of this scheduler.
 
@@ -76,7 +77,8 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
         """Return a list of valid keys to be passed to the constructor."""
         return list(cls._default_fields)
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
@@ -458,6 +460,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         """
 
         import datetime
+
         import pytz
 
         if value is None:
@@ -482,6 +485,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         :return: The deserialised date
         """
         import datetime
+
         import pytz
 
         if value is None:

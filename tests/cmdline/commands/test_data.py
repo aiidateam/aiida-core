@@ -14,9 +14,9 @@ import asyncio
 import io
 import os
 import shutil
-import unittest
-import tempfile
 import subprocess as sp
+import tempfile
+import unittest
 
 from click.testing import CliRunner
 import numpy as np
@@ -24,12 +24,21 @@ import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_data import cmd_array, cmd_bands, cmd_cif, cmd_dict, cmd_remote
-from aiida.cmdline.commands.cmd_data import cmd_structure, cmd_trajectory, cmd_upf, cmd_singlefile
 from aiida.cmdline.commands import cmd_group
+from aiida.cmdline.commands.cmd_data import (
+    cmd_array,
+    cmd_bands,
+    cmd_cif,
+    cmd_dict,
+    cmd_remote,
+    cmd_singlefile,
+    cmd_structure,
+    cmd_trajectory,
+    cmd_upf,
+)
 from aiida.engine import calcfunction
+from aiida.orm import ArrayData, BandsData, CifData, Dict, Group, KpointsData, RemoteData, StructureData, TrajectoryData
 from aiida.orm.nodes.data.cif import has_pycifrw
-from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
 from tests.static import STATIC_DIR
 
 
@@ -201,7 +210,10 @@ class TestVerdiData(AiidaTestCase):
         verdi data structure
         verdi data trajectory
         verdi data upf"""
-        subcommands = ['array', 'bands', 'cif', 'dict', 'remote', 'structure', 'trajectory', 'upf']
+        subcommands = [
+            'core.array', 'core.bands', 'core.cif', 'core.dict', 'core.remote', 'core.structure', 'core.trajectory',
+            'core.upf'
+        ]
         for sub_cmd in subcommands:
             output = sp.check_output(['verdi', 'data', sub_cmd, '--help'])
             self.assertIn(b'Usage:', output, f'Sub-command verdi data {sub_cmd} --help failed.')
@@ -222,7 +234,7 @@ class TestVerdiDataArray(AiidaTestCase):
         self.cli_runner = CliRunner()
 
     def test_arrayshowhelp(self):
-        output = sp.check_output(['verdi', 'data', 'array', 'show', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.array', 'show', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data array show --help failed.')
 
     def test_arrayshow(self):
@@ -317,11 +329,11 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         self.cli_runner = CliRunner()
 
     def test_bandsshowhelp(self):
-        output = sp.check_output(['verdi', 'data', 'bands', 'show', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.bands', 'show', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data bands show --help failed.')
 
     def test_bandlistshelp(self):
-        output = sp.check_output(['verdi', 'data', 'bands', 'list', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.bands', 'list', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data bands show --help failed.')
 
     def test_bandslist(self):
@@ -335,7 +347,7 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         self.assertNotIn(b'<<NOT FOUND>>', res.stdout_bytes, 'The string "<<NOT FOUND>>" should not in the listing')
 
     def test_bandexporthelp(self):
-        output = sp.check_output(['verdi', 'data', 'bands', 'export', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.bands', 'export', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data bands export --help failed.')
 
     def test_bandsexport(self):
@@ -385,7 +397,7 @@ class TestVerdiDataDict(AiidaTestCase):
         self.cli_runner = CliRunner()
 
     def test_dictshowhelp(self):
-        output = sp.check_output(['verdi', 'data', 'dict', 'show', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.dict', 'show', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data dict show --help failed.')
 
     def test_dictshow(self):
@@ -421,7 +433,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         self.cli_runner = CliRunner()
 
     def test_remoteshowhelp(self):
-        output = sp.check_output(['verdi', 'data', 'remote', 'show', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.remote', 'show', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data remote show --help failed.')
 
     def test_remoteshow(self):
@@ -439,7 +451,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         )
 
     def test_remotelshelp(self):
-        output = sp.check_output(['verdi', 'data', 'remote', 'ls', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.remote', 'ls', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data remote ls --help failed.')
 
     def test_remotels(self):
@@ -452,7 +464,7 @@ class TestVerdiDataRemote(AiidaTestCase):
         )
 
     def test_remotecathelp(self):
-        output = sp.check_output(['verdi', 'data', 'remote', 'cat', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.remote', 'cat', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data remote cat --help failed.')
 
     def test_remotecat(self):
@@ -533,7 +545,11 @@ class TestVerdiDataTrajectory(AiidaTestCase, DummyVerdiDataListable, DummyVerdiD
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         orm.Computer(
-            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
         ).store()
         cls.ids = cls.create_trajectory_data()
 
@@ -614,7 +630,11 @@ class TestVerdiDataStructure(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDa
     def setUpClass(cls):  # pylint: disable=arguments-differ
         super().setUpClass()
         orm.Computer(
-            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
         ).store()
         cls.ids = cls.create_structure_data()
 
@@ -874,7 +894,11 @@ class TestVerdiDataCif(AiidaTestCase, DummyVerdiDataListable, DummyVerdiDataExpo
         """Setup class to test CifData."""
         super().setUpClass()
         orm.Computer(
-            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
         ).store()
 
         cls.ids = cls.create_cif_data()
@@ -988,7 +1012,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         )
 
     def test_uploadfamilyhelp(self):
-        output = sp.check_output(['verdi', 'data', 'upf', 'uploadfamily', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.upf', 'uploadfamily', '--help'])
         self.assertIn(b'Usage:', output, f'Sub-command verdi data upf uploadfamily --help failed: {output}')
 
     def test_uploadfamily(self):
@@ -998,7 +1022,7 @@ class TestVerdiDataUpf(AiidaTestCase):
             self.cli_runner.invoke(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
 
     def test_exportfamilyhelp(self):
-        output = sp.check_output(['verdi', 'data', 'upf', 'exportfamily', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.upf', 'exportfamily', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data upf exportfamily --help failed.')
 
     def test_exportfamily(self):
@@ -1025,7 +1049,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         self.assertIn(b'C_pbe_v1.2.uspp.F.UPF', output, 'Sub-command verdi data upf exportfamily --help failed.')
 
     def test_listfamilieshelp(self):
-        output = sp.check_output(['verdi', 'data', 'upf', 'listfamilies', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.upf', 'listfamilies', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data upf listfamilies --help failed.')
 
     def test_listfamilies(self):
@@ -1053,7 +1077,7 @@ class TestVerdiDataUpf(AiidaTestCase):
         )
 
     def test_importhelp(self):
-        output = sp.check_output(['verdi', 'data', 'upf', 'import', '--help'])
+        output = sp.check_output(['verdi', 'data', 'core.upf', 'import', '--help'])
         self.assertIn(b'Usage:', output, 'Sub-command verdi data upf listfamilies --help failed.')
 
     def test_import(self):

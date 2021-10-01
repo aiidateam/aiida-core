@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unittests for TestManager"""
+import sys
 import unittest
 import warnings
-import sys
 
 import pytest
 

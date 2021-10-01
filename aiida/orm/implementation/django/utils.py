@@ -10,7 +10,7 @@
 """Utilities for the implementation of the Django backend."""
 
 # pylint: disable=import-error,no-name-in-module
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models.fields import FieldDoesNotExist
 
 from aiida.common import exceptions

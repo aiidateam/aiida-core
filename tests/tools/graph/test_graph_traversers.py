@@ -9,9 +9,9 @@
 ###########################################################################
 """Tests for aiida.tools.graph.graph_traversers"""
 
-from aiida.common.links import LinkType
 from aiida.backends.testbase import AiidaTestCase
-from aiida.tools.graph.graph_traversers import traverse_graph, get_nodes_delete
+from aiida.common.links import LinkType
+from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 
 def create_minimal_graph():
@@ -346,8 +346,8 @@ class TestTraverseGraph(AiidaTestCase):
 
     def test_traversal_errors(self):
         """This will test the errors of the traversers."""
-        from aiida.common.exceptions import NotExistent
         from aiida import orm
+        from aiida.common.exceptions import NotExistent
 
         test_node = orm.Data().store()
         false_node = -1

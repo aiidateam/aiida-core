@@ -39,7 +39,8 @@ def test_exit_code_serializability():
 
     exit_code = ExitCode()
     serialized = yaml.dump(exit_code)
-    deserialized = yaml.full_load(serialized)
+    # The default loaders are "safe" and won't load an ``ExitCode``, however, the ``Loader`` loader will.
+    deserialized = yaml.load(serialized, Loader=yaml.Loader)
 
     assert deserialized == exit_code
     assert isinstance(deserialized, ExitCode)

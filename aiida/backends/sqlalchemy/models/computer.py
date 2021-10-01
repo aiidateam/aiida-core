@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Module to manage computers for the SQLA backend."""
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Text
 

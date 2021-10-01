@@ -18,11 +18,10 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
-from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_pk, run_get_node
+from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage.caching import enable_caching
 from aiida.plugins import CalculationFactory
-
 from tests.utils import processes as test_processes
 
 
@@ -186,7 +185,7 @@ class TestProcess(AiidaTestCase):
 
     def test_exit_codes(self):
         """Test the properties to return various (sub) sets of existing exit codes."""
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
         exit_codes = ArithmeticAddCalculation.exit_codes
         self.assertIsInstance(exit_codes, ExitCodesNamespace)
@@ -264,7 +263,7 @@ class TestProcess(AiidaTestCase):
             }
         }
 
-        entry_point = 'templatereplacer'
+        entry_point = 'core.templatereplacer'
         process_class = CalculationFactory(entry_point)
         process = process_class(inputs=inputs)
 

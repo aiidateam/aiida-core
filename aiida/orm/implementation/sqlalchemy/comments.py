@@ -11,17 +11,15 @@
 # pylint: disable=import-error,no-name-in-module
 
 from datetime import datetime
+
 from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import comment as models
-from aiida.common import exceptions
-from aiida.common import lang
+from aiida.common import exceptions, lang
 
+from . import entities, users, utils
 from ..comments import BackendComment, BackendCommentCollection
-from . import entities
-from . import users
-from . import utils
 
 
 class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
@@ -112,7 +110,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        return SqlaComment(self.backend, node, user, content, **kwargs)
+        return SqlaComment(self.backend, node, user, content, **kwargs)  # pylint: disable=abstract-class-instantiated
 
     def delete(self, comment_id):
         """

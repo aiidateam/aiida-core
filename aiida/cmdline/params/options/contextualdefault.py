@@ -15,6 +15,8 @@
 
 import click
 
+__all__ = ('ContextualDefaultOption',)
+
 
 class ContextualDefaultOption(click.Option):
     """A class that extends click.Option allowing to define a default callable

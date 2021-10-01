@@ -11,10 +11,11 @@
 This module contains tests for UpfData and UpfData related functions.
 """
 import errno
-import tempfile
-import shutil
 import json
 import os
+import shutil
+import tempfile
+
 import numpy
 from numpy import array, isclose
 

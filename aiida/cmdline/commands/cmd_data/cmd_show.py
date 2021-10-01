@@ -12,8 +12,8 @@ This allows to manage showfunctionality to all data types.
 """
 import click
 
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.params import options
+from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import MultipleObjectsError
 
@@ -53,8 +53,8 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
     """
     Plugin for jmol
     """
-    import tempfile
     import subprocess
+    import tempfile
 
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+b') as handle:
@@ -66,13 +66,10 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
             subprocess.check_output([exec_name, handle.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -81,8 +78,8 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
     """
     Plugin for xcrysden
     """
-    import tempfile
     import subprocess
+    import tempfile
 
     if len(object_list) > 1:
         raise MultipleObjectsError('Visualization of multiple trajectories is not implemented')
@@ -97,13 +94,10 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
             subprocess.check_output([exec_name, '--xsf', tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -146,8 +140,8 @@ def _show_vesta(exec_name, structure_list):
     at Kyoto University in the group of Prof. Isao Tanaka's lab
 
     """
-    import tempfile
     import subprocess
+    import tempfile
 
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+b', suffix='.cif') as tmpf:
@@ -159,13 +153,10 @@ def _show_vesta(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -174,8 +165,8 @@ def _show_vmd(exec_name, structure_list):
     """
     Plugin for vmd
     """
-    import tempfile
     import subprocess
+    import tempfile
 
     if len(structure_list) > 1:
         raise MultipleObjectsError('Visualization of multiple objects is not implemented')
@@ -190,13 +181,10 @@ def _show_vmd(exec_name, structure_list):
             subprocess.check_output([exec_name, tmpf.name])
         except subprocess.CalledProcessError:
             # The program died: just print a message
-            echo.echo_info(f'the call to {exec_name} ended with an error.')
+            echo.echo_error(f'the call to {exec_name} ended with an error.')
         except OSError as err:
             if err.errno == 2:
-                echo.echo_critical(
-                    "No executable '{}' found. Add to the path, "
-                    'or try with an absolute path.'.format(exec_name)
-                )
+                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
             else:
                 raise
 
@@ -205,9 +193,10 @@ def _show_xmgrace(exec_name, list_bands):
     """
     Plugin for showing the bands with the XMGrace plotting software.
     """
-    import sys
     import subprocess
+    import sys
     import tempfile
+
     from aiida.orm.nodes.data.array.bands import MAX_NUM_AGR_COLORS
 
     list_files = []
@@ -220,7 +209,7 @@ def _show_xmgrace(exec_name, list_bands):
             'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % MAX_NUM_AGR_COLORS)
         )
         # write a tempfile
-        tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')
+        tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')  # pylint: disable=consider-using-with
         tempf.write(text)
         tempf.flush()
         list_files.append(tempf)

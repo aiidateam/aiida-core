@@ -11,6 +11,7 @@
 
 from aiida.common import timezone
 from aiida.manage.manager import get_manager
+
 from . import entities
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')

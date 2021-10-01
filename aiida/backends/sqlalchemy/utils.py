@@ -17,8 +17,8 @@ def delete_nodes_and_connections_sqla(pks_to_delete):  # pylint: disable=invalid
     :param pks_to_delete: A list, tuple or set of pks that should be deleted.
     """
     # pylint: disable=no-value-for-parameter
-    from aiida.backends.sqlalchemy.models.node import DbNode, DbLink
     from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+    from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
     from aiida.manage.manager import get_manager
 
     backend = get_manager().get_backend()
@@ -48,6 +48,7 @@ def flag_modified(instance, key):
     derefence the model instance if the passed instance is actually wrapped in the ModelWrapper.
     """
     from sqlalchemy.orm.attributes import flag_modified as flag_modified_sqla
+
     from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
 
     if isinstance(instance, ModelWrapper):
@@ -60,6 +61,8 @@ def install_tc(session):
     """
     Install the transitive closure table with SqlAlchemy.
     """
+    from sqlalchemy import text
+
     links_table_name = 'db_dblink'
     links_table_input_field = 'input_id'
     links_table_output_field = 'output_id'
@@ -68,9 +71,11 @@ def install_tc(session):
     closure_table_child_field = 'child_id'
 
     session.execute(
-        get_pg_tc(
-            links_table_name, links_table_input_field, links_table_output_field, closure_table_name,
-            closure_table_parent_field, closure_table_child_field
+        text(
+            get_pg_tc(
+                links_table_name, links_table_input_field, links_table_output_field, closure_table_name,
+                closure_table_parent_field, closure_table_child_field
+            )
         )
     )
 

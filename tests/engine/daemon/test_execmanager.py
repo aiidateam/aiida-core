@@ -131,23 +131,28 @@ def test_retrieve_files_from_list(
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_code_factory):
+def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_code_factory, file_hierarchy, tmp_path):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 
     Specifically, verify that files in the ``local_copy_list`` do not end up in the repository of the node.
     """
     from aiida.common.datastructures import CalcInfo, CodeInfo
-    from aiida.orm import CalcJobNode, SinglefileData
+    from aiida.orm import CalcJobNode, FolderData, SinglefileData
+
+    create_file_hierarchy(file_hierarchy, tmp_path)
+    folder = FolderData()
+    folder.put_object_from_tree(tmp_path)
 
     inputs = {
-        'file_a': SinglefileData(io.BytesIO(b'content_a')).store(),
-        'file_b': SinglefileData(io.BytesIO(b'content_b')).store(),
+        'file_x': SinglefileData(io.BytesIO(b'content_x')).store(),
+        'file_y': SinglefileData(io.BytesIO(b'content_y')).store(),
+        'folder': folder.store(),
     }
 
     node = CalcJobNode(computer=aiida_localhost)
     node.store()
 
-    code = aiida_local_code_factory('arithmetic.add', '/bin/bash').store()
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash').store()
     code_info = CodeInfo()
     code_info.code_uuid = code.uuid
 
@@ -155,11 +160,22 @@ def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_co
     calc_info.uuid = node.uuid
     calc_info.codes_info = [code_info]
     calc_info.local_copy_list = [
-        (inputs['file_a'].uuid, inputs['file_a'].filename, './files/file_a'),
-        (inputs['file_a'].uuid, inputs['file_a'].filename, './files/file_b'),
+        (inputs['file_x'].uuid, inputs['file_x'].filename, './files/file_x'),
+        (inputs['file_y'].uuid, inputs['file_y'].filename, './files/file_y'),
+        (inputs['folder'].uuid, None, '.'),
     ]
 
     with LocalTransport() as transport:
         execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
+    # Check that none of the files were written to the repository of the calculation node, since they were communicated
+    # through the ``local_copy_list``.
     assert node.list_object_names() == []
+
+    # Now check that all contents were successfully written to the sandbox
+    written_hierarchy = serialize_file_hierarchy(pathlib.Path(fixture_sandbox.abspath))
+    expected_hierarchy = file_hierarchy
+    expected_hierarchy['files'] = {}
+    expected_hierarchy['files']['file_x'] = 'content_x'
+    expected_hierarchy['files']['file_y'] = 'content_y'
+    assert expected_hierarchy == written_hierarchy

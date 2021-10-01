@@ -9,19 +9,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
-import os
-import sys
-import re
-import json
-import subprocess
-from pathlib import Path
 from collections import OrderedDict, defaultdict
-from pkg_resources import Requirement, parse_requirements
-from packaging.utils import canonicalize_name
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
 
 import click
+from packaging.utils import canonicalize_name
+from packaging.version import parse
+from pkg_resources import Requirement, parse_requirements
+import requests
 import yaml
-import tomlkit as toml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -160,49 +161,10 @@ def generate_environment_yml():
 
 
 @cli.command()
-def update_pyproject_toml():
-    """Generate a 'pyproject.toml' file, or update an existing one.
-
-    This function generates/updates the ``build-system`` section,
-    to be consistent with the 'setup.json' file.
-    """
-
-    # read the current file
-    toml_path = ROOT / 'pyproject.toml'
-    if toml_path.exists():
-        pyproject = toml.loads(toml_path.read_text(encoding='utf8'))
-    else:
-        pyproject = {}
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
-
-    # update the build-system key
-    pyproject.setdefault('build-system', {})
-    pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0', 'wheel',
-                     str(reentry_requirement), 'fastentrypoints~=0.12'],
-        'build-backend':
-        'setuptools.build_meta',
-    })
-
-    # write the new file
-    toml_path.write_text(toml.dumps(pyproject), encoding='utf8')
-
-
-@cli.command()
 @click.pass_context
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(update_pyproject_toml)
 
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
@@ -276,34 +238,6 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     click.secho('Conda dependency specification is consistent.', fg='green')
 
 
-@cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
-def validate_pyproject_toml():
-    """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
-
-    pyproject_file = ROOT / 'pyproject.toml'
-    if not pyproject_file.exists():
-        raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
-
-    pyproject = toml.loads(pyproject_file.read_text(encoding='utf8'))
-    pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
-
-    if reentry_requirement not in pyproject_requires:
-        raise DependencySpecificationError(f"Missing requirement '{reentry_requirement}' in 'pyproject.toml'.")
-
-    click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
-
-
 @cli.command('validate-all', help='Validate consistency of all requirements.')
 @click.pass_context
 def validate_all(ctx):
@@ -312,14 +246,12 @@ def validate_all(ctx):
     Validates that the specification of requirements/dependencies is consistent across
     the following files:
 
-    - setup.py
     - setup.json
     - environment.yml
-    - pyproject.toml
+
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_pyproject_toml)
 
 
 @cli.command()
@@ -450,6 +382,47 @@ def pip_install_extras(extras):
 
     cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
     subprocess.run(cmd, check=True)
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
+@click.option('--pre-releases', is_flag=True, help='Include pre-releases.')
+def identify_outdated(extras, pre_releases):
+    """Identify outdated dependencies.
+
+    For example:
+
+        identify-outdated all
+
+    This command will analyze the current dependencies and compare them against
+    the latest versions released on PyPI. It then lists all dependencies where
+    the latest release is not compatible with the dependency specification.
+    This function can thus be used to identify dependencies where the
+    specification must be loosened.
+    """
+
+    # Read the requirements from 'setup.json'
+    setup_cfg = _load_setup_cfg()
+
+    if 'all' in extras:
+        extras = list(setup_cfg['extras_require'])
+
+    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    for key in extras:
+        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+
+    def get_package_data(name):
+        req = requests.get(f'https://pypi.python.org/pypi/{name}/json')
+        req.raise_for_status()
+        return req.json()
+
+    release_data = {requirement: get_package_data(requirement.name)['releases'] for requirement in to_install}
+    for requirement, releases in release_data.items():
+        releases_ = list(sorted(map(parse, releases)))
+        latest_release = [r for r in releases_ if pre_releases or not r.is_prerelease][-1]
+
+        if str(latest_release) not in requirement.specifier:
+            print(requirement, latest_release)
 
 
 if __name__ == '__main__':

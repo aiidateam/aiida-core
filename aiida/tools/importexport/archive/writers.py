@@ -13,10 +13,10 @@ from copy import deepcopy
 from pathlib import Path
 import shelve
 import shutil
-import time
 import tempfile
+import time
 from types import TracebackType
-from typing import Any, cast, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, cast
 import zipfile
 
 from archive_path import TarPath, ZipPath

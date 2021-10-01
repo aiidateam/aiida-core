@@ -1,0 +1,6 @@
+#!/bin/bash
+exec > _scheduler-stdout.txt
+exec 2> _scheduler-stderr.txt
+
+
+'/home/candersen/virtualenv/new_tests/aiida/aiida_core/.ci/add.sh' '-in' 'aiida.in'  > 'aiida.out' 

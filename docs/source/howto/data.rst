@@ -58,7 +58,7 @@ If you have such a file that you would like to store in AiiDA, you can use the `
 
 .. code-block:: python
 
-    SinglefileData = DataFactory('singlefile')
+    SinglefileData = DataFactory('core.singlefile')
     singlefile = SinglefileData(file='/absolute/path/to/file.txt')
     singlefile.store()
 
@@ -77,7 +77,6 @@ Ways to find and retrieve data that have previously been imported are described 
 
 If none of the currently available data types, as listed by ``verdi plugin list``, seem to fit your needs, you can also create your own custom type.
 For details refer to the next section :ref:`"How to add support for custom data types"<topics:data_types:plugin>`.
-
 
 
 .. _how-to:data:organize:

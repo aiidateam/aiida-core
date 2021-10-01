@@ -75,8 +75,8 @@ class TestAttributesExtrasToJSONMigrationSimple(TestMigrations):
         computer = db_computer_model(
             name='localhost_migration',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
             metadata={'workdir': '/tmp/aiida'}
         )
         computer.save()
@@ -131,8 +131,8 @@ class TestAttributesExtrasToJSONMigrationManyNodes(TestMigrations):
         computer = db_computer_model(
             name='localhost_migration',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
             metadata={'workdir': '/tmp/aiida'}
         )
         computer.save()
@@ -293,8 +293,7 @@ class DbMultipleValueAttributeBaseClass:
             raise ValidationError('The key cannot be an empty string.')
         if AIIDA_ATTRIBUTE_SEP in key:
             raise ValidationError(
-                "The separator symbol '{}' cannot be present "
-                'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP)
+                f"The separator symbol '{AIIDA_ATTRIBUTE_SEP}' cannot be present in the key of attributes, extras, etc."
             )
 
     @classmethod
@@ -364,6 +363,7 @@ class DbMultipleValueAttributeBaseClass:
                 transaction.savepoint_commit(sid)
         except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
+
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
@@ -407,7 +407,7 @@ class DbMultipleValueAttributeBaseClass:
         import datetime
 
         from aiida.common import json
-        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
+        from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:

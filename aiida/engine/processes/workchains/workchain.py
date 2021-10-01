@@ -11,11 +11,13 @@
 import collections.abc
 import functools
 import logging
-from typing import Any, List, Optional, Sequence, Union, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
 from plumpy.persistence import auto_persist
-from plumpy.process_states import Wait, Continue
-from plumpy.workchains import if_, while_, return_, _PropagateReturn, Stepper, WorkChainSpec as PlumpyWorkChainSpec
+from plumpy.process_states import Continue, Wait
+from plumpy.workchains import Stepper
+from plumpy.workchains import WorkChainSpec as PlumpyWorkChainSpec
+from plumpy.workchains import _PropagateReturn, if_, return_, while_
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
@@ -24,9 +26,9 @@ from aiida.orm import Node, ProcessNode, WorkChainNode
 from aiida.orm.utils import load_node
 
 from ..exit_code import ExitCode
-from ..process_spec import ProcessSpec
 from ..process import Process, ProcessState
-from .awaitable import Awaitable, AwaitableTarget, AwaitableAction, construct_awaitable
+from ..process_spec import ProcessSpec
+from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
 
 if TYPE_CHECKING:
     from aiida.engine.runners import Runner

@@ -10,7 +10,7 @@
 """Backend user"""
 import abc
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendUser', 'BackendUserCollection')
 
@@ -33,7 +33,8 @@ class BackendUser(BackendEntity):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def email(self):
         """
         Get the email address of the user
@@ -41,8 +42,8 @@ class BackendUser(BackendEntity):
         :return: the email address
         """
 
-    @abc.abstractmethod
     @email.setter
+    @abc.abstractmethod
     def email(self, val):
         """
         Set the email address of the user
@@ -50,7 +51,8 @@ class BackendUser(BackendEntity):
         :param val: the new email address
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def first_name(self):
         """
         Get the user's first name
@@ -59,8 +61,8 @@ class BackendUser(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractmethod
     @first_name.setter
+    @abc.abstractmethod
     def first_name(self, val):
         """
         Set the user's first name
@@ -68,7 +70,8 @@ class BackendUser(BackendEntity):
         :param val: the new first name
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def last_name(self):
         """
         Get the user's last name
@@ -77,8 +80,8 @@ class BackendUser(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractmethod
     @last_name.setter
+    @abc.abstractmethod
     def last_name(self, val):
         """
         Set the user's last name
@@ -87,7 +90,8 @@ class BackendUser(BackendEntity):
         :type val: str
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def institution(self):
         """
         Get the user's institution
@@ -96,8 +100,8 @@ class BackendUser(BackendEntity):
         :rtype: str
         """
 
-    @abc.abstractmethod
     @institution.setter
+    @abc.abstractmethod
     def institution(self, val):
         """
         Set the user's institution

@@ -7,10 +7,33 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Classes and functions to load and interact with plugin classes accessible through defined entry points."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
 
 from .entry_point import *
 from .factories import *
+from .utils import *
 
-__all__ = (entry_point.__all__ + factories.__all__)
+__all__ = (
+    'BaseFactory',
+    'CalcJobImporterFactory',
+    'CalculationFactory',
+    'DataFactory',
+    'DbImporterFactory',
+    'GroupFactory',
+    'OrbitalFactory',
+    'ParserFactory',
+    'PluginVersionProvider',
+    'SchedulerFactory',
+    'TransportFactory',
+    'WorkflowFactory',
+    'load_entry_point',
+    'load_entry_point_from_string',
+    'parse_entry_point',
+)
+
+# yapf: enable

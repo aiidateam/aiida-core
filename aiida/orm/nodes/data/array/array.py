@@ -10,8 +10,9 @@
 """
 AiiDA ORM data class storing (numpy) arrays
 """
-
 from ..data import Data
+
+__all__ = ('ArrayData',)
 
 
 class ArrayData(Data):
@@ -148,6 +149,7 @@ class ArrayData(Data):
         """
         import re
         import tempfile
+
         import numpy
 
         if not isinstance(array, numpy.ndarray):

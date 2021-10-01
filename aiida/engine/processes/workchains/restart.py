@@ -11,14 +11,14 @@
 import functools
 from inspect import getmembers
 from types import FunctionType
-from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from aiida import orm
 from aiida.common import AttributeDict
 
 from .context import ToContext, append_
-from .workchain import WorkChain
 from .utils import ProcessHandlerReport, process_handler
+from .workchain import WorkChain
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
@@ -303,11 +303,13 @@ class BaseRestartWorkChain(WorkChain):
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
 
+        exposed_outputs = self.exposed_outputs(node, self.process_class)
+
         for name, port in self.spec().outputs.items():
 
             try:
-                output = node.get_outgoing(link_label_filter=name).one().node
-            except ValueError:
+                output = exposed_outputs[name]
+            except KeyError:
                 if port.required:
                     self.report(f"required output '{name}' was not an output of {self.ctx.process_name}<{node.pk}>")
             else:

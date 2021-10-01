@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-lines,invalid-name,protected-access
 # pylint: disable=missing-docstring,too-many-locals,too-many-statements
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,no-member
 import copy
 import io
 import tempfile
@@ -20,7 +20,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.tools import delete_nodes, delete_group_nodes
+from aiida.tools import delete_group_nodes, delete_nodes
 
 
 class TestNodeIsStorable(AiidaTestCase):
@@ -183,7 +183,7 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
 
         extra_name = f'{self.__class__.__name__}/test_with_subclasses'
 
-        Dict = DataFactory('dict')
+        Dict = DataFactory('core.dict')
 
         a1 = orm.CalcJobNode(computer=self.computer)
         a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -551,8 +551,8 @@ class TestNodeBasic(AiidaTestCase):
         Similar as test_files, but I manipulate a tree of folders
         """
         import os
-        import shutil
         import random
+        import shutil
         import string
 
         a = orm.Data()
@@ -972,8 +972,9 @@ class TestNodeBasic(AiidaTestCase):
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from datetime import timedelta
-        from aiida.common import timezone
         from time import sleep
+
+        from aiida.common import timezone
 
         user = orm.User.objects.get_default()
 
@@ -1009,7 +1010,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks that the method Code.get_from_string works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
         code1 = orm.Code()
@@ -1056,7 +1057,7 @@ class TestNodeBasic(AiidaTestCase):
         """
         Checks that the method Code.get(pk) works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
         code1 = orm.Code()
@@ -1387,7 +1388,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
     def test_valid_links(self):
         from aiida.plugins import DataFactory
 
-        SinglefileData = DataFactory('singlefile')
+        SinglefileData = DataFactory('core.singlefile')
 
         # I create some objects
         d1 = orm.Data().store()
@@ -1395,7 +1396,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
             d2 = SinglefileData(file=handle).store()
 
         unsavedcomputer = orm.Computer(
-            label='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local'
+            label='localhost2', hostname='localhost', scheduler_type='core.direct', transport_type='core.local'
         )
 
         with self.assertRaises(ValueError):

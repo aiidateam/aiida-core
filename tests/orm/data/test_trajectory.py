@@ -34,7 +34,7 @@ class TestTrajectory(AiidaTestCase):
             positions_unit = tjd.get_attribute('units|positions')
         except AttributeError:
             positions_unit = 'A'
-        except:
+        except KeyError:
             times_unit = 'FAILED_tryexc'
         self.assertEqual(positions_unit, 'A')
 
@@ -42,7 +42,7 @@ class TestTrajectory(AiidaTestCase):
             times_unit = tjd.get_attribute('units|times')
         except AttributeError:
             times_unit = 'ps'
-        except:
+        except KeyError:
             times_unit = 'FAILED_tryexc'
         self.assertEqual(times_unit, 'ps')
 
@@ -53,7 +53,7 @@ class TestTrajectory(AiidaTestCase):
                 positions *= bohr_to_ang
         except AttributeError:
             pass
-        except:
+        except KeyError:
             positions = 'FAILED_tryexc'
         self.assertEqual(positions, 1)
 

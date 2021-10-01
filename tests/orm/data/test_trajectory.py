@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the `TrajectoryData` class."""
 
 import numpy as np
@@ -17,7 +18,7 @@ class TestTrajectory(AiidaTestCase):
         n_steps = 30
 
         cls.symbols = [chr(_) for _ in range(ord('A'), ord('A') + n_atoms)]
-        cls.positions = np.array(np.arange(n_steps*n_atoms*3).reshape(n_steps,n_atoms,3), dtype=float)
+        cls.positions = np.array(np.arange(n_steps * n_atoms * 3).reshape(n_steps, n_atoms, 3), dtype=float)
 
     def test_get_attribute_tryexcept_default(self):
         """
@@ -72,4 +73,3 @@ class TestTrajectory(AiidaTestCase):
         tjd2 = load_node(tjd.pk)
         self.assertEqual(tjd2.get_attribute('units|positions'), 'some_random_pos_unit')
         self.assertEqual(tjd2.get_attribute('units|times'), 'some_random_time_unit')
-

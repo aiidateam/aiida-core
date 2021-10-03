@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
+# pylint: disable=protected-access,no-member
 import re
 
 from IPython.lib.pretty import pretty
@@ -59,13 +60,44 @@ def test_access_methods():
     assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
 
+def test_update_inputs():
+    """Test the ``ProcessBuilder._update()`` method."""
+    builder = ProcessBuilder(ArithmeticAddCalculation)
+    builder._update({'x': orm.Int(1), 'y': orm.Int(2)})
+    assert builder._inputs()['x'].value == 1
+    assert builder._inputs()['y'].value == 2
+    assert 'metadata' in builder._inputs()
+    assert 'metadata' not in builder._inputs(prune=True)
+
+    builder._update(**{'x': orm.Int(3), 'y': orm.Int(4)})
+    assert builder._inputs()['x'].value == 3
+    assert builder._inputs()['y'].value == 4
+
+    builder._update({'metadata': {'options': {'resources': {'num_machines': 1}}}})
+    assert builder.metadata.options.resources['num_machines'] == 1
+    builder._update({'metadata': {'options': {'resources': {'num_cores_per_machine': 2}}}})
+    assert builder.metadata.options.resources['num_cores_per_machine'] == 2
+    assert 'num_machines' not in builder.metadata.options.resources
+
+
+def test_merge():
+    """Test the ``ProcessBuilder`` merge methods."""
+    builder = ProcessBuilder(ArithmeticAddCalculation)
+
+    builder._update({'metadata': {'options': {'resources': {'num_machines': 1}}}})
+    assert builder.metadata.options.resources['num_machines'] == 1
+    builder._merge({'metadata': {'options': {'resources': {'num_cores_per_machine': 2}}}})
+    assert builder.metadata.options.resources['num_machines'] == 1
+    assert builder.metadata.options.resources['num_cores_per_machine'] == 2
+
+
 def test_pretty_repr():
     """Test the pretty representation of the ``ProcessBuilder`` class."""
     builder = ProcessBuilder(ArithmeticAddCalculation)
 
     builder.x = orm.Int(3)
     builder.y = orm.Int(1)
-    builder.metadata.options.resources = {'num_machines': 1}  # pylint: disable=no-member
+    builder.metadata.options.resources = {'num_machines': 1}
 
     pretty_repr = \
     """Process class: ArithmeticAddCalculation

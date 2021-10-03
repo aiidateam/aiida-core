@@ -518,17 +518,32 @@ The target relative path is also compatible with glob patterns in the source rel
 
 Retrieve temporary list
 ~~~~~~~~~~~~~~~~~~~~~~~
+
 Recall that, as explained in the :ref:`'prepare' section<topics:calculations:usage:calcjobs:prepare>`, all the files that are retrieved by the engine following the 'retrieve list', are stored in the ``retrieved`` folder data node.
 This means that any file you retrieve for a completed calculation job will be stored in your repository.
 If you are retrieving big files, this can cause your repository to grow significantly.
 Often, however, you might only need a part of the information contained in these retrieved files.
 To solve this common issue, there is the concept of the 'retrieve temporary list'.
-The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`.
+The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`, but it is added to the ``calc_info`` under the ``retrieve_temporary_list`` attribute:
+
+.. code-block:: python
+
+    calcinfo = CalcInfo()
+    calcinfo.retrieve_temporary_list = ['relative/path/to/file.txt']
+
 The only difference is that, unlike the files of the retrieve list which will be permanently stored in the retrieved :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, the files of the retrieve temporary list will be stored in a temporary sandbox folder.
-This folder is then passed to the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job.
+This folder is then passed under the ``retrieved_temporary_folder`` keyword argument to the ``parse`` method of the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job:
+
+.. code-block:: python
+
+    def parse(self, **kwargs):
+        """Parse the retrieved files of the calculation job."""
+
+        retrieved_temporary_folder = kwargs['retrieved_temporary_folder']
+
 The parser implementation can then parse these files and store the relevant information as output nodes.
-After the parser terminates, the engine will take care to automatically clean up the sandbox folder with the temporarily retrieved files.
-The contract of the 'retrieve temporary list' is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
+After the parser terminates, the engine will automatically clean up the sandbox folder with the temporarily retrieved files.
+The concept of the ``retrieve_temporary_list`` is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
 
 .. _topics:calculations:usage:calcjobs:stashing:
 

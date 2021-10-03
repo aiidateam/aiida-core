@@ -8,6 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
+import re
+
+from IPython.lib.pretty import pretty
 import pytest
 
 from aiida import orm
@@ -54,3 +57,29 @@ def test_access_methods():
 
     builder.x = node_numb
     assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
+
+
+def test_pretty_repr():
+    """Test the pretty representation of the ``ProcessBuilder`` class."""
+    builder = ProcessBuilder(ArithmeticAddCalculation)
+
+    builder.x = orm.Int(3)
+    builder.y = orm.Int(1)
+    builder.metadata.options.resources = {'num_machines': 1}  # pylint: disable=no-member
+
+    pretty_repr = \
+    """Process class: ArithmeticAddCalculation
+    Inputs:
+    "metadata": {
+        "options": {
+            "resources": {
+                "num_machines": 1
+            },
+            "stash": {}
+        },
+    },
+    "x": 3
+    "y": 1"""
+    pretty_repr = re.sub(r'(?m)^\s{4}', '', pretty_repr)
+
+    assert pretty(builder) == pretty_repr

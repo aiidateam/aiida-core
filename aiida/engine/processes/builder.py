@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
-import collections
 from collections.abc import Mapping, MutableMapping
+import json
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
@@ -150,7 +150,7 @@ class ProcessBuilderNamespace(MutableMapping):
 
     def _recursive_merge(self, dictionary, key, value):
         """Recursively merge the contents of ``dictionary`` setting its ``key`` to ``value``."""
-        if isinstance(value, collections.abc.Mapping):
+        if isinstance(value, Mapping):
             for inner_key, inner_value in value.items():
                 self._recursive_merge(dictionary[key], inner_key, inner_value)
         else:

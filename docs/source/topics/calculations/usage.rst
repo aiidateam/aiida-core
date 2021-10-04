@@ -542,6 +542,12 @@ This folder is then passed under the ``retrieved_temporary_folder`` keyword argu
         retrieved_temporary_folder = kwargs['retrieved_temporary_folder']
 
 The parser implementation can then parse these files and store the relevant information as output nodes.
+
+.. important::
+
+    The type of ``kwargs['retrieved_temporary_folder']`` is a simple ``str`` that represents the `absolute` filepath to the temporary folder.
+    You can access its contents with the ``os`` standard library module or convert it into a ``pathlib.Path``.
+
 After the parser terminates, the engine will automatically clean up the sandbox folder with the temporarily retrieved files.
 The concept of the ``retrieve_temporary_list`` is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
 

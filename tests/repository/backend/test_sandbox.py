@@ -152,3 +152,25 @@ def test_get_object_hash(repository, generate_directory):
         key = repository.put_object_from_filelike(handle)
 
     assert repository.get_object_hash(key) == 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73'
+
+
+def test_list_objects(repository, generate_directory):
+    """Test the ``Repository.delete_object`` method."""
+    repository.initialise()
+    keylist = list()
+
+    directory = generate_directory({'file_a': b'content a'})
+    with open(directory / 'file_a', 'rb') as handle:
+        keylist.append(repository.put_object_from_filelike(handle))
+
+    directory = generate_directory({'file_b': b'content b'})
+    with open(directory / 'file_b', 'rb') as handle:
+        keylist.append(repository.put_object_from_filelike(handle))
+
+    assert sorted(list(repository.list_objects())) == sorted(keylist)
+
+
+def test_key_format(repository):
+    """Test the ``key_format`` property."""
+    repository.initialise()
+    assert repository.key_format == 'uuid4'

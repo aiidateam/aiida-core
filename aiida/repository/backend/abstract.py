@@ -33,6 +33,16 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository."""
 
+    @property
+    @abc.abstractmethod
+    def key_format(self) -> Optional[str]:
+        """Return the format for the keys of the repository.
+
+        Important for when migrating between backends (e.g. archive -> main), as if they are not equal then it is
+        necessary to re-compute all the `Node.repository_metadata` before importing (otherwise they will not match
+        with the repository).
+        """
+
     @abc.abstractmethod
     def initialise(self, **kwargs) -> None:
         """Initialise the repository if it hasn't already been initialised.
@@ -104,7 +114,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def list_objects(self) -> Iterable[str]:
-        """Return iterable that yeilds all available objects by key.
+        """Return iterable that yields all available objects by key.
 
         :return: An iterable for all the available object keys.
         """

@@ -33,6 +33,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return None
         return self.container.container_id
 
+    @property
+    def key_format(self) -> Optional[str]:
+        return self.container.hash_type
+
     def initialise(self, **kwargs) -> None:
         """Initialise the repository if it hasn't already been initialised.
 

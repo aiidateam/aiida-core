@@ -93,6 +93,10 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         """
         return None
 
+    @property
+    def key_format(self) -> Optional[str]:
+        return None
+
     def initialise(self, **kwargs) -> None:
         raise NotImplementedError()
 

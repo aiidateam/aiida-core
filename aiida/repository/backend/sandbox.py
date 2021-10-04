@@ -36,6 +36,10 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         """
         return None
 
+    @property
+    def key_format(self) -> Optional[str]:
+        return 'uuid4'
+
     def initialise(self, **kwargs) -> None:
         """Initialise the repository if it hasn't already been initialised.
 

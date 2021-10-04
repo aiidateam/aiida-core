@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
-
 import copy
 
 from aiida.common import exceptions
@@ -75,7 +74,7 @@ class Dict(Data):
         if isinstance(other, dict):
             return self.get_dict() == other
 
-        return self is other
+        return super().__eq__(other)
 
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.

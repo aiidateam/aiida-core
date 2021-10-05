@@ -12,6 +12,7 @@ from collections.abc import Iterable, Mapping
 from decimal import Decimal
 import math
 import numbers
+import datetime
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
@@ -74,6 +75,11 @@ def clean_value(value):
         if isinstance(val, numbers.Real) and (math.isnan(val) or math.isinf(val)):
             # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
             raise exceptions.ValidationError('nan and inf/-inf can not be serialized to the database')
+
+        # This fixes an error that occurs when aiida.gaussian passes the output from '_parse_log_cclib' 
+        # It contains a datetime.timedelta instance which is not json-serializable
+        if isinstance(val, (datetime.timedelta)):
+            return int(val.total_seconds())
 
         # This is for float-like types, like ``numpy.float128`` that are not json-serializable
         # Note that `numbers.Real` also match booleans but they are already returned above

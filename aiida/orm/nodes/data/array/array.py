@@ -193,3 +193,28 @@ class ArrayData(Data):
                 f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
             )
         super()._validate()
+
+    def _get_array_entries(self):
+
+        array_dict = {}
+        for key, val in self.get_iterarrays():
+            array_dict[key] = val.tolist()
+        return array_dict
+
+    def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
+        """
+        Prepare a json file in a format compatible with the AiiDA band visualizer
+
+        :param comments: if True, print comments (if it makes sense for the given
+            format)
+        """
+        from aiida import get_file_header
+        from aiida.common import json
+
+        json_dict = self._get_array_entries()
+        json_dict['original_uuid'] = self.uuid
+
+        if comments:
+            json_dict['comments'] = get_file_header(comment_char='')
+
+        return json.dumps(json_dict).encode('utf-8'), {}

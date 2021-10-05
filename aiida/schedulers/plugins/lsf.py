@@ -265,7 +265,10 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         from aiida.common.exceptions import FeatureNotAvailable
 
         # Force to display year
-        command = ["LSB_DISPLAY_YEAR='Y'", 'bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
+        command = [
+            "LSB_DISPLAY_YEAR='Y'", 'bjobs', '-noheader',
+            f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"
+        ]
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in LSF')

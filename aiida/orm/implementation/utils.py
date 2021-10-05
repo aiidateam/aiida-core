@@ -9,10 +9,10 @@
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
 from collections.abc import Iterable, Mapping
+import datetime
 from decimal import Decimal
 import math
 import numbers
-import datetime
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
@@ -76,7 +76,7 @@ def clean_value(value):
             # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
             raise exceptions.ValidationError('nan and inf/-inf can not be serialized to the database')
 
-        # This fixes an error that occurs when aiida.gaussian passes the output from '_parse_log_cclib' 
+        # This fixes an error that occurs when aiida.gaussian passes the output from '_parse_log_cclib'
         # It contains a datetime.timedelta instance which is not json-serializable
         if isinstance(val, (datetime.timedelta)):
             return int(val.total_seconds())

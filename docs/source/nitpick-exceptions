@@ -181,6 +181,7 @@ py:class Session
 py:class Query
 py:class BackendQueryBuilder
 py:class importlib_metadata.EntryPoint
+py:class importlib_metadata.EntryPoints
 py:class Command
 
 py:class BooleanClauseList

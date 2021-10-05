@@ -7,24 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the `Data` base class."""
-
+# pylint: disable=redefined-outer-name
+"""Tests for the :class:`aiida.orm.nodes.data.data:Data` class."""
 import os
 
 import numpy
 import pytest
 
-from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+from aiida import orm, plugins
 from tests.static import STATIC_DIR
 
 
-class TestData(AiidaTestCase):
-    """Test for the `Data` base class."""
+@pytest.fixture
+@pytest.mark.usefixtures('clear_database_before_test')
+def generate_class_instance():
+    """Generate a dummy `Data` instance for the given sub class."""
 
-    @staticmethod
-    def generate_class_instance(data_class):
-        """Generate a dummy `Data` instance for the given sub class."""
+    def _generate_class_instance(data_class):
         if data_class is orm.CifData:
             instance = data_class(file=os.path.join(STATIC_DIR, 'data', 'Si.cif'))
             return instance
@@ -67,26 +66,41 @@ class TestData(AiidaTestCase):
             'for this data class, add a generator of a dummy instance here'.format(data_class)
         )
 
-    # Tracked in issue #4281
-    @pytest.mark.flaky(reruns=2)
-    def test_data_exporters(self):
-        """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
+    return _generate_class_instance
 
-        It should be a tuple where the first should be a byte string and the second a dictionary.
-        """
-        from aiida.plugins.entry_point import get_entry_points
 
-        for entry_point in get_entry_points('aiida.data'):
+@pytest.fixture(scope='function', params=plugins.get_entry_points('aiida.data'))
+def data_plugin(request):
+    """Fixture that parametrizes over all the registered entry points of the ``aiida.data`` entry point group."""
+    return request.param.load()
 
-            data_class = entry_point.load()
-            export_formats = data_class.get_export_formats()
 
-            if not export_formats:
-                continue
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_constructor():
+    """Test the constructor.
 
-            instance = self.generate_class_instance(data_class)
+    Specifically, verify that the ``source`` attribute can be set through a keyword argument.
+    """
+    source = {'id': 1}
+    node = orm.Data(source=source)
+    assert isinstance(node, orm.Data)
+    assert node.source == source
 
-            for fileformat in export_formats:
-                content, dictionary = instance._exportcontent(fileformat)  # pylint: disable=protected-access
-                self.assertIsInstance(content, bytes)
-                self.assertIsInstance(dictionary, dict)
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_data_exporters(data_plugin, generate_class_instance):
+    """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
+
+    It should be a tuple where the first should be a byte string and the second a dictionary.
+    """
+    export_formats = data_plugin.get_export_formats()
+
+    if not export_formats:
+        return
+
+    instance = generate_class_instance(data_plugin)
+
+    for fileformat in export_formats:
+        content, dictionary = instance._exportcontent(fileformat)  # pylint: disable=protected-access
+        assert isinstance(content, bytes)
+        assert isinstance(dictionary, dict)

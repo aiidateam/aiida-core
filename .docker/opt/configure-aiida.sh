@@ -42,7 +42,7 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
     # `os.cpu_count()` since the latter would include hyperthreaded (logical
     # cores).
     NUM_PHYSICAL_CORES=$(python -c 'import psutil; print(int(psutil.cpu_count(logical=False)))' 2>/dev/null)
-    LOCALHOST_MPI_PROCS_PER_MACHINE=${MPI_PROCS_PER_MACHINE:-${NUM_PHYSICAL_CORES}}
+    LOCALHOST_MPI_PROCS_PER_MACHINE=${LOCALHOST_MPI_PROCS_PER_MACHINE:-${NUM_PHYSICAL_CORES}}
 
     if [ -z $LOCALHOST_MPI_PROCS_PER_MACHINE ]; then
       echo "Unable to automatically determine the number of logical CPUs on this "

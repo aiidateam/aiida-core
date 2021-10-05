@@ -22,21 +22,21 @@ def dictionary():
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_keys(dictionary):
     """Test the ``keys`` method."""
-    node = Dict(dict=dictionary)
+    node = Dict(dictionary)
     assert sorted(node.keys()) == sorted(dictionary.keys())
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_get_dict(dictionary):
     """Test the ``get_dict`` method."""
-    node = Dict(dict=dictionary)
+    node = Dict(dictionary)
     assert node.get_dict() == dictionary
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_dict_property(dictionary):
     """Test the ``dict`` property."""
-    node = Dict(dict=dictionary)
+    node = Dict(dictionary)
     assert node.dict.value == dictionary['value']
     assert node.dict.nested == dictionary['nested']
 
@@ -44,7 +44,7 @@ def test_dict_property(dictionary):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_get_item(dictionary):
     """Test the ``__getitem__`` method."""
-    node = Dict(dict=dictionary)
+    node = Dict(dictionary)
     assert node['value'] == dictionary['value']
     assert node['nested'] == dictionary['nested']
 
@@ -56,7 +56,7 @@ def test_set_item(dictionary):
     * ``__setitem__`` directly on the node
     * ``__setattr__`` through the ``AttributeManager`` returned by the ``dict`` property
     """
-    node = Dict(dict=dictionary)
+    node = Dict(dictionary)
 
     node['value'] = 2
     assert node['value'] == 2
@@ -72,7 +72,7 @@ def test_correct_raises(dictionary):
     * ``node['inexistent']`` should raise ``KeyError``
     * ``node.dict.inexistent`` should raise ``AttributeError``
     """
-    node = Dict(dict=dictionary)
+    node = Dict(dictionary)
 
     with pytest.raises(KeyError):
         _ = node['inexistent_key']
@@ -89,8 +89,8 @@ def test_eq(dictionary):
     compare equal to another node that has the same content. This is a hot issue and is being discussed in the following
     ticket: https://github.com/aiidateam/aiida-core/issues/1917
     """
-    node = Dict(dict=dictionary)
-    clone = Dict(dict=dictionary)
+    node = Dict(dictionary)
+    clone = Dict(dictionary)
 
     assert node is node  # pylint: disable=comparison-with-itself
     assert node == dictionary
@@ -101,8 +101,14 @@ def test_eq(dictionary):
     # wouldn't happen unless, by accident, two different nodes get the same UUID, the probability of which is minimal.
     # Note that we have to set the UUID directly through the database model instance of the backend entity, since it is
     # forbidden to change it through the front-end or backend entity instance, for good reasons.
-    other = Dict(dict={})
+    other = Dict({})
     other.backend_entity._dbmodel.uuid = node.uuid  # pylint: disable=protected-access
     assert other.uuid == node.uuid
     assert other.dict != node.dict
     assert node == other
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_initialise_with_dict_kwarg(dictionary):
+    """Test that the ``Dict`` node can be initialized with the ``dict`` keyword argument for backwards compatibility."""
+    node = Dict(dict=dictionary)
+    assert sorted(node.keys()) == sorted(dictionary.keys())

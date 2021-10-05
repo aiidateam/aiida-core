@@ -24,7 +24,7 @@ def to_aiida_type(value):
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, value=None, **kwargs):
         try:
             getattr(self, '_type')
         except AttributeError:
@@ -32,12 +32,7 @@ class BaseType(Data):
 
         super().__init__(**kwargs)
 
-        try:
-            value = args[0]
-        except IndexError:
-            value = self._type()  # pylint: disable=no-member
-
-        self.value = value
+        self.value = value or self._type()  # pylint: disable=no-member
 
     @property
     def value(self):

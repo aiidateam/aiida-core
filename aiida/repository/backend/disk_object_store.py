@@ -2,7 +2,7 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
 import shutil
-import typing
+from typing import BinaryIO, Iterable, Iterator, List, Optional
 
 from disk_objectstore import Container
 
@@ -27,11 +27,15 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         return 'DiskObjectStoreRepository: <uninitialised>'
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository."""
         if not self.is_initialised:
             return None
         return self.container.container_id
+
+    @property
+    def key_format(self) -> Optional[str]:
+        return self.container.hash_type
 
     def initialise(self, **kwargs) -> None:
         """Initialise the repository if it hasn't already been initialised.
@@ -56,25 +60,20 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         except FileNotFoundError:
             pass
 
-    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        return self.container.add_object(handle.read())
+        return self.container.add_streamed_object(handle)
 
-    def has_object(self, key: str) -> bool:
-        """Return whether the repository has an object with the given key.
-
-        :param key: fully qualified identifier for the object within the repository.
-        :return: True if the object exists, False otherwise.
-        """
-        return self.container.has_object(key)
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        return self.container.has_objects(keys)
 
     @contextlib.contextmanager
-    def open(self, key: str) -> typing.Iterator[typing.BinaryIO]:
+    def open(self, key: str) -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -90,15 +89,12 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self.container.get_object_stream(key) as handle:
             yield handle  # type: ignore[misc]
 
-    def delete_object(self, key: str):
-        """Delete the object from the repository.
+    def delete_objects(self, keys: List[str]) -> None:
+        super().delete_objects(keys)
+        self.container.delete_objects(keys)
 
-        :param key: fully qualified identifier for the object within the repository.
-        :raise FileNotFoundError: if the file does not exist.
-        :raise OSError: if the file could not be deleted.
-        """
-        super().delete_object(key)
-        self.container.delete_objects([key])
+    def list_objects(self) -> Iterable[str]:
+        return self.container.list_all_objects()
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.

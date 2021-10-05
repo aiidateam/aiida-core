@@ -264,9 +264,8 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         """
         from aiida.common.exceptions import FeatureNotAvailable
 
-        # I add the environment variable SLURM_TIME_FORMAT in front to be
-        # sure to get the times in 'standard' format
-        command = ['bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
+        # Force to display year
+        command = ["LSB_DISPLAY_YEAR='Y'", 'bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in LSF')
@@ -599,9 +598,9 @@ fi
 
             this_job.queue_name = partition
 
-            psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M')
-            psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M')
-            psd_submission_time = self._parse_time_string(submission_time, fmt='%b %d %H:%M')
+            psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M:%S %Y')
+            psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M:%S %Y')
+            psd_submission_time = self._parse_time_string(submission_time, fmt='%b %d %H:%M:%S %Y')
 
             # Now get the time in seconds which has been used
             # Only if it is RUNNING; otherwise it is not meaningful,
@@ -699,17 +698,11 @@ fi
         if string == '-':
             return None
 
-        # The year is not specified. I have to add it, and I set it to the
-        # current year. This is actually not correct, if we are close
-        # new year... we should ask the scheduler also the year.
-        actual_string = f'{datetime.datetime.now().year} {string}'
-        actual_fmt = f'%Y {fmt}'
-
         try:
             try:
-                thetime = datetime.datetime.strptime(actual_string, actual_fmt)
+                thetime = datetime.datetime.strptime(string, fmt)
             except ValueError:
-                thetime = datetime.datetime.strptime(actual_string, f'{actual_fmt} L')
+                thetime = datetime.datetime.strptime(string, f'{fmt} L')
         except Exception as exc:
             self.logger.debug(f'Unable to parse time string {string}, the message was {exc}')
             raise ValueError(f'Problem parsing the time string: `{string}`') from exc

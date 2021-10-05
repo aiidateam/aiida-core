@@ -24,7 +24,6 @@ if TYPE_CHECKING:
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
 Dict = DataFactory('dict')
-Structure = DataFactory('structure')
 
 
 class ProcessBuilderNamespace(MutableMapping):
@@ -244,44 +243,45 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
         self._process_spec = self._process_class.spec()
         super().__init__(self._process_spec.inputs)
 
-    def _repr_pretty_(self, p, _):  # pylint: disable=invalid-name
-        """Pretty representation for in the IPython console and notebooks."""
-
-        def format_inputs(inputs, level=0):
-            """Return the dictionary of inputs as a human-readable wayformatted multiline string for displaying.
-
-            :param inputs: a nested dictionary of inputs nodes
-            :param level: the nesting level of the current dictionary
-            """
-            result = []
-
-            def fmt_indent(content, level):
-                indent_string = ' ' * (4 * level)
-                return f'{indent_string}{content}'
-
-            for key, value in sorted(inputs.items()):
-                if isinstance(value, (dict, ProcessBuilder, ProcessBuilderNamespace)) and len(value) > 0:
-                    result.append(fmt_indent(f'"{key}": {{', level))
-                    result.append(format_inputs(value, level=level + 1))
-                    result.append(fmt_indent('},', level))
-                elif isinstance(value, Dict):
-                    result.append(fmt_indent(f'"{key}": {{', level))
-                    for line in json.dumps(value.get_dict(), indent=4).split('\n'):
-                        if line not in ['{', '}', '{}']:
-                            result.append(fmt_indent(f'{line}', level))
-                    result.append(fmt_indent('},', level))
-                elif isinstance(value, BaseType):
-                    result.append(fmt_indent(f'"{key}": {value.value}', level))
-                elif isinstance(value, Structure):
-                    result.append(fmt_indent(f'"{key}": {value.get_formula()} (pk: {value.pk})', level))
-                else:
-                    result.append(fmt_indent(f'"{key}": {value}', level))
-
-            return '\n'.join(result)
-
-        return p.text(f'Process class: {self._process_class.get_name()}\nInputs:\n{format_inputs(self._data)}')
-
     @property
     def process_class(self) -> Type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
+
+    def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
+        """Pretty representation for in the IPython console and notebooks."""
+
+        return p.text(f'Process class: {self._process_class.get_name()}\nInputs:\n{self._format_inputs(self._data)}')
+
+    @classmethod
+    def _format_inputs(cls, inputs: Mapping, level: int = 0) -> str:
+        """Return the dictionary of inputs as a human-readable wayformatted multiline string for displaying.
+
+        :param inputs: a nested dictionary of inputs nodes
+        :param level: the nesting level of the current dictionary
+        """
+        result = []
+
+        def fmt_indent(content, level):
+            indent_string = ' ' * (4 * level)
+            return f'{indent_string}{content}'
+
+        for key, value in sorted(inputs.items()):
+            if isinstance(value, (dict, ProcessBuilder, ProcessBuilderNamespace)) and len(value) > 0:
+                result.append(fmt_indent(f'"{key}": {{', level))
+                result.append(cls._format_inputs(value, level=level + 1))
+                result.append(fmt_indent('},', level))
+            elif isinstance(value, Dict):
+                result.append(fmt_indent(f'"{key}": {{', level))
+                for line in json.dumps(value.get_dict(), indent=4).split('\n'):
+                    if line not in ['{', '}', '{}']:
+                        result.append(fmt_indent(f'{line}', level))
+                result.append(fmt_indent('},', level))
+            elif isinstance(value, BaseType):
+                result.append(fmt_indent(f'"{key}": {value.value}', level))
+            elif isinstance(value, Node):
+                result.append(fmt_indent(f'"{key}": {value.get_description()}', level))
+            else:
+                result.append(fmt_indent(f'"{key}": {value}', level))
+
+        return '\n'.join(result)

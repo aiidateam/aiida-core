@@ -11,7 +11,8 @@
 """Tests for :class:`aiida.orm.nodes.data.list.List` class."""
 import pytest
 
-from aiida.orm import List
+from aiida.common.exceptions import ModificationNotAllowed
+from aiida.orm import List, load_node
 
 
 @pytest.fixture
@@ -22,6 +23,49 @@ def listing():
 @pytest.fixture
 def int_listing():
     return [2, 1, 3]
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_creation():
+    """Test the creation of an empty ``List`` node."""
+    node = List()
+    assert len(node) == 0
+    with pytest.raises(IndexError):
+        node[0]  # pylint: disable=pointless-statement
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_mutability():
+    """Test list's mutability before and after storage."""
+    node = List()
+    node.append(5)
+    node.store()
+
+    # Test all mutable calls are now disallowed
+    with pytest.raises(ModificationNotAllowed):
+        node.append(5)
+    with pytest.raises(ModificationNotAllowed):
+        node.extend([5])
+    with pytest.raises(ModificationNotAllowed):
+        node.insert(0, 2)
+    with pytest.raises(ModificationNotAllowed):
+        node.remove(5)
+    with pytest.raises(ModificationNotAllowed):
+        node.pop()
+    with pytest.raises(ModificationNotAllowed):
+        node.sort()
+    with pytest.raises(ModificationNotAllowed):
+        node.reverse()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_store_load(listing):
+    """Test load_node on just stored object."""
+    node = List(listing)
+    node.store()
+
+    node_loaded = load_node(node.pk)
+    assert node.get_list() == node_loaded.get_list()
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -57,6 +101,19 @@ def test_equality(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_append(listing):
     """Test the ``List.append()`` method."""
+
+    def do_checks(node):
+        assert len(node) == 1
+        assert node[0] == 4
+
+    node = List()
+    node.append(4)
+    do_checks(node)
+
+    # Try the same after storing
+    node.store()
+    do_checks(node)
+
     node = List(list=listing)
     node.append('more')
     assert node[-1] == 'more'
@@ -64,10 +121,25 @@ def test_append(listing):
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_extend(listing):
-    """Test the ``List.extend()`` method."""
-    node = List(list=listing)
-    node.extend(['more', 'values'])
-    assert node[-2:] == ['more', 'values']
+    """Test extend() member function."""
+
+    def do_checks(node, lst):
+        assert len(node) == len(lst)
+        # Do an element wise comparison
+        for lst_el, node_el in zip(lst, node):
+            assert lst_el == node_el
+
+    node = List()
+    node.extend(listing)
+    do_checks(node, listing)
+
+    # Further extend
+    node.extend(listing)
+    do_checks(node, listing * 2)
+
+    # Now try after storing
+    node.store()
+    do_checks(node, listing * 2)
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

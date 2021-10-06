@@ -107,6 +107,7 @@ def test_eq(dictionary):
     assert other.dict != node.dict
     assert node == other
 
+
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_initialise_with_dict_kwarg(dictionary):
     """Test that the ``Dict`` node can be initialized with the ``dict`` keyword argument for backwards compatibility."""

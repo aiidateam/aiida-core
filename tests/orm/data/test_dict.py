@@ -95,3 +95,14 @@ def test_eq(dictionary):
     assert node is node  # pylint: disable=comparison-with-itself
     assert node == dictionary
     assert node != clone
+
+    # To test the fallback, where two ``Dict`` nodes are equal if their UUIDs are even if the content is different, we
+    # create a different node with other content, but artificially give it the same UUID as ``node``. In practice this
+    # wouldn't happen unless, by accident, two different nodes get the same UUID, the probability of which is minimal.
+    # Note that we have to set the UUID directly through the database model instance of the backend entity, since it is
+    # forbidden to change it through the front-end or backend entity instance, for good reasons.
+    other = Dict(dict={})
+    other.backend_entity._dbmodel.uuid = node.uuid  # pylint: disable=protected-access
+    assert other.uuid == node.uuid
+    assert other.dict != node.dict
+    assert node == other

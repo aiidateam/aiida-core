@@ -42,6 +42,12 @@ class Data(Node):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
+    def __init__(self, *args, source=None, **kwargs):
+        """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
+        super().__init__(*args, **kwargs)
+        if source is not None:
+            self.source = source
+
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
         raise exceptions.InvalidOperation('copying a Data node is not supported, use copy.deepcopy')

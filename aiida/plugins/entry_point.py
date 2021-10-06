@@ -21,7 +21,7 @@ from importlib_metadata import entry_points as _eps
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 
-__all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
+__all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'

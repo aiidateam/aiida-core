@@ -10,20 +10,18 @@
 """Convenience classes to help building the input dictionaries for Processes."""
 from collections.abc import Mapping, MutableMapping
 import json
+import textwrap
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
 from aiida.engine.processes.ports import PortNamespace
-from aiida.orm import Node
+from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
-from aiida.plugins import DataFactory
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
-
-Dict = DataFactory('dict')
 
 
 class ProcessBuilderNamespace(MutableMapping):
@@ -261,27 +259,24 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
         :param level: the nesting level of the current dictionary
         """
         result = []
-
-        def fmt_indent(content, level):
-            indent_string = ' ' * (4 * level)
-            return f'{indent_string}{content}'
+        indent_string = ' ' * (4 * level)
 
         for key, value in sorted(inputs.items()):
             if isinstance(value, (dict, ProcessBuilder, ProcessBuilderNamespace)) and len(value) > 0:
-                result.append(fmt_indent(f'"{key}": {{', level))
+                result.append(textwrap.indent(f'"{key}": {{', indent_string))
                 result.append(cls._format_inputs(value, level=level + 1))
-                result.append(fmt_indent('},', level))
+                result.append(textwrap.indent('},', indent_string))
             elif isinstance(value, Dict):
-                result.append(fmt_indent(f'"{key}": {{', level))
+                result.append(textwrap.indent(f'"{key}": {{', indent_string))
                 for line in json.dumps(value.get_dict(), indent=4).split('\n'):
                     if line not in ['{', '}', '{}']:
-                        result.append(fmt_indent(f'{line}', level))
-                result.append(fmt_indent('},', level))
+                        result.append(textwrap.indent(f'{line}', indent_string))
+                result.append(textwrap.indent('},', indent_string))
             elif isinstance(value, BaseType):
-                result.append(fmt_indent(f'"{key}": {value.value}', level))
+                result.append(textwrap.indent(f'"{key}": {value.value}', indent_string))
             elif isinstance(value, Node):
-                result.append(fmt_indent(f'"{key}": {value.get_description()}', level))
+                result.append(textwrap.indent(f'"{key}": {value.get_description()}', indent_string))
             else:
-                result.append(fmt_indent(f'"{key}": {value}', level))
+                result.append(textwrap.indent(f'"{key}": {value}', indent_string))
 
         return '\n'.join(result)

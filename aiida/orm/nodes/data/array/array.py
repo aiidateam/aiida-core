@@ -195,7 +195,12 @@ class ArrayData(Data):
         super()._validate()
 
     def _get_array_entries(self):
+        """Return a dictionary with the different array entries.
 
+        The idea is that this dictionary contains the array name as a key and
+        the value is the numpy array transformed into a list. This is so that
+        it can be transformed into a json object.
+        """
         array_dict = {}
         for key, val in self.get_iterarrays():
             array_dict[key] = val.tolist()
@@ -203,7 +208,7 @@ class ArrayData(Data):
 
     def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
         """
-        Prepare a json file in a format compatible with the AiiDA band visualizer
+        Prepare a json file to extract the arrays stored in this node
 
         :param comments: if True, print comments (if it makes sense for the given
             format)

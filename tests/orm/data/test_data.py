@@ -12,7 +12,6 @@
 import os
 
 import numpy
-from aiida.orm.nodes.data import orbital
 import pytest
 
 from aiida import orm, plugins
@@ -22,6 +21,7 @@ from tests.static import STATIC_DIR
 @pytest.fixture
 @pytest.mark.usefixtures('clear_database_before_test')
 def generate_class_instance():
+    # pylint: disable=too-many-return-statements, too-many-statements
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -77,8 +77,8 @@ def generate_class_instance():
 
         if data_class is orm.XyData:
             instance = data_class()
-            instance.set_x(numpy.arange(5),'xdata','m')
-            instance.set_y(numpy.arange(5),'ydata','m')
+            instance.set_x(numpy.arange(5), 'xdata', 'm')
+            instance.set_y(numpy.arange(5), 'ydata', 'm')
             return instance
 
         if data_class is orm.ProjectionData:
@@ -108,10 +108,8 @@ def generate_class_instance():
             instance = data_class()
             instance.set_reference_bandsdata(bands)
             instance.set_projectiondata(
-                orbital,
-                list_of_pdos=numpy.asarray([1.0]),
-                list_of_energy=numpy.asarray([1.0]),
-                bands_check=False)
+                orbital, list_of_pdos=numpy.asarray([1.0]), list_of_energy=numpy.asarray([1.0]), bands_check=False
+            )
             return instance
 
         raise RuntimeError(

@@ -222,4 +222,4 @@ class ArrayData(Data):
         if comments:
             json_dict['comments'] = get_file_header(comment_char='')
 
-        return json.dumps(json_dict).encode('utf-8'), {}
+        return json.dumps(json_dict, ignore_nan=True).encode('utf-8'), {}

@@ -50,8 +50,7 @@ class NodeRepositoryMixin:
         """
         if self._repository_instance is None:
             if self.is_stored:
-                from aiida.manage.manager import get_manager
-                backend = get_manager().get_profile().get_repository().backend
+                backend = self.backend.get_repository()
                 serialized = self.repository_metadata
                 self._repository_instance = Repository.from_serialized(backend=backend, serialized=serialized)
             else:

@@ -37,8 +37,8 @@ def repository(request, tmp_path_factory) -> Repository:
 
     """
     with request.param(tmp_path_factory.mktemp('container')) as backend:
+        backend.initialise()
         repository = Repository(backend=backend)
-        repository.initialise()
         yield repository
 
 
@@ -506,26 +506,6 @@ def test_delete_object_hard(repository, generate_directory):
 
     assert not repository.has_object('file_a')
     assert not repository.backend.has_object(key)
-
-
-def test_delete(repository, generate_directory):
-    """Test the ``Repository.delete`` method."""
-    directory = generate_directory({
-        'file_a': b'content_a',
-        'relative': {
-            'file_b': b'content_b',
-        }
-    })
-
-    repository.put_object_from_tree(str(directory))
-
-    assert repository.has_object('file_a')
-    assert repository.has_object('relative/file_b')
-
-    repository.delete()
-
-    assert repository.is_empty()
-    assert not repository.is_initialised
 
 
 def test_erase(repository, generate_directory):

@@ -24,12 +24,22 @@ if TYPE_CHECKING:
         BackendQueryBuilder,
         BackendUserCollection,
     )
+    from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
 __all__ = ('Backend',)
 
 
 class Backend(abc.ABC):
-    """The public interface that defines a backend factory that creates backend specific concrete objects."""
+    """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
+
+    AiiDA splits data storage into two sources:
+
+    - Searchable data, which is stored in the database and can be queried using the QueryBuilder
+    - Non-searchable data, which is stored in the repository and can be loaded using the RepositoryBackend
+
+    The two sources are inter-linked by the ``Node.repository_metadata``.
+    Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
+    """
 
     @abc.abstractmethod
     def migrate(self):
@@ -90,3 +100,7 @@ class Backend(abc.ABC):
 
         :return: an instance of :class:`sqlalchemy.orm.session.Session`
         """
+
+    @abc.abstractmethod
+    def get_repository(self) -> 'AbstractRepositoryBackend':
+        """Return the object repository configured for this backend."""

@@ -132,11 +132,23 @@ class Manager:
             backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 
+        backend_type = profile.database_backend
+
+        # Can only import the backend classes after the backend has been loaded
+        if backend_type == BACKEND_DJANGO:
+            from aiida.orm.implementation.django.backend import DjangoBackend
+            self._backend = DjangoBackend()
+        elif backend_type == BACKEND_SQLA:
+            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+            self._backend = SqlaBackend()
+        else:
+            raise ValueError(f'unknown database backend type: {backend_type}')
+
         # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
         # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
         # then become an exception once we have verified that it is working reliably.
         if repository_check and not profile.is_test_profile:
-            repository_uuid_config = profile.get_repository().uuid
+            repository_uuid_config = self._backend.get_repository().uuid
             repository_uuid_database = backend_manager.get_repository_uuid()
 
             from aiida.cmdline.utils import echo
@@ -148,16 +160,6 @@ class Manager:
                     'Using a database with an incompatible repository will prevent AiiDA from functioning properly.\n'
                     'Please make sure that the configuration of your profile is correct.\n'
                 )
-
-        backend_type = profile.database_backend
-
-        # Can only import the backend classes after the backend has been loaded
-        if backend_type == BACKEND_DJANGO:
-            from aiida.orm.implementation.django.backend import DjangoBackend
-            self._backend = DjangoBackend()
-        elif backend_type == BACKEND_SQLA:
-            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-            self._backend = SqlaBackend()
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.

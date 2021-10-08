@@ -78,12 +78,12 @@ def test_uuid(repository_uninitialised):
 
     if isinstance(repository.backend, SandboxRepositoryBackend):
         assert repository.uuid is None
-        repository.initialise()
+        repository.backend.initialise()
         assert repository.uuid is None
 
     if isinstance(repository.backend, DiskObjectStoreRepositoryBackend):
         assert repository.uuid is None
-        repository.initialise()
+        repository.backend.initialise()
         assert isinstance(repository.uuid, str)
 
 
@@ -92,7 +92,7 @@ def test_initialise(repository_uninitialised):
     repository = repository_uninitialised
 
     assert not repository.is_initialised
-    repository.initialise()
+    repository.backend.initialise()
     assert repository.is_initialised
 
 

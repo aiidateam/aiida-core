@@ -99,10 +99,10 @@ class DbNode(Base):
             self.mtime = None
 
         if self.attributes is None:
-            self.attributes = dict()
+            self.attributes = {}
 
         if self.extras is None:
-            self.extras = dict()
+            self.extras = {}
 
     @property
     def outputs(self):

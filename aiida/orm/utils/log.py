@@ -56,7 +56,7 @@ def get_dblogger_extra(node):
     # If the object is not a Node or it is not stored, then any associated log records should bot be stored. This is
     # accomplished by returning an empty dictionary because the `dbnode_id` is required to successfully store it.
     if not isinstance(node, Node) or not node.is_stored:
-        return dict()
+        return {}
 
     return {'dbnode_id': node.id, 'backend': node.backend}
 

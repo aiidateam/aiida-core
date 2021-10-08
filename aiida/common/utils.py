@@ -520,12 +520,12 @@ class Capturing:
     # pylint: disable=attribute-defined-outside-init
 
     def __init__(self, capture_stderr=False):
-        self.stdout_lines = list()
+        self.stdout_lines = []
         super().__init__()
 
         self._capture_stderr = capture_stderr
         if self._capture_stderr:
-            self.stderr_lines = list()
+            self.stderr_lines = []
         else:
             self.stderr_lines = None
 

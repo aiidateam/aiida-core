@@ -183,7 +183,7 @@ class CodDbImporter(DbImporter):
         """
         sql_parts = ["(status IS NULL OR status != 'retracted')"]
         for key in sorted(self._keywords.keys()):
-            if key in kwargs.keys():
+            if key in kwargs:
                 values = kwargs.pop(key)
                 if not isinstance(values, list):
                     values = [values]
@@ -220,7 +220,7 @@ class CodDbImporter(DbImporter):
         Changes the database connection details.
         """
         for key in self._db_parameters:
-            if key in kwargs.keys():
+            if key in kwargs:
                 self._db_parameters[key] = kwargs.pop(key)
         if len(kwargs.keys()) > 0:
             raise NotImplementedError(

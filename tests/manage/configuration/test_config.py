@@ -143,7 +143,7 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     in_memory = json.dumps(config.dictionary, indent=DEFAULT_CONFIG_INDENT_SIZE)
 
     # Read the content stored on disk
-    with open(filepath, 'r') as handle:
+    with open(filepath, 'r', encoding='utf8') as handle:
         on_disk = handle.read()
 
     # Compare content of in memory config and the one on disk
@@ -380,7 +380,7 @@ def test_store(config_with_profile):
     config = config_with_profile
     config.store()
 
-    with open(config.filepath, 'r') as handle:
+    with open(config.filepath, 'r', encoding='utf8') as handle:
         config_recreated = Config(config.filepath, json.load(handle))
 
         assert config.dictionary == config_recreated.dictionary

@@ -54,7 +54,7 @@ def test_put_object_from_filelike_raises(repository, generate_directory):
         repository.put_object_from_filelike(directory / 'file_a')  # String
 
     with pytest.raises(TypeError):
-        with open(directory / 'file_a') as handle:
+        with open(directory / 'file_a', encoding='utf8') as handle:
             repository.put_object_from_filelike(handle)  # Not in binary mode
 
 
@@ -157,7 +157,7 @@ def test_get_object_hash(repository, generate_directory):
 def test_list_objects(repository, generate_directory):
     """Test the ``Repository.delete_object`` method."""
     repository.initialise()
-    keylist = list()
+    keylist = []
 
     directory = generate_directory({'file_a': b'content a'})
     with open(directory / 'file_a', 'rb') as handle:

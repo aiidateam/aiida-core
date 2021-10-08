@@ -409,7 +409,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         log_6.save()
 
         # Storing temporarily information needed for the check at the test
-        self.to_check = dict()
+        self.to_check = {}
 
         # Keeping calculation & calculation log ids
         self.to_check['CalculationNode'] = (
@@ -579,7 +579,7 @@ class TestDbLogMigrationBackward(TestMigrations):
         log_2.save()
 
         # Keeping what is needed to be verified at the test
-        self.to_check = dict()
+        self.to_check = {}
         self.to_check[log_1.pk] = (log_1.dbnode_id, calc_1.type)
         self.to_check[log_2.pk] = (log_2.dbnode_id, calc_2.type)
 

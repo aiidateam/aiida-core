@@ -177,7 +177,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     return nfiles, nuploaded
 
 
-def parse_upf(fname, check_filename=True):
+def parse_upf(fname, check_filename=True, encoding='utf-8'):
     """
     Try to get relevant information from the UPF. For the moment, only the
     element name. Note that even UPF v.2 cannot be parsed with the XML minidom!
@@ -198,7 +198,7 @@ def parse_upf(fname, check_filename=True):
     try:
         upf_contents = fname.read()
     except AttributeError:
-        with open(fname) as handle:
+        with open(fname, encoding=encoding) as handle:
             upf_contents = handle.read()
     else:
         if check_filename:

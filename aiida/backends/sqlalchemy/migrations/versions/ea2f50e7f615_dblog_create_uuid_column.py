@@ -38,7 +38,7 @@ def set_new_uuid(connection):
         return
 
     id_res = id_query.fetchall()
-    ids = list()
+    ids = []
     for (curr_id,) in id_res:
         ids.append(curr_id)
     uuids = set()

@@ -68,7 +68,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
 
     datablocks = []
     for _, atoms in enumerate(ase):
-        datablock = dict()
+        datablock = {}
 
         cell = atoms.cell
         a = norm(cell[0])
@@ -143,7 +143,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         raise ImportError(f'{str(exc)}. You need to install the PyCifRW package.')
 
     if loops is None:
-        loops = dict()
+        loops = {}
 
     cif = CifFile.CifFile()  # pylint: disable=no-member
     try:

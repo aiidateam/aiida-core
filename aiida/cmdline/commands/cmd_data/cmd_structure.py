@@ -100,7 +100,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         entry_list.append([str(pid), label, str(formula)])
 
     counter = 0
-    struct_list_data = list()
+    struct_list_data = []
     if not raw:
         struct_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:

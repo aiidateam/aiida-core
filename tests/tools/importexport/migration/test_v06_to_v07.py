@@ -37,7 +37,7 @@ def test_migrate_external(migrate_from_func):
 
     # Check Attribute and Link have been removed
     illegal_entities = {'Attribute', 'Link'}
-    for dict_ in {'unique_identifiers', 'all_fields_info'}:
+    for dict_ in ('unique_identifiers', 'all_fields_info'):
         for entity in illegal_entities:
             assert entity not in metadata[dict_], (
                 f"key '{entity}' should have been removed from '{dict_}' in metadata.json"

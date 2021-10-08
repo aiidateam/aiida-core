@@ -764,7 +764,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 session.commit()
 
                 # Storing temporarily information needed for the check at the test
-                self.to_check = dict()
+                self.to_check = {}
 
                 # Keeping calculation & calculation log ids
                 self.to_check['CalculationNode'] = (
@@ -946,7 +946,7 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
                 session.commit()
 
                 # Keeping what is needed to be verified at the test
-                self.to_check = dict()
+                self.to_check = {}
                 self.to_check[log_1.id] = (log_1.dbnode_id, calc_1.type)
                 self.to_check[log_2.id] = (log_2.dbnode_id, calc_2.type)
             except Exception:

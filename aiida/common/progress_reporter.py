@@ -129,7 +129,7 @@ def get_progress_reporter() -> Type[ProgressReporterAbstract]:
                 progress.update()
 
     """
-    global PROGRESS_REPORTER
+    global PROGRESS_REPORTER  # pylint: disable=global-variable-not-assigned
     return PROGRESS_REPORTER
 
 

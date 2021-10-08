@@ -398,9 +398,9 @@ def suppress_auto_now(list_of_models_fields):
     #    ]
     #   ...
     # }
-    _original_model_values = dict()
+    _original_model_values = {}
     for model, fields in list_of_models_fields:
-        _original_field_values = dict()
+        _original_field_values = {}
         for field in model._meta.local_fields:  # pylint: disable=protected-access
             if field.name in fields:
                 _original_field_values[field] = {

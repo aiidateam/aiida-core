@@ -432,7 +432,7 @@ class ModelModifierV0025:
     def getvalue(self, attr):
         """This can be called on a given row and will get the corresponding value, casting it correctly. """
         try:
-            if attr.datatype == 'list' or attr.datatype == 'dict':
+            if attr.datatype in ('list', 'dict'):
                 prefix = f'{attr.key}{self._sep}'
                 prefix_len = len(prefix)
                 dballsubvalues = self._model_class.objects.filter(

@@ -217,7 +217,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                         # Duplicate entry, skip
                         pass
             else:
-                ins_dict = list()
+                ins_dict = []
                 for node in nodes:
                     check_node(node)
                     ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})

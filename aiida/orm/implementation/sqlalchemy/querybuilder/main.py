@@ -464,7 +464,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         for projectable_spec in project_dict:
             for projectable_entity_name, extraspec in projectable_spec.items():
-                property_names = list()
+                property_names = []
                 if projectable_entity_name == '**':
                     # Need to expand
                     property_names.extend(self.modify_expansions(alias, self.get_column_names(alias)))

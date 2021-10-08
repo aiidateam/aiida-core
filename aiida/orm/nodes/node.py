@@ -174,7 +174,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         super().initialize()
 
         # A cache of incoming links represented as a list of LinkTriples instances
-        self._incoming_cache = list()
+        self._incoming_cache = []
 
     def _validate(self) -> bool:
         """Validate information stored in Node object.
@@ -715,7 +715,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         links = self._incoming_cache
         self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
 
-        self._incoming_cache = list()
+        self._incoming_cache = []
         self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
 
         return self

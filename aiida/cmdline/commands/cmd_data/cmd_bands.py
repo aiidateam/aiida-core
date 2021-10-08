@@ -61,7 +61,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
     entry_list = get_bands_and_parents_structure(args)
 
     counter = 0
-    bands_list_data = list()
+    bands_list_data = []
     if not raw:
         bands_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:

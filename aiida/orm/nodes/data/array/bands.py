@@ -1857,7 +1857,7 @@ def get_bands_and_parents_structure(args):
 
     q_build.order_by({orm.StructureData: {'ctime': 'desc'}})
 
-    structure_dict = dict()
+    structure_dict = {}
     list_data = q_build.distinct().all()
     for bid, _, _, _, akinds, asites in list_data:
         structure_dict[bid] = (akinds, asites)

@@ -192,7 +192,7 @@ class DjangoSettingsManager(SettingsManager):
         self.validate_table_existence()
         validate_attribute_extra_key(key)
 
-        other_attribs = dict()
+        other_attribs = {}
         if description is not None:
             other_attribs['description'] = description
 

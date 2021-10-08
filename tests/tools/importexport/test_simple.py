@@ -77,7 +77,7 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
     attrs = {}
     for pk in pks:
         node = orm.load_node(pk)
-        attrs[node.uuid] = dict()
+        attrs[node.uuid] = {}
         for k in node.attributes.keys():
             attrs[node.uuid][k] = node.get_attribute(k)
 

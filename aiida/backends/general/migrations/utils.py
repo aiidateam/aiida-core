@@ -331,7 +331,7 @@ def get_object_from_repository(uuid, name):
     """
     filepath = os.path.join(get_node_repository_sub_folder(uuid), name)
 
-    with open(filepath) as handle:
+    with open(filepath, encoding='utf-8') as handle:
         return handle.read()
 
 

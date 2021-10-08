@@ -74,8 +74,8 @@ def load_profile(profile=None):
     from aiida.common import InvalidOperation
     from aiida.common.log import configure_logging
 
-    global PROFILE
-    global BACKEND_UUID
+    global PROFILE  # pylint: disable=global-variable-not-assigned
+    global BACKEND_UUID  # pylint: disable=global-variable-not-assigned
 
     # If a profile is loaded and the specified profile name is None or that of the currently loaded, do nothing
     if PROFILE and (profile is None or PROFILE.name is profile):
@@ -174,7 +174,7 @@ def get_profile():
     :return: the globally loaded `Profile` instance or `None`
     :rtype: :class:`~aiida.manage.configuration.Profile`
     """
-    global PROFILE
+    global PROFILE  # pylint: disable=global-variable-not-assigned
     return PROFILE
 
 

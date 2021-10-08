@@ -377,7 +377,7 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         with self.cli_runner.isolated_filesystem():
             options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
             self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
-            with open('bands.gnu', 'r') as gnu_file:
+            with open('bands.gnu', 'r', encoding='utf8') as gnu_file:
                 res = gnu_file.read()
                 self.assertIn('vectors nohead', res, 'The string "vectors nohead" was not found in the gnuplot script')
 

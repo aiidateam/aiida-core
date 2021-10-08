@@ -86,7 +86,7 @@ def get_serialized_legacy_workflow_logs(schema_editor):
             """
         ))
         keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-        res = list()
+        res = []
         for row in cursor.fetchall():
             res.append(dict(list(zip(keys, row))))
         return dumps_json(res)
@@ -105,7 +105,7 @@ def get_serialized_unknown_entity_logs(schema_editor):
             """
         ))
         keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-        res = list()
+        res = []
         for row in cursor.fetchall():
             res.append(dict(list(zip(keys, row))))
         return dumps_json(res)
@@ -124,7 +124,7 @@ def get_serialized_logs_with_no_nodes(schema_editor):
             """
         ))
         keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-        res = list()
+        res = []
         for row in cursor.fetchall():
             res.append(dict(list(zip(keys, row))))
         return dumps_json(res)

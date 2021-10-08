@@ -923,7 +923,7 @@ def test_store_from_cache():
     with tempfile.TemporaryDirectory() as tmpdir:
         dir_path = os.path.join(tmpdir, 'directory')
         os.makedirs(dir_path)
-        with open(os.path.join(dir_path, 'file'), 'w') as file:
+        with open(os.path.join(dir_path, 'file'), 'w', encoding='utf8') as file:
             file.write('content')
         data.put_object_from_tree(tmpdir)
 

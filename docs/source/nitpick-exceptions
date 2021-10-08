@@ -35,6 +35,7 @@ py:class aiida.engine.runners.ResultAndNode
 py:class aiida.engine.runners.ResultAndPk
 py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
 py:class aiida.manage.manager.Manager
+py:class aiida.orm.entities.EntityTypes
 py:class aiida.orm.nodes.node.WarnWhenNotEntered
 py:class aiida.orm.implementation.querybuilder.QueryDictType
 py:class aiida.orm.querybuilder.Classifier

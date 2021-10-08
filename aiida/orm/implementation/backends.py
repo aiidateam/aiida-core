@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, List
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
+    from aiida.orm.entities import EntityTypes
     from aiida.orm.implementation import (
         BackendAuthInfoCollection,
         BackendCommentCollection,

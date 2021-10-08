@@ -92,7 +92,10 @@ class SqlaBackend(SqlBackend[base.Base]):
     @staticmethod
     @functools.lru_cache(maxsize=18)
     def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool):
-        """Return the Sqlalchemy mapper and non-primary keys corresponding to the given entity."""
+        """Return the Sqlalchemy mapper and fields corresponding to the given entity.
+
+        :param with_pk: if True, the fields returned will include the primary key
+        """
         from sqlalchemy import inspect
 
         from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo

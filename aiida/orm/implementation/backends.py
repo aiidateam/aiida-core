@@ -9,7 +9,7 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
-from typing import Any, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session

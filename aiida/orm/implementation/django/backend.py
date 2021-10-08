@@ -96,7 +96,10 @@ class DjangoBackend(SqlBackend[models.Model]):
     @staticmethod
     @functools.lru_cache(maxsize=18)
     def _get_model_from_entity(entity_type: EntityTypes, with_pk: bool):
-        """Return the Django model corresponding to the given entity."""
+        """Return the Django model and fields corresponding to the given entity.
+
+        :param with_pk: if True, the fields returned will include the primary key
+        """
         from sqlalchemy import inspect
 
         model = {

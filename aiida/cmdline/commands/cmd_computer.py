@@ -507,7 +507,7 @@ def computer_test(user, print_traceback, computer):
         else:
             echo.echo_success(f'all {num_tests} tests succeeded')
 
-    except Exception as exception:  # pylint:disable=broad-except
+    except Exception:  # pylint:disable=broad-except
         echo.echo('[FAILED]: ', fg='red', nl=False)
         message = 'Error while trying to connect to the computer'
 

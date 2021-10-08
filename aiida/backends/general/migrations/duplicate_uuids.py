@@ -79,7 +79,7 @@ def deduplicate_uuids(table=None, dry_run=True):
 
     from aiida.common.utils import get_new_uuid
 
-    from .utils import get_node_repository_sub_folder
+    from .utils import get_node_repository_sub_folder  # pylint: disable=no-name-in-module
 
     if table not in TABLES_UUID_DEDUPLICATION:
         raise ValueError(f"invalid table {table}: choose from {', '.join(TABLES_UUID_DEDUPLICATION)}")

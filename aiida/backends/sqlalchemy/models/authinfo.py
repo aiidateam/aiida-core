@@ -43,8 +43,8 @@ class DbAuthInfo(Base):
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 
     def __init__(self, *args, **kwargs):
-        self._metadata = dict()
-        self.auth_params = dict()
+        self._metadata = {}
+        self.auth_params = {}
         super().__init__(*args, **kwargs)
 
     def __str__(self):

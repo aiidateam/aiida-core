@@ -33,7 +33,7 @@ from aiida.common import json
 from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.common.exceptions import ArchiveMigrationError
 
-from .utils import remove_fields, update_metadata, verify_metadata_version
+from .utils import remove_fields, update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 
 def migration_base_data_plugin_type_string(data):

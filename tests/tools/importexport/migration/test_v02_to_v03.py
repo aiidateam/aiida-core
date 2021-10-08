@@ -25,7 +25,7 @@ def test_migrate_external(migrate_from_func):
 
     # Check entity names
     legal_entity_names = {'Node', 'Link', 'Group', 'Computer', 'User', 'Attribute'}
-    for field in {'unique_identifiers', 'all_fields_info'}:
+    for field in ('unique_identifiers', 'all_fields_info'):
         for entity, prop in metadata[field].items():
             assert entity in legal_entity_names, (
                 f"'{entity}' should now be equal to anyone of these: {legal_entity_names}, but is not"

@@ -273,7 +273,7 @@ def upload_calculation(
     else:
 
         if remote_copy_list:
-            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:
+            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:  # pylint: disable=unspecified-encoding
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         'would have copied {} to {} in working directory on remote {}'.format(
@@ -282,7 +282,7 @@ def upload_calculation(
                     )
 
         if remote_symlink_list:
-            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:
+            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:  # pylint: disable=unspecified-encoding
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         'would have created symlinks from {} to {} in working directory on remote {}'.format(

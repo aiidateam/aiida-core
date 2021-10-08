@@ -180,7 +180,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         try:
             node = load_node(pk=pid)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
             # In this case, the process node corresponding to the process id, cannot be resolved uniquely or does not
             # exist. The latter being the most common case, where someone deleted the node, before the process was
             # properly terminated. Since the node is never coming back and so the process will never be able to continue

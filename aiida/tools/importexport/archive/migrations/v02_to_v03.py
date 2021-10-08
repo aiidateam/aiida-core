@@ -14,7 +14,7 @@ import enum
 from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.common.exceptions import DanglingLinkError
 
-from .utils import update_metadata, verify_metadata_version
+from .utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 
 def migrate_v2_to_v3(folder: CacheFolder):

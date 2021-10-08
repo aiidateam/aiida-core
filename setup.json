@@ -97,7 +97,7 @@
             "mypy==0.910",
             "packaging==20.3",
             "pre-commit~=2.2",
-            "pylint~=2.9.4",
+            "pylint~=2.11.1",
             "pylint-django",
             "sqlalchemy2-stubs"
         ],

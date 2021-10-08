@@ -92,7 +92,7 @@ def get_serialized_legacy_workflow_logs(connection):
         """
         )
     )
-    res = list()
+    res = []
     for row in query:
         res.append(row._asdict())
     return dumps_json(res)
@@ -111,7 +111,7 @@ def get_serialized_unknown_entity_logs(connection):
         """
         )
     )
-    res = list()
+    res = []
     for row in query:
         res.append(row._asdict())
     return dumps_json(res)
@@ -130,7 +130,7 @@ def get_serialized_logs_with_no_nodes(connection):
         """
         )
     )
-    res = list()
+    res = []
     for row in query:
         res.append(row._asdict())
     return dumps_json(res)

@@ -22,7 +22,7 @@ class List(Data, MutableSequence):
     _LIST_KEY = 'list'
 
     def __init__(self, **kwargs):
-        data = kwargs.pop('list', list())
+        data = kwargs.pop('list', [])
         super().__init__(**kwargs)
         self.set_list(data)
 
@@ -113,7 +113,7 @@ class List(Data, MutableSequence):
         try:
             return self.get_attribute(self._LIST_KEY)
         except AttributeError:
-            self.set_list(list())
+            self.set_list([])
             return self.get_attribute(self._LIST_KEY)
 
     def set_list(self, data):

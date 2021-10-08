@@ -42,7 +42,7 @@ class DependencySpecificationError(click.ClickException):
 def _load_setup_cfg():
     """Load the setup configuration from the 'setup.json' file."""
     try:
-        with open(ROOT / 'setup.json') as setup_json_file:
+        with open(ROOT / 'setup.json', encoding='utf8') as setup_json_file:
             return json.load(setup_json_file)
     except json.decoder.JSONDecodeError as error:  # pylint: disable=no-member
         raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")
@@ -53,7 +53,7 @@ def _load_setup_cfg():
 def _load_environment_yml():
     """Load the conda environment specification from the 'environment.yml' file."""
     try:
-        with open(ROOT / 'environment.yml') as file:
+        with open(ROOT / 'environment.yml', encoding='utf8') as file:
             return yaml.load(file, Loader=yaml.SafeLoader)
     except yaml.error.YAMLError as error:
         raise DependencySpecificationError(f"Error while parsing 'environment.yml':\n{error}")
@@ -89,7 +89,7 @@ def _find_linenos_of_requirements_in_setup_json(requirements):
     """
     linenos = defaultdict(list)
 
-    with open(ROOT / 'setup.json') as setup_json_file:
+    with open(ROOT / 'setup.json', encoding='utf8') as setup_json_file:
         lines = list(setup_json_file)
 
     # Determine the lines that correspond to affected requirements in setup.json.
@@ -153,7 +153,7 @@ def generate_environment_yml():
         ('dependencies', conda_requires),
     ])
 
-    with open(ROOT / 'environment.yml', 'w') as env_file:
+    with open(ROOT / 'environment.yml', 'w', encoding='utf8') as env_file:
         env_file.write('# Usage: conda env create -n myenvname -f environment.yml\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
@@ -293,7 +293,7 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
         env = {'python_version': match.groups()[0]}
         required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
 
-        with open(fn_req) as req_file:
+        with open(fn_req, encoding='utf8') as req_file:
             working_set = list(_parse_working_set(req_file))
             installed = {req for req in required for entry in working_set if entry.fulfills(req)}
 

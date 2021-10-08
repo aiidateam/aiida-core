@@ -137,7 +137,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
                 class SomeWorkChain(BaseRestartWorkChain):
 
-                    @process_handler(exit_codes=incorrect_type)
+                    @process_handler(exit_codes=incorrect_type)  # pylint: disable=cell-var-from-loop
                     def _(self, node):
                         pass
 

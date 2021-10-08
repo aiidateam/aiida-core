@@ -38,7 +38,7 @@ class OqmdDbImporter(DbImporter):
         :return: a strings for HTTP GET statement.
         """
         elements = []
-        if 'element' in kwargs.keys():
+        if 'element' in kwargs:
             elements = kwargs.pop('element')
         if not isinstance(elements, list):
             elements = [elements]

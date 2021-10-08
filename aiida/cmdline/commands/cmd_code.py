@@ -253,16 +253,16 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     from aiida import orm
     from aiida.orm import Code  # pylint: disable=redefined-outer-name
 
-    qb_user_filters = dict()
+    qb_user_filters = {}
     if not all_users:
         user = orm.User.objects.get_default()
         qb_user_filters['email'] = user.email
 
-    qb_computer_filters = dict()
+    qb_computer_filters = {}
     if computer is not None:
         qb_computer_filters['label'] = computer.label
 
-    qb_code_filters = dict()
+    qb_code_filters = {}
     if input_plugin is not None:
         qb_code_filters['attributes.input_plugin'] = input_plugin.name
 

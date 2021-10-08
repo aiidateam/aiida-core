@@ -118,7 +118,7 @@ def downgrade():
         sa.Column(
             'id',
             sa.INTEGER(),
-            server_default=sa.text(u"nextval('db_dbworkflow_id_seq'::regclass)"),
+            server_default=sa.text("nextval('db_dbworkflow_id_seq'::regclass)"),
             autoincrement=True,
             nullable=False
         ),

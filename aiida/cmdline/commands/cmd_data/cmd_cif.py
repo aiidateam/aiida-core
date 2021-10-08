@@ -45,14 +45,14 @@ def cif_list(raw, formula_mode, past_days, groups, all_users):
     )
 
     counter = 0
-    cif_list_data = list()
+    cif_list_data = []
 
     if not raw:
         cif_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:
         for i, value in enumerate(entry):
             if isinstance(value, list):
-                new_entry = list()
+                new_entry = []
                 for elm in value:
                     if elm is None:
                         new_entry.append('')

@@ -146,7 +146,7 @@ def get_all_fields_info():
         COMMENT_ENTITY_NAME: 'uuid'
     }
 
-    all_fields_info = dict()
+    all_fields_info = {}
     all_fields_info[USER_ENTITY_NAME] = {'last_name': {}, 'first_name': {}, 'institution': {}, 'email': {}}
     all_fields_info[COMPUTER_ENTITY_NAME] = {
         'transport_type': {},

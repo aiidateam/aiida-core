@@ -90,7 +90,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         return key
 
     def has_objects(self, keys: List[str]) -> List[bool]:
-        result = list()
+        result = []
         dirlist = os.listdir(self.sandbox.abspath)
         for key in keys:
             result.append(key in dirlist)

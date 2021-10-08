@@ -45,7 +45,7 @@ def trajectory_list(raw, past_days, groups, all_users):
     )
 
     counter = 0
-    struct_list_data = list()
+    struct_list_data = []
     if not raw:
         struct_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:

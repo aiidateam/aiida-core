@@ -215,7 +215,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
             '>',
         ])
         path_to_upf = os.path.join(temp_dir, upf_filename)
-        with open(path_to_upf, 'w') as upf_file:
+        with open(path_to_upf, 'w', encoding='utf8') as upf_file:
             upf_file.write(upf_contents)
 
         # Create Groups

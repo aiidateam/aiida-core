@@ -205,10 +205,10 @@ def write_workchain(outlines, directory=None) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     (directory / '__init__.py').touch()
 
-    with open(template_file_base, 'r') as handle:
+    with open(template_file_base, 'r', encoding='utf8') as handle:
         template_base = handle.readlines()
 
-    with open(template_file_workchain, 'r') as handle:
+    with open(template_file_workchain, 'r', encoding='utf8') as handle:
         template_workchain = Template(handle.read())
 
     code_strings = []

@@ -36,7 +36,7 @@ class DbComputer(Base):
         self.description = ''
 
         # If someone passes metadata in **kwargs we change it to _metadata
-        if 'metadata' in kwargs.keys():
+        if 'metadata' in kwargs:
             kwargs['_metadata'] = kwargs.pop('metadata')
 
         super().__init__(*args, **kwargs)

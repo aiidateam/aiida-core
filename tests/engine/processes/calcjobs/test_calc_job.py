@@ -131,7 +131,7 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
     _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    with open(os.path.join(folder_name, submit_script_filename)) as handle:
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
         content = handle.read()
 
     file_regression.check(content, extension='.sh')
@@ -161,7 +161,7 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
     _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    with open(os.path.join(folder_name, submit_script_filename)) as handle:
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
         content = handle.read()
 
     file_regression.check(content, extension='.sh')
@@ -402,7 +402,7 @@ class TestCalcJob(AiidaTestCase):
         _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
         job_tmpl_file = os.path.join(node.dry_run_info['folder'], '.aiida', 'job_tmpl.json')
 
-        with open(job_tmpl_file, mode='r') as in_f:
+        with open(job_tmpl_file, mode='r', encoding='utf8') as in_f:
             job_tmpl = json.load(in_f)
 
         assert job_tmpl['rerunnable']
@@ -810,7 +810,7 @@ class TestImport(AiidaTestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
-            with open(filepath, 'w') as handle:
+            with open(filepath, 'w', encoding='utf8') as handle:
                 handle.write(f'{expected_sum}\n')
 
             remote = orm.RemoteData(directory, computer=self.computer).store()
@@ -840,7 +840,7 @@ class TestImport(AiidaTestCase):
         """
         with tempfile.TemporaryDirectory() as directory:
             filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
-            with open(filepath, 'w') as handle:
+            with open(filepath, 'w', encoding='utf8') as handle:
                 handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
 
             remote = orm.RemoteData(directory, computer=self.computer).store()
@@ -871,7 +871,7 @@ class TestImport(AiidaTestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             filepath = os.path.join(directory, output_filename)
-            with open(filepath, 'w') as handle:
+            with open(filepath, 'w', encoding='utf8') as handle:
                 handle.write(f'{expected_sum}\n')
 
             remote = orm.RemoteData(directory, computer=self.computer).store()

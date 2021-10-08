@@ -15,6 +15,7 @@ max-line-length = 120
 disable = [
     "bad-continuation",
     "bad-option-value",
+    "consider-using-f-string",
     "cyclic-import",
     "django-not-configured",
     "duplicate-code",
@@ -27,7 +28,9 @@ disable = [
     "too-few-public-methods",
     "too-many-ancestors",
     "too-many-arguments",
-    "too-many-instance-attributes"
+    "too-many-instance-attributes",
+    # this can be removed when https://github.com/PyCQA/astroid/issues/1015 is fixed
+    "not-context-manager",
 ]
 
 [tool.pylint.basic]

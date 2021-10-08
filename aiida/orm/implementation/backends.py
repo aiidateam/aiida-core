@@ -90,3 +90,35 @@ class Backend(abc.ABC):
 
         :return: an instance of :class:`sqlalchemy.orm.session.Session`
         """
+
+    @abc.abstractmethod
+    def bulk_insert(self,
+                    entity_type: 'EntityTypes',
+                    rows: List[dict],
+                    transaction: Any,
+                    allow_defaults: bool = False) -> List[int]:
+        """Insert a list of entities into the database, directly into a backend transaction.
+
+        :param entity_type: The type of the entity
+        :param data: A list of dictionaries, containing all fields of the backend model,
+            except the `id` field (a.k.a primary key), which will be generated dynamically
+        :param transaction: the returned object of the ``self.transaction`` context
+        :param allow_defaults: If ``False``, assert that each row contains all fields (except primary key(s)),
+            otherwise, allow default values for missing fields.
+
+        :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
+
+        :returns: The list of generated primary keys for the entities
+        """
+
+    @abc.abstractmethod
+    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict], transaction: Any) -> None:
+        """Update a list of entities in the database, directly with a backend transaction.
+
+        :param entity_type: The type of the entity
+        :param data: A list of dictionaries, containing fields of the backend model to update,
+            and the `id` field (a.k.a primary key)
+        :param transaction: the returned object of the ``self.transaction`` context
+
+        :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
+        """

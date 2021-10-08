@@ -164,7 +164,15 @@ def aiida_local_code_factory(aiida_localhost):
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost, label=None, prepend_text=None, append_text=None):
+    def get_code(
+        entry_point,
+        executable,
+        computer=aiida_localhost,
+        label=None,
+        withmpi=False,
+        prepend_text=None,
+        append_text=None
+    ):
         """Get local code.
 
         Sets up code for given entry point on given computer.
@@ -200,6 +208,8 @@ def aiida_local_code_factory(aiida_localhost):
         code = Code(input_plugin_name=entry_point, remote_computer_exec=[computer, executable_path])
         code.label = label
         code.description = label
+
+        code.set_withmpi(withmpi)
 
         if prepend_text is not None:
             code.set_prepend_text(prepend_text)

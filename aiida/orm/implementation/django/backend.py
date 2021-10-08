@@ -9,11 +9,18 @@
 ###########################################################################
 """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
+import functools
+from typing import Any, List
 
 # pylint: disable=import-error,no-name-in-module
-from django.db import models, transaction
+from django.apps import apps
+from django.db import models
+from django.db import transaction as django_transaction
 
+from aiida.backends.djsite.db import models as dbm
 from aiida.backends.djsite.manager import DjangoBackendManager
+from aiida.common.exceptions import IntegrityError
+from aiida.orm.entities import EntityTypes
 
 from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from ..sql.backends import SqlBackend
@@ -72,7 +79,7 @@ class DjangoBackend(SqlBackend[models.Model]):
     @staticmethod
     def transaction():
         """Open a transaction to be used as a context manager."""
-        return transaction.atomic()
+        return django_transaction.atomic()
 
     @staticmethod
     def get_session():
@@ -85,6 +92,76 @@ class DjangoBackend(SqlBackend[models.Model]):
         """
         from aiida.backends.djsite import get_scoped_session
         return get_scoped_session()
+
+    @staticmethod
+    @functools.lru_cache(maxsize=18)
+    def _get_model_from_entity(entity_type: EntityTypes, with_pk: bool):
+        """Return the Django model corresponding to the given entity."""
+        from sqlalchemy import inspect
+
+        model = {
+            EntityTypes.AUTHINFO: dbm.DbAuthInfo,
+            EntityTypes.COMMENT: dbm.DbComment,
+            EntityTypes.COMPUTER: dbm.DbComputer,
+            EntityTypes.GROUP: dbm.DbGroup,
+            EntityTypes.LOG: dbm.DbLog,
+            EntityTypes.NODE: dbm.DbNode,
+            EntityTypes.USER: dbm.DbUser,
+            EntityTypes.LINK: dbm.DbLink,
+            EntityTypes.GROUP_NODE:
+            {model._meta.db_table: model for model in apps.get_models(include_auto_created=True)}['db_dbgroup_dbnodes']
+        }[entity_type]
+        mapper = inspect(model.sa).mapper  # here aldjemy provides us the SQLAlchemy model
+        keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
+        return model, keys
+
+    def bulk_insert(self,
+                    entity_type: EntityTypes,
+                    rows: List[dict],
+                    transaction: Any,
+                    allow_defaults: bool = False) -> List[int]:
+        model, keys = self._get_model_from_entity(entity_type, False)
+        if allow_defaults:
+            for row in rows:
+                if not keys.issuperset(row):
+                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+        else:
+            for row in rows:
+                if set(row) != keys:
+                    raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
+        objects = [model(**row) for row in rows]
+        # if there is an mtime field, disable the automatic update, so as not to change it
+        if entity_type in (EntityTypes.NODE, EntityTypes.COMMENT):
+            with dbm.suppress_auto_now([(model, ['mtime'])]):
+                model.objects.bulk_create(objects)
+        else:
+            model.objects.bulk_create(objects)
+        return [obj.id for obj in objects]
+
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: Any) -> None:
+        model, keys = self._get_model_from_entity(entity_type, True)
+        id_entries = {}
+        fields = None
+        for row in rows:
+            if not keys.issuperset(row):
+                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+            try:
+                id_entries[row['id']] = {k: v for k, v in row.items() if k != 'id'}
+                fields = fields or list(id_entries[row['id']])
+                assert fields == list(id_entries[row['id']])
+            except KeyError:
+                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+            except AssertionError:
+                # this is handled in sqlalchemy, but would require more complex logic here
+                raise NotImplementedError(f'Cannot bulk update {entity_type} with different fields')
+        if fields is None:
+            return
+        objects = []
+        for pk, obj in model.objects.in_bulk(list(id_entries), field_name='id').items():
+            for name, value in id_entries[pk].items():
+                setattr(obj, name, value)
+            objects.append(obj)
+        model.objects.bulk_update(objects, fields)
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 

@@ -13,7 +13,7 @@ This migration applies the name change of the ``Computer`` attribute ``name`` to
 """
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import update_metadata, verify_metadata_version
+from .utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 
 def migrate_v11_to_v12(folder: CacheFolder):

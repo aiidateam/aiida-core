@@ -17,7 +17,7 @@ from aiida import orm
 from aiida.common import AttributeDict
 
 from .context import ToContext, append_
-from .utils import ProcessHandlerReport, process_handler
+from .utils import ProcessHandlerReport, process_handler  # pylint: disable=no-name-in-module
 from .workchain import WorkChain
 
 if TYPE_CHECKING:

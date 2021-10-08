@@ -165,7 +165,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, *args, **inputs):
-        from .utils import instantiate_process
+        from .utils import instantiate_process  # pylint: disable=no-name-in-module
         return instantiate_process(self, process, *args, **inputs)
 
     def submit(self, process: TYPE_SUBMIT_PROCESS, *args: Any, **inputs: Any):

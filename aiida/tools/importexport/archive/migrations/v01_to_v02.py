@@ -10,7 +10,7 @@
 """Migration from v0.1 to v0.2, used by `verdi export migrate` command."""
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import update_metadata, verify_metadata_version
+from .utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 
 def migrate_v1_to_v2(folder: CacheFolder):

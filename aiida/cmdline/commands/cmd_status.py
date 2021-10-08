@@ -19,7 +19,7 @@ from aiida.cmdline.utils import echo
 from aiida.common.exceptions import IncompatibleDatabaseSchema
 from aiida.common.log import override_log_level
 
-from ..utils.echo import ExitCode
+from ..utils.echo import ExitCode  # pylint: disable=import-error,no-name-in-module
 
 
 class ServiceStatus(enum.IntEnum):

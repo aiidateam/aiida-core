@@ -13,7 +13,7 @@ This migration is necessary after the `core.` prefix was added to entry points s
 """
 from aiida.tools.importexport.archive.common import CacheFolder
 
-from .utils import update_metadata, verify_metadata_version
+from .utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 MAPPING_DATA = {
     'data.array.ArrayData.': 'data.core.array.ArrayData.',

@@ -16,7 +16,7 @@ from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 from .. import types
-from ...utils import defaults, echo
+from ...utils import defaults, echo  # pylint: disable=no-name-in-module
 from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption

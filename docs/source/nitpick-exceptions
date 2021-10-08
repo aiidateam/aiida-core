@@ -43,6 +43,7 @@ py:class aiida.tools.importexport.dbexport.ExportReport
 py:class aiida.tools.importexport.dbexport.ArchiveData
 py:class aiida.tools.groups.paths.WalkNodeResult
 
+py:class AbstractRepositoryBackend
 py:class Backend
 py:class BackendEntity
 py:class BackendNode
@@ -52,6 +53,7 @@ py:class CalcJobImporter
 py:class CalcJobNode
 py:class Data
 py:class DbImporter
+py:class DiskObjectStoreRepositoryBackend
 py:class ExitCode
 py:class File
 py:class FolderData

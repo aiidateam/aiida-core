@@ -17,8 +17,6 @@ except ImportError:  # Python2
 
 import aiida.backends.djsite.db.models as djmodels
 
-__all__ = ('get_backend_entity',)
-
 
 @singledispatch
 def get_backend_entity(dbmodel, backend):  # pylint: disable=unused-argument

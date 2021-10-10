@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
 
-    from aiida.backends.manager import BackendManager
     from aiida.engine.daemon.client import DaemonClient
     from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
@@ -46,7 +45,6 @@ class Manager:
 
     def __init__(self) -> None:
         self._backend: Optional['Backend'] = None
-        self._backend_manager: Optional['BackendManager'] = None
         self._config: Optional['Config'] = None
         self._daemon_client: Optional['DaemonClient'] = None
         self._profile: Optional['Profile'] = None
@@ -63,7 +61,6 @@ class Manager:
             self._runner.stop()
 
         self._backend = None
-        self._backend_manager = None
         self._config = None
         self._profile = None
         self._communicator = None
@@ -95,8 +92,8 @@ class Manager:
 
     def unload_backend(self) -> None:
         """Unload the current backend and its corresponding database environment."""
-        manager = self.get_backend_manager()
-        manager.reset_backend_environment()
+        backend = self.get_backend()
+        backend.reset_environment()
         self._backend = None
 
     def _load_backend(self, schema_check: bool = True, repository_check: bool = True) -> 'Backend':
@@ -110,7 +107,7 @@ class Manager:
             for the current profile.
         :return: the database backend.
         """
-        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA, get_backend_manager
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.common import ConfigurationError, InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage import configuration
@@ -125,19 +122,29 @@ class Manager:
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
-        backend_manager = get_backend_manager(profile.database_backend)
+        backend_type = profile.database_backend
+
+        # For django only, the setup module must be loaded before the class can be instantiated,
+        if backend_type == BACKEND_DJANGO:
+            from aiida.orm.implementation.django.backend import DjangoBackend
+            backend_cls = DjangoBackend
+        elif backend_type == BACKEND_SQLA:
+            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+            backend_cls = SqlaBackend
 
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            backend_manager.load_backend_environment(profile, validate_schema=schema_check)
+            backend_cls.load_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
+
+        backend = backend_cls()
 
         # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
         # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
         # then become an exception once we have verified that it is working reliably.
         if repository_check and not profile.is_test_profile:
             repository_uuid_config = profile.get_repository().uuid
-            repository_uuid_database = backend_manager.get_repository_uuid()
+            repository_uuid_database = backend.get_repository_uuid()
 
             from aiida.cmdline.utils import echo
             if repository_uuid_config != repository_uuid_database:
@@ -149,15 +156,7 @@ class Manager:
                     'Please make sure that the configuration of your profile is correct.\n'
                 )
 
-        backend_type = profile.database_backend
-
-        # Can only import the backend classes after the backend has been loaded
-        if backend_type == BACKEND_DJANGO:
-            from aiida.orm.implementation.django.backend import DjangoBackend
-            self._backend = DjangoBackend()
-        elif backend_type == BACKEND_SQLA:
-            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-            self._backend = SqlaBackend()
+        self._backend = backend
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
@@ -172,32 +171,6 @@ class Manager:
         :return: boolean, True if database backend is currently loaded, False otherwise
         """
         return self._backend is not None
-
-    def get_backend_manager(self) -> 'BackendManager':
-        """Return the database backend manager.
-
-        .. note:: this is not the actual backend, but a manager class that is necessary for database operations that
-            go around the actual ORM. For example when the schema version has not yet been validated.
-
-        :return: the database backend manager
-
-        """
-        from aiida.backends import get_backend_manager
-        from aiida.common import ConfigurationError
-
-        if self._backend_manager is None:
-
-            if self._backend is None:
-                self._load_backend()
-
-            profile = self.get_profile()
-            if profile is None:
-                raise ConfigurationError(
-                    'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
-                )
-            self._backend_manager = get_backend_manager(profile.database_backend)
-
-        return self._backend_manager
 
     def get_backend(self) -> 'Backend':
         """Return the database backend

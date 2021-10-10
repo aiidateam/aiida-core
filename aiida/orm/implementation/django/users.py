@@ -17,8 +17,6 @@ from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 
 from . import entities, utils
 
-__all__ = ('DjangoUser', 'DjangoUserCollection')
-
 
 class DjangoUser(entities.DjangoModelEntity[models.DbUser], BackendUser):
     """The Django user class"""

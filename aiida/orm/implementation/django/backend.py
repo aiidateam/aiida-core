@@ -9,13 +9,15 @@
 ###########################################################################
 """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
+import os
 
 # pylint: disable=import-error,no-name-in-module
+import django
 from django.db import models, transaction
 
+from aiida.backends.djsite import get_scoped_session, reset_session
 from aiida.backends.djsite.manager import DjangoBackendManager
 
-from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 from ..sql.backends import SqlBackend
 
 __all__ = ('DjangoBackend',)
@@ -26,6 +28,8 @@ class DjangoBackend(SqlBackend[models.Model]):
 
     def __init__(self):
         """Construct the backend instance by initializing all the collections."""
+        from . import authinfos, comments, computers, groups, logs, nodes, users
+        super().__init__()
         self._authinfos = authinfos.DjangoAuthInfoCollection(self)
         self._comments = comments.DjangoCommentCollection(self)
         self._computers = computers.DjangoComputerCollection(self)
@@ -34,6 +38,18 @@ class DjangoBackend(SqlBackend[models.Model]):
         self._nodes = nodes.DjangoNodeCollection(self)
         self._backend_manager = DjangoBackendManager()
         self._users = users.DjangoUserCollection(self)
+
+    @classmethod
+    def load_environment(cls, profile, validate_schema=True, **kwargs):
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
+        django.setup()  # pylint: disable=no-member
+        # For QueryBuilder only
+        get_scoped_session(profile, **kwargs)
+        if validate_schema:
+            DjangoBackendManager().validate_schema(profile)
+
+    def reset_environment(self):
+        reset_session()
 
     def migrate(self):
         self._backend_manager.migrate()
@@ -63,6 +79,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         return self._nodes
 
     def query(self):
+        from . import querybuilder
         return querybuilder.DjangoQueryBuilder(self)
 
     @property
@@ -83,13 +100,13 @@ class DjangoBackend(SqlBackend[models.Model]):
 
         :return: an instance of :class:`sqlalchemy.orm.session.Session`
         """
-        from aiida.backends.djsite import get_scoped_session
         return get_scoped_session()
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 
     def get_backend_entity(self, model):
         """Return a `BackendEntity` instance from a `DbModel` instance."""
+        from . import convert
         return convert.get_backend_entity(model, self)
 
     @contextmanager

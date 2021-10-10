@@ -107,29 +107,6 @@ class BackendManager:
         :return: `SettingsManager`
         """
 
-    def load_backend_environment(self, profile, validate_schema=True, **kwargs):
-        """Load the backend environment.
-
-        :param profile: the profile whose backend environment to load
-        :param validate_schema: boolean, if True, validate the schema first before loading the environment.
-        :param kwargs: keyword arguments that will be passed on to the backend specific scoped session getter function.
-        """
-        self._load_backend_environment(**kwargs)
-
-        if validate_schema:
-            self.validate_schema(profile)
-
-    @abc.abstractmethod
-    def _load_backend_environment(self, **kwargs):
-        """Load the backend environment.
-
-        :param kwargs: keyword arguments that will be passed on to the backend specific scoped session getter function.
-        """
-
-    @abc.abstractmethod
-    def reset_backend_environment(self):
-        """Reset the backend environment."""
-
     def migrate(self):
         """Migrate the database to the latest schema generation or version."""
         try:

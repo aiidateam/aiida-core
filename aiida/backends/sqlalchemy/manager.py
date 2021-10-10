@@ -81,19 +81,6 @@ class SqlaBackendManager(BackendManager):
 
         return self._settings_manager
 
-    def _load_backend_environment(self, **kwargs):
-        """Load the backend environment.
-
-        :param kwargs: keyword arguments that will be passed on to
-            :py:func:`aiida.backends.sqlalchemy.get_scoped_session`.
-        """
-        get_scoped_session(**kwargs)
-
-    def reset_backend_environment(self):
-        """Reset the backend environment."""
-        from . import reset_session
-        reset_session()
-
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.
 

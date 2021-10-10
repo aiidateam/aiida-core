@@ -52,9 +52,9 @@ def restrict_sqlalchemy_queuepool(aiida_profile):
     """Create special SQLAlchemy engine for use with QueryBuilder - backend-agnostic"""
     from aiida.manage.manager import get_manager
 
-    backend_manager = get_manager().get_backend_manager()
-    backend_manager.reset_backend_environment()
-    backend_manager.load_backend_environment(aiida_profile, pool_timeout=1, max_overflow=0)
+    backend = get_manager().get_backend()
+    backend.reset_environment()
+    backend.load_environment(aiida_profile, pool_timeout=1, max_overflow=0)
 
 
 @pytest.fixture

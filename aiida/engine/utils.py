@@ -275,7 +275,7 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
 
     try:
         manager = get_manager()
-        manager.get_backend_manager().get_settings_manager().set(key, value, description)
+        manager.get_backend().set_value(key, value, description)
     except UniquenessError as exception:
         process.logger.debug(f'could not update the {key} setting because of a UniquenessError: {exception}')
 
@@ -294,7 +294,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     from aiida.common.exceptions import NotExistent
     from aiida.manage.manager import get_manager  # pylint: disable=cyclic-import
 
-    manager = get_manager().get_backend_manager().get_settings_manager()
+    backend = get_manager().get_backend()
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
@@ -310,7 +310,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            time_stamp = timezone.isoformat_to_datetime(manager.get(key).value)
+            time_stamp = timezone.isoformat_to_datetime(backend.get_value(key).value)
             if time_stamp is not None:
                 timestamps.append(time_stamp)
         except NotExistent:

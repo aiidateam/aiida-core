@@ -21,8 +21,6 @@ from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
 from . import entities, users, utils
 
-__all__ = ('DjangoGroup', 'DjangoGroupCollection')
-
 
 class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # pylint: disable=abstract-method
     """The Django group object"""

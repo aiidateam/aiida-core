@@ -31,7 +31,7 @@ def reset_session():
     SESSION_FACTORY = None
 
 
-def get_scoped_session(**kwargs):
+def get_scoped_session(profile=None, **kwargs):
     """Return a scoped session
 
     According to SQLAlchemy docs, this returns always the same object within a thread, and a different object in a
@@ -43,6 +43,8 @@ def get_scoped_session(**kwargs):
         more info.
     """
     from aiida.manage.configuration import get_profile
+    if profile is None:
+        profile = get_profile()
 
     global ENGINE
     global SESSION_FACTORY
@@ -52,7 +54,7 @@ def get_scoped_session(**kwargs):
         return session
 
     if ENGINE is None:
-        ENGINE = create_sqlalchemy_engine(get_profile(), **kwargs)
+        ENGINE = create_sqlalchemy_engine(profile, **kwargs)
 
     SESSION_FACTORY = create_scoped_session_factory(ENGINE, expire_on_commit=True)
 

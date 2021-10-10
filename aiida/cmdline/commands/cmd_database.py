@@ -33,12 +33,12 @@ def database_version():
 
     manager = get_manager()
     manager._load_backend(schema_check=False)  # pylint: disable=protected-access
-    backend_manager = manager.get_backend_manager()
+    backend = manager.get_backend()
 
     echo.echo('Generation: ', bold=True, nl=False)
-    echo.echo(backend_manager.get_schema_generation_database())
+    echo.echo(backend.get_schema_generation_database())
     echo.echo('Revision:   ', bold=True, nl=False)
-    echo.echo(backend_manager.get_schema_version_database())
+    echo.echo(backend.get_schema_version_database())
 
 
 @verdi_database.command('migrate')

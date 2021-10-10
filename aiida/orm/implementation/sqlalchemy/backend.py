@@ -10,6 +10,7 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 
+from aiida.backends.sqlalchemy import get_scoped_session, reset_session
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 from aiida.backends.sqlalchemy.models import base
 
@@ -24,17 +25,27 @@ class SqlaBackend(SqlBackend[base.Base]):
 
     def __init__(self):
         """Construct the backend instance by initializing all the collections."""
+        super().__init__()
         self._authinfos = authinfos.SqlaAuthInfoCollection(self)
         self._comments = comments.SqlaCommentCollection(self)
         self._computers = computers.SqlaComputerCollection(self)
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
-        self._schema_manager = SqlaBackendManager()
+        self._backend_manager = SqlaBackendManager()
         self._users = users.SqlaUserCollection(self)
 
+    @classmethod
+    def load_environment(cls, profile, validate_schema=True, **kwargs):
+        get_scoped_session(profile, **kwargs)
+        if validate_schema:
+            SqlaBackendManager().validate_schema(profile)
+
+    def reset_environment(self):  # pylint: disable=no-self-use
+        reset_session()
+
     def migrate(self):
-        self._schema_manager.migrate()
+        self._backend_manager.migrate()
 
     @property
     def authinfos(self):
@@ -89,7 +100,6 @@ class SqlaBackend(SqlBackend[base.Base]):
 
         :return: an instance of :class:`sqlalchemy.orm.session.Session`
         """
-        from aiida.backends.sqlalchemy import get_scoped_session
         return get_scoped_session()
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`

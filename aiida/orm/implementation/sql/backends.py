@@ -29,6 +29,11 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
     if any of these assumptions do not fit then just implement a backend from :class:`aiida.orm.implementation.Backend`
     """
 
+    def __init__(self) -> None:
+        from aiida.backends.manager import BackendManager
+        super().__init__()
+        self._backend_manager = BackendManager()
+
     @abc.abstractmethod
     def get_backend_entity(self, model):
         """
@@ -74,3 +79,55 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
                 results.append(row)
 
         return results
+
+    @classmethod
+    @abc.abstractmethod
+    def load_environment(cls, profile, validate_schema=True, **kwargs):
+        """Load the backend environment.
+
+        :param profile: the profile whose backend environment to load
+        :param validate_schema: boolean, if True, validate the schema after loading the environment.
+        :param kwargs: keyword arguments that will be passed on to the backend specific scoped session getter function.
+        """
+
+    @abc.abstractmethod
+    def reset_environment(self):
+        """Reset the backend environment."""
+
+    def get_repository_uuid(self):
+        """Return the UUID of the repository that is associated with this database.
+
+        :return: the UUID of the repository associated with this database or None if it doesn't exist.
+        """
+        return self._backend_manager.get_repository_uuid()
+
+    def get_schema_generation_database(self):
+        """Return the database schema version.
+
+        :return: `distutils.version.LooseVersion` with schema version of the database
+        """
+        return self._backend_manager.get_schema_generation_database()
+
+    def get_schema_version_database(self):
+        """Return the database schema version.
+
+        :return: `distutils.version.LooseVersion` with schema version of the database
+        """
+        return self._backend_manager.get_schema_version_database()
+
+    def set_value(self, key: str, value: typing.Any, description: typing.Optional[str] = None) -> None:
+        """Set a global key/value pair on the profile backend.
+
+        :param key: the key identifying the setting
+        :param value: the value for the setting
+        :param description: optional setting description
+        """
+        return self._backend_manager.get_settings_manager().set(key, value, description)
+
+    def get_value(self, key: str) -> typing.Any:
+        """Get a global key/value pair on the profile backend.
+
+        :param key: the key identifying the setting
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+        return self._backend_manager.get_settings_manager().get(key)

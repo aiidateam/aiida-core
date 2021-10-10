@@ -9,11 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the Django database schema."""
-
-import os
-
-import django
-
 from aiida.common import NotExistent
 
 from ..manager import SCHEMA_VERSION_DESCRIPTION, SCHEMA_VERSION_KEY, BackendManager, Setting, SettingsManager
@@ -34,25 +29,6 @@ class DjangoBackendManager(BackendManager):
             self._settings_manager = DjangoSettingsManager()
 
         return self._settings_manager
-
-    def _load_backend_environment(self, **kwargs):
-        """Load the backend environment.
-
-        The scoped session is needed for the QueryBuilder only.
-
-        :param kwargs: keyword arguments that will be passed on to :py:func:`aiida.backends.djsite.get_scoped_session`.
-        """
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
-        django.setup()  # pylint: disable=no-member
-
-        # For QueryBuilder only
-        from . import get_scoped_session
-        get_scoped_session(**kwargs)
-
-    def reset_backend_environment(self):
-        """Reset the backend environment."""
-        from . import reset_session
-        reset_session()
 
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.

@@ -31,7 +31,7 @@ def reset_session():
     SESSION_FACTORY = None
 
 
-def get_scoped_session(**kwargs):
+def get_scoped_session(profile=None, **kwargs):
     """Return a scoped session for the given profile that is exclusively to be used for the `QueryBuilder`.
 
     Since the `QueryBuilder` implementation uses SqlAlchemy to map the query onto the models in order to generate the
@@ -51,6 +51,8 @@ def get_scoped_session(**kwargs):
     :return: :class:`sqlalchemy.orm.session.Session` instance with engine configured for the given profile.
     """
     from aiida.manage.configuration import get_profile
+    if profile is None:
+        profile = get_profile()
 
     global ENGINE
     global SESSION_FACTORY
@@ -60,7 +62,7 @@ def get_scoped_session(**kwargs):
         return session
 
     if ENGINE is None:
-        ENGINE = create_sqlalchemy_engine(get_profile(), **kwargs)
+        ENGINE = create_sqlalchemy_engine(profile, **kwargs)
 
     SESSION_FACTORY = create_scoped_session_factory(ENGINE)
 

@@ -26,7 +26,7 @@ from ..sql.backends import SqlBackend
 __all__ = ('SqlaBackend',)
 
 
-class SqlaBackend(SqlBackend[base.Base]):
+class SqlaBackend(SqlBackend[Session, base.Base]):
     """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
     def __init__(self):
@@ -169,26 +169,24 @@ class SqlaBackend(SqlBackend[base.Base]):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         transaction.bulk_update_mappings(mapper, rows)
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int], transact: Session) -> None:  # pylint: disable=no-self-use
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int], transaction: Session) -> None:  # pylint: disable=no-self-use
         # pylint: disable=no-value-for-parameter
         from aiida.backends.sqlalchemy.models.group import table_groups_nodes
         from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
-
-        session = transact
 
         # I am first making a statement to delete the membership of these nodes to groups.
         # Since table_groups_nodes is a sqlalchemy.schema.Table, I am using expression language to compile
         # a stmt to be executed by the session. It works, but it's not nice that two different ways are used!
         # Can this be changed?
         stmt = table_groups_nodes.delete().where(table_groups_nodes.c.dbnode_id.in_(list(pks_to_delete)))
-        session.execute(stmt)
+        transaction.execute(stmt)
         # First delete links, then the Nodes, since we are not cascading deletions.
         # Here I delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        transaction.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Here I delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        transaction.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Now I am deleting the nodes
-        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        transaction.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 

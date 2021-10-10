@@ -19,9 +19,12 @@ py:class builtins.str
 py:class builtins.dict
 
 # typing
+py:class AbstractContextManager
 py:class asyncio.events.AbstractEventLoop
 py:class EntityType
 py:class EntityTypes
+py:class ModelType
+py:class TransactionType
 py:class function
 py:class IO
 py:class traceback

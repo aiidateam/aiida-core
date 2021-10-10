@@ -68,14 +68,14 @@ class Backend(abc.ABC, Generic[TransactionType]):
     def nodes(self) -> 'BackendNodeCollection':
         """Return the collection of nodes"""
 
-    @abc.abstractmethod
-    def query(self) -> 'BackendQueryBuilder':
-        """Return an instance of a query builder implementation for this backend"""
-
     @property
     @abc.abstractmethod
     def users(self) -> 'BackendUserCollection':
         """Return the collection of users"""
+
+    @abc.abstractmethod
+    def query(self) -> 'BackendQueryBuilder':
+        """Return an instance of a query builder implementation for this backend"""
 
     @abc.abstractmethod
     def get_session(self) -> 'Session':

@@ -28,7 +28,7 @@ from ..sql.backends import SqlBackend
 __all__ = ('DjangoBackend',)
 
 
-class DjangoBackend(SqlBackend[models.Model]):
+class DjangoBackend(SqlBackend[None, models.Model]):
     """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 
     def __init__(self):

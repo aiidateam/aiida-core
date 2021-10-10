@@ -48,7 +48,7 @@ def server_url():
 
 
 @pytest.fixture
-def restrict_sqlalchemy_queuepool(aiida_profile):
+def restrict_sqlalchemy_queuepool(aiida_profile):  # pylint: disable=unused-argument
     """Create special SQLAlchemy engine for use with QueryBuilder - backend-agnostic"""
     from aiida.manage.manager import get_manager
 

@@ -11,7 +11,9 @@
 # pylint: disable=missing-function-docstring
 from contextlib import contextmanager
 import functools
-from typing import Any, List
+from typing import Iterator, List, Sequence
+
+from sqlalchemy.orm import Session
 
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 from aiida.backends.sqlalchemy.models import base
@@ -72,8 +74,17 @@ class SqlaBackend(SqlBackend[base.Base]):
     def users(self):
         return self._users
 
+    @staticmethod
+    def get_session() -> Session:
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+        """
+        from aiida.backends.sqlalchemy import get_scoped_session
+        return get_scoped_session()
+
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Iterator[Session]:
         """Open a transaction to be used as a context manager.
 
         If there is an exception within the context then the changes will be rolled back and the state will be as before
@@ -120,11 +131,13 @@ class SqlaBackend(SqlBackend[base.Base]):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(self,
-                    entity_type: EntityTypes,
-                    rows: List[dict],
-                    transaction: Any,
-                    allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(
+        self,
+        entity_type: EntityTypes,
+        rows: List[dict],
+        transaction: Session,
+        allow_defaults: bool = False
+    ) -> List[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -145,7 +158,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         transaction.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: Any) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: Session) -> None:  # pylint: disable=no-self-use
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -156,41 +169,42 @@ class SqlaBackend(SqlBackend[base.Base]):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         transaction.bulk_update_mappings(mapper, rows)
 
-    @staticmethod
-    def get_session():
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int], transact: Session) -> None:  # pylint: disable=no-self-use
+        # pylint: disable=no-value-for-parameter
+        from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+        from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
 
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
-        return get_scoped_session()
+        session = transact
+
+        # I am first making a statement to delete the membership of these nodes to groups.
+        # Since table_groups_nodes is a sqlalchemy.schema.Table, I am using expression language to compile
+        # a stmt to be executed by the session. It works, but it's not nice that two different ways are used!
+        # Can this be changed?
+        stmt = table_groups_nodes.delete().where(table_groups_nodes.c.dbnode_id.in_(list(pks_to_delete)))
+        session.execute(stmt)
+        # First delete links, then the Nodes, since we are not cascading deletions.
+        # Here I delete the links coming out of the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Here I delete the links pointing to the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Now I am deleting the nodes
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 
     def get_backend_entity(self, model):
-        """Return a `BackendEntity` instance from a `DbModel` instance."""
         return convert.get_backend_entity(model, self)
 
     @contextmanager
     def cursor(self):
-        """Return a psycopg cursor to be used in a context manager.
-
-        :return: a psycopg cursor
-        :rtype: :class:`psycopg2.extensions.cursor`
-        """
         from aiida.backends import sqlalchemy as sa
         try:
             connection = sa.ENGINE.raw_connection()
             yield connection.cursor()
         finally:
-            self.get_connection().close()
+            self._get_connection().close()
 
     def execute_raw(self, query):
-        """Execute a raw SQL statement and return the result.
-
-        :param query: a string containing a raw SQL statement
-        :return: the result of the query
-        """
         from sqlalchemy import text
         from sqlalchemy.exc import ResourceClosedError  # pylint: disable=import-error,no-name-in-module
 
@@ -205,7 +219,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         return results
 
     @staticmethod
-    def get_connection():
+    def _get_connection():
         """Get the SQLA database connection
 
         :return: the SQLA database connection

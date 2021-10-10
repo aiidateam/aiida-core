@@ -11,8 +11,8 @@
 import logging
 from typing import Callable, Iterable, Set, Tuple, Union
 
-from aiida.backends.utils import delete_nodes_and_connections
 from aiida.common.log import AIIDA_LOGGER
+from aiida.manage.manager import get_manager
 from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
@@ -21,9 +21,12 @@ __all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
-def delete_nodes(pks: Iterable[int],
-                 dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
-                 **traversal_rules: bool) -> Tuple[Set[int], bool]:
+def delete_nodes(
+    pks: Iterable[int],
+    dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
+    backend=None,
+    **traversal_rules: bool
+) -> Tuple[Set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
 
     This command will delete not only the specified nodes, but also the ones that are
@@ -60,6 +63,7 @@ def delete_nodes(pks: Iterable[int],
     :returns: (pks to delete, whether they were deleted)
 
     """
+    backend = backend or get_manager().get_backend()
 
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
 
@@ -99,7 +103,8 @@ def delete_nodes(pks: Iterable[int],
         return (pks_set_to_delete, True)
 
     DELETE_LOGGER.report('Starting node deletion...')
-    delete_nodes_and_connections(pks_set_to_delete)
+    with backend.transaction() as transaction:
+        backend.delete_nodes_and_connections(pks_set_to_delete, transaction)
     DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)

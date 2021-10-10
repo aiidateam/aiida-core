@@ -10,7 +10,7 @@
 """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 import functools
-from typing import Any, List
+from typing import ContextManager, List, Sequence
 
 # pylint: disable=import-error,no-name-in-module
 from django.apps import apps
@@ -77,11 +77,6 @@ class DjangoBackend(SqlBackend[models.Model]):
         return self._users
 
     @staticmethod
-    def transaction():
-        """Open a transaction to be used as a context manager."""
-        return django_transaction.atomic()
-
-    @staticmethod
     def get_session():
         """Return a database session that can be used by the `QueryBuilder` to perform its query.
 
@@ -92,6 +87,11 @@ class DjangoBackend(SqlBackend[models.Model]):
         """
         from aiida.backends.djsite import get_scoped_session
         return get_scoped_session()
+
+    @staticmethod
+    def transaction() -> ContextManager[None]:
+        """Open a transaction to be used as a context manager."""
+        return django_transaction.atomic()
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
@@ -121,7 +121,7 @@ class DjangoBackend(SqlBackend[models.Model]):
     def bulk_insert(self,
                     entity_type: EntityTypes,
                     rows: List[dict],
-                    transaction: Any,
+                    transaction: None,
                     allow_defaults: bool = False) -> List[int]:
         model, keys = self._get_model_from_entity(entity_type, False)
         if allow_defaults:
@@ -141,7 +141,7 @@ class DjangoBackend(SqlBackend[models.Model]):
             model.objects.bulk_create(objects)
         return [obj.id for obj in objects]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: Any) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: None) -> None:
         model, keys = self._get_model_from_entity(entity_type, True)
         id_entries = {}
         fields = None
@@ -166,6 +166,12 @@ class DjangoBackend(SqlBackend[models.Model]):
             objects.append(obj)
         model.objects.bulk_update(objects, fields)
 
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int], transaction: None) -> None:
+        # Delete all links pointing to or from a given node
+        dbm.DbLink.objects.filter(models.Q(input__in=pks_to_delete) | models.Q(output__in=pks_to_delete)).delete()
+        # now delete nodes
+        dbm.DbNode.objects.filter(pk__in=pks_to_delete).delete()
+
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 
     def get_backend_entity(self, model):
@@ -180,7 +186,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         :rtype: :class:`psycopg2.extensions.cursor`
         """
         try:
-            yield self.get_connection().cursor()
+            yield self._get_connection().cursor()
         finally:
             pass
 
@@ -197,7 +203,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         return results
 
     @staticmethod
-    def get_connection():
+    def _get_connection():
         """
         Get the Django connection
 

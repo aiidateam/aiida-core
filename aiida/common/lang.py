@@ -11,6 +11,7 @@
 import functools
 import inspect
 import keyword
+from typing import Any, Callable, Generic, TypeVar
 
 
 def isidentifier(identifier):
@@ -75,8 +76,10 @@ def override_decorator(check=False):
 
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
+ReturnType = TypeVar('ReturnType')
 
-class classproperty:  # pylint: disable=invalid-name
+
+class classproperty(Generic[ReturnType]):
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
@@ -85,8 +88,8 @@ class classproperty:  # pylint: disable=invalid-name
     instance as its first argument).
     """
 
-    def __init__(self, getter):
+    def __init__(self, getter: Callable[[Any], ReturnType]) -> None:
         self.getter = getter
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance: Any, owner: Any) -> ReturnType:
         return self.getter(owner)

@@ -79,7 +79,7 @@ override = override_decorator(check=False)  # pylint: disable=invalid-name
 ReturnType = TypeVar('ReturnType')
 
 
-class classproperty(Generic[ReturnType]):
+class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together

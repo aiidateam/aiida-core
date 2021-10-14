@@ -10,6 +10,7 @@
 """Generic backend related objects"""
 import abc
 from typing import TYPE_CHECKING
+import weakref
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
@@ -28,6 +29,20 @@ if TYPE_CHECKING:
 
 __all__ = ('Backend',)
 
+_backends = weakref.WeakValueDictionary()
+"""Weak-referencing dictionary of loaded Backend.
+"""
+
+
+def close_all_backends():
+    """Close all loaded backends.
+
+    This function is not for general use but may be useful for test suites
+    within the teardown scheme.
+    """
+    for backend in _backends.values():
+        backend.close()
+
 
 class Backend(abc.ABC):
     """Abstraction for a backend to read/write persistent data for a profile's provenance graph."""
@@ -39,6 +54,8 @@ class Backend(abc.ABC):
         :param validate_db: if True, the backend will perform validation tests on the database consistency
         """
         self._profile = profile
+        self._hashkey = 1 if not _backends else max(_backends.keys()) + 1
+        _backends[self._hashkey] = self
 
     @property
     def profile(self) -> 'Profile':

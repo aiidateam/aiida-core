@@ -11,13 +11,12 @@
 import abc
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
+from sqlalchemy.future.engine import Engine
+from sqlalchemy.orm import Session
+
 from .. import backends
 
 if TYPE_CHECKING:
-    from sqlalchemy.future.engine import Engine
-    from sqlalchemy.future.orm import Session
-    from sqlalchemy.orm.scoping import scoped_session
-
     from aiida.backends.manager import BackendManager
 
 __all__ = ('SqlBackend',)
@@ -39,30 +38,28 @@ class SqlBackend(Generic[ModelType], backends.Backend):
     def __init__(self, profile, validate_db: bool = True):
         super().__init__(profile, validate_db)
         # set variables for QueryBuilder
-        self._engine: Optional['Engine'] = None
-        self._session_factory: Optional['scoped_session'] = None
+        self._engine: Optional[Engine] = None
+        self._session: Optional[Session] = None
 
     def get_session(self, **kwargs: Any) -> 'Session':
-        """Return a database session that can be used by the `QueryBuilderBackend`.
+        """Return an SQLAlchemy database session.
 
         On first call (or after a reset) the session is initialised, then the same session is always returned.
 
         :param kwargs: keyword arguments to be passed to the engine
         """
-        from aiida.backends.utils import create_scoped_session_factory, create_sqlalchemy_engine
-        if self._session_factory is not None:
-            return self._session_factory()
+        from aiida.backends.utils import create_sqlalchemy_engine
+
         if self._engine is None:
             self._engine = create_sqlalchemy_engine(self._profile, **kwargs)
-        self._session_factory = create_scoped_session_factory(self._engine)
-        return self._session_factory()
+        if self._session is None:
+            self._session = Session(bind=self._engine, future=True)
+        return self._session
 
     def close(self):
-        if self._session_factory is not None:
-            # these methods are proxied from the session
-            self._session_factory.expunge_all()  # pylint: disable=no-member
-            self._session_factory.remove()  # pylint: disable=no-member
-            self._session_factory = None
+        if self._session is not None:
+            self._session.close()
+            self._session = None
         if self._engine is not None:
             self._engine.dispose()
             self._engine = None

@@ -105,7 +105,9 @@ class AiidaTestCase(unittest.TestCase):
         cls.clean_repository()
 
     def tearDown(self):
+        from aiida.orm.implementation.backends import close_all_backends
         reset_manager()
+        close_all_backends()
         # the user and computer need to be reset, so that they can be set to the new backend
         # pylint: disable=protected-access
         self.__class__._computer = None

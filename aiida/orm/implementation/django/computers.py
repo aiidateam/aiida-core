@@ -63,7 +63,7 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
 
     @property
     def is_stored(self):
-        return self._dbmodel.is_saved()
+        return self._dbmodel.id is not None
 
     @property
     def label(self):

@@ -304,4 +304,4 @@ def load_documentation_profile():
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile}}
         PROFILE = Profile(profile_name, profile, from_config=True)
         CONFIG = Config(handle.name, config)
-        get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
+        get_manager()._load_backend(validate_db=False, repository_check=False)  # pylint: disable=protected-access

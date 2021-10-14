@@ -15,7 +15,6 @@ from copy import copy
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common import exceptions
 from aiida.orm.implementation.computers import BackendComputer, BackendComputerCollection
@@ -32,7 +31,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def __init__(self, backend, **kwargs):
         super().__init__(backend)
-        self._dbmodel = utils.ModelWrapper(DbComputer(**kwargs))
+        self._dbmodel = utils.StorableModel(DbComputer(**kwargs), self._backend)
 
     @property
     def uuid(self):
@@ -48,11 +47,11 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     @property
     def is_stored(self):
-        return self._dbmodel.id is not None
+        return self._dbmodel.is_saved()
 
     def copy(self):
         """Create an unstored clone of an already stored `Computer`."""
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can copy a computer only after having stored it')
@@ -128,15 +127,17 @@ class SqlaComputerCollection(BackendComputerCollection):
 
     ENTITY_CLASS = SqlaComputer
 
-    @staticmethod
-    def list_names():
-        session = get_scoped_session()
+    def list_names(self):
+        session = self.backend.get_session()
         return session.query(DbComputer.label).all()
 
     def delete(self, pk):
+        session = self.backend.get_session()
+        inst = session.get(DbComputer, pk)
+        if inst is None:
+            raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
         try:
-            session = get_scoped_session()
-            session.get(DbComputer, pk).delete()
+            session.delete(inst)
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(

@@ -8,13 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA implementations for the Comment entity and collection."""
-# pylint: disable=import-error,no-name-in-module
-
 from datetime import datetime
 
-from sqlalchemy.orm.exc import NoResultFound
-
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import comment as models
 from aiida.common import exceptions, lang
 
@@ -56,7 +51,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
             lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._dbmodel = utils.ModelWrapper(models.DbComment(**arguments))
+        self._dbmodel = utils.StorableModel(models.DbComment(**arguments), self._backend)
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
@@ -113,26 +108,15 @@ class SqlaCommentCollection(BackendCommentCollection):
         return SqlaComment(self.backend, node, user, content, **kwargs)  # pylint: disable=abstract-class-instantiated
 
     def delete(self, comment_id):
-        """
-        Remove a Comment from the collection with the given id
-
-        :param comment_id: the id of the comment to delete
-        :type comment_id: int
-
-        :raises TypeError: if ``comment_id`` is not an `int`
-        :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
-        """
         if not isinstance(comment_id, int):
             raise TypeError('comment_id must be an int')
 
-        session = get_scoped_session()
-
-        try:
-            session.query(models.DbComment).filter_by(id=comment_id).one().delete()
-            session.commit()
-        except NoResultFound:
-            session.rollback()
-            raise exceptions.NotExistent(f"Comment with id '{comment_id}' not found")
+        session = self.backend.get_session()
+        inst = session.get(models.DbComment, comment_id)
+        if inst is None:
+            raise exceptions.NotExistent(f'Comment<{comment_id}> does not exist')
+        session.delete(inst)
+        session.commit()
 
     def delete_all(self):
         """
@@ -140,7 +124,7 @@ class SqlaCommentCollection(BackendCommentCollection):
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbComment).delete()

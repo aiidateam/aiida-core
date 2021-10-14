@@ -131,7 +131,7 @@ class DjangoCommentCollection(BackendCommentCollection):
         try:
             models.DbComment.objects.get(id=comment_id).delete()
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent(f"Comment with id '{comment_id}' not found")
+            raise exceptions.NotExistent(f'Comment<{comment_id}> does not exist')
 
     def delete_all(self):
         """

@@ -14,7 +14,6 @@ import os
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import NotExistent
 
 from ..manager import BackendManager, Setting, SettingsManager
@@ -28,9 +27,8 @@ SCHEMA_VERSION_RESET = {'1': None}
 class SqlaBackendManager(BackendManager):
     """Class to manage the database schema."""
 
-    @staticmethod
     @contextlib.contextmanager
-    def alembic_config():
+    def alembic_config(self):
         """Context manager to return an instance of an Alembic configuration.
 
         The current database connection is added in the `attributes` property, through which it can then also be
@@ -38,9 +36,7 @@ class SqlaBackendManager(BackendManager):
         """
         from alembic.config import Config
 
-        from . import ENGINE
-
-        with ENGINE.begin() as connection:
+        with self._backend.get_session().bind.begin() as connection:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             config = Config()
             config.set_main_option('script_location', os.path.join(dir_path, ALEMBIC_REL_PATH))
@@ -77,7 +73,7 @@ class SqlaBackendManager(BackendManager):
         :return: `SettingsManager`
         """
         if self._settings_manager is None:
-            self._settings_manager = SqlaSettingsManager()
+            self._settings_manager = SqlaSettingsManager(self._backend)
 
         return self._settings_manager
 
@@ -134,12 +130,15 @@ class SqlaSettingsManager(SettingsManager):
 
     table_name = 'db_dbsetting'
 
+    def __init__(self, backend) -> None:
+        self._backend = backend
+
     def validate_table_existence(self):
         """Verify that the `DbSetting` table actually exists.
 
         :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
         """
-        inspector = sqlalchemy.inspect(get_scoped_session().bind)
+        inspector = sqlalchemy.inspect(self._backend.get_session().bind)
         if self.table_name not in inspector.get_table_names():
             raise NotExistent('the settings table does not exist')
 
@@ -154,7 +153,7 @@ class SqlaSettingsManager(SettingsManager):
         self.validate_table_existence()
 
         try:
-            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+            setting = self._backend.get_session().query(DbSetting).filter_by(key=key).one()
         except NoResultFound:
             raise NotExistent(f'setting `{key}` does not exist') from NoResultFound
 
@@ -177,7 +176,7 @@ class SqlaSettingsManager(SettingsManager):
         if description is not None:
             other_attribs['description'] = description
 
-        DbSetting.set_value(key, value, other_attribs=other_attribs)
+        DbSetting.set_value(self._backend.get_session(), key, value, other_attribs=other_attribs)
 
     def delete(self, key):
         """Delete the setting with the given key.
@@ -189,7 +188,7 @@ class SqlaSettingsManager(SettingsManager):
         self.validate_table_existence()
 
         try:
-            setting = get_scoped_session().query(DbSetting).filter_by(key=key).one()
+            setting = self._backend.get_session().query(DbSetting).filter_by(key=key).one()
             setting.delete()
         except NoResultFound:
             raise NotExistent(f'setting `{key}` does not exist') from NoResultFound

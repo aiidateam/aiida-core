@@ -9,10 +9,6 @@
 ###########################################################################
 """SQLA Log and LogCollection module"""
 # pylint: disable=import-error,no-name-in-module
-
-from sqlalchemy.orm.exc import NoResultFound
-
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import log as models
 from aiida.common import exceptions
 
@@ -28,7 +24,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
     def __init__(self, backend, time, loggername, levelname, dbnode_id, message='', metadata=None):
         # pylint: disable=too-many-arguments
         super().__init__(backend)
-        self._dbmodel = utils.ModelWrapper(
+        self._dbmodel = utils.StorableModel(
             models.DbLog(
                 time=time,
                 loggername=loggername,
@@ -36,7 +32,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
                 dbnode_id=dbnode_id,
                 message=message,
                 metadata=metadata
-            )
+            ), self._backend
         )
 
     @property
@@ -95,26 +91,15 @@ class SqlaLogCollection(BackendLogCollection):
     ENTITY_CLASS = SqlaLog
 
     def delete(self, log_id):
-        """
-        Remove a Log entry from the collection with the given id
-
-        :param log_id: id of the Log to delete
-        :type log_id: int
-
-        :raises TypeError: if ``log_id`` is not an `int`
-        :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
-        """
         if not isinstance(log_id, int):
             raise TypeError('log_id must be an int')
 
-        session = get_scoped_session()
-
-        try:
-            session.query(models.DbLog).filter_by(id=log_id).one().delete()
-            session.commit()
-        except NoResultFound:
-            session.rollback()
-            raise exceptions.NotExistent(f"Log with id '{log_id}' not found")
+        session = self.backend.get_session()
+        inst = session.get(models.DbLog, log_id)
+        if inst is None:
+            raise exceptions.NotExistent(f'Log<{log_id}> does not exist')
+        session.delete(inst)
+        session.commit()
 
     def delete_all(self):
         """
@@ -122,7 +107,7 @@ class SqlaLogCollection(BackendLogCollection):
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbLog).delete()

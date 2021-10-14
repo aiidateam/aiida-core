@@ -20,19 +20,19 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
     def test_settings(self):
         """Test the settings table (similar to Attributes, but without the key."""
-        from aiida.backends.sqlalchemy import get_scoped_session
+
         from aiida.backends.sqlalchemy.models.settings import DbSetting
-        session = get_scoped_session()
+        session = self.backend.get_session()  # pylint: disable=no-member
 
         from pytz import UTC
         from sqlalchemy.exc import IntegrityError
 
         from aiida.common import timezone
 
-        DbSetting.set_value(key='pippo', value=[1, 2, 3])
+        DbSetting.set_value(session, key='pippo', value=[1, 2, 3])
 
         # s_1 = DbSetting.objects.get(key='pippo')
-        s_1 = DbSetting.query.filter_by(key='pippo').first()  # pylint: disable=no-member
+        s_1 = session.query(DbSetting).filter_by(key='pippo').first()  # pylint: disable=no-member
 
         self.assertEqual(s_1.getvalue(), [1, 2, 3])
 
@@ -44,14 +44,14 @@ class TestNodeBasicSQLA(AiidaTestCase):
                 session.add(s_2)
 
         # Should replace pippo
-        DbSetting.set_value(key='pippo', value='a')
-        s_1 = DbSetting.query.filter_by(key='pippo').first()  # pylint: disable=no-member
+        DbSetting.set_value(session, key='pippo', value='a')
+        s_1 = session.query(DbSetting).filter_by(key='pippo').first()  # pylint: disable=no-member
 
         self.assertEqual(s_1.getvalue(), 'a')
 
     def test_load_nodes(self):
         """Test for load_node() function."""
-        from aiida.backends.sqlalchemy import get_scoped_session
+
         from aiida.orm import load_node
 
         a_obj = Data()
@@ -62,7 +62,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         self.assertEqual(a_obj.pk, load_node(pk=a_obj.pk).pk)
         self.assertEqual(a_obj.pk, load_node(uuid=a_obj.uuid).pk)
 
-        session = get_scoped_session()
+        session = self.backend.get_session()  # pylint: disable=no-member
 
         try:
             session.begin_nested()
@@ -105,19 +105,16 @@ class TestNodeBasicSQLA(AiidaTestCase):
         (and subsequently committed) when a user is in the session.
         It tests the fix for the issue #234
         """
-        import aiida.backends.sqlalchemy
         from aiida.backends.sqlalchemy.models.node import DbNode
         from aiida.common.utils import get_new_uuid
 
-        backend = self.backend
-
         # Get the automatic user
-        dbuser = backend.users.create(f'{self.id()}@aiida.net').store().dbmodel
+        dbuser = self.backend.users.create(f'{self.id()}@aiida.net').store().dbmodel  # pylint: disable=no-member
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, node_type=None)
 
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+        session = self.backend.get_session()  # pylint: disable=no-member
 
         # Query the session before commit
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()

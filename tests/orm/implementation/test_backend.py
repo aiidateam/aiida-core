@@ -16,13 +16,17 @@ from aiida.common import exceptions
 class TestBackend(AiidaTestCase):
     """Test backend."""
 
+    @property
+    def transaction(self):
+        return self.backend.transaction()  # pylint: disable=no-member
+
     def test_transaction_nesting(self):
         """Test that transaction nesting works."""
         user = orm.User('initial@email.com').store()
-        with self.backend.transaction():
+        with self.transaction:
             user.email = 'pre-failure@email.com'
             try:
-                with self.backend.transaction():
+                with self.transaction:
                     user.email = 'failure@email.com'
                     self.assertEqual(user.email, 'failure@email.com')
                     raise RuntimeError
@@ -37,7 +41,7 @@ class TestBackend(AiidaTestCase):
         user2 = orm.User('user2@email.com').store()
 
         try:
-            with self.backend.transaction():
+            with self.transaction:
                 user1.email = 'broken1@email.com'
                 user2.email = 'broken2@email.com'
                 raise RuntimeError
@@ -49,14 +53,21 @@ class TestBackend(AiidaTestCase):
     def test_store_in_transaction(self):
         """Test that storing inside a transaction is correctly dealt with."""
         user1 = orm.User('user_store@email.com')
-        with self.backend.transaction():
+        assert user1.is_stored is False
+
+        with self.transaction:
+            assert user1.is_stored is False
             user1.store()
+            assert user1.is_stored is True
+
+        assert user1.is_stored is True
+
         # the following shouldn't raise
         orm.User.objects.get(email='user_store@email.com')
 
         user2 = orm.User('user_store_fail@email.com')
         try:
-            with self.backend.transaction():
+            with self.transaction:
                 user2.store()
                 raise RuntimeError
         except RuntimeError:

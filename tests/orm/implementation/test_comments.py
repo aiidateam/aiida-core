@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-member
 """Unit tests for the BackendComment and BackendCommentCollection classes."""
 
 from datetime import datetime
@@ -20,14 +21,11 @@ from aiida.common import exceptions, timezone
 class TestBackendComment(AiidaTestCase):
     """Test BackendComment."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        cls.user = cls.backend.users.create(email='tester@localhost').store()
-
     def setUp(self):
         super().setUp()
+        # get backend instances of the entities
+        self.computer = self.computer.backend_entity
+        self.user = self.user.backend_entity
         self.node = self.backend.nodes.create(
             node_type='', user=self.user, computer=self.computer, label='label', description='description'
         ).store()
@@ -334,7 +332,7 @@ class TestBackendComment(AiidaTestCase):
         # NotExistent should be raised, since no entities are found
         with self.assertRaises(exceptions.NotExistent) as exc:
             self.backend.comments.delete(comment_id=id_)
-        self.assertIn(f"Comment with id '{id_}' not found", str(exc.exception))
+        self.assertIn(f'Comment<{id_}> does not exist', str(exc.exception))
 
         # Try to delete existing and non-existing Comment - using delete_many
         # delete_many should return a list that *only* includes the existing Comment

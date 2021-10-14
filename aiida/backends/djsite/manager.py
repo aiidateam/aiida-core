@@ -61,12 +61,8 @@ class DjangoBackendManager(BackendManager):
         """
         from django.db.utils import ProgrammingError
 
-        from aiida.manage.manager import get_manager
-
-        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
-
         try:
-            result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'schema_generation';""")
+            result = self._backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'schema_generation';""")
         except ProgrammingError:
             # If this value does not exist, the schema has to correspond to the first generation which didn't actually
             # record its value explicitly in the database until ``aiida-core>=1.0.0``.
@@ -84,14 +80,10 @@ class DjangoBackendManager(BackendManager):
         """
         from django.db.utils import ProgrammingError
 
-        from aiida.manage.manager import get_manager
-
-        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
-
         try:
-            result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+            result = self._backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
         except ProgrammingError:
-            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+            result = self._backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
         return result[0][0]
 
     def set_schema_version_database(self, version):
@@ -107,13 +99,9 @@ class DjangoBackendManager(BackendManager):
         For Django we also have to clear the `django_migrations` table that contains a history of all applied
         migrations. After clearing it, we reinsert the name of the new initial schema .
         """
-        # pylint: disable=cyclic-import
-        from aiida.manage.manager import get_manager
         super()._migrate_database_generation()
-
-        backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
-        backend.execute_raw(r"""DELETE FROM django_migrations WHERE app = 'db';""")
-        backend.execute_raw(
+        self._backend.execute_raw(r"""DELETE FROM django_migrations WHERE app = 'db';""")
+        self._backend.execute_raw(
             r"""INSERT INTO django_migrations (app, name, applied) VALUES ('db', '0001_initial', NOW());"""
         )
 

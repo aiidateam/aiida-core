@@ -107,7 +107,7 @@ class DjangoLogCollection(BackendLogCollection):
         try:
             models.DbLog.objects.get(id=log_id).delete()
         except ObjectDoesNotExist:
-            raise exceptions.NotExistent(f"Log with id '{log_id}' not found")
+            raise exceptions.NotExistent(f'Log<{log_id}> does not exist')
 
     def delete_all(self):
         """

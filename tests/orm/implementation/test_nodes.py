@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods
+# pylint: disable=no-member,too-many-public-methods
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
 
 from collections import OrderedDict
@@ -21,14 +21,11 @@ from aiida.common import exceptions, timezone
 class TestBackendNode(AiidaTestCase):
     """Test BackendNode."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        cls.user = cls.backend.users.create(email='tester@localhost').store()
-
     def setUp(self):
         super().setUp()
+        # unwrap the default user/computer instances to their backend entities
+        self.user = self.user.backend_entity
+        self.computer = self.computer.backend_entity
         self.node_type = ''
         self.node_label = 'label'
         self.node_description = 'description'

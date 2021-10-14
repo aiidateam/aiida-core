@@ -10,46 +10,58 @@
 """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 import os
+from typing import TYPE_CHECKING
 
 # pylint: disable=import-error,no-name-in-module
 import django
 from django.db import models, transaction
 
-from aiida.backends.djsite import get_scoped_session, reset_session
 from aiida.backends.djsite.manager import DjangoBackendManager
 
 from ..sql.backends import SqlBackend
 
+if TYPE_CHECKING:
+    from sqlalchemy.future.engine import Engine
+    from sqlalchemy.future.orm import Session
+    from sqlalchemy.orm.scoping import scoped_session
+
 __all__ = ('DjangoBackend',)
+
+# Django setup can only be called once, see:
+# https://docs.djangoproject.com/en/2.2/topics/settings/#calling-django-setup-is-required-for-standalone-django-usage
+DJANGO_SETUP_CALLED = False
 
 
 class DjangoBackend(SqlBackend[models.Model]):
     """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 
-    def __init__(self):
-        """Construct the backend instance by initializing all the collections."""
+    def __init__(self, profile, validate_db: bool = True):
+        super().__init__(profile, validate_db)
+
+        # we have to setup Django before importing the Django models
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
+        global DJANGO_SETUP_CALLED  # pylint: disable=global-statement
+        if not DJANGO_SETUP_CALLED:
+            django.setup()  # pylint: disable=no-member
+            DJANGO_SETUP_CALLED = True
+
         from . import authinfos, comments, computers, groups, logs, nodes, users
-        super().__init__()
         self._authinfos = authinfos.DjangoAuthInfoCollection(self)
         self._comments = comments.DjangoCommentCollection(self)
         self._computers = computers.DjangoComputerCollection(self)
         self._groups = groups.DjangoGroupCollection(self)
         self._logs = logs.DjangoLogCollection(self)
         self._nodes = nodes.DjangoNodeCollection(self)
-        self._backend_manager = DjangoBackendManager()
+        self._backend_manager = DjangoBackendManager(self)
         self._users = users.DjangoUserCollection(self)
 
-    @classmethod
-    def load_environment(cls, profile, validate_schema=True, **kwargs):
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'aiida.backends.djsite.settings'
-        django.setup()  # pylint: disable=no-member
-        # For QueryBuilder only
-        get_scoped_session(profile, **kwargs)
-        if validate_schema:
-            DjangoBackendManager().validate_schema(profile)
+        if validate_db:
+            self.get_session()  # ensure that the database is accessible
+            self._backend_manager.validate_schema(profile)
 
-    def reset_environment(self):
-        reset_session()
+    @property
+    def backend_manager(self):
+        return self._backend_manager
 
     def migrate(self):
         self._backend_manager.migrate()
@@ -90,17 +102,6 @@ class DjangoBackend(SqlBackend[models.Model]):
     def transaction():
         """Open a transaction to be used as a context manager."""
         return transaction.atomic()
-
-    @staticmethod
-    def get_session():
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
-
-        If there is an exception within the context then the changes will be rolled back and the state will
-        be as before entering.  Transactions can be nested.
-
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
-        """
-        return get_scoped_session()
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 

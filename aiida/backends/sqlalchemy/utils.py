@@ -40,18 +40,18 @@ def delete_nodes_and_connections_sqla(pks_to_delete):  # pylint: disable=invalid
 
 
 def flag_modified(instance, key):
-    """Wrapper around `sqlalchemy.orm.attributes.flag_modified` to correctly dereference utils.ModelWrapper
+    """Wrapper around `sqlalchemy.orm.attributes.flag_modified` to correctly dereference a StorableModel
 
     Since SqlAlchemy 1.2.12 (and maybe earlier but not in 1.0.19) the flag_modified function will check that the
-    key is actually present in the instance or it will except. If we pass a model instance, wrapped in the ModelWrapper
+    key is actually present in the instance or it will except. If we pass a model instance, wrapped in the StorableModel
     the call will raise an InvalidRequestError. In this function that wraps the flag_modified of SqlAlchemy, we
-    derefence the model instance if the passed instance is actually wrapped in the ModelWrapper.
+    dereference the model instance if the passed instance is actually wrapped in the StorableModel.
     """
     from sqlalchemy.orm.attributes import flag_modified as flag_modified_sqla
 
-    from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
+    from aiida.orm.implementation.sqlalchemy.utils import StorableModel
 
-    if isinstance(instance, ModelWrapper):
+    if isinstance(instance, StorableModel):
         instance = instance._model  # pylint: disable=protected-access
 
     flag_modified_sqla(instance, key)

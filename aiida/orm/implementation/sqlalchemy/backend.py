@@ -10,7 +10,6 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 
-from aiida.backends.sqlalchemy import get_scoped_session, reset_session
 from aiida.backends.sqlalchemy.manager import SqlaBackendManager
 from aiida.backends.sqlalchemy.models import base
 
@@ -23,26 +22,24 @@ __all__ = ('SqlaBackend',)
 class SqlaBackend(SqlBackend[base.Base]):
     """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
-    def __init__(self):
-        """Construct the backend instance by initializing all the collections."""
-        super().__init__()
+    def __init__(self, profile, validate_db: bool = True):  # pylint: disable=missing-function-docstring
+        super().__init__(profile, validate_db)
         self._authinfos = authinfos.SqlaAuthInfoCollection(self)
         self._comments = comments.SqlaCommentCollection(self)
         self._computers = computers.SqlaComputerCollection(self)
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
-        self._backend_manager = SqlaBackendManager()
+        self._backend_manager = SqlaBackendManager(self)
         self._users = users.SqlaUserCollection(self)
 
-    @classmethod
-    def load_environment(cls, profile, validate_schema=True, **kwargs):
-        get_scoped_session(profile, **kwargs)
-        if validate_schema:
-            SqlaBackendManager().validate_schema(profile)
+        if validate_db:
+            self.get_session()  # ensure that the database is accessible
+            self._backend_manager.validate_schema(profile)
 
-    def reset_environment(self):  # pylint: disable=no-self-use
-        reset_session()
+    @property
+    def backend_manager(self):
+        return self._backend_manager
 
     def migrate(self):
         self._backend_manager.migrate()
@@ -89,18 +86,11 @@ class SqlaBackend(SqlBackend[base.Base]):
         if session.in_transaction():
             with session.begin_nested():
                 yield session
+            session.commit()
         else:
             with session.begin():
                 with session.begin_nested():
                     yield session
-
-    @staticmethod
-    def get_session():
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
-
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
-        """
-        return get_scoped_session()
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 
@@ -115,9 +105,8 @@ class SqlaBackend(SqlBackend[base.Base]):
         :return: a psycopg cursor
         :rtype: :class:`psycopg2.extensions.cursor`
         """
-        from aiida.backends import sqlalchemy as sa
         try:
-            connection = sa.ENGINE.raw_connection()
+            connection = self.get_session().bind.raw_connection()
             yield connection.cursor()
         finally:
             self.get_connection().close()
@@ -141,11 +130,9 @@ class SqlaBackend(SqlBackend[base.Base]):
 
         return results
 
-    @staticmethod
-    def get_connection():
+    def get_connection(self):
         """Get the SQLA database connection
 
-        :return: the SQLA database connection
+        :return: the raw SQLA database connection
         """
-        from aiida.backends import sqlalchemy as sa
-        return sa.ENGINE.raw_connection()
+        return self.get_session().bind.raw_connection()

@@ -45,7 +45,7 @@ class SqlaModelEntity(typing.Generic[ModelType]):
         type_check(backend, SqlaBackend)
         entity = cls.__new__(cls)
         super(SqlaModelEntity, entity).__init__(backend)
-        entity._dbmodel = utils.ModelWrapper(dbmodel)  # pylint: disable=protected-access
+        entity._dbmodel = utils.StorableModel(dbmodel, backend)  # pylint: disable=protected-access
         return entity
 
     @classmethod
@@ -92,7 +92,7 @@ class SqlaModelEntity(typing.Generic[ModelType]):
 
         :return: True if stored, False otherwise
         """
-        return self._dbmodel.id is not None
+        return self._dbmodel.is_saved()
 
     def store(self):
         """

@@ -8,34 +8,43 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for the implementation of the SqlAlchemy backend."""
-
 import contextlib
+from typing import TYPE_CHECKING, Tuple
 
-# pylint: disable=import-error,no-name-in-module
 from sqlalchemy import inspect
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError
+from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import exceptions
+
+if TYPE_CHECKING:
+    from aiida.backends.sqlalchemy.models.base import Base
+
+    from .backend import SqlaBackend
 
 IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
 
 
-class ModelWrapper:
-    """Wrap a database model instance to correctly update and flush the data model when getting or setting a field.
+class StorableModel:
+    """Class to create a storable ORM Model.
 
-    If the model is not stored, the behavior of the get and set attributes is unaltered. However, if the model is
-    stored, which is to say, it has a primary key, the `getattr` and `setattr` are modified as follows:
+    This class takes as input an SQLAlchemy ORM model instance (defining a row of a DB table),
+    and an AiiDA backend (providing an interface to a single database via a session),
+    and then provides methods to store and update the model in the database.
 
-    * `getattr`: if the item corresponds to a mutable model field, the model instance is refreshed first
-    * `setattr`: if the item corresponds to a mutable model field, changes are flushed after performing the change
+    An instance is deemed as stored in the database if it has been added to the session of the backend.
+    Note, this does not mean it has actually been saved in the database,
+    for example in a transaction when it will only be committed at the end of the transaction.
+
+    Once an instance is stored, AiiDA enforces that certain DB fields are immutable,
+    and so changes to these fields are not flushed/refreshed to/from the database.
     """
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, model, auto_flush=()):
-        """Construct the ModelWrapper.
+    def __init__(self, model: 'Base', backend: 'SqlaBackend', auto_flush: Tuple[str, ...] = ()):
+        """Initialize the storable model.
 
         :param model: the database model instance to wrap
         :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
@@ -44,6 +53,7 @@ class ModelWrapper:
         super().__init__()
         # Have to do it this way because we overwrite __setattr__
         object.__setattr__(self, '_model', model)
+        object.__setattr__(self, '_backend', backend)
         object.__setattr__(self, '_auto_flush', auto_flush)
 
     def __getattr__(self, item):
@@ -55,10 +65,10 @@ class ModelWrapper:
         :param item: the name of the model field
         :return: the value of the model's attribute
         """
-        # Python 3's implementation of copy.copy does not call __init__ on the new object
-        # but manually restores attributes instead. Make sure we never get into a recursive
-        # loop by protecting the only special variable here: _model
-        if item == '_model':
+        # Python 3's implementation of copy.copy does not call __init__ on the new object but
+        # manually restores attributes instead.
+        # Make sure we never get into a recursive loop by protecting special variables
+        if item in ('_model', '_backend', '_auto_flush'):
             raise AttributeError()
 
         if self.is_saved() and self._is_mutable_model_field(item) and not self._in_transaction():
@@ -79,29 +89,52 @@ class ModelWrapper:
             fields = set((key,) + self._auto_flush)
             self._flush(fields=fields)
 
+    @property
+    def _session(self) -> Session:
+        """Return the session of the backend.
+
+        :return: the session of the backend
+        """
+        return self._backend.get_session()
+
     def is_saved(self):
         """Return whether the wrapped model instance is saved in the database.
 
         :return: boolean, True if the model is saved in the database, False otherwise
         """
-        # we should not flush here since it may lead to IntegrityErrors
-        # which are handled later in the save method
-        with self._model.session.no_autoflush:
-            return self._model.id is not None
+        return self._model in self._session
+
+    def _in_transaction(self):
+        """Return whether the backend session is within a SAVEPOINT database transaction.
+
+        :return: boolean, True if currently in SAVEPOINT transaction, False otherwise.
+        """
+        return self._session.in_nested_transaction()
 
     def save(self):
         """Store the model instance.
 
-        .. note:: If one is currently in a transaction, this method is a no-op.
+        .. note::
+
+            If one is currently in a transaction, this method will only add the model to the session but not commit it.
 
         :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
         """
+        session = self._session
         try:
-            commit = not self._in_transaction()
-            self._model.save(commit=commit)
-        except IntegrityError as exception:
-            self._model.session.rollback()
-            raise exceptions.IntegrityError(str(exception))
+            session.add(self._model)
+        except InvalidRequestError as exc:
+            msg = (
+                f'The entity {type(self._model)} could not be stored, '
+                f'because it, or a joined entity, is already associated with another backend: {exc}'
+            )
+            raise exceptions.StoringNotAllowed(msg) from exc
+        if not self._in_transaction():
+            try:
+                session.commit()
+            except IntegrityError as exception:
+                session.rollback()
+                raise exceptions.IntegrityError(str(exception))
 
     def _is_mutable_model_field(self, field):
         """Return whether the field is a mutable field of the model.
@@ -129,8 +162,8 @@ class ModelWrapper:
         """
         if self.is_saved():
             for field in fields:
-                flag_modified(self._model, field)
-
+                if field in self._model.__dict__:
+                    flag_modified(self._model, field)
             self.save()
 
     def _ensure_model_uptodate(self, fields=None):
@@ -138,24 +171,12 @@ class ModelWrapper:
 
         :param fields: optionally refresh only these fields, if `None` all fields are refreshed.
         """
-        self._model.session.expire(self._model, attribute_names=fields)
-
-    @staticmethod
-    def _in_transaction():
-        """Return whether the current scope is within an open database transaction.
-
-        :return: boolean, True if currently in open transaction, False otherwise.
-        """
-        return get_scoped_session().in_nested_transaction()
+        self._session.expire(self._model, attribute_names=fields)
 
 
 @contextlib.contextmanager
-def disable_expire_on_commit(session):
-    """Context manager that disables expire_on_commit and restores the original value on exit
-
-    :param session: The SQLA session
-    :type session: :class:`sqlalchemy.orm.session.Session`
-    """
+def disable_expire_on_commit(session: Session):
+    """Context manager that disables expire_on_commit and restores the original value on exit"""
     current_value = session.expire_on_commit
     session.expire_on_commit = False
     try:

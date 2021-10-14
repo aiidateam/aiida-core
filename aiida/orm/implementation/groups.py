@@ -274,9 +274,8 @@ class BackendGroupCollection(BackendCollection[BackendGroup]):
         return results[0]
 
     @abc.abstractmethod
-    def delete(self, id):  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Delete a group with the given id
+    def delete(self, pk):
+        """Delete a group with the given pk
 
-        :param id: the id of the group to delete
+        :param pk: the primary key of the group to delete
         """

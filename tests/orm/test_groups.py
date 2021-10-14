@@ -566,7 +566,9 @@ class TestGroupExtras(AiidaTestCase):
         self.assertEqual(self.group.extras, {})
 
         # Repeat for stored group
+        self.group.set_extra_many(extras)
         self.group.store()
+        self.assertEqual(self.group.extras, extras)
 
         self.group.clear_extras()
         self.assertEqual(orm.load_group(self.group.pk).extras, {})

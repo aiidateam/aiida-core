@@ -24,7 +24,7 @@ def main(profile, command):  # pylint: disable=unused-argument
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
-    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    manager._load_backend(validate_db=False)  # pylint: disable=protected-access
 
     # The `execute_from_command` expects a list of command line arguments where the first is the program name that one
     # would normally call directly. Since this is now replaced by our `click` command we just spoof a random name.

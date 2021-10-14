@@ -288,8 +288,8 @@ def import_data_sqla(
 @contextmanager
 def sql_transaction():
     """A context manager for the transaction."""
-    import aiida.backends.sqlalchemy
-    session = aiida.backends.sqlalchemy.get_scoped_session()
+    from aiida.manage.manager import get_manager
+    session = get_manager().get_backend().get_session()
     try:
         yield session
         IMPORT_LOGGER.debug('COMMITTING EVERYTHING...')

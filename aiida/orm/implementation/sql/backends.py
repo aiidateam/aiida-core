@@ -9,17 +9,24 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
-import typing
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar
 
 from .. import backends
+
+if TYPE_CHECKING:
+    from sqlalchemy.future.engine import Engine
+    from sqlalchemy.future.orm import Session
+    from sqlalchemy.orm.scoping import scoped_session
+
+    from aiida.backends.manager import BackendManager
 
 __all__ = ('SqlBackend',)
 
 # The template type for the base ORM model type
-ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
+ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
 
 
-class SqlBackend(typing.Generic[ModelType], backends.Backend):
+class SqlBackend(Generic[ModelType], backends.Backend):
     """
     A class for SQL based backends.  Assumptions are that:
         * there is an ORM
@@ -29,10 +36,44 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
     if any of these assumptions do not fit then just implement a backend from :class:`aiida.orm.implementation.Backend`
     """
 
-    def __init__(self) -> None:
-        from aiida.backends.manager import BackendManager
-        super().__init__()
-        self._backend_manager = BackendManager()
+    def __init__(self, profile, validate_db: bool = True):
+        super().__init__(profile, validate_db)
+        # set variables for QueryBuilder
+        self._engine: Optional['Engine'] = None
+        self._session_factory: Optional['scoped_session'] = None
+
+    def get_session(self, **kwargs: Any) -> 'Session':
+        """Return a database session that can be used by the `QueryBuilderBackend`.
+
+        On first call (or after a reset) the session is initialised, then the same session is always returned.
+
+        :param kwargs: keyword arguments to be passed to the engine
+        """
+        from aiida.backends.utils import create_scoped_session_factory, create_sqlalchemy_engine
+        if self._session_factory is not None:
+            return self._session_factory()
+        if self._engine is None:
+            self._engine = create_sqlalchemy_engine(self._profile, **kwargs)
+        self._session_factory = create_scoped_session_factory(self._engine)
+        return self._session_factory()
+
+    def close(self):
+        if self._session_factory is not None:
+            # these methods are proxied from the session
+            self._session_factory.expunge_all()  # pylint: disable=no-member
+            self._session_factory.remove()  # pylint: disable=no-member
+            self._session_factory = None
+        if self._engine is not None:
+            self._engine.dispose()
+            self._engine = None
+
+    def reset(self):
+        self.close()  # close the connection, so that it will be regenerated on get_session
+
+    @property
+    @abc.abstractmethod
+    def backend_manager(self) -> 'BackendManager':
+        """Return the backend manager."""
 
     @abc.abstractmethod
     def get_backend_entity(self, model):
@@ -80,54 +121,40 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
 
         return results
 
-    @classmethod
-    @abc.abstractmethod
-    def load_environment(cls, profile, validate_schema=True, **kwargs):
-        """Load the backend environment.
-
-        :param profile: the profile whose backend environment to load
-        :param validate_schema: boolean, if True, validate the schema after loading the environment.
-        :param kwargs: keyword arguments that will be passed on to the backend specific scoped session getter function.
-        """
-
-    @abc.abstractmethod
-    def reset_environment(self):
-        """Reset the backend environment."""
-
     def get_repository_uuid(self):
         """Return the UUID of the repository that is associated with this database.
 
         :return: the UUID of the repository associated with this database or None if it doesn't exist.
         """
-        return self._backend_manager.get_repository_uuid()
+        return self.backend_manager.get_repository_uuid()
 
     def get_schema_generation_database(self):
         """Return the database schema version.
 
         :return: `distutils.version.LooseVersion` with schema version of the database
         """
-        return self._backend_manager.get_schema_generation_database()
+        return self.backend_manager.get_schema_generation_database()
 
     def get_schema_version_database(self):
         """Return the database schema version.
 
         :return: `distutils.version.LooseVersion` with schema version of the database
         """
-        return self._backend_manager.get_schema_version_database()
+        return self.backend_manager.get_schema_version_database()
 
-    def set_value(self, key: str, value: typing.Any, description: typing.Optional[str] = None) -> None:
+    def set_value(self, key: str, value: Any, description: Optional[str] = None) -> None:
         """Set a global key/value pair on the profile backend.
 
         :param key: the key identifying the setting
         :param value: the value for the setting
         :param description: optional setting description
         """
-        return self._backend_manager.get_settings_manager().set(key, value, description)
+        return self.backend_manager.get_settings_manager().set(key, value, description)
 
-    def get_value(self, key: str) -> typing.Any:
+    def get_value(self, key: str) -> Any:
         """Get a global key/value pair on the profile backend.
 
         :param key: the key identifying the setting
         :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
         """
-        return self._backend_manager.get_settings_manager().get(key)
+        return self.backend_manager.get_settings_manager().get(key)

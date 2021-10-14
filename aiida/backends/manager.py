@@ -100,6 +100,10 @@ class BackendManager:
 
     _settings_manager = None
 
+    def __init__(self, backend) -> None:
+        from aiida.backends.sqlalchemy.manager import SqlaBackendManager
+        self._backend: SqlaBackendManager = backend
+
     @abc.abstractmethod
     def get_settings_manager(self):
         """Return an instance of the `SettingsManager`.

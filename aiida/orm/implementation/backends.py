@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
+    from aiida.manage.configuration import Profile
     from aiida.orm.implementation import (
         BackendAuthInfoCollection,
         BackendCommentCollection,
@@ -29,11 +30,39 @@ __all__ = ('Backend',)
 
 
 class Backend(abc.ABC):
-    """The public interface that defines a backend factory that creates backend specific concrete objects."""
+    """Abstraction for a backend to read/write persistent data for a profile's provenance graph."""
+
+    def __init__(self, profile: 'Profile', validate_db: bool = True) -> None:  # pylint: disable=unused-argument
+        """Instatiate the backend.
+
+        :param profile: the profile provides the configuration details for connecting to the persistent storage
+        :param validate_db: if True, the backend will perform validation tests on the database consistency
+        """
+        self._profile = profile
+
+    @property
+    def profile(self) -> 'Profile':
+        """Return the profile used to initialize the backend."""
+        return self._profile
+
+    @abc.abstractmethod
+    def close(self) -> None:
+        """Close the backend.
+
+        This method is called when the backend is no longer needed,
+        and should be used to close any open connections to the persistent storage
+        """
+
+    @abc.abstractmethod
+    def reset(self) -> None:
+        """Reset the backend.
+
+        This method should reset any open connections to the persistent storage
+        """
 
     @abc.abstractmethod
     def migrate(self):
-        """Migrate the database to the latest schema generation or version."""
+        """Migrate the persistent storage to the latest schema generation or version."""
 
     @property
     @abc.abstractmethod

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-member
 """Unit tests for the BackendLog and BackendLogCollection classes."""
 
 from datetime import datetime
@@ -22,14 +23,11 @@ from aiida.common.log import LOG_LEVEL_REPORT
 class TestBackendLog(AiidaTestCase):
     """Test BackendLog."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        cls.user = cls.backend.users.create(email='tester@localhost').store()
-
     def setUp(self):
         super().setUp()
+        # get backend instances of the entities
+        self.computer = self.computer.backend_entity
+        self.user = self.user.backend_entity
         self.node = self.backend.nodes.create(
             node_type='', user=self.user, computer=self.computer, label='label', description='description'
         ).store()
@@ -285,7 +283,7 @@ class TestBackendLog(AiidaTestCase):
         # NotExistent should be raised, since no entities are found
         with self.assertRaises(exceptions.NotExistent) as exc:
             self.backend.logs.delete(log_id=id_)
-        self.assertIn(f"Log with id '{id_}' not found", str(exc.exception))
+        self.assertIn(f'Log<{id_}> does not exist', str(exc.exception))
 
         # Try to delete existing and non-existing Log - using delete_many
         # delete_many should return a list that *only* includes the existing Logs

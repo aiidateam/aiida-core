@@ -22,11 +22,12 @@ def execute_alembic_command(command_name, **kwargs):
     :param command_name: the sub command name
     :param kwargs: parameters to pass to the command
     """
-    from aiida.backends.sqlalchemy.manager import SqlaBackendManager
+    from aiida.manage.configuration import get_profile
+    from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
 
-    manager = SqlaBackendManager()
-
-    with manager.alembic_config() as config:
+    # create a new backend which does not validate the schema version
+    backend = SqlaBackend(get_profile(), validate_db=False)
+    with backend._backend_manager.alembic_config() as config:  # pylint: disable=protected-access
         command = getattr(alembic.command, command_name)
         command(config, **kwargs)
 
@@ -40,7 +41,7 @@ def alembic_cli(profile):
 
     load_profile(profile=profile.name)
     manager = get_manager()
-    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    manager._load_backend(validate_db=False)  # pylint: disable=protected-access
 
 
 @alembic_cli.command('revision')

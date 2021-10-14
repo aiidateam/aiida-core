@@ -282,5 +282,5 @@ class DjangoGroupCollection(BackendGroupCollection):
 
         return retlist
 
-    def delete(self, id):  # pylint: disable=redefined-builtin
-        models.DbGroup.objects.filter(id=id).delete()
+    def delete(self, pk):
+        models.DbGroup.objects.filter(id=pk).delete()

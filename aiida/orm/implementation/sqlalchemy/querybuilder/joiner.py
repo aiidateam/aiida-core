@@ -19,7 +19,7 @@ from sqlalchemy.sql.expression import cast as type_cast
 from sqlalchemy.sql.schema import Table
 from sqlalchemy.types import Integer
 
-from aiida.backends.sqlalchemy.models.base import Model
+from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.links import LinkType
 
 try:
@@ -34,31 +34,31 @@ class _EntityMapper(Protocol):
     # pylint: disable=invalid-name
 
     @property
-    def Node(self) -> Type[Model]:
+    def Node(self) -> Type[Base]:
         ...
 
     @property
-    def Group(self) -> Type[Model]:
+    def Group(self) -> Type[Base]:
         ...
 
     @property
-    def Link(self) -> Type[Model]:
+    def Link(self) -> Type[Base]:
         ...
 
     @property
-    def User(self) -> Type[Model]:
+    def User(self) -> Type[Base]:
         ...
 
     @property
-    def Computer(self) -> Type[Model]:
+    def Computer(self) -> Type[Base]:
         ...
 
     @property
-    def Comment(self) -> Type[Model]:
+    def Comment(self) -> Type[Base]:
         ...
 
     @property
-    def Log(self) -> Type[Model]:
+    def Log(self) -> Type[Base]:
         ...
 
     @property
@@ -72,7 +72,7 @@ class JoinReturn(NamedTuple):
 
 
 FilterType = Dict[str, Any]  # pylint: disable=invalid-name
-JoinFuncType = Callable[[Query, Type[Model], Type[Model], bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
+JoinFuncType = Callable[[Query, Type[Base], Type[Base], bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
 
 
 class SqlaJoiner:

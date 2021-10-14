@@ -39,23 +39,18 @@ class TestSessionSqla(AiidaTestCase):
 
         # Cleaning the database
         self.clean_db()
-        aiida.backends.sqlalchemy.get_scoped_session().expunge_all()
+        self.backend.get_session().expunge_all()
 
-    @staticmethod
-    def drop_connection():
+    def drop_connection(self):
         """Drop connection to a database."""
-        session = aiida.backends.sqlalchemy.get_scoped_session()
-        session.expunge_all()
-        session.close()
-        aiida.backends.sqlalchemy.sessionfactory = None
+        self.backend.reset()
 
     def test_session_update_and_expiration_1(self):
         """expire_on_commit=True & adding manually and committing
         computer and code objects."""
 
         self.set_connection(expire_on_commit=True)
-
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+        session = self.backend.get_session()
 
         email = get_manager().get_profile().default_user
         user = self.backend.users.create(email=email)
@@ -79,9 +74,8 @@ class TestSessionSqla(AiidaTestCase):
         """expire_on_commit=True & committing computer and code objects with
         their built-in store function."""
 
-        session = aiida.backends.sqlalchemy.get_scoped_session()
-
         self.set_connection(expire_on_commit=True)
+        session = self.backend.get_session()
 
         email = get_manager().get_profile().default_user
         user = self.backend.users.create(email=email)
@@ -103,8 +97,7 @@ class TestSessionSqla(AiidaTestCase):
         computer and code objects.
         """
         self.set_connection(expire_on_commit=False)
-
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+        session = self.backend.get_session()
 
         email = get_manager().get_profile().default_user
         user = self.backend.users.create(email=email)
@@ -129,8 +122,7 @@ class TestSessionSqla(AiidaTestCase):
         their built-in store function."""
 
         self.set_connection(expire_on_commit=False)
-
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+        session = self.backend.get_session()
 
         email = get_manager().get_profile().default_user
         user = self.backend.users.create(email=email)
@@ -155,12 +147,12 @@ class TestSessionSqla(AiidaTestCase):
         import aiida.backends.sqlalchemy as sa
         from aiida.common import timezone
 
-        session = sessionmaker(bind=sa.ENGINE)
+        session = sessionmaker(bind=self.backend.get_session().bind)
         custom_session = session()
 
         user = self.backend.users.create(email='test@localhost').store()
         node = self.backend.nodes.create(node_type='', user=user).store()
-        master_session = node.dbmodel.session
+        master_session = self.backend.get_session()
         self.assertIsNot(master_session, custom_session)
 
         # Manually load the DbNode in a different session

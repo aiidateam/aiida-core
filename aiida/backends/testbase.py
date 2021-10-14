@@ -10,6 +10,7 @@
 """Basic test classes."""
 import os
 import traceback
+from typing import TYPE_CHECKING
 import unittest
 
 from aiida import orm
@@ -17,6 +18,9 @@ from aiida.common.exceptions import ConfigurationError, InternalError, TestsNotA
 from aiida.common.lang import classproperty
 from aiida.manage import configuration
 from aiida.manage.manager import get_manager, reset_manager
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
 
 TEST_KEYWORD = 'test_'
 
@@ -36,7 +40,6 @@ class AiidaTestCase(unittest.TestCase):
     _user = None  # type: aiida.orm.User
     _class_was_setup = False
     __backend_instance = None
-    backend = None  # type: aiida.orm.implementation.Backend
 
     @classmethod
     def get_backend_class(cls):
@@ -65,6 +68,11 @@ class AiidaTestCase(unittest.TestCase):
 
         return cls.__impl_class
 
+    @classproperty
+    def backend(cls) -> 'Backend':  # pylint: disable=no-self-argument,no-self-use
+        """Return the backend instance."""
+        return get_manager().get_backend()
+
     @classmethod
     def setUpClass(cls):
         """Set up test class."""
@@ -74,7 +82,7 @@ class AiidaTestCase(unittest.TestCase):
         check_if_tests_can_run()
 
         # Force the loading of the backend which will load the required database environment
-        cls.backend = get_manager().get_backend()
+        cls.backend  # pylint: disable=pointless-statement
         cls.__backend_instance = cls.get_backend_class()()
         cls._class_was_setup = True
 
@@ -98,6 +106,10 @@ class AiidaTestCase(unittest.TestCase):
 
     def tearDown(self):
         reset_manager()
+        # the user and computer need to be reset, so that they can be set to the new backend
+        # pylint: disable=protected-access
+        self.__class__._computer = None
+        self.__class__._user = None
 
     ### Database/repository-related methods
 

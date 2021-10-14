@@ -59,6 +59,8 @@ class Manager:
             self._communicator.close()
         if self._runner is not None:
             self._runner.stop()
+        if self._backend is not None:
+            self._backend.close()
 
         self._backend = None
         self._config = None
@@ -93,16 +95,16 @@ class Manager:
     def unload_backend(self) -> None:
         """Unload the current backend and its corresponding database environment."""
         backend = self.get_backend()
-        backend.reset_environment()
+        backend.close()
         self._backend = None
 
-    def _load_backend(self, schema_check: bool = True, repository_check: bool = True) -> 'Backend':
+    def _load_backend(self, validate_db: bool = True, repository_check: bool = True) -> 'Backend':
         """Load the backend for the currently configured profile and return it.
 
         .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
             backend is to call `get_backend` which will create it only when not yet instantiated.
 
-        :param schema_check: force a database schema check if the database environment has not yet been loaded.
+        :param validate_db: force a database schema check if the database environment has not yet been loaded.
         :param repository_check: force a check that the database is associated with the repository that is configured
             for the current profile.
         :return: the database backend.
@@ -122,29 +124,28 @@ class Manager:
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
-        backend_type = profile.database_backend
+        # only reload the backend if not already loaded
+        if self._backend is None:
 
-        # For django only, the setup module must be loaded before the class can be instantiated,
-        if backend_type == BACKEND_DJANGO:
-            from aiida.orm.implementation.django.backend import DjangoBackend
-            backend_cls = DjangoBackend
-        elif backend_type == BACKEND_SQLA:
-            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-            backend_cls = SqlaBackend
+            backend_type = profile.database_backend
 
-        # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
-        if configuration.BACKEND_UUID is None:
-            backend_cls.load_environment(profile, validate_schema=schema_check)
-            configuration.BACKEND_UUID = profile.uuid
+            if backend_type == BACKEND_DJANGO:
+                from aiida.orm.implementation.django.backend import DjangoBackend
+                backend_cls = DjangoBackend
+            elif backend_type == BACKEND_SQLA:
+                from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
+                backend_cls = SqlaBackend
 
-        backend = backend_cls()
+            self._backend = backend_cls(profile, validate_db=validate_db)
+
+        configuration.BACKEND_UUID = profile.uuid
 
         # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
         # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
         # then become an exception once we have verified that it is working reliably.
         if repository_check and not profile.is_test_profile:
             repository_uuid_config = profile.get_repository().uuid
-            repository_uuid_database = backend.get_repository_uuid()
+            repository_uuid_database = self._backend.get_repository_uuid()
 
             from aiida.cmdline.utils import echo
             if repository_uuid_config != repository_uuid_database:
@@ -155,8 +156,6 @@ class Manager:
                     'Using a database with an incompatible repository will prevent AiiDA from functioning properly.\n'
                     'Please make sure that the configuration of your profile is correct.\n'
                 )
-
-        self._backend = backend
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.

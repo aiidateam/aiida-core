@@ -35,7 +35,7 @@ class TestMigrations(AiidaTestCase):
 
     def setUp(self):
         """Go to a specific schema version before running tests."""
-        from aiida.backends.djsite import get_scoped_session
+        from aiida.manage.manager import get_manager
         from aiida.orm import autogroup
 
         self.current_autogroup = autogroup.CURRENT_AUTOGROUP
@@ -51,7 +51,7 @@ class TestMigrations(AiidaTestCase):
         # Before running the migration, make sure we close the querybuilder session which may still contain references
         # to objects whose mapping may be invalidated after resetting the schema to an older version. This can block
         # the migrations so we first expunge those objects by closing the session.
-        get_scoped_session().close()
+        get_manager().get_backend().reset()
 
         # Reverse to the original migration
         with Capturing():

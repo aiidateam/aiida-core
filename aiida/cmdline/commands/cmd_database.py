@@ -32,7 +32,7 @@ def database_version():
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
-    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    manager._load_backend(validate_db=False)  # pylint: disable=protected-access
     backend = manager.get_backend()
 
     echo.echo('Generation: ', bold=True, nl=False)
@@ -54,7 +54,7 @@ def database_migrate(force):
 
     manager = get_manager()
     profile = manager.get_profile()
-    backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    backend = manager._load_backend(validate_db=False)  # pylint: disable=protected-access
 
     if force:
         try:
@@ -124,7 +124,7 @@ def detect_duplicate_uuid(table, apply_patch):
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
-    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    manager._load_backend(validate_db=False)  # pylint: disable=protected-access
 
     try:
         messages = deduplicate_uuids(table=table, dry_run=not apply_patch)

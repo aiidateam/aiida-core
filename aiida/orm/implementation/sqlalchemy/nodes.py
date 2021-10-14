@@ -15,7 +15,6 @@ from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -83,7 +82,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
             type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))
+        self._dbmodel = sqla_utils.StorableModel(models.DbNode(**arguments), self._backend)
 
     def clone(self):
         """Return an unstored clone of ourselves.
@@ -103,7 +102,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
+        clone._dbmodel = sqla_utils.StorableModel(models.DbNode(**arguments), self.backend)  # pylint: disable=protected-access
         return clone
 
     @property
@@ -158,7 +157,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :return: True if the proposed link is allowed, False otherwise
         :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         type_check(source, SqlaNode)
 
@@ -180,7 +179,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         from aiida.backends.sqlalchemy.models.node import DbLink
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             with session.begin_nested():
@@ -200,7 +199,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if clean:
             self.clean_values()
@@ -231,7 +230,7 @@ class SqlaNodeCollection(BackendNodeCollection):
 
         :param pk: id of the node
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
@@ -239,14 +238,9 @@ class SqlaNodeCollection(BackendNodeCollection):
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
     def delete(self, pk):
-        """Remove a Node entry from the collection with the given id
-
-        :param pk: id of the node to delete
-        """
-        session = get_scoped_session()
-
-        try:
-            session.query(models.DbNode).filter_by(id=pk).one().delete()
-            session.commit()
-        except NoResultFound:
-            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
+        session = self.backend.get_session()
+        inst = session.get(models.DbNode, pk)
+        if inst is None:
+            raise exceptions.NotExistent(f'Node<{pk}> does not exist')
+        session.delete(inst)
+        session.commit()

@@ -84,7 +84,7 @@ class DjangoModelEntity(typing.Generic[ModelType]):
 
         :return: True if stored, False otherwise
         """
-        return self._dbmodel.id is not None
+        return self._dbmodel.is_saved()
 
     def store(self):
         """

@@ -145,7 +145,7 @@ class ProfileManager:
 
         try:
             self._profile = load_profile(profile_name)
-            manager.get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+            manager.get_manager()._load_backend(validate_db=False)  # pylint: disable=protected-access
         except Exception:
             raise TestManagerError('Unable to load test profile \'{}\'.'.format(profile_name))
         check_if_tests_can_run()
@@ -160,11 +160,8 @@ class ProfileManager:
             from aiida.backends.djsite.db.testbase import DjangoTests
             self._test_case = DjangoTests()
         elif backend == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy import get_scoped_session
             from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
-
             self._test_case = SqlAlchemyTests()
-            self._test_case.test_session = get_scoped_session()
 
     def reset_db(self):
         self._test_case.clean_db()  # will drop all users
@@ -352,7 +349,7 @@ class TemporaryProfileManager(ProfileManager):
         self._profile = profile
 
         load_profile(profile_name)
-        backend = manager.get_manager()._load_backend(schema_check=False)
+        backend = manager.get_manager()._load_backend(validate_db=False)
         backend.migrate()
 
         self._select_db_test_case(backend=self._profile.database_backend)

@@ -193,13 +193,6 @@ class DummyVerdiDataListable:
 class TestVerdiData(AiidaTestCase):
     """Testing reachability of the verdi data subcommands."""
 
-    @classmethod
-    def setUpClass(cls):  # pylint: disable=arguments-differ
-        super().setUpClass()
-
-    def setUp(self):
-        pass
-
     def test_reachable(self):
         """Testing reachability of the following commands:
         verdi data array
@@ -221,10 +214,6 @@ class TestVerdiData(AiidaTestCase):
 
 class TestVerdiDataArray(AiidaTestCase):
     """Testing verdi data array."""
-
-    @classmethod
-    def setUpClass(cls):  # pylint: disable=arguments-differ
-        super().setUpClass()
 
     def setUp(self):
         self.arr = ArrayData()

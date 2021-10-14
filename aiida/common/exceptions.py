@@ -17,7 +17,8 @@ __all__ = (
     'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
     'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
     'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError'
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError',
+    'BackendClosedError'
 )
 
 
@@ -260,3 +261,7 @@ class HashingError(AiidaException):
     """
     Raised when an attempt to hash an object fails via a known failure mode
     """
+
+
+class BackendClosedError(AiidaException):
+    """Raised when trying to manipulate an entity who's backend is closed"""

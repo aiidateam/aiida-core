@@ -428,7 +428,7 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
     """
     from click.testing import Result
 
-    def _run_cli_command(command: click.Command, options: list = None, raises: bool = False) -> Result:
+    def _run_cli_command(command: click.Command, options: list = None, raises: bool = False, **kwargs) -> Result:
         """Run the command and check the result.
 
         .. note:: the `output_lines` attribute is added to return value containing list of stripped output lines.
@@ -457,12 +457,12 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
         command = VerdiCommandGroup.add_verbosity_option(command)
 
         runner = click.testing.CliRunner()
-        result = runner.invoke(command, options, obj=obj)
+        result = runner.invoke(command, options, obj=obj, **kwargs)
 
         if raises:
             assert result.exception is not None, result.output
             assert result.exit_code != 0
-        else:
+        elif kwargs.get('catch_exceptions', True):
             assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
             assert result.exit_code == 0, result.output
 

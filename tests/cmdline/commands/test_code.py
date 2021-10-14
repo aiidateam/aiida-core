@@ -26,18 +26,14 @@ from aiida.common.exceptions import NotExistent
 class TestVerdiCodeSetup(AiidaTestCase):
     """Tests for the 'verdi code setup' command."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = orm.Computer(
+    def setUp(self):
+        self.computer = orm.Computer.objects.get_or_create(
             label='comp',
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida'
-        ).store()
-
-    def setUp(self):
+        )
         self.cli_runner = CliRunner()
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
@@ -118,18 +114,14 @@ class TestVerdiCodeCommands(AiidaTestCase):
 
     Testing everything besides `code setup`."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = orm.Computer(
+    def setUp(self):
+        self.computer = orm.Computer.objects.get_or_create(
             label='comp',
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida'
-        ).store()
-
-    def setUp(self):
+        )
         try:
             code = orm.Code.get_from_string('code')
         except NotExistent:

@@ -84,8 +84,11 @@ class TestMigrationsSQLA(AiidaTestCase):
 
         # create a new backend which does not validate the schema version
         backend = SqlaBackend(get_profile(), validate_db=False)
-        with backend._backend_manager.alembic_config() as config:
-            command.upgrade(config, destination)
+        try:
+            with backend._backend_manager.alembic_config() as config:
+                command.upgrade(config, destination)
+        finally:
+            backend.close()
 
     @staticmethod
     def migrate_db_down(destination):
@@ -98,8 +101,11 @@ class TestMigrationsSQLA(AiidaTestCase):
 
         # create a new backend which does not validate the schema version
         backend = SqlaBackend(get_profile(), validate_db=False)
-        with backend._backend_manager.alembic_config() as config:
-            command.downgrade(config, destination)
+        try:
+            with backend._backend_manager.alembic_config() as config:
+                command.downgrade(config, destination)
+        finally:
+            backend.close()
 
     def tearDown(self):
         """

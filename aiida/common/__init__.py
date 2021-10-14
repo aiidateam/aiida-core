@@ -30,6 +30,7 @@ __all__ = (
     'AIIDA_LOGGER',
     'AiidaException',
     'AttributeDict',
+    'BackendClosedError',
     'CalcInfo',
     'CalcJobState',
     'CodeInfo',

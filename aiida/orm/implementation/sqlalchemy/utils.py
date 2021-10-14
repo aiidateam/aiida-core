@@ -15,6 +15,7 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.exc import DetachedInstanceError
 
 from aiida.common import exceptions
 
@@ -74,7 +75,11 @@ class StorableModel:
         if self.is_saved() and self._is_mutable_model_field(item) and not self._in_transaction():
             self._ensure_model_uptodate(fields=(item,))
 
-        return getattr(self._model, item)
+        try:
+            _attr = getattr(self._model, item)
+        except DetachedInstanceError as exc:
+            raise exceptions.BackendClosedError(f'The backend for this instance has been closed: {exc}') from exc
+        return _attr
 
     def __setattr__(self, key, value):
         """Set the attribute on the model instance.
@@ -84,7 +89,10 @@ class StorableModel:
         :param key: the name of the model field
         :param value: the value to set
         """
-        setattr(self._model, key, value)
+        try:
+            setattr(self._model, key, value)
+        except DetachedInstanceError as exc:
+            raise exceptions.BackendClosedError(f'The backend for this instance has been closed: {exc}') from exc
         if self.is_saved() and self._is_mutable_model_field(key):
             fields = set((key,) + self._auto_flush)
             self._flush(fields=fields)

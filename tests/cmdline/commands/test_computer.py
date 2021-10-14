@@ -529,33 +529,27 @@ class TestVerdiComputerCommands(AiidaTestCase):
     Testing everything besides `computer setup`.
     """
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """Create a new computer> I create a new one because I want to configure it and I don't want to
-        interfere with other tests"""
-        super().setUpClass(*args, **kwargs)
-        cls.computer_name = 'comp_cli_test_computer'
-        cls.comp = orm.Computer(
-            label=cls.computer_name,
-            hostname='localhost',
-            transport_type='core.local',
-            scheduler_type='core.direct',
-            workdir='/tmp/aiida'
-        )
-        cls.comp.set_default_mpiprocs_per_machine(1)
-        cls.comp.set_prepend_text('text to prepend')
-        cls.comp.set_append_text('text to append')
-        cls.comp.store()
-
     def setUp(self):
         """
         Prepare the computer and user
         """
         self.user = orm.User.objects.get_default()
 
-        # I need to configure the computer here; being 'core.local',
-        # there should not be any options asked here
-        self.comp.configure()
+        self.computer_name = 'comp_cli_test_computer'
+
+        created, self.comp = orm.Computer.objects.get_or_create(
+            label=self.computer_name,
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
+        )
+        if created:
+            self.comp.set_default_mpiprocs_per_machine(1)
+            self.comp.set_prepend_text('text to prepend')
+            self.comp.set_append_text('text to append')
+            self.comp.store()
+            self.comp.configure()
 
         assert self.comp.is_user_configured(self.user), 'There was a problem configuring the test computer'
         self.cli_runner = CliRunner()

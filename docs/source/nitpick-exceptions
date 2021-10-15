@@ -21,6 +21,7 @@ py:class builtins.dict
 # typing
 py:class asyncio.events.AbstractEventLoop
 py:class EntityType
+py:class ReturnType
 py:class function
 py:class IO
 py:class traceback

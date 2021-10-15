@@ -45,9 +45,7 @@ class Manager:
 
     def __init__(self) -> None:
         self._backend: Optional['Backend'] = None
-        self._config: Optional['Config'] = None
         self._daemon_client: Optional['DaemonClient'] = None
-        self._profile: Optional['Profile'] = None
         self._communicator: Optional['RmqThreadCommunicator'] = None
         self._process_controller: Optional['RemoteProcessThreadController'] = None
         self._persister: Optional['AiiDAPersister'] = None
@@ -63,8 +61,6 @@ class Manager:
             self._backend.close()
 
         self._backend = None
-        self._config = None
-        self._profile = None
         self._communicator = None
         self._daemon_client = None
         self._process_controller = None

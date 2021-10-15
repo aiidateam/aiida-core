@@ -25,6 +25,7 @@ py:class EntityType
 py:class EntityTypes
 py:class ModelType
 py:class TransactionType
+py:class ReturnType
 py:class function
 py:class IO
 py:class traceback

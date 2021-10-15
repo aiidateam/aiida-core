@@ -46,6 +46,7 @@ py:class aiida.tools.groups.paths.WalkNodeResult
 py:class Backend
 py:class BackendEntity
 py:class BackendNode
+py:class Base
 py:class AuthInfo
 py:class CalcJob
 py:class CalcJobImporter
@@ -66,11 +67,13 @@ py:class Process
 py:class ProcessBuilder
 py:class ProcessNode
 py:class ProcessSpec
+py:class Profile
 py:class Port
 py:class PortNamespace
 py:class Repository
 py:class Runner
 py:class Scheduler
+py:class SqlaBackend
 py:class Transport
 py:class TransportQueue
 py:class WorkChain

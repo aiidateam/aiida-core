@@ -20,7 +20,6 @@ from unittest.mock import patch
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
@@ -168,16 +167,17 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
 
 @pytest.mark.requires_rmq
-class TestCalcJob(AiidaTestCase):
+class TestCalcJob:
     """Test for the `CalcJob` process sub class."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer.configure()  # pylint: disable=no-member
-        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/bash')).store()
-        cls.local_code = orm.Code(local_executable='bash', files=['/bin/bash']).store()
-        cls.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
+    @pytest.fixture(autouse=True)
+    def init_db(self, clear_database_before_test, aiida_localhost):  # pylint: disable=unused-argument
+        """Setup database before each test"""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
+        self.remote_code = orm.Code(remote_computer_exec=(self.computer, '/bin/bash')).store()
+        self.local_code = orm.Code(local_executable='bash', files=['/bin/bash']).store()
+        self.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
 
     def instantiate_process(self, state=CalcJobState.PARSING):
         """Instantiate a process with default inputs and return the `Process` instance."""
@@ -196,29 +196,27 @@ class TestCalcJob(AiidaTestCase):
 
         return process
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
+    def setup_method(self):
+        assert Process.current() is None
 
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    def teardown_method(self):
+        assert Process.current() is None
 
     def test_run_base_class(self):
         """Verify that it is impossible to run, submit or instantiate a base `CalcJob` class."""
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             CalcJob()
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run(CalcJob)
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run_get_node(CalcJob)
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run_get_pk(CalcJob)
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.submit(CalcJob)
 
     def test_define_not_calling_super(self):
@@ -234,13 +232,13 @@ class TestCalcJob(AiidaTestCase):
             def prepare_for_submission(self, folder):
                 pass
 
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             launch.run(IncompleteDefineCalcJob)
 
     def test_spec_options_property(self):
         """`CalcJob.spec_options` should return the options port namespace of its spec."""
-        self.assertIsInstance(CalcJob.spec_options, PortNamespace)
-        self.assertEqual(CalcJob.spec_options, CalcJob.spec().inputs['metadata']['options'])
+        assert isinstance(CalcJob.spec_options, PortNamespace)
+        assert CalcJob.spec_options == CalcJob.spec().inputs['metadata']['options']
 
     def test_invalid_options_type(self):
         """Verify that passing an invalid type to `metadata.options` raises a `TypeError`."""
@@ -256,7 +254,7 @@ class TestCalcJob(AiidaTestCase):
                 pass
 
         # The `metadata.options` input expects a plain dict and not a node `Dict`
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             launch.run(SimpleCalcJob, code=self.remote_code, metadata={'options': orm.Dict(dict={'a': 1})})
 
     def test_remote_code_set_computer_implicit(self):
@@ -269,8 +267,8 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
 
         process = ArithmeticAddCalculation(inputs=inputs)
-        self.assertTrue(process.node.is_stored)
-        self.assertEqual(process.node.computer.uuid, self.remote_code.computer.uuid)
+        assert process.node.is_stored
+        assert process.node.computer.uuid == self.remote_code.computer.uuid
 
     def test_remote_code_unstored_computer(self):
         """Test launching a `CalcJob` with an unstored computer which should raise."""
@@ -278,7 +276,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['computer'] = orm.Computer('different', 'localhost', 'desc', 'core.local', 'core.direct')
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_remote_code_set_computer_explicit(self):
@@ -291,7 +289,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
 
         # Setting explicitly a computer that is not the same as that of the `code` should raise
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             inputs['metadata']['computer'] = orm.Computer(
                 'different', 'localhost', 'desc', 'core.local', 'core.direct'
             ).store()
@@ -300,8 +298,8 @@ class TestCalcJob(AiidaTestCase):
         # Setting the same computer as that of the `code` effectively accomplishes nothing but should be fine
         inputs['metadata']['computer'] = self.remote_code.computer
         process = ArithmeticAddCalculation(inputs=inputs)
-        self.assertTrue(process.node.is_stored)
-        self.assertEqual(process.node.computer.uuid, self.remote_code.computer.uuid)
+        assert process.node.is_stored
+        assert process.node.computer.uuid == self.remote_code.computer.uuid
 
     def test_local_code_set_computer(self):
         """Test launching a `CalcJob` with a local code *with* explicitly defining a computer, which should work."""
@@ -310,15 +308,15 @@ class TestCalcJob(AiidaTestCase):
         inputs['metadata']['computer'] = self.computer
 
         process = ArithmeticAddCalculation(inputs=inputs)
-        self.assertTrue(process.node.is_stored)
-        self.assertEqual(process.node.computer.uuid, self.computer.uuid)  # pylint: disable=no-member
+        assert process.node.is_stored
+        assert process.node.computer.uuid == self.computer.uuid  # pylint: disable=no-member
 
     def test_local_code_no_computer(self):
         """Test launching a `CalcJob` with a local code *without* explicitly defining a computer, which should raise."""
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.local_code
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_invalid_parser_name(self):
@@ -327,7 +325,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['parser_name'] = 'invalid_parser'
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_invalid_resources(self):
@@ -336,7 +334,7 @@ class TestCalcJob(AiidaTestCase):
         inputs['code'] = self.remote_code
         inputs['metadata']['options']['resources'] = {'num_machines': 'invalid_type'}
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             ArithmeticAddCalculation(inputs=inputs)
 
     def test_par_env_resources_computer(self):
@@ -369,10 +367,8 @@ class TestCalcJob(AiidaTestCase):
         """
         from aiida.engine.processes.calcjobs.tasks import PreSubmitException
 
-        with self.assertRaises(PreSubmitException) as context:
+        with pytest.raises(PreSubmitException, match='exception occurred in presubmit call'):
             launch.run(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)
-
-        self.assertIn('exception occurred in presubmit call', str(context.exception))
 
     @pytest.mark.usefixtures('chdir_tmp_path')
     def test_run_local_code(self):
@@ -388,7 +384,7 @@ class TestCalcJob(AiidaTestCase):
 
         # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
         for filename in self.local_code.list_object_names():
-            self.assertTrue(filename in uploaded_files)
+            assert filename in uploaded_files
 
     @pytest.mark.usefixtures('chdir_tmp_path')
     def test_rerunnable(self):
@@ -446,13 +442,13 @@ class TestCalcJob(AiidaTestCase):
         # written to the node's repository so we can check it contains the expected contents.
         _, node = launch.run_get_node(FileCalcJob, **inputs)
 
-        self.assertIn('folder', node.dry_run_info)
+        assert 'folder' in node.dry_run_info
 
         # Verify that the folder (representing the node's repository) indeed do not contain the input files. Note,
         # however, that the directory hierarchy should be there, albeit empty
-        self.assertIn('base', node.list_object_names())
-        self.assertEqual(sorted(['b']), sorted(node.list_object_names(os.path.join('base'))))
-        self.assertEqual(['two'], node.list_object_names(os.path.join('base', 'b')))
+        assert 'base' in node.list_object_names()
+        assert sorted(['b']) == sorted(node.list_object_names(os.path.join('base')))
+        assert ['two'] == node.list_object_names(os.path.join('base', 'b'))
 
     def test_parse_no_retrieved_folder(self):
         """Test the `CalcJob.parse` method when there is no retrieved folder."""
@@ -784,14 +780,15 @@ def test_validate_stash_options(stash_options, expected):
         assert expected in validate_stash_options(stash_options, None)
 
 
-class TestImport(AiidaTestCase):
+class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer.configure()  # pylint: disable=no-member
-        cls.inputs = {
+    @pytest.fixture(autouse=True)
+    def init_db(self, clear_database_before_test, aiida_localhost):  # pylint: disable=unused-argument
+        """Setup database before each test"""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
+        self.inputs = {
             'x': orm.Int(1),
             'y': orm.Int(2),
             'metadata': {

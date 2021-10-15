@@ -53,8 +53,7 @@ def restrict_sqlalchemy_queuepool(aiida_profile):  # pylint: disable=unused-argu
     from aiida.manage.manager import get_manager
 
     backend = get_manager().get_backend()
-    backend.close()
-    backend.get_session(pool_timeout=1, max_overflow=0)
+    backend.reset(pool_timeout=1, max_overflow=0)
 
 
 @pytest.fixture

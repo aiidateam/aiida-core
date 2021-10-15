@@ -64,8 +64,9 @@ class SqlBackend(Generic[ModelType], backends.Backend):
             self._engine.dispose()
             self._engine = None
 
-    def reset(self):
-        self.close()  # close the connection, so that it will be regenerated on get_session
+    def reset(self, **kwargs):
+        self.close()
+        self.get_session(**kwargs)
 
     @property
     @abc.abstractmethod

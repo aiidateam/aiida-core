@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 __all__ = ('Backend',)
 
 _backends = weakref.WeakValueDictionary()
-"""Weak-referencing dictionary of loaded Backend.
+"""Weak-referencing dictionary of loaded Backends.
 """
 
 
@@ -71,7 +71,7 @@ class Backend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def reset(self) -> None:
+    def reset(self, **kwargs) -> None:
         """Reset the backend.
 
         This method should reset any open connections to the persistent storage

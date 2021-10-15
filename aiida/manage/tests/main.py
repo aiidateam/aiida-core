@@ -164,8 +164,12 @@ class ProfileManager:
             self._test_case = SqlAlchemyTests()
 
     def reset_db(self):
+        """Reset the test database state."""
+        from aiida.orm.implementation.backends import close_all_backends
+
         self._test_case.clean_db()  # will drop all users
         manager.reset_manager()
+        close_all_backends()
         self.init_db()
 
     def init_db(self):

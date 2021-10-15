@@ -30,8 +30,8 @@ class TestJobManager(AiidaTestCase):
         self.manager = JobManager(self.transport_queue)
 
     def tearDown(self):
-        super().tearDown()
         AuthInfo.objects.delete(self.auth_info.pk)
+        super().tearDown()
 
     def test_get_jobs_list(self):
         """Test the `JobManager.get_jobs_list` method."""
@@ -59,8 +59,8 @@ class TestJobsList(AiidaTestCase):
         self.jobs_list = JobsList(self.auth_info, self.transport_queue)
 
     def tearDown(self):
-        super().tearDown()
         AuthInfo.objects.delete(self.auth_info.pk)
+        super().tearDown()
 
     def test_get_minimum_update_interval(self):
         """Test the `JobsList.get_minimum_update_interval` method."""

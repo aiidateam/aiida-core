@@ -10,7 +10,7 @@
 """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 from contextlib import contextmanager
 import functools
-from typing import ContextManager, List, Sequence
+from typing import Any, ContextManager, List, Sequence
 
 # pylint: disable=import-error,no-name-in-module
 from django.apps import apps
@@ -28,7 +28,7 @@ from ..sql.backends import SqlBackend
 __all__ = ('DjangoBackend',)
 
 
-class DjangoBackend(SqlBackend[None, models.Model]):
+class DjangoBackend(SqlBackend[models.Model]):
     """Django implementation of `aiida.orm.implementation.backends.Backend`."""
 
     def __init__(self):
@@ -89,9 +89,13 @@ class DjangoBackend(SqlBackend[None, models.Model]):
         return get_scoped_session()
 
     @staticmethod
-    def transaction() -> ContextManager[None]:
+    def transaction() -> ContextManager[Any]:
         """Open a transaction to be used as a context manager."""
         return django_transaction.atomic()
+
+    @property
+    def in_transaction(self) -> bool:
+        return not django_transaction.get_autocommit()
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
@@ -118,11 +122,7 @@ class DjangoBackend(SqlBackend[None, models.Model]):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return model, keys
 
-    def bulk_insert(self,
-                    entity_type: EntityTypes,
-                    rows: List[dict],
-                    transaction: None,
-                    allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
         model, keys = self._get_model_from_entity(entity_type, False)
         if allow_defaults:
             for row in rows:
@@ -141,7 +141,7 @@ class DjangoBackend(SqlBackend[None, models.Model]):
             model.objects.bulk_create(objects)
         return [obj.id for obj in objects]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: None) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
         model, keys = self._get_model_from_entity(entity_type, True)
         id_entries = {}
         fields = None
@@ -166,7 +166,9 @@ class DjangoBackend(SqlBackend[None, models.Model]):
             objects.append(obj)
         model.objects.bulk_update(objects, fields)
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int], transaction: None) -> None:
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
+        if not self.in_transaction:
+            raise AssertionError('Cannot delete nodes outside a transaction')
         # Delete all links pointing to or from a given node
         dbm.DbLink.objects.filter(models.Q(input__in=pks_to_delete) | models.Q(output__in=pks_to_delete)).delete()
         # now delete nodes

@@ -19,7 +19,7 @@ __all__ = ('SqlBackend',)
 ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
 
 
-class SqlBackend(typing.Generic[backends.TransactionType, ModelType], backends.Backend[backends.TransactionType]):
+class SqlBackend(typing.Generic[ModelType], backends.Backend):
     """
     A class for SQL based backends.  Assumptions are that:
         * there is an ORM

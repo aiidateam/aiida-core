@@ -26,7 +26,7 @@ from ..sql.backends import SqlBackend
 __all__ = ('SqlaBackend',)
 
 
-class SqlaBackend(SqlBackend[Session, base.Base]):
+class SqlaBackend(SqlBackend[base.Base]):
     """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
     def __init__(self):
@@ -100,6 +100,10 @@ class SqlaBackend(SqlBackend[Session, base.Base]):
                 with session.begin_nested():
                     yield session
 
+    @property
+    def in_transaction(self) -> bool:
+        return self.get_session().in_nested_transaction()
+
     @staticmethod
     @functools.lru_cache(maxsize=18)
     def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool):
@@ -131,13 +135,7 @@ class SqlaBackend(SqlBackend[Session, base.Base]):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(
-        self,
-        entity_type: EntityTypes,
-        rows: List[dict],
-        transaction: Session,
-        allow_defaults: bool = False
-    ) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -155,10 +153,10 @@ class SqlaBackend(SqlBackend[Session, base.Base]):
         # note for postgresql+psycopg2 we could also use `save_all` + `flush` with minimal performance degradation, see
         # https://docs.sqlalchemy.org/en/14/changelog/migration_14.html#orm-batch-inserts-with-psycopg2-now-batch-statements-with-returning-in-most-cases
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
-        transaction.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
+        self.get_session().bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict], transaction: Session) -> None:  # pylint: disable=no-self-use
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:  # pylint: disable=no-self-use
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -167,26 +165,26 @@ class SqlaBackend(SqlBackend[Session, base.Base]):
                 raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
-        transaction.bulk_update_mappings(mapper, rows)
+        self.get_session().bulk_update_mappings(mapper, rows)
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int], transaction: Session) -> None:  # pylint: disable=no-self-use
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:  # pylint: disable=no-self-use
         # pylint: disable=no-value-for-parameter
-        from aiida.backends.sqlalchemy.models.group import table_groups_nodes
+        from aiida.backends.sqlalchemy.models.group import DbGroupNode
         from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
 
-        # I am first making a statement to delete the membership of these nodes to groups.
-        # Since table_groups_nodes is a sqlalchemy.schema.Table, I am using expression language to compile
-        # a stmt to be executed by the session. It works, but it's not nice that two different ways are used!
-        # Can this be changed?
-        stmt = table_groups_nodes.delete().where(table_groups_nodes.c.dbnode_id.in_(list(pks_to_delete)))
-        transaction.execute(stmt)
-        # First delete links, then the Nodes, since we are not cascading deletions.
-        # Here I delete the links coming out of the nodes marked for deletion.
-        transaction.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
-        # Here I delete the links pointing to the nodes marked for deletion.
-        transaction.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
-        # Now I am deleting the nodes
-        transaction.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        if not self.in_transaction:
+            raise AssertionError('Cannot delete nodes outside a transaction')
+
+        session = self.get_session()
+        # Delete the membership of these nodes to groups.
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))
+                                          ).delete(synchronize_session='fetch')
+        # Delete the links coming out of the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Delete the links pointing to the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Delete the actual nodes
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
     # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
 

@@ -9,7 +9,7 @@
 ###########################################################################
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 # pylint: disable=missing-function-docstring
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import functools
 from typing import Iterator, List, Sequence
 
@@ -153,7 +153,9 @@ class SqlaBackend(SqlBackend[base.Base]):
         # note for postgresql+psycopg2 we could also use `save_all` + `flush` with minimal performance degradation, see
         # https://docs.sqlalchemy.org/en/14/changelog/migration_14.html#orm-batch-inserts-with-psycopg2-now-batch-statements-with-returning-in-most-cases
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
-        self.get_session().bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
+        session = self.get_session()
+        with (nullcontext() if self.in_transaction else self.transaction()):  # type: ignore[attr-defined]
+            session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
     def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:  # pylint: disable=no-self-use
@@ -165,7 +167,9 @@ class SqlaBackend(SqlBackend[base.Base]):
                 raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
-        self.get_session().bulk_update_mappings(mapper, rows)
+        session = self.get_session()
+        with (nullcontext() if self.in_transaction else self.transaction()):  # type: ignore[attr-defined]
+            session.bulk_update_mappings(mapper, rows)
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:  # pylint: disable=no-self-use
         # pylint: disable=no-value-for-parameter
@@ -173,7 +177,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
 
         if not self.in_transaction:
-            raise AssertionError('Cannot delete nodes outside a transaction')
+            raise AssertionError('Cannot delete nodes and links outside a transaction')
 
         session = self.get_session()
         # Delete the membership of these nodes to groups.

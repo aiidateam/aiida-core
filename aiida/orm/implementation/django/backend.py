@@ -168,7 +168,7 @@ class DjangoBackend(SqlBackend[models.Model]):
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
         if not self.in_transaction:
-            raise AssertionError('Cannot delete nodes outside a transaction')
+            raise AssertionError('Cannot delete nodes and links outside a transaction')
         # Delete all links pointing to or from a given node
         dbm.DbLink.objects.filter(models.Q(input__in=pks_to_delete) | models.Q(output__in=pks_to_delete)).delete()
         # now delete nodes

@@ -20,7 +20,7 @@
         "Topic :: Scientific/Engineering"
     ],
     "install_requires": [
-        "aldjemy~=2.2",
+        "aldjemy~=2.4",
         "alembic~=1.2",
         "archive-path~=0.2.1",
         "aio-pika~=6.6",

@@ -156,8 +156,9 @@ class DbLink(Base):
         Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), index=True
     )
 
-    input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id')
-    output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id')
+    # https://docs.sqlalchemy.org/en/14/errors.html#relationship-x-will-copy-column-q-to-column-p-which-conflicts-with-relationship-s-y
+    input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id', overlaps='inputs_q,outputs_q')
+    output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id', overlaps='inputs_q,outputs_q')
 
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255), index=True)

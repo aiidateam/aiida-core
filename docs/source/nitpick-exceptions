@@ -19,8 +19,13 @@ py:class builtins.str
 py:class builtins.dict
 
 # typing
+py:class AbstractContextManager
 py:class asyncio.events.AbstractEventLoop
 py:class EntityType
+py:class EntityTypes
+py:class ModelType
+py:class TransactionType
+py:class ReturnType
 py:class function
 py:class IO
 py:class traceback
@@ -35,6 +40,7 @@ py:class aiida.engine.runners.ResultAndNode
 py:class aiida.engine.runners.ResultAndPk
 py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
 py:class aiida.manage.manager.Manager
+py:class aiida.orm.entities.EntityTypes
 py:class aiida.orm.nodes.node.WarnWhenNotEntered
 py:class aiida.orm.implementation.querybuilder.QueryDictType
 py:class aiida.orm.querybuilder.Classifier

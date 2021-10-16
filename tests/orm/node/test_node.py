@@ -16,7 +16,8 @@ import tempfile
 
 import pytest
 
-from aiida.common import LinkType, exceptions
+from aiida.common import LinkType, exceptions, timezone
+from aiida.manage.manager import get_manager
 from aiida.orm import CalculationNode, Computer, Data, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
@@ -800,10 +801,9 @@ class TestNodeDelete:
     # pylint: disable=no-member,no-self-use
 
     @pytest.mark.usefixtures('clear_database_before_test')
-    def test_delete_through_utility_method(self):
-        """Test deletion works correctly through the `aiida.backends.utils.delete_nodes_and_connections`."""
-        from aiida.backends.utils import delete_nodes_and_connections
-        from aiida.common import timezone
+    def test_delete_through_backend(self):
+        """Test deletion works correctly through the backend."""
+        backend = get_manager().get_backend()
 
         data_one = Data().store()
         data_two = Data().store()
@@ -820,7 +820,8 @@ class TestNodeDelete:
         assert len(Log.objects.get_logs_for(data_two)) == 1
         assert Log.objects.get_logs_for(data_two)[0].pk == log_two.pk
 
-        delete_nodes_and_connections([data_two.pk])
+        with backend.transaction():
+            backend.delete_nodes_and_connections([data_two.pk])
 
         assert len(Log.objects.get_logs_for(data_one)) == 1
         assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
@@ -829,8 +830,6 @@ class TestNodeDelete:
     @pytest.mark.usefixtures('clear_database_before_test')
     def test_delete_collection_logs(self):
         """Test deletion works correctly through objects collection."""
-        from aiida.common import timezone
-
         data_one = Data().store()
         data_two = Data().store()
 

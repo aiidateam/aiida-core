@@ -10,6 +10,7 @@
 """Module for all common top level AiiDA entity classes and methods"""
 import abc
 import copy
+from enum import Enum
 import typing
 
 from plumpy.base.utils import call_with_super_check, super_check
@@ -23,6 +24,19 @@ __all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityExtrasMixin')
 EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 
 _NO_DEFAULT = tuple()
+
+
+class EntityTypes(Enum):
+    """Enum for referring to ORM entities in a backend-agnostic manner."""
+    AUTHINFO = 'authinfo'
+    COMMENT = 'comment'
+    COMPUTER = 'computer'
+    GROUP = 'group'
+    LOG = 'log'
+    NODE = 'node'
+    USER = 'user'
+    LINK = 'link'
+    GROUP_NODE = 'group_node'
 
 
 class Collection(typing.Generic[EntityType]):

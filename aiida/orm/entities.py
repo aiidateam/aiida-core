@@ -12,7 +12,7 @@ import abc
 import copy
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, TypeVar, cast
 
 from plumpy.base.utils import call_with_super_check, super_check
 
@@ -146,14 +146,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         :return: a list of resulting matches
         """
         query = self.query(filters=filters, order_by=order_by, limit=limit)
-        return query.all(flat=True)  # type: ignore[return-value]
+        return cast(List[EntityType], query.all(flat=True))
 
     def all(self) -> List[EntityType]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
-        return self.query().all(flat=True)  # type: ignore[return-value]  # pylint: disable=no-member
+        return cast(List[EntityType], self.query().all(flat=True))  # pylint: disable=no-member
 
     def count(self, filters: Optional[Dict[str, 'FilterType']] = None) -> int:
         """Count entities in this collection according to criteria.

@@ -81,6 +81,7 @@ py:class Repository
 py:class ReturnType
 py:class Runner
 py:class Scheduler
+py:class SelfType
 py:class TransactionType
 py:class Transport
 py:class TransportQueue

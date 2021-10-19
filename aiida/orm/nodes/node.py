@@ -14,7 +14,21 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -41,8 +55,10 @@ if TYPE_CHECKING:
 
 __all__ = ('Node',)
 
+NodeType = TypeVar('NodeType', bound='Node')
 
-class NodeCollection(EntityCollection['Node']):
+
+class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
@@ -112,8 +128,8 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     Collection = NodeCollection
 
     @classproperty
-    def objects(cls) -> NodeCollection:  # pylint: disable=no-self-argument
-        return NodeCollection.get_cached(cls, get_manager().get_backend())
+    def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
+        return NodeCollection.get_cached(cls, get_manager().get_backend())  # type: ignore[arg-type]
 
     def __init__(
         self,

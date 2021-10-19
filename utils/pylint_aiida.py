@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """pylint plugin for ``aiida-core`` specific issues."""
 import astroid
 

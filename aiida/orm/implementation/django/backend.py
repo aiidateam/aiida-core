@@ -19,7 +19,6 @@ from django.apps import apps
 from django.db import models
 from django.db import transaction as django_transaction
 
-from aiida.backends.djsite.db import models as dbm
 from aiida.backends.djsite.manager import DjangoBackendManager
 from aiida.common.exceptions import IntegrityError
 from aiida.orm.entities import EntityTypes
@@ -117,6 +116,8 @@ class DjangoBackend(SqlBackend[models.Model]):
         """
         from sqlalchemy import inspect
 
+        from aiida.backends.djsite.db import models as dbm
+
         model = {
             EntityTypes.AUTHINFO: dbm.DbAuthInfo,
             EntityTypes.COMMENT: dbm.DbComment,
@@ -134,6 +135,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         return model, keys
 
     def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+        from aiida.backends.djsite.db import models as dbm
         model, keys = self._get_model_from_entity(entity_type, False)
         if allow_defaults:
             for row in rows:
@@ -178,6 +180,7 @@ class DjangoBackend(SqlBackend[models.Model]):
         model.objects.bulk_update(objects, fields)
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
+        from aiida.backends.djsite.db import models as dbm
         if not self.in_transaction:
             raise AssertionError('Cannot delete nodes and links outside a transaction')
         # Delete all links pointing to or from a given node

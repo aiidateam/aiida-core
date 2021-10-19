@@ -14,19 +14,7 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from uuid import UUID
 
 from aiida.common import exceptions

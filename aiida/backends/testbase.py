@@ -71,6 +71,7 @@ class AiidaTestCase(unittest.TestCase):
     @classproperty
     def backend(cls) -> 'Backend':  # pylint: disable=no-self-argument,no-self-use
         """Return the backend instance."""
+        from aiida.manage.manager import get_manager
         return get_manager().get_backend()
 
     @classmethod

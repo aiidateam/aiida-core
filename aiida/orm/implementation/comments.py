@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for comment backend classes."""
-
 import abc
+from typing import List
 
 from .entities import BackendCollection, BackendEntity
 
@@ -98,7 +98,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters):
+    def delete_many(self, filters) -> List[int]:
         """
         Delete Comments based on ``filters``
 

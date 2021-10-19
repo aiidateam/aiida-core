@@ -10,8 +10,10 @@
 """Module for Computer entities"""
 import logging
 import os
+from typing import List, Optional, Tuple, Type
 
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 from aiida.orm.implementation import Backend
 from aiida.plugins import SchedulerFactory, TransportFactory
@@ -19,6 +21,41 @@ from aiida.plugins import SchedulerFactory, TransportFactory
 from . import entities, users
 
 __all__ = ('Computer',)
+
+
+class ComputerCollection(entities.Collection['Computer']):
+    """The collection of Computer entries."""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['Computer']:
+        return Computer
+
+    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple['Computer', bool]:
+        """
+        Try to retrieve a Computer from the DB with the given arguments;
+        create (and store) a new Computer if such a Computer was not present yet.
+
+        :param label: computer label
+        :type label: str
+
+        :return: (computer, created) where computer is the computer (new or existing,
+            in any case already stored) and created is a boolean saying
+        """
+        if not label:
+            raise ValueError('Computer label must be provided')
+
+        try:
+            return False, self.get(label=label)
+        except exceptions.NotExistent:
+            return True, Computer(backend=self.backend, label=label, **kwargs)
+
+    def list_labels(self) -> List[str]:
+        """Return a list with all the labels of the computers in the DB."""
+        return self._backend.computers.list_names()
+
+    def delete(self, pk: int):
+        """Delete the computer with the given id"""
+        return self._backend.computers.delete(pk)
 
 
 class Computer(entities.Entity):
@@ -34,36 +71,11 @@ class Computer(entities.Entity):
     PROPERTY_WORKDIR = 'workdir'
     PROPERTY_SHEBANG = 'shebang'
 
-    class Collection(entities.Collection):
-        """The collection of Computer entries."""
+    Collection = ComputerCollection
 
-        def get_or_create(self, label=None, **kwargs):
-            """
-            Try to retrieve a Computer from the DB with the given arguments;
-            create (and store) a new Computer if such a Computer was not present yet.
-
-            :param label: computer label
-            :type label: str
-
-            :return: (computer, created) where computer is the computer (new or existing,
-              in any case already stored) and created is a boolean saying
-            :rtype: (:class:`aiida.orm.Computer`, bool)
-            """
-            if not label:
-                raise ValueError('Computer label must be provided')
-
-            try:
-                return False, self.get(label=label)
-            except exceptions.NotExistent:
-                return True, Computer(backend=self.backend, label=label, **kwargs)
-
-        def list_labels(self):
-            """Return a list with all the labels of the computers in the DB."""
-            return self._backend.computers.list_names()
-
-        def delete(self, id):  # pylint: disable=redefined-builtin,invalid-name
-            """Delete the computer with the given id"""
-            return self._backend.computers.delete(id)
+    @classproperty
+    def objects(cls) -> ComputerCollection:  # pylint: disable=no-self-argument
+        return ComputerCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(  # pylint: disable=too-many-arguments
         self,

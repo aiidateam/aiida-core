@@ -9,11 +9,11 @@
 ###########################################################################
 """AiiDA Group entites"""
 from abc import ABCMeta
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, Tuple, Type
 import warnings
 
 from aiida.common import exceptions
-from aiida.common.lang import type_check
+from aiida.common.lang import classproperty, type_check
 from aiida.manage.manager import get_manager
 
 from . import convert, entities, users
@@ -63,47 +63,56 @@ class GroupMeta(ABCMeta):
         return newcls
 
 
+class GroupCollection(entities.Collection['Group']):
+    """Collection of Groups"""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['Group']:
+        return Group
+
+    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple['Group', bool]:
+        """
+        Try to retrieve a group from the DB with the given arguments;
+        create (and store) a new group if such a group was not present yet.
+
+        :param label: group label
+
+        :return: (group, created) where group is the group (new or existing,
+            in any case already stored) and created is a boolean saying
+        """
+        if not label:
+            raise ValueError('Group label must be provided')
+
+        res = self.find(filters={'label': label})
+
+        if not res:
+            return self.entity_type(label, backend=self.backend, **kwargs).store(), True
+
+        if len(res) > 1:
+            raise exceptions.MultipleObjectsError('More than one groups found in the database')
+
+        return res[0], False
+
+    def delete(self, pk: int) -> None:
+        """
+        Delete a group
+
+        :param pk: the id of the group to delete
+        """
+        self._backend.groups.delete(pk)
+
+
 class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
 
     # added by metaclass
     _type_string = ClassVar[Optional[str]]
 
-    class Collection(entities.Collection):
-        """Collection of Groups"""
+    Collection = GroupCollection
 
-        def get_or_create(self, label=None, **kwargs):
-            """
-            Try to retrieve a group from the DB with the given arguments;
-            create (and store) a new group if such a group was not present yet.
-
-            :param label: group label
-            :type label: str
-
-            :return: (group, created) where group is the group (new or existing,
-              in any case already stored) and created is a boolean saying
-            :rtype: (:class:`aiida.orm.Group`, bool)
-            """
-            if not label:
-                raise ValueError('Group label must be provided')
-
-            res = self.find(filters={'label': label})
-
-            if not res:
-                return self.entity_type(label, backend=self.backend, **kwargs).store(), True
-
-            if len(res) > 1:
-                raise exceptions.MultipleObjectsError('More than one groups found in the database')
-
-            return res[0], False
-
-        def delete(self, id):  # pylint: disable=invalid-name, redefined-builtin
-            """
-            Delete a group
-
-            :param id: the id of the group to delete
-            """
-            self._backend.groups.delete(id)
+    @classproperty
+    def objects(cls) -> GroupCollection:  # pylint: disable=no-self-argument
+        return GroupCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(self, label=None, user=None, description='', type_string=None, backend=None):
         """

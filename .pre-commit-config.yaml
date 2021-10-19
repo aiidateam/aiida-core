@@ -81,6 +81,7 @@ repos:
                 aiida/orm/implementation/sqlalchemy/backend.py|
                 aiida/orm/implementation/querybuilder.py|
                 aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
+                aiida/orm/entities.py|
                 aiida/orm/nodes/data/jsonable.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|

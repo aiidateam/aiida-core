@@ -14,7 +14,19 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -41,7 +53,31 @@ if TYPE_CHECKING:
 
 __all__ = ('Node',)
 
-_NO_DEFAULT = tuple()  # type: ignore[var-annotated]
+
+class NodeCollection(EntityCollection['Node']):
+    """The collection of nodes."""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['Node']:
+        return Node
+
+    def delete(self, pk: int) -> None:
+        """Delete a `Node` from the collection with the given id
+
+        :param pk: the node id
+        """
+        node = self.get(id=pk)
+
+        if not node.is_stored:
+            return
+
+        if node.get_incoming().all():
+            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
+
+        if node.get_outgoing().all():
+            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
+
+        self._backend.nodes.delete(pk)
 
 
 class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
@@ -65,27 +101,6 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     _plugin_type_string: ClassVar[str]
     _query_type_string: ClassVar[str]
 
-    class Collection(EntityCollection):
-        """The collection of nodes."""
-
-        def delete(self, node_id: int) -> None:
-            """Delete a `Node` from the collection with the given id
-
-            :param node_id: the node id
-            """
-            node = self.get(id=node_id)
-
-            if not node.is_stored:
-                return
-
-            if node.get_incoming().all():
-                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
-
-            if node.get_outgoing().all():
-                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
-
-            self._backend.nodes.delete(node_id)
-
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None
 
@@ -106,10 +121,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     # These are to be initialized in the `initialization` method
     _incoming_cache: Optional[List[LinkTriple]] = None
 
-    @classmethod
-    def from_backend_entity(cls, backend_entity: 'BackendNode') -> 'Node':
-        entity = super().from_backend_entity(backend_entity)
-        return entity
+    Collection = NodeCollection
+
+    @classproperty
+    def objects(cls) -> NodeCollection:  # pylint: disable=no-self-argument
+        return NodeCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(
         self,
@@ -374,7 +390,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
-        user = user or User.objects.get_default()
+        user = user or User.objects(self.backend).get_default()
         return Comment(node=self, user=user, content=content).store()
 
     def get_comment(self, identifier: int) -> Comment:
@@ -385,14 +401,14 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
-        return Comment.objects.get(dbnode_id=self.pk, id=identifier)
+        return Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
 
     def get_comments(self) -> List[Comment]:
         """Return a sorted list of comments for this node.
 
         :return: the list of comments, sorted by pk
         """
-        return Comment.objects.find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
+        return Comment.objects(self.backend).find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
 
     def update_comment(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.
@@ -402,7 +418,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
-        comment = Comment.objects.get(dbnode_id=self.pk, id=identifier)
+        comment = Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
         comment.set_content(content)
 
     def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
@@ -410,7 +426,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
         :param identifier: the comment pk
         """
-        Comment.objects.delete(identifier)
+        Comment.objects(self.backend).delete(identifier)
 
     def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.

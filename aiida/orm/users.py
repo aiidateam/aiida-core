@@ -8,68 +8,78 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ORM user class."""
+from typing import TYPE_CHECKING, Optional, Tuple, Type
+
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 
 from . import entities
 
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
+
 __all__ = ('User',)
+
+
+class UserCollection(entities.Collection['User']):
+    """The collection of users stored in a backend."""
+
+    UNDEFINED = 'UNDEFINED'
+    _default_user: Optional['User'] = None
+
+    @staticmethod
+    def _entity_base_cls() -> Type['User']:
+        return User
+
+    def __init__(self, entity_class: Type['User'], backend: Optional['Backend'] = None) -> None:
+        super().__init__(entity_class=entity_class, backend=backend)
+        self._default_user = self.UNDEFINED
+
+    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
+        """Get the existing user with a given email address or create an unstored one
+
+        :param kwargs: The properties of the user to get or create
+        :return: The corresponding user object
+        :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
+            :class:`aiida.common.exceptions.NotExistent`
+        """
+        try:
+            return False, self.get(email=email)
+        except exceptions.NotExistent:
+            return True, User(backend=self.backend, email=email, **kwargs)
+
+    def get_default(self) -> 'User':
+        """Get the current default user"""
+        if self._default_user is self.UNDEFINED:
+            from aiida.manage.configuration import get_profile
+            profile = get_profile()
+            email = profile.default_user
+            if not email:
+                self._default_user = None
+
+            try:
+                self._default_user = self.get(email=email)
+            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                self._default_user = None
+
+        return self._default_user
+
+    def reset(self) -> None:
+        """
+        Reset internal caches (default user).
+        """
+        self._default_user = self.UNDEFINED
 
 
 class User(entities.Entity):
     """AiiDA User"""
 
-    class Collection(entities.Collection):
-        """The collection of users stored in a backend."""
+    Collection = UserCollection
 
-        UNDEFINED = 'UNDEFINED'
-        _default_user = None  # type: aiida.orm.User
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._default_user = self.UNDEFINED
-
-        def get_or_create(self, email, **kwargs):
-            """
-                Get the existing user with a given email address or create an unstored one
-
-                :param kwargs: The properties of the user to get or create
-                :return: The corresponding user object
-                :rtype: :class:`aiida.orm.User`
-                :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
-                    :class:`aiida.common.exceptions.NotExistent`
-                """
-            try:
-                return False, self.get(email=email)
-            except exceptions.NotExistent:
-                return True, User(backend=self.backend, email=email, **kwargs)
-
-        def get_default(self):
-            """
-            Get the current default user
-
-            :return: The default user
-            :rtype: :class:`aiida.orm.User`
-            """
-            if self._default_user is self.UNDEFINED:
-                from aiida.manage.configuration import get_profile
-                profile = get_profile()
-                email = profile.default_user
-                if not email:
-                    self._default_user = None
-
-                try:
-                    self._default_user = self.get(email=email)
-                except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                    self._default_user = None
-
-            return self._default_user
-
-        def reset(self):
-            """
-            Reset internal caches (default user).
-            """
-            self._default_user = self.UNDEFINED
+    @classproperty
+    def objects(cls) -> UserCollection:  # pylint: disable=no-self-argument
+        return UserCollection.get_cached(cls, get_manager().get_backend())
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 

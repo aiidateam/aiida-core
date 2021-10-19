@@ -2,7 +2,7 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
 import shutil
-from typing import BinaryIO, Iterable, Iterator, List, Optional
+from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple
 
 from disk_objectstore import Container
 
@@ -88,6 +88,12 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         with self.container.get_object_stream(key) as handle:
             yield handle  # type: ignore[misc]
+
+    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+        with self.container.get_objects_stream_and_meta(keys) as triplets:
+            for key, stream, _ in triplets:
+                assert stream is not None
+                yield key, stream  # type: ignore[misc]
 
     def delete_objects(self, keys: List[str]) -> None:
         super().delete_objects(keys)

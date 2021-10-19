@@ -112,6 +112,16 @@ def test_open(repository, generate_directory):
         assert handle.read() == b'content_b'
 
 
+def test_iter_object_streams(repository):
+    """Test the ``Repository.iter_object_streams`` method."""
+    repository.initialise()
+    key = repository.put_object_from_filelike(io.BytesIO(b'content'))
+
+    for _key, stream in repository.iter_object_streams([key]):
+        assert _key == key
+        assert stream.read() == b'content'
+
+
 def test_delete_object(repository, generate_directory):
     """Test the ``Repository.delete_object`` method."""
     repository.initialise()

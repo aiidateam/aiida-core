@@ -15,6 +15,7 @@ import io
 import os
 import re
 import sys
+from typing import Any, Dict
 from uuid import UUID
 
 from .lang import classproperty
@@ -388,7 +389,7 @@ class Prettifier:
         return re.sub(r'(\d+)', r'$_{\1}$', label)
 
     @classproperty
-    def prettifiers(cls):  # pylint: disable=no-self-argument
+    def prettifiers(cls) -> Dict[str, Any]:  # pylint: disable=no-self-argument
         """
         Property that returns a dictionary that for each string associates
         the function to prettify a label
@@ -412,7 +413,7 @@ class Prettifier:
 
         :return: a list of strings
         """
-        return sorted(cls.prettifiers.keys())  # pylint: disable=no-member
+        return sorted(cls.prettifiers.keys())
 
     def __init__(self, format):  # pylint: disable=redefined-builtin
         """

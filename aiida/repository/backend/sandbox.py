@@ -3,7 +3,7 @@
 import contextlib
 import os
 import shutil
-from typing import BinaryIO, Iterable, Iterator, List, Optional
+from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple
 import uuid
 
 from .abstract import AbstractRepositoryBackend
@@ -98,20 +98,15 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
-        """Open a file handle to an object stored under the given key.
-
-        .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
-            ``put_object_from_filelike`` instead.
-
-        :param key: fully qualified identifier for the object within the repository.
-        :return: yield a byte stream object.
-        :raise FileNotFoundError: if the file does not exist.
-        :raise OSError: if the file could not be opened.
-        """
         super().open(key)
 
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle
+
+    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+        for key in keys:
+            with self.open(key) as handle:  # pylint: disable=not-context-manager
+                yield key, handle
 
     def delete_objects(self, keys: List[str]) -> None:
         super().delete_objects(keys)

@@ -119,6 +119,9 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def list_objects(self) -> Iterable[str]:
         raise NotImplementedError()
 
+    def iter_object_streams(self, keys: List[str]):
+        raise NotImplementedError()
+
 
 def migrate_legacy_repository(shard=None):
     """Migrate the legacy file repository to the new disk object store and return mapping of repository metadata.

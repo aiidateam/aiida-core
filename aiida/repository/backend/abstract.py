@@ -148,6 +148,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
         """Return an iterator over the (read-only) byte streams of objects identified by key.
 
+        .. note:: handles should only be read within the context of this iterator.
+
         :param keys: fully qualified identifiers for the objects within the repository.
         :return: an iterator over the object byte streams.
         :raise FileNotFoundError: if the file does not exist.

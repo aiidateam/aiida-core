@@ -16,12 +16,11 @@ from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
 class TestBackend:
     """Test backend."""
 
     @pytest.fixture(autouse=True)
-    def init_test(self, backend):
+    def init_test(self, clear_database_before_test, backend):   # pylint: disable=unused-argument
         """Set up the backend."""
         self.backend = backend  # pylint: disable=attribute-defined-outside-init
 

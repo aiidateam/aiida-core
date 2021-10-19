@@ -270,7 +270,7 @@ class Entity(abc.ABC):
 
 
 class EntityProtocol(Protocol):
-    """Protocol for attributes required be Entity mixins."""
+    """Protocol for attributes required by Entity mixins."""
 
     @property
     def backend_entity(self) -> 'BackendEntity':

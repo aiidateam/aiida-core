@@ -28,9 +28,11 @@ if TYPE_CHECKING:
         BackendUserCollection,
     )
 
+    BackendCacheType = weakref.WeakValueDictionary[int, 'Backend']  # pylint: disable=unsubscriptable-object
+
 __all__ = ('Backend',)
 
-_backends = weakref.WeakValueDictionary()
+_backends: 'BackendCacheType' = weakref.WeakValueDictionary()
 """Weak-referencing dictionary of loaded Backends.
 """
 

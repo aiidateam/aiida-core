@@ -17,7 +17,7 @@ from aiida import orm
 from aiida.common.exceptions import ConfigurationError, InternalError, TestsNotAllowedError
 from aiida.common.lang import classproperty
 from aiida.manage import configuration
-from aiida.manage.manager import get_manager, reset_manager
+from aiida.manage.manager import reset_manager
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend

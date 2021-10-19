@@ -125,6 +125,7 @@ class Manager:
 
             backend_type = profile.database_backend
 
+            backend_cls: 'Backend'
             if backend_type == BACKEND_DJANGO:
                 from aiida.orm.implementation.django.backend import DjangoBackend
                 backend_cls = DjangoBackend

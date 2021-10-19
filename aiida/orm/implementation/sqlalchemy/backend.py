@@ -196,11 +196,11 @@ class SqlaBackend(SqlBackend[base.Base]):
 
     @contextmanager
     def cursor(self):
+        connection = self.get_session().bind.raw_connection()  # type: ignore[union-attr]
         try:
-            connection = self.get_session().bind.raw_connection()
             yield connection.cursor()
         finally:
-            self._get_connection().close()
+            connection.close()
 
     def execute_raw(self, query):
         from sqlalchemy import text
@@ -215,10 +215,3 @@ class SqlaBackend(SqlBackend[base.Base]):
                 return None
 
         return results
-
-    def _get_connection(self):
-        """Get the SQLA database connection
-
-        :return: the raw SQLA database connection
-        """
-        return self.get_session().bind.raw_connection()

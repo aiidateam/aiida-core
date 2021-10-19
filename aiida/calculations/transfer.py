@@ -10,9 +10,10 @@
 """Implementation of Transfer CalcJob."""
 
 import os
+
 from aiida import orm
-from aiida.engine import CalcJob
 from aiida.common.datastructures import CalcInfo
+from aiida.engine import CalcJob
 
 
 def validate_instructions(instructions, _):

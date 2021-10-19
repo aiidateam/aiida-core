@@ -14,7 +14,7 @@ from collections.abc import Mapping, MutableMapping
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
-from aiida.engine import WorkChain, Process
+from aiida.engine import Process, ProcessBuilderNamespace, WorkChain
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256
@@ -47,6 +47,28 @@ class LazyProcessNamespace(Process):
         spec.input('namespace.c')
 
 
+class SimpleProcessNamespace(Process):
+    """Process with basic nested namespaces to test "pruning" of empty nested namespaces from the builder."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input_namespace('namespace.nested', dynamic=True)
+        spec.input('namespace.a', valid_type=int)
+        spec.input('namespace.c', valid_type=dict)
+
+
+class NestedNamespaceProcess(Process):
+    """Process with nested required ports to check the update and merge functionality."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('nested.namespace.int', valid_type=int, required=True)
+        spec.input('nested.namespace.float', valid_type=float, required=True)
+        spec.input('nested.namespace.str', valid_type=str, required=False)
+
+
 class MappingData(Mapping, orm.Data):
     """Data sub class that is also a `Mapping`."""
 
@@ -72,7 +94,7 @@ class TestProcessBuilder(AiidaTestCase):
     def setUp(self):
         super().setUp()
         self.assertIsNone(Process.current())
-        self.process_class = CalculationFactory('templatereplacer')
+        self.process_class = CalculationFactory('core.templatereplacer')
         self.builder = self.process_class.get_builder()
         self.builder_workchain = ExampleWorkChain.get_builder()
         self.inputs = {
@@ -117,13 +139,13 @@ class TestProcessBuilder(AiidaTestCase):
 
         # Verify that empty lists are considered as a "value" and are not pruned
         builder = LazyProcessNamespace.get_builder()
-        builder.namespace.c = list()
+        builder.namespace.c = []
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'c': [], 'nested': {}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'c': []}})
 
         # Verify that empty lists, even in doubly nested namespace are considered as a "value" and are not pruned
         builder = LazyProcessNamespace.get_builder()
-        builder.namespace.nested.bird = list()
+        builder.namespace.nested.bird = []
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'nested': {'bird': []}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'nested': {'bird': []}}})
 
@@ -159,7 +181,7 @@ class TestProcessBuilder(AiidaTestCase):
         self.builder_workchain.boolean = self.inputs['boolean']
 
         # Verify that the correct type is returned by the getter
-        self.assertTrue(isinstance(self.builder_workchain.dynamic.namespace, dict))
+        self.assertTrue(isinstance(self.builder_workchain.dynamic.namespace, ProcessBuilderNamespace))
         self.assertTrue(isinstance(self.builder_workchain.name.spaced, orm.Int))
         self.assertTrue(isinstance(self.builder_workchain.name_spaced, orm.Str))
         self.assertTrue(isinstance(self.builder_workchain.boolean, orm.Bool))
@@ -242,7 +264,7 @@ class TestProcessBuilder(AiidaTestCase):
     def test_calc_job_node_get_builder_restart(self):
         """Test the `CalcJobNode.get_builder_restart` method."""
         original = orm.CalcJobNode(
-            computer=self.computer, process_type='aiida.calculations:arithmetic.add', label='original'
+            computer=self.computer, process_type='aiida.calculations:core.arithmetic.add', label='original'
         )
         original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         original.set_option('max_wallclock_seconds', 1800)
@@ -259,14 +281,14 @@ class TestProcessBuilder(AiidaTestCase):
         self.assertIn('options', builder.metadata)
         self.assertEqual(builder.x, orm.Int(1))
         self.assertEqual(builder.y, orm.Int(2))
-        self.assertDictEqual(builder.metadata.options, original.get_options())
+        self.assertDictEqual(builder._inputs(prune=True)['metadata']['options'], original.get_options())
 
     def test_code_get_builder(self):
         """Test that the `Code.get_builder` method returns a builder where the code is already set."""
         code = orm.Code()
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.label = 'test_code'
-        code.set_input_plugin_name('templatereplacer')
+        code.set_input_plugin_name('core.templatereplacer')
         code.store()
 
         # Check that I can get a builder
@@ -283,3 +305,78 @@ class TestProcessBuilder(AiidaTestCase):
         # Check that it complains if the type is not the correct one (for the templatereplacer, it should be a Dict)
         with self.assertRaises(ValueError):
             builder.parameters = orm.Int(3)
+
+    def test_set_attr(self):
+        """Test that ``__setattr__`` keeps sub portnamespaces as ``ProcessBuilderNamespace`` instances."""
+        builder = LazyProcessNamespace.get_builder()
+        self.assertTrue(isinstance(builder.namespace, ProcessBuilderNamespace))
+        self.assertTrue(isinstance(builder.namespace.nested, ProcessBuilderNamespace))
+
+        builder.namespace = {'a': 'a', 'c': 'c', 'nested': {'bird': 'mus'}}
+        self.assertTrue(isinstance(builder.namespace, ProcessBuilderNamespace))
+        self.assertTrue(isinstance(builder.namespace.nested, ProcessBuilderNamespace))
+
+    def test_update(self):
+        """Test the ``_update`` method to update an existing builder with a dictionary."""
+        builder = NestedNamespaceProcess.get_builder()
+        builder.nested.namespace = {'int': 1, 'float': 2.0}
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 1, 'float': 2.0}}})
+
+        # Since ``_update`` will replace nested namespaces and not recursively merge them, if we don't specify all
+        # required inputs, the validation should fail.
+        with self.assertRaises(ValueError):
+            builder._update({'nested': {'namespace': {'int': 5, 'str': 'x'}}})
+
+        # Now we specify all required inputs and an additional optional one and since it is a nested namespace
+        builder._update({'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}})
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}})
+
+    def test_merge(self):
+        """Test the ``_merge`` method to merge a dictionary into an existing builder."""
+        builder = NestedNamespaceProcess.get_builder()
+        builder.nested.namespace = {'int': 1, 'float': 2.0}
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 1, 'float': 2.0}}})
+
+        # Define only one of the required ports of `nested.namespace`. This should leave the `float` input untouched and
+        # even though not specified explicitly again, since the merged dictionary still contains it, the
+        # `nested.namespace` port should still be valid.
+        builder._merge({'nested': {'namespace': {'int': 5}}})
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 2.0}}})
+
+        # Perform same test but passing the dictionary in as keyword arguments
+        builder._merge(**{'nested': {'namespace': {'int': 5}}})
+        self.assertEqual(builder._inputs(prune=True), {'nested': {'namespace': {'int': 5, 'float': 2.0}}})
+
+    def test_instance_interference(self):
+        """Test that two builder instances do not interact through the class.
+
+        This is a regression test for #4420.
+        """
+
+        class ProcessOne(Process):
+            """Process with nested required ports to check the update functionality."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('port', valid_type=int, default=1)
+
+        class ProcessTwo(Process):
+            """Process with nested required ports to check the update functionality."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.input('port', valid_type=int, default=2)
+
+        builder_one = ProcessOne.get_builder()
+        assert builder_one.port == 1
+        assert isinstance(builder_one, ProcessBuilderNamespace)
+
+        # Create a second builder and check its only port has the correct default, but also that the original builder
+        # still has its original port default and hasn't been affected by the second builder because the share a port
+        # name.
+        builder_two = ProcessTwo.get_builder()
+        assert isinstance(builder_two, ProcessBuilderNamespace)
+        assert builder_two.port == 2
+        assert builder_one.port == 1

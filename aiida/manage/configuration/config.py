@@ -21,7 +21,7 @@ from aiida.common import json
 from aiida.common.exceptions import ConfigurationError
 
 from . import schema as schema_module
-from .options import get_option, get_option_names, Option, parse_option, NO_DEFAULT
+from .options import NO_DEFAULT, Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
@@ -77,6 +77,7 @@ class Config:  # pylint: disable=too-many-public-methods
         :return: `Config` instance
         """
         from aiida.cmdline.utils import echo
+
         from .migrations import check_and_migrate_config, config_needs_migrating
 
         try:
@@ -372,6 +373,7 @@ class Config:  # pylint: disable=too-many-public-methods
             postgres.drop_dbuser(profile.database_username)
 
         self.remove_profile(name)
+        self.store()
 
     def set_default_profile(self, name, overwrite=False):
         """Set the given profile as the new default.
@@ -488,7 +490,8 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :return: self
         """
-        from aiida.common.files import md5_from_filelike, md5_file
+        from aiida.common.files import md5_file, md5_from_filelike
+
         from .settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.
@@ -519,7 +522,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :param filepath: optional filepath to write the contents to, if not specified, the default filename is used.
         """
-        from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
+        from .settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
 
         umask = os.umask(DEFAULT_UMASK)
 

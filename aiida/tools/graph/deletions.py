@@ -11,8 +11,8 @@
 import logging
 from typing import Callable, Iterable, Set, Tuple, Union
 
-from aiida.backends.utils import delete_nodes_and_connections
 from aiida.common.log import AIIDA_LOGGER
+from aiida.manage.manager import get_manager
 from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
@@ -21,9 +21,12 @@ __all__ = ('DELETE_LOGGER', 'delete_nodes', 'delete_group_nodes')
 DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
-def delete_nodes(pks: Iterable[int],
-                 dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
-                 **traversal_rules: bool) -> Tuple[Set[int], bool]:
+def delete_nodes(
+    pks: Iterable[int],
+    dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
+    backend=None,
+    **traversal_rules: bool
+) -> Tuple[Set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
 
     This command will delete not only the specified nodes, but also the ones that are
@@ -60,6 +63,7 @@ def delete_nodes(pks: Iterable[int],
     :returns: (pks to delete, whether they were deleted)
 
     """
+    backend = backend or get_manager().get_backend()
 
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
 
@@ -70,7 +74,7 @@ def delete_nodes(pks: Iterable[int],
     pks_set_to_delete = get_nodes_delete(pks, get_links=False, missing_callback=_missing_callback,
                                          **traversal_rules)['nodes']
 
-    DELETE_LOGGER.info('%s Node(s) marked for deletion', len(pks_set_to_delete))
+    DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
     if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
         builder = QueryBuilder().append(
@@ -87,20 +91,21 @@ def delete_nodes(pks: Iterable[int],
             DELETE_LOGGER.debug(f'   {uuid} {pk} {short_type_string} {label}')
 
     if dry_run is True:
-        DELETE_LOGGER.info('This was a dry run, exiting without deleting anything')
+        DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
         return (pks_set_to_delete, False)
 
     # confirm deletion
     if callable(dry_run) and dry_run(pks_set_to_delete):
-        DELETE_LOGGER.info('This was a dry run, exiting without deleting anything')
+        DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
         return (pks_set_to_delete, False)
 
     if not pks_set_to_delete:
         return (pks_set_to_delete, True)
 
-    DELETE_LOGGER.info('Starting node deletion...')
-    delete_nodes_and_connections(pks_set_to_delete)
-    DELETE_LOGGER.info('Deletion of nodes completed.')
+    DELETE_LOGGER.report('Starting node deletion...')
+    with backend.transaction():
+        backend.delete_nodes_and_connections(pks_set_to_delete)
+    DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)
 

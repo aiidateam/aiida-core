@@ -20,10 +20,10 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
-from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, launch, calcfunction
+from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
-from aiida.orm import load_node, Bool, Float, Int, Str
+from aiida.orm import Bool, Float, Int, Str, load_node
 
 
 def run_until_paused(proc):
@@ -780,6 +780,182 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(Workchain)
 
+    def test_nested_to_context(self):
+        val = Int(5).store()
+
+        test_case = self
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'sub1.sub2.result_a': self.submit(SimpleWc)})
+                return ToContext(**{'sub1.sub2.result_b': self.submit(SimpleWc)})
+
+            def result(self):
+                test_case.assertEqual(self.ctx.sub1.sub2.result_a.outputs.result, val)
+                test_case.assertEqual(self.ctx.sub1.sub2.result_b.outputs.result, val)
+
+        run_and_check_success(Workchain)
+
+    def test_nested_to_context_with_append(self):
+        val1 = Int(5).store()
+        val2 = Int(6).store()
+
+        test_case = self
+
+        class SimpleWc1(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val1)
+
+        class SimpleWc2(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val2)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'sub1.workchains': append_(self.submit(SimpleWc1))})
+                return ToContext(**{'sub1.workchains': append_(self.submit(SimpleWc2))})
+
+            def result(self):
+                test_case.assertEqual(self.ctx.sub1.workchains[0].outputs.result, val1)
+                test_case.assertEqual(self.ctx.sub1.workchains[1].outputs.result, val2)
+
+        run_and_check_success(Workchain)
+
+    def test_nested_to_context_no_overlap(self):
+        val = Int(5).store()
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'result_a': self.submit(SimpleWc)})
+                return ToContext(**{'result_a.sub1': self.submit(SimpleWc)})
+
+            def result(self):
+                raise RuntimeError('Never reached: the second to_context above should fail')
+
+        process = Workchain()
+        with pytest.raises(ValueError):
+            launch.run(process)
+
+    def test_nested_to_context_no_overlap_with_append(self):
+        val = Int(5).store()
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(workchains=append_(self.submit(SimpleWc)))  # make the workchains point to a list
+                return ToContext(**{'workchains.sub1.sub2': self.submit(SimpleWc)})  # now try to treat it as a sub-dict
+
+            def result(self):
+                raise RuntimeError('Never reached: the second to_context above should fail')
+
+        process = Workchain()
+        with pytest.raises(ValueError):
+            launch.run(process)
+
+    def test_nested_to_context_no_overlap_with_append2(self):
+        val = Int(5).store()
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(workchains=append_(self.submit(SimpleWc)))  # make the workchains point to a list
+                return ToContext(
+                    **{'workchains.sub1': self.submit(SimpleWc)}
+                )  # now try to treat the final path element it as a sub-dict
+
+            def result(self):
+                raise RuntimeError('Never reached: the second to_context above should fail')
+
+        process = Workchain()
+        with pytest.raises(ValueError):
+            launch.run(process)
+
     def test_namespace_nondb_mapping(self):
         """
         Regression test for a bug in _flatten_inputs
@@ -838,12 +1014,12 @@ class TestWorkchain(AiidaTestCase):
         wc = ExitCodeWorkChain()
 
         # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
-        self.assertEqual(wc.exit_codes(status).status, status)
-        self.assertEqual(wc.exit_codes(label).status, status)
-        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)
+        self.assertEqual(wc.exit_codes(status).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes(label).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
 
         with self.assertRaises(AttributeError):
-            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=pointless-statement
+            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=no-member,pointless-statement
 
         self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
         self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)  # pylint: disable=no-member

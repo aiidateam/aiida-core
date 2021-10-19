@@ -15,6 +15,6 @@ AiiDA is built to support and streamline the four core pillars of the ADES model
 *  **Plugin interface:** AiiDA can support via plugins any computational code and data analytics tool, data type, scheduler, connection mode, etc. (see `public plugin repository <https://aiidateam.github.io/aiida-registry/>`__).
 *  **HPC interface:** AiiDA can seamlessly deal with heterogeneous and remote computing resources; it works with many schedulers out of the box (`SLURM <https://slurm.schedmd.com>`__, `PBS Pro <https://www.pbspro.org/>`__, `torque <http://www.adaptivecomputing.com/products/torque/>`__, `SGE <http://gridscheduler.sourceforge.net/>`__ or `LSF <https://www.ibm.com/support/knowledgecenter/SSETD4/product_welcome_platform_lsf.html>`__).
 *  **Open science:** AiiDA allows to export both full databases and selected subsets, to be shared with collaborators or made available and browsable online on the `Archive <https://archive.materialscloud.org/>`__ and `Explore <https://www.materialscloud.org/explore>`__ sections of `Materials Cloud <https://www.materialscloud.org>`__.
-*  **Open source:** AiiDA is released under the `MIT open-source license <LICENSE.txt>`__.
+*  **Open source:** AiiDA is released under the `MIT open-source license <https://github.com/aiidateam/aiida-core/blob/develop/LICENSE.txt>`__.
 
 See also the `list of AiiDA-powered scientific publications <http://www.aiida.net/science/>`__ and `testimonials from AiiDA users <http://www.aiida.net/testimonials/>`__.

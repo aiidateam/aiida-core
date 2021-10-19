@@ -1,15 +1,32 @@
+ci:
+    autoupdate_schedule: monthly
+    autofix_prs: true
+    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs, version-number]
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.5.0
+    rev: v4.0.1
     hooks:
     -   id: double-quote-string-fixer
     -   id: end-of-file-fixer
+        exclude: &exclude_pre_commit_hooks >
+            (?x)^(
+                tests/.*(?<!\.py)$
+            )$
     -   id: fix-encoding-pragma
     -   id: mixed-line-ending
     -   id: trailing-whitespace
+        exclude: *exclude_pre_commit_hooks
+    -   id: check-yaml
+
+
+-   repo: https://github.com/pycqa/isort
+    rev: 5.9.3
+    hooks:
+    - id: isort
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.55'
+    rev: '0.66'
     hooks:
     -   id: flynt
         args: [
@@ -18,7 +35,7 @@ repos:
         ]
 
 -   repo: https://github.com/pre-commit/mirrors-yapf
-    rev: v0.30.0
+    rev: v0.31.0
     hooks:
     -   id: yapf
         name: yapf
@@ -28,14 +45,25 @@ repos:
                 docs/.*|
             )$
         args: ['-i']
+        additional_dependencies: ['toml']
 
 -   repo: local
 
     hooks:
 
+    -   id: imports
+        name: imports
+        entry: python utils/make_all.py
+        language: python
+        types: [python]
+        require_serial: true
+        pass_filenames: false
+        files: aiida/.*py
+
     -   id: mypy
         name: mypy
         entry: mypy
+        args: [--config-file=pyproject.toml]
         language: python
         types: [python]
         require_serial: true
@@ -46,8 +74,18 @@ repos:
                 aiida/engine/.*py|
                 aiida/manage/manager.py|
                 aiida/manage/database/delete/nodes.py|
+                aiida/orm/querybuilder.py|
+                aiida/orm/implementation/backends.py|
+                aiida/orm/implementation/sql/backends.py|
+                aiida/orm/implementation/django/backend.py|
+                aiida/orm/implementation/sqlalchemy/backend.py|
+                aiida/orm/implementation/querybuilder.py|
+                aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
+                aiida/orm/nodes/data/jsonable.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
+                aiida/plugins/entry_point.py|
+                aiida/plugins/factories.py|
                 aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
@@ -73,19 +111,6 @@ repos:
                 setup.py|
                 setup.json|
                 utils/dependency_management.py
-            )$
-
-    -   id: pyproject
-        name: Validate pyproject.toml
-        entry: python ./utils/dependency_management.py validate-pyproject-toml
-        language: system
-        pass_filenames: false
-        files: >-
-            (?x)^(
-                setup.json|
-                setup.py|
-                utils/dependency_management.py|
-                pyproject.toml
             )$
 
     -   id: dependencies

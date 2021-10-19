@@ -13,8 +13,12 @@ collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
 import numpy as np
+
 from aiida.common.exceptions import NotExistent
+
 from .array import ArrayData
+
+__all__ = ('XyData',)
 
 
 def check_convert_single_to_tuple(item):

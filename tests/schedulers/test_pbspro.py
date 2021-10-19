@@ -12,8 +12,8 @@
 import unittest
 import uuid
 
-from aiida.schedulers.plugins.pbspro import PbsproScheduler
 from aiida.schedulers.datastructures import JobState
+from aiida.schedulers.plugins.pbspro import PbsproScheduler
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal
@@ -896,8 +896,8 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test to verify if scripts works fine with default options
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = PbsproScheduler()
 
@@ -924,8 +924,8 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test to verify if scripts works fine with default options
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = PbsproScheduler()
         code_info = CodeInfo()
@@ -945,15 +945,15 @@ class TestSubmitScript(unittest.TestCase):
             submit_script_text = scheduler.get_submit_script(job_tmpl)
 
             # This tests if the implementation correctly chooses the default:
-            self.assertEqual(submit_script_text.split('\n')[0], expected_first_line)
+            self.assertEqual(submit_script_text.split('\n', maxsplit=1)[0], expected_first_line)
 
     def test_submit_script_with_num_cores_per_machine(self):
         """
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = PbsproScheduler()
 
@@ -985,8 +985,8 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if scripts works fine if we pass only
         num_cores_per_mpiproc value
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = PbsproScheduler()
 
@@ -1020,8 +1020,8 @@ class TestSubmitScript(unittest.TestCase):
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = PbsproScheduler()
 
@@ -1063,3 +1063,27 @@ class TestSubmitScript(unittest.TestCase):
             job_tmpl.job_resource = scheduler.create_job_resource(
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
+
+    def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
+        """Test the `rerunnable` option of the submit script."""
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
+
+        scheduler = PbsproScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+        code_info = CodeInfo()
+        code_info.cmdline_params = []
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+        job_tmpl.rerunnable = True
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#PBS -r y' in submit_script_text
+        assert '#PBS -r n' not in submit_script_text
+
+        job_tmpl.rerunnable = False
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#PBS -r y' not in submit_script_text
+        assert '#PBS -r n' in submit_script_text

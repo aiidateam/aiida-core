@@ -32,8 +32,10 @@ def setup_codes(clear_database_before_test, aiida_localhost):
     that arise when determing the identifier type.
     """
     entity_01 = Code(remote_computer_exec=(aiida_localhost, '/bin/true')).store()
-    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'), input_plugin_name='arithmetic.add').store()
-    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'), input_plugin_name='templatereplacer').store()
+    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
+                     input_plugin_name='core.arithmetic.add').store()
+    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
+                     input_plugin_name='core.templatereplacer').store()
 
     entity_01.label = 'computer_01'
     entity_02.label = str(entity_01.pk)
@@ -109,7 +111,7 @@ def test_ambiguous_label_uuid(setup_codes, parameter_type):
 def test_entry_point_validation(setup_codes):
     """Verify that when an `entry_point` is defined in the constructor, it is respected in the validation."""
     entity_01, entity_02, entity_03 = setup_codes
-    parameter_type = CodeParamType(entry_point='arithmetic.add')
+    parameter_type = CodeParamType(entry_point='core.arithmetic.add')
     identifier = f'{entity_02.pk}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_02.uuid

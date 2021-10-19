@@ -9,15 +9,15 @@
 ###########################################################################
 """Unittests for TestManager"""
 import os
+import sys
 import unittest
 import warnings
-import sys
 
 from pgtest import pgtest
 import pytest
 
-from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 from aiida.common.utils import Capturing
+from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 
 
 class TemporaryProfileManagerTestCase(unittest.TestCase):
@@ -68,7 +68,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory
-        data = DataFactory('dict')(dict={'key': 'value'})
+        data = DataFactory('core.dict')(dict={'key': 'value'})
         data.store()
         data_pk = data.pk
         self.assertTrue(load_node(data_pk))

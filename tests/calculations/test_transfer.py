@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for the `TransferCalculation` plugin."""
 import os
+
 import pytest
 
 from aiida import orm
@@ -51,17 +52,17 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     ]
     retrieve_list = [('folder/file1.txt'), ('file2.txt')]
     assert sorted(calc_info.remote_symlink_list) == sorted(copy_list)
-    assert sorted(calc_info.remote_copy_list) == sorted(list())
-    assert sorted(calc_info.local_copy_list) == sorted(list())
+    assert sorted(calc_info.remote_copy_list) == sorted([])
+    assert sorted(calc_info.local_copy_list) == sorted([])
     assert sorted(calc_info.retrieve_list) == sorted(retrieve_list)
 
     # Now without symlinks
     instructions = orm.Dict(dict={'retrieve_files': True, 'remote_files': list_of_files})
     inputs = {'instructions': instructions, 'source_nodes': list_of_nodes, 'metadata': {'computer': aiida_localhost}}
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
-    assert sorted(calc_info.remote_symlink_list) == sorted(list())
+    assert sorted(calc_info.remote_symlink_list) == sorted([])
     assert sorted(calc_info.remote_copy_list) == sorted(copy_list)
-    assert sorted(calc_info.local_copy_list) == sorted(list())
+    assert sorted(calc_info.local_copy_list) == sorted([])
     assert sorted(calc_info.retrieve_list) == sorted(retrieve_list)
 
 
@@ -99,10 +100,10 @@ def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
         (data_source.uuid, 'file1.txt', 'folder/file1.txt'),
         (data_source.uuid, 'folder/file2.txt', 'file2.txt'),
     ]
-    assert sorted(calc_info.remote_symlink_list) == sorted(list())
-    assert sorted(calc_info.remote_copy_list) == sorted(list())
+    assert sorted(calc_info.remote_symlink_list) == sorted([])
+    assert sorted(calc_info.remote_copy_list) == sorted([])
     assert sorted(calc_info.local_copy_list) == sorted(copy_list)
-    assert sorted(calc_info.retrieve_list) == sorted(list())
+    assert sorted(calc_info.retrieve_list) == sorted([])
 
 
 def test_validate_instructions():
@@ -143,16 +144,16 @@ def test_validate_instructions():
 
 def test_validate_transfer_inputs(aiida_localhost, tmp_path, temp_dir):
     """Test the `TransferCalculation` validators."""
-    from aiida.orm import Computer
     from aiida.calculations.transfer import check_node_type, validate_transfer_inputs
+    from aiida.orm import Computer
 
     fake_localhost = Computer(
         label='localhost-fake',
         description='extra localhost computer set up by test',
         hostname='localhost-fake',
         workdir=temp_dir,
-        transport_type='local',
-        scheduler_type='direct'
+        transport_type='core.local',
+        scheduler_type='core.direct'
     )
     fake_localhost.store()
     fake_localhost.set_minimum_job_poll_interval(0.)

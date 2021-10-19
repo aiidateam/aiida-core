@@ -10,11 +10,12 @@
 """`verdi data upf` command."""
 
 import os
+
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -65,7 +66,7 @@ def upf_listfamilies(elements, with_description):
     from aiida import orm
     from aiida.plugins import DataFactory
 
-    UpfData = DataFactory('upf')  # pylint: disable=invalid-name
+    UpfData = DataFactory('core.upf')  # pylint: disable=invalid-name
     query = orm.QueryBuilder()
     query.append(UpfData, tag='upfdata')
     if elements is not None:
@@ -127,7 +128,7 @@ def upf_import(filename):
 
 
 @upf.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:upf',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.upf',)))
 @options.EXPORT_FORMAT(
     type=click.Choice(['json']),
     default='json',

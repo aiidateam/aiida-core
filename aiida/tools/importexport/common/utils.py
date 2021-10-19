@@ -10,11 +10,16 @@
 """ Utility functions for import/export of AiiDA entities """
 # pylint: disable=too-many-branches,too-many-return-statements,too-many-nested-blocks,too-many-locals
 from html.parser import HTMLParser
-import urllib.request
 import urllib.parse
+import urllib.request
 
 from aiida.tools.importexport.common.config import (
-    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
+    COMMENT_ENTITY_NAME,
+    COMPUTER_ENTITY_NAME,
+    GROUP_ENTITY_NAME,
+    LOG_ENTITY_NAME,
+    NODE_ENTITY_NAME,
+    USER_ENTITY_NAME,
 )
 
 
@@ -85,9 +90,9 @@ def get_valid_import_links(url):
     Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
-    request = urllib.request.urlopen(url)
-    parser = HTMLGetLinksParser(filter_extension='aiida')
-    parser.feed(request.read().decode('utf8'))
+    with urllib.request.urlopen(url) as request:
+        parser = HTMLGetLinksParser(filter_extension='aiida')
+        parser.feed(request.read().decode('utf8'))
 
     return_urls = []
 

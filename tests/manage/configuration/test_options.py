@@ -12,8 +12,8 @@ import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ConfigurationError
-from aiida.manage.configuration.options import get_option, get_option_names, parse_option, Option
-from aiida.manage.configuration import get_config, get_config_option, ConfigValidationError
+from aiida.manage.configuration import ConfigValidationError, get_config, get_config_option
+from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option
 
 
 class TestConfigurationOptions(AiidaTestCase):

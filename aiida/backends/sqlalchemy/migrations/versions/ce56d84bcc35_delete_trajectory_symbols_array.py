@@ -18,12 +18,11 @@ Create Date: 2019-01-21 15:35:07.280805
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-member,no-name-in-module,import-error
 
-import numpy
-
 from alembic import op
-from sqlalchemy.sql import table, column, select, func, text
-from sqlalchemy import String, Integer, cast
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+import numpy
+from sqlalchemy import Integer, String, cast
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.sql import column, func, select, table, text
 
 from aiida.backends.general.migrations import utils
 
@@ -43,7 +42,7 @@ def upgrade():
                    column('attributes', JSONB))
 
     nodes = connection.execute(
-        select([DbNode.c.id, DbNode.c.uuid]).where(
+        select(DbNode.c.id, DbNode.c.uuid).where(
             DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
 
     for pk, uuid in nodes:
@@ -61,11 +60,11 @@ def downgrade():
                    column('attributes', JSONB))
 
     nodes = connection.execute(
-        select([DbNode.c.id, DbNode.c.uuid]).where(
+        select(DbNode.c.id, DbNode.c.uuid).where(
             DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
 
     for pk, uuid in nodes:
-        attributes = connection.execute(select([DbNode.c.attributes]).where(DbNode.c.id == pk)).fetchone()
+        attributes = connection.execute(select(DbNode.c.attributes).where(DbNode.c.id == pk)).fetchone()
         symbols = numpy.array(attributes['symbols'])
         utils.store_numpy_array_in_repository(uuid, 'symbols', symbols)
         key = op.inline_literal('{"array|symbols"}')

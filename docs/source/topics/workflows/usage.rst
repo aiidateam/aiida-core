@@ -417,6 +417,17 @@ The ``self.ctx.workchains`` now contains a list with the nodes of the completed 
 Note that the use of ``append_`` is not just limited to the ``to_context`` method.
 You can also use it in exactly the same way with ``ToContext`` to append a process to a list in the context in multiple outline steps.
 
+Nested context keys
+^^^^^^^^^^^^^^^^^^^
+
+To simplify the organization of the context, the keys may contain dots ``.``, transparently creating namespaces in the process.
+As an example compare the following to the parallel submission example above:
+
+.. include:: include/snippets/workchains/run_workchain_submit_append.py
+    :code: python
+
+This allows to create intuitively grouped and easily accessible structures of child calculations or workchains.
+
 .. _topics:workflows:usage:workchains:reporting:
 
 Reporting

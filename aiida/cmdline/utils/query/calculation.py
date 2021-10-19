@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A utility module with a factory of standard QueryBuilder instances for Calculation nodes."""
-from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
+from aiida.common.lang import classproperty
 
 
 class CalculationQueryBuilder:

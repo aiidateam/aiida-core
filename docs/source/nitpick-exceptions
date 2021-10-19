@@ -19,13 +19,19 @@ py:class builtins.str
 py:class builtins.dict
 
 # typing
+py:class AbstractContextManager
 py:class asyncio.events.AbstractEventLoop
 py:class EntityType
+py:class EntityTypes
+py:class ModelType
+py:class TransactionType
+py:class ReturnType
 py:class function
 py:class IO
 py:class traceback
 py:class _io.BufferedReader
 py:class BinaryIO
+py:class typing_extensions.Protocol
 
 ### AiiDA
 
@@ -34,7 +40,10 @@ py:class aiida.engine.runners.ResultAndNode
 py:class aiida.engine.runners.ResultAndPk
 py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
 py:class aiida.manage.manager.Manager
+py:class aiida.orm.entities.EntityTypes
 py:class aiida.orm.nodes.node.WarnWhenNotEntered
+py:class aiida.orm.implementation.querybuilder.QueryDictType
+py:class aiida.orm.querybuilder.Classifier
 py:class aiida.orm.utils.links.LinkQuadruple
 py:class aiida.tools.importexport.dbexport.ExportReport
 py:class aiida.tools.importexport.dbexport.ArchiveData
@@ -45,14 +54,18 @@ py:class BackendEntity
 py:class BackendNode
 py:class AuthInfo
 py:class CalcJob
+py:class CalcJobImporter
 py:class CalcJobNode
 py:class Data
+py:class DbImporter
 py:class ExitCode
 py:class File
 py:class FolderData
+py:class Group
 py:class JobInfo
 py:class JobState
 py:class Node
+py:class Orbital
 py:class Parser
 py:class PersistenceError
 py:class Process
@@ -63,8 +76,10 @@ py:class Port
 py:class PortNamespace
 py:class Repository
 py:class Runner
+py:class Scheduler
 py:class Transport
 py:class TransportQueue
+py:class WorkChain
 py:class WorkChainSpec
 
 py:class kiwipy.communications.Communicator
@@ -127,11 +142,17 @@ py:class flask.app.Flask
 
 py:class sqlalchemy.ext.declarative.api.Base
 py:class sqlalchemy.ext.declarative.api.Model
-py:class sqlalchemy.sql.functions.FunctionElement
+py:class sqlalchemy.orm.attributes.InstrumentedAttribute
 py:class sqlalchemy.orm.query.Query
-py:class sqlalchemy.orm.util.AliasedClass
 py:class sqlalchemy.orm.session.Session
+py:class sqlalchemy.orm.util.AliasedClass
+py:class sqlalchemy.sql.compiler.SQLCompiler
+py:class sqlalchemy.sql.compiler.TypeCompiler
+py:class sqlalchemy.sql.elements.BinaryExpression
+py:class sqlalchemy.sql.elements.BooleanClauseList
+py:class sqlalchemy.sql.functions.FunctionElement
 py:exc sqlalchemy.orm.exc.MultipleResultsFound
+py:func QueryBuilder._get_ormclass
 
 py:class sphinx.ext.autodoc.ClassDocumenter
 
@@ -139,8 +160,8 @@ py:class yaml.Dumper
 py:class yaml.Loader
 py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
-py:class yaml.FullLoader
-py:class yaml.loader.FullLoader
+py:class yaml.UnsafeLoader
+py:class yaml.loader.UnsafeLoader
 py:class uuid.UUID
 
 py:class psycopg2.extensions.cursor
@@ -161,3 +182,15 @@ py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
 
 py:class jsonschema.exceptions._Error
+
+py:class Session
+py:class Query
+py:class BackendQueryBuilder
+py:class importlib_metadata.EntryPoint
+py:class importlib_metadata.EntryPoints
+py:class Command
+
+py:class BooleanClauseList
+py:class SQLCompiler
+py:class sqlalchemy.orm.decl_api.Model
+py:class sqlalchemy.sql.elements.ColumnElement

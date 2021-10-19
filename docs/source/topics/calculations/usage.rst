@@ -229,11 +229,11 @@ File lists
 
 Local copy list
 ~~~~~~~~~~~~~~~
-The local copy list takes tuples of length three, each of which represents a file to be copied, defined through the following items:
+The local copy list takes tuples of length three, each of which represents a file or directory to be copied, defined through the following items:
 
     * `node uuid`: the node whose repository contains the file, typically a ``SinglefileData`` or ``FolderData`` node
-    * `source relative path`: the relative path of the file within the node repository
-    * `target relative path`: the relative path within the working directory to which to copy the file
+    * `source relative path`: the relative path of the file or directory within the node repository
+    * `target relative path`: the relative path within the working directory to which to copy the file or directory contents
 
 As an example, consider a ``CalcJob`` implementation that receives a ``SinglefileData`` node as input with the name ``pseudopotential``, to copy its contents one can specify:
 
@@ -250,6 +250,43 @@ If instead, you need to transfer a specific file from a ``FolderData``, you can 
 
 Note that the filenames in the relative source and target path need not be the same.
 This depends fully on how the files are stored in the node's repository and what files need to be written to the working directory.
+
+To copy the contents of a directory of the source node, simply define it as the `source relative path`.
+For example, imagine we have a `FolderData` node that is passed as the `folder` input, which has the following repository virtual hierarchy:
+
+.. code:: bash
+
+    ├─ sub
+    │  └─ file_b.txt
+    └─ file_a.txt
+
+If the entire content needs to be copied over, specify the `local_copy_list` as follows:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, '.', None)]
+
+The ``'.'`` here indicates that the entire contents need to be copied over.
+Alternatively, one can specify a sub directory, e.g.:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, 'sub', None)]
+
+Finally, the `target relative path` can be used to write the contents of the source repository to a particular sub directory in the working directory.
+For example, the following statement:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, 'sub', 'relative/target')]
+
+will result in the following file hierarchy in the working directory of the calculation:
+
+.. code:: bash
+
+    └─ relative
+       └─ target
+           └─ file_b.txt
 
 One might think what the purpose of the list is, when one could just as easily use normal the normal API to write the file to the ``folder`` sandbox folder.
 It is true, that in this way the file will be copied to the working directory, however, then it will *also* be copied into the repository of the calculation node.
@@ -481,31 +518,52 @@ The target relative path is also compatible with glob patterns in the source rel
 
 Retrieve temporary list
 ~~~~~~~~~~~~~~~~~~~~~~~
+
 Recall that, as explained in the :ref:`'prepare' section<topics:calculations:usage:calcjobs:prepare>`, all the files that are retrieved by the engine following the 'retrieve list', are stored in the ``retrieved`` folder data node.
 This means that any file you retrieve for a completed calculation job will be stored in your repository.
 If you are retrieving big files, this can cause your repository to grow significantly.
 Often, however, you might only need a part of the information contained in these retrieved files.
 To solve this common issue, there is the concept of the 'retrieve temporary list'.
-The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`.
+The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`, but it is added to the ``calc_info`` under the ``retrieve_temporary_list`` attribute:
+
+.. code-block:: python
+
+    calcinfo = CalcInfo()
+    calcinfo.retrieve_temporary_list = ['relative/path/to/file.txt']
+
 The only difference is that, unlike the files of the retrieve list which will be permanently stored in the retrieved :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, the files of the retrieve temporary list will be stored in a temporary sandbox folder.
-This folder is then passed to the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job.
+This folder is then passed under the ``retrieved_temporary_folder`` keyword argument to the ``parse`` method of the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job:
+
+.. code-block:: python
+
+    def parse(self, **kwargs):
+        """Parse the retrieved files of the calculation job."""
+
+        retrieved_temporary_folder = kwargs['retrieved_temporary_folder']
+
 The parser implementation can then parse these files and store the relevant information as output nodes.
-After the parser terminates, the engine will take care to automatically clean up the sandbox folder with the temporarily retrieved files.
-The contract of the 'retrieve temporary list' is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
+
+.. important::
+
+    The type of ``kwargs['retrieved_temporary_folder']`` is a simple ``str`` that represents the `absolute` filepath to the temporary folder.
+    You can access its contents with the ``os`` standard library module or convert it into a ``pathlib.Path``.
+
+After the parser terminates, the engine will automatically clean up the sandbox folder with the temporarily retrieved files.
+The concept of the ``retrieve_temporary_list`` is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
 
 .. _topics:calculations:usage:calcjobs:stashing:
 
-Stashing files on the remote
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Stashing on the remote
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 1.6.0
 
-The ``stash`` option namespace allows a user to specify certain files that are created by the calculation job to be stashed somewhere on the remote.
-This can be useful if those files need to be stored for a longer time than the scratch space where the job was run is typically not cleaned for, but need to be kept on the remote machine and not retrieved.
+The ``stash`` option namespace allows a user to specify certain files and/or folders that are created by the calculation job to be stashed somewhere on the remote where the job is run.
+This can be useful if these need to be stored for a longer time on a machine where the scratch space is cleaned regularly, but they need to be kept on the remote machine and not retrieved.
 Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
 
-The files that are to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
-Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy these files to, and is set through the ``stash.target_base`` option, for example:
+The files/folder that need to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
+Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy the files to, and is set through the ``stash.target_base`` option, for example:
 
 .. code-block:: python
 
@@ -535,12 +593,12 @@ Using the ``COPY`` mode, the target path defines another location (on the same f
    This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files will be stashed independent of the final exit status that the parser will assign to the calculation job.
    This may cause files to be stashed for calculations that will later be considered to have failed.
 
-The stashed files are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
+The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
 Just like the ``remote_folder`` node, this represents a location or files on a remote machine and so is equivalent to a "symbolic link".
 
 .. important::
 
-   AiiDA does not actually own the files in the remote stash, and so the contents may disappear at some point.
+   AiiDA does not actually control the files in the remote stash, and so the contents may disappear at some point.
 
 .. _topics:calculations:usage:calcjobs:options:
 
@@ -554,6 +612,13 @@ The full list of available options are documented below as part of the ``CalcJob
     :module: aiida.engine.processes.calcjobs
     :expand-namespaces:
 
+
+The ``rerunnable`` option enables the scheduler to re-launch the calculation if it has failed, for example due to node failure or a failure to launch the job. It corresponds to the ``--requeue`` option in SLURM, and the ``-r`` option in SGE, LSF, and PBS. The following two conditions must be met in order for this to work well with AiiDA:
+
+- the scheduler assigns the same job-id to the restarted job
+- the code produces the same results if it has already partially run before (not every scheduler may produce this situation)
+
+Because this depends on the scheduler, its configuration, and the code used, we cannot say conclusively when it will work -- do your own testing! It has been tested on a cluster using SLURM, but that does not guarantee other SLURM clusters behave in the same way.
 
 .. _topics:calculations:usage:calcjobs:launch:
 

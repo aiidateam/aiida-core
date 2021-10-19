@@ -11,8 +11,8 @@
 Translator for computer
 """
 
-from aiida.restapi.translator.base import BaseTranslator
 from aiida import orm
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class ComputerTranslator(BaseTranslator):
@@ -36,8 +36,8 @@ class ComputerTranslator(BaseTranslator):
         Get projectable properties specific for Computer
         :return: dict of projectable properties and column_order list
         """
-        from aiida.plugins.entry_point import get_entry_points
         from aiida.common.exceptions import EntryPointError
+        from aiida.plugins.entry_point import get_entry_points
 
         schedulers = {}
         for entry_point in get_entry_points('aiida.schedulers'):

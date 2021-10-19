@@ -13,8 +13,10 @@ Module for the custom click param type computer
 
 from click.types import StringParamType
 
-from ...utils import decorators
+from ...utils import decorators  # pylint: disable=no-name-in-module
 from .identifier import IdentifierParamType
+
+__all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')
 
 
 class ComputerParamType(IdentifierParamType):
@@ -41,7 +43,7 @@ class ComputerParamType(IdentifierParamType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='name')]
+        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
 
 
 class ShebangParamType(StringParamType):

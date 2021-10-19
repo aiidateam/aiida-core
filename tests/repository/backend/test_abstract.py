@@ -3,7 +3,7 @@
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
 import io
 import tempfile
-import typing
+from typing import BinaryIO, Iterable, List, Optional
 
 import pytest
 
@@ -13,25 +13,41 @@ from aiida.repository.backend import AbstractRepositoryBackend
 class RepositoryBackend(AbstractRepositoryBackend):
     """Concrete implementation of ``AbstractRepositoryBackend``."""
 
-    def has_object(self, key):
-        return True
+    @property
+    def uuid(self) -> Optional[str]:
+        return None
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def key_format(self) -> Optional[str]:
         return None
 
     def initialise(self, **kwargs) -> None:
         return
 
     def erase(self):
-        pass
+        raise NotImplementedError
 
     @property
     def is_initialised(self) -> bool:
         return True
 
-    def _put_object_from_filelike(self, handle: typing.BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         pass
+
+    # pylint useless-super-delegation needs to be disabled here because it refuses to
+    # recognize that this is an abstract method and thus has to be overriden. See the
+    # following issue: https://github.com/PyCQA/pylint/issues/1594
+    def delete_objects(self, keys: List[str]) -> None:  # pylint: disable=useless-super-delegation
+        super().delete_objects(keys)
+
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        return [True]
+
+    def list_objects(self) -> Iterable[str]:
+        raise NotImplementedError
+
+    def iter_object_streams(self, keys: List[str]):
+        raise NotImplementedError
 
 
 @pytest.fixture(scope='function')
@@ -51,7 +67,7 @@ def test_put_object_from_filelike_raises(repository, generate_directory):
         repository.put_object_from_filelike(str(directory / 'file_a'))  # String
 
     with pytest.raises(TypeError):
-        with open(directory / 'file_a') as handle:
+        with open(directory / 'file_a', encoding='utf8') as handle:
             repository.put_object_from_filelike(handle)  # Not in binary mode
 
     with pytest.raises(TypeError):
@@ -84,3 +100,35 @@ def test_put_object_from_file(repository, generate_directory):
 
     repository.put_object_from_file(directory / 'file_a')
     repository.put_object_from_file(str(directory / 'file_a'))
+
+
+def test_passes_to_batch(repository, monkeypatch):
+    """Checks that the single object operations call the batch operations"""
+
+    def mock_batch_operation(self, keys):
+        raise NotImplementedError('this method was intentionally not implemented')
+
+    monkeypatch.setattr(RepositoryBackend, 'has_objects', mock_batch_operation)
+    with pytest.raises(NotImplementedError) as execinfo:
+        repository.has_object('object_key')
+    assert str(execinfo.value) == 'this method was intentionally not implemented'
+
+    monkeypatch.undo()
+
+    monkeypatch.setattr(RepositoryBackend, 'delete_objects', mock_batch_operation)
+    with pytest.raises(NotImplementedError) as execinfo:
+        repository.delete_object('object_key')
+    assert str(execinfo.value) == 'this method was intentionally not implemented'
+
+
+def test_delete_objects_test(repository, monkeypatch):
+    """Checks that the super of delete_objects will check for existence of the files"""
+
+    def has_objects_mock(self, keys):  # pylint: disable=unused-argument
+        return [False for key in keys]
+
+    monkeypatch.setattr(RepositoryBackend, 'has_objects', has_objects_mock)
+    with pytest.raises(FileNotFoundError) as execinfo:
+        repository.delete_objects(['object_key'])
+    assert 'exist' in str(execinfo.value)
+    assert 'object_key' in str(execinfo.value)

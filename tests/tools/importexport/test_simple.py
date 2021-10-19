@@ -17,7 +17,7 @@ from aiida.common import json
 from aiida.common.exceptions import LicensingException
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport import export, import_data
 from aiida.tools.importexport.common import exceptions
 
 
@@ -58,8 +58,8 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
         description='localhost computer set up by test manager',
         hostname='localhost-test',
         workdir=str(tmp_path / 'workdir'),
-        transport_type='local',
-        scheduler_type='direct'
+        transport_type='core.local',
+        scheduler_type='core.direct'
     )
     computer.store()
     computer.configure()
@@ -77,7 +77,7 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
     attrs = {}
     for pk in pks:
         node = orm.load_node(pk)
-        attrs[node.uuid] = dict()
+        attrs[node.uuid] = {}
         for k in node.attributes.keys():
             attrs[node.uuid][k] = node.get_attribute(k)
 
@@ -88,10 +88,10 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
     aiida_profile.reset_db()
 
     import_data(filename)
-    for uuid in attrs:
+    for uuid, value in attrs.items():
         node = orm.load_node(uuid)
-        for k in attrs[uuid].keys():
-            assert attrs[uuid][k] == node.get_attribute(k)
+        for k in value.keys():
+            assert value[k] == node.get_attribute(k)
 
 
 def test_check_for_export_format_version(aiida_profile, tmp_path):

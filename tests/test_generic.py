@@ -9,8 +9,8 @@
 ###########################################################################
 """Generic tests that need the use of the DB."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida import orm
+from aiida.backends.testbase import AiidaTestCase
 
 
 class TestCode(AiidaTestCase):
@@ -20,8 +20,8 @@ class TestCode(AiidaTestCase):
         """Test local code."""
         import tempfile
 
-        from aiida.orm import Code
         from aiida.common.exceptions import ValidationError
+        from aiida.orm import Code
 
         code = Code(local_executable='test.sh')
         with self.assertRaises(ValidationError):
@@ -42,8 +42,8 @@ class TestCode(AiidaTestCase):
         """Test remote code."""
         import tempfile
 
-        from aiida.orm import Code
         from aiida.common.exceptions import ValidationError
+        from aiida.orm import Code
 
         with self.assertRaises(ValueError):
             # remote_computer_exec has length 2 but is not a list or tuple
@@ -83,8 +83,8 @@ class TestCode(AiidaTestCase):
         othercomputer = orm.Computer(
             label='another_localhost',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='pbspro',
+            transport_type='core.local',
+            scheduler_type='core.pbspro',
             workdir='/tmp/aiida'
         ).store()
         self.assertFalse(code.can_run_on(othercomputer))

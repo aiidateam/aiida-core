@@ -10,8 +10,7 @@
 # pylint: disable=too-many-branches
 """Test archive file migration from export version 0.2 to 0.3"""
 from aiida.tools.importexport.archive.migrations.v02_to_v03 import migrate_v2_to_v3
-
-from tests.utils.archives import read_json_files, get_archive_file
+from tests.utils.archives import get_archive_file, read_json_files
 
 
 def test_migrate_external(migrate_from_func):
@@ -26,7 +25,7 @@ def test_migrate_external(migrate_from_func):
 
     # Check entity names
     legal_entity_names = {'Node', 'Link', 'Group', 'Computer', 'User', 'Attribute'}
-    for field in {'unique_identifiers', 'all_fields_info'}:
+    for field in ('unique_identifiers', 'all_fields_info'):
         for entity, prop in metadata[field].items():
             assert entity in legal_entity_names, (
                 f"'{entity}' should now be equal to anyone of these: {legal_entity_names}, but is not"

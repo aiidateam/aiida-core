@@ -8,12 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A transport queue to batch process multiple tasks that require a Transport."""
+import asyncio
 import contextlib
+import contextvars
 import logging
 import traceback
 from typing import Awaitable, Dict, Hashable, Iterator, Optional
-import asyncio
-import contextvars
 
 from aiida.orm import AuthInfo
 from aiida.transports import Transport

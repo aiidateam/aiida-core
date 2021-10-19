@@ -13,7 +13,7 @@ import functools
 import inspect
 import logging
 import signal
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple, Type
 
 from aiida.common.lang import override
 from aiida.manage.manager import get_manager

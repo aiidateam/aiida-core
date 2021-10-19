@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,protected-access
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 
 from contextlib import contextmanager
@@ -15,6 +15,7 @@ import os
 
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import column
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.general.migrations import utils
@@ -22,6 +23,7 @@ from aiida.backends.sqlalchemy import manager
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.backends.testbase import AiidaTestCase
+
 from .test_utils import new_database
 
 
@@ -266,6 +268,7 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
     def setUp(self):
         from sqlalchemydiff.util import get_temporary_uri
+
         from aiida.backends.sqlalchemy.migrations import versions
 
         self.migr_method_dir_path = os.path.dirname(os.path.realpath(manager.__file__))
@@ -398,7 +401,11 @@ class TestProvenanceRedesignMigration(TestMigrationsSQLA):
                 # Migration of calculation job with known plugin class
                 node_calc_job_known = session.query(DbNode).filter(DbNode.id == self.node_calc_job_known_id).one()
                 self.assertEqual(node_calc_job_known.type, 'node.process.calculation.calcjob.CalcJobNode.')
-                self.assertEqual(node_calc_job_known.process_type, 'aiida.calculations:arithmetic.add')
+                # The test below had to be changed when the `core.` prefix was added to the `arithmetic.add` prefix.
+                # This indicates that the migration of the process type for these test processes would no longer no work
+                # but that only applies to databases that are still at v0.x and this change will go into v2.0, so it is
+                # fine to accept that at this point.
+                self.assertEqual(node_calc_job_known.process_type, 'arithmetic.add.ArithmeticAddCalculation')
 
                 # Migration of calculation job with unknown plugin class
                 node_calc_job_unknown = session.query(DbNode).filter(DbNode.id == self.node_calc_job_unknown_id).one()
@@ -454,7 +461,7 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
                 # test user group type_string: '' -> 'user'
                 group_user = DbGroup(label='test_user_group', user_id=default_user.id, type_string='')
                 session.add(group_user)
-                # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+                # test upf group type_string: 'data.upf.family' -> 'data.upf'
                 group_data_upf = DbGroup(
                     label='test_data_upf_group', user_id=default_user.id, type_string='data.upf.family'
                 )
@@ -493,7 +500,7 @@ class TestGroupRenamingMigration(TestMigrationsSQLA):
                 group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()
                 self.assertEqual(group_user.type_string, 'user')
 
-                # test data.upf group type_string: 'data.upf.family' -> 'data.upf'
+                # test upf group type_string: 'data.upf.family' -> 'data.upf'
                 group_data_upf = session.query(DbGroup).filter(DbGroup.id == self.group_data_upf_pk).one()
                 self.assertEqual(group_data_upf.type_string, 'data.upf')
 
@@ -641,7 +648,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
     def setUpBeforeMigration(self):
         # pylint: disable=too-many-locals,too-many-statements
         import importlib
+
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.utils import dumps_json
 
         log_migration = importlib.import_module(
@@ -662,7 +671,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 session.commit()
 
                 calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
-                param = DbNode(type='data.dict.Dict.', user_id=user.id)
+                param = DbNode(type='data.core.dict.Dict.', user_id=user.id)
                 leg_workf = DbWorkflow(label='Legacy WorkflowNode', user_id=user.id)
                 calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
 
@@ -755,7 +764,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 session.commit()
 
                 # Storing temporarily information needed for the check at the test
-                self.to_check = dict()
+                self.to_check = {}
 
                 # Keeping calculation & calculation log ids
                 self.to_check['CalculationNode'] = (
@@ -774,7 +783,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 param_data = session.query(DbLog).filter(DbLog.objpk == param.id
                                                          ).filter(DbLog.objname == 'something.else.'
                                                                   ).with_entities(*cols_to_project).one()
-                serialized_param_data = dumps_json([(dict(list(zip(param_data.keys(), param_data))))])
+                serialized_param_data = dumps_json([param_data._asdict()])
                 # Getting the serialized logs for the unknown entity logs (as the export migration fuction
                 # provides them) - this should coincide to the above
                 serialized_unknown_exp_logs = log_migration.get_serialized_unknown_entity_logs(connection)
@@ -787,7 +796,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 leg_wf = session.query(DbLog).filter(DbLog.objpk == leg_workf.id).filter(
                     DbLog.objname == 'aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow'
                 ).with_entities(*cols_to_project).one()
-                serialized_leg_wf_logs = dumps_json([(dict(list(zip(leg_wf.keys(), leg_wf))))])
+                serialized_leg_wf_logs = dumps_json([leg_wf._asdict()])
                 # Getting the serialized logs for the legacy workflow logs (as the export migration function
                 # provides them) - this should coincide to the above
                 serialized_leg_wf_exp_logs = log_migration.get_serialized_legacy_workflow_logs(connection)
@@ -798,9 +807,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 # Getting the serialized logs that don't correspond to a DbNode record
                 logs_no_node = session.query(DbLog).filter(
                     DbLog.id.in_([log_5.id, log_6.id])).with_entities(*cols_to_project)
-                logs_no_node_list = list()
-                for log_no_node in logs_no_node:
-                    logs_no_node_list.append((dict(list(zip(log_no_node.keys(), log_no_node)))))
+                logs_no_node_list = [log_no_node._asdict() for log_no_node in logs_no_node]
                 serialized_logs_no_node = dumps_json(logs_no_node_list)
 
                 # Getting the serialized logs that don't correspond to a node (as the export migration function
@@ -832,11 +839,11 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
 
                 # Get the node id of the log record referencing the node and verify that it is the correct one
                 dbnode_id_1 = session.query(DbLog).filter(
-                    DbLog.id == self.to_check['CalculationNode'][1]).with_entities('dbnode_id').one()[0]
+                    DbLog.id == self.to_check['CalculationNode'][1]).with_entities(column('dbnode_id')).one()[0]
                 self.assertEqual(dbnode_id_1, self.to_check['CalculationNode'][0], 'The the referenced node is not '
                                  'the expected one')
                 dbnode_id_2 = session.query(DbLog).filter(
-                    DbLog.id == self.to_check['CalculationNode'][3]).with_entities('dbnode_id').one()[0]
+                    DbLog.id == self.to_check['CalculationNode'][3]).with_entities(column('dbnode_id')).one()[0]
                 self.assertEqual(dbnode_id_2, self.to_check['CalculationNode'][2], 'The the referenced node is not '
                                  'the expected one')
             finally:
@@ -939,7 +946,7 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
                 session.commit()
 
                 # Keeping what is needed to be verified at the test
-                self.to_check = dict()
+                self.to_check = {}
                 self.to_check[log_1.id] = (log_1.dbnode_id, calc_1.type)
                 self.to_check[log_2.id] = (log_2.dbnode_id, calc_2.type)
             except Exception:
@@ -961,9 +968,9 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
             try:
                 session = Session(connection.engine)
 
-                for log_pk in self.to_check:
+                for log_pk, to_check_value in self.to_check.items():
                     log_entry = session.query(DbLog).filter(DbLog.id == log_pk).one()
-                    log_dbnode_id, node_type = self.to_check[log_pk]
+                    log_dbnode_id, node_type = to_check_value
 
                     self.assertEqual(
                         log_dbnode_id, log_entry.objpk,
@@ -1069,7 +1076,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
                 session.commit()
 
                 node_calc = DbNode(type='node.process.calculation.calcjob.CalcJobNode.', user_id=user.id)
-                node_data = DbNode(type='data.int.Int.', user_id=user.id)
+                node_data = DbNode(type='data.core.int.Int.', user_id=user.id)
 
                 session.add(node_data)
                 session.add(node_calc)
@@ -1095,7 +1102,7 @@ class TestDataMoveWithinNodeMigration(TestMigrationsSQLA):
 
                 # The data node should have been touched and migrated
                 node_data = session.query(DbNode).filter(DbNode.id == self.node_data_id).one()
-                self.assertEqual(node_data.type, 'node.data.int.Int.')
+                self.assertEqual(node_data.type, 'node.data.core.int.Int.')
 
                 # The calc node by contrast should not have been changed
                 node_calc = session.query(DbNode).filter(DbNode.id == self.node_calc_id).one()
@@ -1228,6 +1235,7 @@ class TestNodePrefixRemovalMigration(TestMigrationsSQLA):
             finally:
                 session.close()
 
+
 class TestParameterDataToDictMigration(TestMigrationsSQLA):
     """Test the data migration after `ParameterData` was renamed to `Dict`."""
 
@@ -1284,6 +1292,7 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
 
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
         self.state_mapping = STATE_MAPPING
@@ -1349,6 +1358,7 @@ class TestResetHash(TestMigrationsSQLA):
 
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
         self.state_mapping = STATE_MAPPING
@@ -1444,7 +1454,7 @@ class TestLegacyProcessAttributeMigration(TestMigrationsSQLA):
                 # Note that `Data` nodes should not have these attributes in real databases but the migration explicitly
                 # excludes data nodes, which is what this test is verifying, by checking they are not deleted
                 node_data = DbNode(
-                    node_type='data.dict.Dict.',
+                    node_type='data.core.dict.Dict.',
                     user_id=user.id,
                     attributes={
                         '_sealed': True,
@@ -1545,7 +1555,7 @@ class TestSealUnsealedProcessesMigration(TestMigrationsSQLA):
                 # Note that `Data` nodes should not have these attributes in real databases but the migration explicitly
                 # excludes data nodes, which is what this test is verifying, by checking they are not deleted
                 node_data = DbNode(
-                    node_type='data.dict.Dict.',
+                    node_type='data.core.dict.Dict.',
                     user_id=user.id,
                     attributes={}
                 )
@@ -1614,7 +1624,7 @@ class TestDefaultLinkLabelMigration(TestMigrationsSQLA):
                 session.commit()
 
                 node_process = DbNode(node_type='process.calculation.calcjob.CalcJobNode.', user_id=user.id)
-                node_data = DbNode(node_type='data.dict.Dict.', user_id=user.id)
+                node_data = DbNode(node_type='data.core.dict.Dict.', user_id=user.id)
                 link = DbLink(input_id=node_data.id, output_id=node_process.id, type='input', label='_return')
 
                 session.add(node_process)
@@ -1667,7 +1677,7 @@ class TestGroupTypeStringMigration(TestMigrationsSQLA):
                 # test user group type_string: 'user' -> 'core'
                 group_user = DbGroup(label='01', user_id=default_user.id, type_string='user')
                 session.add(group_user)
-                # test data.upf group type_string: 'data.upf' -> 'core.upf'
+                # test upf group type_string: 'data.upf' -> 'core.upf'
                 group_data_upf = DbGroup(label='02', user_id=default_user.id, type_string='data.upf')
                 session.add(group_data_upf)
                 # test auto.import group type_string: 'auto.import' -> 'core.import'
@@ -1698,7 +1708,7 @@ class TestGroupTypeStringMigration(TestMigrationsSQLA):
                 group_user = session.query(DbGroup).filter(DbGroup.id == self.group_user_pk).one()
                 self.assertEqual(group_user.type_string, 'core')
 
-                # test data.upf group type_string: 'data.upf' -> 'core.upf'
+                # test upf group type_string: 'data.upf' -> 'core.upf'
                 group_data_upf = session.query(DbGroup).filter(DbGroup.id == self.group_data_upf_pk).one()
                 self.assertEqual(group_data_upf.type_string, 'core.upf')
 
@@ -1815,22 +1825,26 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                 node_02 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
                 node_03 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
                 node_04 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
+                node_05 = DbNode(user_id=default_user.id, uuid=get_new_uuid())
 
                 session.add(node_01)
                 session.add(node_02)
                 session.add(node_03)  # Empty repository folder
                 session.add(node_04)  # Both `path` and `raw_input` subfolder
+                session.add(node_05)  # Both `path` and `raw_input` subfolder & `.gitignore` in `path`
                 session.commit()
 
                 assert node_01.uuid is not None
                 assert node_02.uuid is not None
                 assert node_03.uuid is not None
                 assert node_04.uuid is not None
+                assert node_05.uuid is not None
 
                 self.node_01_pk = node_01.id
                 self.node_02_pk = node_02.id
                 self.node_03_pk = node_03.id
                 self.node_04_pk = node_04.id
+                self.node_05_pk = node_05.id
 
                 utils.put_object_from_string(node_01.uuid, 'sub/path/file_b.txt', 'b')
                 utils.put_object_from_string(node_01.uuid, 'sub/file_a.txt', 'a')
@@ -1838,6 +1852,17 @@ class TestRepositoryMigration(TestMigrationsSQLA):
 
                 os.makedirs(utils.get_node_repository_sub_folder(node_04.uuid, 'path'), exist_ok=True)
                 os.makedirs(utils.get_node_repository_sub_folder(node_04.uuid, 'raw_input'), exist_ok=True)
+                os.makedirs(utils.get_node_repository_sub_folder(node_05.uuid, 'path'), exist_ok=True)
+                os.makedirs(utils.get_node_repository_sub_folder(node_05.uuid, 'raw_input'), exist_ok=True)
+
+                utils.put_object_from_string(node_05.uuid, '.gitignore', 'test')
+                with open(
+                    os.path.join(
+                        utils.get_node_repository_sub_folder(node_05.uuid, 'raw_input'), 'input.txt'),
+                        'w',
+                        encoding='utf-8',
+                ) as handle:
+                    handle.write('input')
 
                 # Add a repository folder for a node that no longer exists - i.e. it may have been deleted.
                 utils.put_object_from_string(get_new_uuid(), 'file_of_deleted_node', 'output')
@@ -1858,6 +1883,7 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                 node_01 = session.query(DbNode).filter(DbNode.id == self.node_01_pk).one()
                 node_02 = session.query(DbNode).filter(DbNode.id == self.node_02_pk).one()
                 node_03 = session.query(DbNode).filter(DbNode.id == self.node_03_pk).one()
+                node_05 = session.query(DbNode).filter(DbNode.id == self.node_05_pk).one()
 
                 assert node_01.repository_metadata == {
                     'o': {
@@ -1885,16 +1911,140 @@ class TestRepositoryMigration(TestMigrationsSQLA):
                     }
                 }
                 assert node_03.repository_metadata == {}
+                assert node_05.repository_metadata == {
+                    'o': {
+                        'input.txt': {
+                            'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()
+                        }
+                    }
+                }
 
                 for hashkey, content in (
                     (node_01.repository_metadata['o']['sub']['o']['path']['o']['file_b.txt']['k'], b'b'),
                     (node_01.repository_metadata['o']['sub']['o']['file_a.txt']['k'], b'a'),
                     (node_02.repository_metadata['o']['output.txt']['k'], b'output'),
+                    (node_05.repository_metadata['o']['input.txt']['k'], b'input'),
                 ):
                     assert utils.get_repository_object(hashkey) == content
 
                 repository_uuid = session.query(DbSetting).filter(DbSetting.key == repository_uuid_key).one()
                 assert repository_uuid is not None
                 assert isinstance(repository_uuid.val, str)
+            finally:
+                session.close()
+
+
+class TestComputerNameToLabelMigration(TestMigrationsSQLA):
+    """Test the renaming of `name` to `label` for `DbComputer."""
+
+    migrate_from = '1feaea71bd5a'  # 1feaea71bd5a_migrate_repository
+    migrate_to = '535039300e4a'  # 5ddd24e52864_dbnode_type_to_dbnode_node_type
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbComputer = self.get_auto_base().classes.db_dbcomputer  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                computer = DbComputer(name='testing')
+
+                session.add(computer)
+                session.commit()
+
+                self.computer_id = computer.id
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_migration(self):
+        """Verify that the column was successfully renamed."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbComputer = self.get_auto_base().classes.db_dbcomputer  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                computer = session.query(DbComputer).filter(DbComputer.id == self.computer_id).one()
+                self.assertEqual(computer.label, 'testing')
+            finally:
+                session.close()
+
+
+
+class TestEntryPointCorePrefixMigration(TestMigrationsSQLA):
+    """Test migration that updates node types after `core.` prefix was added to entry point names."""
+
+    migrate_from = '535039300e4a'  # 535039300e4a_computer_name_to_label.py
+    migrate_to = '34a831f4286d'  # 34a831f4286d_entry_point_core_prefix
+
+    def setUpBeforeMigration(self):
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbComputer = self.get_auto_base().classes.db_dbcomputer  # pylint: disable=invalid-name
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+        DbUser = self.get_auto_base().classes.db_dbuser  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                user = DbUser(email=f'{self.id()}@aiida.net')
+                session.add(user)
+                session.commit()
+
+                computer = DbComputer(label='testing', scheduler_type='direct', transport_type='local')
+                session.add(computer)
+                session.commit()
+                self.computer_id = computer.id
+
+                calcjob = DbNode(
+                    user_id=user.id,
+                    process_type='aiida.calculations:core.arithmetic.add',
+                    attributes={'parser_name': 'core.arithmetic.add'}
+                )
+                session.add(calcjob)
+                session.commit()
+                self.calcjob_id = calcjob.id
+
+                workflow = DbNode(user_id=user.id, process_type='aiida.workflows:arithmetic.add_multiply')
+                session.add(workflow)
+                session.commit()
+                self.workflow_id = workflow.id
+
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    def test_migration(self):
+        """Verify that the column was successfully renamed."""
+        from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
+        DbComputer = self.get_auto_base().classes.db_dbcomputer  # pylint: disable=invalid-name
+        DbNode = self.get_auto_base().classes.db_dbnode  # pylint: disable=invalid-name
+
+        with sa.ENGINE.begin() as connection:
+            try:
+                session = Session(connection.engine)
+
+                computer = session.query(DbComputer).filter(DbComputer.id == self.computer_id).one()
+                assert computer.scheduler_type == 'core.direct'
+                assert computer.transport_type == 'core.local'
+
+                calcjob = session.query(DbNode).filter(DbNode.id == self.calcjob_id).one()
+                assert calcjob.process_type == 'aiida.calculations:core.arithmetic.add'
+                assert calcjob.attributes['parser_name'] == 'core.arithmetic.add'
+
+                workflow = session.query(DbNode).filter(DbNode.id == self.workflow_id).one()
+                assert workflow.process_type == 'aiida.workflows:core.arithmetic.add_multiply'
+
             finally:
                 session.close()

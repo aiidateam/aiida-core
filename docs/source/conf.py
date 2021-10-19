@@ -101,7 +101,6 @@ exclude_patterns = [
     'internals/orm.rst',
     'scheduler/index.rst',
     'topics/daemon.rst',
-    'topics/repository.rst',
     'working_with_aiida/**',
 ]
 
@@ -408,3 +407,8 @@ with open('nitpick-exceptions', 'r') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
     ]
+
+linkcheck_ignore = [r'http://localhost:\d+/',
+                    r'http://127.0.0.1:\d+/',
+                    r'http://www.wannier.org/support/',
+                    r'https://github.com/aiidateam/aiida-diff/blob/92c61bdcc2db201d69da4d8b83a2b3f5dd529bf1/aiida_diff/data/__init__.py#L14-L20']

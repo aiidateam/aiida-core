@@ -1,9 +1,10 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
 
-from aiida.orm import Bool, Float, Int
-from aiida.engine import run
 from complex_parent import ComplexParentWorkChain
+
+from aiida.engine import run
+from aiida.orm import Bool, Float, Int
 
 if __name__ == '__main__':
     result = run(

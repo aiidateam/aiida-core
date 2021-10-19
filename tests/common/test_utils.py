@@ -10,8 +10,7 @@
 """Tests for the aiida.common.utils functionality."""
 import unittest
 
-from aiida.common import escaping
-from aiida.common import utils
+from aiida.common import escaping, utils
 
 
 class UniqueTest(unittest.TestCase):

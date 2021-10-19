@@ -21,9 +21,9 @@ Create Date: 2019-01-21 10:15:02.451308
 # pylint: disable=no-member,no-name-in-module,import-error
 
 from alembic import op
-from sqlalchemy import cast, String, Integer
-from sqlalchemy.sql import table, column, select, func, text
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Integer, String, cast
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.sql import column, func, select, table, text
 
 from aiida.backends.general.migrations.utils import load_numpy_array_from_repository
 
@@ -46,7 +46,7 @@ def upgrade():
                    column('attributes', JSONB))
 
     nodes = connection.execute(
-        select([DbNode.c.id, DbNode.c.uuid]).where(
+        select(DbNode.c.id, DbNode.c.uuid).where(
             DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
 
     for pk, uuid in nodes:
@@ -64,7 +64,7 @@ def downgrade():
                    column('attributes', JSONB))
 
     nodes = connection.execute(
-        select([DbNode.c.id, DbNode.c.uuid]).where(
+        select(DbNode.c.id, DbNode.c.uuid).where(
             DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
 
     for pk, _ in nodes:

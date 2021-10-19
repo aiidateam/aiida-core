@@ -12,7 +12,7 @@
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.links import LinkType
 
-VALID_LINK_TYPES = tuple([link_type.value for link_type in LinkType])
+VALID_LINK_TYPES = tuple(link_type.value for link_type in LinkType)
 
 SELECT_CALCULATIONS_WITH_OUTGOING_CALL = """
     SELECT link.id, node_in.uuid, node_out.uuid, link.type, link.label

@@ -184,7 +184,9 @@ Below is a list with all available subcommands.
       Inspect, create and manage data nodes.
 
     Options:
-      --help  Show this message and exit.
+      -v, --verbosity [notset|debug|info|report|warning|error|critical]
+                                      Set the verbosity of the output.
+      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-database:
@@ -225,6 +227,7 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
+      run-sql                  Run a raw SQL command on the database.
       run_daemon               Run a daemon instance in the current interpreter.
       validate-plugins         Validate all plugins by checking they can be loaded.
 
@@ -246,7 +249,7 @@ Below is a list with all available subcommands.
     Commands:
       add-nodes     Add nodes to a group.
       copy          Duplicate a group.
-      create        Create an empty group with a given name.
+      create        Create an empty group with a given label.
       delete        Delete a group and (optionally) the nodes it contains.
       description   Change the description of a group.
       list          Show a list of existing groups.

@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on datetime objects."""
-
 from datetime import datetime
-import dateutil
+
+import dateutil.parser
 
 
 def get_current_timezone():
@@ -23,8 +23,7 @@ def get_current_timezone():
 
     if local.zone == 'local':
         raise ValueError(
-            "Unable to detect name of local time zone. Please set 'TZ' environment variable, e.g."
-            " to 'Europe/Zurich'"
+            "Unable to detect name of local time zone. Please set 'TZ' environment variable, e.g. to 'Europe/Zurich'"
         )
     return local
 
@@ -35,6 +34,7 @@ def now():
     :return: datetime object represeting current time
     """
     import pytz
+
     from aiida.manage.configuration import settings
 
     if getattr(settings, 'USE_TZ', None):

@@ -11,11 +11,10 @@
 """Module to manage computers for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import Column, Table, UniqueConstraint, Index
-from sqlalchemy.types import Integer, String, DateTime, Text
-
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import Column, Index, Table, UniqueConstraint
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
@@ -30,6 +29,11 @@ table_groups_nodes = Table(  # pylint: disable=invalid-name
     Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED')),
     UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
 )
+
+
+class DbGroupNode(Base):
+    """Class to store group to nodes relation using SQLA backend."""
+    __table__ = table_groups_nodes
 
 
 class DbGroup(Base):

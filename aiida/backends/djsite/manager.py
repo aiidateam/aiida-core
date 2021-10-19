@@ -11,10 +11,12 @@
 """Utilities and configuration of the Django database schema."""
 
 import os
+
 import django
 
 from aiida.common import NotExistent
-from ..manager import BackendManager, SettingsManager, Setting, SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
+
+from ..manager import SCHEMA_VERSION_DESCRIPTION, SCHEMA_VERSION_KEY, BackendManager, Setting, SettingsManager
 
 # The database schema version required to perform schema reset for a given code schema generation
 SCHEMA_VERSION_RESET = {'1': None}
@@ -82,19 +84,22 @@ class DjangoBackendManager(BackendManager):
         :return: `distutils.version.StrictVersion` with schema version of the database
         """
         from django.db.utils import ProgrammingError
+
         from aiida.manage.manager import get_manager
 
         backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
         try:
-            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'schema_generation';""")
-        except ProgrammingError:
             result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'schema_generation';""")
-
-        try:
-            return str(int(result[0][0]))
-        except (IndexError, TypeError, ValueError):
+        except ProgrammingError:
+            # If this value does not exist, the schema has to correspond to the first generation which didn't actually
+            # record its value explicitly in the database until ``aiida-core>=1.0.0``.
             return '1'
+        else:
+            try:
+                return str(int(result[0][0]))
+            except (IndexError, ValueError, TypeError):
+                return '1'
 
     def get_schema_version_database(self):
         """Return the database schema version.
@@ -102,14 +107,15 @@ class DjangoBackendManager(BackendManager):
         :return: `distutils.version.StrictVersion` with schema version of the database
         """
         from django.db.utils import ProgrammingError
+
         from aiida.manage.manager import get_manager
 
         backend = get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
         try:
-            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
-        except ProgrammingError:
             result = backend.execute_raw(r"""SELECT val FROM db_dbsetting WHERE key = 'db|schemaversion';""")
+        except ProgrammingError:
+            result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
         return result[0][0]
 
     def set_schema_version_database(self, version):
@@ -186,7 +192,7 @@ class DjangoSettingsManager(SettingsManager):
         self.validate_table_existence()
         validate_attribute_extra_key(key)
 
-        other_attribs = dict()
+        other_attribs = {}
         if description is not None:
             other_attribs['description'] = description
 

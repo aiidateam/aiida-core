@@ -14,7 +14,6 @@ Validates consistency of setup.json and
 
  * environment.yml
  * version in aiida/__init__.py
- * reentry dependency in pyproject.toml
 
 """
 import collections
@@ -34,7 +33,7 @@ FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
 
 def get_setup_json():
     """Return the `setup.json` as a python dictionary """
-    with open(FILEPATH_SETUP_JSON, 'r') as fil:
+    with open(FILEPATH_SETUP_JSON, 'r', encoding='utf8') as fil:
         return json.load(fil, object_pairs_hook=collections.OrderedDict)
 
 
@@ -61,7 +60,7 @@ def dump_setup_json(data):
 
     :param data: the dictionary to write to the `setup.json`
     """
-    with open(FILEPATH_SETUP_JSON, 'w') as handle:
+    with open(FILEPATH_SETUP_JSON, 'w', encoding='utf8') as handle:
         # Write with indentation of four spaces and explicitly define separators to not have spaces at end of lines
         return json.dump(data, handle, indent=4, separators=(',', ': '))
 
@@ -117,7 +116,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
     :param block_end_marker: string marking the end of the block
     :param block: list of lines representing the new block that should be inserted after old block is removed
     """
-    with open(filepath) as handle:
+    with open(filepath, encoding='utf8') as handle:
         lines = handle.readlines()
 
     try:
@@ -127,7 +126,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
 
     lines = replace_line_block(lines, block, index_start, index_end)
 
-    with open(filepath, 'w') as handle:
+    with open(filepath, 'w', encoding='utf8') as handle:
         for line in lines:
             handle.write(line)
 
@@ -141,6 +140,7 @@ def cli():
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
     from click import Context
+
     from aiida.cmdline.commands.cmd_verdi import verdi
 
     width = 90  # The maximum width of the formatted help strings in characters

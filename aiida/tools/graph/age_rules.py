@@ -11,11 +11,12 @@
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+
 import numpy as np
 
 from aiida import orm
-from aiida.tools.graph.age_entities import Basket
 from aiida.common.lang import type_check
+from aiida.tools.graph.age_entities import Basket
 
 
 class Operation(metaclass=ABCMeta):
@@ -75,26 +76,26 @@ class QueryRule(Operation, metaclass=ABCMeta):
         """
         super().__init__(max_iterations, track_edges=track_edges)
 
-        def get_spec_from_path(queryhelp, idx):
+        def get_spec_from_path(query_dict, idx):
             from aiida.orm.querybuilder import GROUP_ENTITY_TYPE_PREFIX
 
             if (
-                queryhelp['path'][idx]['entity_type'].startswith('node') or
-                queryhelp['path'][idx]['entity_type'].startswith('data') or
-                queryhelp['path'][idx]['entity_type'].startswith('process') or
-                queryhelp['path'][idx]['entity_type'] == ''
+                query_dict['path'][idx]['entity_type'].startswith('node') or
+                query_dict['path'][idx]['entity_type'].startswith('data') or
+                query_dict['path'][idx]['entity_type'].startswith('process') or
+                query_dict['path'][idx]['entity_type'] == ''
             ):
                 result = 'nodes'
-            elif queryhelp['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
+            elif query_dict['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise Exception(f"not understood entity from ( {queryhelp['path'][idx]['entity_type']} )")
+                raise Exception(f"not understood entity from ( {query_dict['path'][idx]['entity_type']} )")
             return result
 
-        queryhelp = querybuilder.queryhelp
+        query_dict = querybuilder.as_dict()
 
         # Check if there is any projection:
-        query_projections = queryhelp['project']
+        query_projections = query_dict['project']
         for projection_key in query_projections:
             if query_projections[projection_key] != []:
                 raise ValueError(
@@ -103,13 +104,13 @@ class QueryRule(Operation, metaclass=ABCMeta):
                         projection_key, query_projections[projection_key]
                     )
                 )
-        for pathspec in queryhelp['path']:
+        for pathspec in query_dict['path']:
             if not pathspec['entity_type']:
                 pathspec['entity_type'] = 'node.Node.'
-        self._qbtemplate = orm.QueryBuilder(**queryhelp)
-        queryhelp = self._qbtemplate.queryhelp
-        self._first_tag = queryhelp['path'][0]['tag']
-        self._last_tag = queryhelp['path'][-1]['tag']
+        self._qbtemplate = orm.QueryBuilder(**query_dict)
+        query_dict = self._qbtemplate.as_dict()
+        self._first_tag = query_dict['path'][0]['tag']
+        self._last_tag = query_dict['path'][-1]['tag']
         self._querybuilder = None
 
         # All of these are set in _init_run:
@@ -117,8 +118,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
         self._edge_keys = None
         self._entity_to_identifier = None
 
-        self._entity_from = get_spec_from_path(queryhelp, 0)
-        self._entity_to = get_spec_from_path(queryhelp, -1)
+        self._entity_from = get_spec_from_path(query_dict, 0)
+        self._entity_to = get_spec_from_path(query_dict, -1)
         self._accumulator_set = None
 
     def set_edge_keys(self, edge_keys):
@@ -161,8 +162,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
             self._accumulator_set = operational_set.copy()
 
         # Copying qbtemplate so there's no problem if it is used again in a later run:
-        queryhelp = self._qbtemplate.queryhelp
-        self._querybuilder = orm.QueryBuilder(**queryhelp)
+        query_dict = self._qbtemplate.as_dict()
+        self._querybuilder = orm.QueryBuilder.from_dict(query_dict)
 
         self._entity_to_identifier = operational_set[self._entity_to].identifier
 
@@ -175,7 +176,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             # that stores the information what I need to project as well, as in (tag, projection)
             projections = defaultdict(list)
             self._edge_keys = []
-            self._edge_label = queryhelp['path'][-1]['edge_tag']
+            self._edge_label = query_dict['path'][-1]['edge_tag']
 
             # Need to get the edge_set: This is given by entity1_entity2. Here, the results needs to
             # be sorted somehow in order to ensure that the same key is used when entity_from and

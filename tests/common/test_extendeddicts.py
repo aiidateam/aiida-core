@@ -14,9 +14,7 @@ import copy
 import pickle
 import unittest
 
-from aiida.common import json
-from aiida.common import exceptions
-from aiida.common import extendeddicts
+from aiida.common import exceptions, extendeddicts, json
 
 
 class FFADExample(extendeddicts.FixedFieldsAttributeDict):

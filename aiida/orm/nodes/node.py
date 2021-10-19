@@ -14,24 +14,23 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
 from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
-from aiida.common.hashing import make_hash, _HASH_EXTRA_KEY
+from aiida.common.hashing import _HASH_EXTRA_KEY, make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
+from aiida.orm import autogroup
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
-from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
-from ..entities import Entity, EntityExtrasMixin, EntityAttributesMixin
 from ..entities import Collection as EntityCollection
+from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .repository import NodeRepositoryMixin
@@ -60,8 +59,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
-
     # pylint: disable=too-many-public-methods
+
+    # added by metaclass
+    _plugin_type_string: ClassVar[str]
+    _query_type_string: ClassVar[str]
 
     class Collection(EntityCollection):
         """The collection of nodes."""
@@ -160,7 +162,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             raise ValueError('the computer is not stored')
 
         computer = computer.backend_entity if computer else None
-        user = user.backend_entity if user else User.objects(backend).get_default()
+        user = user if user else User.objects(backend).get_default()
 
         if user is None:
             raise ValueError('the user cannot be None')
@@ -210,16 +212,18 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         super().initialize()
 
         # A cache of incoming links represented as a list of LinkTriples instances
-        self._incoming_cache = list()
+        self._incoming_cache = []
 
     def _validate(self) -> bool:
-        """Check if the attributes and files retrieved from the database are valid.
+        """Validate information stored in Node object.
 
-        Must be able to work even before storing: therefore, use the `get_attr` and similar methods that automatically
-        read either from the DB or from the internal attribute cache.
+        For the :py:class:`~aiida.orm.Node` base class, this check is always valid.
+        Subclasses can override this method to perform additional checks
+        and should usually call ``super()._validate()`` first!
 
-        For the base class, this is always valid. Subclasses will reimplement this.
-        In the subclass, always call the super()._validate() method first!
+        This method is called automatically before storing the node in the DB.
+        Therefore, use :py:meth:`~aiida.orm.entities.EntityAttributesMixin.get_attribute()` and similar methods that
+        automatically read either from the DB or from the internal attribute cache.
         """
         # pylint: disable=no-self-use
         return True
@@ -235,8 +239,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
-            msg = f'class `{self.__module__}:{self.__class__.__name__}` does not have registered entry point'
-            raise exceptions.StoringNotAllowed(msg)
+            raise exceptions.StoringNotAllowed(
+                f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
+                'Check that the corresponding plugin is installed '
+                'and that the entry point shows up in `verdi plugin list`.'
+            )
 
     @classproperty
     def class_node_type(cls) -> str:
@@ -545,7 +552,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
 
-        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
+        if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node
@@ -746,7 +753,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         links = self._incoming_cache
         self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
 
-        self._incoming_cache = list()
+        self._incoming_cache = []
         self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
 
         return self

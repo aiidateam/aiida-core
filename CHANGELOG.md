@@ -1,8 +1,54 @@
 # Changelog
 
-## v1.6.2 - 2021-04-26
+## v1.6.5 - 2021-08-13
 
-[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.1...v1.6.2) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-31&to=2021-04-26&type=c)
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.4...v1.6.5)
+
+This patch release contains a number of helpful bug fixes and improvements.
+
+### Improvements 👌
+
+- Add support for the `ProxyJump` SSH config option for seting up an arbitrary number of proxy jumps without additional processes by creating TCP channels over existing SSH connections.
+  This provides improved control over the lifetime of the different connections.
+  See [SSH configuration](docs/source/howto/ssh.rst) for further details. [[#4951]](https://github.com/aiidateam/aiida-core/pull/4951)
+- Allow numpy arrays to be serialized to a process checkpoint. [[#4730)]](https://github.com/aiidateam/aiida-core/pull/4730))
+- Add the `_merge` method to `ProcessBuilder`, to update the builder with a nested dictionary. [[#4983)]](https://github.com/aiidateam/aiida-core/pull/4983))
+- `verdi setup`: Set the defaut database hostname as `localhost`. [[#4908]](https://github.com/aiidateam/aiida-core/pull/4908)
+- Allow `Node.__init__` to be constructed with a specific `User` node. [[#4977]](https://github.com/aiidateam/aiida-core/pull/4977)
+- Minimize database logs of failed schema version retrievals. [[#5056]](https://github.com/aiidateam/aiida-core/pull/5056)
+- Remove duplicate call of normal `callback` for `InteractiveOption`. [[#5064]](https://github.com/aiidateam/aiida-core/pull/5064)
+- Update requirement `pyyaml~=5.4`, which contains critical security fixes. [[#5060]](https://github.com/aiidateam/aiida-core/pull/5060)
+
+### Bug Fixes 🐛
+
+- Fix regression issue with `__contains__` operator in `LinkManager`, when using double underscores, e.g. for `'some__nested__namespace' in calc.inputs`. [#5067](https://github.com/aiidateam/aiida-core/pull/5067)
+- Stop deprecation warning being shown when tab-completing incoming and outgoing node links. [[#5011]](https://github.com/aiidateam/aiida-core/pull/5011)
+- Stop possible command hints being shown when attempting to tab complete `verdi` commands that do not exist. [[#5012]](https://github.com/aiidateam/aiida-core/pull/5012)
+- Do not use `get_detailed_job_info` when retrieving a calculation job, if no job id is set. [[#4967]](https://github.com/aiidateam/aiida-core/pull/4967)
+- Race condition when two processes try to create the same `Folder`/`SandboxFolder`, [[#4912]](https://github.com/aiidateam/aiida-core/pull/4912)
+- Return the whole nested namespace when using `BaseRestartWorkChain.result`. [[#4961]](https://github.com/aiidateam/aiida-core/pull/4961)
+- Use `numpy.nanmin` and `numpy.nanmax` for computing y-limits of `BandsData` matplotlib methods. [[#5024]](https://github.com/aiidateam/aiida-core/pull/5024)
+- Use sanitized job title with `SgeScheduler` scheduler. [[#4994]](https://github.com/aiidateam/aiida-core/pull/4994)
+
+## v1.6.4 - 2021-06-23
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.3...v1.6.4)
+
+This is a patch release to pin `psycopg2-binary` to version 2.8.x, to avoid an issue with database creation in version 2.9 ([#4989](https://github.com/aiidateam/aiida-core/pull/4989)).
+
+## v1.6.3 - 2021-04-28
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.2...v1.6.3) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-04-281&to=2021-04-28&type=c)
+
+This is a patch release to fix a bug that was introduced in `v1.6.2` that would cause a number of `verdi` commands to fail due to a bug in the `with_dbenv` decorator utility.
+
+### Bug fixes
+- Fix `aiida.cmdline.utils.decorators.load_backend_if_not_loaded` [[#4878]](https://github.com/aiidateam/aiida-core/pull/4878)
+
+
+## v1.6.2 - 2021-04-28
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.1...v1.6.2) | [GitHub contributors page for this release](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-03-31&to=2021-04-27&type=c)
 
 ### Bug fixes
 - CLI: Use the proper proxy command for `verdi calcjob gotocomputer` if configured as such [[#4761]](https://github.com/aiidateam/aiida-core/pull/4761)

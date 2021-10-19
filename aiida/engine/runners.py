@@ -18,19 +18,18 @@ from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 import uuid
 
 import kiwipy
+from plumpy.communications import wrap_communicator
+from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
 from plumpy.process_comms import RemoteProcessThreadController
-from plumpy.events import set_event_loop_policy, reset_event_loop_policy
-from plumpy.communications import wrap_communicator
 
 from aiida.common import exceptions
-from aiida.orm import load_node, ProcessNode
+from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 
-from .processes import futures, Process, ProcessBuilder, ProcessState
+from . import transports, utils
+from .processes import Process, ProcessBuilder, ProcessState, futures
 from .processes.calcjobs import manager
-from . import transports
-from . import utils
 
 __all__ = ('Runner',)
 
@@ -166,7 +165,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, *args, **inputs):
-        from .utils import instantiate_process
+        from .utils import instantiate_process  # pylint: disable=no-name-in-module
         return instantiate_process(self, process, *args, **inputs)
 
     def submit(self, process: TYPE_SUBMIT_PROCESS, *args: Any, **inputs: Any):

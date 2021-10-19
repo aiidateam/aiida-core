@@ -19,7 +19,7 @@ def array():
 
 
 @array.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.array',)))
 @options.DICT_FORMAT()
 def array_show(data, fmt):
     """Visualize ArrayData objects."""

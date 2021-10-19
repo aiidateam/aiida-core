@@ -20,7 +20,7 @@ def singlefile():
 
 
 @singlefile.command('content')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:singlefile',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.singlefile',)))
 @decorators.with_dbenv()
 def singlefile_content(datum):
     """Show the content of the file."""

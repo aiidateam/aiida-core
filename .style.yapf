@@ -1,8 +1,0 @@
-[style]
-based_on_style = google
-column_limit = 120
-dedent_closing_brackets = true
-coalesce_brackets = true
-align_closing_bracket_with_visual_indent = true
-split_arguments_when_comma_terminated = true
-indent_dictionary_value = false

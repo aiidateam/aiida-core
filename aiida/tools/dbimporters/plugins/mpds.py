@@ -14,8 +14,8 @@ import os
 
 import requests
 
-from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
 from aiida.common import json
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
 
 
 class ApiFormat(enum.Enum):

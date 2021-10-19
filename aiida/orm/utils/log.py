@@ -21,8 +21,9 @@ class DBLogHandler(logging.Handler):
             # https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
             self.format(record)
 
-        from aiida import orm
         from django.core.exceptions import ImproperlyConfigured  # pylint: disable=no-name-in-module, import-error
+
+        from aiida import orm
 
         try:
             try:
@@ -55,7 +56,7 @@ def get_dblogger_extra(node):
     # If the object is not a Node or it is not stored, then any associated log records should bot be stored. This is
     # accomplished by returning an empty dictionary because the `dbnode_id` is required to successfully store it.
     if not isinstance(node, Node) or not node.is_stored:
-        return dict()
+        return {}
 
     return {'dbnode_id': node.id, 'backend': node.backend}
 

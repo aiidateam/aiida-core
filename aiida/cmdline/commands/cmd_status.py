@@ -16,9 +16,10 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.log import override_log_level
 from aiida.common.exceptions import IncompatibleDatabaseSchema
-from ..utils.echo import ExitCode
+from aiida.common.log import override_log_level
+
+from ..utils.echo import ExitCode  # pylint: disable=import-error,no-name-in-module
 
 
 class ServiceStatus(enum.IntEnum):
@@ -56,10 +57,10 @@ def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements,too-many-branches
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
+    from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
-    from aiida.manage.manager import get_manager
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
 
@@ -71,7 +72,7 @@ def verdi_status(print_traceback, no_rmq):
 
     if profile is None:
         print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
-        echo.echo_info('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+        echo.echo_report('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
         return
 
     try:
@@ -94,7 +95,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.UP, 'repository', repository_status)
 
     # Getting the postgres status by trying to get a database cursor
-    database_data = [profile.database_username, profile.database_hostname, profile.database_port]
+    database_data = [profile.database_name, profile.database_username, profile.database_hostname, profile.database_port]
     try:
         with override_log_level():  # temporarily suppress noisy logging
             backend = manager.get_backend()
@@ -104,11 +105,11 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.DOWN, 'postgres', message)
         exit_code = ExitCode.CRITICAL
     except Exception as exc:
-        message = 'Unable to connect as {}@{}:{}'.format(*database_data)
+        message = 'Unable to connect to database `{}` as {}@{}:{}'.format(*database_data)
         print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
+        print_status(ServiceStatus.UP, 'postgres', 'Connected to database `{}` as {}@{}:{}'.format(*database_data))
 
     # Getting the rmq status
     if not no_rmq:
@@ -130,7 +131,7 @@ def verdi_status(print_traceback, no_rmq):
         delete_stale_pid_file(client)
         daemon_status = get_daemon_status(client)
 
-        daemon_status = daemon_status.split('\n')[0]  # take only the first line
+        daemon_status = daemon_status.split('\n', maxsplit=1)[0]  # take only the first line
         if client.is_daemon_running:
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
@@ -155,8 +156,8 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    click.secho(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    click.secho(f"{service + ':':12s} {msg}")
+    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
+    echo.echo(f"{service + ':':12s} {msg}")
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

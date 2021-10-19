@@ -12,6 +12,7 @@
 
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 
 REVISION = '1.0.44'

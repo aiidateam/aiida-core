@@ -18,10 +18,9 @@ from sqlalchemy.orm.session import make_transient
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common import exceptions
-from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
+from aiida.orm.implementation.computers import BackendComputer, BackendComputerCollection
 
-from . import utils
-from . import entities
+from . import entities, utils
 
 
 class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
@@ -137,7 +136,7 @@ class SqlaComputerCollection(BackendComputerCollection):
     def delete(self, pk):
         try:
             session = get_scoped_session()
-            session.query(DbComputer).get(pk).delete()
+            session.get(DbComputer, pk).delete()
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(

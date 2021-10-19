@@ -7,9 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Module for classes and utilities to write parsers for calculation jobs."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
 
 from .parser import *
 
-__all__ = (parser.__all__)
+__all__ = (
+    'Parser',
+)
+
+# yapf: enable

@@ -19,7 +19,7 @@ from aiida.orm.utils.calcjob import CalcJobResultManager
 @pytest.fixture
 def get_calcjob_node(clear_database_before_test, generate_calculation_node):
     """Return a calculation node with `Dict` output with default output label and the dictionary it contains."""
-    node = generate_calculation_node(entry_point='aiida.calculations:templatereplacer').store()
+    node = generate_calculation_node(entry_point='aiida.calculations:core.templatereplacer').store()
     dictionary = {
         'key_one': 'val_one',
         'key_two': 'val_two',

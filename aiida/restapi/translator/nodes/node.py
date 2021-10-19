@@ -8,25 +8,33 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
-import pkgutil
-import importlib.util
-import importlib.machinery
 from importlib._bootstrap import _exec, _load
-import sys
+import importlib.machinery
+import importlib.util
 import inspect
 import os
+import pkgutil
+import sys
 
 from aiida import orm
-from aiida.orm import Node, Data
 from aiida.common.exceptions import (
-    InputValidationError, ValidationError, InvalidOperation, LoadingEntryPointError, EntryPointError
+    EntryPointError,
+    InputValidationError,
+    InvalidOperation,
+    LoadingEntryPointError,
+    ValidationError,
 )
 from aiida.manage.manager import get_manager
-from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
-from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.common.identifiers import get_full_type_filters
+from aiida.orm import Data, Node
+from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 from aiida.restapi.common.exceptions import RestFeatureNotAvailable, RestInputValidationError, RestValidationError
-from aiida.restapi.common.identifiers import get_node_namespace, load_entry_point_from_full_type, construct_full_type
+from aiida.restapi.common.identifiers import (
+    construct_full_type,
+    get_full_type_filters,
+    get_node_namespace,
+    load_entry_point_from_full_type,
+)
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class NodeTranslator(BaseTranslator):
@@ -594,9 +602,7 @@ class NodeTranslator(BaseTranslator):
 
     def get_statistics(self, user_pk=None):
         """Return statistics for a given node"""
-
-        qmanager = self._backend.query_manager
-        return qmanager.get_creation_statistics(user_pk=user_pk)
+        return self._backend.query().get_creation_statistics(user_pk=user_pk)
 
     @staticmethod
     def get_namespace(user_pk=None, count_nodes=False):

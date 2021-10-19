@@ -16,9 +16,8 @@ from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import log as models
 from aiida.common import exceptions
 
+from . import entities, utils
 from .. import BackendLog, BackendLogCollection
-from . import entities
-from . import utils
 
 
 class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):

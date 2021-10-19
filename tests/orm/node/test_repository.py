@@ -1,21 +1,23 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name,protected-access
+# pylint: disable=redefined-outer-name,protected-access,no-member
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
 import io
+import pathlib
 
 import pytest
 
 from aiida.common import exceptions
 from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
-from aiida.orm import load_node, CalcJobNode, Data
+from aiida.orm import CalcJobNode, Data, load_node
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
+from aiida.repository.common import File, FileType
 
 
 @pytest.fixture
 def cacheable_node():
     """Return a node that can be cached from."""
-    node = CalcJobNode(process_type='aiida.calculations:arithmetic.add')
+    node = CalcJobNode(process_type='aiida.calculations:core.arithmetic.add')
     node.set_process_state(ProcessState.FINISHED)
     node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
     node.store()
@@ -94,7 +96,7 @@ def test_caching(cacheable_node):
     """Test the repository after a node is stored from the cache."""
 
     with enable_caching():
-        cached = CalcJobNode(process_type='aiida.calculations:arithmetic.add')
+        cached = CalcJobNode(process_type='aiida.calculations:core.core.arithmetic.add')
         cached.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
         cached.store()
 
@@ -147,3 +149,82 @@ def test_sealed():
 
     with pytest.raises(exceptions.ModificationNotAllowed):
         node.put_object_from_filelike(io.BytesIO(b'content'), 'path')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_get_object_raises():
+    """Test the ``NodeRepositoryMixin.get_object`` method when it is supposed to raise."""
+    node = Data()
+
+    with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
+        node.get_object('/absolute/path')
+
+    with pytest.raises(FileNotFoundError, match=r'object with path `.*` does not exist.'):
+        node.get_object('non_existing_folder/file_a')
+
+    with pytest.raises(FileNotFoundError, match=r'object with path `.*` does not exist.'):
+        node.get_object('non_existant')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_get_object():
+    """Test the ``NodeRepositoryMixin.get_object`` method."""
+    node = CalcJobNode()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/file_b')
+
+    file_object = node.get_object(None)
+    assert isinstance(file_object, File)
+    assert file_object.file_type == FileType.DIRECTORY
+
+    file_object = node.get_object('relative')
+    assert isinstance(file_object, File)
+    assert file_object.file_type == FileType.DIRECTORY
+    assert file_object.name == 'relative'
+
+    file_object = node.get_object('relative/file_b')
+    assert isinstance(file_object, File)
+    assert file_object.file_type == FileType.FILE
+    assert file_object.name == 'file_b'
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_walk():
+    """Test the ``NodeRepositoryMixin.walk`` method."""
+    node = Data()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+
+    results = []
+    for root, dirnames, filenames in node.walk():
+        results.append((root, sorted(dirnames), sorted(filenames)))
+
+    assert sorted(results) == [
+        (pathlib.Path('.'), ['relative'], []),
+        (pathlib.Path('relative'), [], ['path']),
+    ]
+
+    # Check that the method still works after storing the node
+    node.store()
+
+    results = []
+    for root, dirnames, filenames in node.walk():
+        results.append((root, sorted(dirnames), sorted(filenames)))
+
+    assert sorted(results) == [
+        (pathlib.Path('.'), ['relative'], []),
+        (pathlib.Path('relative'), [], ['path']),
+    ]
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_copy_tree(tmp_path):
+    """Test the ``Repository.copy_tree`` method."""
+    node = Data()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+
+    node.copy_tree(tmp_path)
+    dirpath = pathlib.Path(tmp_path / 'relative')
+    filepath = dirpath / 'path'
+    assert dirpath.is_dir()
+    assert filepath.is_file()
+    with node.open('relative/path', 'rb') as handle:
+        assert filepath.read_bytes() == handle.read()

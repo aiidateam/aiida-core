@@ -17,6 +17,8 @@ import yaml
 
 from .overridable import OverridableOption
 
+__all__ = ('ConfigFileOption',)
+
 
 def yaml_config_file_provider(handle, cmd_name):  # pylint: disable=unused-argument
     """Read yaml config file from file handle."""

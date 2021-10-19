@@ -10,6 +10,7 @@
 """Tests for the `OrbitalData` class."""
 
 import copy
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import ValidationError
 from aiida.orm import OrbitalData
@@ -38,7 +39,7 @@ class TestOrbitalData(AiidaTestCase):
 
     def test_real_hydrogen(self):
         """Tests storage of the RealHydrogen oribtal"""
-        RealHydrogen = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
+        RealHydrogen = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
         orbital = RealHydrogen(**self.my_real_hydrogen_dict)
         orbitaldata = OrbitalData()
 
@@ -51,7 +52,7 @@ class TestOrbitalData(AiidaTestCase):
 
         #Check the orbital dict has been assigned correctly
         retrieved_real_hydrogen_dict = orbitaldata.get_orbitals()[0].get_orbital_dict()
-        self.assertEqual(retrieved_real_hydrogen_dict.pop('_orbital_type'), 'realhydrogen')
+        self.assertEqual(retrieved_real_hydrogen_dict.pop('_orbital_type'), 'core.realhydrogen')
         self.assertDictEqual(retrieved_real_hydrogen_dict, self.my_real_hydrogen_dict)
 
         #Check that a corrupted OribtalData fails on get_orbitals

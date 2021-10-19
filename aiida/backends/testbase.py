@@ -9,14 +9,14 @@
 ###########################################################################
 """Basic test classes."""
 import os
-import unittest
 import traceback
+import unittest
 
-from aiida.common.exceptions import ConfigurationError, TestsNotAllowedError, InternalError
+from aiida import orm
+from aiida.common.exceptions import ConfigurationError, InternalError, TestsNotAllowedError
+from aiida.common.lang import classproperty
 from aiida.manage import configuration
 from aiida.manage.manager import get_manager, reset_manager
-from aiida import orm
-from aiida.common.lang import classproperty
 
 TEST_KEYWORD = 'test_'
 
@@ -41,8 +41,8 @@ class AiidaTestCase(unittest.TestCase):
     @classmethod
     def get_backend_class(cls):
         """Get backend class."""
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
         from aiida.backends.testimplbase import AiidaTestImplementation
-        from aiida.backends import BACKEND_SQLA, BACKEND_DJANGO
         from aiida.manage.configuration import PROFILE
 
         # Freeze the __impl_class after the first run
@@ -159,9 +159,10 @@ class AiidaTestCase(unittest.TestCase):
         """
         Cleans up file repository.
         """
-        from aiida.manage.configuration import get_profile
-        from aiida.common.exceptions import InvalidOperation
         import shutil
+
+        from aiida.common.exceptions import InvalidOperation
+        from aiida.manage.configuration import get_profile
 
         dirpath_repository = get_profile().repository_path
 
@@ -189,8 +190,8 @@ class AiidaTestCase(unittest.TestCase):
             created, computer = orm.Computer.objects.get_or_create(
                 label='localhost',
                 hostname='localhost',
-                transport_type='local',
-                scheduler_type='direct',
+                transport_type='core.local',
+                scheduler_type='core.direct',
                 workdir='/tmp/aiida',
             )
             if created:

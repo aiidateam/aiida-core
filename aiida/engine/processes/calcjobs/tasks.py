@@ -12,21 +12,21 @@ import asyncio
 import functools
 import logging
 import tempfile
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 import plumpy
-import plumpy.process_states
 import plumpy.futures
+import plumpy.process_states
 
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.engine.transports import TransportQueue
-from aiida.engine.utils import exponential_backoff_retry, interruptable_task, InterruptableFuture
+from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task
+from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
-from aiida.manage.configuration import get_config_option
 
 from ..process import ProcessState
 
@@ -255,6 +255,10 @@ async def task_retrieve_job(
             # accounting was called but could not be set.
             scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
             scheduler.set_transport(transport)
+
+            if node.get_job_id() is None:
+                logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
+                return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
 
             try:
                 detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())

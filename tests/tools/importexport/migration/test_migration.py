@@ -12,10 +12,9 @@
 import pytest
 
 from aiida import orm
-from aiida.tools.importexport import detect_archive_type, get_migrator
-from aiida.tools.importexport import import_data, ArchiveMigrationError, EXPORT_VERSION as newest_version
+from aiida.tools.importexport import ArchiveMigrationError, detect_archive_type, get_migrator, import_data
+from aiida.tools.importexport import EXPORT_VERSION as newest_version
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
-
 from tests.utils.archives import get_archive_file, read_json_files
 
 # archives to test migration against

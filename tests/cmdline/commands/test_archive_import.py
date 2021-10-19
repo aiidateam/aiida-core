@@ -8,16 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi import`."""
-from click.testing import CliRunner
 from click.exceptions import BadParameter
-
+from click.testing import CliRunner
 import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
 from aiida.tools.importexport import EXPORT_VERSION
-
 from tests.utils.archives import get_archive_file
 
 
@@ -154,7 +152,7 @@ class TestVerdiImport(AiidaTestCase):
             result = self.cli_runner.invoke(cmd_archive.import_archive, options)
             self.assertIsNone(result.exception, result.output)
             self.assertTrue(
-                any([re.fullmatch(r'Comment rules[\s]*{}'.format(mode), line) for line in result.output.split('\n')]),
+                any(re.fullmatch(r'Comment rules[\s]*{}'.format(mode), line) for line in result.output.split('\n')),
                 msg=f'Mode: {mode}. Output: {result.output}'
             )
             self.assertEqual(result.exit_code, 0, result.output)
@@ -164,7 +162,7 @@ class TestVerdiImport(AiidaTestCase):
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
         archives = []
-        for version in range(1, int(EXPORT_VERSION.split('.')[-1]) - 1):
+        for version in range(1, int(EXPORT_VERSION.rsplit('.', maxsplit=1)[-1]) - 1):
             archives.append((f'export_v0.{version}_simple.aiida', f'0.{version}'))
 
         for archive, version in archives:

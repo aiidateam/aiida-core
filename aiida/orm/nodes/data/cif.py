@@ -11,9 +11,12 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
+
 from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
+
+__all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
 
 ase_loops = {
     '_atom_site': [
@@ -50,14 +53,14 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     """
     Construct a CIF datablock from the ASE structure. The code is taken
     from
-    https://wiki.fysik.dtu.dk/ase/epydoc/ase.io.cif-pysrc.html#write_cif,
+    https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html#ase.io.cif.write_cif,
     as the original ASE code contains a bug in printing the
     Hermann-Mauguin symmetry space group symbol.
 
     :param ase: ASE "images"
     :return: array of CIF datablocks
     """
-    from numpy import arccos, pi, dot
+    from numpy import arccos, dot, pi
     from numpy.linalg import norm
 
     if not isinstance(ase, (list, tuple)):
@@ -65,7 +68,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
 
     datablocks = []
     for _, atoms in enumerate(ase):
-        datablock = dict()
+        datablock = {}
 
         cell = atoms.cell
         a = norm(cell[0])
@@ -140,7 +143,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         raise ImportError(f'{str(exc)}. You need to install the PyCifRW package.')
 
     if loops is None:
-        loops = dict()
+        loops = {}
 
     cif = CifFile.CifFile()  # pylint: disable=no-member
     try:
@@ -259,17 +262,7 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    def __init__(
-        self,
-        ase=None,
-        file=None,
-        filename=None,
-        values=None,
-        source=None,
-        scan_type=None,
-        parse_policy=None,
-        **kwargs
-    ):
+    def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
         :param file: an absolute filepath or filelike object for CIF.
@@ -277,7 +270,6 @@ class CifData(SinglefileData):
         :param filename: specify filename to use (defaults to name of provided file).
         :param ase: ASE Atoms object to construct the CifData instance from.
         :param values: PyCifRW CifFile object to construct the CifData instance from.
-        :param source:
         :param scan_type: scan type string for parsing with PyCIFRW ('standard' or 'flex'). See CifFile.ReadCif
         :param parse_policy: 'eager' (parse CIF file on set_file) or 'lazy' (defer parsing until needed)
         """
@@ -297,9 +289,6 @@ class CifData(SinglefileData):
         super().__init__(file, filename=filename, **kwargs)
         self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
         self.set_parse_policy(parse_policy or CifData._PARSE_POLICY_DEFAULT)
-
-        if source is not None:
-            self.set_source(source)
 
         if ase is not None:
             self.set_ase(ase)
@@ -369,6 +358,7 @@ class CifData(SinglefileData):
             from the DB.
         """
         import os
+
         from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):
@@ -706,7 +696,7 @@ class CifData(SinglefileData):
                 if tag in self.values[datablock].keys():
                     coords.extend(self.values[datablock][tag])
 
-        return not all([coord == '?' for coord in coords])
+        return not all(coord == '?' for coord in coords)
 
     @property
     def has_unknown_species(self):
@@ -731,7 +721,7 @@ class CifData(SinglefileData):
                 return None
 
             species = parse_formula(formula).keys()
-            if any([specie not in known_species for specie in species]):
+            if any(specie not in known_species for specie in species):
                 return True
 
         return False

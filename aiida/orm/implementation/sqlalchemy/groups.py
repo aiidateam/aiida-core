@@ -18,9 +18,8 @@ from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from . import entities
-from . import users
-from . import utils
+
+from . import entities, users, utils
 
 __all__ = ('SqlaGroup', 'SqlaGroupCollection')
 
@@ -182,11 +181,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             to create a direct SQL INSERT statement to the group-node relationship
             table (to improve speed).
         """
-        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
         from sqlalchemy.dialects.postgresql import insert  # pylint: disable=import-error, no-name-in-module
-        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
+        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
+
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.backends.sqlalchemy.models.base import Base
+        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
         super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
@@ -217,7 +217,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                         # Duplicate entry, skip
                         pass
             else:
-                ins_dict = list()
+                ins_dict = []
                 for node in nodes:
                     check_node(node)
                     ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
@@ -240,6 +240,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             DELETE statement to the group-node relationship table in order to improve speed.
         """
         from sqlalchemy import and_
+
         from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.backends.sqlalchemy.models.base import Base
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
@@ -362,10 +363,10 @@ class SqlaGroupCollection(BackendGroupCollection):
             _LOGGER.warning("SQLA query doesn't support additional filters, ignoring '%s'", kwargs)
         groups = (session.query(DbGroup).filter(*filters).order_by(DbGroup.id).distinct().all())
 
-        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]
+        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]  # pylint: disable=no-member
 
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = sa.get_scoped_session()
 
-        session.query(DbGroup).get(id).delete()
+        session.get(DbGroup, id).delete()
         session.commit()

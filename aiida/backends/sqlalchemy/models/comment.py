@@ -11,13 +11,13 @@
 """Module to manage comments for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.types import DateTime, Integer, Text
 
-from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
 
@@ -49,7 +49,7 @@ class DbComment(Base):
         """Adding mtime attribute if not present."""
         super().__init__(*args, **kwargs)
         # The behavior of an unstored Comment instance should be that all its attributes should be initialized in
-        # accordance with the defaults specified on the collums, i.e. if a default is specified for the `uuid` column,
+        # accordance with the defaults specified on the columns, i.e. if a default is specified for the `uuid` column,
         # then an unstored `DbComment` instance should have a default value for the `uuid` attribute. The exception here
         # is the `mtime`, that we do not want to be set upon instantiation, but only upon storing. However, in
         # SqlAlchemy a default *has* to be defined if one wants to get that value upon storing. But since defining a

@@ -16,8 +16,7 @@ from aiida.manage.manager import get_manager
 from aiida.orm.implementation import Backend
 from aiida.plugins import SchedulerFactory, TransportFactory
 
-from . import entities
-from . import users
+from . import entities, users
 
 __all__ = ('Computer',)
 
@@ -138,7 +137,7 @@ class Computer(entities.Entity):
         """
         from aiida.plugins.entry_point import get_entry_point_names
         if scheduler_type not in get_entry_point_names('aiida.schedulers'):
-            raise exceptions.ValidationError('The specified scheduler is not a valid one')
+            raise exceptions.ValidationError(f'The specified scheduler `{scheduler_type}` is not a valid one')
 
     @classmethod
     def _prepend_text_validator(cls, prepend_text):

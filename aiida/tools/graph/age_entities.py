@@ -414,8 +414,8 @@ class Basket():
 
     def __add__(self, other):
         new_dict = {}
-        for key in self._dict:
-            new_dict[key] = self._dict[key] + other.dict[key]
+        for key, value in self._dict.items():
+            new_dict[key] = value + other.dict[key]
         return Basket(**new_dict)
 
     def __iadd__(self, other):
@@ -460,14 +460,14 @@ class Basket():
 
     def get_template(self):
         """Create new nasket with the same defining attributes for its internal containers."""
-        new_dict = dict()
+        new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.get_template()
         return Basket(**new_dict)
 
     def copy(self):
         """Create new instance with the same defining attributes and content."""
-        new_dict = dict()
+        new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.copy()
         return Basket(**new_dict)

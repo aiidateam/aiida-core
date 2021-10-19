@@ -11,6 +11,8 @@
 
 from .strings import LabelStringType
 
+__all__ = ('ProfileParamType',)
+
 
 class ProfileParamType(LabelStringType):
     """The profile parameter type for click."""
@@ -28,8 +30,9 @@ class ProfileParamType(LabelStringType):
 
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
+        from aiida.common import extendeddicts
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import get_config, load_profile, Profile
+        from aiida.manage.configuration import Profile, get_config, load_profile
 
         value = super().convert(value, param, ctx)
 
@@ -48,6 +51,12 @@ class ProfileParamType(LabelStringType):
 
         if self._load_profile:
             load_profile(profile.name)
+
+        if ctx.obj is None:
+            ctx.obj = extendeddicts.AttributeDict()
+
+        ctx.obj.config = config
+        ctx.obj.profile = profile
 
         return profile
 

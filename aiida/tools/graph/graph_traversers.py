@@ -9,7 +9,7 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 import sys
-from typing import Any, Callable, cast, Dict, Iterable, List, Mapping, Optional, Set
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, cast
 
 from numpy import inf
 
@@ -18,7 +18,7 @@ from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
 from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.age_entities import Basket
-from aiida.tools.graph.age_rules import UpdateRule, RuleSequence, RuleSaveWalkers, RuleSetWalkers
+from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -230,7 +230,7 @@ def traverse_graph(
     if not isinstance(starting_pks, Iterable):  # pylint: disable=isinstance-second-argument-not-valid-type
         raise TypeError(f'starting_pks must be an iterable\ninstead, it is {type(starting_pks)}')
 
-    if any([not isinstance(pk, int) for pk in starting_pks]):
+    if any(not isinstance(pk, int) for pk in starting_pks):
         raise TypeError(f'one of the starting_pks is not of type int:\n {starting_pks}')
     operational_set = set(starting_pks)
 

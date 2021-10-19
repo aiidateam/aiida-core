@@ -11,7 +11,7 @@
 
 import abc
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendComment', 'BackendCommentCollection')
 
@@ -23,11 +23,13 @@ class BackendComment(BackendEntity):
     def uuid(self):
         return str(self._dbmodel.uuid)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def ctime(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def mtime(self):
         pass
 
@@ -35,11 +37,13 @@ class BackendComment(BackendEntity):
     def set_mtime(self, value):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def node(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         pass
 
@@ -47,7 +51,8 @@ class BackendComment(BackendEntity):
     def set_user(self, value):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def content(self):
         pass
 

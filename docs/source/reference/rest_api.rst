@@ -58,22 +58,22 @@ Nodes
             "nodes  ": [
               {
                 "ctime": "Sun, 21 Jul 2019 11:45:52 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 102618,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 11:45:52 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "a43596fe-3d95-4d9b-b34a-acabc21d7a1e"
               },
               {
                 "ctime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "full_type": "data.remote.RemoteData.|",
+                "full_type": "data.core.remote.RemoteData.|",
                 "id": 102617,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "node_type": "data.remote.RemoteData.",
+                "node_type": "data.core.remote.RemoteData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "12f95e1c-69df-4a4b-9b06-8e69072e6108"
@@ -108,11 +108,11 @@ Nodes
               {
                 "attributes.pbc1": true,
                 "ctime": "Sun, 21 Jul 2019 15:36:30 GMT",
-                "full_type": "data.structure.StructureData.|",
+                "full_type": "data.core.structure.StructureData.|",
                 "id": 51310,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 15:36:30 GMT",
-                "node_type": "data.structure.StructureData.",
+                "node_type": "data.core.structure.StructureData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "98de8d6d-f533-4f97-a8ad-7720cc5ca8f6"
@@ -120,11 +120,11 @@ Nodes
               {
                 "attributes.pbc1": null,
                 "ctime": "Sun, 21 Jul 2019 15:44:14 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 51311,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 15:44:14 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "321795fa-338e-4852-ae72-2eb30e33386e"
@@ -184,7 +184,7 @@ Nodes
 
         {
             "data": {
-                "data.array.bands.BandsData.|": [
+                "data.core.array.bands.BandsData.|": [
                     "agr",
                     "agr_batch",
                     "dat_blocks",
@@ -196,20 +196,20 @@ Nodes
                     "mpl_singlefile",
                     "mpl_withjson"
                 ],
-                "data.array.trajectory.TrajectoryData.|": [
+                "data.core.array.trajectory.TrajectoryData.|": [
                     "cif",
                     "xsf"
                 ],
-                "data.cif.CifData.|": [
+                "data.core.cif.CifData.|": [
                     "cif"
                 ],
-                "data.structure.StructureData.|": [
+                "data.core.structure.StructureData.|": [
                     "chemdoodle",
                     "cif",
                     "xsf",
                     "xyz"
                 ],
-                "data.upf.UpfData.|": [
+                "data.core.upf.UpfData.|": [
                     "upf"
                 ]
             },
@@ -239,11 +239,11 @@ Nodes
             "nodes  ": [
               {
                 "ctime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "full_type": "data.remote.RemoteData.|",
+                "full_type": "data.core.remote.RemoteData.|",
                 "id": 102617,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "node_type": "data.remote.RemoteData.",
+                "node_type": "data.core.remote.RemoteData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "12f95e1c-69df-4a4b-9b06-8e69072e6108"
@@ -276,26 +276,26 @@ Nodes
             "incoming": [
               {
                 "ctime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 53770,
                 "label": "",
                 "link_label": "settings",
                 "link_type": "input_calc",
                 "mtime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "31993382-c1ab-4822-a116-bd88697f2796"
               },
               {
                 "ctime": "Fri, 28 Jun 2019 10:54:25 GMT",
-                "full_type": "data.upf.UpfData.|",
+                "full_type": "data.core.upf.UpfData.|",
                 "id": 54502,
                 "label": "",
                 "link_label": "pseudos__N",
                 "link_type": "input_calc",
                 "mtime": "Fri, 28 Jun 2019 10:54:28 GMT",
-                "node_type": "data.upf.UpfData.",
+                "node_type": "data.core.upf.UpfData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "2e2df55d-27a5-4b34-bf7f-911b16da95f0"
@@ -315,7 +315,7 @@ Nodes
 
     REST URL::
 
-        http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type="data.dict.Dict.|"
+        http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type="data.core.dict.Dict.|"
 
     Description:
 
@@ -328,13 +328,13 @@ Nodes
             "incoming": [
               {
                 "ctime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 53770,
                 "label": "",
                 "link_label": "settings",
                 "link_type": "input_calc",
                 "mtime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "31993382-c1ab-4822-a116-bd88697f2796"
@@ -344,15 +344,15 @@ Nodes
           "id": "de83b1",
           "method": "GET",
           "path": "/api/v4/nodes/de83b1/links/incoming",
-          "query_string": "full_type=%22data.dict.Dict.|%22",
+          "query_string": "full_type=%22data.core.dict.Dict.|%22",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type=\"data.dict.Dict.|\"",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type=\"data.core.dict.Dict.|\"",
           "url_root": "http://localhost:5000/"
         }
 
     REST URL::
 
-        http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type="data.dict.Dict.|"
+        http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type="data.core.dict.Dict.|"
 
     Description:
 
@@ -365,13 +365,13 @@ Nodes
             "outgoing": [
               {
                 "ctime": "Sun, 21 Jul 2019 09:08:05 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 67440,
                 "label": "",
                 "link_label": "output_parameters",
                 "link_type": "create",
                 "mtime": "Sun, 21 Jul 2019 09:08:05 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "861e1108-33a1-4495-807b-8c5189ad74e3"
@@ -381,9 +381,9 @@ Nodes
           "id": "de83b1",
           "method": "GET",
           "path": "/api/v4/nodes/de83b1/links/outgoing",
-          "query_string": "full_type=%22data.dict.Dict.|%22",
+          "query_string": "full_type=%22data.core.dict.Dict.|%22",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type=\"data.dict.Dict.|\"",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type=\"data.core.dict.Dict.|\"",
           "url_root": "http://localhost:5000/"
         }
 
@@ -696,8 +696,8 @@ Computers
                 "hostname": "alpha.aiida.net",
                 "id": 3,
                 "name": "Alpha",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
               },
               {
@@ -705,8 +705,8 @@ Computers
                 "hostname": "beta.aiida.net",
                 "id": 4,
                 "name": "Beta",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               },
               {
@@ -714,8 +714,8 @@ Computers
                 "hostname": "gamma.aiida.net",
                 "id": 5,
                 "name": "Gamma",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
               }
             ]
@@ -749,8 +749,8 @@ Computers
                 "hostname": "beta.aiida.net",
                 "id": 4,
                 "name": "Beta",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               }
             ]
@@ -904,7 +904,7 @@ Groups
                 "description": "GBRV US pseudos, version 1.2",
                 "id": 23,
                 "label": "GBRV_1.2",
-                "type_string": "data.upf.family",
+                "type_string": "data.core.upf.family",
                 "user_email": "aiida@theossrv5.epfl.ch",
                 "user_id": 2,
                 "uuid": "a6e5b6c6-9d47-445b-bfea-024cf8333c55"
@@ -1098,15 +1098,15 @@ Regular filters can be compounded, requiring all specified filters to apply.
 .. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
     Examples:
 
-    - ``node_type="data.code.Code."`` selects only objects of type |Code|.
-    - ``node_type="data.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.nodes.data.remote.RemoteData`.
+    - ``node_type="data.core.code.Code."`` selects only objects of type |Code|.
+    - ``node_type="data.core.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.nodes.data.remote.RemoteData`.
 
 .. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
     For example, the request::
 
-            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
+            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.core.dict.Dict.|"
 
-    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
+    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.core.core.dict.Dict.|*.
 
 
 
@@ -1193,7 +1193,7 @@ The condition is fulfilled if the column value of an object is an element of the
 Examples::
 
     http://localhost:5000/api/v4/nodes?id=in=45,56,78
-    http://localhost:5000/api/v4/computers/?scheduler_type=in="slurm","pbs"
+    http://localhost:5000/api/v4/computers/?scheduler_type=in="core.slurm","core.pbs"
 
 Comparison
 ^^^^^^^^^^^^^^^^^^^^

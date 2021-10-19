@@ -15,11 +15,11 @@ import io
 import os
 import pathlib
 import re
-import typing
+from typing import Dict, Iterable, List, Optional, Union
 
-import numpy
 from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
+import numpy
 
 from aiida.common import exceptions, json
 from aiida.repository.backend import AbstractRepositoryBackend
@@ -42,8 +42,8 @@ class LazyFile(File):
         self,
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
-        key: typing.Union[str, None, LazyOpener] = None,
-        objects: typing.Dict[str, 'File'] = None
+        key: Union[str, None, LazyOpener] = None,
+        objects: Dict[str, 'File'] = None
     ):
         # pylint: disable=super-init-not-called
         if not isinstance(name, str):
@@ -55,7 +55,7 @@ class LazyFile(File):
         if key is not None and not isinstance(key, (str, LazyOpener)):
             raise TypeError('key should be `None` or a string.')
 
-        if objects is not None and any([not isinstance(obj, self.__class__) for obj in objects.values()]):
+        if objects is not None and any(not isinstance(obj, self.__class__) for obj in objects.values()):
             raise TypeError('objects should be `None` or a dictionary of `File` instances.')
 
         if file_type == FileType.DIRECTORY and key is not None:
@@ -86,43 +86,40 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     """
 
     @property
-    def uuid(self) -> typing.Optional[str]:
+    def uuid(self) -> Optional[str]:
         """Return the unique identifier of the repository.
 
         .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
         """
         return None
 
-    def initialise(self, **kwargs) -> None:
-        """Initialise the repository if it hasn't already been initialised.
+    @property
+    def key_format(self) -> Optional[str]:
+        return None
 
-        :param kwargs: parameters for the initialisation.
-        """
+    def initialise(self, **kwargs) -> None:
         raise NotImplementedError()
 
     @property
     def is_initialised(self) -> bool:
-        """Return whether the repository has been initialised."""
         return True
 
     def erase(self):
         raise NotImplementedError()
 
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
-        """Store the byte contents of a file in the repository.
-
-        :param handle: filelike object with the byte content to be stored.
-        :return: the generated fully qualified identifier for the object within the repository.
-        :raises TypeError: if the handle is not a byte stream.
-        """
         return LazyOpener(handle.name)
 
-    def has_object(self, key: str) -> bool:
-        """Return whether the repository has an object with the given key.
+    def has_objects(self, keys: List[str]) -> List[bool]:
+        raise NotImplementedError()
 
-        :param key: fully qualified identifier for the object within the repository.
-        :return: True if the object exists, False otherwise.
-        """
+    def delete_objects(self, keys: List[str]) -> None:
+        raise NotImplementedError()
+
+    def list_objects(self) -> Iterable[str]:
+        raise NotImplementedError()
+
+    def iter_object_streams(self, keys: List[str]):
         raise NotImplementedError()
 
 
@@ -252,12 +249,16 @@ def get_node_repository_dirpaths(basepath, shard=None):
                 path = None
 
                 if 'path' in subdirs and 'raw_input' in subdirs:
-                    # If the `path` is empty, we simply ignore and set `raw_input` to be migrated, otherwise we add
-                    # the entry to `contains_both` which will cause the migration to fail.
-                    if os.listdir(dirpath / 'path'):
-                        contains_both.append(str(dirpath))
-                    else:
+                    # If the `path` folder is empty OR it contains *only* a `.gitignore`, we simply ignore and set
+                    # `raw_input` to be migrated, otherwise we add the entry to `contains_both` which will cause the
+                    # migration to fail.
+                    # See issue #4910 (https://github.com/aiidateam/aiida-core/issues/4910) for more information on the
+                    # `.gitignore` case.
+                    path_contents = os.listdir(dirpath / 'path')
+                    if not path_contents or path_contents == ['.gitignore']:
                         path = dirpath / 'raw_input'
+                    else:
+                        contains_both.append(str(dirpath))
                 elif 'path' in subdirs:
                     path = dirpath / 'path'
                 elif 'raw_input' in subdirs:
@@ -333,7 +334,7 @@ def get_object_from_repository(uuid, name):
     """
     filepath = os.path.join(get_node_repository_sub_folder(uuid), name)
 
-    with open(filepath) as handle:
+    with open(filepath, encoding='utf-8') as handle:
         return handle.read()
 
 
@@ -431,99 +432,3 @@ def recursive_datetime_to_isoformat(value):
 def dumps_json(dictionary):
     """Transforms all datetime object into isoformat and then returns the JSON."""
     return json.dumps(recursive_datetime_to_isoformat(dictionary))
-
-
-def get_duplicate_uuids(table):
-    """Retrieve rows with duplicate UUIDS.
-
-    :param table: database table with uuid column, e.g. 'db_dbnode'
-    :return: list of tuples of (id, uuid) of rows with duplicate UUIDs
-    """
-    from aiida.manage.manager import get_manager
-    backend = get_manager().get_backend()
-    return backend.query_manager.get_duplicate_uuids(table=table)
-
-
-def verify_uuid_uniqueness(table):
-    """Check whether database table contains rows with duplicate UUIDS.
-
-    :param table: Database table with uuid column, e.g. 'db_dbnode'
-    :type str:
-
-    :raises: IntegrityError if table contains rows with duplicate UUIDS.
-    """
-    duplicates = get_duplicate_uuids(table=table)
-
-    if duplicates:
-        raise exceptions.IntegrityError(
-            'Table {table:} contains rows with duplicate UUIDS: run '
-            '`verdi database integrity detect-duplicate-uuid -t {table:}` to address the problem'.format(table=table)
-        )
-
-
-def apply_new_uuid_mapping(table, mapping):
-    """Take a mapping of pks to UUIDs and apply it to the given table.
-
-    :param table: database table with uuid column, e.g. 'db_dbnode'
-    :param mapping: dictionary of UUIDs mapped onto a pk
-    """
-    from aiida.manage.manager import get_manager
-    backend = get_manager().get_backend()
-    backend.query_manager.apply_new_uuid_mapping(table, mapping)
-
-
-def deduplicate_uuids(table=None):
-    """Detect and solve entities with duplicate UUIDs in a given database table.
-
-    Before aiida-core v1.0.0, there was no uniqueness constraint on the UUID column of the node table in the database
-    and a few other tables as well. This made it possible to store multiple entities with identical UUIDs in the same
-    table without the database complaining. This bug was fixed in aiida-core=1.0.0 by putting an explicit uniqueness
-    constraint on UUIDs on the database level. However, this would leave databases created before this patch with
-    duplicate UUIDs in an inconsistent state. This command will run an analysis to detect duplicate UUIDs in a given
-    table and solve it by generating new UUIDs. Note that it will not delete or merge any rows.
-
-    :return: list of strings denoting the performed operations
-    :raises ValueError: if the specified table is invalid
-    """
-    import distutils.dir_util
-    from collections import defaultdict
-
-    from aiida.common.utils import get_new_uuid
-
-    mapping = defaultdict(list)
-
-    for pk, uuid in get_duplicate_uuids(table=table):
-        mapping[uuid].append(int(pk))
-
-    messages = []
-    mapping_new_uuid = {}
-
-    for uuid, rows in mapping.items():
-
-        uuid_ref = None
-
-        for pk in rows:
-
-            # We don't have to change all rows that have the same UUID, the first one can keep the original
-            if uuid_ref is None:
-                uuid_ref = uuid
-                continue
-
-            uuid_new = str(get_new_uuid())
-            mapping_new_uuid[pk] = uuid_new
-
-            messages.append(f'updated UUID of {table} row<{pk}> from {uuid_ref} to {uuid_new}')
-            dirpath_repo_ref = get_node_repository_sub_folder(uuid_ref)
-            dirpath_repo_new = get_node_repository_sub_folder(uuid_new)
-
-            # First make sure the new repository exists, then copy the contents of the ref into the new. We use the
-            # somewhat unknown `distuitils.dir_util` method since that does just contents as we want.
-            os.makedirs(dirpath_repo_new, exist_ok=True)
-            distutils.dir_util.copy_tree(dirpath_repo_ref, dirpath_repo_new)
-
-    apply_new_uuid_mapping(table, mapping_new_uuid)
-
-    if not messages:
-        messages = ['no duplicate UUIDs found']
-
-    return messages

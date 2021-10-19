@@ -89,7 +89,7 @@ Place this command in your shell or virtual environment activation script to aut
 This file is shell specific, but likely one of the following:
 
     * the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
-    * the `activation script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
+    * the `activators <https://virtualenv.pypa.io/en/latest/user_guide.html#activators>`_ of your virtual environment
     * a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
 
 
@@ -409,9 +409,7 @@ Failing to do so, may leave your installation in a broken state, or worse may ev
         * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
         * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-    6. Run `reentry scan` to update the cache of registered entry points.
-
-    7. Migrate your database with ``verdi -p <profile_name> database migrate``.
+    6. Migrate your database with ``verdi -p <profile_name> database migrate``.
        Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.

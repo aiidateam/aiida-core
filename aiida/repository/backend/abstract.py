@@ -144,17 +144,15 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         with self.open(key) as handle:  # pylint: disable=not-context-manager
             return handle.read()
 
+    @abc.abstractmethod
     def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
-        """Return an iterator over the byte streams of objects identified by key.
+        """Return an iterator over the (read-only) byte streams of objects identified by key.
 
         :param keys: fully qualified identifiers for the objects within the repository.
         :return: an iterator over the object byte streams.
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if a file could not be opened.
         """
-        for key in keys:
-            with self.open(key) as handle:  # pylint: disable=not-context-manager
-                yield key, handle
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.

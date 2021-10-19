@@ -19,7 +19,7 @@ import pytest
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
-from aiida.orm import Code, load_code
+from aiida.orm import Code, Computer, load_code
 
 
 @pytest.fixture
@@ -303,7 +303,7 @@ def test_code_setup_remote_duplicate_full_label_non_interactive(
     run_cli_command, aiida_local_code_factory, aiida_localhost, label_first
 ):
     """Test ``verdi code setup`` for a remote code in non-interactive mode specifying an existing full label."""
-    label = 'some-label'
+    label = f'some-label-{label_first}'
     aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
     assert isinstance(load_code(label), Code)
 
@@ -318,7 +318,6 @@ def test_code_setup_remote_duplicate_full_label_non_interactive(
     assert f'the code `{label}@{aiida_localhost.label}` already exists.' in result.output
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_setup_local_duplicate_full_label_interactive(
     run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
@@ -377,3 +376,24 @@ def test_validate_label_uniqueness(monkeypatch, aiida_localhost):
 
     with pytest.raises(click.BadParameter, match=r'multiple copies of the local code `.*` already exist.'):
         validate_label_uniqueness(ctx, None, 'some-code')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_test(run_cli_command):
+    """Test the ``verdi code test`` command."""
+    computer = Computer(
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+    ).store()
+    code = Code(remote_computer_exec=[computer, '/bin/invalid']).store()
+
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)], raises=True)
+    assert 'Could not connect to the configured computer' in result.output
+
+    computer.configure()
+
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)], raises=True)
+    assert 'the provided remote absolute path `/bin/invalid` does not exist' in result.output
+
+    code = Code(remote_computer_exec=[computer, '/bin/bash']).store()
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)])
+    assert 'all tests succeeded.' in result.output

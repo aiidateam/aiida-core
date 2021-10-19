@@ -78,6 +78,7 @@ Below is a list with all available subcommands.
       reveal     Reveal one or more hidden codes in `verdi code list`.
       setup      Setup a new code.
       show       Display detailed information for a code.
+      test       Run tests for the given code to check whether it is usable.
 
 
 .. _reference:command-line:verdi-computer:

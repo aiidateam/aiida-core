@@ -265,6 +265,13 @@ Use this, for instance, to load modules or set variables that are needed by the 
 
 At the end, you receive a confirmation, with the *PK* and the *UUID* of your new code.
 
+.. tip::
+
+    The ``verdi code setup`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
+    If you want additional checks to verify the code is properly configured and usable, run the `verdi code test` command.
+    For remote codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
+    Look at the command help to see what other checks may be run.
+
 .. admonition:: Using configuration files
     :class: tip title-icon-lightbulb
 

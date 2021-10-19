@@ -10,7 +10,7 @@ import contextlib
 import hashlib
 import io
 import pathlib
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Union
+from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple, Union
 
 from aiida.common.hashing import chunked_file_hash
 
@@ -143,6 +143,18 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
         with self.open(key) as handle:  # pylint: disable=not-context-manager
             return handle.read()
+
+    @abc.abstractmethod
+    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+        """Return an iterator over the (read-only) byte streams of objects identified by key.
+
+        .. note:: handles should only be read within the context of this iterator.
+
+        :param keys: fully qualified identifiers for the objects within the repository.
+        :return: an iterator over the object byte streams.
+        :raise FileNotFoundError: if the file does not exist.
+        :raise OSError: if a file could not be opened.
+        """
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.

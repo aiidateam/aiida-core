@@ -25,7 +25,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
         return
 
     def erase(self):
-        pass
+        raise NotImplementedError
 
     @property
     def is_initialised(self) -> bool:
@@ -44,7 +44,10 @@ class RepositoryBackend(AbstractRepositoryBackend):
         return [True]
 
     def list_objects(self) -> Iterable[str]:
-        pass
+        raise NotImplementedError
+
+    def iter_object_streams(self, keys: List[str]):
+        raise NotImplementedError
 
 
 @pytest.fixture(scope='function')

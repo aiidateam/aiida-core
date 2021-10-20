@@ -1198,7 +1198,9 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> Tuple[EntityTypes, Classifier]
         classifiers = Classifier(cls.class_node_type)  # type: ignore[union-attr]
         ormclass = EntityTypes.NODE
     elif issubclass(cls, groups.Group):
-        classifiers = Classifier(GROUP_ENTITY_TYPE_PREFIX + cls._type_string)  # type: ignore[union-attr]
+        type_string = cls._type_string
+        assert type_string is not None, 'Group not registered as entry point'
+        classifiers = Classifier(GROUP_ENTITY_TYPE_PREFIX + type_string)
         ormclass = EntityTypes.GROUP
     elif issubclass(cls, computers.Computer):
         classifiers = Classifier('computer')

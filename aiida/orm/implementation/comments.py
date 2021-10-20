@@ -20,7 +20,7 @@ class BackendComment(BackendEntity):
     """Base class for a node comment."""
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         return str(self._dbmodel.uuid)
 
     @property

@@ -8,12 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Comment objects and functions"""
-from typing import List, Type
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional, Type
 
 from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 
 from . import entities, users
+
+if TYPE_CHECKING:
+    from aiida.orm import Node, User
+    from aiida.orm.implementation import Backend
 
 __all__ = ('Comment',)
 
@@ -68,55 +73,59 @@ class Comment(entities.Entity):
     def objects(cls) -> CommentCollection:  # pylint: disable=no-self-argument
         return CommentCollection.get_cached(cls, get_manager().get_backend())
 
-    def __init__(self, node, user, content=None, backend=None):
-        """
-        Create a Comment for a given node and user
+    def __init__(self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['Backend'] = None):
+        """Create a Comment for a given node and user
 
         :param node: a Node instance
-        :type node: :class:`aiida.orm.Node`
-
         :param user: a User instance
-        :type user: :class:`aiida.orm.User`
-
         :param content: the comment content
-        :type content: str
+        :param backend: the backend to use for the instance, or use the default backend if None
 
         :return: a Comment object associated to the given node and user
-        :rtype: :class:`aiida.orm.Comment`
         """
         backend = backend or get_manager().get_backend()
         model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
         super().__init__(model)
 
-    def __str__(self):
+    def __str__(self) -> str:
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]
         return 'Comment<{}> for node<{}> and user<{}>: {}'.format(*arguments)
 
     @property
-    def ctime(self):
+    def uuid(self) -> str:
+        """Return the UUID for this comment.
+
+        This identifier is unique across all entities types and backend instances.
+
+        :return: the entity uuid
+        """
+        return self._backend_entity.uuid
+
+    @property
+    def ctime(self) -> datetime:
         return self._backend_entity.ctime
 
     @property
-    def mtime(self):
+    def mtime(self) -> datetime:
         return self._backend_entity.mtime
 
-    def set_mtime(self, value):
+    def set_mtime(self, value: datetime) -> None:
         return self._backend_entity.set_mtime(value)
 
     @property
-    def node(self):
+    def node(self) -> 'Node':
         return self._backend_entity.node
 
     @property
-    def user(self):
+    def user(self) -> 'User':
         return users.User.from_backend_entity(self._backend_entity.user)
 
-    def set_user(self, value):
+    def set_user(self, value: 'User') -> None:
         self._backend_entity.user = value.backend_entity
 
     @property
-    def content(self):
+    def content(self) -> str:
         return self._backend_entity.content
 
-    def set_content(self, value):
+    def set_content(self, value: str) -> None:
         return self._backend_entity.set_content(value)

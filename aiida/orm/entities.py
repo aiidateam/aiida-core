@@ -99,7 +99,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def query(
         self,
-        filters: Optional[Dict[str, 'FilterType']] = None,
+        filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None
@@ -133,7 +133,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def find(
         self,
-        filters: Optional[Dict[str, 'FilterType']] = None,
+        filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
         limit: Optional[int] = None
     ) -> List[EntityType]:
@@ -155,7 +155,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         """
         return cast(List[EntityType], self.query().all(flat=True))  # pylint: disable=no-member
 
-    def count(self, filters: Optional[Dict[str, 'FilterType']] = None) -> int:
+    def count(self, filters: Optional['FilterType'] = None) -> int:
         """Count entities in this collection according to criteria.
 
         :param filters: the keyword value pair filters to match
@@ -236,17 +236,6 @@ class Entity(abc.ABC):
         :return: the entity's principal key
         """
         return self.id
-
-    @property
-    def uuid(self):
-        """Return the UUID for this entity.
-
-        This identifier is unique across all entities types and backend instances.
-
-        :return: the entity uuid
-        :rtype: :class:`uuid.UUID`
-        """
-        return self._backend_entity.uuid
 
     def store(self: EntityType) -> EntityType:
         """Store the entity."""

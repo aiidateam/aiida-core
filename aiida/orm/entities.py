@@ -33,6 +33,7 @@ __all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityExtrasMixin')
 
 CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')
+BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
 _NO_DEFAULT: Any = tuple()
 
@@ -165,7 +166,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC):
+class Entity(abc.ABC, Generic[BackendEntityType]):
     """An AiiDA entity"""
 
     @classproperty
@@ -181,7 +182,7 @@ class Entity(abc.ABC):
         return cls.objects.get(**kwargs)  # pylint: disable=no-member
 
     @classmethod
-    def from_backend_entity(cls: Type[EntityType], backend_entity: 'BackendEntity') -> EntityType:
+    def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
         """
         Construct an entity from a backend entity instance
 
@@ -197,14 +198,14 @@ class Entity(abc.ABC):
         call_with_super_check(entity.initialize)
         return entity
 
-    def __init__(self, backend_entity: 'BackendEntity') -> None:
+    def __init__(self, backend_entity: BackendEntityType) -> None:
         """
         :param backend_entity: the backend model supporting this entity
         """
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
 
-    def init_from_backend(self, backend_entity: 'BackendEntity') -> None:
+    def init_from_backend(self, backend_entity: BackendEntityType) -> None:
         """
         :param backend_entity: the backend model supporting this entity
         """
@@ -253,7 +254,7 @@ class Entity(abc.ABC):
         return self._backend_entity.backend
 
     @property
-    def backend_entity(self) -> 'BackendEntity':
+    def backend_entity(self) -> BackendEntityType:
         """Get the implementing class for this object"""
         return self._backend_entity
 

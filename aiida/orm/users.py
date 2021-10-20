@@ -17,7 +17,7 @@ from aiida.manage.manager import get_manager
 from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import Backend, BackendUser
 
 __all__ = ('User',)
 
@@ -72,7 +72,7 @@ class UserCollection(entities.Collection['User']):
         self._default_user = self.UNDEFINED
 
 
-class User(entities.Entity):
+class User(entities.Entity['BackendUser']):
     """AiiDA User"""
 
     Collection = UserCollection

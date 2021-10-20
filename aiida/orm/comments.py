@@ -18,7 +18,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import Backend, BackendComment
 
 __all__ = ('Comment',)
 
@@ -64,7 +64,7 @@ class CommentCollection(entities.Collection['Comment']):
         return self._backend.comments.delete_many(filters)
 
 
-class Comment(entities.Entity):
+class Comment(entities.Entity['BackendComment']):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
     Collection = CommentCollection

@@ -20,7 +20,7 @@ from . import convert, entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import Backend, BackendGroup
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -109,7 +109,7 @@ class GroupCollection(entities.Collection['Group']):
         self._backend.groups.delete(pk)
 
 
-class Group(entities.Entity, entities.EntityExtrasMixin, metaclass=GroupMeta):
+class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
 
     # added by metaclass

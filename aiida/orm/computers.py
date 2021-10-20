@@ -15,13 +15,13 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
-from aiida.orm.implementation import Backend
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
+    from aiida.orm.implementation import Backend, BackendComputer
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 
@@ -62,7 +62,7 @@ class ComputerCollection(entities.Collection['Computer']):
         return self._backend.computers.delete(pk)
 
 
-class Computer(entities.Entity):
+class Computer(entities.Entity['BackendComputer']):
     """
     Computer entity.
     """
@@ -89,7 +89,7 @@ class Computer(entities.Entity):
         transport_type: str = '',
         scheduler_type: str = '',
         workdir: str = None,
-        backend: Backend = None,
+        backend: Optional['Backend'] = None,
     ) -> None:
         """Construct a new computer."""
         backend = backend or get_manager().get_backend()

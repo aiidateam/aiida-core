@@ -20,7 +20,7 @@ from . import entities
 
 if TYPE_CHECKING:
     from aiida.orm import Node
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import Backend, BackendLog
     from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
@@ -123,7 +123,7 @@ class LogCollection(entities.Collection['Log']):
         return self._backend.logs.delete_many(filters)
 
 
-class Log(entities.Entity):
+class Log(entities.Entity['BackendLog']):
     """
     An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node.
     """

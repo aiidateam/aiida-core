@@ -19,7 +19,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import Backend, BackendAuthInfo
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -40,7 +40,7 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
         self._backend.authinfos.delete(pk)
 
 
-class AuthInfo(entities.Entity):
+class AuthInfo(entities.Entity['BackendAuthInfo']):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     Collection = AuthInfoCollection

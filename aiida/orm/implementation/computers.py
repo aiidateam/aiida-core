@@ -124,6 +124,10 @@ class BackendComputer(BackendEntity):
     def set_transport_type(self, transport_type):
         pass
 
+    @abc.abstractmethod
+    def copy(self) -> 'BackendComputer':
+        """Create an unstored clone of an already stored `Computer`."""
+
 
 class BackendComputerCollection(BackendCollection[BackendComputer]):
     """The collection of Computer entries."""

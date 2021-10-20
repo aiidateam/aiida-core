@@ -72,7 +72,7 @@ def delete_nodes(
             DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
 
     pks_set_to_delete = get_nodes_delete(
-        pks, get_links=False, missing_callback=_missing_callback, backend=backend**traversal_rules
+        pks, get_links=False, missing_callback=_missing_callback, backend=backend, **traversal_rules
     )['nodes']
 
     DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))

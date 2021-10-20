@@ -21,11 +21,6 @@ py:class builtins.dict
 # typing
 py:class AbstractContextManager
 py:class asyncio.events.AbstractEventLoop
-py:class EntityType
-py:class EntityTypes
-py:class ModelType
-py:class TransactionType
-py:class ReturnType
 py:class function
 py:class IO
 py:class traceback
@@ -48,6 +43,7 @@ py:class aiida.orm.utils.links.LinkQuadruple
 py:class aiida.tools.importexport.dbexport.ExportReport
 py:class aiida.tools.importexport.dbexport.ArchiveData
 py:class aiida.tools.groups.paths.WalkNodeResult
+py:meth aiida.orm.groups.GroupCollection.delete
 
 py:class Backend
 py:class BackendEntity
@@ -57,16 +53,22 @@ py:class AuthInfo
 py:class CalcJob
 py:class CalcJobImporter
 py:class CalcJobNode
+py:class CollectionType
 py:class Data
 py:class DbImporter
+py:class EntityType
+py:class EntityTypes
 py:class ExitCode
 py:class File
+py:class FilterType
 py:class FolderData
 py:class Group
 py:class JobInfo
 py:class JobState
+py:class ModelType
 py:class Node
 py:class Orbital
+py:class OrderByType
 py:class Parser
 py:class PersistenceError
 py:class Process
@@ -76,14 +78,26 @@ py:class ProcessSpec
 py:class Profile
 py:class Port
 py:class PortNamespace
+py:class QueryBuilder
 py:class Repository
+py:class ReturnType
 py:class Runner
 py:class Scheduler
 py:class SqlaBackend
+py:class SelfType
+py:class TransactionType
 py:class Transport
 py:class TransportQueue
 py:class WorkChain
 py:class WorkChainSpec
+
+py:class AuthInfoCollection
+py:class CommentCollection
+py:class ComputerCollection
+py:class GroupCollection
+py:class LogCollection
+py:class NodeCollection
+py:class UserCollection
 
 py:class kiwipy.communications.Communicator
 py:class plumpy.process_states.State

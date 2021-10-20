@@ -311,7 +311,10 @@ class BaseRestartWorkChain(WorkChain):
                 output = exposed_outputs[name]
             except KeyError:
                 if port.required:
-                    self.report(f"required output '{name}' was not an output of {self.ctx.process_name}<{node.pk}>")
+                    self.report(
+                        f'required output \'{name}\' was not an output of {self.ctx.process_name}<{node.pk}> '
+                        f'(or an incorrect class/output is being exposed).'
+                    )
             else:
                 self.out(name, output)
 

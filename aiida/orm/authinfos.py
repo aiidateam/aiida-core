@@ -8,8 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
+from typing import Type
 
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 from aiida.plugins import TransportFactory
 
@@ -18,22 +20,33 @@ from . import entities, users
 __all__ = ('AuthInfo',)
 
 
+class AuthInfoCollection(entities.Collection['AuthInfo']):
+    """The collection of `AuthInfo` entries."""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['AuthInfo']:
+        return AuthInfo
+
+    def delete(self, pk: int) -> None:
+        """Delete an entry from the collection.
+
+        :param pk: the pk of the entry to delete
+        """
+        self._backend.authinfos.delete(pk)
+
+
 class AuthInfo(entities.Entity):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
-    class Collection(entities.Collection):
-        """The collection of `AuthInfo` entries."""
+    Collection = AuthInfoCollection
 
-        def delete(self, pk):
-            """Delete an entry from the collection.
-
-            :param pk: the pk of the entry to delete
-            """
-            self._backend.authinfos.delete(pk)
+    @classproperty
+    def objects(cls) -> AuthInfoCollection:  # pylint: disable=no-self-argument
+        return AuthInfoCollection.get_cached(cls, get_manager().get_backend())
 
     PROPERTY_WORKDIR = 'workdir'
 
-    def __init__(self, computer, user, backend=None):
+    def __init__(self, computer, user, backend=None) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
         :param computer: a `Computer` instance
@@ -41,8 +54,6 @@ class AuthInfo(entities.Entity):
 
         :param user: a `User` instance
         :type user: :class:`aiida.orm.User`
-
-        :rtype: :class:`aiida.orm.authinfos.AuthInfo`
         """
         backend = backend or get_manager().get_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)

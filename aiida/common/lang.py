@@ -11,7 +11,7 @@
 import functools
 import inspect
 import keyword
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, Type, TypeVar
 
 
 def isidentifier(identifier):
@@ -77,6 +77,7 @@ def override_decorator(check=False):
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
 ReturnType = TypeVar('ReturnType')
+SelfType = TypeVar('SelfType')
 
 
 class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
@@ -88,8 +89,8 @@ class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
     instance as its first argument).
     """
 
-    def __init__(self, getter: Callable[[Any], ReturnType]) -> None:
+    def __init__(self, getter: Callable[[Type[SelfType]], ReturnType]) -> None:
         self.getter = getter
 
-    def __get__(self, instance: Any, owner: Any) -> ReturnType:
+    def __get__(self, instance: Any, owner: Type[SelfType]) -> ReturnType:
         return self.getter(owner)

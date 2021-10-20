@@ -456,11 +456,11 @@ class Node(
         """
         from aiida.orm.utils.links import validate_link
 
-        validate_link(source, self, link_type, link_label)
+        validate_link(source, self, link_type, link_label, backend=self.backend)
 
         # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
         if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
-            builder = QueryBuilder().append(
+            builder = QueryBuilder(backend=self.backend).append(
                 Node, filters={'id': self.pk}, tag='parent').append(
                 Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')  # yapf:disable
             if builder.count() > 0:
@@ -537,7 +537,7 @@ class Node(
         if link_label_filter:
             edge_filters['label'] = {'like': link_label_filter}
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=self.backend)
         builder.append(Node, filters=node_filters, tag='main')
 
         node_project = ['uuid'] if only_uuid else ['*']
@@ -894,7 +894,7 @@ class Node(
         if not node_hash or not self._cachable:
             return iter(())
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=self.backend)
         builder.append(self.__class__, filters={'extras._aiida_hash': node_hash}, project='*', subclassing=False)
         nodes_identical = (n[0] for n in builder.iterall())
 

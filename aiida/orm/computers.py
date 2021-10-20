@@ -36,7 +36,6 @@ class ComputerCollection(entities.Collection['Computer']):
         create (and store) a new Computer if such a Computer was not present yet.
 
         :param label: computer label
-        :type label: str
 
         :return: (computer, created) where computer is the computer (new or existing,
             in any case already stored) and created is a boolean saying
@@ -53,7 +52,7 @@ class ComputerCollection(entities.Collection['Computer']):
         """Return a list with all the labels of the computers in the DB."""
         return self._backend.computers.list_names()
 
-    def delete(self, pk: int):
+    def delete(self, pk: int) -> None:
         """Delete the computer with the given id"""
         return self._backend.computers.delete(pk)
 

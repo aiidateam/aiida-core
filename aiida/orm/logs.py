@@ -8,11 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for orm logging abstract classes"""
+import logging
+from typing import TYPE_CHECKING, List, Optional, Type
 
 from aiida.common import timezone
+from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 
 from . import entities
+
+if TYPE_CHECKING:
+    from aiida.orm import Node
+    from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
 
@@ -24,114 +31,108 @@ def OrderSpecifier(field, direction):  # pylint: disable=invalid-name
     return {field: direction}
 
 
+class LogCollection(entities.Collection['Log']):
+    """
+    This class represents the collection of logs and can be used to create
+    and retrieve logs.
+    """
+
+    @staticmethod
+    def _entity_base_cls() -> Type['Log']:
+        return Log
+
+    def create_entry_from_record(self, record: logging.LogRecord) -> 'Log':
+        """Helper function to create a log entry from a record created as by the python logging library
+
+        :param record: The record created by the logging module
+        :return: A stored log instance
+        """
+        from datetime import datetime
+
+        dbnode_id = record.__dict__.get('dbnode_id', None)
+
+        # Do not store if dbnode_id is not set
+        if dbnode_id is None:
+            return None
+
+        metadata = dict(record.__dict__)
+
+        # If an `exc_info` is present, the log message was an exception, so format the full traceback
+        try:
+            import traceback
+            exc_info = metadata.pop('exc_info')
+            message = ''.join(traceback.format_exception(*exc_info))
+        except (TypeError, KeyError):
+            message = record.getMessage()
+
+        # Stringify the content of `args` if they exist in the metadata to ensure serializability
+        for key in ['args']:
+            if key in metadata:
+                metadata[key] = str(metadata[key])
+
+        return Log(
+            time=timezone.make_aware(datetime.fromtimestamp(record.created)),
+            loggername=record.name,
+            levelname=record.levelname,
+            dbnode_id=dbnode_id,
+            message=message,
+            metadata=metadata,
+            backend=self.backend
+        )
+
+    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
+        """Get all the log messages for a given node and optionally sort
+
+        :param entity: the entity to get logs for
+        :param order_by: a list of (key, direction) pairs specifying the sort order
+
+        :return: the list of log entries
+        """
+        from . import nodes
+
+        if not isinstance(entity, nodes.Node):
+            raise Exception('Only node logs are stored')
+
+        return self.find({'dbnode_id': entity.pk}, order_by=order_by)
+
+    def delete(self, pk: int) -> None:
+        """Remove a Log entry from the collection with the given id
+
+        :param pk: id of the Log to delete
+
+        :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``pk`` is not found
+        """
+        return self._backend.logs.delete(pk)
+
+    def delete_all(self) -> None:
+        """Delete all Logs in the collection
+
+        :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
+        """
+        return self._backend.logs.delete_all()
+
+    def delete_many(self, filters: 'FilterType') -> List[int]:
+        """Delete Logs based on ``filters``
+
+        :param filters: filters to pass to the QueryBuilder
+        :return: (former) ``PK`` s of deleted Logs
+
+        :raises TypeError: if ``filters`` is not a `dict`
+        :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
+        """
+        return self._backend.logs.delete_many(filters)
+
+
 class Log(entities.Entity):
     """
     An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node.
     """
 
-    class Collection(entities.Collection):
-        """
-        This class represents the collection of logs and can be used to create
-        and retrieve logs.
-        """
+    Collection = LogCollection
 
-        @staticmethod
-        def create_entry_from_record(record):
-            """
-            Helper function to create a log entry from a record created as by the python logging library
-
-            :param record: The record created by the logging module
-            :type record: :class:`logging.LogRecord`
-
-            :return: An object implementing the log entry interface
-            :rtype: :class:`aiida.orm.logs.Log`
-            """
-            from datetime import datetime
-
-            dbnode_id = record.__dict__.get('dbnode_id', None)
-
-            # Do not store if dbnode_id is not set
-            if dbnode_id is None:
-                return None
-
-            metadata = dict(record.__dict__)
-
-            # If an `exc_info` is present, the log message was an exception, so format the full traceback
-            try:
-                import traceback
-                exc_info = metadata.pop('exc_info')
-                message = ''.join(traceback.format_exception(*exc_info))
-            except (TypeError, KeyError):
-                message = record.getMessage()
-
-            # Stringify the content of `args` if they exist in the metadata to ensure serializability
-            for key in ['args']:
-                if key in metadata:
-                    metadata[key] = str(metadata[key])
-
-            return Log(
-                time=timezone.make_aware(datetime.fromtimestamp(record.created)),
-                loggername=record.name,
-                levelname=record.levelname,
-                dbnode_id=dbnode_id,
-                message=message,
-                metadata=metadata
-            )
-
-        def get_logs_for(self, entity, order_by=None):
-            """
-            Get all the log messages for a given entity and optionally sort
-
-            :param entity: the entity to get logs for
-            :type entity: :class:`aiida.orm.Entity`
-
-            :param order_by: a list of (key, direction) pairs specifying the sort order
-            :type order_by: list
-
-            :return: the list of log entries
-            :rtype: list
-            """
-            from . import nodes
-
-            if not isinstance(entity, nodes.Node):
-                raise Exception('Only node logs are stored')
-
-            return self.find({'dbnode_id': entity.pk}, order_by=order_by)
-
-        def delete(self, log_id):
-            """
-            Remove a Log entry from the collection with the given id
-
-            :param log_id: id of the Log to delete
-            :type log_id: int
-
-            :raises TypeError: if ``log_id`` is not an `int`
-            :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
-            """
-            self._backend.logs.delete(log_id)
-
-        def delete_all(self):
-            """
-            Delete all Logs in the collection
-
-            :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
-            """
-            self._backend.logs.delete_all()
-
-        def delete_many(self, filters):
-            """
-            Delete Logs based on ``filters``
-
-            :param filters: similar to QueryBuilder filter
-            :type filters: dict
-
-            :return: (former) ``PK`` s of deleted Logs
-            :rtype: list
-
-            :raises TypeError: if ``filters`` is not a `dict`
-            :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
-            """
-            self._backend.logs.delete_many(filters)
+    @classproperty
+    def objects(cls) -> LogCollection:  # pylint: disable=no-self-argument
+        return LogCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(self, time, loggername, levelname, dbnode_id, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
         """Construct a new log

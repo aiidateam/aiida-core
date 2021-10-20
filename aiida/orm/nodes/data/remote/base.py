@@ -177,4 +177,4 @@ class RemoteData(Data):
             raise ValidationError('Remote computer not set.')
 
     def get_authinfo(self):
-        return AuthInfo.objects.get(dbcomputer=self.computer, aiidauser=self.user)
+        return AuthInfo.objects(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)

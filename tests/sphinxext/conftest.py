@@ -10,13 +10,13 @@
 """Pytest fixtures for AiiDA sphinx extension tests."""
 import os
 from pathlib import Path
-import sys
 import shutil
+import sys
 import xml.etree.ElementTree as ET
 
+import pytest
 from sphinx.testing.path import path as sphinx_path
 from sphinx.testing.util import SphinxTestApp
-import pytest
 
 SRC_DIR = Path(__file__).parent / 'sources'
 WORKCHAIN_DIR = Path(__file__).parent / 'workchains'

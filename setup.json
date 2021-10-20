@@ -20,7 +20,7 @@
         "Topic :: Scientific/Engineering"
     ],
     "install_requires": [
-        "aldjemy~=2.2",
+        "aldjemy~=2.4",
         "alembic~=1.2",
         "archive-path~=0.2.1",
         "aio-pika~=6.6",
@@ -97,7 +97,7 @@
             "mypy==0.910",
             "packaging==20.3",
             "pre-commit~=2.2",
-            "pylint~=2.9.4",
+            "pylint~=2.11.1",
             "pylint-django",
             "sqlalchemy2-stubs"
         ],
@@ -131,6 +131,9 @@
             "core.transfer = aiida.calculations.transfer:TransferCalculation",
             "core.arithmetic.add = aiida.calculations.arithmetic.add:ArithmeticAddCalculation",
             "core.templatereplacer = aiida.calculations.templatereplacer:TemplatereplacerCalculation"
+        ],
+        "aiida.calculations.importers": [
+            "core.arithmetic.add = aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter"
         ],
         "aiida.cmdline.computer.configure": [
             "core.local = aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD",

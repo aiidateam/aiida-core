@@ -15,7 +15,8 @@ import shutil
 import tempfile
 
 from aiida import orm
-from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport import export, import_data
+
 from .. import AiidaArchiveTestCase
 
 

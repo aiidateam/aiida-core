@@ -10,8 +10,8 @@
 """Test utility to import, inspect, or migrate AiiDA export archives."""
 import os
 import tarfile
-import zipfile
 from typing import List
+import zipfile
 
 from archive_path import read_file_in_tar, read_file_in_zip
 

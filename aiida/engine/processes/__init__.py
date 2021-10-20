@@ -30,6 +30,7 @@ __all__ = (
     'AwaitableTarget',
     'BaseRestartWorkChain',
     'CalcJob',
+    'CalcJobImporter',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
     'ExitCode',

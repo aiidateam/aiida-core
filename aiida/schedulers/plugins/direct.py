@@ -11,10 +11,10 @@
 Plugin for direct execution.
 """
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
+import aiida.schedulers
 from aiida.schedulers import SchedulerError
-from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,

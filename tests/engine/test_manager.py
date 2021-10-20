@@ -9,13 +9,13 @@
 ###########################################################################
 """Tests for the classes in `aiida.engine.processes.calcjobs.manager`."""
 
-import time
 import asyncio
+import time
 
-from aiida.orm import AuthInfo, User
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
 from aiida.engine.transports import TransportQueue
+from aiida.orm import AuthInfo, User
 
 
 class TestJobManager(AiidaTestCase):

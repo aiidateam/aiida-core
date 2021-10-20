@@ -11,8 +11,8 @@
 import pytest
 
 from aiida import orm
-from aiida.common import datastructures
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq

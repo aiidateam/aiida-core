@@ -11,6 +11,7 @@
 import os
 
 from aiida.orm import AuthInfo
+
 from ..data import Data
 
 __all__ = ('RemoteData',)
@@ -88,7 +89,7 @@ class RemoteData(Data):
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 transport.chdir(full_path)
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -101,7 +102,7 @@ class RemoteData(Data):
             try:
                 return transport.listdir()
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -125,7 +126,7 @@ class RemoteData(Data):
                 full_path = os.path.join(self.get_remote_path(), path)
                 transport.chdir(full_path)
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -138,7 +139,7 @@ class RemoteData(Data):
             try:
                 return transport.listdir_withattributes()
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -176,4 +177,4 @@ class RemoteData(Data):
             raise ValidationError('Remote computer not set.')
 
     def get_authinfo(self):
-        return AuthInfo.objects.get(dbcomputer=self.computer, aiidauser=self.user)
+        return AuthInfo.objects(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)

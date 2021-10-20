@@ -146,7 +146,7 @@ class ModelWrapper:
 
         :return: boolean, True if currently in open transaction, False otherwise.
         """
-        return get_scoped_session().transaction.nested
+        return get_scoped_session().in_nested_transaction()
 
 
 @contextlib.contextmanager

@@ -11,8 +11,9 @@
 
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime
-from sqlalchemy.orm.exc import NoResultFound
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import node as models
@@ -20,9 +21,9 @@ from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation.utils import clean_value
 
-from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils as sqla_utils
+from .. import BackendNode, BackendNodeCollection
 from .computers import SqlaComputer
 from .users import SqlaUser
 

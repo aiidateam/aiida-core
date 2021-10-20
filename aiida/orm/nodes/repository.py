@@ -7,7 +7,7 @@ import tempfile
 from typing import BinaryIO, Dict, Iterable, Iterator, List, Tuple, Union
 
 from aiida.common import exceptions
-from aiida.repository import Repository, File
+from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)

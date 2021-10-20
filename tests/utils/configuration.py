@@ -21,7 +21,7 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
     :param name: name of the profile
     :param repository_dirpath: optional absolute path to use as the base for the repository path
     """
-    from aiida.manage.configuration import get_config, Profile
+    from aiida.manage.configuration import Profile, get_config
     from aiida.manage.external.postgres import DEFAULT_DBINFO
 
     if repository_dirpath is None:

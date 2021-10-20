@@ -23,6 +23,7 @@ class SqlAlchemyTests(AiidaTestImplementation):
 
     def clean_db(self):
         from sqlalchemy.sql import table
+
         # pylint: disable=invalid-name
         DbGroupNodes = table('db_dbgroup_dbnodes')
         DbGroup = table('db_dbgroup')

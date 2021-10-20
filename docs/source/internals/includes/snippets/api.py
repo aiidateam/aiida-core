@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from flask_restful import Resource
+
 from aiida.restapi.api import AiidaApi, App
 from aiida.restapi.run_api import run_api
-from flask_restful import Resource
+
 
 class NewResource(Resource):
     """
@@ -17,7 +19,7 @@ class NewResource(Resource):
     """
 
     def get(self):
-        from aiida.orm import QueryBuilder, Dict
+        from aiida.orm import Dict, QueryBuilder
 
         qb = QueryBuilder()
         qb.append(Dict,
@@ -53,12 +55,14 @@ class NewApi(AiidaApi):
 
 # processing the options and running the app
 
-import aiida.restapi.common as common
 from aiida import load_profile
+import aiida.restapi.common as common
 
 CONFIG_DIR = common.__path__[0]
 
 import click
+
+
 @click.command()
 @click.option('-P', '--port', type=click.INT, default=5000,
     help='Port number')

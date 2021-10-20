@@ -17,7 +17,7 @@ import asyncio
 
 import pytest
 
-from aiida.engine import run_get_node, submit, while_, WorkChain
+from aiida.engine import WorkChain, run_get_node, submit, while_
 from aiida.manage.manager import get_manager
 from aiida.orm import Code, Int
 from aiida.plugins.factories import CalculationFactory

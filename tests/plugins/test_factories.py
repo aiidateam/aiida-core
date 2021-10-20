@@ -7,23 +7,23 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the :py:mod:`~aiida.plugins.factories` module."""
-from unittest.mock import patch
+import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidEntryPointTypeError
-from aiida.engine import calcfunction, workfunction, CalcJob, WorkChain
-from aiida.orm import Data, Node, CalcFunctionNode, WorkFunctionNode
+from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
+from aiida.orm import CalcFunctionNode, Data, Node, WorkFunctionNode
 from aiida.parsers import Parser
-from aiida.plugins import factories
+from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
-from aiida.transports import Transport
 from aiida.tools.data.orbital import Orbital
 from aiida.tools.dbimporters import DbImporter
+from aiida.transports import Transport
 
 
 def custom_load_entry_point(group, name):
-    """Function that mocks `aiida.plugins.entry_point.load_entry_point` that is called by factories."""
+    """Function that mocks :meth:`aiida.plugins.entry_point.load_entry_point` that is called by factories."""
 
     @calcfunction
     def calc_function():
@@ -39,6 +39,10 @@ def custom_load_entry_point(group, name):
             'calc_function': calc_function,
             'work_function': work_function,
             'work_chain': WorkChain
+        },
+        'aiida.calculations.importers': {
+            'importer': CalcJobImporter,
+            'invalid': CalcJob,
         },
         'aiida.data': {
             'valid': Data,
@@ -74,91 +78,107 @@ def custom_load_entry_point(group, name):
     return entry_points[group][name]
 
 
-class TestFactories(AiidaTestCase):
+@pytest.fixture
+def mock_load_entry_point(monkeypatch):
+    """Monkeypatch the :meth:`aiida.plugins.entry_point.load_entry_point` method."""
+    monkeypatch.setattr(entry_point, 'load_entry_point', custom_load_entry_point)
+    yield
+
+
+class TestFactories:
     """Tests for the :py:mod:`~aiida.plugins.factories` factory classes."""
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_calculation_factory(self):
-        """Test the `CalculationFactory`."""
+        """Test the ```CalculationFactory```."""
         plugin = factories.CalculationFactory('calc_function')
-        self.assertEqual(plugin.is_process_function, True)
-        self.assertEqual(plugin.node_class, CalcFunctionNode)
+        assert plugin.is_process_function
+        assert plugin.node_class is CalcFunctionNode
 
         plugin = factories.CalculationFactory('calc_job')
-        self.assertEqual(plugin, CalcJob)
+        assert plugin is CalcJob
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.CalculationFactory('work_function')
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.CalculationFactory('work_chain')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
+    def test_calc_job_importer_factory(self):
+        """Test the ``CalcJobImporterFactory``."""
+        plugin = factories.CalcJobImporterFactory('importer')
+        assert plugin is CalcJobImporter
+
+        with pytest.raises(InvalidEntryPointTypeError):
+            factories.CalcJobImporterFactory('invalid')
+
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_workflow_factory(self):
-        """Test the `WorkflowFactory`."""
+        """Test the ``WorkflowFactory``."""
         plugin = factories.WorkflowFactory('work_function')
-        self.assertEqual(plugin.is_process_function, True)
-        self.assertEqual(plugin.node_class, WorkFunctionNode)
+        assert plugin.is_process_function
+        assert plugin.node_class is WorkFunctionNode
 
         plugin = factories.WorkflowFactory('work_chain')
-        self.assertEqual(plugin, WorkChain)
+        assert plugin is WorkChain
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.WorkflowFactory('calc_function')
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.WorkflowFactory('calc_job')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_data_factory(self):
-        """Test the `DataFactory`."""
+        """Test the ``DataFactory``."""
         plugin = factories.DataFactory('valid')
-        self.assertEqual(plugin, Data)
+        assert plugin is Data
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.DataFactory('invalid')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_db_importer_factory(self):
-        """Test the `DbImporterFactory`."""
+        """Test the ``DbImporterFactory``."""
         plugin = factories.DbImporterFactory('valid')
-        self.assertEqual(plugin, DbImporter)
+        assert plugin is DbImporter
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.DbImporterFactory('invalid')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_orbital_factory(self):
-        """Test the `OrbitalFactory`."""
+        """Test the ``OrbitalFactory``."""
         plugin = factories.OrbitalFactory('valid')
-        self.assertEqual(plugin, Orbital)
+        assert plugin is Orbital
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.OrbitalFactory('invalid')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_parser_factory(self):
-        """Test the `ParserFactory`."""
+        """Test the ``ParserFactory``."""
         plugin = factories.ParserFactory('valid')
-        self.assertEqual(plugin, Parser)
+        assert plugin is Parser
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.ParserFactory('invalid')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_scheduler_factory(self):
-        """Test the `SchedulerFactory`."""
+        """Test the ``SchedulerFactory``."""
         plugin = factories.SchedulerFactory('valid')
-        self.assertEqual(plugin, Scheduler)
+        assert plugin is Scheduler
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.SchedulerFactory('invalid')
 
-    @patch('aiida.plugins.entry_point.load_entry_point', custom_load_entry_point)
+    @pytest.mark.usefixtures('mock_load_entry_point')
     def test_transport_factory(self):
-        """Test the `TransportFactory`."""
+        """Test the ``TransportFactory``."""
         plugin = factories.TransportFactory('valid')
-        self.assertEqual(plugin, Transport)
+        assert plugin is Transport
 
-        with self.assertRaises(InvalidEntryPointTypeError):
+        with pytest.raises(InvalidEntryPointTypeError):
             factories.TransportFactory('invalid')

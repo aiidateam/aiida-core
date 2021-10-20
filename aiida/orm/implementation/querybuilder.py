@@ -10,7 +10,7 @@
 """Abstract `QueryBuilder` definition."""
 import abc
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Set, Union
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 __all__ = ('BackendQueryBuilder',)
 
-QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('export')
+QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('orm.querybuilder')
 
 
 class EntityTypes(Enum):

@@ -9,11 +9,11 @@
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
 import collections
-from typing import Any, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
-from aiida.orm import Node
 from aiida.engine.processes.ports import PortNamespace
+from aiida.orm import Node
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process

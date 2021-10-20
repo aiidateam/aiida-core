@@ -8,8 +8,8 @@ import typing as t
 
 import pytest
 
-from aiida.repository import Repository, File, FileType
-from aiida.repository.backend import SandboxRepositoryBackend, DiskObjectStoreRepositoryBackend
+from aiida.repository import File, FileType, Repository
+from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
 
 @contextlib.contextmanager
@@ -355,7 +355,7 @@ def test_put_object_from_filelike_raises(repository, generate_directory):
         repository.put_object_from_filelike('file_a', directory / 'file_a')  # String
 
     with pytest.raises(TypeError):
-        with open(directory / 'file_a') as handle:
+        with open(directory / 'file_a', encoding='utf8') as handle:
             repository.put_object_from_filelike(handle, 'file_a')  # Not in binary mode
 
 

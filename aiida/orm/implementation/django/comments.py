@@ -10,17 +10,16 @@
 """Django implementations for the Comment entity and collection."""
 # pylint: disable=import-error,no-name-in-module
 import contextlib
-
 from datetime import datetime
+
 from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions, lang
 
+from . import entities, users
 from ..comments import BackendComment, BackendCommentCollection
 from .utils import ModelWrapper
-from . import entities
-from . import users
 
 
 class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment):

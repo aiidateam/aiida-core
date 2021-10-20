@@ -15,24 +15,26 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Union
 import uuid
 import warnings
 
-from sqlalchemy import and_, or_, not_, func as sa_func
+from sqlalchemy import and_
+from sqlalchemy import func as sa_func
+from sqlalchemy import not_, or_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import aliased, loading
-from sqlalchemy.orm.context import ORMCompileState, QueryContext
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql.expression import case, text
 from sqlalchemy.sql.compiler import SQLCompiler, TypeCompiler
-from sqlalchemy.sql.elements import BooleanClauseList, Cast, BinaryExpression, ColumnElement, Label, ColumnClause
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, Cast, ColumnClause, ColumnElement, Label
+from sqlalchemy.sql.expression import case, text
 from sqlalchemy.sql.functions import FunctionElement
-from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
+from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
-from aiida.orm.implementation.querybuilder import (BackendQueryBuilder, EntityTypes, QueryDictType, QUERYBUILD_LOGGER)
+from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, EntityTypes, QueryDictType
+
 from .joiner import SqlaJoiner
 
 
@@ -70,35 +72,6 @@ def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=funct
     Get length of array defined in a JSONB column
     """
     return f'jsonb_typeof({compiler.process(element.clauses, **kwargs)})'
-
-
-def _orm_setup_cursor_result(
-    session,
-    statement,
-    params,
-    execution_options,
-    bind_arguments,
-    result,
-):
-    """Patched class method."""
-    execution_context = result.context
-    compile_state = execution_context.compiled.compile_state
-
-    # this is the patch required for turning off de-duplication of results
-    compile_state._has_mapper_entities = False  # pylint: disable=protected-access
-
-    load_options = execution_options.get('_sa_orm_load_options', QueryContext.default_load_options)
-
-    querycontext = QueryContext(
-        compile_state,
-        statement,
-        params,
-        session,
-        load_options,
-        execution_options,
-        bind_arguments,
-    )
-    return loading.instances(result, querycontext)
 
 
 class SqlaQueryBuilder(BackendQueryBuilder):
@@ -229,7 +202,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """Return an iterator over all the results of a list of lists."""
         with self.use_query(data) as query:
 
-            for resultrow in query.yield_per(batch_size):  # type: ignore[arg-type] # pylint: disable=not-an-iterable
+            stmt = query.statement.execution_options(yield_per=batch_size)
+
+            for resultrow in self.get_session().execute(stmt):
                 # we discard the first item of the result row,
                 # which is what the query was initialised with
                 # and not one of the requested projection (see self._build)
@@ -240,7 +215,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """Return an iterator over all the results of a list of dictionaries."""
         with self.use_query(data) as query:
 
-            for row in query.yield_per(batch_size):  # type: ignore[arg-type] # pylint: disable=not-an-iterable
+            stmt = query.statement.execution_options(yield_per=batch_size)
+
+            for row in self.get_session().execute(stmt):
                 # build the yield result
                 yield_result: Dict[str, Dict[str, Any]] = {}
                 for tag, projected_entities_dict in self._tag_to_projected_fields.items():
@@ -255,20 +232,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     @contextmanager
     def use_query(self, data: QueryDictType) -> Iterator[Query]:
         """Yield the built query."""
-        # Currently, a monkey-patch is required to turn off de-duplication of results,
-        # carried out in the `use_query` method
-        # see: https://github.com/sqlalchemy/sqlalchemy/issues/4395#issuecomment-907293360
-        # THIS CAN BE REMOVED WHEN MOVING TO THE VERSION 2 API
-        existing_func = ORMCompileState.orm_setup_cursor_result
-        ORMCompileState.orm_setup_cursor_result = _orm_setup_cursor_result  # type: ignore[assignment]
         query = self._update_query(data)
         try:
             yield query
         except Exception:
             self.get_session().close()
             raise
-        finally:
-            ORMCompileState.orm_setup_cursor_result = existing_func  # type: ignore[assignment]
 
     def _update_query(self, data: QueryDictType) -> Query:
         """Return the sqlalchemy.orm.Query instance for the current query specification.
@@ -366,7 +335,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 alias = self._get_tag_alias(tag)
             except KeyError:
                 raise ValueError(f'Unknown tag {tag!r} in filters, known: {list(self._tag_to_alias)}')
-            self._query = self._query.filter(self.build_filters(alias, filter_specs))
+            filters = self.build_filters(alias, filter_specs)
+            if filters is not None:
+                self._query = self._query.filter(filters)
 
         # PROJECTIONS ##########################
 
@@ -493,7 +464,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         for projectable_spec in project_dict:
             for projectable_entity_name, extraspec in projectable_spec.items():
-                property_names = list()
+                property_names = []
                 if projectable_entity_name == '**':
                     # Need to expand
                     property_names.extend(self.modify_expansions(alias, self.get_column_names(alias)))
@@ -601,7 +572,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 '{}'.format(colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys()))  # pylint: disable=protected-access
             ) from exc
 
-    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> BooleanClauseList:
+    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> Optional[BooleanClauseList]:  # pylint: disable=too-many-branches
         """Recurse through the filter specification and apply filter operations.
 
         :param alias: The alias of the ORM class the filter will be applied on
@@ -612,17 +583,20 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         expressions: List[Any] = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
-                subexpressions = [
-                    self.build_filters(alias, sub_filter_spec) for sub_filter_spec in filter_operation_dict
-                ]
-                if path_spec == 'and':
-                    expressions.append(and_(*subexpressions))
-                elif path_spec == 'or':
-                    expressions.append(or_(*subexpressions))
-                elif path_spec in ('~and', '!and'):
-                    expressions.append(not_(and_(*subexpressions)))
-                elif path_spec in ('~or', '!or'):
-                    expressions.append(not_(or_(*subexpressions)))
+                subexpressions = []
+                for sub_filter_spec in filter_operation_dict:
+                    filters = self.build_filters(alias, sub_filter_spec)
+                    if filters is not None:
+                        subexpressions.append(filters)
+                if subexpressions:
+                    if path_spec == 'and':
+                        expressions.append(and_(*subexpressions))
+                    elif path_spec == 'or':
+                        expressions.append(or_(*subexpressions))
+                    elif path_spec in ('~and', '!and'):
+                        expressions.append(not_(and_(*subexpressions)))
+                    elif path_spec in ('~or', '!or'):
+                        expressions.append(not_(or_(*subexpressions)))
             else:
                 column_name = path_spec.split('.')[0]
 
@@ -650,7 +624,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             alias=alias
                         )
                     )
-        return and_(*expressions)
+        return and_(*expressions) if expressions else None
 
     def modify_expansions(self, alias: AliasedClass, expansions: List[str]) -> List[str]:
         """Modify names of projections if `**` was specified.

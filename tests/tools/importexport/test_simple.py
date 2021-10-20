@@ -17,7 +17,7 @@ from aiida.common import json
 from aiida.common.exceptions import LicensingException
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport import export, import_data
 from aiida.tools.importexport.common import exceptions
 
 
@@ -77,7 +77,7 @@ def test_calc_of_structuredata(aiida_profile, tmp_path, file_format):
     attrs = {}
     for pk in pks:
         node = orm.load_node(pk)
-        attrs[node.uuid] = dict()
+        attrs[node.uuid] = {}
         for k in node.attributes.keys():
             attrs[node.uuid][k] = node.get_attribute(k)
 

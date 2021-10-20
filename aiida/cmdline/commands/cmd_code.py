@@ -14,7 +14,7 @@ import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
@@ -146,8 +146,8 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code):
     """Display detailed information for a code."""
-    from aiida.repository import FileType
     from aiida.cmdline import is_verbose
+    from aiida.repository import FileType
 
     table = []
     table.append(['PK', code.pk])
@@ -250,19 +250,19 @@ def relabel(code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the available codes."""
-    from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
+    from aiida.orm import Code  # pylint: disable=redefined-outer-name
 
-    qb_user_filters = dict()
+    qb_user_filters = {}
     if not all_users:
         user = orm.User.objects.get_default()
         qb_user_filters['email'] = user.email
 
-    qb_computer_filters = dict()
+    qb_computer_filters = {}
     if computer is not None:
         qb_computer_filters['label'] = computer.label
 
-    qb_code_filters = dict()
+    qb_code_filters = {}
     if input_plugin is not None:
         qb_code_filters['attributes.input_plugin'] = input_plugin.name
 

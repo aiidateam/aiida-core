@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement
+# pylint: disable=global-statement,no-self-use
 """Test engine utilities such as the exponential backoff mechanism."""
 import asyncio
 
@@ -16,8 +16,7 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import calcfunction, workfunction
-from aiida.engine.utils import exponential_backoff_retry, is_process_function, \
-        InterruptableFuture, interruptable_task
+from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task, is_process_function
 
 ITERATION = 0
 MAX_ITERATIONS = 3

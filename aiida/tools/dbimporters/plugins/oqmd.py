@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """"Implementation of `DbImporter` for the OQMD database."""
-from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, CifEntry
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class OqmdDbImporter(DbImporter):
@@ -38,7 +38,7 @@ class OqmdDbImporter(DbImporter):
         :return: a strings for HTTP GET statement.
         """
         elements = []
-        if 'element' in kwargs.keys():
+        if 'element' in kwargs:
             elements = kwargs.pop('element')
         if not isinstance(elements, list):
             elements = [elements]
@@ -53,8 +53,8 @@ class OqmdDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdSearchResults`.
         """
-        from urllib.request import urlopen
         import re
+        from urllib.request import urlopen
 
         query_statement = self.query_get(**kwargs)
         with urlopen(query_statement) as handle:

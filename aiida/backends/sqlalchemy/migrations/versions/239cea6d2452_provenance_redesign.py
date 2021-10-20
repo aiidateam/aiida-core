@@ -19,9 +19,9 @@ Create Date: 2018-12-04 21:14:15.250247
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from alembic import op
-from sqlalchemy import String, Integer
-from sqlalchemy.sql import table, column, select, text
+from sqlalchemy import Integer, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import column, select, table, text
 
 # revision identifiers, used by Alembic.
 revision = '239cea6d2452'
@@ -41,7 +41,7 @@ def migrate_infer_calculation_entry_point(connection):
         column('process_type', String)
     )
 
-    query_set = connection.execute(select([DbNode.c.type]).where(DbNode.c.type.like('calculation.%'))).fetchall()
+    query_set = connection.execute(select(DbNode.c.type).where(DbNode.c.type.like('calculation.%'))).fetchall()
     type_strings = set(entry[0] for entry in query_set)
     mapping_node_type_to_entry_point = infer_calculation_entry_point(type_strings=type_strings)
 
@@ -54,7 +54,7 @@ def migrate_infer_calculation_entry_point(connection):
         # All affected entries should be logged to file that the user can consult.
         if ENTRY_POINT_STRING_SEPARATOR not in entry_point_string:
             query_set = connection.execute(
-                select([DbNode.c.uuid]).where(DbNode.c.type == op.inline_literal(type_string))
+                select(DbNode.c.uuid).where(DbNode.c.type == op.inline_literal(type_string))
             ).fetchall()
 
             uuids = [str(entry.uuid) for entry in query_set]

@@ -14,7 +14,7 @@ import asyncio
 import contextlib
 from datetime import datetime
 import logging
-from typing import Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
 if TYPE_CHECKING:
     from .processes import Process, ProcessBuilder
@@ -257,7 +257,7 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
     from aiida.common import timezone
     from aiida.common.exceptions import UniquenessError
     from aiida.manage.manager import get_manager  # pylint: disable=cyclic-import
-    from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
+    from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
 
     if isinstance(process.node, CalculationNode):
         process_type = 'calculation'

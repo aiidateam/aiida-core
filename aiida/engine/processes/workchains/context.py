@@ -11,7 +11,8 @@
 from typing import Union
 
 from aiida.orm import ProcessNode
-from .awaitable import construct_awaitable, Awaitable, AwaitableAction
+
+from .awaitable import Awaitable, AwaitableAction, construct_awaitable
 
 __all__ = ('ToContext', 'assign_', 'append_')
 

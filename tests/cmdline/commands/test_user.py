@@ -11,9 +11,9 @@
 
 from click.testing import CliRunner
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_user
-from aiida import orm
 
 USER_1 = {  # pylint: disable=invalid-name
     'email': 'testuser1@localhost',

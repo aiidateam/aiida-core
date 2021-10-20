@@ -8,11 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
+from collections.abc import Iterable, Mapping
+from decimal import Decimal
 import math
 import numbers
-from decimal import Decimal
-
-from collections.abc import Iterable, Mapping
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION

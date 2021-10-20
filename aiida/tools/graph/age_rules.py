@@ -11,11 +11,12 @@
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+
 import numpy as np
 
 from aiida import orm
-from aiida.tools.graph.age_entities import Basket
 from aiida.common.lang import type_check
+from aiida.tools.graph.age_entities import Basket
 
 
 class Operation(metaclass=ABCMeta):

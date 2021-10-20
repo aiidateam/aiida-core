@@ -13,6 +13,7 @@ import hashlib
 import os
 
 from aiida.backends.general.migrations import utils
+
 from .test_migrations_common import TestMigrations
 
 REPOSITORY_UUID_KEY = 'repository|uuid'

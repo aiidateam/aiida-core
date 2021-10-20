@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,protected-access
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
 
 from contextlib import contextmanager
@@ -23,6 +23,7 @@ from aiida.backends.sqlalchemy import manager
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.backends.sqlalchemy.utils import flag_modified
 from aiida.backends.testbase import AiidaTestCase
+
 from .test_utils import new_database
 
 
@@ -267,6 +268,7 @@ class TestMigrationSchemaVsModelsSchema(AiidaTestCase):
 
     def setUp(self):
         from sqlalchemydiff.util import get_temporary_uri
+
         from aiida.backends.sqlalchemy.migrations import versions
 
         self.migr_method_dir_path = os.path.dirname(os.path.realpath(manager.__file__))
@@ -646,7 +648,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
     def setUpBeforeMigration(self):
         # pylint: disable=too-many-locals,too-many-statements
         import importlib
+
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.utils import dumps_json
 
         log_migration = importlib.import_module(
@@ -760,7 +764,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 session.commit()
 
                 # Storing temporarily information needed for the check at the test
-                self.to_check = dict()
+                self.to_check = {}
 
                 # Keeping calculation & calculation log ids
                 self.to_check['CalculationNode'] = (
@@ -779,7 +783,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 param_data = session.query(DbLog).filter(DbLog.objpk == param.id
                                                          ).filter(DbLog.objname == 'something.else.'
                                                                   ).with_entities(*cols_to_project).one()
-                serialized_param_data = dumps_json([(dict(list(zip(param_data.keys(), param_data))))])
+                serialized_param_data = dumps_json([param_data._asdict()])
                 # Getting the serialized logs for the unknown entity logs (as the export migration fuction
                 # provides them) - this should coincide to the above
                 serialized_unknown_exp_logs = log_migration.get_serialized_unknown_entity_logs(connection)
@@ -792,7 +796,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 leg_wf = session.query(DbLog).filter(DbLog.objpk == leg_workf.id).filter(
                     DbLog.objname == 'aiida.workflows.user.topologicalworkflows.topo.TopologicalWorkflow'
                 ).with_entities(*cols_to_project).one()
-                serialized_leg_wf_logs = dumps_json([(dict(list(zip(leg_wf.keys(), leg_wf))))])
+                serialized_leg_wf_logs = dumps_json([leg_wf._asdict()])
                 # Getting the serialized logs for the legacy workflow logs (as the export migration function
                 # provides them) - this should coincide to the above
                 serialized_leg_wf_exp_logs = log_migration.get_serialized_legacy_workflow_logs(connection)
@@ -803,9 +807,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrationsSQLA):
                 # Getting the serialized logs that don't correspond to a DbNode record
                 logs_no_node = session.query(DbLog).filter(
                     DbLog.id.in_([log_5.id, log_6.id])).with_entities(*cols_to_project)
-                logs_no_node_list = list()
-                for log_no_node in logs_no_node:
-                    logs_no_node_list.append((dict(list(zip(log_no_node.keys(), log_no_node)))))
+                logs_no_node_list = [log_no_node._asdict() for log_no_node in logs_no_node]
                 serialized_logs_no_node = dumps_json(logs_no_node_list)
 
                 # Getting the serialized logs that don't correspond to a node (as the export migration function
@@ -944,7 +946,7 @@ class TestDbLogMigrationBackward(TestBackwardMigrationsSQLA):
                 session.commit()
 
                 # Keeping what is needed to be verified at the test
-                self.to_check = dict()
+                self.to_check = {}
                 self.to_check[log_1.id] = (log_1.dbnode_id, calc_1.type)
                 self.to_check[log_2.id] = (log_2.dbnode_id, calc_2.type)
             except Exception:
@@ -1290,6 +1292,7 @@ class TestLegacyJobCalcStateDataMigration(TestMigrationsSQLA):
 
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
         self.state_mapping = STATE_MAPPING
@@ -1355,6 +1358,7 @@ class TestResetHash(TestMigrationsSQLA):
 
     def setUpBeforeMigration(self):
         from sqlalchemy.orm import Session  # pylint: disable=import-error,no-name-in-module
+
         from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 
         self.state_mapping = STATE_MAPPING

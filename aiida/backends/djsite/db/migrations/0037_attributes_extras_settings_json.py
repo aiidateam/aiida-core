@@ -14,8 +14,7 @@ import math
 
 import click
 import django.contrib.postgres.fields.jsonb
-from django.db import migrations, models
-from django.db import transaction
+from django.db import migrations, models, transaction
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.cmdline.utils import echo

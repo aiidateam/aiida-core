@@ -11,15 +11,16 @@
 # pylint: disable=invalid-name
 """Migration for the update of the DbLog table. Addition of uuids"""
 import sys
-import click
 
+import click
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations, models
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.backends.general.migrations.utils import dumps_json
-from aiida.common.utils import get_new_uuid
 from aiida.cmdline.utils import echo
+from aiida.common.utils import get_new_uuid
 from aiida.manage import configuration
 
 REVISION = '1.0.24'
@@ -85,7 +86,7 @@ def get_serialized_legacy_workflow_logs(schema_editor):
             """
         ))
         keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-        res = list()
+        res = []
         for row in cursor.fetchall():
             res.append(dict(list(zip(keys, row))))
         return dumps_json(res)
@@ -104,7 +105,7 @@ def get_serialized_unknown_entity_logs(schema_editor):
             """
         ))
         keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-        res = list()
+        res = []
         for row in cursor.fetchall():
             res.append(dict(list(zip(keys, row))))
         return dumps_json(res)
@@ -123,7 +124,7 @@ def get_serialized_logs_with_no_nodes(schema_editor):
             """
         ))
         keys = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-        res = list()
+        res = []
         for row in cursor.fetchall():
             res.append(dict(list(zip(keys, row))))
         return dumps_json(res)

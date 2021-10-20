@@ -16,17 +16,17 @@ Create Date: 2019-04-03 17:11:44.073582
 
 """
 import sys
-import click
 
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-member,import-error,no-name-in-module
 from alembic import op
+import click
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql import table, select, func
+from sqlalchemy.sql import func, select, table
 
-from aiida.common import json
 from aiida.cmdline.utils import echo
+from aiida.common import json
 from aiida.manage import configuration
 
 # revision identifiers, used by Alembic.
@@ -38,7 +38,7 @@ depends_on = None
 
 def json_serializer(obj):
     """JSON serializer for objects not serializable by default json code"""
-    from datetime import datetime, date
+    from datetime import date, datetime
     from uuid import UUID
 
     if isinstance(obj, UUID):
@@ -58,9 +58,9 @@ def export_workflow_data(connection):
     DbWorkflowData = table('db_dbworkflowdata')
     DbWorkflowStep = table('db_dbworkflowstep')
 
-    count_workflow = connection.execute(select([func.count()]).select_from(DbWorkflow)).scalar()
-    count_workflow_data = connection.execute(select([func.count()]).select_from(DbWorkflowData)).scalar()
-    count_workflow_step = connection.execute(select([func.count()]).select_from(DbWorkflowStep)).scalar()
+    count_workflow = connection.execute(select(func.count()).select_from(DbWorkflow)).scalar()
+    count_workflow_data = connection.execute(select(func.count()).select_from(DbWorkflowData)).scalar()
+    count_workflow_step = connection.execute(select(func.count()).select_from(DbWorkflowStep)).scalar()
 
     # Nothing to do if all tables are empty
     if count_workflow == 0 and count_workflow_data == 0 and count_workflow_step == 0:
@@ -78,9 +78,9 @@ def export_workflow_data(connection):
     delete_on_close = configuration.PROFILE.is_test_profile
 
     data = {
-        'workflow': [dict(row) for row in connection.execute(select(['*']).select_from(DbWorkflow))],
-        'workflow_data': [dict(row) for row in connection.execute(select(['*']).select_from(DbWorkflowData))],
-        'workflow_step': [dict(row) for row in connection.execute(select(['*']).select_from(DbWorkflowStep))],
+        'workflow': [dict(row) for row in connection.execute(select('*').select_from(DbWorkflow))],
+        'workflow_data': [dict(row) for row in connection.execute(select('*').select_from(DbWorkflowData))],
+        'workflow_step': [dict(row) for row in connection.execute(select('*').select_from(DbWorkflowStep))],
     }
 
     with NamedTemporaryFile(
@@ -118,7 +118,7 @@ def downgrade():
         sa.Column(
             'id',
             sa.INTEGER(),
-            server_default=sa.text(u"nextval('db_dbworkflow_id_seq'::regclass)"),
+            server_default=sa.text("nextval('db_dbworkflow_id_seq'::regclass)"),
             autoincrement=True,
             nullable=False
         ),

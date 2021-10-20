@@ -53,9 +53,11 @@ class ArithmeticAddCalculation(CalcJob):
             handle.write(f'echo $(({self.inputs.x.value} + {self.inputs.y.value}))\n')
 
         codeinfo = CodeInfo()
-        codeinfo.code_uuid = self.inputs.code.uuid
         codeinfo.stdin_name = self.options.input_filename
         codeinfo.stdout_name = self.options.output_filename
+
+        if 'code' in self.inputs:
+            codeinfo.code_uuid = self.inputs.code.uuid
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]

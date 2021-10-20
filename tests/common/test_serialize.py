@@ -14,8 +14,8 @@ import types
 import numpy as np
 
 from aiida import orm
-from aiida.orm.utils import serialize
 from aiida.backends.testbase import AiidaTestCase
+from aiida.orm.utils import serialize
 
 
 class TestSerialize(AiidaTestCase):

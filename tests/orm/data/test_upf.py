@@ -7,14 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=unspecified-encoding
 """
 This module contains tests for UpfData and UpfData related functions.
 """
 import errno
-import tempfile
-import shutil
 import json
 import os
+import shutil
+import tempfile
+
 import numpy
 from numpy import array, isclose
 

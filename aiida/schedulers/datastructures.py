@@ -460,6 +460,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         """
 
         import datetime
+
         import pytz
 
         if value is None:
@@ -484,6 +485,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         :return: The deserialised date
         """
         import datetime
+
         import pytz
 
         if value is None:

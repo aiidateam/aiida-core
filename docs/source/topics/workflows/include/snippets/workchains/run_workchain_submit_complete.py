@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from aiida.engine import WorkChain, ToContext
+from aiida.engine import ToContext, WorkChain
 
 
 class SomeWorkChain(WorkChain):

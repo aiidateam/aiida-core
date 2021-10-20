@@ -9,8 +9,8 @@
 ###########################################################################
 # pylint: disable=invalid-name,protected-access
 """Tests for the `SgeScheduler` plugin."""
-import unittest
 import logging
+import unittest
 
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.sge import SgeScheduler
@@ -364,8 +364,8 @@ class TestCommand(unittest.TestCase):
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

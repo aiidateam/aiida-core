@@ -3,7 +3,7 @@ requires = ["setuptools>=40.8.0", "wheel", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta"
 
 [tool.pylint.master]
-load-plugins = "pylint_django"
+load-plugins = ["pylint_django", "utils.pylint_aiida"]
 # this currently fails with aiida.common.exceptions.ProfileConfigurationError: no profile has been loaded
 # we woud need a static settings module to use this
 # django-settings-module = "aiida.backends.djsite.settings"
@@ -15,6 +15,7 @@ max-line-length = 120
 disable = [
     "bad-continuation",
     "bad-option-value",
+    "consider-using-f-string",
     "cyclic-import",
     "django-not-configured",
     "duplicate-code",
@@ -27,7 +28,9 @@ disable = [
     "too-few-public-methods",
     "too-many-ancestors",
     "too-many-arguments",
-    "too-many-instance-attributes"
+    "too-many-instance-attributes",
+    # this can be removed when https://github.com/PyCQA/astroid/issues/1015 is fixed
+    "not-context-manager",
 ]
 
 [tool.pylint.basic]
@@ -74,6 +77,13 @@ markers = [
     "requires_rmq: requires a connection (on port 5672) to RabbitMQ",
     "sphinx: set parameters for the sphinx `app` fixture"
 ]
+
+[tool.isort]
+line_length = 120
+force_sort_within_sections = true
+# this configuration is compatible with yapf
+multi_line_output = 3
+include_trailing_comma = true
 
 [tool.yapf]
 based_on_style = "google"

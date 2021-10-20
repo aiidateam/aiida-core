@@ -20,8 +20,9 @@ class TestCodDbImporter(AiidaTestCase):
 
     def test_query_construction_1(self):
         """Test query construction."""
-        from aiida.tools.dbimporters.plugins.cod import CodDbImporter
         import re
+
+        from aiida.tools.dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
         q_sql = codi.query_sql(
@@ -103,8 +104,7 @@ class TestCodDbImporter(AiidaTestCase):
 
     def test_dbentry_creation(self):
         """Tests the creation of CodEntry from CodSearchResults."""
-        from aiida.tools.dbimporters.plugins.cod \
-            import CodSearchResults
+        from aiida.tools.dbimporters.plugins.cod import CodSearchResults
 
         results = CodSearchResults([{
             'id': '1000000',
@@ -249,8 +249,8 @@ class TestNnincDbImporter(AiidaTestCase):
         """Tests the creation of NnincEntry from NnincSearchResults."""
         import os
 
-        from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
         from aiida.common.exceptions import ParsingError
+        from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
 
         upf = 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030'
 

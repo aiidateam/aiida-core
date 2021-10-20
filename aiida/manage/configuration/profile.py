@@ -131,6 +131,7 @@ class Profile:  # pylint: disable=too-many-public-methods
     def get_repository(self) -> 'Repository':
         """Return the repository configured for this profile."""
         from disk_objectstore import Container
+
         from aiida.repository import Repository
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
         container = Container(self.repository_path / 'container')

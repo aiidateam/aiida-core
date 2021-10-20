@@ -20,6 +20,7 @@ from aiida.cmdline.params import options, types
 def main(profile, command):  # pylint: disable=unused-argument
     """Simple wrapper around the Django command line tool that first loads an AiiDA profile."""
     from django.core.management import execute_from_command_line  # pylint: disable=import-error,no-name-in-module
+
     from aiida.manage.manager import get_manager
 
     manager = get_manager()

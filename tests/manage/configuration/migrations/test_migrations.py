@@ -9,14 +9,13 @@
 ###########################################################################
 """Tests for the configuration migration functionality."""
 import os
-import uuid
 from unittest import TestCase
 from unittest.mock import patch
+import uuid
 
 from aiida.common import json
-
-from aiida.manage.configuration.migrations.utils import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import _MIGRATION_LOOKUP
+from aiida.manage.configuration.migrations.utils import check_and_migrate_config
 
 
 class TestConfigMigration(TestCase):

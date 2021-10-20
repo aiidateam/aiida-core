@@ -11,17 +11,18 @@
 
 # pylint: disable=import-error,no-name-in-module
 from datetime import datetime
+
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError, transaction
 
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation.utils import clean_value
 
-from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils as dj_utils
+from .. import BackendNode, BackendNodeCollection
 from .computers import DjangoComputer
 from .users import DjangoUser
 
@@ -196,6 +197,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
         import contextlib
+
         from aiida.backends.djsite.db.models import suppress_auto_now
 
         if clean:

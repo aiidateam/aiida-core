@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Module to manage computers for the SQLA backend."""
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Text
 
@@ -36,7 +36,7 @@ class DbComputer(Base):
         self.description = ''
 
         # If someone passes metadata in **kwargs we change it to _metadata
-        if 'metadata' in kwargs.keys():
+        if 'metadata' in kwargs:
             kwargs['_metadata'] = kwargs.pop('metadata')
 
         super().__init__(*args, **kwargs)

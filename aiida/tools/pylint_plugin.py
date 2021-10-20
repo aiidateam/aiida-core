@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
-"""pylint plugin for ``aiida-core`` specific issues."""
+"""pylint plugin for ``aiida-core`` specific linting issues.
+
+the plugin can be loaded into pylint in the pyproject.toml::
+
+    [tool.pylint.master]
+    load-plugins = ["aiida.tools.pylint_plugin"]
+"""
 import astroid
 
 

@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from inspect import isclass
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type, Union
 
 from importlib_metadata import EntryPoint
 
@@ -264,12 +264,11 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Transport']]:
+def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, Type['Transport']]]:
     """Return the `Transport` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
-    :return: sub class of :py:class:`~aiida.transports.transport.Transport`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from aiida.transports import Transport

@@ -47,12 +47,15 @@ py:meth aiida.orm.groups.GroupCollection.delete
 
 py:class Backend
 py:class BackendEntity
+py:class BackendEntityType
 py:class BackendNode
 py:class AuthInfo
 py:class CalcJob
 py:class CalcJobImporter
 py:class CalcJobNode
+py:class Code
 py:class CollectionType
+py:class Computer
 py:class Data
 py:class DbImporter
 py:class EntityType
@@ -85,6 +88,7 @@ py:class SelfType
 py:class TransactionType
 py:class Transport
 py:class TransportQueue
+py:class User
 py:class WorkChain
 py:class WorkChainSpec
 

@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for orm logging abstract classes"""
+from datetime import datetime
 import logging
-from typing import TYPE_CHECKING, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from aiida.common import timezone
 from aiida.common.lang import classproperty
@@ -19,6 +20,7 @@ from . import entities
 
 if TYPE_CHECKING:
     from aiida.orm import Node
+    from aiida.orm.implementation import Backend, BackendLog
     from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
@@ -41,14 +43,12 @@ class LogCollection(entities.Collection['Log']):
     def _entity_base_cls() -> Type['Log']:
         return Log
 
-    def create_entry_from_record(self, record: logging.LogRecord) -> 'Log':
+    def create_entry_from_record(self, record: logging.LogRecord) -> Optional['Log']:
         """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
         :return: A stored log instance
         """
-        from datetime import datetime
-
         dbnode_id = record.__dict__.get('dbnode_id', None)
 
         # Do not store if dbnode_id is not set
@@ -123,7 +123,7 @@ class LogCollection(entities.Collection['Log']):
         return self._backend.logs.delete_many(filters)
 
 
-class Log(entities.Entity):
+class Log(entities.Entity['BackendLog']):
     """
     An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node.
     """
@@ -134,31 +134,25 @@ class Log(entities.Entity):
     def objects(cls) -> LogCollection:  # pylint: disable=no-self-argument
         return LogCollection.get_cached(cls, get_manager().get_backend())
 
-    def __init__(self, time, loggername, levelname, dbnode_id, message='', metadata=None, backend=None):  # pylint: disable=too-many-arguments
+    def __init__(
+        self,
+        time: datetime,
+        loggername: str,
+        levelname: str,
+        dbnode_id: int,
+        message: str = '',
+        metadata: Optional[Dict[str, Any]] = None,
+        backend: Optional['Backend'] = None
+    ):  # pylint: disable=too-many-arguments
         """Construct a new log
 
         :param time: time
-        :type time: :class:`!datetime.datetime`
-
         :param loggername: name of logger
-        :type loggername: str
-
         :param levelname: name of log level
-        :type levelname: str
-
         :param dbnode_id: id of database node
-        :type dbnode_id: int
-
         :param message: log message
-        :type message: str
-
         :param metadata: metadata
-        :type metadata: dict
-
         :param backend: database backend
-        :type backend: :class:`aiida.orm.implementation.Backend`
-
-
         """
         from aiida.common import exceptions
 
@@ -181,61 +175,65 @@ class Log(entities.Entity):
         self.store()  # Logs are immutable and automatically stored
 
     @property
-    def time(self):
+    def uuid(self) -> str:
+        """Return the UUID for this log.
+
+        This identifier is unique across all entities types and backend instances.
+
+        :return: the entity uuid
+        """
+        return self._backend_entity.uuid
+
+    @property
+    def time(self) -> datetime:
         """
         Get the time corresponding to the entry
 
         :return: The entry timestamp
-        :rtype: :class:`!datetime.datetime`
         """
         return self._backend_entity.time
 
     @property
-    def loggername(self):
+    def loggername(self) -> str:
         """
         The name of the logger that created this entry
 
         :return: The entry loggername
-        :rtype: str
         """
         return self._backend_entity.loggername
 
     @property
-    def levelname(self):
+    def levelname(self) -> str:
         """
         The name of the log level
 
         :return: The entry log level name
-        :rtype: str
         """
         return self._backend_entity.levelname
 
     @property
-    def dbnode_id(self):
+    def dbnode_id(self) -> int:
         """
         Get the id of the object that created the log entry
 
         :return: The id of the object that created the log entry
-        :rtype: int
         """
         return self._backend_entity.dbnode_id
 
     @property
-    def message(self):
+    def message(self) -> str:
         """
         Get the message corresponding to the entry
 
         :return: The entry message
-        :rtype: str
         """
         return self._backend_entity.message
 
     @property
-    def metadata(self):
+    def metadata(self) -> Dict[str, Any]:
         """
         Get the metadata corresponding to the entry
 
         :return: The entry metadata
-        :rtype: dict
         """
         return self._backend_entity.metadata

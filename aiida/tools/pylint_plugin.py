@@ -6,19 +6,23 @@ the plugin can be loaded into pylint in the pyproject.toml::
     [tool.pylint.master]
     load-plugins = ["aiida.tools.pylint_plugin"]
 """
-import astroid
+try:
+    import astroid
+    INSTALLED = True
+except ImportError:
+    INSTALLED = False
 
 
 def register(linter):  # pylint: disable=unused-argument
     """Register linters (unused)"""
 
 
-def remove_classprop_imports(import_from: astroid.ImportFrom):
+def remove_classprop_imports(import_from: 'astroid.ImportFrom'):
     """Remove any ``classproperty`` imports (handled in ``replace_classprops``)"""
     import_from.names = [name for name in import_from.names if name[0] != 'classproperty']
 
 
-def replace_classprops(func: astroid.FunctionDef):
+def replace_classprops(func: 'astroid.FunctionDef'):
     """Replace ``classproperty`` decorated methods.
 
     As discussed in https://github.com/PyCQA/pylint/issues/1694, pylint does not understand the ``@classproperty``
@@ -59,5 +63,6 @@ def replace_classprops(func: astroid.FunctionDef):
         return assign
 
 
-astroid.MANAGER.register_transform(astroid.ImportFrom, remove_classprop_imports)
-astroid.MANAGER.register_transform(astroid.FunctionDef, replace_classprops)
+if INSTALLED:
+    astroid.MANAGER.register_transform(astroid.ImportFrom, remove_classprop_imports)
+    astroid.MANAGER.register_transform(astroid.FunctionDef, replace_classprops)

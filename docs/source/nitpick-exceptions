@@ -109,6 +109,9 @@ py:class plumpy.workchains._While
 # Note: These exceptions are needed if
 # * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
 # * the documentation linked via intersphinx lists the objects at a different (usually lower) import hierarchy
+py:class astroid.ImportFrom
+py:class astroid.FunctionDef
+
 py:class click.core.Group
 py:class click.core.Option
 py:class click.types.ParamType

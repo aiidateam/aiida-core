@@ -162,7 +162,7 @@ sphinxext-rediraffe==0.2.7
 SQLAlchemy==1.4.22
 sqlalchemy-diff==0.1.5
 SQLAlchemy-Utils==0.37.8
-sqlparse==0.4.1
+sqlparse==0.4.2
 sympy==1.8
 tabulate==0.8.9
 tenacity==8.0.1

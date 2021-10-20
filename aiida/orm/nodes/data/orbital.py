@@ -12,6 +12,7 @@ import copy
 
 from aiida.common.exceptions import ValidationError
 from aiida.plugins import OrbitalFactory
+
 from .data import Data
 
 __all__ = ('OrbitalData',)

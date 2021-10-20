@@ -13,6 +13,9 @@ import typing
 
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
+if typing.TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
+
 __all__ = (
     'BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityAttributesMixin', 'BackendEntityExtrasMixin'
 )
@@ -23,12 +26,12 @@ EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend):
+    def __init__(self, backend: 'Backend'):
         self._backend = backend
         self._dbmodel = None
 
     @property
-    def backend(self):
+    def backend(self) -> 'Backend':
         """Return the backend this entity belongs to
 
         :return: the backend instance
@@ -41,7 +44,7 @@ class BackendEntity(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def id(self):  # pylint: disable=invalid-name
+    def id(self) -> int:  # pylint: disable=invalid-name
         """Return the id for this entity.
 
         This is unique only amongst entities of this type for a particular backend.
@@ -50,7 +53,7 @@ class BackendEntity(abc.ABC):
         """
 
     @property
-    def pk(self):
+    def pk(self) -> int:
         """Return the id for this entity.
 
         This is unique only amongst entities of this type for a particular backend.
@@ -68,11 +71,10 @@ class BackendEntity(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def is_stored(self):
+    def is_stored(self) -> bool:
         """Return whether the entity is stored.
 
         :return: True if stored, False otherwise
-        :rtype: bool
         """
 
     def _flush_if_stored(self, fields):
@@ -85,10 +87,9 @@ class BackendCollection(typing.Generic[EntityType]):
 
     ENTITY_CLASS = None  # type: EntityType
 
-    def __init__(self, backend):
+    def __init__(self, backend: 'Backend'):
         """
         :param backend: the backend this collection belongs to
-        :type backend: :class:`aiida.orm.implementation.Backend`
         """
         assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
@@ -103,12 +104,8 @@ class BackendCollection(typing.Generic[EntityType]):
         return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     @property
-    def backend(self):
-        """
-        Return the backend.
-
-        :rtype: :class:`aiida.orm.implementation.Backend`
-        """
+    def backend(self) -> 'Backend':
+        """Return the backend."""
         return self._backend
 
     def create(self, **kwargs):

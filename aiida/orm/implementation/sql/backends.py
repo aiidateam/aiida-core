@@ -11,11 +11,11 @@
 import abc
 import typing
 
-from .. import backends
+from .. import backends, entities
 
 __all__ = ('SqlBackend',)
 
-# The template type for the base ORM model type
+# The template type for the base sqlalchemy/django ORM model type
 ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
 
 
@@ -30,13 +30,12 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
     """
 
     @abc.abstractmethod
-    def get_backend_entity(self, model):
+    def get_backend_entity(self, model: ModelType) -> entities.BackendEntity:
         """
         Return the backend entity that corresponds to the given Model instance
 
         :param model: the ORM model instance to promote to a backend instance
         :return: the backend entity corresponding to the given model
-        :rtype: :class:`aiida.orm.implementation.entities.BackendEntity`
         """
 
     @abc.abstractmethod

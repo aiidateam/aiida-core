@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Database migration."""
-from django.db import models, migrations
+from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 

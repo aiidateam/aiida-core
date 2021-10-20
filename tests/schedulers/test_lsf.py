@@ -11,11 +11,12 @@
 """Tests for the `LsfScheduler` plugin."""
 import logging
 import uuid
+
 import pytest
 
 from aiida.schedulers.datastructures import JobState
-from aiida.schedulers.scheduler import SchedulerError
 from aiida.schedulers.plugins.lsf import LsfScheduler
+from aiida.schedulers.scheduler import SchedulerError
 
 BJOBS_STDOUT_TO_TEST = '764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit' \
                        '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44' \
@@ -111,8 +112,8 @@ def test_parse_common_joblist_output():
 
 def test_submit_script():
     """Test the creation of a simple submission script"""
-    from aiida.schedulers.datastructures import JobTemplate
     from aiida.common.datastructures import CodeInfo, CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate
 
     scheduler = LsfScheduler()
 
@@ -141,8 +142,8 @@ def test_submit_script():
 
 def test_submit_script_rerunnable():
     """Test the `rerunnable` option of the submit script."""
-    from aiida.schedulers.datastructures import JobTemplate
     from aiida.common.datastructures import CodeInfo, CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate
 
     scheduler = LsfScheduler()
 
@@ -214,8 +215,8 @@ def test_kill_output():
 
 def test_job_tmpl_errors():
     """Test the raising of the appropriate errors"""
-    from aiida.schedulers.datastructures import JobTemplate
     from aiida.common.datastructures import CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate
 
     scheduler = LsfScheduler()
     job_tmpl = JobTemplate()

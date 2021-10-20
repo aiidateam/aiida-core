@@ -20,11 +20,11 @@ Local transport
 ### in the exact same way as paramiko does already.
 
 import errno
+import glob
 import io
 import os
 import shutil
 import subprocess
-import glob
 
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError

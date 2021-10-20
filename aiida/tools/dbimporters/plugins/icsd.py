@@ -11,7 +11,7 @@
 """"Implementation of `DbImporter` for the CISD database."""
 import io
 
-from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, CifEntry
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class IcsdImporterExp(Exception):
@@ -128,7 +128,7 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
-        return ' OR '.join("{} LIKE '%{}%'".format(key, s) for s in values)
+        return ' OR '.join(f"{key} LIKE '%{s}%'" for s in values)
 
     def _composition_clause(self, key, alias, values):  # pylint: disable=unused-argument
         """
@@ -152,7 +152,7 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, float):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and floats are accepted')
-        return ' OR '.join('{} BETWEEN {} AND {}'.format(key, d - precision, d + precision) for d in values)
+        return ' OR '.join(f'{key} BETWEEN {d - precision} AND {d + precision}' for d in values)
 
     def _crystal_system_clause(self, key, alias, values):
         """
@@ -582,9 +582,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             self._disconnect_db()
 
         else:
-            from bs4 import BeautifulSoup  # pylint: disable=import-error
-            from urllib.request import urlopen
             import re
+            from urllib.request import urlopen
+
+            from bs4 import BeautifulSoup  # pylint: disable=import-error
 
             with urlopen(
                 self.db_parameters['server'] + self.db_parameters['db'] + '/' + self.query.format(str(self.page))

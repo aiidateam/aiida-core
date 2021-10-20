@@ -10,7 +10,7 @@
 """Tests for generic queries."""
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.orm import Group, User, Computer, Node, Data, ProcessNode, QueryBuilder
+from aiida.orm import Computer, Data, Group, Node, ProcessNode, QueryBuilder, User
 
 
 class TestQueryBuilderSQLA(AiidaTestCase):

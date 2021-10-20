@@ -11,6 +11,7 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
+
 from aiida.common.utils import Capturing
 
 from .singlefile import SinglefileData
@@ -59,7 +60,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
     :param ase: ASE "images"
     :return: array of CIF datablocks
     """
-    from numpy import arccos, pi, dot
+    from numpy import arccos, dot, pi
     from numpy.linalg import norm
 
     if not isinstance(ase, (list, tuple)):
@@ -67,7 +68,7 @@ def cif_from_ase(ase, full_occupancies=False, add_fake_biso=False):
 
     datablocks = []
     for _, atoms in enumerate(ase):
-        datablock = dict()
+        datablock = {}
 
         cell = atoms.cell
         a = norm(cell[0])
@@ -142,7 +143,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
         raise ImportError(f'{str(exc)}. You need to install the PyCifRW package.')
 
     if loops is None:
-        loops = dict()
+        loops = {}
 
     cif = CifFile.CifFile()  # pylint: disable=no-member
     try:
@@ -261,17 +262,7 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    def __init__(
-        self,
-        ase=None,
-        file=None,
-        filename=None,
-        values=None,
-        source=None,
-        scan_type=None,
-        parse_policy=None,
-        **kwargs
-    ):
+    def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
         :param file: an absolute filepath or filelike object for CIF.
@@ -279,7 +270,6 @@ class CifData(SinglefileData):
         :param filename: specify filename to use (defaults to name of provided file).
         :param ase: ASE Atoms object to construct the CifData instance from.
         :param values: PyCifRW CifFile object to construct the CifData instance from.
-        :param source:
         :param scan_type: scan type string for parsing with PyCIFRW ('standard' or 'flex'). See CifFile.ReadCif
         :param parse_policy: 'eager' (parse CIF file on set_file) or 'lazy' (defer parsing until needed)
         """
@@ -299,9 +289,6 @@ class CifData(SinglefileData):
         super().__init__(file, filename=filename, **kwargs)
         self.set_scan_type(scan_type or CifData._SCAN_TYPE_DEFAULT)
         self.set_parse_policy(parse_policy or CifData._PARSE_POLICY_DEFAULT)
-
-        if source is not None:
-            self.set_source(source)
 
         if ase is not None:
             self.set_ase(ase)
@@ -371,6 +358,7 @@ class CifData(SinglefileData):
             from the DB.
         """
         import os
+
         from aiida.common.files import md5_file
 
         if not os.path.abspath(filename):

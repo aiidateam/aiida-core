@@ -56,7 +56,7 @@ def query(datatype, project, past_days, group_pks, all_users):
 
     # If there is a group restriction
     if group_pks is not None:
-        group_filters = dict()
+        group_filters = {}
         group_filters.update({'id': {'in': group_pks}})
         qbl.append(orm.Group, tag='group', filters=group_filters, with_node='data')
 

@@ -9,7 +9,7 @@
 ###########################################################################
 """Module for defintion of base `Data` sub class for numeric based data types."""
 
-from .base import to_aiida_type, BaseType
+from .base import BaseType, to_aiida_type
 
 __all__ = ('NumericType',)
 

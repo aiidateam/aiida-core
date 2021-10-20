@@ -16,7 +16,7 @@ from aiida import orm
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_query(backend):
     """Test if queries are working."""
-    from aiida.common.exceptions import NotExistent, MultipleObjectsError
+    from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
     default_user = backend.users.create('simple@ton.com')
 

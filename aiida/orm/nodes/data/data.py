@@ -9,8 +9,8 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 from aiida.common import exceptions
-from aiida.common.links import LinkType
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 
 from ..node import Node
 
@@ -41,6 +41,12 @@ class Data(Node):
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
+
+    def __init__(self, *args, source=None, **kwargs):
+        """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
+        super().__init__(*args, **kwargs)
+        if source is not None:
+            self.source = source
 
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""

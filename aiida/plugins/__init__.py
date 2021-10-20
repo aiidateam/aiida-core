@@ -20,6 +20,7 @@ from .utils import *
 
 __all__ = (
     'BaseFactory',
+    'CalcJobImporterFactory',
     'CalculationFactory',
     'DataFactory',
     'DbImporterFactory',
@@ -30,6 +31,7 @@ __all__ = (
     'SchedulerFactory',
     'TransportFactory',
     'WorkflowFactory',
+    'get_entry_points',
     'load_entry_point',
     'load_entry_point_from_string',
     'parse_entry_point',

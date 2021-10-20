@@ -2,6 +2,7 @@
 """Data plugin that models an archived folder on a remote computer."""
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+
 from ...data import Data
 
 __all__ = ('RemoteStashData',)

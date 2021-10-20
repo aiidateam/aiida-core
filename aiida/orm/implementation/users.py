@@ -10,7 +10,7 @@
 """Backend user"""
 import abc
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendUser', 'BackendUserCollection')
 
@@ -23,15 +23,6 @@ class BackendUser(BackendEntity):
     # pylint: disable=invalid-name
 
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-
-    @property
-    def uuid(self):
-        """
-        For now users do not have UUIDs so always return false
-
-        :return: None
-        """
-        return None
 
     @property
     @abc.abstractmethod

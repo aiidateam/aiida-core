@@ -8,10 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Abstract BackendNode and BackendNodeCollection implementation."""
-
 import abc
 
-from .entities import BackendEntity, BackendCollection, BackendEntityAttributesMixin, BackendEntityExtrasMixin
+from .entities import BackendCollection, BackendEntity, BackendEntityAttributesMixin, BackendEntityExtrasMixin
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
@@ -29,16 +28,12 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttribut
         """
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """Return the node UUID.
 
         :return: the string representation of the UUID
-        :rtype: str or None
         """
-        if self._dbmodel.uuid:
-            return str(self._dbmodel.uuid)
-
-        return None
+        return str(self._dbmodel.uuid)
 
     @property
     def node_type(self):

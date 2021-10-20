@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 from collections.abc import Mapping
 
 from aiida.common import exceptions
@@ -114,7 +114,7 @@ def validate_link(source, target, link_type, link_label):
     """
     # yapf: disable
     from aiida.common.links import LinkType, validate_link_label
-    from aiida.orm import Node, Data, CalculationNode, WorkflowNode
+    from aiida.orm import CalculationNode, Data, Node, WorkflowNode
 
     type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')

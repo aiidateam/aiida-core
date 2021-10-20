@@ -345,7 +345,7 @@ class TestGroupsSubclasses(AiidaTestCase):
         # Removing it as other methods might get a warning instead
         group_pk = group.pk
         del group
-        orm.Group.objects.delete(id=group_pk)
+        orm.Group.objects.delete(pk=group_pk)
 
     @staticmethod
     def test_querying():
@@ -367,7 +367,7 @@ class TestGroupsSubclasses(AiidaTestCase):
         # Removing it as other methods might get a warning instead
         group_pk = group.pk
         del group
-        orm.Group.objects.delete(id=group_pk)
+        orm.Group.objects.delete(pk=group_pk)
 
     @staticmethod
     def test_querying_node_subclasses():

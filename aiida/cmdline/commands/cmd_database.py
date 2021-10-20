@@ -11,11 +11,11 @@
 
 import click
 
-from aiida.common import exceptions
+from aiida.backends.general.migrations.duplicate_uuids import TABLES_UUID_DEDUPLICATION
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
-from aiida.backends.general.migrations.duplicate_uuids import TABLES_UUID_DEDUPLICATION
+from aiida.common import exceptions
 
 
 @verdi.group('database')
@@ -45,8 +45,8 @@ def database_version():
 @options.FORCE()
 def database_migrate(force):
     """Migrate the database to the latest schema version."""
-    from aiida.manage.manager import get_manager
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage.manager import get_manager
 
     client = get_daemon_client()
     if client.is_daemon_running:
@@ -200,7 +200,7 @@ def detect_invalid_nodes():
 def database_summary():
     """Summarise the entities in the database."""
     from aiida.cmdline import is_verbose
-    from aiida.orm import QueryBuilder, Node, Group, Computer, Comment, Log, User
+    from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
     data = {}
 
     # User

@@ -8,16 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi import`."""
-from click.testing import CliRunner
 from click.exceptions import BadParameter
-
+from click.testing import CliRunner
 import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
 from aiida.tools.importexport import EXPORT_VERSION
-
 from tests.utils.archives import get_archive_file
 
 

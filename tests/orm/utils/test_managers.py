@@ -12,8 +12,8 @@
 import pytest
 
 from aiida import orm
+from aiida.common import AttributeDict, LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
-from aiida.common import LinkType, AttributeDict
 
 
 def test_dot_dict_manager(clear_database_before_test):

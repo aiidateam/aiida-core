@@ -9,7 +9,7 @@
 ###########################################################################
 """Utility functions for tests for the export and import routines"""
 
-from aiida.orm import QueryBuilder, Node
+from aiida.orm import Node, QueryBuilder
 
 
 def get_all_node_links():

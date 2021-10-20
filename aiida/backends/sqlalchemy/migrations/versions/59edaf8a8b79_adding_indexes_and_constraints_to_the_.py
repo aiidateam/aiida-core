@@ -16,7 +16,7 @@ Create Date: 2018-06-22 14:50:18.447211
 
 """
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
+import sqlalchemy
 
 # revision identifiers, used by Alembic.
 revision = '59edaf8a8b79'
@@ -29,7 +29,7 @@ def upgrade():
     """Migrations for the upgrade."""
     # Check if constraint uix_dbnode_id_dbgroup_id of migration 7a6587e16f4c
     # is there and if yes, drop it
-    insp = Inspector.from_engine(op.get_bind())
+    insp = sqlalchemy.inspect(op.get_bind())
     for constr in insp.get_unique_constraints('db_dbgroup_dbnodes'):
         if constr['name'] == 'uix_dbnode_id_dbgroup_id':
             op.drop_constraint('uix_dbnode_id_dbgroup_id', 'db_dbgroup_dbnodes')

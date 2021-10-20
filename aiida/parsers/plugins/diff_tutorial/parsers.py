@@ -6,9 +6,9 @@ Register parsers via the "aiida.parsers" entry point in the setup.json file.
 """
 # START PARSER HEAD
 from aiida.engine import ExitCode
+from aiida.orm import SinglefileData
 from aiida.parsers.parser import Parser
 from aiida.plugins import CalculationFactory
-from aiida.orm import SinglefileData
 
 DiffCalculation = CalculationFactory('diff-tutorial')
 

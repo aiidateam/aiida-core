@@ -10,13 +10,12 @@
 """Module with `Node` sub class for processes."""
 
 import enum
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
 
-from aiida.common.links import LinkType
 from aiida.common.lang import classproperty
+from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import Sealable
 
 from ..node import Node

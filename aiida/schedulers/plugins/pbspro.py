@@ -13,6 +13,7 @@ This has been tested on PBSPro v. 12.
 """
 
 import logging
+
 from .pbsbaseclasses import PbsBaseClass
 
 _LOGGER = logging.getLogger(__name__)

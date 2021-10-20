@@ -13,7 +13,7 @@ import contextlib
 import contextvars
 import logging
 import time
-from typing import Any, Dict, Hashable, Iterator, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional
 
 from aiida.common import lang
 from aiida.orm import AuthInfo

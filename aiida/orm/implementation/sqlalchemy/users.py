@@ -10,8 +10,8 @@
 """SQLA user"""
 from aiida.backends.sqlalchemy.models.user import DbUser
 from aiida.orm.implementation.users import BackendUser, BackendUserCollection
-from . import entities
-from . import utils
+
+from . import entities, utils
 
 __all__ = ('SqlaUserCollection', 'SqlaUser')
 

@@ -9,7 +9,7 @@ import pytest
 from aiida.common import exceptions
 from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
-from aiida.orm import load_node, CalcJobNode, Data
+from aiida.orm import CalcJobNode, Data, load_node
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 from aiida.repository.common import File, FileType
 
@@ -213,3 +213,18 @@ def test_walk():
         (pathlib.Path('.'), ['relative'], []),
         (pathlib.Path('relative'), [], ['path']),
     ]
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_copy_tree(tmp_path):
+    """Test the ``Repository.copy_tree`` method."""
+    node = Data()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+
+    node.copy_tree(tmp_path)
+    dirpath = pathlib.Path(tmp_path / 'relative')
+    filepath = dirpath / 'path'
+    assert dirpath.is_dir()
+    assert filepath.is_file()
+    with node.open('relative/path', 'rb') as handle:
+        assert filepath.read_bytes() == handle.read()

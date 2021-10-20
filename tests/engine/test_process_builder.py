@@ -14,7 +14,7 @@ from collections.abc import Mapping, MutableMapping
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
-from aiida.engine import WorkChain, Process, ProcessBuilderNamespace
+from aiida.engine import Process, ProcessBuilderNamespace, WorkChain
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256
@@ -139,13 +139,13 @@ class TestProcessBuilder(AiidaTestCase):
 
         # Verify that empty lists are considered as a "value" and are not pruned
         builder = LazyProcessNamespace.get_builder()
-        builder.namespace.c = list()
+        builder.namespace.c = []
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'c': [], 'nested': {}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'c': []}})
 
         # Verify that empty lists, even in doubly nested namespace are considered as a "value" and are not pruned
         builder = LazyProcessNamespace.get_builder()
-        builder.namespace.nested.bird = list()
+        builder.namespace.nested.bird = []
         self.assertEqual(builder._inputs(prune=False), {'namespace': {'nested': {'bird': []}}, 'metadata': {}})
         self.assertEqual(builder._inputs(prune=True), {'namespace': {'nested': {'bird': []}}})
 

@@ -29,10 +29,11 @@ def migrate_repository(apps, schema_editor):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     import json
     from tempfile import NamedTemporaryFile
+
     from disk_objectstore import Container
 
     from aiida.common import exceptions
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, get_progress_reporter, set_progress_reporter
+    from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.configuration import get_profile
 
     DbNode = apps.get_model('db', 'DbNode')

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from aiida.engine import ToContext, WorkChain, run
 from child import ChildWorkChain
+
+from aiida.engine import ToContext, WorkChain, run
 
 
 class SimpleParentWorkChain(WorkChain):

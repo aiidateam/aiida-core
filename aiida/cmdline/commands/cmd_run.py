@@ -9,8 +9,8 @@
 ###########################################################################
 """`verdi run` command."""
 import contextlib
-import os
 import functools
+import os
 import sys
 
 import click
@@ -114,7 +114,7 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, inclu
 
     try:
         # Here we use a standard open and not open, as exec will later fail if passed a unicode type string.
-        handle = open(scriptname, 'r')  # pylint: disable=consider-using-with
+        handle = open(scriptname, 'r')  # pylint: disable=consider-using-with,unspecified-encoding
     except IOError:
         echo.echo_critical(f"Unable to load file '{scriptname}'")
     else:

@@ -15,7 +15,6 @@ import pytest
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import processes, run
 from aiida.manage.manager import get_manager
-
 from tests.utils import processes as test_processes
 
 

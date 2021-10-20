@@ -19,6 +19,7 @@ from django.db import migrations
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.backends.general.migrations import utils
+
 from . import ModelModifierV0025
 
 REVISION = '1.0.27'

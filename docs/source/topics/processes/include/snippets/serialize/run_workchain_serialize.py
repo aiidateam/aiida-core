@@ -1,8 +1,8 @@
 #!/usr/bin/env runaiida
 # -*- coding: utf-8 -*-
-from aiida.engine import run
-
 from serialize_workchain import SerializeWorkChain
+
+from aiida.engine import run
 
 if __name__ == '__main__':
     print(run(

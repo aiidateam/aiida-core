@@ -149,6 +149,7 @@ class ArrayData(Data):
         """
         import re
         import tempfile
+
         import numpy
 
         if not isinstance(array, numpy.ndarray):

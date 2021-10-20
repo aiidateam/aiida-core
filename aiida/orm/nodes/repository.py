@@ -7,7 +7,7 @@ import tempfile
 from typing import BinaryIO, Dict, Iterable, Iterator, List, Tuple, Union
 
 from aiida.common import exceptions
-from aiida.repository import Repository, File
+from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)
@@ -215,6 +215,14 @@ class NodeRepositoryMixin:
             ``pathlib.PurePosixPath`` instead of a normal string
         """
         yield from self._repository.walk(path)
+
+    def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
+        """Copy the contents of the entire node repository to another location on the local file system.
+
+        :param target: absolute path of the directory where to copy the contents to.
+        :param path: optional relative path whose contents to copy.
+        """
+        self._repository.copy_tree(target, path)
 
     def delete_object(self, path: str):
         """Delete the object from the repository.

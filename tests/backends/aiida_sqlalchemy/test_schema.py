@@ -9,15 +9,17 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Test object relationships in the database."""
-from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.common.links import LinkType
-from aiida.orm import Data
-from aiida.orm import CalculationNode
-import aiida
+import warnings
 
+from sqlalchemy import exc as sa_exc
+
+import aiida
+from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.testbase import AiidaTestCase
+from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
+from aiida.orm import CalculationNode, Data
 
 
 class TestRelationshipsSQLA(AiidaTestCase):
@@ -111,9 +113,6 @@ class TestRelationshipsSQLA(AiidaTestCase):
         storing USER does NOT induce storage of the NODE
 
         Assert the correct storage of user and node."""
-        import warnings
-        from sqlalchemy import exc as sa_exc
-
         # Create user
         dbu1 = DbUser('tests2@schema', 'spam', 'eggs', 'monty')
 
@@ -164,7 +163,10 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
         # Add only first node and commit
         session.add(dbn_1)
-        session.commit()
+        with warnings.catch_warnings():
+            # suppress known SAWarning that we have not added dbn_2
+            warnings.simplefilter('ignore', category=sa_exc.SAWarning)
+            session.commit()
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
@@ -200,7 +202,10 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
         # Add only first node and commit
         session.add(dbn_1)
-        session.commit()
+        with warnings.catch_warnings():
+            # suppress known SAWarning that we have not add the other nodes
+            warnings.simplefilter('ignore', category=sa_exc.SAWarning)
+            session.commit()
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database

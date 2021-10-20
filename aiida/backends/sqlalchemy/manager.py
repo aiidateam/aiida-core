@@ -8,14 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities and configuration of the SqlAlchemy database schema."""
-import os
 import contextlib
+import os
 
+import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import NotExistent
-from ..manager import BackendManager, SettingsManager, Setting
+
+from ..manager import BackendManager, Setting, SettingsManager
 
 ALEMBIC_REL_PATH = 'migrations'
 
@@ -34,8 +36,9 @@ class SqlaBackendManager(BackendManager):
         The current database connection is added in the `attributes` property, through which it can then also be
         retrieved, also in the `env.py` file, which is run when the database is migrated.
         """
-        from . import ENGINE
         from alembic.config import Config
+
+        from . import ENGINE
 
         with ENGINE.begin() as connection:
             dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -149,8 +152,7 @@ class SqlaSettingsManager(SettingsManager):
 
         :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
         """
-        from sqlalchemy.engine import reflection
-        inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
+        inspector = sqlalchemy.inspect(get_scoped_session().bind)
         if self.table_name not in inspector.get_table_names():
             raise NotExistent('the settings table does not exist')
 
@@ -184,7 +186,7 @@ class SqlaSettingsManager(SettingsManager):
         self.validate_table_existence()
         validate_attribute_extra_key(key)
 
-        other_attribs = dict()
+        other_attribs = {}
         if description is not None:
             other_attribs['description'] = description
 

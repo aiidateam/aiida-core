@@ -14,9 +14,9 @@ import zipfile
 import pytest
 
 from aiida import get_version
+from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
-from aiida.tools.importexport.archive.common import CacheFolder
 from tests.utils.archives import get_archive_file, read_json_files
 
 

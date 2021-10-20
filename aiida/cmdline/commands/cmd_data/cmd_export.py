@@ -12,8 +12,9 @@ This module provides export functionality to all data types
 """
 
 import click
-from aiida.cmdline.utils import echo
+
 from aiida.cmdline.params import options
+from aiida.cmdline.utils import echo
 
 EXPORT_OPTIONS = [
     click.option(

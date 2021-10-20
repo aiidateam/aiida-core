@@ -11,8 +11,12 @@
 """Module that contains the db migrations."""
 from django.core.exceptions import ObjectDoesNotExist
 
-from aiida.backends.manager import SCHEMA_VERSION_KEY, SCHEMA_VERSION_DESCRIPTION
-from aiida.backends.manager import SCHEMA_GENERATION_KEY, SCHEMA_GENERATION_DESCRIPTION
+from aiida.backends.manager import (
+    SCHEMA_GENERATION_DESCRIPTION,
+    SCHEMA_GENERATION_KEY,
+    SCHEMA_VERSION_DESCRIPTION,
+    SCHEMA_VERSION_KEY,
+)
 from aiida.common.exceptions import AiidaException, DbContentError
 from aiida.manage.configuration import get_config_option
 
@@ -63,7 +67,9 @@ def _upgrade_schema_generation(version, apps, _):
 
 
 def upgrade_schema_version(up_revision, down_revision):
+    """Run migrations, to translate the database schema."""
     from functools import partial
+
     from django.db import migrations
 
     return migrations.RunPython(
@@ -247,16 +253,16 @@ def _deserialize_attribute(mainitem, subitems, sep, original_class=None, origina
     :raise aiida.backends.djsite.db.migrations.DeserializationException: if an error occurs"""
 
     from aiida.common import json
-    from aiida.common.timezone import (is_naive, make_aware, get_current_timezone)
+    from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
     if mainitem['datatype'] in ['none', 'bool', 'int', 'float', 'txt']:
         if subitems:
-            raise DeserializationException("'{}' is of a base type, " 'but has subitems!'.format(mainitem.key))
+            raise DeserializationException(f"'{mainitem.key}' is of a base type, but has subitems!")
         return _deserialize_basic_type(mainitem)
 
     if mainitem['datatype'] == 'date':
         if subitems:
-            raise DeserializationException("'{}' is of a base type, " 'but has subitems!'.format(mainitem.key))
+            raise DeserializationException(f"'{mainitem.key}' is of a base type, but has subitems!")
         if is_naive(mainitem['dval']):
             return make_aware(mainitem['dval'], get_current_timezone())
         return mainitem['dval']
@@ -396,8 +402,7 @@ class ModelModifierV0025:
             raise ValidationError('The key cannot be an empty string.')
         if AIIDA_ATTRIBUTE_SEP in key:
             raise ValidationError(
-                "The separator symbol '{}' cannot be present "
-                'in the key of attributes, extras, etc.'.format(AIIDA_ATTRIBUTE_SEP)
+                f"The separator symbol '{AIIDA_ATTRIBUTE_SEP}' cannot be present in the key of attributes, extras, etc."
             )
 
     def get_value_for_node(self, dbnode, key):
@@ -427,7 +432,7 @@ class ModelModifierV0025:
     def getvalue(self, attr):
         """This can be called on a given row and will get the corresponding value, casting it correctly. """
         try:
-            if attr.datatype == 'list' or attr.datatype == 'dict':
+            if attr.datatype in ('list', 'dict'):
                 prefix = f'{attr.key}{self._sep}'
                 prefix_len = len(prefix)
                 dballsubvalues = self._model_class.objects.filter(
@@ -654,6 +659,7 @@ class ModelModifierV0025:
                 transaction.savepoint_commit(sid)
         except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
+
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
@@ -717,7 +723,7 @@ class ModelModifierV0025:
         import datetime
 
         from aiida.common import json
-        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
+        from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
         other_attribs = other_attribs if other_attribs is not None else {}
 

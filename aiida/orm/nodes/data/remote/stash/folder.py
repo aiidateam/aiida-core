@@ -4,6 +4,7 @@ import typing
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
+
 from .base import RemoteStashData
 
 __all__ = ('RemoteStashFolderData',)

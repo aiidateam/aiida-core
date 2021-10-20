@@ -15,10 +15,10 @@ checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fin
 for new types though.
 """
 from functools import partial
-import yaml
 
 from plumpy import Bundle
 from plumpy.utils import AttributesFrozendict
+import yaml
 
 from aiida import orm
 from aiida.common import AttributeDict

@@ -11,8 +11,7 @@
 
 import click
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
 from aiida.cmdline.params import arguments, options, types
@@ -55,8 +54,9 @@ def structure():
 @decorators.with_dbenv()
 def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
     """List StructureData objects."""
-    from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
     from tabulate import tabulate
+
+    from aiida.orm.nodes.data.structure import StructureData, get_formula, get_symbols_string
 
     elements_only = False
     lst = data_list(
@@ -100,7 +100,7 @@ def structure_list(elements, raw, formula_mode, past_days, groups, all_users):
         entry_list.append([str(pid), label, str(formula)])
 
     counter = 0
-    struct_list_data = list()
+    struct_list_data = []
     if not raw:
         struct_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:

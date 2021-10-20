@@ -10,6 +10,7 @@
 """`verdi user` command."""
 
 from functools import partial
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

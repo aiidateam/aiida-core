@@ -12,15 +12,15 @@
 import os
 import subprocess as sp
 from textwrap import dedent
-
 from unittest import mock
+
 from click.testing import CliRunner
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_code import (setup_code, delete, hide, reveal, relabel, code_list, show, code_duplicate)
-from aiida.common.exceptions import NotExistent
 from aiida import orm
+from aiida.backends.testbase import AiidaTestCase
+from aiida.cmdline.commands.cmd_code import code_duplicate, code_list, delete, hide, relabel, reveal, setup_code, show
+from aiida.common.exceptions import NotExistent
 
 
 class TestVerdiCodeSetup(AiidaTestCase):

@@ -13,7 +13,7 @@ Module for the custom click param type computer
 
 from click.types import StringParamType
 
-from ...utils import decorators
+from ...utils import decorators  # pylint: disable=no-name-in-module
 from .identifier import IdentifierParamType
 
 __all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')

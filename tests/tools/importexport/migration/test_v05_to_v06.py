@@ -11,8 +11,7 @@
 from aiida.backends.general.migrations.calc_state import STATE_MAPPING
 from aiida.tools.importexport.archive.migrations.utils import verify_metadata_version
 from aiida.tools.importexport.archive.migrations.v05_to_v06 import migrate_v5_to_v6
-
-from tests.utils.archives import read_json_files, get_archive_file
+from tests.utils.archives import get_archive_file, read_json_files
 
 
 def test_migrate_external(migrate_from_func):

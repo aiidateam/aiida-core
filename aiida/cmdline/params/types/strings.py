@@ -12,6 +12,7 @@ Module for various text-based string validation.
 """
 
 import re
+
 from click.types import StringParamType
 
 __all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'NonEmptyStringParamType', 'LabelStringType')

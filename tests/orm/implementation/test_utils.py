@@ -12,7 +12,7 @@ import math
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.orm.implementation.utils import validate_attribute_extra_key, clean_value, FIELD_SEPARATOR
+from aiida.orm.implementation.utils import FIELD_SEPARATOR, clean_value, validate_attribute_extra_key
 
 
 class TestOrmImplementationUtils(AiidaTestCase):

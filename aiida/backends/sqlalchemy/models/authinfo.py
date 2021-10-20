@@ -11,10 +11,10 @@
 """Module to manage authentification information for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint
-from sqlalchemy.types import Integer, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import Boolean, Integer
 
 from .base import Base
 
@@ -43,8 +43,8 @@ class DbAuthInfo(Base):
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 
     def __init__(self, *args, **kwargs):
-        self._metadata = dict()
-        self.auth_params = dict()
+        self._metadata = {}
+        self.auth_params = {}
         super().__init__(*args, **kwargs)
 
     def __str__(self):

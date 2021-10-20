@@ -21,6 +21,7 @@ import paramiko
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
+
 from ..transport import Transport, TransportInternalError
 
 __all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
@@ -446,6 +447,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         :raise aiida.common.InvalidOperation: if the channel is already open
         """
         from paramiko.ssh_exception import SSHException
+
         from aiida.common.exceptions import InvalidOperation
         from aiida.transports.util import _DetachedProxyCommand
 

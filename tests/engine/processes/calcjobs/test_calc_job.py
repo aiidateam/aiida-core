@@ -7,29 +7,30 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods,redefined-outer-name
+# pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use
 """Test for the `CalcJob` process sub class."""
-import json
 from copy import deepcopy
 from functools import partial
 import io
+import json
 import os
+import tempfile
 from unittest.mock import patch
 
 import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions, LinkType, CalcJobState, StashMode
-from aiida.engine import launch, CalcJob, Process, ExitCode
-from aiida.engine.processes.ports import PortNamespace
+from aiida.common import CalcJobState, LinkType, StashMode, exceptions
+from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
+from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
-def raise_exception(exception):
+def raise_exception(exception, *args, **kwargs):
     """Raise an exception of the specified class.
 
     :param exception: exception class to raise
@@ -130,7 +131,7 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
     _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    with open(os.path.join(folder_name, submit_script_filename)) as handle:
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
         content = handle.read()
 
     file_regression.check(content, extension='.sh')
@@ -160,7 +161,7 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
     _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    with open(os.path.join(folder_name, submit_script_filename)) as handle:
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
         content = handle.read()
 
     file_regression.check(content, extension='.sh')
@@ -401,7 +402,7 @@ class TestCalcJob(AiidaTestCase):
         _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
         job_tmpl_file = os.path.join(node.dry_run_info['folder'], '.aiida', 'job_tmpl.json')
 
-        with open(job_tmpl_file, mode='r') as in_f:
+        with open(job_tmpl_file, mode='r', encoding='utf8') as in_f:
             job_tmpl = json.load(in_f)
 
         assert job_tmpl['rerunnable']
@@ -409,8 +410,6 @@ class TestCalcJob(AiidaTestCase):
     @pytest.mark.usefixtures('chdir_tmp_path')
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
-        import tempfile
-
         code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
                                                                                        '/bin/true']).store()
 
@@ -471,6 +470,16 @@ class TestCalcJob(AiidaTestCase):
         # The following exit code is specific to the `ArithmeticAddCalculation` we are testing here and is returned
         # because the retrieved folder does not contain the output file it expects
         assert exit_code == process.exit_codes.ERROR_READING_OUTPUT_FILE
+
+    def test_get_importer(self):
+        """Test the ``CalcJob.get_importer`` method."""
+        assert isinstance(ArithmeticAddCalculation.get_importer(), CalcJobImporter)
+        assert isinstance(
+            ArithmeticAddCalculation.get_importer(entry_point_name='core.arithmetic.add'), CalcJobImporter
+        )
+
+        with pytest.raises(exceptions.MissingEntryPointError):
+            ArithmeticAddCalculation.get_importer(entry_point_name='non-existing')
 
 
 @pytest.fixture
@@ -773,3 +782,114 @@ def test_validate_stash_options(stash_options, expected):
         assert validate_stash_options(stash_options, None) is expected
     else:
         assert expected in validate_stash_options(stash_options, None)
+
+
+class TestImport(AiidaTestCase):
+    """Test the functionality to import existing calculations completed outside of AiiDA."""
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super().setUpClass(*args, **kwargs)
+        cls.computer.configure()  # pylint: disable=no-member
+        cls.inputs = {
+            'x': orm.Int(1),
+            'y': orm.Int(2),
+            'metadata': {
+                'options': {
+                    'resources': {
+                        'num_machines': 1,
+                        'num_mpiprocs_per_machine': 1
+                    },
+                }
+            }
+        }
+
+    def test_import_from_valid(self):
+        """Test the import of a successfully completed `ArithmeticAddCalculation`."""
+        expected_sum = (self.inputs['x'] + self.inputs['y']).value
+
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
+            with open(filepath, 'w', encoding='utf8') as handle:
+                handle.write(f'{expected_sum}\n')
+
+            remote = orm.RemoteData(directory, computer=self.computer).store()
+            inputs = deepcopy(self.inputs)
+            inputs['remote_folder'] = remote
+
+            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+
+            # Check node attributes
+            assert isinstance(node, orm.CalcJobNode)
+            assert node.is_finished_ok
+            assert node.is_sealed
+            assert node.is_imported
+
+            # Verify the expected outputs are there
+            assert 'retrieved' in results
+            assert isinstance(results['retrieved'], orm.FolderData)
+            assert 'sum' in results
+            assert isinstance(results['sum'], orm.Int)
+            assert results['sum'].value == expected_sum
+
+    def test_import_from_invalid(self):
+        """Test the import of a completed `ArithmeticAddCalculation` where parsing will fail.
+
+        The `ArithmeticParser` will return a non-zero exit code if the output file could not be parsed. Make sure that
+        this is piped through correctly through the infrastructure and will cause the process to be marked as failed.
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
+            with open(filepath, 'w', encoding='utf8') as handle:
+                handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
+
+            remote = orm.RemoteData(directory, computer=self.computer).store()
+            inputs = deepcopy(self.inputs)
+            inputs['remote_folder'] = remote
+
+            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+
+            # Check node attributes
+            assert isinstance(node, orm.CalcJobNode)
+            assert node.is_failed
+            assert node.is_sealed
+            assert node.is_imported
+            assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+
+            # Verify the expected outputs are there
+            assert 'retrieved' in results
+            assert isinstance(results['retrieved'], orm.FolderData)
+
+    def test_import_non_default_input_file(self):
+        """Test the import of a successfully completed `ArithmeticAddCalculation`
+
+        The only difference of this test with `test_import_from_valid` is that here the name of the output file
+        of the completed calculation differs from the default written by the calculation job class."""
+        expected_sum = (self.inputs['x'] + self.inputs['y']).value
+
+        output_filename = 'non_standard.out'
+
+        with tempfile.TemporaryDirectory() as directory:
+            filepath = os.path.join(directory, output_filename)
+            with open(filepath, 'w', encoding='utf8') as handle:
+                handle.write(f'{expected_sum}\n')
+
+            remote = orm.RemoteData(directory, computer=self.computer).store()
+            inputs = deepcopy(self.inputs)
+            inputs['remote_folder'] = remote
+            inputs['metadata']['options']['output_filename'] = output_filename
+
+            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+
+            # Check node attributes
+            assert isinstance(node, orm.CalcJobNode)
+            assert node.is_finished_ok
+            assert node.is_sealed
+            assert node.is_imported
+
+            # Verify the expected outputs are there
+            assert 'retrieved' in results
+            assert isinstance(results['retrieved'], orm.FolderData)
+            assert 'sum' in results
+            assert isinstance(results['sum'], orm.Int)
+            assert results['sum'].value == expected_sum

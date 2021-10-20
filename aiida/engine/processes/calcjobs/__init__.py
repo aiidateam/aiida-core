@@ -15,10 +15,12 @@
 # pylint: disable=wildcard-import
 
 from .calcjob import *
+from .importer import *
 from .manager import *
 
 __all__ = (
     'CalcJob',
+    'CalcJobImporter',
     'JobManager',
     'JobsList',
 )

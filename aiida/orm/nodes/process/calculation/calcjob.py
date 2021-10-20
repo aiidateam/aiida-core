@@ -9,8 +9,7 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 import datetime
-from typing import Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -38,6 +37,7 @@ class CalcJobNode(CalculationNode):
     # pylint: disable=too-many-public-methods
 
     CALC_JOB_STATE_KEY = 'state'
+    IMMIGRATED_KEY = 'imported'
     REMOTE_WORKDIR_KEY = 'remote_workdir'
     RETRIEVE_LIST_KEY = 'retrieve_list'
     RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
@@ -61,7 +61,7 @@ class CalcJobNode(CalculationNode):
 
         :return: CalculationTools instance
         """
-        from aiida.plugins.entry_point import is_valid_entry_point_string, get_entry_point_from_string, load_entry_point
+        from aiida.plugins.entry_point import get_entry_point_from_string, is_valid_entry_point_string, load_entry_point
         from aiida.tools.calculations import CalculationTools
 
         if self._tools is None:
@@ -89,6 +89,7 @@ class CalcJobNode(CalculationNode):
     def _updatable_attributes(cls) -> Tuple[str, ...]:  # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
+            cls.IMMIGRATED_KEY,
             cls.REMOTE_WORKDIR_KEY,
             cls.RETRIEVE_LIST_KEY,
             cls.RETRIEVE_TEMPORARY_LIST_KEY,
@@ -150,6 +151,11 @@ class CalcJobNode(CalculationNode):
         builder = super().get_builder_restart()
         builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
         return builder
+
+    @property
+    def is_imported(self) -> bool:
+        """Return whether the calculation job was imported instead of being an actual run."""
+        return self.get_attribute(self.IMMIGRATED_KEY, None) is True
 
     def get_option(self, name: str) -> Optional[Any]:
         """

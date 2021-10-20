@@ -14,11 +14,12 @@ from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-mod
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.rmq import BROKER_DEFAULTS
-from ...utils import defaults, echo
+
 from .. import types
+from ...utils import defaults, echo  # pylint: disable=no-name-in-module
+from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
-from .config import ConfigFileOption
 
 __all__ = (
     'ALL', 'ALL_STATES', 'ALL_USERS', 'APPEND_TEXT', 'ARCHIVE_FORMAT', 'BROKER_HOST', 'BROKER_PASSWORD', 'BROKER_PORT',
@@ -90,18 +91,19 @@ def graph_traversal_rules(rules):
     return decorator
 
 
-def set_log_level(ctx, __, value):
-    """Set the log level for the global ``AIIDA_LOGGER``.
+def set_log_level(_ctx, _param, value):
+    """Fix the log level for all loggers from the cli.
 
     Note that we cannot use the most obvious approach of directly setting the level on the ``AIIDA_LOGGER``. The reason
     is that after this callback is finished, the :meth:`aiida.common.log.configure_logging` method can be called again,
     for example when the database backend is loaded, and this will undo this change. So instead, we change the value of
-    the ``logging.aiida_loglevel`` option of the profile that is currently loaded, which is the profile that was
-    selected for this CLI call and is stored in memory. If the logging is reconfigured, the correct log level will be
-    retrieved from the current profile and set on the loggers.
+    the `aiida.common.log.CLI_LOG_LEVEL` constant. When the logging is reconfigured, that value is no longer ``None``
+    which will ensure that the ``cli`` handler is configured for all handlers with the level of ``CLI_LOG_LEVEL``. This
+    approach tighly couples the generic :mod:`aiida.common.log` module to the :mod:`aiida.cmdline` module, which is not
+    the cleanest, but given that other module code can undo the logging configuration by calling that method, there
+    seems no easy way around this approach.
     """
-    if value is None:
-        return
+    from aiida.common import log
 
     try:
         log_level = value.upper()
@@ -111,19 +113,10 @@ def set_log_level(ctx, __, value):
     if log_level not in LOG_LEVELS:
         raise click.BadParameter(f'`{log_level}` is not a valid log level.')
 
-    try:
-        profile = ctx.obj.profile
-    except AttributeError:
-        # This can occur when the command is not invoked from the command line but directly, for example during testing,
-        # which won't go through the actual ``verdi`` command which is what initializes the ``obj`` attribute and sets
-        # the profile on it.
-        from aiida.manage.configuration import get_profile
-        profile = get_profile()
+    log.CLI_LOG_LEVEL = log_level
 
-    if profile is not None:
-        profile.set_option('logging.aiida_loglevel', log_level)
-        # Make sure the value is currently loaded, even if it may be undone in the future by another call to this method
-        configure_logging(cli=True)
+    # Make sure the logging is configured, even if it may be undone in the future by another call to this method.
+    configure_logging()
 
     return log_level
 
@@ -132,6 +125,7 @@ VERBOSITY = OverridableOption(
     '-v',
     '--verbosity',
     type=click.Choice(tuple(map(str.lower, LOG_LEVELS.keys())), case_sensitive=False),
+    default='REPORT',
     callback=set_log_level,
     expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
     help='Set the verbosity of the output.'

@@ -220,8 +220,8 @@ class DbEntry:
         Returns raw contents of a file as string.
         """
         if self._contents is None:
-            from urllib.request import urlopen
             from hashlib import md5
+            from urllib.request import urlopen
 
             with urlopen(self.source['uri']) as handle:
                 self._contents = handle.read().decode('utf-8')
@@ -282,8 +282,9 @@ class CifEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` object
         """
-        from aiida.orm.nodes.data.cif import CifData
         import tempfile
+
+        from aiida.orm.nodes.data.cif import CifData
 
         cifnode = None
 
@@ -327,8 +328,9 @@ class UpfEntry(DbEntry):
 
         :return: :py:class:`aiida.orm.nodes.data.upf.UpfData` object
         """
-        from aiida.orm import UpfData
         import tempfile
+
+        from aiida.orm import UpfData
 
         upfnode = None
 

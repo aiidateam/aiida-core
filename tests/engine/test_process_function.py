@@ -12,7 +12,7 @@ import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
+from aiida.engine import ExitCode, Process, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 

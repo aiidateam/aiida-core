@@ -324,11 +324,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
     @property
     def computer(self) -> Optional[Computer]:
-        """Return the computer of this node.
-
-        :return: the computer or None
-        :rtype: `Computer` or None
-        """
+        """Return the computer of this node."""
         if self.backend_entity.computer:
             return Computer.from_backend_entity(self.backend_entity.computer)
 
@@ -352,11 +348,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
     @property
     def user(self) -> User:
-        """Return the user of this node.
-
-        :return: the user
-        :rtype: `User`
-        """
+        """Return the user of this node."""
         return User.from_backend_entity(self.backend_entity.user)
 
     @user.setter

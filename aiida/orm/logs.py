@@ -8,13 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for orm logging abstract classes"""
-from typing import Type
+import logging
+from typing import TYPE_CHECKING, List, Optional, Type
 
 from aiida.common import timezone
 from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 
 from . import entities
+
+if TYPE_CHECKING:
+    from aiida.orm import Node
+    from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
 
@@ -36,16 +41,11 @@ class LogCollection(entities.Collection['Log']):
     def _entity_base_cls() -> Type['Log']:
         return Log
 
-    @staticmethod
-    def create_entry_from_record(record):
-        """
-        Helper function to create a log entry from a record created as by the python logging library
+    def create_entry_from_record(self, record: logging.LogRecord) -> 'Log':
+        """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
-        :type record: :class:`logging.LogRecord`
-
-        :return: An object implementing the log entry interface
-        :rtype: :class:`aiida.orm.logs.Log`
+        :return: A stored log instance
         """
         from datetime import datetime
 
@@ -76,21 +76,17 @@ class LogCollection(entities.Collection['Log']):
             levelname=record.levelname,
             dbnode_id=dbnode_id,
             message=message,
-            metadata=metadata
+            metadata=metadata,
+            backend=self.backend
         )
 
-    def get_logs_for(self, entity, order_by=None):
-        """
-        Get all the log messages for a given entity and optionally sort
+    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
+        """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for
-        :type entity: :class:`aiida.orm.Entity`
-
         :param order_by: a list of (key, direction) pairs specifying the sort order
-        :type order_by: list
 
         :return: the list of log entries
-        :rtype: list
         """
         from . import nodes
 
@@ -100,37 +96,31 @@ class LogCollection(entities.Collection['Log']):
         return self.find({'dbnode_id': entity.pk}, order_by=order_by)
 
     def delete(self, pk: int) -> None:
-        """
-        Remove a Log entry from the collection with the given id
+        """Remove a Log entry from the collection with the given id
 
         :param pk: id of the Log to delete
 
         :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``pk`` is not found
         """
-        self._backend.logs.delete(pk)
+        return self._backend.logs.delete(pk)
 
-    def delete_all(self):
-        """
-        Delete all Logs in the collection
+    def delete_all(self) -> None:
+        """Delete all Logs in the collection
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
         """
-        self._backend.logs.delete_all()
+        return self._backend.logs.delete_all()
 
-    def delete_many(self, filters):
-        """
-        Delete Logs based on ``filters``
+    def delete_many(self, filters: 'FilterType') -> List[int]:
+        """Delete Logs based on ``filters``
 
-        :param filters: similar to QueryBuilder filter
-        :type filters: dict
-
+        :param filters: filters to pass to the QueryBuilder
         :return: (former) ``PK`` s of deleted Logs
-        :rtype: list
 
         :raises TypeError: if ``filters`` is not a `dict`
         :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty
         """
-        self._backend.logs.delete_many(filters)
+        return self._backend.logs.delete_many(filters)
 
 
 class Log(entities.Entity):

@@ -151,7 +151,7 @@ class Code(Data):
         return f'{self.description}'
 
     @classmethod
-    def get_code_helper(cls, label, machinename=None):
+    def get_code_helper(cls, label, machinename=None, backend=None):
         """
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
@@ -164,7 +164,7 @@ class Code(Data):
         from aiida.orm.computers import Computer
         from aiida.orm.querybuilder import QueryBuilder
 
-        query = QueryBuilder()
+        query = QueryBuilder(backend=backend)
         query.append(cls, filters={'label': label}, project='*', tag='code')
         if machinename:
             query.append(Computer, filters={'label': machinename}, with_node='code')
@@ -249,7 +249,7 @@ class Code(Data):
             raise MultipleObjectsError(f'{code_string} could not be uniquely resolved')
 
     @classmethod
-    def list_for_plugin(cls, plugin, labels=True):
+    def list_for_plugin(cls, plugin, labels=True, backend=None):
         """
         Return a list of valid code strings for a given plugin.
 
@@ -260,7 +260,7 @@ class Code(Data):
           otherwise a list of integers with the code PKs.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        query = QueryBuilder()
+        query = QueryBuilder(backend=backend)
         query.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
         valid_codes = query.all(flat=True)
 

@@ -9,7 +9,7 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 import sys
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, cast
 
 from numpy import inf
 
@@ -19,6 +19,9 @@ from aiida.common.links import GraphTraversalRules, LinkType
 from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -35,6 +38,7 @@ def get_nodes_delete(
     starting_pks: Iterable[int],
     get_links: bool = False,
     missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
+    backend: Optional['Backend'] = None,
     **traversal_rules: bool
 ) -> TraverseGraphOutput:
     """
@@ -59,9 +63,10 @@ def get_nodes_delete(
     traverse_output = traverse_graph(
         starting_pks,
         get_links=get_links,
+        backend=backend,
         links_forward=traverse_links['forward'],
         links_backward=traverse_links['backward'],
-        missing_callback=missing_callback
+        missing_callback=missing_callback,
     )
 
     function_output = {
@@ -74,7 +79,10 @@ def get_nodes_delete(
 
 
 def get_nodes_export(
-    starting_pks: Iterable[int], get_links: bool = False, **traversal_rules: bool
+    starting_pks: Iterable[int],
+    get_links: bool = False,
+    backend: Optional['Backend'] = None,
+    **traversal_rules: bool
 ) -> TraverseGraphOutput:
     """
     This function will return the set of all nodes that can be connected
@@ -99,6 +107,7 @@ def get_nodes_export(
     traverse_output = traverse_graph(
         starting_pks,
         get_links=get_links,
+        backend=backend,
         links_forward=traverse_links['forward'],
         links_backward=traverse_links['backward']
     )
@@ -186,7 +195,8 @@ def traverse_graph(
     get_links: bool = False,
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None
+    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
+    backend: Optional['Backend'] = None
 ) -> TraverseGraphOutput:
     """
     This function will return the set of all nodes that can be connected
@@ -239,7 +249,7 @@ def traverse_graph(
             return {'nodes': set(), 'links': set()}
         return {'nodes': set(), 'links': None}
 
-    query_nodes = orm.QueryBuilder()
+    query_nodes = orm.QueryBuilder(backend=backend)
     query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': operational_set}})
     existing_pks = set(query_nodes.all(flat=True))
     missing_pks = operational_set.difference(existing_pks)
@@ -266,7 +276,7 @@ def traverse_graph(
         rules += [RuleSaveWalkers(stash)]
 
     if links_forward:
-        query_outgoing = orm.QueryBuilder()
+        query_outgoing = orm.QueryBuilder(backend=backend)
         query_outgoing.append(orm.Node, tag='sources')
         query_outgoing.append(orm.Node, edge_filters=filters_forwards, with_incoming='sources')
         rule_outgoing = UpdateRule(query_outgoing, max_iterations=1, track_edges=get_links)
@@ -276,7 +286,7 @@ def traverse_graph(
         rules += [RuleSetWalkers(stash)]
 
     if links_backward:
-        query_incoming = orm.QueryBuilder()
+        query_incoming = orm.QueryBuilder(backend=backend)
         query_incoming.append(orm.Node, tag='sources')
         query_incoming.append(orm.Node, edge_filters=filters_backwards, with_outgoing='sources')
         rule_incoming = UpdateRule(query_incoming, max_iterations=1, track_edges=get_links)

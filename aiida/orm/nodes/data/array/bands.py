@@ -1803,7 +1803,7 @@ MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE = Template("""pl.savefig("$fname", format=
 MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE_WITH_DPI = Template("""pl.savefig("$fname", format="$format", dpi=$dpi)""")
 
 
-def get_bands_and_parents_structure(args):
+def get_bands_and_parents_structure(args, backend=None):
     """Search for bands and return bands and the closest structure that is a parent of the instance.
 
     :returns:
@@ -1817,7 +1817,7 @@ def get_bands_and_parents_structure(args):
     from aiida import orm
     from aiida.common import timezone
 
-    q_build = orm.QueryBuilder()
+    q_build = orm.QueryBuilder(backend=backend)
     if args.all_users is False:
         q_build.append(orm.User, tag='creator', filters={'email': orm.User.objects.get_default().email})
     else:

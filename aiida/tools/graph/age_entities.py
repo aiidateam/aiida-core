@@ -225,17 +225,6 @@ class AiidaEntitySet(AbstractSetContainer):
         """Class of nodes contained in the entity set (node or group)"""
         return self._aiida_cls
 
-    def get_entities(self):
-        """Iterator that returns the AiiDA entities"""
-        for entity, in orm.QueryBuilder().append(
-            self._aiida_cls, project='*', filters={
-                self._identifier: {
-                    'in': self.keyset
-                }
-            }
-        ).iterall():
-            yield entity
-
 
 class DirectedEdgeSet(AbstractSetContainer):
     """Extension of AbstractSetContainer

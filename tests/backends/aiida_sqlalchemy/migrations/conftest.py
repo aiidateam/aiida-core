@@ -78,7 +78,7 @@ class Migrator:
 def perform_migrations(aiida_profile, backend, request):
     """A fixture to setup the database for migration tests"""
     # note downgrading to 1830c8430131 requires adding columns to `DbUser` and hangs if a user is present
-    aiida_profile.reset_db(create_user=False)
+    aiida_profile.reset_db(init_db=False)
     migrator = Migrator(backend, SqlaBackendManager())
     marker = request.node.get_closest_marker('migrate_down')
     if marker is not None:
@@ -86,5 +86,5 @@ def perform_migrations(aiida_profile, backend, request):
         migrator.migrate_down(marker.args[0])
     yield migrator
     # ensure that the database is migrated back up to the latest version, once finished
-    aiida_profile.reset_db(create_user=False)
+    aiida_profile.reset_db(init_db=False)
     SqlaBackendManager().migrate_up('head')

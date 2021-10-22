@@ -117,8 +117,8 @@ class TestManager:
     def has_profile_open(self):
         return self._manager and self._manager.has_profile_open()
 
-    def reset_db(self, create_user=True):
-        return self._manager.reset_db(create_user=create_user)
+    def reset_db(self, init_db=True):
+        return self._manager.reset_db(init_db=init_db)
 
     def destroy_all(self):
         if self._manager:
@@ -166,10 +166,10 @@ class ProfileManager:
             self._test_case = SqlAlchemyTests()
             self._test_case.test_session = get_scoped_session()
 
-    def reset_db(self, create_user=True):
+    def reset_db(self, init_db=True):
         self._test_case.clean_db()  # will drop all users
         manager.reset_manager()
-        if create_user:
+        if init_db:
             self.init_db()
 
     def init_db(self):

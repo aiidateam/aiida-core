@@ -37,13 +37,17 @@ class BackendComputer(BackendEntity):
 
     @property
     @abc.abstractmethod
-    def is_stored(self):
+    def is_stored(self) -> bool:
         """
         Is the computer stored?
 
         :return: True if stored, False otherwise
-        :rtype: bool
         """
+
+    @property
+    @abc.abstractmethod
+    def uuid(self) -> str:
+        pass
 
     @property
     @abc.abstractmethod
@@ -119,6 +123,10 @@ class BackendComputer(BackendEntity):
     @abc.abstractmethod
     def set_transport_type(self, transport_type):
         pass
+
+    @abc.abstractmethod
+    def copy(self) -> 'BackendComputer':
+        """Create an unstored clone of an already stored `Computer`."""
 
 
 class BackendComputerCollection(BackendCollection[BackendComputer]):

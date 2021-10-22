@@ -14,7 +14,21 @@ import datetime
 import importlib
 from logging import Logger
 import typing
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -41,10 +55,38 @@ if TYPE_CHECKING:
 
 __all__ = ('Node',)
 
-_NO_DEFAULT = tuple()  # type: ignore[var-annotated]
+NodeType = TypeVar('NodeType', bound='Node')
 
 
-class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
+class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
+    """The collection of nodes."""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['Node']:
+        return Node
+
+    def delete(self, pk: int) -> None:
+        """Delete a `Node` from the collection with the given id
+
+        :param pk: the node id
+        """
+        node = self.get(id=pk)
+
+        if not node.is_stored:
+            return
+
+        if node.get_incoming().all():
+            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
+
+        if node.get_outgoing().all():
+            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
+
+        self._backend.nodes.delete(pk)
+
+
+class Node(
+    Entity['BackendNode'], NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta
+):
     """
     Base class for all nodes in AiiDA.
 
@@ -64,27 +106,6 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     # added by metaclass
     _plugin_type_string: ClassVar[str]
     _query_type_string: ClassVar[str]
-
-    class Collection(EntityCollection):
-        """The collection of nodes."""
-
-        def delete(self, node_id: int) -> None:
-            """Delete a `Node` from the collection with the given id
-
-            :param node_id: the node id
-            """
-            node = self.get(id=node_id)
-
-            if not node.is_stored:
-                return
-
-            if node.get_incoming().all():
-                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
-
-            if node.get_outgoing().all():
-                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
-
-            self._backend.nodes.delete(node_id)
 
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None
@@ -106,10 +127,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
     # These are to be initialized in the `initialization` method
     _incoming_cache: Optional[List[LinkTriple]] = None
 
-    @classmethod
-    def from_backend_entity(cls, backend_entity: 'BackendNode') -> 'Node':
-        entity = super().from_backend_entity(backend_entity)
-        return entity
+    Collection = NodeCollection
+
+    @classproperty
+    def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
+        return NodeCollection.get_cached(cls, get_manager().get_backend())  # type: ignore[arg-type]
 
     def __init__(
         self,
@@ -133,10 +155,6 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
             node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
         )
         super().__init__(backend_entity)
-
-    @property
-    def backend_entity(self) -> 'BackendNode':
-        return super().backend_entity
 
     def __eq__(self, other: Any) -> bool:
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""
@@ -304,11 +322,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
     @property
     def computer(self) -> Optional[Computer]:
-        """Return the computer of this node.
-
-        :return: the computer or None
-        :rtype: `Computer` or None
-        """
+        """Return the computer of this node."""
         if self.backend_entity.computer:
             return Computer.from_backend_entity(self.backend_entity.computer)
 
@@ -332,11 +346,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
     @property
     def user(self) -> User:
-        """Return the user of this node.
-
-        :return: the user
-        :rtype: `User`
-        """
+        """Return the user of this node."""
         return User.from_backend_entity(self.backend_entity.user)
 
     @user.setter
@@ -374,7 +384,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
-        user = user or User.objects.get_default()
+        user = user or User.objects(self.backend).get_default()
         return Comment(node=self, user=user, content=content).store()
 
     def get_comment(self, identifier: int) -> Comment:
@@ -385,14 +395,14 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
-        return Comment.objects.get(dbnode_id=self.pk, id=identifier)
+        return Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
 
     def get_comments(self) -> List[Comment]:
         """Return a sorted list of comments for this node.
 
         :return: the list of comments, sorted by pk
         """
-        return Comment.objects.find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
+        return Comment.objects(self.backend).find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
 
     def update_comment(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.
@@ -402,7 +412,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
-        comment = Comment.objects.get(dbnode_id=self.pk, id=identifier)
+        comment = Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
         comment.set_content(content)
 
     def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
@@ -410,7 +420,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
 
         :param identifier: the comment pk
         """
-        Comment.objects.delete(identifier)
+        Comment.objects(self.backend).delete(identifier)
 
     def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
@@ -446,11 +456,11 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         """
         from aiida.orm.utils.links import validate_link
 
-        validate_link(source, self, link_type, link_label)
+        validate_link(source, self, link_type, link_label, backend=self.backend)
 
         # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
         if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
-            builder = QueryBuilder().append(
+            builder = QueryBuilder(backend=self.backend).append(
                 Node, filters={'id': self.pk}, tag='parent').append(
                 Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')  # yapf:disable
             if builder.count() > 0:
@@ -527,7 +537,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if link_label_filter:
             edge_filters['label'] = {'like': link_label_filter}
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=self.backend)
         builder.append(Node, filters=node_filters, tag='main')
 
         node_project = ['uuid'] if only_uuid else ['*']
@@ -884,7 +894,7 @@ class Node(Entity, NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin
         if not node_hash or not self._cachable:
             return iter(())
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=self.backend)
         builder.append(self.__class__, filters={'extras._aiida_hash': node_hash}, project='*', subclassing=False)
         nodes_identical = (n[0] for n in builder.iterall())
 

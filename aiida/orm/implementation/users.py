@@ -25,15 +25,6 @@ class BackendUser(BackendEntity):
     REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
 
     @property
-    def uuid(self):
-        """
-        For now users do not have UUIDs so always return false
-
-        :return: None
-        """
-        return None
-
-    @property
     @abc.abstractmethod
     def email(self):
         """

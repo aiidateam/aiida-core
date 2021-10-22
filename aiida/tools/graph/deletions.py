@@ -71,17 +71,18 @@ def delete_nodes(
         for _pk in _pks:
             DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
 
-    pks_set_to_delete = get_nodes_delete(pks, get_links=False, missing_callback=_missing_callback,
-                                         **traversal_rules)['nodes']
+    pks_set_to_delete = get_nodes_delete(
+        pks, get_links=False, missing_callback=_missing_callback, backend=backend, **traversal_rules
+    )['nodes']
 
     DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
     if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
-        builder = QueryBuilder().append(
-            Node, filters={'id': {
-                'in': pks_set_to_delete
-            }}, project=('uuid', 'id', 'node_type', 'label')
-        )
+        builder = QueryBuilder(
+            backend=backend
+        ).append(Node, filters={'id': {
+            'in': pks_set_to_delete
+        }}, project=('uuid', 'id', 'node_type', 'label'))
         DELETE_LOGGER.debug('Node(s) to delete:')
         for uuid, pk, type_string, label in builder.iterall():
             try:
@@ -113,6 +114,7 @@ def delete_nodes(
 def delete_group_nodes(
     pks: Iterable[int],
     dry_run: Union[bool, Callable[[Set[int]], bool]] = True,
+    backend=None,
     **traversal_rules: bool
 ) -> Tuple[Set[int], bool]:
     """Delete nodes contained in a list of groups (not the groups themselves!).
@@ -149,7 +151,7 @@ def delete_group_nodes(
     :returns: (node pks to delete, whether they were deleted)
 
     """
-    group_node_query = QueryBuilder().append(
+    group_node_query = QueryBuilder(backend=backend).append(
         Group,
         filters={
             'id': {
@@ -160,4 +162,4 @@ def delete_group_nodes(
     ).append(Node, project='id', with_group='groups')
     group_node_query.distinct()
     node_pks = group_node_query.all(flat=True)
-    return delete_nodes(node_pks, dry_run=dry_run, **traversal_rules)
+    return delete_nodes(node_pks, dry_run=dry_run, backend=backend, **traversal_rules)

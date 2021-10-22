@@ -10,16 +10,20 @@
 """ provides functionality to create graphs of the AiiDa data providence,
 *via* graphviz.
 """
-
 import os
 from types import MappingProxyType  # pylint: disable=no-name-in-module,useless-suppression
+from typing import TYPE_CHECKING, Optional
 
 from graphviz import Digraph
 
 from aiida import orm
 from aiida.common import LinkType
+from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'pstate_node_styles', 'default_node_sublabels')
 
@@ -359,7 +363,8 @@ class Graph:
         link_style_fn=None,
         node_style_fn=None,
         node_sublabel_fn=None,
-        node_id_type='pk'
+        node_id_type='pk',
+        backend: Optional['Backend'] = None
     ):
         """a class to create graphviz graphs of the AiiDA node provenance
 
@@ -398,9 +403,15 @@ class Graph:
         self._node_styles = node_style_fn or default_node_styles
         self._node_sublabels = node_sublabel_fn or default_node_sublabels
         self._node_id_type = node_id_type
+        self._backend = backend or get_manager().get_backend()
 
         self._ignore_node_style = _OVERRIDE_STYLES_DICT['ignore_node']
         self._origin_node_style = _OVERRIDE_STYLES_DICT['origin_node']
+
+    @property
+    def backend(self) -> 'Backend':
+        """The backend used to create the graph"""
+        return self._backend
 
     @property
     def graphviz(self):
@@ -539,10 +550,11 @@ class Graph:
             (node_pk,),
             max_iterations=1,
             get_links=True,
+            backend=self.backend,
             links_backward=valid_link_types,
         )
 
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -595,10 +607,11 @@ class Graph:
             (node_pk,),
             max_iterations=1,
             get_links=True,
+            backend=self.backend,
             links_forward=valid_link_types,
         )
 
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -664,6 +677,7 @@ class Graph:
             (origin_pk,),
             max_iterations=depth,
             get_links=True,
+            backend=self.backend,
             links_forward=valid_link_types,
         )
 
@@ -674,13 +688,14 @@ class Graph:
                 traversed_graph['nodes'],
                 max_iterations=1,
                 get_links=True,
+                backend=self.backend,
                 links_backward=[LinkType.INPUT_WORK, LinkType.INPUT_CALC]
             )
             traversed_graph['nodes'] = traversed_graph['nodes'].union(traversed_outputs['nodes'])
             traversed_graph['links'] = traversed_graph['links'].union(traversed_outputs['links'])
 
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -755,6 +770,7 @@ class Graph:
             (origin_pk,),
             max_iterations=depth,
             get_links=True,
+            backend=self.backend,
             links_backward=valid_link_types,
         )
 
@@ -765,13 +781,14 @@ class Graph:
                 traversed_graph['nodes'],
                 max_iterations=1,
                 get_links=True,
+                backend=self.backend,
                 links_forward=[LinkType.CREATE, LinkType.RETURN]
             )
             traversed_graph['nodes'] = traversed_graph['nodes'].union(traversed_outputs['nodes'])
             traversed_graph['links'] = traversed_graph['links'].union(traversed_outputs['links'])
 
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -842,6 +859,7 @@ class Graph:
         self.add_node(origin_node, style_override=dict(origin_style))
 
         query = orm.QueryBuilder(
+            backend=self.backend,
             **{
                 'path': [{
                     'cls': origin_node.__class__,
@@ -902,6 +920,7 @@ class Graph:
             origin_filters = {}
 
         query = orm.QueryBuilder(
+            backend=self.backend,
             **{'path': [{
                 'cls': origin_cls,
                 'filters': origin_filters,

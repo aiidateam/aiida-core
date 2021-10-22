@@ -171,7 +171,7 @@ class SqlaCommentCollection(BackendCommentCollection):
             raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
-        builder = QueryBuilder().append(Comment, filters=filters, project='id')
+        builder = QueryBuilder(backend=self.backend).append(Comment, filters=filters, project='id')
         entities_to_delete = builder.all(flat=True)
         for entity in entities_to_delete:
             self.delete(entity)

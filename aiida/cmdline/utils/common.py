@@ -11,10 +11,14 @@
 import logging
 import os
 import sys
+from typing import TYPE_CHECKING
 
 from tabulate import tabulate
 
 from . import echo
+
+if TYPE_CHECKING:
+    from aiida.orm import WorkChainNode
 
 __all__ = ('is_verbose',)
 
@@ -306,7 +310,7 @@ def get_process_function_report(node):
     return '\n'.join(report)
 
 
-def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
+def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_depth=None):
     """
     Return a multi line string representation of the log messages and output of a given workchain
 
@@ -333,7 +337,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
         Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
         The result is a list of uuid of these nodes.
         """
-        builder = orm.QueryBuilder()
+        builder = orm.QueryBuilder(backend=node.backend)
         builder.append(cls=orm.WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
         builder.append(
             cls=orm.WorkChainNode,

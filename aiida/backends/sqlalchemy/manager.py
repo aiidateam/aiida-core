@@ -11,6 +11,7 @@
 import contextlib
 import os
 
+from alembic.command import downgrade, upgrade
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -94,6 +95,14 @@ class SqlaBackendManager(BackendManager):
         from . import reset_session
         reset_session()
 
+    def list_schema_versions(self):
+        """List all available schema versions (oldest to latest).
+
+        :return: list of strings with schema versions
+        """
+        with self.alembic_script() as script:
+            return list(reversed([entry.revision for entry in script.walk_revisions()]))
+
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.
 
@@ -102,10 +111,9 @@ class SqlaBackendManager(BackendManager):
         :return: boolean, True if the database schema version is ahead of the code schema version.
         """
         with self.alembic_script() as script:
-            return self.get_schema_version_database() not in [entry.revision for entry in script.walk_revisions()]
+            return self.get_schema_version_current() not in [entry.revision for entry in script.walk_revisions()]
 
-    def get_schema_version_code(self):
-        """Return the code schema version."""
+    def get_schema_version_latest(self):
         with self.alembic_script() as script:
             return script.get_current_head()
 
@@ -117,11 +125,7 @@ class SqlaBackendManager(BackendManager):
         """
         return SCHEMA_VERSION_RESET[schema_generation_code]
 
-    def get_schema_version_database(self):
-        """Return the database schema version.
-
-        :return: `distutils.version.StrictVersion` with schema version of the database
-        """
+    def get_schema_version_current(self):
         with self.migration_context() as context:
             return context.get_current_revision()
 
@@ -133,13 +137,26 @@ class SqlaBackendManager(BackendManager):
         with self.migration_context() as context:
             return context.stamp(context.script, 'head')
 
-    def _migrate_database_version(self):
-        """Migrate the database to the current schema version."""
-        super()._migrate_database_version()
-        from alembic.command import upgrade
+    def migrate_up(self, version: str):
+        """Migrate the database up to a specific version.
 
+        :param version: string with schema version to migrate to
+        """
         with self.alembic_config() as config:
-            upgrade(config, 'head')
+            upgrade(config, version)
+
+    def migrate_down(self, version: str):
+        """Migrate the database down to a specific version.
+
+        :param version: string with schema version to migrate to
+        """
+        with self.alembic_config() as config:
+            downgrade(config, version)
+
+    def _migrate_database_version(self):
+        """Migrate the database to the latest schema version."""
+        super()._migrate_database_version()
+        self.migrate_up('head')
 
 
 class SqlaSettingsManager(SettingsManager):

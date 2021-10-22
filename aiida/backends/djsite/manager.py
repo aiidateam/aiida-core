@@ -63,10 +63,9 @@ class DjangoBackendManager(BackendManager):
         """
         # For Django the versions numbers are numerical so we can compare them
         from distutils.version import StrictVersion
-        return StrictVersion(self.get_schema_version_database()) > StrictVersion(self.get_schema_version_code())
+        return StrictVersion(self.get_schema_version_current()) > StrictVersion(self.get_schema_version_latest())
 
-    def get_schema_version_code(self):
-        """Return the code schema version."""
+    def get_schema_version_latest(self):
         from .db.models import SCHEMA_VERSION
         return SCHEMA_VERSION
 
@@ -101,11 +100,7 @@ class DjangoBackendManager(BackendManager):
             except (IndexError, ValueError, TypeError):
                 return '1'
 
-    def get_schema_version_database(self):
-        """Return the database schema version.
-
-        :return: `distutils.version.StrictVersion` with schema version of the database
-        """
+    def get_schema_version_current(self):
         from django.db.utils import ProgrammingError
 
         from aiida.manage.manager import get_manager

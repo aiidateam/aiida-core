@@ -145,7 +145,7 @@ class BackendManager:
             self.validate_schema_generation_for_migration()
             self._migrate_database_generation()
 
-        if self.get_schema_version_code() != self.get_schema_version_database():
+        if self.get_schema_version_latest() != self.get_schema_version_current():
             self.validate_schema_version_for_migration()
             self._migrate_database_version()
 
@@ -160,7 +160,7 @@ class BackendManager:
         logic that is required.
         """
         self.set_schema_generation_database(SCHEMA_GENERATION_VALUE)
-        self.set_schema_version_database(self.get_schema_version_code())
+        self.set_schema_version_database(self.get_schema_version_latest())
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version.
@@ -179,8 +179,8 @@ class BackendManager:
         """
 
     @abc.abstractmethod
-    def get_schema_version_code(self):
-        """Return the code schema version."""
+    def get_schema_version_latest(self):
+        """Return the latest schema version."""
 
     @abc.abstractmethod
     def get_schema_version_reset(self, schema_generation_code):
@@ -191,11 +191,8 @@ class BackendManager:
         """
 
     @abc.abstractmethod
-    def get_schema_version_database(self):
-        """Return the database schema version.
-
-        :return: `distutils.version.LooseVersion` with schema version of the database
-        """
+    def get_schema_version_current(self):
+        """Return the current schema version."""
 
     @abc.abstractmethod
     def set_schema_version_database(self, version):
@@ -256,7 +253,7 @@ class BackendManager:
         """
         schema_generation_code = SCHEMA_GENERATION_VALUE
         schema_generation_database = self.get_schema_generation_database()
-        schema_version_database = self.get_schema_version_database()
+        schema_version_database = self.get_schema_version_current()
         schema_version_reset = self.get_schema_version_reset(schema_generation_code)
         schema_generation_reset, aiida_core_version_reset = SCHEMA_GENERATION_RESET[schema_generation_code]
 
@@ -287,8 +284,8 @@ class BackendManager:
 
         :raises `aiida.common.exceptions.IncompatibleDatabaseSchema`: if database schema version cannot be migrated
         """
-        schema_version_code = self.get_schema_version_code()
-        schema_version_database = self.get_schema_version_database()
+        schema_version_code = self.get_schema_version_latest()
+        schema_version_database = self.get_schema_version_current()
 
         if self.is_database_schema_ahead():
             # Database is newer than the code so a downgrade would be necessary but this is not supported.
@@ -322,8 +319,8 @@ class BackendManager:
         :param profile: the profile for which to validate the database schema
         :raises `aiida.common.exceptions.IncompatibleDatabaseSchema`: if database schema version is not up-to-date
         """
-        schema_version_code = self.get_schema_version_code()
-        schema_version_database = self.get_schema_version_database()
+        schema_version_code = self.get_schema_version_latest()
+        schema_version_database = self.get_schema_version_current()
 
         if schema_version_database != schema_version_code:
             raise exceptions.IncompatibleDatabaseSchema(

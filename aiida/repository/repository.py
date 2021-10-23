@@ -493,3 +493,21 @@ class Repository:
 
                 with self.open(root / filename) as handle:
                     filepath.write_bytes(handle.read())
+
+    # these methods are not actually used in aiida-core, but are here for completeness
+
+    def initialise(self, **kwargs: Any) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.
+        """
+        self.backend.initialise(**kwargs)
+
+    def delete(self) -> None:
+        """Delete the repository.
+
+        .. important:: This will not just delete the contents of the repository but also the repository itself and all
+            of its assets. For example, if the repository is stored inside a folder on disk, the folder may be deleted.
+        """
+        self.backend.erase()
+        self.reset()

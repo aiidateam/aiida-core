@@ -361,8 +361,9 @@ class Config:  # pylint: disable=too-many-public-methods
         profile = self.get_profile(name)
 
         if include_repository:
-            repository = profile.get_repository()
-            repository.delete()
+            folder = profile.repository_path
+            if folder.exists():
+                shutil.rmtree(folder)
 
         if include_database:
             postgres = Postgres.from_profile(profile)

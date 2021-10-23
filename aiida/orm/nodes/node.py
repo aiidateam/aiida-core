@@ -709,13 +709,13 @@ class Node(
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
+        from aiida.repository import Repository
         from aiida.repository.backend import SandboxRepositoryBackend
 
         # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
         if isinstance(self._repository.backend, SandboxRepositoryBackend):
-            profile = get_manager().get_profile()
-            assert profile is not None, 'profile not loaded'
-            repository = profile.get_repository()
+            repository_backend = self.backend.get_repository()
+            repository = Repository(backend=repository_backend)
             repository.clone(self._repository)
             # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
             self._repository_instance = repository

@@ -85,7 +85,7 @@ def verdi_status(print_traceback, no_rmq):
 
     # Getting the repository
     try:
-        repository = profile.get_repository()
+        repository = manager.get_backend().get_repository()
     except Exception as exc:
         message = 'Error with repository folder'
         print_status(ServiceStatus.ERROR, 'repository', message, exception=exc, print_traceback=print_traceback)

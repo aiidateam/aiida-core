@@ -31,7 +31,7 @@ def test_read_stored():
     assert numpy.array_equal(loaded.get_array('array'), array)
 
     # Now pack all the files in the repository
-    container = get_manager().get_profile().get_repository().backend.container
+    container = get_manager().get_backend().get_repository().container
     container.pack_all_loose()
 
     loaded = load_node(node.uuid)

@@ -271,6 +271,60 @@ def test_interactive_upload(clear_database_before_test, aiida_localhost, non_int
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_interactive_remote_duplicate_label(
+    clear_database_before_test, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+):
+    """Test interactive remote code setup with already existing lab."""
+    label = 'interactive_remote_duplicate_label'
+    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label=label)
+
+    replace_label = 'interactive_remote_replace_label'
+    user_input = '\n'.join([
+        label, 'description', 'core.arithmetic.add', 'yes', aiida_localhost.label, 'yes', replace_label,
+        '/remote/abs/path'
+    ])
+    result = CliRunner().invoke(setup_code, input=user_input)
+    assert result.exception is None
+    assert isinstance(orm.Code.get_from_string(f'{replace_label}@{aiida_localhost.label}'), orm.Code)
+
+
+def test_non_interactive_remote_duplicate_label(clear_database_before_test, aiida_local_code_factory, aiida_localhost):
+    """Test non-interactive remote code setup with already existing label."""
+    label = 'non_interactive_remote_duplicate_label'
+    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label=label)
+
+    result = CliRunner().invoke(
+        setup_code, [
+            '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
+            '--on-computer', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+        ]
+    )
+
+    assert result.exception is not None
+    assert f"'{label}@{aiida_localhost.label}' already exists." in result.output
+
+
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_interactive_upload_duplicate_label(
+    clear_database_before_test, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+):
+    """Test interactive local code setup with already existing label."""
+    label = 'interactive_upload_duplicate_label'
+    replace_label = 'interactive_upload_replace_label'
+    dirname = os.path.dirname(__file__)
+    basename = os.path.basename(__file__)
+    user_input = '\n'.join([label, 'description', 'core.arithmetic.add', 'no', dirname, basename])
+    result = CliRunner().invoke(setup_code, input=user_input)
+    assert result.exception is None
+    assert isinstance(orm.Code.get_from_string(f'{label}'), orm.Code)
+
+    user_input = '\n'.join([label, 'description', 'core.arithmetic.add', 'no', 'yes', replace_label, dirname, basename])
+    result = CliRunner().invoke(setup_code, input=user_input)
+    assert result.exception is None
+    assert isinstance(orm.Code.get_from_string(f'{replace_label}'), orm.Code)
+
+
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_mixed(clear_database_before_test, aiida_localhost, non_interactive_editor):
     """Test mixed (interactive/from config) code setup."""
     from aiida.orm import Code
@@ -295,6 +349,35 @@ def test_code_duplicate_interactive(clear_database_before_test, aiida_local_code
     assert code.description == duplicate.description
     assert code.get_prepend_text() == duplicate.get_prepend_text()
     assert code.get_append_text() == duplicate.get_append_text()
+
+
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_code_duplicate_interactive_duplicate_label(
+    clear_database_before_test, aiida_local_code_factory, non_interactive_editor
+):
+    """Test code duplication interactive with already existing lable."""
+    label = 'code_duplicate_interactive_duplicate_label'
+    replace_label = 'code_duplicate_interactive_replace_label'
+    user_input = f'{label}\n\n\n\n\nyes\n{replace_label}\n\n'
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label=label)
+    result = CliRunner().invoke(code_duplicate, [str(code.pk)], input=user_input)
+    assert result.exception is None, result.exception
+
+    duplicate = orm.Code.get_from_string(replace_label)
+    assert code.description == duplicate.description
+    assert code.get_prepend_text() == duplicate.get_prepend_text()
+    assert code.get_append_text() == duplicate.get_append_text()
+
+
+def test_code_duplicate_non_interactive_duplicate_label(
+    clear_database_before_test, aiida_local_code_factory, aiida_localhost
+):
+    """Test code duplication non-interactive without chaing the label."""
+    label = 'code_duplicate_interactive_duplicate_label'
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label=label)
+    result = CliRunner().invoke(code_duplicate, ['--non-interactive', str(code.pk)])
+    assert result.exception is not None
+    assert f"'{label}@{aiida_localhost.label}' already exists." in result.output
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)

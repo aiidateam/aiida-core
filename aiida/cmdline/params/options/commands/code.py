@@ -13,6 +13,7 @@ import click
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.utils import echo
 
 
 def is_on_computer(ctx):
@@ -21,6 +22,88 @@ def is_on_computer(ctx):
 
 def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
+
+
+def label_is_none(ctx):
+    return ctx.params.get('label') is None
+
+
+def get_code_labels_of_computer(computer_node):
+    """
+    Retrieve the list of codes for the given computer in the DB.
+    """
+    from aiida.orm import Code
+    from aiida.orm.querybuilder import QueryBuilder
+    builder = QueryBuilder()
+    builder.append(entity_type='computer', filters={'id': {'==': computer_node.id}}, tag='computer')
+    builder.append(Code, project=['label'], with_computer='computer')
+    if builder.count() > 0:
+        return next(zip(*builder.all()))  # return the first entry
+
+    return []
+
+
+def get_local_code_labels():
+    """
+    Retrieve the list of codes locally stored in the DB.
+    """
+    from aiida.orm import Code
+    from aiida.orm.querybuilder import QueryBuilder
+    builder = QueryBuilder()
+    builder.append(Code, project=['label'], filters={'attributes.is_local': {'==': True}})
+    if builder.count() > 0:
+        return next(zip(*builder.all()))  # return the first entry
+
+    return []
+
+
+def _check_for_duplicate_code_label(ctx, param, value):
+    """
+    Check if the given code label and computer combination is already present
+    and ask if the user wants to enter a new label
+    """
+
+    if param.name == 'computer':
+        computer = value
+        label = ctx.params.get('label')
+    elif param.name == 'label':
+        if value is None:
+            #Even if the code/computer label combination is valid
+            #the callback will be called once for the hidden LABEL_AFTER_DUPLICATE
+            #option with a None value. In this case nothing should be done
+            return
+        computer = ctx.params.get('computer')
+        label = value
+
+    existing_codes = []
+    if computer is not None:
+        computer_label = computer.label
+        existing_codes = get_code_labels_of_computer(computer)
+    elif is_not_on_computer(ctx):
+        computer_label = 'repository'
+        existing_codes = get_local_code_labels()
+
+    if label in existing_codes:
+
+        message = f"Code '{label}@{computer_label}' already exists."
+        if param.is_non_interactive(ctx):
+            raise click.BadParameter(message)
+
+        if param.name == 'computer':
+            #First usage: Ask if the label should be changed
+            #Setting the label to None will trigger the second label prompt
+            echo.echo_warning(message)
+
+            reenter_label = click.confirm('Choose a different label:', default=True)
+            if reenter_label:
+                ctx.params['label'] = None
+        elif param.name == 'label':
+            #Second usage: If we are her the user wants to change the label
+            #so we raise click.BadParameter
+            raise click.BadParameter(message)
+    elif param.name == 'label':
+        #Overwrite the old label value
+        ctx.params['label'] = value
 
 
 ON_COMPUTER = OverridableOption(
@@ -71,6 +154,18 @@ LABEL = options.LABEL.clone(
     'computer.'
 )
 
+LABEL_AFTER_DUPLICATE = options.LABEL.clone(
+    prompt='Label',
+    cls=InteractiveOption,
+    required_fn=label_is_none,
+    prompt_fn=label_is_none,
+    callback=_check_for_duplicate_code_label,
+    hidden=True,
+    expose_value=False,
+    help="This label can be used to identify the code (using 'label@computerlabel'), as long as labels are unique per "
+    'computer.'
+)
+
 DESCRIPTION = options.DESCRIPTION.clone(
     prompt='Description',
     cls=InteractiveOption,
@@ -88,6 +183,7 @@ COMPUTER = options.COMPUTER.clone(
     cls=InteractiveOption,
     required_fn=is_on_computer,
     prompt_fn=is_on_computer,
+    callback=_check_for_duplicate_code_label,
     help='Name of the computer, on which the code is installed.'
 )
 

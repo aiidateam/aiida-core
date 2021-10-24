@@ -34,6 +34,10 @@ class _EntityMapper(Protocol):
     # pylint: disable=invalid-name
 
     @property
+    def AuthInfo(self) -> Type[Model]:
+        ...
+
+    @property
     def Node(self) -> Type[Model]:
         ...
 
@@ -97,207 +101,64 @@ class SqlaJoiner:
         and the second defines the relationship with respect to a given tag.
         """
         mapping = {
-            'node': {
-                'with_log': self._join_log_node,
-                'with_comment': self._join_comment_node,
-                'with_incoming': self._join_outputs,
-                'with_outgoing': self._join_inputs,
-                'with_descendants': self._join_ancestors_recursive,
-                'with_ancestors': self._join_descendants_recursive,
-                'with_computer': self._join_to_computer_used,
-                'with_user': self._join_created_by,
-                'with_group': self._join_group_members,
-            },
-            'computer': {
-                'with_node': self._join_computer,
-            },
-            'user': {
-                'with_comment': self._join_comment_user,
-                'with_node': self._join_creator_of,
-                'with_group': self._join_group_user,
-            },
-            'group': {
-                'with_node': self._join_groups,
-                'with_user': self._join_user_group,
+            'authinfo': {
+                'with_computer': self._join_computer_authinfo,
+                'with_user': self._join_user_authinfo,
             },
             'comment': {
                 'with_node': self._join_node_comment,
                 'with_user': self._join_user_comment,
             },
+            'computer': {
+                'with_node': self._join_node_computer,
+            },
+            'group': {
+                'with_node': self._join_node_group,
+                'with_user': self._join_user_group,
+            },
             'log': {
                 'with_node': self._join_node_log,
-            }
+            },
+            'node': {
+                'with_log': self._join_log_node,
+                'with_comment': self._join_comment_node,
+                'with_incoming': self._join_node_outputs,
+                'with_outgoing': self._join_node_inputs,
+                'with_descendants': self._join_node_ancestors_recursive,
+                'with_ancestors': self._join_node_descendants_recursive,
+                'with_computer': self._join_computer_node,
+                'with_user': self._join_user_node,
+                'with_group': self._join_group_node,
+            },
+            'user': {
+                'with_comment': self._join_comment_user,
+                'with_node': self._join_node_user,
+                'with_group': self._join_group_user,
+            },
         }
 
         return mapping  # type: ignore
 
-    def _join_outputs(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_computer_authinfo(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
-        :param joined_entity: The (aliased) ORMclass that is an input
-        :param entity_to_join: The (aliased) ORMClass that is an output.
-
-        **joined_entity** and **entity_to_join** are joined with a link
-        from **joined_entity** as input to **enitity_to_join** as output
-        (**enitity_to_join** is *with_incoming* **joined_entity**)
+        :param joined_entity: the aliased user you want to join to
+        :param entity_to_join: the (aliased) node or group in the DB to join with
         """
-        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_incoming')
+        _check_dbentities((joined_entity, self._entities.Computer), (entity_to_join, self._entities.AuthInfo),
+                          'with_computer')
+        new_query = query.join(entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
+        return JoinReturn(new_query)
 
-        aliased_edge = aliased(self._entities.Link)
-        new_query = query.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin
-                               ).join(entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
-        return JoinReturn(new_query, aliased_edge)
-
-    def _join_inputs(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_user_authinfo(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
-        :param joined_entity: The (aliased) ORMclass that is an output
-        :param entity_to_join: The (aliased) ORMClass that is an input.
-
-        **joined_entity** and **entity_to_join** are joined with a link
-        from **joined_entity** as output to **enitity_to_join** as input
-        (**enitity_to_join** is *with_outgoing* **joined_entity**)
-
+        :param joined_entity: the aliased user you want to join to
+        :param entity_to_join: the (aliased) node or group in the DB to join with
         """
+        _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.AuthInfo), 'with_user')
+        new_query = query.join(entity_to_join, entity_to_join.aiidauser_id == joined_entity.id, isouter=isouterjoin)
+        return JoinReturn(new_query)
 
-        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_outgoing')
-        aliased_edge = aliased(self._entities.Link)
-        new_query = query.join(
-            aliased_edge,
-            aliased_edge.output_id == joined_entity.id,
-        ).join(entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin)
-        return JoinReturn(new_query, aliased_edge)
-
-    def _join_descendants_recursive(
-        self,
-        query: Query,
-        joined_entity,
-        entity_to_join,
-        isouterjoin: bool,
-        filter_dict: FilterType,
-        expand_path=False
-    ):
-        """
-        joining descendants using the recursive functionality
-        :TODO: Move the filters to be done inside the recursive query (for example on depth)
-        :TODO: Pass an option to also show the path, if this is wanted.
-        """
-
-        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_ancestors')
-
-        link1 = aliased(self._entities.Link)
-        link2 = aliased(self._entities.Link)
-        node1 = aliased(self._entities.Node)
-
-        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
-        in_recursive_filters = self._build_filters(node1, filter_dict)
-        if in_recursive_filters is None:
-            filters = link_filters
-        else:
-            filters = and_(in_recursive_filters, link_filters)
-
-        selection_walk_list = [
-            link1.input_id.label('ancestor_id'),
-            link1.output_id.label('descendant_id'),
-            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
-        ]
-        if expand_path:
-            selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
-
-        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)
-                                                        ).where(filters).cte(recursive=True)
-
-        aliased_walk = aliased(walk)
-
-        selection_union_list = [
-            aliased_walk.c.ancestor_id.label('ancestor_id'),
-            link2.output_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth')  # type: ignore[type-var]
-        ]
-        if expand_path:
-            selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
-
-        descendants_recursive = aliased(
-            aliased_walk.union_all(
-                select(*selection_union_list
-                       ).select_from(join(
-                           aliased_walk,
-                           link2,
-                           link2.input_id == aliased_walk.c.descendant_id,
-                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
-            )
-        )  # .alias()
-
-        new_query = query.join(descendants_recursive, descendants_recursive.c.ancestor_id == joined_entity.id).join(
-            entity_to_join, descendants_recursive.c.descendant_id == entity_to_join.id, isouter=isouterjoin
-        )
-        return JoinReturn(new_query, descendants_recursive.c)
-
-    def _join_ancestors_recursive(
-        self,
-        query: Query,
-        joined_entity,
-        entity_to_join,
-        isouterjoin: bool,
-        filter_dict: FilterType,
-        expand_path=False
-    ):
-        """
-        joining ancestors using the recursive functionality
-        :TODO: Move the filters to be done inside the recursive query (for example on depth)
-        :TODO: Pass an option to also show the path, if this is wanted.
-
-        """
-        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_ancestors')
-
-        link1 = aliased(self._entities.Link)
-        link2 = aliased(self._entities.Link)
-        node1 = aliased(self._entities.Node)
-
-        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
-        in_recursive_filters = self._build_filters(node1, filter_dict)
-        if in_recursive_filters is None:
-            filters = link_filters
-        else:
-            filters = and_(in_recursive_filters, link_filters)
-
-        selection_walk_list = [
-            link1.input_id.label('ancestor_id'),
-            link1.output_id.label('descendant_id'),
-            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
-        ]
-        if expand_path:
-            selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
-
-        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)
-                                                        ).where(filters).cte(recursive=True)
-
-        aliased_walk = aliased(walk)
-
-        selection_union_list = [
-            link2.input_id.label('ancestor_id'),
-            aliased_walk.c.descendant_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),  # type: ignore[type-var]
-        ]
-        if expand_path:
-            selection_union_list.append((aliased_walk.c.path + array((link2.input_id,))).label('path'))
-
-        ancestors_recursive = aliased(
-            aliased_walk.union_all(
-                select(*selection_union_list
-                       ).select_from(join(
-                           aliased_walk,
-                           link2,
-                           link2.output_id == aliased_walk.c.ancestor_id,
-                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
-                # I can't follow RETURN or CALL links
-            )
-        )
-
-        new_query = query.join(ancestors_recursive, ancestors_recursive.c.descendant_id == joined_entity.id).join(
-            entity_to_join, ancestors_recursive.c.ancestor_id == entity_to_join.id, isouter=isouterjoin
-        )
-        return JoinReturn(new_query, ancestors_recursive.c)
-
-    def _join_group_members(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_group_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity:
             The (aliased) ORMclass that is
@@ -317,7 +178,7 @@ class SqlaJoiner:
         )
         return JoinReturn(new_query, aliased_group_nodes)
 
-    def _join_groups(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_group(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: The (aliased) node in the database
         :param entity_to_join: The (aliased) Group
@@ -334,7 +195,7 @@ class SqlaJoiner:
         )
         return JoinReturn(new_query, aliased_group_nodes)
 
-    def _join_creator_of(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
@@ -343,7 +204,7 @@ class SqlaJoiner:
         new_query = query.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_created_by(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_user_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
@@ -352,7 +213,7 @@ class SqlaJoiner:
         new_query = query.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_to_computer_used(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_computer_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the (aliased) computer entity
         :param entity_to_join: the (aliased) node entity
@@ -363,7 +224,7 @@ class SqlaJoiner:
         new_query = query.join(entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_computer(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_computer(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
@@ -445,6 +306,172 @@ class SqlaJoiner:
                           'with_comment')
         new_query = query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query)
+
+    def _join_node_outputs(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+        """
+        :param joined_entity: The (aliased) ORMclass that is an input
+        :param entity_to_join: The (aliased) ORMClass that is an output.
+
+        **joined_entity** and **entity_to_join** are joined with a link
+        from **joined_entity** as input to **enitity_to_join** as output
+        (**enitity_to_join** is *with_incoming* **joined_entity**)
+        """
+        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_incoming')
+
+        aliased_edge = aliased(self._entities.Link)
+        new_query = query.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin
+                               ).join(entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
+        return JoinReturn(new_query, aliased_edge)
+
+    def _join_node_inputs(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+        """
+        :param joined_entity: The (aliased) ORMclass that is an output
+        :param entity_to_join: The (aliased) ORMClass that is an input.
+
+        **joined_entity** and **entity_to_join** are joined with a link
+        from **joined_entity** as output to **enitity_to_join** as input
+        (**enitity_to_join** is *with_outgoing* **joined_entity**)
+
+        """
+
+        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_outgoing')
+        aliased_edge = aliased(self._entities.Link)
+        new_query = query.join(
+            aliased_edge,
+            aliased_edge.output_id == joined_entity.id,
+        ).join(entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin)
+        return JoinReturn(new_query, aliased_edge)
+
+    def _join_node_descendants_recursive(
+        self,
+        query: Query,
+        joined_entity,
+        entity_to_join,
+        isouterjoin: bool,
+        filter_dict: FilterType,
+        expand_path=False
+    ):
+        """
+        joining descendants using the recursive functionality
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        :TODO: Pass an option to also show the path, if this is wanted.
+        """
+
+        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_ancestors')
+
+        link1 = aliased(self._entities.Link)
+        link2 = aliased(self._entities.Link)
+        node1 = aliased(self._entities.Node)
+
+        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
+        in_recursive_filters = self._build_filters(node1, filter_dict)
+        if in_recursive_filters is None:
+            filters = link_filters
+        else:
+            filters = and_(in_recursive_filters, link_filters)
+
+        selection_walk_list = [
+            link1.input_id.label('ancestor_id'),
+            link1.output_id.label('descendant_id'),
+            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
+        ]
+        if expand_path:
+            selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
+
+        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.input_id == node1.id)
+                                                        ).where(filters).cte(recursive=True)
+
+        aliased_walk = aliased(walk)
+
+        selection_union_list = [
+            aliased_walk.c.ancestor_id.label('ancestor_id'),
+            link2.output_id.label('descendant_id'),
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth')  # type: ignore[type-var]
+        ]
+        if expand_path:
+            selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
+
+        descendants_recursive = aliased(
+            aliased_walk.union_all(
+                select(*selection_union_list
+                       ).select_from(join(
+                           aliased_walk,
+                           link2,
+                           link2.input_id == aliased_walk.c.descendant_id,
+                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+            )
+        )  # .alias()
+
+        new_query = query.join(descendants_recursive, descendants_recursive.c.ancestor_id == joined_entity.id).join(
+            entity_to_join, descendants_recursive.c.descendant_id == entity_to_join.id, isouter=isouterjoin
+        )
+        return JoinReturn(new_query, descendants_recursive.c)
+
+    def _join_node_ancestors_recursive(
+        self,
+        query: Query,
+        joined_entity,
+        entity_to_join,
+        isouterjoin: bool,
+        filter_dict: FilterType,
+        expand_path=False
+    ):
+        """
+        joining ancestors using the recursive functionality
+        :TODO: Move the filters to be done inside the recursive query (for example on depth)
+        :TODO: Pass an option to also show the path, if this is wanted.
+
+        """
+        _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_ancestors')
+
+        link1 = aliased(self._entities.Link)
+        link2 = aliased(self._entities.Link)
+        node1 = aliased(self._entities.Node)
+
+        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
+        in_recursive_filters = self._build_filters(node1, filter_dict)
+        if in_recursive_filters is None:
+            filters = link_filters
+        else:
+            filters = and_(in_recursive_filters, link_filters)
+
+        selection_walk_list = [
+            link1.input_id.label('ancestor_id'),
+            link1.output_id.label('descendant_id'),
+            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
+        ]
+        if expand_path:
+            selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
+
+        walk = select(*selection_walk_list).select_from(join(node1, link1, link1.output_id == node1.id)
+                                                        ).where(filters).cte(recursive=True)
+
+        aliased_walk = aliased(walk)
+
+        selection_union_list = [
+            link2.input_id.label('ancestor_id'),
+            aliased_walk.c.descendant_id.label('descendant_id'),
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),  # type: ignore[type-var]
+        ]
+        if expand_path:
+            selection_union_list.append((aliased_walk.c.path + array((link2.input_id,))).label('path'))
+
+        ancestors_recursive = aliased(
+            aliased_walk.union_all(
+                select(*selection_union_list
+                       ).select_from(join(
+                           aliased_walk,
+                           link2,
+                           link2.output_id == aliased_walk.c.ancestor_id,
+                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                # I can't follow RETURN or CALL links
+            )
+        )
+
+        new_query = query.join(ancestors_recursive, ancestors_recursive.c.descendant_id == joined_entity.id).join(
+            entity_to_join, ancestors_recursive.c.ancestor_id == entity_to_join.id, isouter=isouterjoin
+        )
+        return JoinReturn(new_query, ancestors_recursive.c)
 
 
 def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: str):

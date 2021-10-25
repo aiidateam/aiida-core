@@ -84,7 +84,7 @@ class Computer(entities.Entity['BackendComputer']):
     def __init__(  # pylint: disable=too-many-arguments
         self,
         label: str = None,
-        hostname: str = None,
+        hostname: str = '',
         description: str = '',
         transport_type: str = '',
         scheduler_type: str = '',
@@ -137,7 +137,7 @@ class Computer(entities.Entity['BackendComputer']):
         """
         Validates the hostname.
         """
-        if not hostname.strip():
+        if not (hostname or hostname.strip()):
             raise exceptions.ValidationError('No hostname specified')
 
     @classmethod

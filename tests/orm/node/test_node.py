@@ -966,3 +966,21 @@ def test_uuid_equality_fallback():
     assert hash(node_a) == hash(node_b)
     assert hash(node_a) != hash(node_0)
     assert hash(node_b) != hash(node_0)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_caching():
+    """Test the repository after a node is stored from the cache."""
+    from aiida.manage.caching import enable_caching
+
+    node = Data()
+
+    def _iter_all_same_nodes(allow_before_store=False, **kwargs):
+        assert kwargs['order_by'] == {'ctime': 'desc'}
+
+        return iter([])
+
+    node._iter_all_same_nodes = _iter_all_same_nodes
+
+    with enable_caching():
+        node.store()

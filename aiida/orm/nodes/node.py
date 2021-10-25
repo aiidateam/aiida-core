@@ -685,7 +685,8 @@ class Node(
             self._backend_entity.clean_values()
 
             # Retrieve the cached node.
-            same_node = self._get_same_node() if use_cache else None
+            # We do the 'desc' order here in order to using the latest caching node,
+            same_node = self._get_same_node(order_by={'ctime': 'desc'}) if use_cache else None
 
             if same_node is not None:
                 self._store_from_cache(same_node, with_transaction=with_transaction)
@@ -849,7 +850,7 @@ class Node(
         """
         return self.get_cache_source() is not None
 
-    def _get_same_node(self) -> Optional['Node']:
+    def _get_same_node(self, **kwargs) -> Optional['Node']:
         """Returns a stored node from which the current Node can be cached or None if it does not exist
 
         If a node is returned it is a valid cache, meaning its `_aiida_hash` extra matches `self.get_hash()`.
@@ -862,11 +863,11 @@ class Node(
         clean_value() on the attributes to normalise them.
         """
         try:
-            return next(self._iter_all_same_nodes(allow_before_store=True))
+            return next(self._iter_all_same_nodes(allow_before_store=True, **kwargs))
         except StopIteration:
             return None
 
-    def get_all_same_nodes(self) -> List['Node']:
+    def get_all_same_nodes(self, **kwargs) -> List['Node']:
         """Return a list of stored nodes which match the type and hash of the current node.
 
         All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.get_hash()`.
@@ -874,9 +875,9 @@ class Node(
         Note: this can be called only after storing a Node (since at store time attributes will be cleaned with
         `clean_value` and the hash should become idempotent to the action of serialization/deserialization)
         """
-        return list(self._iter_all_same_nodes())
+        return list(self._iter_all_same_nodes(**kwargs))
 
-    def _iter_all_same_nodes(self, allow_before_store=False) -> Iterator['Node']:
+    def _iter_all_same_nodes(self, allow_before_store=False, **kwargs) -> Iterator['Node']:
         """
         Returns an iterator of all same nodes.
 
@@ -892,6 +893,8 @@ class Node(
 
         builder = QueryBuilder(backend=self.backend)
         builder.append(self.__class__, filters={'extras._aiida_hash': node_hash}, project='*', subclassing=False)
+        if 'order_by' in kwargs:
+            builder.order_by({self.__class__: kwargs['order_by']})
         nodes_identical = (n[0] for n in builder.iterall())
 
         return (node for node in nodes_identical if node.is_valid_cache)

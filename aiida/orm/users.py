@@ -81,8 +81,6 @@ class User(entities.Entity['BackendUser']):
     def objects(cls) -> UserCollection:  # pylint: disable=no-self-argument
         return UserCollection.get_cached(cls, get_manager().get_backend())
 
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-
     def __init__(
         self,
         email: str,

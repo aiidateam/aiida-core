@@ -642,18 +642,13 @@ class Computer(entities.Entity['BackendComputer']):
     def get_configuration(self, user: Optional['User'] = None) -> Dict[str, Any]:
         """Get the configuration of computer for the given user as a dictionary
 
-        :param user: the user to to get the configuration for.  Uses default user if `None`
+        :param user: the user to to get the configuration for, otherwise default user
         """
-
-        backend = self.backend
         user = user or users.User.objects(self.backend).get_default()
 
-        config = {}
         try:
-            # Need to pass the backend entity here, not just self
-            authinfo = backend.authinfos.get(self._backend_entity, user)
-            config = authinfo.get_auth_params()
+            authinfo = self.get_authinfo(user)
         except exceptions.NotExistent:
-            pass
+            return {}
 
-        return config
+        return authinfo.get_auth_params()

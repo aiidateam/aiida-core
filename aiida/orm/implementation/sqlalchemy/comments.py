@@ -67,6 +67,10 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         super().store()
 
     @property
+    def uuid(self) -> str:
+        return str(self._dbmodel.uuid)
+
+    @property
     def ctime(self):
         return self._dbmodel.ctime
 

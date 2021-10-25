@@ -8,9 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django user module"""
-
-import functools
-
 from aiida.backends.djsite.db import models
 from aiida.backends.djsite.db.models import DbUser
 from aiida.orm.implementation.users import BackendUser, BackendUserCollection
@@ -79,35 +76,3 @@ class DjangoUserCollection(BackendUserCollection):
         """
         # pylint: disable=abstract-class-instantiated
         return DjangoUser(self.backend, email, first_name, last_name, institution)
-
-    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Find users in this collection
-
-        :param email: optional email address filter
-        :param id: optional id filter
-        :return: a list of the found users
-        :rtype: list
-        """
-        # Constructing the default query
-        import operator
-
-        from django.db.models import Q  # pylint: disable=import-error, no-name-in-module
-        query_list = []
-
-        # If an id is specified then we add it to the query
-        if id is not None:
-            query_list.append(Q(pk=id))
-
-        # If an email is specified then we add it to the query
-        if email is not None:
-            query_list.append(Q(email=email))
-
-        if not query_list:
-            dbusers = DbUser.objects.all()
-        else:
-            dbusers = DbUser.objects.filter(functools.reduce(operator.and_, query_list))
-        found_users = []
-        for dbuser in dbusers:
-            found_users.append(self.from_dbmodel(dbuser))
-        return found_users

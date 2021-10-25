@@ -9,56 +9,65 @@
 ###########################################################################
 """Module for comment backend classes."""
 import abc
-from typing import List
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
 
 from .entities import BackendCollection, BackendEntity
+
+if TYPE_CHECKING:
+    from .nodes import BackendNode
+    from .users import BackendUser
 
 __all__ = ('BackendComment', 'BackendCommentCollection')
 
 
 class BackendComment(BackendEntity):
-    """Base class for a node comment."""
+    """Backend implementation for the `Comment` ORM class.
+
+    A comment is a text that can be attached to a node.
+    """
 
     @property
+    @abc.abstractmethod
     def uuid(self) -> str:
-        return str(self._dbmodel.uuid)
+        """Return the UUID of the comment."""
 
     @property
     @abc.abstractmethod
-    def ctime(self):
-        pass
+    def ctime(self) -> datetime:
+        """Return the creation time of the comment."""
 
     @property
     @abc.abstractmethod
-    def mtime(self):
-        pass
+    def mtime(self) -> datetime:
+        """Return the modified time of the comment."""
 
     @abc.abstractmethod
-    def set_mtime(self, value):
-        pass
-
-    @property
-    @abc.abstractmethod
-    def node(self):
-        pass
+    def set_mtime(self, value: datetime) -> None:
+        """Set the modified time of the comment."""
 
     @property
     @abc.abstractmethod
-    def user(self):
-        pass
-
-    @abc.abstractmethod
-    def set_user(self, value):
-        pass
+    def node(self) -> 'BackendNode':
+        """Return the comment's node."""
 
     @property
     @abc.abstractmethod
-    def content(self):
-        pass
+    def user(self) -> 'BackendUser':
+        """Return the comment owner."""
 
     @abc.abstractmethod
-    def set_content(self, value):
-        pass
+    def set_user(self, value: 'BackendUser') -> None:
+        """Set the comment owner."""
+
+    @property
+    @abc.abstractmethod
+    def content(self) -> str:
+        """Return the comment content."""
+
+    @abc.abstractmethod
+    def set_content(self, value: str):
+        """Set the comment content."""
 
 
 class BackendCommentCollection(BackendCollection[BackendComment]):
@@ -67,7 +76,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
     ENTITY_CLASS = BackendComment
 
     @abc.abstractmethod
-    def create(self, node, user, content=None, **kwargs):  # pylint: disable=arguments-differ
+    def create(self, node: 'BackendNode', user: 'BackendNode', content: Optional[str] = None, **kwargs):  # type: ignore[override]  # pylint: disable=arguments-differ,line-too-long
         """
         Create a Comment for a given node and user
 
@@ -78,19 +87,18 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete(self, comment_id):
+    def delete(self, comment_id: int) -> None:
         """
         Remove a Comment from the collection with the given id
 
         :param comment_id: the id of the comment to delete
-        :type comment_id: int
 
         :raises TypeError: if ``comment_id`` is not an `int`
         :raises `~aiida.common.exceptions.NotExistent`: if Comment with ID ``comment_id`` is not found
         """
 
     @abc.abstractmethod
-    def delete_all(self):
+    def delete_all(self) -> None:
         """
         Delete all Comment entries.
 
@@ -98,15 +106,13 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters) -> List[int]:
+    def delete_many(self, filters: dict) -> List[int]:
         """
         Delete Comments based on ``filters``
 
         :param filters: similar to QueryBuilder filter
-        :type filters: dict
 
         :return: (former) ``PK`` s of deleted Comments
-        :rtype: list
 
         :raises TypeError: if ``filters`` is not a `dict`
         :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty

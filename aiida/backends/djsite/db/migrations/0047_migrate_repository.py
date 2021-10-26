@@ -35,10 +35,12 @@ def migrate_repository(apps, schema_editor):
     from aiida.common import exceptions
     from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.configuration import get_profile
+    from aiida.manage.manager import get_manager
 
     DbNode = apps.get_model('db', 'DbNode')
 
     profile = get_profile()
+    backend = get_manager().get_backend()
     node_count = DbNode.objects.count()
     missing_node_uuids = []
     missing_repo_folder = []
@@ -107,7 +109,7 @@ def migrate_repository(apps, schema_editor):
     # Store the UUID of the repository container in the `DbSetting` table. Note that for new databases, the profile
     # setup will already have stored the UUID and so it should be skipped, or an exception for a duplicate key will be
     # raised. This migration step is only necessary for existing databases that are migrated.
-    container_id = profile.get_repository().uuid
+    container_id = backend.get_repository().uuid
     with schema_editor.connection.cursor() as cursor:
         cursor.execute(
             f"""

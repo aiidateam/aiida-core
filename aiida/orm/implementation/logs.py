@@ -9,6 +9,7 @@
 ###########################################################################
 """Backend group module"""
 import abc
+from typing import List
 
 from .entities import BackendCollection, BackendEntity
 
@@ -97,19 +98,18 @@ class BackendLogCollection(BackendCollection[BackendLog]):
     ENTITY_CLASS = BackendLog
 
     @abc.abstractmethod
-    def delete(self, log_id):
+    def delete(self, log_id: int) -> None:
         """
         Remove a Log entry from the collection with the given id
 
         :param log_id: id of the Log to delete
-        :type log_id: int
 
         :raises TypeError: if ``log_id`` is not an `int`
         :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
         """
 
     @abc.abstractmethod
-    def delete_all(self):
+    def delete_all(self) -> None:
         """
         Delete all Log entries.
 
@@ -117,15 +117,13 @@ class BackendLogCollection(BackendCollection[BackendLog]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters):
+    def delete_many(self, filters) -> List[int]:
         """
         Delete Logs based on ``filters``
 
         :param filters: similar to QueryBuilder filter
-        :type filters: dict
 
         :return: (former) ``PK`` s of deleted Logs
-        :rtype: list
 
         :raises TypeError: if ``filters`` is not a `dict`
         :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty

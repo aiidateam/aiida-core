@@ -10,10 +10,14 @@
 """Module with `OrmEntityLoader` and its sub classes that simplify loading entities through their identifiers."""
 from abc import abstractmethod
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.common.lang import classproperty
 from aiida.orm.querybuilder import QueryBuilder
+
+if TYPE_CHECKING:
+    from aiida.orm import Code, Computer, Group, Node
 
 __all__ = (
     'load_code', 'load_computer', 'load_group', 'load_node', 'load_entity', 'get_loader', 'OrmEntityLoader',
@@ -86,7 +90,7 @@ def load_entity(
     )
 
 
-def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'Code':
     """
     Load a Code instance by one of its identifiers: pk, uuid or label
 
@@ -117,7 +121,9 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     )
 
 
-def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+def load_computer(
+    identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True
+) -> 'Computer':
     """
     Load a Computer instance by one of its identifiers: pk, uuid or label
 
@@ -148,7 +154,7 @@ def load_computer(identifier=None, pk=None, uuid=None, label=None, sub_classes=N
     )
 
 
-def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'Group':
     """
     Load a Group instance by one of its identifiers: pk, uuid or label
 
@@ -179,7 +185,7 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
     )
 
 
-def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True):
+def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'Node':
     """
     Load a node by one of its identifiers: pk or uuid. If the type of the identifier is unknown
     simply pass it without a keyword and the loader will attempt to infer the type

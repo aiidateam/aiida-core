@@ -9,17 +9,20 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
-import typing
+from typing import TYPE_CHECKING, Generic, TypeVar
 
-from .. import backends
+from .. import backends, entities
+
+if TYPE_CHECKING:
+    from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('SqlBackend',)
 
-# The template type for the base ORM model type
-ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
+# The template type for the base sqlalchemy/django ORM model type
+ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
 
 
-class SqlBackend(typing.Generic[ModelType], backends.Backend):
+class SqlBackend(Generic[ModelType], backends.Backend):
     """
     A class for SQL based backends.  Assumptions are that:
         * there is an ORM
@@ -29,14 +32,24 @@ class SqlBackend(typing.Generic[ModelType], backends.Backend):
     if any of these assumptions do not fit then just implement a backend from :class:`aiida.orm.implementation.Backend`
     """
 
+    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+        from disk_objectstore import Container
+
+        from aiida.manage.manager import get_manager
+        from aiida.repository.backend import DiskObjectStoreRepositoryBackend
+
+        profile = get_manager().get_profile()
+        assert profile is not None, 'profile not loaded'
+        container = Container(profile.repository_path / 'container')
+        return DiskObjectStoreRepositoryBackend(container=container)
+
     @abc.abstractmethod
-    def get_backend_entity(self, model):
+    def get_backend_entity(self, model: ModelType) -> entities.BackendEntity:
         """
         Return the backend entity that corresponds to the given Model instance
 
         :param model: the ORM model instance to promote to a backend instance
         :return: the backend entity corresponding to the given model
-        :rtype: :class:`aiida.orm.implementation.entities.BackendEntity`
         """
 
     @abc.abstractmethod

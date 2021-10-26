@@ -10,8 +10,8 @@
 """Module to test orm utilities to load nodes, codes etc."""
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
-from aiida.orm import Node, Group, Data
-from aiida.orm.utils import load_entity, load_code, load_computer, load_group, load_node
+from aiida.orm import Data, Group, Node
+from aiida.orm.utils import load_code, load_computer, load_entity, load_group, load_node
 from aiida.orm.utils.loaders import NodeEntityLoader
 
 

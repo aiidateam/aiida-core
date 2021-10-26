@@ -18,9 +18,9 @@ import warnings
 import pytest
 
 from aiida import orm, plugins
-from aiida.orm.querybuilder import _get_ormclass
 from aiida.common.links import LinkType
 from aiida.manage import configuration
+from aiida.orm.querybuilder import _get_ormclass
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -112,7 +112,7 @@ class TestBasic:
 
     def test_get_group_type_filter(self):
         """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
-        from aiida.orm.querybuilder import _get_group_type_filter, Classifier
+        from aiida.orm.querybuilder import Classifier, _get_group_type_filter
 
         classifiers = Classifier('group.core')
         assert _get_group_type_filter(classifiers, False) == {'==': 'core'}
@@ -133,8 +133,8 @@ class TestBasic:
         """
         Test querying for a process class.
         """
-        from aiida.engine import run, WorkChain, if_, return_, ExitCode
         from aiida.common.warnings import AiidaEntryPointWarning
+        from aiida.engine import ExitCode, WorkChain, if_, return_, run
 
         class PotentialFailureWorkChain(WorkChain):
             EXIT_STATUS = 1
@@ -372,7 +372,7 @@ class TestBasic:
         assert qb.count() == 1
 
         # Test the hashing:
-        query1 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
+        query1 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
         assert qb.count() == 0
 
@@ -381,8 +381,8 @@ class TestBasic:
         with pytest.raises(MultipleObjectsError):
             orm.QueryBuilder().append(orm.Node).one()
 
-        query2 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
-        query3 = qb._impl.update_query(qb.as_dict())  # pylint: disable=protected-access
+        query2 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
+        query3 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
 
         assert id(query1) != id(query2)
         assert id(query2) == id(query3)
@@ -798,7 +798,7 @@ class TestQueryBuilderCornerCases:
     In this class corner cases of QueryBuilder are added.
     """
 
-    def test_computer_json(self):  # pylint: disable=no-self-use
+    def test_computer_json(self):
         """
         In this test we check the correct behavior of QueryBuilder when
         retrieving the _metadata with no content.
@@ -817,6 +817,14 @@ class TestQueryBuilderCornerCases:
         qb.append(orm.CalculationNode, project=['id'], tag='calc')
         qb.append(orm.Computer, project=['id', 'metadata'], outerjoin=True, with_node='calc')
         qb.all()
+
+    def test_empty_filters(self):
+        """Test that an empty filter is correctly handled."""
+        orm.Data().store()
+        qb = orm.QueryBuilder().append(orm.Data, filters={})
+        assert qb.count() == 1
+        qb = orm.QueryBuilder().append(orm.Data, filters={'or': [{}, {}]})
+        assert qb.count() == 1
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -905,7 +913,7 @@ class TestAttributes:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-class QueryBuilderLimitOffsetsTest:
+class TestQueryBuilderLimitOffsets:
 
     def test_ordering_limits_offsets_of_results_general(self):
         # Creating 10 nodes with an attribute that can be ordered
@@ -973,7 +981,7 @@ class QueryBuilderLimitOffsetsTest:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-class QueryBuilderJoinsTests:
+class TestQueryBuilderJoins:
 
     def test_joins1(self):
         # Creating n1, who will be a parent:
@@ -1075,6 +1083,26 @@ class QueryBuilderJoinsTests:
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
         assert qb.count() == 1, 'The expected user that owns the selected group was not found.'
+
+    def test_joins_authinfo(self):
+        """Test querying for AuthInfo with specific computer/user."""
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+
+        # Search for the user of the authinfo
+        qb = orm.QueryBuilder()
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(orm.AuthInfo, with_user='user', filters={'id': {'==': authinfo.id}})
+        assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
+
+        # Search for the computer of the authinfo
+        qb = orm.QueryBuilder()
+        qb.append(orm.Computer, tag='computer', filters={'id': {'==': computer.id}})
+        qb.append(orm.AuthInfo, with_computer='computer', filters={'id': {'==': authinfo.id}})
+        assert qb.count() == 1, 'The expected computer that owns the selected authinfo was not found.'
 
     def test_joins_group_node(self):
         """

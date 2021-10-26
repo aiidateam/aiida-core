@@ -51,7 +51,15 @@ class CliFormatter(logging.Formatter):
         except KeyError:
             fg = 'white'
 
-        if record.prefix:
+        try:
+            prefix = record.prefix
+        except AttributeError:
+            prefix = None
+
+        if prefix:
             return f'{click.style(record.levelname.capitalize(), fg=fg, bold=True)}: {record.msg % record.args}'
 
-        return f'{record.msg % record.args}'
+        if record.args:
+            return f'{record.msg % record.args}'
+
+        return record.msg

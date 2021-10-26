@@ -15,9 +15,16 @@ import click
 from aiida.cmdline.utils import decorators
 from aiida.common import exceptions
 from aiida.plugins import factories
-from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, ENTRY_POINT_GROUP_PREFIX, EntryPointFormat
-from aiida.plugins.entry_point import format_entry_point_string, get_entry_point_string_format
-from aiida.plugins.entry_point import get_entry_point, get_entry_points, get_entry_point_groups
+from aiida.plugins.entry_point import (
+    ENTRY_POINT_GROUP_PREFIX,
+    ENTRY_POINT_STRING_SEPARATOR,
+    EntryPointFormat,
+    format_entry_point_string,
+    get_entry_point,
+    get_entry_point_groups,
+    get_entry_point_string_format,
+    get_entry_points,
+)
 
 from .strings import EntryPointType
 

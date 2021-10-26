@@ -87,9 +87,9 @@ def calcjob_inputcat(calcjob, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
+    import errno
     from shutil import copyfileobj
     import sys
-    import errno
 
     # Get path from the given CalcJobNode if not defined by user
     if path is None:
@@ -134,9 +134,9 @@ def calcjob_outputcat(calcjob, path):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
+    import errno
     from shutil import copyfileobj
     import sys
-    import errno
 
     try:
         retrieved = calcjob.outputs.retrieved
@@ -236,9 +236,9 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
     If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
     """
+    from aiida import orm
     from aiida.orm.utils.loaders import ComputerEntityLoader, IdentifierType
     from aiida.orm.utils.remote import clean_remote, get_calcjob_remote_paths
-    from aiida import orm
 
     if calcjobs:
         if (past_days is not None and older_than is not None):

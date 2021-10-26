@@ -10,8 +10,8 @@
 # pylint: disable=no-member
 # start-marker for docs
 """Implementation of the MultiplyAddWorkChain for testing and demonstration purposes."""
+from aiida.engine import ToContext, WorkChain, calcfunction
 from aiida.orm import Code, Int
-from aiida.engine import calcfunction, WorkChain, ToContext
 from aiida.plugins.factories import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')

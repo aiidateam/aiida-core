@@ -18,13 +18,16 @@ except ImportError:
     # This should only occur when building the package, i.e. when
     # executing 'python setup.py sdist' or 'python setup.py bdist_wheel'
     pass
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 if __name__ == '__main__':
     THIS_FOLDER = os.path.split(os.path.abspath(__file__))[0]
 
-    with open(os.path.join(THIS_FOLDER, 'setup.json'), 'r') as info:
+    with open(os.path.join(THIS_FOLDER, 'setup.json'), 'r', encoding='utf8') as info:
         SETUP_JSON = json.load(info)
+
+    with open(os.path.join(THIS_FOLDER, 'README.md'), 'r', encoding='utf8') as readme:
+        README = readme.read()
 
     EXTRAS_REQUIRE = SETUP_JSON['extras_require']
     EXTRAS_REQUIRE['tests'] = set(EXTRAS_REQUIRE['tests'] + EXTRAS_REQUIRE['rest'] + EXTRAS_REQUIRE['atomic_tools'])
@@ -33,7 +36,7 @@ if __name__ == '__main__':
 
     setup(
         packages=find_packages(include=['aiida', 'aiida.*']),
-        long_description=open(os.path.join(THIS_FOLDER, 'README.md')).read(),  # pylint: disable=consider-using-with
+        long_description=README,
         long_description_content_type='text/markdown',
         **SETUP_JSON
     )

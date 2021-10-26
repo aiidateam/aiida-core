@@ -9,24 +9,43 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ContextManager, List, Sequence, TypeVar
 
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
+    from aiida.orm.entities import EntityTypes
     from aiida.orm.implementation import (
-        BackendAuthInfoCollection, BackendCommentCollection, BackendComputerCollection, BackendGroupCollection,
-        BackendLogCollection, BackendNodeCollection, BackendQueryBuilder, BackendUserCollection
+        BackendAuthInfoCollection,
+        BackendCommentCollection,
+        BackendComputerCollection,
+        BackendGroupCollection,
+        BackendLogCollection,
+        BackendNodeCollection,
+        BackendQueryBuilder,
+        BackendUserCollection,
     )
+    from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
 __all__ = ('Backend',)
 
+TransactionType = TypeVar('TransactionType')
+
 
 class Backend(abc.ABC):
-    """The public interface that defines a backend factory that creates backend specific concrete objects."""
+    """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
+
+    AiiDA splits data storage into two sources:
+
+    - Searchable data, which is stored in the database and can be queried using the QueryBuilder
+    - Non-searchable data, which is stored in the repository and can be loaded using the RepositoryBackend
+
+    The two sources are inter-linked by the ``Node.repository_metadata``.
+    Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
+    """
 
     @abc.abstractmethod
-    def migrate(self):
+    def migrate(self) -> None:
         """Migrate the database to the latest schema generation or version."""
 
     @property
@@ -59,17 +78,24 @@ class Backend(abc.ABC):
     def nodes(self) -> 'BackendNodeCollection':
         """Return the collection of nodes"""
 
-    @abc.abstractmethod
-    def query(self) -> 'BackendQueryBuilder':
-        """Return an instance of a query builder implementation for this backend"""
-
     @property
     @abc.abstractmethod
     def users(self) -> 'BackendUserCollection':
         """Return the collection of users"""
 
     @abc.abstractmethod
-    def transaction(self):
+    def query(self) -> 'BackendQueryBuilder':
+        """Return an instance of a query builder implementation for this backend"""
+
+    @abc.abstractmethod
+    def get_session(self) -> 'Session':
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+        """
+
+    @abc.abstractmethod
+    def transaction(self) -> ContextManager[Any]:
         """
         Get a context manager that can be used as a transaction context for a series of backend operations.
         If there is an exception within the context then the changes will be rolled back and the state will
@@ -78,9 +104,48 @@ class Backend(abc.ABC):
         :return: a context manager to group database operations
         """
 
+    @property
     @abc.abstractmethod
-    def get_session(self) -> 'Session':
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+    def in_transaction(self) -> bool:
+        """Return whether a transaction is currently active."""
 
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+    @abc.abstractmethod
+    def bulk_insert(self, entity_type: 'EntityTypes', rows: List[dict], allow_defaults: bool = False) -> List[int]:
+        """Insert a list of entities into the database, directly into a backend transaction.
+
+        :param entity_type: The type of the entity
+        :param data: A list of dictionaries, containing all fields of the backend model,
+            except the `id` field (a.k.a primary key), which will be generated dynamically
+        :param allow_defaults: If ``False``, assert that each row contains all fields (except primary key(s)),
+            otherwise, allow default values for missing fields.
+
+        :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
+
+        :returns: The list of generated primary keys for the entities
         """
+
+    @abc.abstractmethod
+    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict]) -> None:
+        """Update a list of entities in the database, directly with a backend transaction.
+
+        :param entity_type: The type of the entity
+        :param data: A list of dictionaries, containing fields of the backend model to update,
+            and the `id` field (a.k.a primary key)
+
+        :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
+        """
+
+    @abc.abstractmethod
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+        """Delete all nodes corresponding to pks in the input and any links to/from them.
+
+        This method is intended to be used within a transaction context.
+
+        :param pks_to_delete: a sequence of node pks to delete
+
+        :raises: ``AssertionError`` if a transaction is not active
+        """
+
+    @abc.abstractmethod
+    def get_repository(self) -> 'AbstractRepositoryBackend':
+        """Return the object repository configured for this backend."""

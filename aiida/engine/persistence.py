@@ -13,11 +13,11 @@
 import importlib
 import logging
 import traceback
-from typing import Any, Hashable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Hashable, Optional
 
-import plumpy.persistence
-import plumpy.loaders
 from plumpy.exceptions import PersistenceError
+import plumpy.loaders
+import plumpy.persistence
 
 from aiida.orm.utils import serialize
 

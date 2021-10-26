@@ -11,16 +11,15 @@
 Testing infrastructure for easy testing of AiiDA plugins.
 
 """
-import tempfile
-import shutil
-import os
 from contextlib import contextmanager
+import os
+import shutil
+import tempfile
 
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common import exceptions
-from aiida.manage import configuration
+from aiida.manage import configuration, manager
 from aiida.manage.configuration.settings import create_instance_directories
-from aiida.manage import manager
 from aiida.manage.external.postgres import Postgres
 
 __all__ = (
@@ -161,8 +160,8 @@ class ProfileManager:
             from aiida.backends.djsite.db.testbase import DjangoTests
             self._test_case = DjangoTests()
         elif backend == BACKEND_SQLA:
-            from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
             from aiida.backends.sqlalchemy import get_scoped_session
+            from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
 
             self._test_case = SqlAlchemyTests()
             self._test_case.test_session = get_scoped_session()
@@ -177,8 +176,8 @@ class ProfileManager:
 
         Adds default user if necessary.
         """
-        from aiida.orm import User
         from aiida.cmdline.commands.cmd_user import set_default_user
+        from aiida.orm import User
 
         if not User.objects.get_default():
             user_dict = get_user_dict(_DEFAULT_PROFILE_INFO)
@@ -318,8 +317,10 @@ class TemporaryProfileManager(ProfileManager):
         if self.pg_cluster is None:
             self.create_db_cluster()
         self.postgres = Postgres(interactive=False, quiet=True, dbinfo=self.dbinfo)
-        # note: not using postgres.create_dbuser_db_safe here since we don't want prompts
-        self.postgres.create_dbuser(self.profile_info['database_username'], self.profile_info['database_password'])
+        # Note: We give the user CREATEDB privileges here, only since they are required for the migration tests
+        self.postgres.create_dbuser(
+            self.profile_info['database_username'], self.profile_info['database_password'], 'CREATEDB'
+        )
         self.postgres.create_db(self.profile_info['database_username'], self.profile_info['database_name'])
         self.dbinfo = self.postgres.dbinfo
         self.profile_info['database_hostname'] = self.postgres.host_for_psycopg2
@@ -332,7 +333,7 @@ class TemporaryProfileManager(ProfileManager):
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
-        from aiida.manage.configuration import settings, load_profile, Profile
+        from aiida.manage.configuration import Profile, load_profile, settings
 
         if not self._has_test_db:
             self.create_aiida_db()
@@ -456,8 +457,8 @@ def test_manager(backend=BACKEND_DJANGO, profile_name=None, pgtest=None):
     :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,
        e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
     """
-    from aiida.common.utils import Capturing
     from aiida.common.log import configure_logging
+    from aiida.common.utils import Capturing
 
     try:
         if not _GLOBAL_TEST_MANAGER.has_profile_open():

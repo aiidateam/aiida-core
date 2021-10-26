@@ -11,7 +11,7 @@
 import io
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import LinkType, CalcJobState
+from aiida.common import CalcJobState, LinkType
 from aiida.orm import CalcJobNode, FolderData
 
 

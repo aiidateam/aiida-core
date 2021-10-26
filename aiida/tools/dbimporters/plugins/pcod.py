@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """"Implementation of `DbImporter` for the PCOD database."""
-from aiida.tools.dbimporters.plugins.cod import CodDbImporter, CodSearchResults, CodEntry
+from aiida.tools.dbimporters.plugins.cod import CodDbImporter, CodEntry, CodSearchResults
 
 
 class PcodDbImporter(CodDbImporter):

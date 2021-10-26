@@ -17,8 +17,8 @@ def format_relative_time(datetime):
     :param datetime: the datetime to format
     :return: string representation of the relative time since the given datetime
     """
-    from aiida.common.utils import str_timedelta
     from aiida.common import timezone
+    from aiida.common.utils import str_timedelta
 
     timedelta = timezone.delta(datetime, timezone.now())
 

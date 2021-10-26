@@ -10,7 +10,7 @@
 """ Resources for REST API """
 from urllib.parse import unquote
 
-from flask import request, make_response
+from flask import make_response, request
 from flask_restful import Resource
 
 from aiida.common.lang import classproperty
@@ -49,8 +49,8 @@ class ServerInfo(Resource):
 
         response = {}
 
-        from aiida.restapi.common.config import API_CONFIG
         from aiida import __version__
+        from aiida.restapi.common.config import API_CONFIG
 
         if resource_type == 'info':
             response = {}

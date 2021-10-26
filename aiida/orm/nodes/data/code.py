@@ -11,6 +11,7 @@
 import os
 
 from aiida.common import exceptions
+
 from .data import Data
 
 __all__ = ('Code',)
@@ -150,7 +151,7 @@ class Code(Data):
         return f'{self.description}'
 
     @classmethod
-    def get_code_helper(cls, label, machinename=None):
+    def get_code_helper(cls, label, machinename=None, backend=None):
         """
         :param label: the code label identifying the code to load
         :param machinename: the machine name where code is setup
@@ -159,11 +160,11 @@ class Code(Data):
         :raise aiida.common.MultipleObjectsError: if the string cannot identify uniquely
             a code
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
-        from aiida.orm.querybuilder import QueryBuilder
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
         from aiida.orm.computers import Computer
+        from aiida.orm.querybuilder import QueryBuilder
 
-        query = QueryBuilder()
+        query = QueryBuilder(backend=backend)
         query.append(cls, filters={'label': label}, project='*', tag='code')
         if machinename:
             query.append(Computer, filters={'label': machinename}, with_node='code')
@@ -233,7 +234,7 @@ class Code(Data):
         :raise TypeError: if code_string is not of string type
 
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         try:
             label, _, machinename = code_string.partition('@')
@@ -248,7 +249,7 @@ class Code(Data):
             raise MultipleObjectsError(f'{code_string} could not be uniquely resolved')
 
     @classmethod
-    def list_for_plugin(cls, plugin, labels=True):
+    def list_for_plugin(cls, plugin, labels=True, backend=None):
         """
         Return a list of valid code strings for a given plugin.
 
@@ -259,7 +260,7 @@ class Code(Data):
           otherwise a list of integers with the code PKs.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        query = QueryBuilder()
+        query = QueryBuilder(backend=backend)
         query.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
         valid_codes = query.all(flat=True)
 
@@ -282,8 +283,7 @@ class Code(Data):
                 )
             if self.get_local_executable() not in self.list_object_names():
                 raise exceptions.ValidationError(
-                    "The local executable '{}' is not in the list of "
-                    'files of this code'.format(self.get_local_executable())
+                    f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
                 )
         else:
             if self.list_object_names():

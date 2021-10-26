@@ -11,11 +11,13 @@
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from copy import deepcopy
+
 import numpy as np
 
 from aiida import orm
-from aiida.tools.graph.age_entities import Basket
 from aiida.common.lang import type_check
+from aiida.tools.graph.age_entities import Basket
 
 
 class Operation(metaclass=ABCMeta):
@@ -64,7 +66,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
     found in the last iteration of the query (ReplaceRule).
     """
 
-    def __init__(self, querybuilder, max_iterations=1, track_edges=False):
+    def __init__(self, querybuilder: orm.QueryBuilder, max_iterations=1, track_edges=False):
         """Initialization method
 
         :param querybuilder: an instance of the QueryBuilder class from which to take the
@@ -106,7 +108,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         for pathspec in query_dict['path']:
             if not pathspec['entity_type']:
                 pathspec['entity_type'] = 'node.Node.'
-        self._qbtemplate = orm.QueryBuilder(**query_dict)
+        self._qbtemplate = deepcopy(querybuilder)
         query_dict = self._qbtemplate.as_dict()
         self._first_tag = query_dict['path'][0]['tag']
         self._last_tag = query_dict['path'][-1]['tag']
@@ -162,7 +164,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
         # Copying qbtemplate so there's no problem if it is used again in a later run:
         query_dict = self._qbtemplate.as_dict()
-        self._querybuilder = orm.QueryBuilder.from_dict(query_dict)
+        self._querybuilder = deepcopy(self._qbtemplate)
 
         self._entity_to_identifier = operational_set[self._entity_to].identifier
 

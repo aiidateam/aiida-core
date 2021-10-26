@@ -13,10 +13,9 @@
 import os
 
 from aiida import orm
-
-from aiida.tools.importexport import import_data, export
-
+from aiida.tools.importexport import export, import_data
 from tests.utils.configuration import with_temp_dir
+
 from .. import AiidaArchiveTestCase
 
 

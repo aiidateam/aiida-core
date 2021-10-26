@@ -10,9 +10,9 @@
 """Module to test transport."""
 import asyncio
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.transports import TransportQueue
-from aiida import orm
 
 
 class TestTransportQueue(AiidaTestCase):

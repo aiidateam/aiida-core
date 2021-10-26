@@ -9,11 +9,11 @@
 ###########################################################################
 """Transport interface."""
 import abc
+from collections import OrderedDict
+import fnmatch
 import os
 import re
-import fnmatch
 import sys
-from collections import OrderedDict
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -194,10 +194,10 @@ class Transport(abc.ABC):
         if cls._valid_auth_options is None:
             raise NotImplementedError
         else:
-            return cls.auth_options.keys()  # pylint: disable=no-member
+            return cls.auth_options.keys()
 
     @classproperty
-    def auth_options(cls):  # pylint: disable=no-self-argument
+    def auth_options(cls) -> OrderedDict:  # pylint: disable=no-self-argument
         """Return the authentication options to be used for building the CLI.
 
         :return: `OrderedDict` of tuples, with first element option name and second dictionary of kwargs

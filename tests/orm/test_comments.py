@@ -10,9 +10,9 @@
 """Unit tests for the Comment ORM class."""
 
 from aiida import orm
-from aiida.orm.comments import Comment
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
+from aiida.orm.comments import Comment
 
 
 class TestComment(AiidaTestCase):

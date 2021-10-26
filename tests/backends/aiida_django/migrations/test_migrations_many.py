@@ -14,10 +14,11 @@ go to a separate file.
 """
 import numpy
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.backends.djsite.db.migrations import ModelModifierV0025
 from aiida.backends.general.migrations import utils
+from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import IntegrityError
+
 from .test_migrations_common import TestMigrations
 
 
@@ -75,8 +76,8 @@ class TestDuplicateNodeUuidMigration(TestMigrations):
     migrate_to = '0014_add_node_uuid_unique_constraint'
 
     def setUpBeforeMigration(self):
-        from aiida.common.utils import get_new_uuid
         from aiida.backends.general.migrations.duplicate_uuids import deduplicate_uuids, verify_uuid_uniqueness
+        from aiida.common.utils import get_new_uuid
         self.file_name = 'test.temp'
         self.file_content = '#!/bin/bash\n\necho test run\n'
 
@@ -302,8 +303,9 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
     migrate_to = '0024_dblog_update'
 
     def setUpBeforeMigration(self):  # pylint: disable=too-many-locals
-        import json
         import importlib
+        import json
+
         from aiida.backends.general.migrations.utils import dumps_json
 
         update_024 = importlib.import_module('aiida.backends.djsite.db.migrations.0024_dblog_update')
@@ -407,7 +409,7 @@ class TestDbLogMigrationRecordCleaning(TestMigrations):
         log_6.save()
 
         # Storing temporarily information needed for the check at the test
-        self.to_check = dict()
+        self.to_check = {}
 
         # Keeping calculation & calculation log ids
         self.to_check['CalculationNode'] = (
@@ -577,7 +579,7 @@ class TestDbLogMigrationBackward(TestMigrations):
         log_2.save()
 
         # Keeping what is needed to be verified at the test
-        self.to_check = dict()
+        self.to_check = {}
         self.to_check[log_1.pk] = (log_1.dbnode_id, calc_1.type)
         self.to_check[log_2.pk] = (log_2.dbnode_id, calc_2.type)
 

@@ -19,9 +19,7 @@ from aiida.backends.djsite.db import models
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
-from . import entities
-from . import users
-from . import utils
+from . import entities, users, utils
 
 __all__ = ('DjangoGroup', 'DjangoGroupCollection')
 

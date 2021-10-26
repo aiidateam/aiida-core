@@ -8,12 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
-import os
-import io
 import errno
+import gzip
+import io
+import os
 import pathlib
 import tempfile
-import gzip
 
 from click.testing import CliRunner
 import pytest
@@ -317,8 +317,8 @@ class TestVerdiGraph(AiidaTestCase):
         Test that an invalid root_node pk (non-numeric, negative, or decimal),
         or non-existent pk will produce an error
         """
-        from aiida.orm import load_node
         from aiida.common.exceptions import NotExistent
+        from aiida.orm import load_node
 
         # Forbidden pk
         for root_node in ['xyz', '-5', '3.14']:
@@ -499,7 +499,7 @@ class TestVerdiRehash(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
-        from aiida.orm import Data, Bool, Float, Int
+        from aiida.orm import Bool, Data, Float, Int
 
         cls.node_base = Data().store()
         cls.node_bool_true = Bool(True).store()

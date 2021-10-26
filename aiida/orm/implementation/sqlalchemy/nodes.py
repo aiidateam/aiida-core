@@ -11,18 +11,18 @@
 
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import SQLAlchemyError
 
-from aiida.backends.sqlalchemy import get_scoped_session
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
+
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation.utils import clean_value
 
-from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils as sqla_utils
+from .. import BackendNode, BackendNodeCollection
 from .computers import SqlaComputer
 from .users import SqlaUser
 
@@ -157,7 +157,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :return: True if the proposed link is allowed, False otherwise
         :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         type_check(source, SqlaNode)
 
@@ -179,7 +179,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """
         from aiida.backends.sqlalchemy.models.node import DbLink
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             with session.begin_nested():
@@ -199,7 +199,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if clean:
             self.clean_values()
@@ -230,7 +230,7 @@ class SqlaNodeCollection(BackendNodeCollection):
 
         :param pk: id of the node
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
@@ -242,7 +242,7 @@ class SqlaNodeCollection(BackendNodeCollection):
 
         :param pk: id of the node to delete
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbNode).filter_by(id=pk).one().delete()

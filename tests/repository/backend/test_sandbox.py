@@ -45,7 +45,7 @@ def test_put_object_from_filelike_raises(repository, generate_directory):
         repository.put_object_from_filelike(directory / 'file_a')  # String
 
     with pytest.raises(TypeError):
-        with open(directory / 'file_a') as handle:
+        with open(directory / 'file_a', encoding='utf-8') as handle:
             repository.put_object_from_filelike(handle)  # Not in binary mode
 
 
@@ -96,6 +96,15 @@ def test_open(repository, generate_directory):
 
     with repository.open(key_b) as handle:
         assert handle.read() == b'content_b'
+
+
+def test_iter_object_streams(repository):
+    """Test the ``Repository.iter_object_streams`` method."""
+    key = repository.put_object_from_filelike(io.BytesIO(b'content'))
+
+    for _key, stream in repository.iter_object_streams([key]):
+        assert _key == key
+        assert stream.read() == b'content'
 
 
 def test_delete_object(repository, generate_directory):
@@ -152,3 +161,25 @@ def test_get_object_hash(repository, generate_directory):
         key = repository.put_object_from_filelike(handle)
 
     assert repository.get_object_hash(key) == 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73'
+
+
+def test_list_objects(repository, generate_directory):
+    """Test the ``Repository.delete_object`` method."""
+    repository.initialise()
+    keylist = []
+
+    directory = generate_directory({'file_a': b'content a'})
+    with open(directory / 'file_a', 'rb') as handle:
+        keylist.append(repository.put_object_from_filelike(handle))
+
+    directory = generate_directory({'file_b': b'content b'})
+    with open(directory / 'file_b', 'rb') as handle:
+        keylist.append(repository.put_object_from_filelike(handle))
+
+    assert sorted(list(repository.list_objects())) == sorted(keylist)
+
+
+def test_key_format(repository):
+    """Test the ``key_format`` property."""
+    repository.initialise()
+    assert repository.key_format == 'uuid4'

@@ -12,8 +12,8 @@ import operator
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
-from aiida.orm import load_node, List, Bool, Float, Int, Str, NumericType
-from aiida.orm.nodes.data.bool import get_true_node, get_false_node
+from aiida.orm import Bool, Float, Int, List, NumericType, Str, load_node
+from aiida.orm.nodes.data.bool import get_false_node, get_true_node
 
 
 class TestList(AiidaTestCase):

@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Module with implementation of the database backend using SqlAlchemy."""
-from aiida.backends.utils import create_sqlalchemy_engine, create_scoped_session_factory
+from aiida.backends.utils import create_scoped_session_factory, create_sqlalchemy_engine
 
 ENGINE = None
 SESSION_FACTORY = None

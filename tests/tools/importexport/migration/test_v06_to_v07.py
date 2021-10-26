@@ -37,7 +37,7 @@ def test_migrate_external(migrate_from_func):
 
     # Check Attribute and Link have been removed
     illegal_entities = {'Attribute', 'Link'}
-    for dict_ in {'unique_identifiers', 'all_fields_info'}:
+    for dict_ in ('unique_identifiers', 'all_fields_info'):
         for entity in illegal_entities:
             assert entity not in metadata[dict_], (
                 f"key '{entity}' should have been removed from '{dict_}' in metadata.json"
@@ -46,8 +46,8 @@ def test_migrate_external(migrate_from_func):
 
 def test_migration_0040_corrupt_archive():
     """Check CorruptArchive is raised for different cases during migration 0040"""
-    from aiida.tools.importexport.common.exceptions import CorruptArchive
     from aiida.tools.importexport.archive.migrations.v06_to_v07 import data_migration_legacy_process_attributes
+    from aiida.tools.importexport.common.exceptions import CorruptArchive
 
     # data has one "valid" entry, in the form of Node <PK=42>.
     # At least it has the needed key `node_type`.
@@ -107,6 +107,7 @@ def test_migration_0040_corrupt_archive():
 def test_migration_0040_no_process_state():
     """Check old ProcessNodes without a `process_state` can be migrated"""
     from aiida.tools.importexport.archive.migrations.v06_to_v07 import data_migration_legacy_process_attributes
+
     # data has one "new" entry, in the form of Node <PK=52>.
     # data also has one "old" entry, in form of Node <PK=42>.
     # It doesn't have a `process_state` attribute (nor a `sealed` or `_sealed`)

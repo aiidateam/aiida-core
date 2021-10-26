@@ -15,6 +15,7 @@ import shutil
 import tempfile
 
 from aiida.manage.configuration import get_profile
+
 from . import timezone
 
 # If True, tries to make everything (dirs, files) group-writable.

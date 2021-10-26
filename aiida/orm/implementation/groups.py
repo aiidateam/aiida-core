@@ -12,8 +12,8 @@
 import abc
 
 from aiida.common import exceptions
-from .entities import BackendEntity, BackendCollection, BackendEntityExtrasMixin
 
+from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 from .nodes import BackendNode
 
 __all__ = ('BackendGroup', 'BackendGroupCollection')

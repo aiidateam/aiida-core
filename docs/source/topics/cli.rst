@@ -127,18 +127,6 @@ is identical to
     verdi --verbosity debug process list
 
 When the option is specified multiple times, only the last value will be considered.
-The default value for the logging level can be changed permanently through the configuration system.
-For example, to set the default log level to ``WARNING``,
-
-.. code:: console
-
-    verdi config set logging.aiida_loglevel WARNING
-
-This is identical to passing ``--verbosity WARNING`` manually to each invoked command.
-
-.. warning:: Setting the configuration option does not just affect the verbosity of the command line, but the logging for all of AiiDA.
-    For example, it also affects the verbosity of process reports, such as those of work chains.
-    If the log level is set above ``REPORT``, the reports of work chains will no longer be logged.
 
 
 .. _topics:cli:identifiers:

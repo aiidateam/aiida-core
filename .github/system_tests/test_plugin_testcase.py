@@ -14,10 +14,10 @@ This must be in a standalone script because it would clash with other tests,
 Since the dbenv gets loaded on the temporary profile.
 """
 
-import sys
-import unittest
-import tempfile
 import shutil
+import sys
+import tempfile
+import unittest
 
 from aiida.manage.tests.unittest_classes import PluginTestCase, TestRunner
 

@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """"Implementation of `DbImporter` for the MPOD database."""
-from aiida.tools.dbimporters.baseclasses import (DbImporter, DbSearchResults, CifEntry)
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class MpodDbImporter(DbImporter):
@@ -44,11 +44,11 @@ class MpodDbImporter(DbImporter):
 
         :return: a list containing strings for HTTP GET statement.
         """
-        if 'formula' in kwargs.keys() and 'element' in kwargs.keys():
+        if 'formula' in kwargs and 'element' in kwargs:
             raise ValueError('can not query both formula and elements ' 'in MPOD')
 
         elements = []
-        if 'element' in kwargs.keys():
+        if 'element' in kwargs:
             elements = kwargs.pop('element')
         if not isinstance(elements, list):
             elements = [elements]
@@ -79,8 +79,8 @@ class MpodDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodSearchResults`.
         """
-        from urllib.request import urlopen
         import re
+        from urllib.request import urlopen
 
         query_statements = self.query_get(**kwargs)
         results = None

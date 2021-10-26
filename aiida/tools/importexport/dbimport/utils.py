@@ -16,8 +16,7 @@ from tabulate import tabulate
 
 from aiida.common.log import AIIDA_LOGGER, LOG_LEVEL_REPORT
 from aiida.common.utils import get_new_uuid
-from aiida.orm import QueryBuilder, Comment
-
+from aiida.orm import Comment, QueryBuilder
 from aiida.tools.importexport.common import exceptions
 
 IMPORT_LOGGER = AIIDA_LOGGER.getChild('import')
@@ -75,8 +74,7 @@ def merge_comment(incoming_comment, comment_mode):
     # Invalid comment_mode
     else:
         raise exceptions.ImportValidationError(
-            'Unknown comment_mode value: {}. Should be '
-            "either 'newest' or 'overwrite'".format(comment_mode)
+            f"Unknown comment_mode value: {comment_mode}. Should be either 'newest' or 'overwrite'"
         )
 
 
@@ -187,6 +185,7 @@ def merge_extras(old_extras, new_extras, mode):
 def deserialize_attributes(attributes_data, conversion_data):
     """Deserialize attributes"""
     import datetime
+
     import pytz
 
     if conversion_data == 'jsonb':

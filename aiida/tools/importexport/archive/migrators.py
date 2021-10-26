@@ -15,17 +15,17 @@ from pathlib import Path
 import shutil
 import tarfile
 import tempfile
-from typing import Any, Callable, cast, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Type, Union, cast
 import zipfile
 
 from archive_path import TarPath, ZipPath, read_file_in_tar, read_file_in_zip
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.progress_reporter import get_progress_reporter, create_callback
-from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
-from aiida.tools.importexport.common.config import ExportFileFormat
+from aiida.common.progress_reporter import create_callback, get_progress_reporter
 from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
+from aiida.tools.importexport.common.config import ExportFileFormat
+from aiida.tools.importexport.common.exceptions import ArchiveMigrationError, CorruptArchive, DanglingLinkError
 
 __all__ = (
     'ArchiveMigratorAbstract', 'ArchiveMigratorJsonBase', 'ArchiveMigratorJsonZip', 'ArchiveMigratorJsonTar',

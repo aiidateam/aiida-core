@@ -51,19 +51,12 @@ class Repository:
 
     @property
     def uuid(self) -> Optional[str]:
-        """Return the unique identifier of the repository or ``None`` if it doesn't have one."""
+        """Return the unique identifier of the repository backend or ``None`` if it doesn't have one."""
         return self.backend.uuid
-
-    def initialise(self, **kwargs: Any) -> None:
-        """Initialise the repository if it hasn't already been initialised.
-
-        :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.
-        """
-        self.backend.initialise(**kwargs)
 
     @property
     def is_initialised(self) -> bool:
-        """Return whether the repository has been initialised."""
+        """Return whether the repository backend has been initialised."""
         return self.backend.is_initialised
 
     @classmethod
@@ -417,16 +410,6 @@ class Repository:
         directory = self.get_directory(path.parent)
         directory.objects.pop(path.name)
 
-    def delete(self) -> None:
-        """Delete the repository.
-
-        .. important:: This will not just delete the contents of the repository but also the repository itself and all
-            of its assets. For example, if the repository is stored inside a folder on disk, the folder may be deleted.
-
-        """
-        self.backend.erase()
-        self.reset()
-
     def erase(self) -> None:
         """Delete all objects from the repository.
 
@@ -473,3 +456,58 @@ class Repository:
                 yield from self.walk(path / dirname)
 
         yield path, dirnames, filenames
+
+    def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
+        """Copy the contents of the entire node repository to another location on the local file system.
+
+        :param target: absolute path of the directory where to copy the contents to.
+        :param path: optional relative path whose contents to copy.
+        :raises TypeError: if ``target`` is of incorrect type or not absolute.
+        :raises NotADirectoryError: if ``path`` does not reference a directory.
+        """
+        path = self._pre_process_path(path)
+        file_object = self.get_object(path)
+
+        if file_object.file_type != FileType.DIRECTORY:
+            raise NotADirectoryError(f'object with path `{path}` is not a directory.')
+
+        if isinstance(target, str):
+            target = pathlib.Path(target)
+
+        if not isinstance(target, pathlib.Path):
+            raise TypeError(f'path `{path}` is not of type `str` nor `pathlib.Path`.')
+
+        if not target.is_absolute():
+            raise TypeError(f'provided target `{target}` is not an absolute path.')
+
+        for root, dirnames, filenames in self.walk(path):
+            for dirname in dirnames:
+                dirpath = target / root / dirname
+                dirpath.mkdir(parents=True, exist_ok=True)
+
+            for filename in filenames:
+                dirpath = target / root
+                filepath = dirpath / filename
+
+                dirpath.mkdir(parents=True, exist_ok=True)
+
+                with self.open(root / filename) as handle:
+                    filepath.write_bytes(handle.read())
+
+    # these methods are not actually used in aiida-core, but are here for completeness
+
+    def initialise(self, **kwargs: Any) -> None:
+        """Initialise the repository if it hasn't already been initialised.
+
+        :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.
+        """
+        self.backend.initialise(**kwargs)
+
+    def delete(self) -> None:
+        """Delete the repository.
+
+        .. important:: This will not just delete the contents of the repository but also the repository itself and all
+            of its assets. For example, if the repository is stored inside a folder on disk, the folder may be deleted.
+        """
+        self.backend.erase()
+        self.reset()

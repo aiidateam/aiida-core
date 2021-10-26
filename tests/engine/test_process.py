@@ -18,11 +18,10 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
-from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_pk, run_get_node
+from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage.caching import enable_caching
 from aiida.plugins import CalculationFactory
-
 from tests.utils import processes as test_processes
 
 

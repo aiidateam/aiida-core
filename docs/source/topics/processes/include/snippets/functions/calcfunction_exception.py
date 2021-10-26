@@ -2,6 +2,7 @@
 from aiida.engine import calcfunction
 from aiida.orm import Int
 
+
 @calcfunction
 def divide(x, y):
     return x / y

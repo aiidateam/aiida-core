@@ -15,8 +15,9 @@ import importlib
 import os
 
 from flask_cors import CORS
-from .common.config import CLI_DEFAULTS, APP_CONFIG, API_CONFIG
+
 from . import api as api_classes
+from .common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
 
 __all__ = ('run_api', 'configure_api')
 

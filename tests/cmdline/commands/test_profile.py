@@ -15,7 +15,6 @@ import pytest
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
-
 from tests.utils.configuration import create_mock_profile
 
 

@@ -20,7 +20,7 @@ import pytest
 from aiida.common.links import LinkType
 from aiida.engine import ProcessState
 from aiida.orm import CalcFunctionNode, Dict, load_node
-from aiida.tools.importexport import import_data, export
+from aiida.tools.importexport import export, import_data
 
 
 def recursive_provenance(in_node, depth, breadth, num_objects=0):

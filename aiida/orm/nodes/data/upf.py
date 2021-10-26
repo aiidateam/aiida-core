@@ -12,6 +12,7 @@ import json
 import re
 
 from upf_to_json import upf_to_json
+
 from .singlefile import SinglefileData
 
 __all__ = ('UpfData',)
@@ -46,7 +47,7 @@ def get_pseudos_from_structure(structure, family_name):
     :raise aiida.common.MultipleObjectsError: if more than one UPF for the same element is found in the group.
     :raise aiida.common.NotExistent: if no UPF for an element in the group is found in the group.
     """
-    from aiida.common.exceptions import NotExistent, MultipleObjectsError
+    from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
     pseudo_list = {}
     family_pseudos = {}
@@ -69,7 +70,7 @@ def get_pseudos_from_structure(structure, family_name):
     return pseudo_list
 
 
-def upload_upf_family(folder, group_label, group_description, stop_if_existing=True):
+def upload_upf_family(folder, group_label, group_description, stop_if_existing=True, backend=None):
     """Upload a set of UPF files in a given group.
 
     :param folder: a path containing all UPF files to be added.
@@ -119,7 +120,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
     for filename in filenames:
         md5sum = md5_file(filename)
-        builder = orm.QueryBuilder()
+        builder = orm.QueryBuilder(backend=backend)
         builder.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = builder.first()
 
@@ -176,7 +177,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     return nfiles, nuploaded
 
 
-def parse_upf(fname, check_filename=True):
+def parse_upf(fname, check_filename=True, encoding='utf-8'):
     """
     Try to get relevant information from the UPF. For the moment, only the
     element name. Note that even UPF v.2 cannot be parsed with the XML minidom!
@@ -188,8 +189,8 @@ def parse_upf(fname, check_filename=True):
     # pylint: disable=too-many-branches
     import os
 
-    from aiida.common.exceptions import ParsingError
     from aiida.common import AIIDA_LOGGER
+    from aiida.common.exceptions import ParsingError
     from aiida.orm.nodes.data.structure import _valid_symbols
 
     parsed_data = {}
@@ -197,7 +198,7 @@ def parse_upf(fname, check_filename=True):
     try:
         upf_contents = fname.read()
     except AttributeError:
-        with open(fname) as handle:
+        with open(fname, encoding=encoding) as handle:
             upf_contents = handle.read()
     else:
         if check_filename:
@@ -252,19 +253,6 @@ def parse_upf(fname, check_filename=True):
 class UpfData(SinglefileData):
     """`Data` sub class to represent a pseudopotential single file in UPF format."""
 
-    def __init__(self, file=None, filename=None, source=None, **kwargs):
-        """Create UpfData instance from pseudopotential file.
-
-          :param file: filepath or filelike object of the UPF potential file to store.
-            Hint: Pass io.BytesIO(b"my string") to construct directly from a string.
-          :param filename: specify filename to use (defaults to name of provided file).
-          :param source: Dictionary with information on source of the potential (see ".source" property).
-          """
-        # pylint: disable=redefined-builtin
-        super().__init__(file, filename=filename, **kwargs)
-        if source is not None:
-            self.set_source(source)
-
     @classmethod
     def get_or_create(cls, filepath, use_first=False, store_upf=True):
         """Get the `UpfData` with the same md5 of the given file, or create it if it does not yet exist.
@@ -276,6 +264,7 @@ class UpfData(SinglefileData):
         :return: tuple of `UpfData` and boolean indicating whether it was created.
         """
         import os
+
         from aiida.common.files import md5_file
 
         if not os.path.isabs(filepath):
@@ -332,7 +321,7 @@ class UpfData(SinglefileData):
         return super().store(*args, **kwargs)
 
     @classmethod
-    def from_md5(cls, md5):
+    def from_md5(cls, md5, backend=None):
         """Return a list of all `UpfData` that match the given md5 hash.
 
         .. note:: assumes hash of stored `UpfData` nodes is stored in the `md5` attribute
@@ -341,7 +330,7 @@ class UpfData(SinglefileData):
         :return: list of existing `UpfData` nodes that have the same md5 hash
         """
         from aiida.orm.querybuilder import QueryBuilder
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=backend)
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 
@@ -375,10 +364,9 @@ class UpfData(SinglefileData):
 
     def get_upf_family_names(self):
         """Get the list of all upf family names to which the pseudo belongs."""
-        from aiida.orm import UpfFamily
-        from aiida.orm import QueryBuilder
+        from aiida.orm import QueryBuilder, UpfFamily
 
-        query = QueryBuilder()
+        query = QueryBuilder(backend=self.backend)
         query.append(UpfFamily, tag='group', project='label')
         query.append(UpfData, filters={'id': {'==': self.id}}, with_group='group')
         return query.all(flat=True)
@@ -460,7 +448,7 @@ class UpfData(SinglefileData):
         return UpfFamily.get(label=group_label)
 
     @classmethod
-    def get_upf_groups(cls, filter_elements=None, user=None):
+    def get_upf_groups(cls, filter_elements=None, user=None, backend=None):
         """Return all names of groups of type UpfFamily, possibly with some filters.
 
         :param filter_elements: A string or a list of strings.
@@ -470,11 +458,9 @@ class UpfData(SinglefileData):
             If defined, it should be either a `User` instance or the user email.
         :return: list of `Group` entities of type UPF.
         """
-        from aiida.orm import UpfFamily
-        from aiida.orm import QueryBuilder
-        from aiida.orm import User
+        from aiida.orm import QueryBuilder, UpfFamily, User
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=backend)
         builder.append(UpfFamily, tag='group', project='*')
 
         if user:

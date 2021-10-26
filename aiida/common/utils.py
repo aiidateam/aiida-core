@@ -8,14 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
+from datetime import datetime
 import filecmp
 import inspect
 import io
 import os
 import re
 import sys
+from typing import Any, Dict
 from uuid import UUID
-from datetime import datetime
+
 from .lang import classproperty
 
 
@@ -260,15 +262,9 @@ def are_dir_trees_equal(dir1, dir2):
     # If the directories contain the same files, compare the common files
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
     if mismatch:
-        return (
-            False, 'The following files in the directories {} and {} '
-            "don't match: {}".format(dir1, dir2, mismatch)
-        )
+        return (False, f"The following files in the directories {dir1} and {dir2} don't match: {mismatch}")
     if errors:
-        return (
-            False, 'The following files in the directories {} and {} '
-            "aren't regular: {}".format(dir1, dir2, errors)
-        )
+        return (False, f"The following files in the directories {dir1} and {dir2} aren't regular: {errors}")
 
     for common_dir in dirs_cmp.common_dirs:
         new_dir1 = os.path.join(dir1, common_dir)
@@ -393,7 +389,7 @@ class Prettifier:
         return re.sub(r'(\d+)', r'$_{\1}$', label)
 
     @classproperty
-    def prettifiers(cls):  # pylint: disable=no-self-argument
+    def prettifiers(cls) -> Dict[str, Any]:  # pylint: disable=no-self-argument
         """
         Property that returns a dictionary that for each string associates
         the function to prettify a label
@@ -417,7 +413,7 @@ class Prettifier:
 
         :return: a list of strings
         """
-        return sorted(cls.prettifiers.keys())  # pylint: disable=no-member
+        return sorted(cls.prettifiers.keys())
 
     def __init__(self, format):  # pylint: disable=redefined-builtin
         """
@@ -525,12 +521,12 @@ class Capturing:
     # pylint: disable=attribute-defined-outside-init
 
     def __init__(self, capture_stderr=False):
-        self.stdout_lines = list()
+        self.stdout_lines = []
         super().__init__()
 
         self._capture_stderr = capture_stderr
         if self._capture_stderr:
-            self.stderr_lines = list()
+            self.stderr_lines = []
         else:
             self.stderr_lines = None
 

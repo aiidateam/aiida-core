@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 from collections.abc import Mapping
 
 from aiida.common import exceptions
@@ -21,7 +21,7 @@ LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
 LinkQuadruple = namedtuple('LinkQuadruple', ['source_id', 'target_id', 'link_type', 'link_label'])
 
 
-def link_triple_exists(source, target, link_type, link_label):
+def link_triple_exists(source, target, link_type, link_label, backend=None):
     """Return whether a link with the given type and label exists between the given source and target node.
 
     :param source: node from which the link is outgoing
@@ -42,7 +42,7 @@ def link_triple_exists(source, target, link_type, link_label):
 
     # Here we have two stored nodes, so we need to check if the same link already exists in the database.
     # Finding just a single match is sufficient so we can use the `limit` clause for efficiency
-    builder = QueryBuilder()
+    builder = QueryBuilder(backend=backend)
     builder.append(Node, filters={'id': source.id}, project=['id'])
     builder.append(Node, filters={'id': target.id}, edge_filters={'type': link_type.value, 'label': link_label})
     builder.limit(1)
@@ -50,7 +50,7 @@ def link_triple_exists(source, target, link_type, link_label):
     return builder.count() != 0
 
 
-def validate_link(source, target, link_type, link_label):
+def validate_link(source, target, link_type, link_label, backend=None):
     """
     Validate adding a link of the given type and label from a given node to ourself.
 
@@ -114,7 +114,7 @@ def validate_link(source, target, link_type, link_label):
     """
     # yapf: disable
     from aiida.common.links import LinkType, validate_link_label
-    from aiida.orm import Node, Data, CalculationNode, WorkflowNode
+    from aiida.orm import CalculationNode, Data, Node, WorkflowNode
 
     type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
@@ -153,7 +153,7 @@ def validate_link(source, target, link_type, link_label):
     if outdegree == 'unique_triple' or indegree == 'unique_triple':
         # For a `unique_triple` degree we just have to check if an identical triple already exist, either in the cache
         # or stored, in which case, the new proposed link is a duplicate and thus illegal
-        duplicate_link_triple = link_triple_exists(source, target, link_type, link_label)
+        duplicate_link_triple = link_triple_exists(source, target, link_type, link_label, backend)
 
     # If the outdegree is `unique` there cannot already be any other outgoing link of that type
     if outdegree == 'unique' and source.get_outgoing(link_type=link_type, only_uuid=True).all():

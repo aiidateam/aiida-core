@@ -11,10 +11,14 @@
 import logging
 import os
 import sys
+from typing import TYPE_CHECKING
 
 from tabulate import tabulate
 
 from . import echo
+
+if TYPE_CHECKING:
+    from aiida.orm import WorkChainNode
 
 __all__ = ('is_verbose',)
 
@@ -90,6 +94,7 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
+
     from aiida.orm import ProcessNode
 
     table_headers = ['Property', 'Value']
@@ -141,8 +146,8 @@ def get_node_info(node, include_summary=True):
     :param include_summary: boolean, if True, also include a summary of node properties
     :return: a string summary of the node including a description of all its links and log messages
     """
-    from aiida.common.links import LinkType
     from aiida import orm
+    from aiida.common.links import LinkType
 
     if include_summary:
         result = get_node_summary(node)
@@ -205,6 +210,7 @@ def format_nested_links(links, headers):
     :return: nested formatted string
     """
     from collections.abc import Mapping
+
     import tabulate as tb
 
     tb.PRESERVE_WHITESPACE = True
@@ -304,7 +310,7 @@ def get_process_function_report(node):
     return '\n'.join(report)
 
 
-def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
+def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_depth=None):
     """
     Return a multi line string representation of the log messages and output of a given workchain
 
@@ -313,6 +319,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
     """
     # pylint: disable=too-many-locals
     import itertools
+
     from aiida import orm
     from aiida.common.log import LOG_LEVELS
 
@@ -330,7 +337,7 @@ def get_workchain_report(node, levelname, indent_size=4, max_depth=None):
         Get a nested tree of work calculation nodes and their nesting level starting from this uuid.
         The result is a list of uuid of these nodes.
         """
-        builder = orm.QueryBuilder()
+        builder = orm.QueryBuilder(backend=node.backend)
         builder.append(cls=orm.WorkChainNode, filters={'uuid': uuid}, tag='workcalculation')
         builder.append(
             cls=orm.WorkChainNode,
@@ -458,7 +465,7 @@ def print_process_spec(process_spec):
     if process_spec.exit_codes:
         echo.echo('Exit codes:', fg='red', bold=True)
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
-        message = exit_code.message.capitalize()
+        message = exit_code.message
         echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
 
 
@@ -488,12 +495,13 @@ def get_num_workers():
 
 
 def check_worker_load(active_slots):
-    """
-    Check if the percentage usage of the daemon worker slots exceeds a threshold.
-    If it does, print a warning.
+    """Log a message with information on the current daemon worker load.
 
-    The purpose of this check is to warn the user if they are close to running out of worker slots
-    which could lead to their processes becoming stuck indefinitely.
+    If there are daemon workers active, it logs the current load. If that exceeds 90%, a warning is included with the
+    suggestion to run ``verdi daemon incr``.
+
+    The purpose of this check is to warn the user if they are close to running out of worker slots which could lead to
+    their processes becoming stuck indefinitely.
 
     :param active_slots: the number of currently active worker slots
     """
@@ -508,16 +516,16 @@ def check_worker_load(active_slots):
     try:
         active_workers = get_num_workers()
     except CircusCallError:
-        echo.echo_critical('Could not contact Circus to get the number of active workers')
+        echo.echo_critical('Could not contact Circus to get the number of active workers.')
 
     if active_workers is not None:
         available_slots = active_workers * slots_per_worker
         percent_load = 1.0 if not available_slots else (active_slots / available_slots)
         if percent_load > warning_threshold:
             echo.echo('')  # New line
-            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
-            echo.echo_warning("Increase the number of workers with 'verdi daemon incr'.\n")
+            echo.echo_warning(f'{percent_load * 100:.0f}%% of the available daemon worker slots have been used!')
+            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
         else:
-            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots')
+            echo.echo_report(f'Using {percent_load * 100:.0f}%% of the available daemon worker slots.')
     else:
-        echo.echo_report('No active daemon workers')
+        echo.echo_report('No active daemon workers.')

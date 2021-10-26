@@ -10,7 +10,7 @@
 """Abstract `QueryBuilder` definition."""
 import abc
 from enum import Enum
-from typing import Any, Dict, Iterable, List, Optional, Set, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Set, Union
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 __all__ = ('BackendQueryBuilder',)
 
-QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('export')
+QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('orm.querybuilder')
 
 
 class EntityTypes(Enum):
@@ -41,7 +41,7 @@ class EntityTypes(Enum):
 
 
 EntityRelationships: Dict[str, Set[str]] = {
-    'authinfo': set(),
+    'authinfo': {'with_computer', 'with_user'},
     'comment': {'with_node', 'with_user'},
     'computer': {'with_node'},
     'group': {'with_node', 'with_user'},
@@ -104,16 +104,6 @@ class BackendQueryBuilder(abc.ABC):
         from . import backends
         type_check(backend, backends.Backend)
         self._backend = backend
-
-    @abc.abstractmethod
-    def yield_per(self, data: QueryDictType, batch_size: int):
-        """
-        :param int batch_size: Number of rows to yield per step
-
-        Yields *count* rows at a time
-
-        :returns: a generator
-        """
 
     @abc.abstractmethod
     def count(self, data: QueryDictType) -> int:

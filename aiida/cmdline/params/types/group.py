@@ -10,8 +10,8 @@
 """Module for custom click param type group."""
 import click
 
-from aiida.common.lang import type_check
 from aiida.cmdline.utils import decorators
+from aiida.common.lang import type_check
 
 from .identifier import IdentifierParamType
 

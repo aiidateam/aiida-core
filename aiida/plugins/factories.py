@@ -10,30 +10,31 @@
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from inspect import isclass
-from typing import Any, Callable, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type, Union
 
 from importlib_metadata import EntryPoint
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
-    'BaseFactory', 'CalculationFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory', 'OrbitalFactory',
-    'ParserFactory', 'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
+    'BaseFactory', 'CalculationFactory', 'CalcJobImporterFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory',
+    'OrbitalFactory', 'ParserFactory', 'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
 )
 
 if TYPE_CHECKING:
-    from aiida.engine import CalcJob, WorkChain
+    from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
-    from aiida.transports import Transport
-    from aiida.tools.dbimporters import DbImporter
     from aiida.tools.data.orbital import Orbital
+    from aiida.tools.dbimporters import DbImporter
+    from aiida.transports import Transport
 
 
 def warn_deprecated_entry_point(entry_point_name: str, deprecated_entry_points: List[str]) -> str:
     """If the ``entry_point_name`` is part of the list of ``deprecated_entry_points``, raise a warning."""
     from warnings import warn
+
     from aiida.common.warnings import AiidaDeprecationWarning
 
     if entry_point_name in deprecated_entry_points:
@@ -70,7 +71,7 @@ def BaseFactory(group: str, name: str, load: bool = True) -> Union[EntryPoint, A
     :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
     :raises aiida.common.LoadingEntryPointError: entry point could not be loaded
     """
-    from .entry_point import load_entry_point, get_entry_point
+    from .entry_point import get_entry_point, load_entry_point
 
     if load is True:
         return load_entry_point(group, name)
@@ -100,6 +101,25 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Optional[Uni
         isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, CalcJob)) or
         (is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode)
     ):
+        return entry_point
+
+    raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
+
+
+def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'CalcJobImporter']]:
+    """Return the plugin registered under the given entry point.
+
+    :param entry_point_name: the entry point name.
+    :return: the loaded :class:`~aiida.engine.processes.calcjobs.importer.CalcJobImporter` plugin.
+    :raises ``aiida.common.InvalidEntryPointTypeError``: if the type of the loaded entry point is invalid.
+    """
+    from aiida.engine import CalcJobImporter
+
+    entry_point_group = 'aiida.calculations.importers'
+    entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
+    valid_classes = (CalcJobImporter,)
+
+    if isclass(entry_point) and issubclass(entry_point, CalcJobImporter):  # type: ignore[arg-type]
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -244,12 +264,11 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Transport']]:
+def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, Type['Transport']]]:
     """Return the `Transport` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
-    :return: sub class of :py:class:`~aiida.transports.transport.Transport`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from aiida.transports import Transport

@@ -51,6 +51,7 @@ import shutil
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
+
 from . import options
 
 CONFIG = None
@@ -73,8 +74,8 @@ def load_profile(profile=None):
     from aiida.common import InvalidOperation
     from aiida.common.log import configure_logging
 
-    global PROFILE
-    global BACKEND_UUID
+    global PROFILE  # pylint: disable=global-variable-not-assigned
+    global BACKEND_UUID  # pylint: disable=global-variable-not-assigned
 
     # If a profile is loaded and the specified profile name is None or that of the currently loaded, do nothing
     if PROFILE and (profile is None or PROFILE.name is profile):
@@ -115,6 +116,7 @@ def load_config(create=False):
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from aiida.common import exceptions
+
     from .config import Config
 
     filepath = get_config_path()
@@ -172,7 +174,7 @@ def get_profile():
     :return: the globally loaded `Profile` instance or `None`
     :rtype: :class:`~aiida.manage.configuration.Profile`
     """
-    global PROFILE
+    global PROFILE  # pylint: disable=global-variable-not-assigned
     return PROFILE
 
 
@@ -278,7 +280,9 @@ def load_documentation_profile():
     the documentation to be built without having to install and configure AiiDA nor having an actual database present.
     """
     import tempfile
+
     from aiida.manage.manager import get_manager
+
     from .config import Config
     from .profile import Profile
 

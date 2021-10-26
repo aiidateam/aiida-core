@@ -152,8 +152,8 @@ class TestSessionSqla(AiidaTestCase):
         to node.description will immediately be seen.
 
         Tests for bug #1372"""
-        from aiida.common import timezone
         import aiida.backends.sqlalchemy as sa
+        from aiida.common import timezone
 
         session = sessionmaker(bind=sa.ENGINE)
         custom_session = session()
@@ -164,7 +164,7 @@ class TestSessionSqla(AiidaTestCase):
         self.assertIsNot(master_session, custom_session)
 
         # Manually load the DbNode in a different session
-        dbnode_reloaded = custom_session.query(sa.models.node.DbNode).get(node.id)
+        dbnode_reloaded = custom_session.get(sa.models.node.DbNode, node.id)
 
         # Now, go through one by one changing the possible attributes (of the model)
         # and check that they're updated when the user reads them from the aiida node

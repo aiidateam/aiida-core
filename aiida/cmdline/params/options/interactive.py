@@ -15,6 +15,7 @@
 import click
 
 from aiida.cmdline.utils import echo
+
 from .conditional import ConditionalOption
 
 

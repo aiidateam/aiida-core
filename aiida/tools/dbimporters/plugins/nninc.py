@@ -22,10 +22,7 @@ class NnincDbImporter(DbImporter):
         Returns part of HTTP GET query for querying string fields.
         """
         if not isinstance(values, str):
-            raise ValueError(
-                "incorrect value for keyword '{}' -- only "
-                'strings and integers are accepted'.format(alias)
-            )
+            raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
         return f'{key}={values}'
 
     _keywords = {
@@ -66,8 +63,8 @@ class NnincDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.nninc.NnincSearchResults`.
         """
-        from urllib.request import urlopen
         import re
+        from urllib.request import urlopen
 
         query = self.query_get(**kwargs)
         with urlopen(query) as handle:

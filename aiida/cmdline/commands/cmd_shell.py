@@ -10,6 +10,7 @@
 """The verdi shell command"""
 
 import os
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi

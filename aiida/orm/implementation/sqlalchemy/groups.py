@@ -12,7 +12,6 @@
 from collections.abc import Iterable
 import logging
 
-from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
 from aiida.backends.sqlalchemy.models.node import DbNode
 from aiida.common.exceptions import UniquenessError
@@ -124,14 +123,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         :return: integer number of entities contained within the group
         """
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
+        session = self.backend.get_session()
         return session.query(self.MODEL_CLASS).join(self.MODEL_CLASS.dbnodes).filter(DbGroup.id == self.pk).count()
 
     def clear(self):
         """Remove all the nodes from this group."""
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
+        session = self.backend.get_session()
         # Note we have to call `dbmodel` and `_dbmodel` to circumvent the `ModelWrapper`
         self.dbmodel.dbnodes = []
         session.commit()
@@ -184,7 +181,6 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         from sqlalchemy.dialects.postgresql import insert  # pylint: disable=import-error, no-name-in-module
         from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
 
-        from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.backends.sqlalchemy.models.base import Base
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
@@ -199,7 +195,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
-        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+        with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
                 dbnodes = self._dbmodel.dbnodes
@@ -241,7 +237,6 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
         """
         from sqlalchemy import and_
 
-        from aiida.backends.sqlalchemy import get_scoped_session
         from aiida.backends.sqlalchemy.models.base import Base
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
@@ -260,7 +255,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         list_nodes = []
 
-        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+        with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 for node in nodes:
                     check_node(node)
@@ -303,7 +298,7 @@ class SqlaGroupCollection(BackendGroupCollection):
         # pylint: disable=too-many-branches
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
-        session = sa.get_scoped_session()
+        session = self.backend.get_session()
 
         filters = []
 
@@ -366,7 +361,7 @@ class SqlaGroupCollection(BackendGroupCollection):
         return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]  # pylint: disable=no-member
 
     def delete(self, id):  # pylint: disable=redefined-builtin
-        session = sa.get_scoped_session()
+        session = self.backend.get_session()
 
         session.get(DbGroup, id).delete()
         session.commit()

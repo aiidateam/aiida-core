@@ -70,7 +70,7 @@ def get_pseudos_from_structure(structure, family_name):
     return pseudo_list
 
 
-def upload_upf_family(folder, group_label, group_description, stop_if_existing=True):
+def upload_upf_family(folder, group_label, group_description, stop_if_existing=True, backend=None):
     """Upload a set of UPF files in a given group.
 
     :param folder: a path containing all UPF files to be added.
@@ -120,7 +120,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
     for filename in filenames:
         md5sum = md5_file(filename)
-        builder = orm.QueryBuilder()
+        builder = orm.QueryBuilder(backend=backend)
         builder.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
         existing_upf = builder.first()
 
@@ -321,7 +321,7 @@ class UpfData(SinglefileData):
         return super().store(*args, **kwargs)
 
     @classmethod
-    def from_md5(cls, md5):
+    def from_md5(cls, md5, backend=None):
         """Return a list of all `UpfData` that match the given md5 hash.
 
         .. note:: assumes hash of stored `UpfData` nodes is stored in the `md5` attribute
@@ -330,7 +330,7 @@ class UpfData(SinglefileData):
         :return: list of existing `UpfData` nodes that have the same md5 hash
         """
         from aiida.orm.querybuilder import QueryBuilder
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=backend)
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 
@@ -366,7 +366,7 @@ class UpfData(SinglefileData):
         """Get the list of all upf family names to which the pseudo belongs."""
         from aiida.orm import QueryBuilder, UpfFamily
 
-        query = QueryBuilder()
+        query = QueryBuilder(backend=self.backend)
         query.append(UpfFamily, tag='group', project='label')
         query.append(UpfData, filters={'id': {'==': self.id}}, with_group='group')
         return query.all(flat=True)
@@ -448,7 +448,7 @@ class UpfData(SinglefileData):
         return UpfFamily.get(label=group_label)
 
     @classmethod
-    def get_upf_groups(cls, filter_elements=None, user=None):
+    def get_upf_groups(cls, filter_elements=None, user=None, backend=None):
         """Return all names of groups of type UpfFamily, possibly with some filters.
 
         :param filter_elements: A string or a list of strings.
@@ -460,7 +460,7 @@ class UpfData(SinglefileData):
         """
         from aiida.orm import QueryBuilder, UpfFamily, User
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=backend)
         builder.append(UpfFamily, tag='group', project='*')
 
         if user:

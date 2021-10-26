@@ -136,8 +136,8 @@ class QueryBuilder:
         :param distinct: Whether to return de-duplicated rows
 
         """
-        backend = backend or get_manager().get_backend()
-        self._impl: BackendQueryBuilder = backend.query()
+        self._backend = backend or get_manager().get_backend()
+        self._impl: BackendQueryBuilder = self._backend.query()
 
         # SERIALISABLE ATTRIBUTES
         # A list storing the path being traversed by the query
@@ -189,6 +189,11 @@ class QueryBuilder:
         if order_by:
             self.order_by(order_by)
 
+    @property
+    def backend(self) -> 'Backend':
+        """Return the backend used by the QueryBuilder."""
+        return self._backend
+
     def as_dict(self, copy: bool = True) -> QueryDictType:
         """Convert to a JSON serialisable dictionary representation of the query."""
         data: QueryDictType = {
@@ -225,7 +230,7 @@ class QueryBuilder:
 
     def __deepcopy__(self, memo) -> 'QueryBuilder':
         """Create deep copy of the instance."""
-        return type(self)(**self.as_dict())  # type: ignore
+        return type(self)(backend=self.backend, **self.as_dict())  # type: ignore
 
     def get_used_tags(self, vertices: bool = True, edges: bool = True) -> List[str]:
         """Returns a list of all the vertices that are being used.

@@ -12,7 +12,6 @@
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import log as models
 from aiida.common import exceptions
 
@@ -107,7 +106,7 @@ class SqlaLogCollection(BackendLogCollection):
         if not isinstance(log_id, int):
             raise TypeError('log_id must be an int')
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbLog).filter_by(id=log_id).one().delete()
@@ -122,7 +121,7 @@ class SqlaLogCollection(BackendLogCollection):
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbLog).delete()
@@ -153,7 +152,7 @@ class SqlaLogCollection(BackendLogCollection):
             raise exceptions.ValidationError('filter must not be empty')
 
         # Apply filter and delete found entities
-        builder = QueryBuilder().append(Log, filters=filters, project='id')
+        builder = QueryBuilder(backend=self.backend).append(Log, filters=filters, project='id')
         entities_to_delete = builder.all(flat=True)
         for entity in entities_to_delete:
             self.delete(entity)

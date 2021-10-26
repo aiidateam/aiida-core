@@ -45,6 +45,7 @@ py:class aiida.tools.importexport.dbexport.ArchiveData
 py:class aiida.tools.groups.paths.WalkNodeResult
 py:meth aiida.orm.groups.GroupCollection.delete
 
+py:class AbstractRepositoryBackend
 py:class Backend
 py:class BackendEntity
 py:class BackendEntityType
@@ -58,6 +59,7 @@ py:class CollectionType
 py:class Computer
 py:class Data
 py:class DbImporter
+py:class DiskObjectStoreRepositoryBackend
 py:class EntityType
 py:class EntityTypes
 py:class ExitCode

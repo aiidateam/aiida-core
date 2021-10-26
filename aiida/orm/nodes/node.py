@@ -83,7 +83,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
 
         self._backend.nodes.delete(pk)
 
-     def iter_object_keys(self, filters: Optional[dict] = None, subclassing: bool = True) -> Iterator[str]:
+    def iter_object_keys(self, filters: Optional[dict] = None, subclassing: bool = True) -> Iterator[str]:
         """Iterate over all repository object keys for this ``Node`` class
 
         .. note::

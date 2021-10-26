@@ -86,38 +86,18 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     def iter_object_keys(self, filters: Optional[dict] = None, subclassing: bool = True) -> Iterator[str]:
         """Iterate over all repository object keys for this ``Node`` class
 
-        .. note::
-           keys will not be deduplicated (wrap in a ``set`` to achieve this)
+        .. note:: keys will not be deduplicated, wrap in a ``set`` to achieve this
 
         :param filters: Filters for the node query
         :param subclassing: Whether to include subclasses of the given class
         """
         from aiida.repository import Repository
-        backend = self.backend.get_repository()
         query = QueryBuilder(backend=self.backend)
         query.append(self.entity_type, subclassing=subclassing, filters=filters, project=['repository_metadata'])
         for metadata, in query.iterall():
-            repo = Repository.from_serialized(backend=backend, serialized=metadata)
-            for hash_key in repo.get_hash_keys():
-                yield hash_key
-
-    def iter_object_names(self, filters: Optional[dict] = None, subclassing: bool = True) -> Iterator[str]:
-        """Iterate over all repository object names for this ``Node`` class
-
-        .. note::
-            names will not be deduplicated (wrap in a ``set`` to achieve this)
-
-        :param filters: Filters for the node query
-        :param subclassing: Whether to include subclasses of the given class
-        """
-        from aiida.repository import Repository
-        backend = self.backend.get_repository()
-        query = QueryBuilder(backend=self.backend)
-        query.append(self.entity_type, subclassing=subclassing, filters=filters, project=['repository_metadata'])
-        for metadata, in query.iterall():
-            repo = Repository.from_serialized(backend=backend, serialized=metadata)
-            for hash_key in repo.list_object_names():
-                yield hash_key
+            for key in Repository.flatten(metadata).values():
+                if key is not None:
+                    yield key
 
 
 class Node(

@@ -84,6 +84,33 @@ class Repository:
         """
         return self._directory.serialize()
 
+    @classmethod
+    def flatten(self, serialized=Optional[Dict[str, Any]], delimiter: str='/') -> Dict[str, Optional[str]]:
+        """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
+
+        Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.
+
+        :param serialized: the serialized content of the repository.
+        :param delimiter: the delimiter to use to separate the path elements.
+        :return: dictionary with the flattened content.
+        """
+        if serialized is None:
+            return {}
+        items = {}
+        stack = [('', serialized)]
+        while stack:
+            path, sub_dict = stack.pop()
+            for name, obj in sub_dict.get('o', {}).items():
+                sub_path = f'{path}{delimiter}{name}' if path else name
+                if not obj:
+                    items[f'{sub_path}{delimiter}'] = None
+                elif 'k' in obj:
+                    items[sub_path] = obj['k']
+                else:
+                    items[f'{sub_path}{delimiter}'] = None
+                    stack.append((sub_path, obj))
+        return items
+
     def hash(self) -> str:
         """Generate a hash of the repository's contents.
 

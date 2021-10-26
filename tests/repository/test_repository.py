@@ -652,3 +652,31 @@ def test_hash(repository, generate_directory):
     """Test the ``Repository.hash`` method."""
     generate_directory({'empty': {}, 'file_a': b'content', 'relative': {'file_b': None, 'sub': {'file_c': None}}})
     assert isinstance(repository.hash(), str)
+
+
+def test_flatten(repository, generate_directory):
+    """Test the ``Repository.flatten`` classmethod."""
+    directory = generate_directory({
+        'empty': {},
+        'file_a': b'content',
+        'relative': {
+            'file_b': None,
+            'sub': {
+                'file_c': None
+            },
+            'sub_empty': {},
+        }
+    })
+    repository.put_object_from_tree(str(directory))
+    flattened = repository.flatten(repository.serialize())
+    assert isinstance(flattened, dict)
+    if isinstance(repository.backend, DiskObjectStoreRepositoryBackend):
+        assert flattened == {
+            'empty/': None,
+            'relative/': None,
+            'file_a': 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73',
+            'relative/sub/': None,
+            'relative/file_b': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            'relative/sub/file_c': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            'relative/sub_empty/': None,
+        }

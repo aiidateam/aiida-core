@@ -76,7 +76,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
     ENTITY_CLASS = BackendComment
 
     @abc.abstractmethod
-    def create(self, node: 'BackendNode', user: 'BackendNode', content: Optional[str] = None, **kwargs):  # type: ignore[override]  # pylint: disable=arguments-differ,line-too-long
+    def create(self, node: 'BackendNode', user: 'BackendUser, content: Optional[str] = None, **kwargs):  # type: ignore[override]  # pylint: disable=arguments-differ
         """
         Create a Comment for a given node and user
 

@@ -22,7 +22,7 @@ class BackendComputer(BackendEntity):
 
     A computer is a resource that can be used to run calculations:
     It has an associated transport_type, which points to a plugin for connecting to the resource and passing data,
-    and a transport_type, which points to a plugin for scheduling calculations.
+    and a scheduler_type, which points to a plugin for scheduling calculations.
     """
     # pylint: disable=too-many-public-methods
 

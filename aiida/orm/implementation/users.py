@@ -18,7 +18,7 @@ __all__ = ('BackendUser', 'BackendUserCollection')
 class BackendUser(BackendEntity):
     """Backend implementation for the `User` ORM class.
 
-    A user is a creator of data.
+    A user can be assigned as the creator of a variety of other entities.
     """
 
     @property  # type: ignore[misc]

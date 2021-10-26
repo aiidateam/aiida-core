@@ -329,7 +329,7 @@ class CifData(SinglefileData):
         return struct_list[index]
 
     @classmethod
-    def from_md5(cls, md5):
+    def from_md5(cls, md5, backend=None):
         """
         Return a list of all CIF files that match a given MD5 hash.
 
@@ -337,7 +337,7 @@ class CifData(SinglefileData):
             otherwise the CIF file will not be found.
         """
         from aiida.orm.querybuilder import QueryBuilder
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=backend)
         builder.append(cls, filters={'attributes.md5': {'==': md5}})
         return builder.all(flat=True)
 

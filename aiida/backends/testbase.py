@@ -142,7 +142,7 @@ class AiidaTestCase(unittest.TestCase):
         """Initialise the repository"""
         from aiida.manage.configuration import get_profile
         profile = get_profile()
-        repository = profile.get_repository()
+        repository = cls.backend.get_repository()
         repository.initialise(clear=True, **profile.defaults['repository'])
 
     @classmethod

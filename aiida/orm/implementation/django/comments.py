@@ -168,7 +168,7 @@ class DjangoCommentCollection(BackendCommentCollection):
             raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
-        builder = QueryBuilder().append(Comment, filters=filters, project='id').all()
+        builder = QueryBuilder(backend=self.backend).append(Comment, filters=filters, project='id').all()
         entities_to_delete = [_[0] for _ in builder]
         for entity in entities_to_delete:
             self.delete(entity)

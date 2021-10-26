@@ -572,9 +572,8 @@ def _write_node_repositories(
             container_export = Container(dirpath)
             container_export.init_container()
 
-            profile = get_manager().get_profile()
-            assert profile is not None, 'profile not loaded'
-            container_profile = profile.get_repository().backend.container
+            backend = get_manager().get_backend()
+            container_profile = backend.get_repository().container
 
             # This should be done more effectively, starting by not having to load the node. Either the repository
             # metadata should be collected earlier when the nodes themselves are already exported or a single separate

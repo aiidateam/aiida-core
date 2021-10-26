@@ -85,7 +85,7 @@ class Repository:
         return self._directory.serialize()
 
     @classmethod
-    def flatten(self, serialized=Optional[Dict[str, Any]], delimiter: str='/') -> Dict[str, Optional[str]]:
+    def flatten(self, serialized=Optional[Dict[str, Any]], delimiter: str = '/') -> Dict[str, Optional[str]]:
         """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
 
         Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.

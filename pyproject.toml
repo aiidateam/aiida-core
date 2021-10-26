@@ -3,7 +3,7 @@ requires = ["setuptools>=40.8.0", "wheel", "fastentrypoints~=0.12"]
 build-backend = "setuptools.build_meta"
 
 [tool.pylint.master]
-load-plugins = ["pylint_django", "aiida.tools.pylint_plugin"]
+load-plugins = ["pylint_aiida", "pylint_django"]
 # this currently fails with aiida.common.exceptions.ProfileConfigurationError: no profile has been loaded
 # we woud need a static settings module to use this
 # django-settings-module = "aiida.backends.djsite.settings"

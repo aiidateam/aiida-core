@@ -98,6 +98,7 @@
             "packaging==20.3",
             "pre-commit~=2.2",
             "pylint~=2.11.1",
+            "pylint-aiida~=0.1.1",
             "pylint-django",
             "sqlalchemy2-stubs"
         ],

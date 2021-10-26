@@ -8,8 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
-
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -123,7 +121,7 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         # pylint: disable=import-error,no-name-in-module
         from sqlalchemy.orm.exc import NoResultFound
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(DbAuthInfo).filter_by(id=pk).one().delete()

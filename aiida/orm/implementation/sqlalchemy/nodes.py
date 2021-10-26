@@ -15,7 +15,6 @@ from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -180,7 +179,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         self._dbmodel.user = user.dbmodel
 
     def add_incoming(self, source, link_type, link_label):
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         type_check(source, SqlaNode)
 
@@ -197,7 +196,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         """Add a single link"""
         from aiida.backends.sqlalchemy.models.node import DbLink
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             with session.begin_nested():
@@ -211,7 +210,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         self._dbmodel.extras = clean_value(self._dbmodel.extras)
 
     def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if clean:
             self.clean_values()
@@ -238,7 +237,7 @@ class SqlaNodeCollection(BackendNodeCollection):
     ENTITY_CLASS = SqlaNode
 
     def get(self, pk):
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
@@ -246,7 +245,7 @@ class SqlaNodeCollection(BackendNodeCollection):
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
     def delete(self, pk):
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbNode).filter_by(id=pk).one().delete()

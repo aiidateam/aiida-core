@@ -14,7 +14,6 @@ from datetime import datetime
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import comment as models
 from aiida.common import exceptions, lang
 
@@ -129,7 +128,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         if not isinstance(comment_id, int):
             raise TypeError('comment_id must be an int')
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbComment).filter_by(id=comment_id).one().delete()
@@ -144,7 +143,7 @@ class SqlaCommentCollection(BackendCommentCollection):
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbComment).delete()

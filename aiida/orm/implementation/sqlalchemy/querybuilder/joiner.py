@@ -131,6 +131,7 @@ class SqlaJoiner:
                 'with_group': self._join_group_node,
             },
             'user': {
+                'with_authinfo': self._join_authinfo_user,
                 'with_comment': self._join_comment_user,
                 'with_node': self._join_node_user,
                 'with_group': self._join_group_user,
@@ -295,6 +296,16 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Comment), 'with_user')
         new_query = query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+        return JoinReturn(new_query)
+
+    def _join_authinfo_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+        """
+        :param joined_entity: An aliased comment
+        :param entity_to_join: aliased user
+        """
+        _check_dbentities((joined_entity, self._entities.AuthInfo), (entity_to_join, self._entities.User),
+                          'with_authinfo')
+        new_query = query.join(entity_to_join, joined_entity.aiidauser_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
     def _join_comment_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):

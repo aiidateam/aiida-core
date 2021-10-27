@@ -428,8 +428,7 @@ class Graph:
         """return a copy of the edges"""
         return self._edges.copy()
 
-    @staticmethod
-    def _load_node(node):
+    def _load_node(self, node):
         """ load a node (if not already loaded)
 
         :param node: node or node pk/uuid

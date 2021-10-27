@@ -436,8 +436,10 @@ class Graph:
         :type node: int or str or aiida.orm.nodes.node.Node
         :returns: aiida.orm.nodes.node.Node
         """
-        if isinstance(node, (int, str)):
-            return orm.load_node(node)
+        if isinstance(node, int):
+            return orm.Node.Collection.get_cached(orm.Node, self._backend).get(pk=node)
+        if isinstance(node, str):
+            return orm.Node.Collection.get_cached(orm.Node, self._backend).get(uuid=node)
         return node
 
     @staticmethod

@@ -213,7 +213,7 @@ class TestVerdiImport(AiidaTestCase):
         with self.assertRaises(BadParameter) as cmd_exc:
             test_timeout_path(timeout_url)
 
-        error_message = f'Path "{timeout_url}" could not be reached within 0 s.'
+        error_message = f'ath "{timeout_url}" could not be reached within 0 s.'
         self.assertIn(error_message, str(cmd_exc.exception), str(cmd_exc.exception))
 
     def test_raise_malformed_url(self):
@@ -225,7 +225,7 @@ class TestVerdiImport(AiidaTestCase):
         self.assertIsNotNone(result.exception, result.output)
         self.assertNotEqual(result.exit_code, 0, result.output)
 
-        error_message = 'Is it a valid path or URL?'
+        error_message = 'could not be reached within'
         self.assertIn(error_message, result.output, result.exception)
 
     def test_non_interactive_and_migration(self):

@@ -79,11 +79,32 @@ Configuring your installation
 Activating tab-completion
 -------------------------
 The ``verdi`` command line interface has many commands and parameters, which can be tab-completed to simplify its use.
-To enable tab-completion, the following shell command should be executed:
+To enable tab-completion, the following shell command should be executed (depending on the shell you use):
 
-.. code:: bash
+.. panels::
+    :container: container-lg pb-3
+    :column: col-lg-12 p-2
 
-    $ eval "$(_VERDI_COMPLETE=source verdi)"
+    Enable tab-completion for ``verdi`` one of the following supported shells
+
+    .. tabbed:: bash
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=bash_source verdi)"
+
+    .. tabbed:: zsh
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=zsh_source verdi)"
+
+    .. tabbed:: fish
+
+        .. code-block:: console
+
+            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.
 This file is shell specific, but likely one of the following:

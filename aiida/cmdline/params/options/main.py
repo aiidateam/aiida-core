@@ -533,7 +533,7 @@ TRANSPORT = OverridableOption(
     '--transport',
     type=types.PluginParamType(group='transports'),
     required=True,
-    help="A transport plugin (as listed in 'verdi plugin list aiida.transports')."
+    help='A transport plugin (as listed in `verdi plugin list aiida.transports`).'
 )
 
 SCHEDULER = OverridableOption(
@@ -541,7 +541,7 @@ SCHEDULER = OverridableOption(
     '--scheduler',
     type=types.PluginParamType(group='schedulers'),
     required=True,
-    help="A scheduler plugin (as listed in 'verdi plugin list aiida.schedulers')."
+    help='A scheduler plugin (as listed in `verdi plugin list aiida.schedulers`).'
 )
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), help='Email address of the user.')

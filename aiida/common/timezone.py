@@ -10,7 +10,7 @@
 """Utility functions to operate on datetime objects."""
 from datetime import datetime
 
-import dateutil.parser
+from dateutil import parser
 
 
 def get_current_timezone():
@@ -136,4 +136,4 @@ def isoformat_to_datetime(value):
     """
     if value is None:
         return None
-    return dateutil.parser.parse(value)
+    return parser.parse(value)

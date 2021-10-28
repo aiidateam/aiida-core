@@ -29,7 +29,6 @@ from .plugin import *
 from .process import *
 from .profile import *
 from .strings import *
-from .test_module import *
 from .user import *
 from .workflow import *
 
@@ -57,7 +56,6 @@ __all__ = (
     'ProcessParamType',
     'ProfileParamType',
     'ShebangParamType',
-    'TestModuleParamType',
     'UserParamType',
     'WorkflowParamType',
 )

@@ -105,12 +105,55 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         return clone
 
     @property
-    def computer(self):
-        """Return the computer of this node.
+    def ctime(self):
+        return self._dbmodel.ctime
 
-        :return: the computer or None
-        :rtype: `BackendComputer` or None
-        """
+    @property
+    def mtime(self):
+        return self._dbmodel.mtime
+
+    @property
+    def uuid(self):
+        return str(self._dbmodel.uuid)
+
+    @property
+    def node_type(self):
+        return self._dbmodel.node_type
+
+    @property
+    def process_type(self):
+        return self._dbmodel.process_type
+
+    @process_type.setter
+    def process_type(self, value):
+        self._dbmodel.process_type = value
+
+    @property
+    def label(self):
+        return self._dbmodel.label
+
+    @label.setter
+    def label(self, value):
+        self._dbmodel.label = value
+
+    @property
+    def description(self):
+        return self._dbmodel.description
+
+    @description.setter
+    def description(self, value):
+        self._dbmodel.description = value
+
+    @property
+    def repository_metadata(self):
+        return self._dbmodel.repository_metadata
+
+    @repository_metadata.setter
+    def repository_metadata(self, value):
+        self._dbmodel.repository_metadata = value
+
+    @property
+    def computer(self):
         try:
             return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
         except TypeError:
@@ -118,10 +161,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
     @computer.setter
     def computer(self, computer):
-        """Set the computer of this node.
-
-        :param computer: a `BackendComputer`
-        """
         type_check(computer, DjangoComputer, allow_none=True)
 
         if computer is not None:
@@ -131,31 +170,14 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
 
     @property
     def user(self):
-        """Return the user of this node.
-
-        :return: the user
-        :rtype: `BackendUser`
-        """
         return self.backend.users.from_dbmodel(self._dbmodel.user)
 
     @user.setter
     def user(self, user):
-        """Set the user of this node.
-
-        :param user: a `BackendUser`
-        """
         type_check(user, DjangoUser)
         self._dbmodel.user = user.dbmodel
 
     def add_incoming(self, source, link_type, link_label):
-        """Add a link of the given type from a given node to ourself.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :return: True if the proposed link is allowed, False otherwise
-        :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
-        """
         type_check(source, DjangoNode)
 
         if not self.is_stored:
@@ -190,12 +212,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
         self._dbmodel.extras = clean_value(self._dbmodel.extras)
 
     def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
-        """Store the node in the database.
-
-        :param links: optional links to add before storing
-        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
-        :param clean: boolean, if True, will clean the attributes and extras before attempting to store
-        """
         import contextlib
 
         from aiida.backends.djsite.db.models import suppress_auto_now
@@ -223,20 +239,12 @@ class DjangoNodeCollection(BackendNodeCollection):
     ENTITY_CLASS = DjangoNode
 
     def get(self, pk):
-        """Return a Node entry from the collection with the given id
-
-        :param pk: id of the node
-        """
         try:
             return self.ENTITY_CLASS.from_dbmodel(models.DbNode.objects.get(pk=pk), self.backend)
         except ObjectDoesNotExist:
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from ObjectDoesNotExist
 
     def delete(self, pk):
-        """Remove a Node entry from the collection with the given id
-
-        :param pk: id of the node to delete
-        """
         try:
             models.DbNode.objects.filter(pk=pk).delete()  # pylint: disable=no-member
         except ObjectDoesNotExist:

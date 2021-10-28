@@ -21,7 +21,7 @@ certifi==2021.5.30
 cffi==1.14.6
 charset-normalizer==2.0.4
 circus==0.17.1
-click==7.1.2
+click==8.0.3
 click-completion==0.5.2
 click-config-file==0.6.0
 click-spinner==0.1.10

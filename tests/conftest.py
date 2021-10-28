@@ -11,6 +11,7 @@
 """Configuration file for pytest tests."""
 import os
 import pathlib
+from typing import IO, List, Optional, Union
 
 import click
 import pytest
@@ -428,14 +429,26 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
     """
     from click.testing import Result
 
-    def _run_cli_command(command: click.Command, options: list = None, raises: bool = False) -> Result:
+    def _run_cli_command(
+        command: click.Command,
+        options: Optional[List] = None,
+        user_input: Optional[Union[str, bytes, IO]] = None,
+        raises: bool = False,
+        catch_exceptions: bool = True,
+        **kwargs
+    ) -> Result:
         """Run the command and check the result.
 
         .. note:: the `output_lines` attribute is added to return value containing list of stripped output lines.
 
-        :param options: the list of command line options to pass to the command invocation
-        :param raises: whether the command is expected to raise an exception
-        :return: test result
+        :param options: the list of command line options to pass to the command invocation.
+        :param user_input: string with data to be provided at the prompt. Can include newline characters to simulate
+            responses to multiple prompts.
+        :param raises: whether the command is expected to raise an exception.
+        :param catch_exceptions: if True and ``raise == False``, will assert that the exception is ``None`` and the exit
+            code of the result of the invoked command equals zero.
+        :param kwargs: keyword arguments that will be psased to the command invocation.
+        :return: test result.
         """
         import traceback
 
@@ -457,12 +470,12 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
         command = VerdiCommandGroup.add_verbosity_option(command)
 
         runner = click.testing.CliRunner()
-        result = runner.invoke(command, options, obj=obj)
+        result = runner.invoke(command, options, input=user_input, obj=obj, **kwargs)
 
         if raises:
             assert result.exception is not None, result.output
             assert result.exit_code != 0
-        else:
+        elif catch_exceptions:
             assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
             assert result.exit_code == 0, result.output
 

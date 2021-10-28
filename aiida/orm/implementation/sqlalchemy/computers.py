@@ -91,20 +91,11 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     def set_metadata(self, metadata):
         self._dbmodel._metadata = metadata  # pylint: disable=protected-access
 
-    def get_label(self):
-        return self._dbmodel.label
-
     def set_label(self, val):
         self._dbmodel.label = val
 
-    def get_hostname(self):
-        return self._dbmodel.hostname
-
     def set_hostname(self, val):
         self._dbmodel.hostname = val
-
-    def get_description(self):
-        return self._dbmodel.description
 
     def set_description(self, val):
         self._dbmodel.description = val

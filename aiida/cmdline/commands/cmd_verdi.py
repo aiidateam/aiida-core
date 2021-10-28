@@ -103,11 +103,10 @@ class VerdiCommandGroup(click.Group):
         return super().group(*args, **kwargs)
 
 
+# Pass the version explicitly to ``version_option`` otherwise editable installs can show the wrong version number
 @click.command(cls=VerdiCommandGroup, context_settings={'help_option_names': ['--help']})
 @options.PROFILE(type=types.ProfileParamType(load_profile=True), expose_value=False)
 @options.VERBOSITY()
-# Note, __version__ should always be passed explicitly here,
-# because click does not retrieve a dynamic version when installed in editable mode
-@click.version_option(__version__, '--version', message='AiiDA version %(version)s')
+@click.version_option(__version__, package_name='aiida_core', message='AiiDA version %(version)s')
 def verdi():
     """The command line interface of AiiDA."""

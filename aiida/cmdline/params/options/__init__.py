@@ -15,7 +15,6 @@
 # pylint: disable=wildcard-import
 
 from .config import *
-from .contextualdefault import *
 from .main import *
 from .multivalue import *
 from .overridable import *
@@ -41,7 +40,6 @@ __all__ = (
     'COMPUTERS',
     'CONFIG_FILE',
     'ConfigFileOption',
-    'ContextualDefaultOption',
     'DATA',
     'DATUM',
     'DB_BACKEND',

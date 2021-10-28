@@ -86,8 +86,11 @@ def interactive_default(key, also_non_interactive=False):
         if not also_non_interactive and ctx.params['non_interactive']:
             raise click.MissingParameter()
 
-        user = ctx.params['user'] or orm.User.objects.get_default()
-        computer = ctx.params['computer']
+        user = ctx.params.get('user', None) or orm.User.objects.get_default()
+        computer = ctx.params.get('computer', None)
+
+        if computer is None:
+            return None
 
         try:
             authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)

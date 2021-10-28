@@ -111,9 +111,9 @@ class SqlaBackendManager(BackendManager):
         :return: boolean, True if the database schema version is ahead of the code schema version.
         """
         with self.alembic_script() as script:
-            return self.get_schema_version_current() not in [entry.revision for entry in script.walk_revisions()]
+            return self.get_schema_version_backend() not in [entry.revision for entry in script.walk_revisions()]
 
-    def get_schema_version_latest(self):
+    def get_schema_version_head(self):
         with self.alembic_script() as script:
             return script.get_current_head()
 
@@ -125,7 +125,7 @@ class SqlaBackendManager(BackendManager):
         """
         return SCHEMA_VERSION_RESET[schema_generation_code]
 
-    def get_schema_version_current(self):
+    def get_schema_version_backend(self):
         with self.migration_context() as context:
             return context.get_current_revision()
 

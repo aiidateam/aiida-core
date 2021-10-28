@@ -38,7 +38,7 @@ def database_version():
     echo.echo('Generation: ', bold=True, nl=False)
     echo.echo(backend_manager.get_schema_generation_database())
     echo.echo('Revision:   ', bold=True, nl=False)
-    echo.echo(backend_manager.get_schema_version_current())
+    echo.echo(backend_manager.get_schema_version_backend())
 
 
 @verdi_database.command('migrate')

@@ -30,6 +30,6 @@ def test_all_empty_migrations():
     for version in all_versions[first_index:]:
         print(version)
         migrator.migrate_down(version)
-        assert migrator.get_schema_version_current() == version
+        assert migrator.get_schema_version_backend() == version
         migrator.migrate_up('head')
-        assert migrator.get_schema_version_current() == migrator.get_schema_version_latest()
+        assert migrator.get_schema_version_backend() == migrator.get_schema_version_head()

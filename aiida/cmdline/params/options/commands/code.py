@@ -23,6 +23,33 @@ def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
 
+def validate_label_uniqueness(ctx, _, value):
+    """Validate the uniqueness of the full label of the code, i.e., `label@computer.label`.
+
+    .. note:: For this to work, the computer parameter already needs to have been parsed. In interactive mode, this
+        means that the computer parameter needs to be defined after the label parameter in the command definition. For
+        non-interactive mode, the parsing order will always be determined by the order the parameters are specified by
+        the caller and so this validator may get called before the computer is parsed. For that reason, this validator
+        should also be called in the command itself, to ensure it has both the label and computer parameter available.
+    """
+    from aiida.common import exceptions
+    from aiida.orm import load_code
+
+    computer = ctx.params.get('computer', None)
+
+    if computer is not None:
+        full_label = f'{value}@{computer.label}'
+
+        try:
+            load_code(full_label)
+        except exceptions.NotExistent:
+            pass
+        else:
+            raise click.BadParameter(f'the code `{full_label}` already exists.')
+
+    return value
+
+
 ON_COMPUTER = OverridableOption(
     '--on-computer/--store-in-db',
     is_eager=False,
@@ -66,6 +93,7 @@ REL_PATH = OverridableOption(
 
 LABEL = options.LABEL.clone(
     prompt='Label',
+    callback=validate_label_uniqueness,
     cls=InteractiveOption,
     help="This label can be used to identify the code (using 'label@computerlabel'), as long as labels are unique per "
     'computer.'

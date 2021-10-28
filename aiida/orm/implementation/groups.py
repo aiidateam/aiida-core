@@ -154,16 +154,6 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
 
         return f'"{self.label}" [user-defined], of user {self.user.email}'
 
-    @abc.abstractmethod
-    def __int__(self) -> Optional[int]:
-        """
-        Convert the class to an integer. This is needed to allow querying
-        with Django. Be careful, though, not to pass it to a wrong field!
-        This only returns the local DB principal key (pk) value.
-
-        :return: the integer pk of the node or None if not stored.
-        """
-
 
 class BackendGroupCollection(BackendCollection[BackendGroup]):
     """The collection of Group entries."""

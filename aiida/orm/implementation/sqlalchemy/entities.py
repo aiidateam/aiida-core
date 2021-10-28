@@ -69,11 +69,6 @@ class SqlaModelEntity(typing.Generic[ModelType]):
 
     @property
     def dbmodel(self):
-        """
-        Get the underlying database model instance
-
-        :return: the database model instance
-        """
         return self._dbmodel._model  # pylint: disable=protected-access
 
     @property

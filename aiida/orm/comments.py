@@ -49,12 +49,11 @@ class CommentCollection(entities.Collection['Comment']):
         """
         self._backend.comments.delete_all()
 
-    def delete_many(self, filters) -> List[int]:
+    def delete_many(self, filters: dict) -> List[int]:
         """
         Delete Comments from the Collection based on ``filters``
 
         :param filters: similar to QueryBuilder filter
-        :type filters: dict
 
         :return: (former) ``PK`` s of deleted Comments
 

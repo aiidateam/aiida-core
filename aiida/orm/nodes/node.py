@@ -13,7 +13,6 @@ import copy
 import datetime
 import importlib
 from logging import Logger
-import typing
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -270,7 +269,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.process_type = value
+        self.backend_entity.process_type = value  # type: ignore[misc]
 
     @property
     def label(self) -> str:
@@ -286,7 +285,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.label = value
+        self.backend_entity.label = value  # type: ignore[misc]
 
     @property
     def description(self) -> str:
@@ -302,10 +301,10 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.description = value
+        self.backend_entity.description = value  # type: ignore[misc]
 
     @property
-    def repository_metadata(self) -> typing.Dict:
+    def repository_metadata(self) -> Dict[str, Any]:
         """Return the node repository metadata.
 
         :return: the repository metadata
@@ -313,12 +312,12 @@ class Node(
         return self.backend_entity.repository_metadata
 
     @repository_metadata.setter
-    def repository_metadata(self, value):
+    def repository_metadata(self, value: Dict[str, Any]) -> None:
         """Set the repository metadata.
 
         :param value: the new value to set
         """
-        self.backend_entity.repository_metadata = value
+        self.backend_entity.repository_metadata = value  # type: ignore[misc]
 
     @property
     def computer(self) -> Optional[Computer]:
@@ -339,10 +338,7 @@ class Node(
 
         type_check(computer, Computer, allow_none=True)
 
-        if computer is not None:
-            computer = computer.backend_entity
-
-        self.backend_entity.computer = computer
+        self.backend_entity.computer = None if computer is None else computer.backend_entity  # type: ignore[misc]
 
     @property
     def user(self) -> User:
@@ -359,7 +355,7 @@ class Node(
             raise exceptions.ModificationNotAllowed('cannot set the user on a stored node')
 
         type_check(user, User)
-        self.backend_entity.user = user.backend_entity
+        self.backend_entity.user = user.backend_entity  # type: ignore[misc]
 
     @property
     def ctime(self) -> datetime.datetime:

@@ -74,9 +74,17 @@ To determine exactly what might be going wrong, first :ref:`set the loglevel <in
 
 Then restart the daemon with ``verdi daemon restart`` for the changes to take effect.
 Run the command ``verdi daemon logshow`` in a separate terminal to see the logging output of the daemon and then submit the problematic calculation or workflow again.
+
 If the root cause is indeed due to an import problem, it will probably appear as an ``ImportError`` exception in the daemon log.
 To solve these issues, make sure that all the Python code that is being run is properly importable, which means that it is part of the `PYTHONPATH <https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH>`_.
-Make sure that the PYTHONPATH is correctly defined automatically when starting your shell, so for example if you are using bash, add it to your ``.bashrc``.
+Make sure that the PYTHONPATH is correctly defined automatically when starting your shell, so for example if you are using bash, add it to your ``.bashrc`` and completely reset daemon.
+For example, go to the directory that contains the file where you defined the process and run:
+
+.. code-block:: console
+
+    $ echo "export PYTHONPATH=\$PYTHONPATH:$PWD" >> $HOME/.bashrc
+    $ source $HOME/.bashrc
+    $ verdi daemon restart --reset
 
 .. _how-to:faq:caching-not-enabled:
 

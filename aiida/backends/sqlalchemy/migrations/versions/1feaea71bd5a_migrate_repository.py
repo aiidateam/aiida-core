@@ -35,6 +35,7 @@ def upgrade():
     from aiida.common import exceptions
     from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.configuration import get_profile
+    from aiida.manage.manager import get_manager
 
     connection = op.get_bind()
 
@@ -46,6 +47,7 @@ def upgrade():
     )
 
     profile = get_profile()
+    backend = get_manager().get_backend()
     node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()
     missing_repo_folder = []
     shard_count = 256
@@ -106,7 +108,7 @@ def upgrade():
     # Store the UUID of the repository container in the `DbSetting` table. Note that for new databases, the profile
     # setup will already have stored the UUID and so it should be skipped, or an exception for a duplicate key will be
     # raised. This migration step is only necessary for existing databases that are migrated.
-    container_id = profile.get_repository().uuid
+    container_id = backend.get_repository().uuid
     statement = text(
         f"""
         INSERT INTO db_dbsetting (key, val, description)

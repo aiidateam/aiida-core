@@ -41,7 +41,7 @@ class EntityTypes(Enum):
 
 
 EntityRelationships: Dict[str, Set[str]] = {
-    'authinfo': set(),
+    'authinfo': {'with_computer', 'with_user'},
     'comment': {'with_node', 'with_user'},
     'computer': {'with_node'},
     'group': {'with_node', 'with_user'},
@@ -50,7 +50,7 @@ EntityRelationships: Dict[str, Set[str]] = {
         'with_comment', 'with_log', 'with_incoming', 'with_outgoing', 'with_descendants', 'with_ancestors',
         'with_computer', 'with_user', 'with_group'
     },
-    'user': {'with_comment', 'with_group', 'with_node'}
+    'user': {'with_authinfo', 'with_comment', 'with_group', 'with_node'}
 }
 
 

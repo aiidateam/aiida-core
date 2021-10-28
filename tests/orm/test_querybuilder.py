@@ -983,7 +983,7 @@ class TestQueryBuilderLimitOffsets:
 @pytest.mark.usefixtures('clear_database_before_test')
 class TestQueryBuilderJoins:
 
-    def test_joins1(self):
+    def test_joins_node_incoming(self):
         # Creating n1, who will be a parent:
         parent = orm.Data()
         parent.label = 'mother'
@@ -1017,7 +1017,7 @@ class TestQueryBuilderJoins:
         qb.append(orm.Node, tag='children', outerjoin=True, project='label', filters={'attributes.is_good': True})
         assert qb.count() == 1
 
-    def test_joins2(self):
+    def test_joins_node_incoming2(self):
         # Creating n1, who will be a parent:
 
         students = [orm.Data() for i in range(10)]
@@ -1061,7 +1061,7 @@ class TestQueryBuilderJoins:
                 }
             }, tag='student').count() == number_students
 
-    def test_joins3_user_group(self):
+    def test_joins_user_group(self):
         # Create another user
         new_email = 'newuser@new.n'
         user = orm.User(email=new_email).store()
@@ -1083,6 +1083,39 @@ class TestQueryBuilderJoins:
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
         assert qb.count() == 1, 'The expected user that owns the selected group was not found.'
+
+    def test_joins_user_authinfo(self):
+        """Test querying for user with particular authinfo"""
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+        qb = orm.QueryBuilder()
+        qb.append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.id}})
+        qb.append(orm.User, with_authinfo='auth')
+        assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
+        assert qb.one()[0].pk == user.pk
+
+    def test_joins_authinfo(self):
+        """Test querying for AuthInfo with specific computer/user."""
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+
+        # Search for the user of the authinfo
+        qb = orm.QueryBuilder()
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(orm.AuthInfo, with_user='user', filters={'id': {'==': authinfo.id}})
+        assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
+
+        # Search for the computer of the authinfo
+        qb = orm.QueryBuilder()
+        qb.append(orm.Computer, tag='computer', filters={'id': {'==': computer.id}})
+        qb.append(orm.AuthInfo, with_computer='computer', filters={'id': {'==': authinfo.id}})
+        assert qb.count() == 1, 'The expected computer that owns the selected authinfo was not found.'
 
     def test_joins_group_node(self):
         """
@@ -1466,6 +1499,23 @@ class TestDoubleStar:
     @pytest.fixture(autouse=True)
     def init_db(self, clear_database_before_test, aiida_localhost):
         self.computer = aiida_localhost
+
+    def test_authinfo(self):
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+        result = orm.QueryBuilder().append(
+            orm.AuthInfo, tag='auth', filters={
+                'id': {
+                    '==': authinfo.id
+                }
+            }, project=['**']
+        ).dict()
+        assert len(result) == 1
+        print(result)
+        assert result[0]['auth']['id'] == authinfo.id
 
     def test_statistics_default_class(self):
 

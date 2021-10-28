@@ -1092,7 +1092,7 @@ class TestQueryBuilderJoins:
         ).store()
         authinfo = computer.configure(user)
         qb = orm.QueryBuilder()
-        qb.append(orm.AuthInfo, tag="auth", filters={'id': {'==': authinfo.id}})
+        qb.append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.id}})
         qb.append(orm.User, with_authinfo='auth')
         assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
         assert qb.one()[0].pk == user.pk
@@ -1506,10 +1506,16 @@ class TestDoubleStar:
             label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
         ).store()
         authinfo = computer.configure(user)
-        result = orm.QueryBuilder().append(orm.AuthInfo, tag="auth", filters={'id': {'==': authinfo.id}}, project=['**']).dict()
+        result = orm.QueryBuilder().append(
+            orm.AuthInfo, tag='auth', filters={
+                'id': {
+                    '==': authinfo.id
+                }
+            }, project=['**']
+        ).dict()
         assert len(result) == 1
         print(result)
-        assert result[0]["auth"]["id"] == authinfo.id
+        assert result[0]['auth']['id'] == authinfo.id
 
     def test_statistics_default_class(self):
 

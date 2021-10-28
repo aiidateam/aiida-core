@@ -69,12 +69,7 @@ class BackendComputer(BackendEntity):
 
     @abc.abstractmethod
     def set_metadata(self, metadata: Dict[str, Any]) -> None:
-        """Set the metadata for the computer.
-
-        .. note: You still need to call the .store() method to actually save
-           data to the database! (The store method can be called multiple
-           times, differently from AiiDA Node objects).
-        """
+        """Set the metadata for the computer."""
 
     @abc.abstractmethod
     def get_scheduler_type(self) -> str:
@@ -94,7 +89,10 @@ class BackendComputer(BackendEntity):
 
     @abc.abstractmethod
     def copy(self) -> 'BackendComputer':
-        """Create an un-stored clone of an already stored `Computer`."""
+        """Create an un-stored clone of an already stored `Computer`.
+
+        :raises: ``InvalidOperation`` if the computer is not stored.
+        """
 
 
 class BackendComputerCollection(BackendCollection[BackendComputer]):

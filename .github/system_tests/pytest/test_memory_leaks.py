@@ -53,6 +53,9 @@ def test_leak_ssh_calcjob():
     code = orm.Code(
         input_plugin_name='core.arithmetic.add', remote_computer_exec=[orm.load_computer('slurm-ssh'), '/bin/bash']
     )
+    code.label = 'bash-remote'
+    code.store()
+
     inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': code}
     run_finished_ok(ArithmeticAddCalculation, **inputs)
 

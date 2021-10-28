@@ -242,6 +242,7 @@ class TestProcess(AiidaTestCase):
 
         code = Code()
         code.set_remote_computer_exec((self.computer, '/bin/true'))
+        code.label = 'label'
         code.store()
 
         parameters = orm.Dict(dict={})

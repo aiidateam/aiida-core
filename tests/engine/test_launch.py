@@ -149,6 +149,14 @@ class TestLaunchers(AiidaTestCase):
 class TestLaunchersDryRun(AiidaTestCase):
     """Test the launchers when performing a dry-run."""
 
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        super().setUpClass(*args, **kwargs)
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[cls.computer, '/bin/true'])
+        code.label = 'some-code'
+        code.store()
+        cls.code = code
+
     def setUp(self):
         super().setUp()
         self.assertIsNone(Process.current())
@@ -175,11 +183,8 @@ class TestLaunchersDryRun(AiidaTestCase):
 
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
-
         inputs = {
-            'code': code,
+            'code': self.code,
             'x': orm.Int(1),
             'y': orm.Int(1),
             'metadata': {
@@ -216,11 +221,8 @@ class TestLaunchersDryRun(AiidaTestCase):
 
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
-
         inputs = {
-            'code': code,
+            'code': self.code,
             'x': orm.Int(1),
             'y': orm.Int(1),
             'metadata': {
@@ -265,9 +267,6 @@ class TestLaunchersDryRun(AiidaTestCase):
         import os
         import tempfile
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
-
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')
             handle.flush()
@@ -276,7 +275,7 @@ class TestLaunchersDryRun(AiidaTestCase):
             file_two = orm.SinglefileData(file=handle.name)
 
         inputs = {
-            'code': code,
+            'code': self.code,
             'single_file': single_file,
             'files': {
                 'file_one': file_one,

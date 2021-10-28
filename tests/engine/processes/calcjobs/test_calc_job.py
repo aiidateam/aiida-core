@@ -175,9 +175,15 @@ class TestCalcJob(AiidaTestCase):
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
         cls.computer.configure()  # pylint: disable=no-member
-        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/bash')).store()
-        cls.local_code = orm.Code(local_executable='bash', files=['/bin/bash']).store()
+        cls.remote_code = orm.Code(remote_computer_exec=(cls.computer, '/bin/bash'))
+        cls.local_code = orm.Code(local_executable='bash', files=['/bin/bash'])
         cls.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
+
+        cls.remote_code.label = 'remote-code'
+        cls.remote_code.store()
+
+        cls.local_code.label = 'local-code'
+        cls.local_code.store()
 
     def instantiate_process(self, state=CalcJobState.PARSING):
         """Instantiate a process with default inputs and return the `Process` instance."""
@@ -349,7 +355,10 @@ class TestCalcJob(AiidaTestCase):
         computer = orm.Computer('sge_computer', 'localhost', 'desc', 'core.local', 'core.sge').store()
         computer.set_default_mpiprocs_per_machine(1)
 
-        inputs['code'] = orm.Code(remote_computer_exec=(computer, '/bin/bash')).store()
+        code = orm.Code(remote_computer_exec=(computer, '/bin/bash'))
+        code.label = 'label'
+        code.store()
+        inputs['code'] = code
         inputs['metadata']['options']['resources'] = {'parallel_env': 'environment', 'tot_num_mpiprocs': 10}
 
         # Just checking that instantiating does not raise, meaning the inputs were valid
@@ -410,8 +419,9 @@ class TestCalcJob(AiidaTestCase):
     @pytest.mark.usefixtures('chdir_tmp_path')
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer, '/bin/true'])
+        code.label = 'test-label'
+        code.store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')

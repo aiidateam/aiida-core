@@ -270,7 +270,12 @@ class Code(Data):
         return [c.pk for c in valid_codes]
 
     def _validate(self):
+        from aiida.orm import load_code
         super()._validate()
+
+        # Both ``None`` and empty string are not acceptable.
+        if not self.label:
+            raise exceptions.ValidationError('No label has been defined.')
 
         if self.is_local() is None:
             raise exceptions.ValidationError('You did not set whether the code is local or remote')
@@ -292,6 +297,17 @@ class Code(Data):
                 raise exceptions.ValidationError('You did not specify a remote computer')
             if not self.get_remote_exec_path():
                 raise exceptions.ValidationError('You did not specify a remote executable')
+
+            # Check a computer is defined and the full label is unique if the code is not local.
+            if self.computer is None:
+                raise exceptions.ValidationError('No computer has been defined.')
+
+            try:
+                load_code(self.full_label)
+            except exceptions.NotExistent:
+                pass
+            else:
+                raise exceptions.UniquenessError(f'The code `{self.full_label}` already exists.')
 
     def set_prepend_text(self, code):
         """

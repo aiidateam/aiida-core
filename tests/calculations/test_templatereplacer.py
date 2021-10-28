@@ -18,13 +18,12 @@ from aiida.common import datastructures
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
+def test_base_template(fixture_sandbox, aiida_local_code_factory, generate_calc_job):
     """Test a base template that emulates the arithmetic add."""
-
     entry_point_name = 'core.templatereplacer'
     inputs = {
         'code':
-        orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash')),
+        aiida_local_code_factory(entry_point_name, '/bin/bash'),
         'metadata': {
             'options': {
                 'resources': {
@@ -74,7 +73,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
+def test_file_usage(fixture_sandbox, aiida_local_code_factory, generate_calc_job):
     """Test a base template that uses two files."""
 
     file1_node = orm.SinglefileData(io.BytesIO(b'Content of file 1'))
@@ -83,7 +82,7 @@ def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     # Check that the files are correctly copied to the copy list
     entry_point_name = 'core.templatereplacer'
     inputs = {
-        'code': orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash')),
+        'code': aiida_local_code_factory(entry_point_name, '/bin/bash'),
         'metadata': {
             'options': {
                 'resources': {

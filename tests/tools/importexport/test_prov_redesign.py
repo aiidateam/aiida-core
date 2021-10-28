@@ -143,6 +143,7 @@ class TestProvenanceRedesign(AiidaArchiveTestCase):
         """
         # Create Code instance
         code = orm.Code()
+        code.label = 'test-label'
         code.set_remote_computer_exec((self.computer, '/bin/true'))
         code.store()
 

@@ -31,15 +31,15 @@ def setup_codes(clear_database_before_test, aiida_localhost):
     the ID and UUID, respectively, of the first one. This allows us to test the rules implemented to solve ambiguities
     that arise when determing the identifier type.
     """
-    entity_01 = Code(remote_computer_exec=(aiida_localhost, '/bin/true')).store()
-    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
-                     input_plugin_name='core.arithmetic.add').store()
-    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
-                     input_plugin_name='core.templatereplacer').store()
-
+    entity_01 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'))
     entity_01.label = 'computer_01'
+    entity_01.store()
+    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'), input_plugin_name='core.arithmetic.add')
     entity_02.label = str(entity_01.pk)
+    entity_02.store()
+    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'), input_plugin_name='core.templatereplacer')
     entity_03.label = str(entity_01.uuid)
+    entity_03.store()
 
     return entity_01, entity_02, entity_03
 

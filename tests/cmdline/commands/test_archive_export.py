@@ -47,7 +47,9 @@ def test_create_compressed(run_cli_command, tmp_path, fmt):
         scheduler_type='core.direct',
         workdir='/tmp/aiida'
     ).store()
-    code = Code(remote_computer_exec=(computer, '/bin/true')).store()
+    code = Code(remote_computer_exec=(computer, '/bin/true'))
+    code.label = 'label'
+    code.store()
     group = Group(label='test_group').store()
     node = Data().store()
     filename_output = tmp_path / 'archive.aiida'

@@ -32,7 +32,7 @@ from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
-from aiida.common.hashing import _HASH_EXTRA_KEY, make_hash
+from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.manage.manager import get_manager
@@ -121,6 +121,10 @@ class Node(
     the 'type' field.
     """
     # pylint: disable=too-many-public-methods
+
+    # The keys in the extras that are used to store the hash of the node and whether it should be used in caching.
+    _HASH_EXTRA_KEY: str = '_aiida_hash'
+    _VALID_CACHE_KEY: str = '_aiida_valid_cache'
 
     # added by metaclass
     _plugin_type_string: ClassVar[str]
@@ -742,7 +746,7 @@ class Node(
         self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
 
         self._incoming_cache = []
-        self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
+        self._backend_entity.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
 
         return self
 
@@ -848,11 +852,11 @@ class Node(
 
     def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""
-        self.set_extra(_HASH_EXTRA_KEY, self.get_hash())
+        self.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
 
     def clear_hash(self) -> None:
         """Sets the stored hash of the Node to None."""
-        self.set_extra(_HASH_EXTRA_KEY, None)
+        self.set_extra(self._HASH_EXTRA_KEY, None)
 
     def get_cache_source(self) -> Optional[str]:
         """Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached.
@@ -905,22 +909,38 @@ class Node(
         """
         if not allow_before_store and not self.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
+
         node_hash = self._get_hash()
 
         if not node_hash or not self._cachable:
             return iter(())
 
         builder = QueryBuilder(backend=self.backend)
-        builder.append(self.__class__, filters={'extras._aiida_hash': node_hash}, project='*', subclassing=False)
-        nodes_identical = (n[0] for n in builder.iterall())
+        builder.append(self.__class__, filters={f'extras.{self._HASH_EXTRA_KEY}': node_hash}, subclassing=False)
 
-        return (node for node in nodes_identical if node.is_valid_cache)
+        return (node for node in builder.all(flat=True) if node.is_valid_cache)  # type: ignore[misc,union-attr]
 
     @property
     def is_valid_cache(self) -> bool:
-        """Hook to exclude certain `Node` instances from being considered a valid cache."""
-        # pylint: disable=no-self-use
-        return True
+        """Hook to exclude certain ``Node`` classes from being considered a valid cache.
+
+        The base class assumes that all node instances are valid to cache from, unless the ``_VALID_CACHE_KEY`` extra
+        has been set to ``False`` explicitly. Subclasses can override this property with more specific logic, but should
+        probably also consider the value returned by this base class.
+        """
+        return self.get_extra(self._VALID_CACHE_KEY, True)
+
+    @is_valid_cache.setter
+    def is_valid_cache(self, valid: bool) -> None:
+        """Set whether this node instance is considered valid for caching or not.
+
+        If a node instance has this property set to ``False``, it will never be used in the caching mechanism, unless
+        the subclass overrides the ``is_valid_cache`` property and ignores it implementation completely.
+
+        :param valid: whether the node is valid or invalid for use in caching.
+        """
+        type_check(valid, bool)
+        self.set_extra(self._VALID_CACHE_KEY, valid)
 
     def get_description(self) -> str:
         """Return a string with a description of the node.

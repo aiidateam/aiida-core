@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1635432829220,
+  "lastUpdate": 1635766639160,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -57099,6 +57099,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.019626",
             "group": "node",
             "extra": "mean: 25.018 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.30",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.12",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "d25339dd7e8f8bed40145392dd5166817f3afef5",
+          "message": "`verdi code setup`: validate the uniqueness of the full label (#5205)\n\nThe full label of a `Code` instance is defined as `label@computer.label`.\r\nRecently, the uniqueness of the full label was not even checked and it\r\nwas possible to create codes with duplicate full labels. Since this was\r\nfixed though, `verdi code setup` would only fail when all parameters are\r\nparsed and it would try to store the code. In interactive mode, this is\r\npretty annoying as the command will not fail until all parameters have\r\nbeen specified.\r\n\r\nHere, a validator is added to the `--label` option to check the\r\nuniqueness of the full label. In order to check this, it needs the\r\nselected computer. To ensure the computer is parsed before the label, the\r\noption is defined before the label when the command is defined. At least\r\nfor the interactive mode, this guarantees that the computer is prompted\r\nfor before the label, so the callback of the label can check for\r\nuniqueness. If it fails, the user is shown the reason why and prompted\r\nagain.\r\n\r\nNote that the parsing order of parameters in the non-interactive mode is\r\nnot guaranteed by the definition order but by the order in which they\r\nare passed by the caller. Therefore, the callback of the label cannot be\r\nrelied upon, because if the label is specified first, the callback won't\r\nknow the computer and will have to exit. Therefore, the callback has to\r\nbe called manually once again in the body of the command when it is\r\nguaranteed that both the label and computer will have been defined.\r\nThere is a slight overhead in the sense that the callback is called\r\ntwice, but the first call will exit almost instantly and so the overhead\r\nwill be minimal.",
+          "timestamp": "2021-11-01T12:26:45+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/d25339dd7e8f8bed40145392dd5166817f3afef5",
+          "distinct": true,
+          "tree_id": "e577812fb2961285fa09fcb2ba4bd35740bfdb87"
+        },
+        "date": 1635766633145,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.0952543896152607,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0070711",
+            "group": "engine",
+            "extra": "mean: 323.08 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7553223826818157,
+            "unit": "iter/sec",
+            "range": "stddev: 0.047742",
+            "group": "engine",
+            "extra": "mean: 1.3239 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.838027299665815,
+            "unit": "iter/sec",
+            "range": "stddev: 0.061806",
+            "group": "engine",
+            "extra": "mean: 1.1933 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.16364885435624701,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15017",
+            "group": "engine",
+            "extra": "mean: 6.1106 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.1926780817342884,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13765",
+            "group": "engine",
+            "extra": "mean: 5.1900 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.4659848242957816,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0057113",
+            "group": "engine",
+            "extra": "mean: 405.52 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.566529501382104,
+            "unit": "iter/sec",
+            "range": "stddev: 0.085979",
+            "group": "engine",
+            "extra": "mean: 1.7651 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6527222343429838,
+            "unit": "iter/sec",
+            "range": "stddev: 0.066759",
+            "group": "engine",
+            "extra": "mean: 1.5320 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.14192261848305168,
+            "unit": "iter/sec",
+            "range": "stddev: 0.21593",
+            "group": "engine",
+            "extra": "mean: 7.0461 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.17379246150202332,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11437",
+            "group": "engine",
+            "extra": "mean: 5.7540 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.4152820625143305,
+            "unit": "iter/sec",
+            "range": "stddev: 0.065343",
+            "group": "import-export",
+            "extra": "mean: 414.03 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.271680466879495,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055003",
+            "group": "import-export",
+            "extra": "mean: 440.20 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 1.2984968042856648,
+            "unit": "iter/sec",
+            "range": "stddev: 0.061593",
+            "group": "import-export",
+            "extra": "mean: 770.12 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.2642533030188703,
+            "unit": "iter/sec",
+            "range": "stddev: 0.059018",
+            "group": "import-export",
+            "extra": "mean: 790.98 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 750.0022177796059,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022130",
+            "group": "node",
+            "extra": "mean: 1.3333 msec\nrounds: 192"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 177.05394364467082,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012529",
+            "group": "node",
+            "extra": "mean: 5.6480 msec\nrounds: 118"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 88.45612645033792,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010399",
+            "group": "node",
+            "extra": "mean: 11.305 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 178.68726514347236,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00047881",
+            "group": "node",
+            "extra": "mean: 5.5964 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 46.945380845041,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0020049",
+            "group": "node",
+            "extra": "mean: 21.301 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 42.35497437269022,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014639",
+            "group": "node",
+            "extra": "mean: 23.610 msec\nrounds: 100"
           }
         ]
       }

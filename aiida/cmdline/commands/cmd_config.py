@@ -182,6 +182,8 @@ def verdi_config_caching(disabled):
     from aiida.manage.caching import get_use_cache
     from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
 
+    echo.echo_deprecated('This command is deprecated, please use set/unset to config the central `config.json` file.')
+
     for group in ['aiida.calculations', 'aiida.workflows']:
         for entry_point in get_entry_point_names(group):
             identifier = ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point])

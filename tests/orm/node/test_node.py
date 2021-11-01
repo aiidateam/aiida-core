@@ -970,7 +970,7 @@ def test_uuid_equality_fallback():
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_iter_object_keys():
+def test_iter_repo_keys():
     """Test the ``iter_object_keys`` method."""
     data1 = Data()
     data1.put_object_from_filelike(BytesIO(b'value1'), 'key1')

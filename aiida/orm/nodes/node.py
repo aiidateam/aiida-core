@@ -82,7 +82,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
 
         self._backend.nodes.delete(pk)
 
-    def iter_object_keys(self,
+    def iter_repo_keys(self,
                          filters: Optional[dict] = None,
                          subclassing: bool = True,
                          batch_size: int = 100) -> Iterator[str]:

@@ -28,7 +28,6 @@ def test_all_empty_migrations():
     first_index = all_versions.index('a514d673c163') + 1
     # ideally we would pytest parametrize this, but then we would need to call list_schema_versions on module load
     for version in all_versions[first_index:]:
-        print(version)
         migrator.migrate_down(version)
         assert migrator.get_schema_version_backend() == version
         migrator.migrate_up('head')

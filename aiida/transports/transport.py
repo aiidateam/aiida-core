@@ -33,6 +33,8 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
         from click import BadParameter
         raise BadParameter(f'{value} is not a valid positive number')
 
+    return value
+
 
 class Transport(abc.ABC):
     """Abstract class for a generic transport (ssh, local, ...) ontains the set of minimal methods."""

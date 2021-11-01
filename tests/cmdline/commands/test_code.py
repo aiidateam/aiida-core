@@ -7,307 +7,310 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,redefined-outer-name
 """Tests for the 'verdi code' command."""
 import os
-import subprocess as sp
-from textwrap import dedent
-from unittest import mock
+import tempfile
+import textwrap
 
-from click.testing import CliRunner
 import pytest
 
-from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_code import code_duplicate, code_list, delete, hide, relabel, reveal, setup_code, show
+from aiida.cmdline.commands import cmd_code
 from aiida.common.exceptions import NotExistent
+from aiida.orm import Code, load_code
 
 
-class TestVerdiCodeSetup(AiidaTestCase):
-    """Tests for the 'verdi code setup' command."""
+@pytest.fixture
+def code(aiida_localhost):
+    """Return a ``Code`` instance."""
+    code = Code(
+        input_plugin_name='core.arithmetic.add',
+        remote_computer_exec=[aiida_localhost, '/remote/abs/path'],
+    )
+    code.label = 'code'
+    code.description = 'desc'
+    code.set_prepend_text('text to prepend')
+    code.set_append_text('text to append')
+    code.store()
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = orm.Computer(
-            label='comp',
-            hostname='localhost',
-            transport_type='core.local',
-            scheduler_type='core.direct',
-            workdir='/tmp/aiida'
-        ).store()
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
-        self.this_folder = os.path.dirname(__file__)
-        self.this_file = os.path.basename(__file__)
-
-    def test_help(self):
-        self.cli_runner.invoke(setup_code, ['--help'], catch_exceptions=False)
-
-    def test_reachable(self):
-        output = sp.check_output(['verdi', 'code', 'setup', '--help'])
-        self.assertIn(b'Usage:', output)
-
-    def test_noninteractive_remote(self):
-        """Test non-interactive remote code setup."""
-        label = 'noninteractive_remote'
-        options = [
-            '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-            '--on-computer', f'--computer={self.computer.label}', '--remote-abs-path=/remote/abs/path'
-        ]
-        result = self.cli_runner.invoke(setup_code, options)
-        self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string(f'{label}@{self.computer.label}'), orm.Code)
-
-    def test_noninteractive_upload(self):
-        """Test non-interactive code setup."""
-        label = 'noninteractive_upload'
-        options = [
-            '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-            '--store-in-db', f'--code-folder={self.this_folder}', f'--code-rel-path={self.this_file}'
-        ]
-        result = self.cli_runner.invoke(setup_code, options)
-        self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
-
-    def test_from_config(self):
-        """Test setting up a code from a config file.
-
-        Try loading from local file and from URL.
-        """
-        import tempfile
-
-        config_file_template = dedent(
-            """
-                    ---
-                    label: {label}
-                    input_plugin: core.arithmetic.add
-                    computer: {computer}
-                    remote_abs_path: /remote/abs/path
-                    """
-        )
-
-        # local file
-        label = 'noninteractive_config'
-        with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(config_file_template.format(label=label, computer=self.computer.label))
-            handle.flush()
-            result = self.cli_runner.invoke(
-                setup_code,
-                ['--non-interactive', '--config', os.path.realpath(handle.name)]
-            )
-        self.assertClickResultNoException(result)
-        self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
-
-        # url
-        label = 'noninteractive_config_url'
-        fake_url = 'https://my.url.com'
-        with mock.patch(
-            'urllib.request.urlopen',
-            return_value=config_file_template.format(label=label, computer=self.computer.label)
-        ):
-            result = self.cli_runner.invoke(setup_code, ['--non-interactive', '--config', fake_url])
-
-            self.assertClickResultNoException(result)
-            self.assertIsInstance(orm.Code.get_from_string(f'{label}'), orm.Code)
+    return code
 
 
-class TestVerdiCodeCommands(AiidaTestCase):
-    """Testing verdi code commands.
-
-    Testing everything besides `code setup`."""
-
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = orm.Computer(
-            label='comp',
-            hostname='localhost',
-            transport_type='core.local',
-            scheduler_type='core.direct',
-            workdir='/tmp/aiida'
-        ).store()
-
-    def setUp(self):
-        try:
-            code = orm.Code.get_from_string('code')
-        except NotExistent:
-            code = orm.Code(
-                input_plugin_name='core.arithmetic.add',
-                remote_computer_exec=[self.computer, '/remote/abs/path'],
-            )
-            code.label = 'code'
-            code.description = 'desc'
-            code.set_prepend_text('text to prepend')
-            code.set_append_text('text to append')
-            code.store()
-        self.code = code
-
-        self.cli_runner = CliRunner()
-
-    def test_hide_one(self):
-        result = self.cli_runner.invoke(hide, [str(self.code.pk)])
-        self.assertIsNone(result.exception, result.output)
-
-        self.assertTrue(self.code.hidden)
-
-    def test_reveal_one(self):
-        result = self.cli_runner.invoke(reveal, [str(self.code.pk)])
-        self.assertIsNone(result.exception, result.output)
-
-        self.assertFalse(self.code.hidden)
-
-    def test_relabel_code(self):
-        """Test force code relabeling."""
-        result = self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code'])
-        self.assertIsNone(result.exception, result.output)
-        new_code = orm.load_node(self.code.pk)
-        self.assertEqual(new_code.label, 'new_code')
-
-    def test_relabel_code_full(self):
-        self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code@comp'])
-        new_code = orm.load_node(self.code.pk)
-        self.assertEqual(new_code.label, 'new_code')
-
-    def test_relabel_code_full_bad(self):
-        result = self.cli_runner.invoke(relabel, [str(self.code.pk), 'new_code@otherstuff'])
-        self.assertIsNotNone(result.exception)
-
-    def test_code_delete_one_force(self):
-        """Test force code deletion."""
-        result = self.cli_runner.invoke(delete, [str(self.code.pk), '--force'])
-        self.assertIsNone(result.exception, result.output)
-
-        with self.assertRaises(NotExistent):
-            orm.Code.get_from_string('code')
-
-    def test_code_list(self):
-        """Test code list command."""
-        # set up second code 'code2'
-        try:
-            code = orm.Code.get_from_string('code2')
-        except NotExistent:
-            code = orm.Code(
-                input_plugin_name='core.templatereplacer',
-                remote_computer_exec=[self.computer, '/remote/abs/path'],
-            )
-            code.label = 'code2'
-            code.store()
-
-        options = ['-A', '-a', '-o', '--input-plugin=core.arithmetic.add', f'--computer={self.computer.label}']
-        result = self.cli_runner.invoke(code_list, options)
-        import traceback
-        self.assertIsNone(result.exception, traceback.format_exception(*result.exc_info))
-        self.assertTrue(str(self.code.pk) in result.output, 'PK of first code should be included')
-        self.assertTrue('code2' not in result.output, 'label of second code should not be included')
-        self.assertTrue('comp' in result.output, 'computer name should be included')
-        self.assertNotIn(result.output, '# No codes found matching the specified criteria.')
-
-    def test_code_list_hide(self):
-        """Test that hidden codes are shown (or not) properly."""
-        self.code.hide()
-        options = ['-A']
-        result = self.cli_runner.invoke(code_list, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(self.code.full_label not in result.output, 'code should be hidden')
-
-        options = ['-a']
-        result = self.cli_runner.invoke(code_list, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(self.code.full_label in result.output, 'code should be shown')
-
-    def test_code_show(self):
-        result = self.cli_runner.invoke(show, [str(self.code.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(str(self.code.pk) in result.output)
-
-    def test_code_duplicate_non_interactive(self):
-        """Test code duplication non-interactive."""
-        label = 'code_duplicate_noninteractive'
-        result = self.cli_runner.invoke(code_duplicate, ['--non-interactive', f'--label={label}', str(self.code.pk)])
-        self.assertIsNone(result.exception, result.output)
-
-        new_code = orm.Code.get_from_string(label)
-        self.assertEqual(self.code.description, new_code.description)
-        self.assertEqual(self.code.get_prepend_text(), new_code.get_prepend_text())
-        self.assertEqual(self.code.get_append_text(), new_code.get_append_text())
-        self.assertEqual(self.code.get_input_plugin_name(), new_code.get_input_plugin_name())
+def test_help(run_cli_command):
+    """Test the help message."""
+    run_cli_command(cmd_code.setup_code, ['--help'])
 
 
-class TestVerdiCodeNoCodes(AiidaTestCase):
-    """Test functionality when no codes been set up."""
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
-
-    def test_code_list_no_codes_error_message(self):
-        result = self.cli_runner.invoke(code_list)
-        self.assertEqual(1, result.output.count('# No codes found matching the specified criteria.'))
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_list_no_codes_error_message(run_cli_command):
+    """Test ``verdi code list`` when no codes exist."""
+    result = run_cli_command(cmd_code.code_list)
+    assert '# No codes found matching the specified criteria.' in result.output
 
 
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_interactive_remote(clear_database_before_test, aiida_localhost, non_interactive_editor):
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_list(run_cli_command, code):
+    """Test ``verdi code list``."""
+    code2 = Code(
+        input_plugin_name='core.templatereplacer',
+        remote_computer_exec=[code.computer, '/remote/abs/path'],
+    )
+    code2.label = 'code2'
+    code2.store()
+
+    options = ['-A', '-a', '-o', '--input-plugin=core.arithmetic.add', f'--computer={code.computer.label}']
+    result = run_cli_command(cmd_code.code_list, options)
+    assert str(code.pk) in result.output
+    assert code2.label not in result.output
+    assert code.computer.label in result.output
+    assert '# No codes found matching the specified criteria.' not in result.output
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_list_hide(run_cli_command, code):
+    """Test that hidden codes are shown (or not) properly."""
+    code.hide()
+    options = ['-A']
+    result = run_cli_command(cmd_code.code_list, options)
+    assert code.full_label not in result.output
+
+    options = ['-a']
+    result = run_cli_command(cmd_code.code_list, options)
+    assert code.full_label in result.output
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_hide_one(run_cli_command, code):
+    """Test ``verdi code hide``."""
+    run_cli_command(cmd_code.hide, [str(code.pk)])
+    assert code.hidden
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_reveal_one(run_cli_command, code):
+    """Test ``verdi code reveal``."""
+    run_cli_command(cmd_code.reveal, [str(code.pk)])
+    assert not code.hidden
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_relabel_code(run_cli_command, code):
+    """Test ``verdi code relabel``."""
+    run_cli_command(cmd_code.relabel, [str(code.pk), 'new_code'])
+    assert load_code(code.pk).label == 'new_code'
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_relabel_code_full(run_cli_command, code):
+    """Test ``verdi code relabel`` passing the full code label."""
+    run_cli_command(cmd_code.relabel, [str(code.pk), f'new_code@{code.computer.label}'])
+    assert load_code(code.pk).label == 'new_code'
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_relabel_code_full_bad(run_cli_command, code):
+    """Test ``verdi code relabel`` with an incorrect full code label."""
+    run_cli_command(cmd_code.relabel, [str(code.pk), 'new_code@otherstuff'], raises=True)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_delete_one_force(run_cli_command, code):
+    """Test force code deletion."""
+    run_cli_command(cmd_code.delete, [str(code.pk), '--force'])
+
+    with pytest.raises(NotExistent):
+        load_code('code')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_show(run_cli_command, code):
+    result = run_cli_command(cmd_code.show, [str(code.pk)])
+    assert str(code.pk) in result.output
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_code_duplicate_non_interactive(run_cli_command, code, non_interactive_editor):
+    """Test code duplication non-interactive."""
+    label = 'code_duplicate_noninteractive'
+    run_cli_command(cmd_code.code_duplicate, ['--non-interactive', f'--label={label}', str(code.pk)])
+
+    duplicate = load_code(label)
+    assert code.description == duplicate.description
+    assert code.get_prepend_text() == duplicate.get_prepend_text()
+    assert code.get_append_text() == duplicate.get_append_text()
+    assert code.get_input_plugin_name() == duplicate.get_input_plugin_name()
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_noninteractive_remote(run_cli_command, aiida_localhost, non_interactive_editor):
+    """Test non-interactive remote code setup."""
+    label = 'noninteractive_remote'
+    options = [
+        '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
+        '--on-computer', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+    ]
+    run_cli_command(cmd_code.setup_code, options)
+    assert isinstance(load_code(label), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_noninteractive_upload(run_cli_command, non_interactive_editor):
+    """Test non-interactive code setup."""
+    label = 'noninteractive_upload'
+    options = [
+        '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
+        '--store-in-db', f'--code-folder={os.path.dirname(__file__)}', f'--code-rel-path={os.path.basename(__file__)}'
+    ]
+    run_cli_command(cmd_code.setup_code, options)
+    assert isinstance(load_code(label), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_interactive_remote(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test interactive remote code setup."""
     label = 'interactive_remote'
-    user_input = '\n'.join([
-        label, 'description', 'core.arithmetic.add', 'yes', aiida_localhost.label, '/remote/abs/path'
-    ])
-    result = CliRunner().invoke(setup_code, input=user_input)
-    assert result.exception is None
-    assert isinstance(orm.Code.get_from_string(f'{label}@{aiida_localhost.label}'), orm.Code)
+    user_input = '\n'.join(['yes', aiida_localhost.label, label, 'desc', 'core.arithmetic.add', '/remote/abs/path'])
+    run_cli_command(cmd_code.setup_code, user_input=user_input)
+    assert isinstance(load_code(label), Code)
 
 
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_interactive_upload(clear_database_before_test, aiida_localhost, non_interactive_editor):
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_interactive_upload(run_cli_command, non_interactive_editor):
     """Test interactive code setup."""
     label = 'interactive_upload'
     dirname = os.path.dirname(__file__)
     basename = os.path.basename(__file__)
-    user_input = '\n'.join([label, 'description', 'core.arithmetic.add', 'no', dirname, basename])
-    result = CliRunner().invoke(setup_code, input=user_input)
-    assert result.exception is None
-    assert isinstance(orm.Code.get_from_string(f'{label}'), orm.Code)
+    user_input = '\n'.join(['no', label, 'description', 'core.arithmetic.add', dirname, basename])
+    run_cli_command(cmd_code.setup_code, user_input=user_input)
+    assert isinstance(load_code(label), Code)
 
 
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_mixed(clear_database_before_test, aiida_localhost, non_interactive_editor):
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test mixed (interactive/from config) code setup."""
-    from aiida.orm import Code
     label = 'mixed_remote'
     options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-    user_input = '\n'.join([label, 'core.arithmetic.add', aiida_localhost.label])
-    result = CliRunner().invoke(setup_code, options, input=user_input)
-    assert result.exception is None
-    assert isinstance(Code.get_from_string(f'{label}@{aiida_localhost.label}'), Code)
+    user_input = '\n'.join([aiida_localhost.label, label, 'core.arithmetic.add'])
+    run_cli_command(cmd_code.setup_code, options, user_input=user_input)
+    assert isinstance(load_code(label), Code)
 
 
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_duplicate_interactive(clear_database_before_test, aiida_local_code_factory, non_interactive_editor):
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_code_duplicate_interactive(run_cli_command, aiida_local_code_factory, non_interactive_editor):
     """Test code duplication interactive."""
     label = 'code_duplicate_interactive'
-    user_input = f'{label}\n\n\n\n\n\n'
+    user_input = f'\n\n{label}\n\n\n\n'
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
-    result = CliRunner().invoke(code_duplicate, [str(code.pk)], input=user_input)
-    assert result.exception is None, result.exception
+    run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
-    duplicate = orm.Code.get_from_string(label)
+    duplicate = load_code(label)
     assert code.description == duplicate.description
     assert code.get_prepend_text() == duplicate.get_prepend_text()
     assert code.get_append_text() == duplicate.get_append_text()
 
 
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_duplicate_ignore(clear_database_before_test, aiida_local_code_factory, non_interactive_editor):
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_interactive_editor):
     """Providing "!" to description should lead to empty description.
 
     Regression test for: https://github.com/aiidateam/aiida-core/issues/3770
     """
     label = 'code_duplicate_interactive'
-    user_input = f'{label}\n!\n\n\n\n\n'
+    user_input = f'\n\n{label}\n!\n\n\n'
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
-    result = CliRunner().invoke(code_duplicate, [str(code.pk)], input=user_input, catch_exceptions=False)
-    assert result.exception is None, result.exception
+    run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
-    duplicate = orm.Code.get_from_string(label)
+    duplicate = load_code(label)
     assert duplicate.description == ''
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_from_config_local_file(non_interactive_editor, run_cli_command, aiida_localhost):
+    """Test setting up a code from a config file on disk."""
+    config_file_template = textwrap.dedent(
+        """
+        label: {label}
+        computer: {computer}
+        input_plugin: core.arithmetic.add
+        remote_abs_path: /remote/abs/path
+        """
+    )
+
+    label = 'noninteractive_config'
+    with tempfile.NamedTemporaryFile('w') as handle:
+        handle.write(config_file_template.format(label=label, computer=aiida_localhost.label))
+        handle.flush()
+        run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', os.path.realpath(handle.name)])
+        assert isinstance(load_code(label), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
+def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhost, monkeypatch):
+    """Test setting up a code from a config file from URL."""
+    from urllib import request
+
+    monkeypatch.setattr(
+        request, 'urlopen',
+        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label)
+    )
+
+    config_file_template = textwrap.dedent(
+        """
+        label: {label}
+        computer: {computer}
+        input_plugin: core.arithmetic.add
+        remote_abs_path: /remote/abs/path
+        """
+    )
+
+    label = 'noninteractive_config_url'
+    fake_url = 'https://my.url.com'
+    run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url])
+    assert isinstance(load_code(label), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_code_setup_duplicate_full_label_interactive(
+    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+):
+    """Test ``verdi code setup`` in interactive mode when specifying a full label that already exists."""
+    label = 'some-label'
+    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    assert isinstance(load_code(label), Code)
+
+    label_unique = 'label-unique'
+    user_input = '\n'.join(['yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash'])
+    run_cli_command(cmd_code.setup_code, user_input=user_input)
+    assert isinstance(load_code(label_unique), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('label_first', (True, False))
+def test_code_setup_duplicate_full_label_non_interactive(
+    run_cli_command, aiida_local_code_factory, aiida_localhost, label_first
+):
+    """Test ``verdi code setup`` in non-interactive mode when specifying a full label that already exists."""
+    label = 'some-label'
+    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    assert isinstance(load_code(label), Code)
+
+    options = ['-n', '-D', 'd', '-P', 'core.arithmetic.add', '--on-computer', '--remote-abs-path=/remote/abs/path']
+
+    if label_first:
+        options.extend(['--label', label, '--computer', aiida_localhost.label])
+    else:
+        options.extend(['--computer', aiida_localhost.label, '--label', label])
+
+    result = run_cli_command(cmd_code.setup_code, options, raises=True)
+    assert f'the code `{label}@{aiida_localhost.label}` already exists.' in result.output

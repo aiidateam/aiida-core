@@ -8,9 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for Path types"""
-
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.params.types.path import PathOrUrl, _check_timeout_seconds
+from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
 
 
 class TestPath(AiidaTestCase):
@@ -35,12 +34,12 @@ class TestPath(AiidaTestCase):
         valid_values = [42, '42']
 
         for value in valid_values:
-            self.assertEqual(_check_timeout_seconds(value), int(value))
+            self.assertEqual(check_timeout_seconds(value), int(value))
 
         for invalid in [None, 'test']:
             with self.assertRaises(TypeError):
-                _check_timeout_seconds(invalid)
+                check_timeout_seconds(invalid)
 
         for invalid in [-5, 65]:
             with self.assertRaises(ValueError):
-                _check_timeout_seconds(invalid)
+                check_timeout_seconds(invalid)

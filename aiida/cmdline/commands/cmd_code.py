@@ -58,12 +58,16 @@ def set_code_builder(ctx, param, value):
     return value
 
 
+# Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary
+# because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
+# guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
+# once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('setup')
+@options_code.ON_COMPUTER()
+@options_code.COMPUTER()
 @options_code.LABEL()
 @options_code.DESCRIPTION()
 @options_code.INPUT_PLUGIN()
-@options_code.ON_COMPUTER()
-@options_code.COMPUTER()
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
@@ -71,10 +75,13 @@ def set_code_builder(ctx, param, value):
 @options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
+@click.pass_context
 @with_dbenv()
-def setup_code(non_interactive, **kwargs):
+def setup_code(ctx, non_interactive, **kwargs):
     """Setup a new code."""
     from aiida.orm.utils.builders.code import CodeBuilder
+
+    options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
@@ -97,13 +104,17 @@ def setup_code(non_interactive, **kwargs):
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
+# Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary
+# because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
+# guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
+# once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('duplicate')
 @arguments.CODE(callback=set_code_builder)
+@options_code.ON_COMPUTER(contextual_default=get_on_computer)
+@options_code.COMPUTER(contextual_default=get_computer_name)
 @options_code.LABEL(contextual_default=partial(get_default, 'label'))
 @options_code.DESCRIPTION(contextual_default=partial(get_default, 'description'))
 @options_code.INPUT_PLUGIN(contextual_default=partial(get_default, 'input_plugin'))
-@options_code.ON_COMPUTER(contextual_default=get_on_computer)
-@options_code.COMPUTER(contextual_default=get_computer_name)
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
@@ -118,6 +129,8 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
+    options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
+
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
     else:
@@ -128,8 +141,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
     code_builder = ctx.code_builder
     for key, value in kwargs.items():
-        if value is not None:
-            setattr(code_builder, key, value)
+        setattr(code_builder, key, value)
     new_code = code_builder.new()
 
     try:

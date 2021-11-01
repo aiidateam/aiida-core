@@ -50,6 +50,8 @@ py:class Backend
 py:class BackendEntity
 py:class BackendEntityType
 py:class BackendNode
+py:class BackendNodeType
+py:class BackendUser
 py:class AuthInfo
 py:class CalcJob
 py:class CalcJobImporter
@@ -69,6 +71,7 @@ py:class FolderData
 py:class Group
 py:class JobInfo
 py:class JobState
+py:class LinkTriple
 py:class ModelType
 py:class Node
 py:class Orbital
@@ -120,6 +123,7 @@ py:class click.types.StringParamType
 py:class click.types.Path
 py:class click.types.File
 py:meth  click.Option.get_default
+py:meth  fail
 
 py:class concurrent.futures._base.TimeoutError
 

@@ -8,12 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA groups"""
-
-from collections.abc import Iterable
 import logging
 
-from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
-from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
@@ -281,84 +278,6 @@ class SqlaGroupCollection(BackendGroupCollection):
     """The SLQA collection of groups"""
 
     ENTITY_CLASS = SqlaGroup
-
-    def query(
-        self,
-        label=None,
-        type_string=None,
-        pk=None,
-        uuid=None,
-        nodes=None,
-        user=None,
-        node_attributes=None,
-        past_days=None,
-        label_filters=None,
-        **kwargs
-    ):  # pylint: disable=too-many-arguments
-        # pylint: disable=too-many-branches
-        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
-
-        session = self.backend.get_session()
-
-        filters = []
-
-        if label is not None:
-            filters.append(DbGroup.label == label)
-        if type_string is not None:
-            filters.append(DbGroup.type_string == type_string)
-        if pk is not None:
-            filters.append(DbGroup.id == pk)
-        if uuid is not None:
-            filters.append(DbGroup.uuid == uuid)
-        if past_days is not None:
-            filters.append(DbGroup.time >= past_days)
-        if nodes:
-            if not isinstance(nodes, Iterable):
-                nodes = [nodes]
-
-            if not all(isinstance(n, (SqlaNode, DbNode)) for n in nodes):
-                raise TypeError(
-                    'At least one of the elements passed as '
-                    'nodes for the query on Group is neither '
-                    'a Node nor a DbNode'
-                )
-
-            # In the case of the Node orm from Sqlalchemy, there is an id
-            # property on it.
-            sub_query = (
-                session.query(table_groups_nodes).filter(
-                    table_groups_nodes.c['dbnode_id'].in_([n.id for n in nodes]),
-                    table_groups_nodes.c['dbgroup_id'] == DbGroup.id
-                ).exists()
-            )
-
-            filters.append(sub_query)
-        if user:
-            if isinstance(user, str):
-                filters.append(DbGroup.user.has(email=user.email))
-            else:
-                type_check(user, users.SqlaUser)
-                filters.append(DbGroup.user == user.dbmodel)
-
-        if label_filters:
-            for key, value in label_filters.items():
-                if not value:
-                    continue
-                if key == 'startswith':
-                    filters.append(DbGroup.label.like(f'{value}%'))
-                elif key == 'endswith':
-                    filters.append(DbGroup.label.like(f'%{value}'))
-                elif key == 'contains':
-                    filters.append(DbGroup.label.like(f'%{value}%'))
-
-        if node_attributes:
-            _LOGGER.warning("SQLA query doesn't support node attribute filters, ignoring '%s'", node_attributes)
-
-        if kwargs:
-            _LOGGER.warning("SQLA query doesn't support additional filters, ignoring '%s'", kwargs)
-        groups = (session.query(DbGroup).filter(*filters).order_by(DbGroup.id).distinct().all())
-
-        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]  # pylint: disable=no-member
 
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = self.backend.get_session()

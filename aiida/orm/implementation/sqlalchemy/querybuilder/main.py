@@ -117,9 +117,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def set_field_mappings(self):
         """Set conversions between the field names in the database and used by the `QueryBuilder`"""
+        self.outer_to_inner_schema['db_dbauthinfo'] = {'metadata': '_metadata'}
         self.outer_to_inner_schema['db_dbcomputer'] = {'metadata': '_metadata'}
         self.outer_to_inner_schema['db_dblog'] = {'metadata': '_metadata'}
 
+        self.inner_to_outer_schema['db_dbauthinfo'] = {'_metadata': 'metadata'}
         self.inner_to_outer_schema['db_dbcomputer'] = {'_metadata': 'metadata'}
         self.inner_to_outer_schema['db_dblog'] = {'_metadata': 'metadata'}
 

@@ -75,29 +75,3 @@ class SqlaUserCollection(BackendUserCollection):
         """
         # pylint: disable=abstract-class-instantiated
         return SqlaUser(self.backend, email, first_name, last_name, institution)
-
-    def find(self, email=None, id=None):  # pylint: disable=redefined-builtin,invalid-name
-        """
-        Find a user in matching the given criteria
-
-        :param email: the email address
-        :param id: the id
-        :return: the matching user
-        :rtype: :class:`aiida.orm.implementation.sqlalchemy.users.SqlaUser`
-        """
-        # Constructing the default query
-        dbuser_query = DbUser.query  # pylint: disable=no-member
-
-        # If an id is specified then we add it to the query
-        if id is not None:
-            dbuser_query = dbuser_query.filter_by(id=id)
-
-        # If an email is specified then we add it to the query
-        if email is not None:
-            dbuser_query = dbuser_query.filter_by(email=email)
-
-        dbusers = dbuser_query.all()
-        found_users = []
-        for dbuser in dbusers:
-            found_users.append(self.from_dbmodel(dbuser))
-        return found_users

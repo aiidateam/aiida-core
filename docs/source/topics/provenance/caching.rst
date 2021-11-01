@@ -58,6 +58,10 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
     ]
 
 
+.. note::
+
+    If there are duplicate nodes with the same hash, we will use the latest node.
+
 .. _topics:provenance:caching:control-hashing:
 
 Controlling hashing

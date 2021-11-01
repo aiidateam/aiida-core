@@ -173,9 +173,7 @@ def test_noninteractive_upload(run_cli_command, non_interactive_editor):
 def test_interactive_remote(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test interactive remote code setup."""
     label = 'interactive_remote'
-    user_input = '\n'.join([
-        label, 'description', 'core.arithmetic.add', 'yes', aiida_localhost.label, '/remote/abs/path'
-    ])
+    user_input = '\n'.join(['yes', aiida_localhost.label, label, 'desc', 'core.arithmetic.add', '/remote/abs/path'])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label), Code)
 
@@ -187,7 +185,7 @@ def test_interactive_upload(run_cli_command, non_interactive_editor):
     label = 'interactive_upload'
     dirname = os.path.dirname(__file__)
     basename = os.path.basename(__file__)
-    user_input = '\n'.join([label, 'description', 'core.arithmetic.add', 'no', dirname, basename])
+    user_input = '\n'.join(['no', label, 'description', 'core.arithmetic.add', dirname, basename])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label), Code)
 
@@ -198,7 +196,7 @@ def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test mixed (interactive/from config) code setup."""
     label = 'mixed_remote'
     options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-    user_input = '\n'.join([label, 'core.arithmetic.add', aiida_localhost.label])
+    user_input = '\n'.join([aiida_localhost.label, label, 'core.arithmetic.add'])
     run_cli_command(cmd_code.setup_code, options, user_input=user_input)
     assert isinstance(load_code(label), Code)
 
@@ -208,7 +206,7 @@ def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
 def test_code_duplicate_interactive(run_cli_command, aiida_local_code_factory, non_interactive_editor):
     """Test code duplication interactive."""
     label = 'code_duplicate_interactive'
-    user_input = f'{label}\n\n\n\n\n\n'
+    user_input = f'\n\n{label}\n\n\n\n'
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
     run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
@@ -226,7 +224,7 @@ def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_in
     Regression test for: https://github.com/aiidateam/aiida-core/issues/3770
     """
     label = 'code_duplicate_interactive'
-    user_input = f'{label}\n!\n\n\n\n\n'
+    user_input = f'\n\n{label}\n!\n\n\n'
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code')
     run_cli_command(cmd_code.code_duplicate, [str(code.pk)], user_input=user_input)
 
@@ -279,3 +277,40 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     fake_url = 'https://my.url.com'
     run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url])
     assert isinstance(load_code(label), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_code_setup_duplicate_full_label_interactive(
+    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+):
+    """Test ``verdi code setup`` in interactive mode when specifying a full label that already exists."""
+    label = 'some-label'
+    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    assert isinstance(load_code(label), Code)
+
+    label_unique = 'label-unique'
+    user_input = '\n'.join(['yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash'])
+    run_cli_command(cmd_code.setup_code, user_input=user_input)
+    assert isinstance(load_code(label_unique), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('label_first', (True, False))
+def test_code_setup_duplicate_full_label_non_interactive(
+    run_cli_command, aiida_local_code_factory, aiida_localhost, label_first
+):
+    """Test ``verdi code setup`` in non-interactive mode when specifying a full label that already exists."""
+    label = 'some-label'
+    aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
+    assert isinstance(load_code(label), Code)
+
+    options = ['-n', '-D', 'd', '-P', 'core.arithmetic.add', '--on-computer', '--remote-abs-path=/remote/abs/path']
+
+    if label_first:
+        options.extend(['--label', label, '--computer', aiida_localhost.label])
+    else:
+        options.extend(['--computer', aiida_localhost.label, '--label', label])
+
+    result = run_cli_command(cmd_code.setup_code, options, raises=True)
+    assert f'the code `{label}@{aiida_localhost.label}` already exists.' in result.output

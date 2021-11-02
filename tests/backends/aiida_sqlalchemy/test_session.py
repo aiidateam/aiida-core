@@ -1,4 +1,4 @@
-# # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # ###########################################################################
 # # Copyright (c), The AiiDA team. All rights reserved.                     #
 # # This file is part of the AiiDA code.                                    #
@@ -15,7 +15,6 @@
 # import aiida.backends
 # from aiida.backends.testbase import AiidaTestCase
 # from aiida.manage.manager import get_manager
-
 
 # class TestSessionSqla(AiidaTestCase):
 #     """The following tests check that the session works as expected in some

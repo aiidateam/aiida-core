@@ -342,3 +342,46 @@ def test_backward_migration(perform_migrations: Migrator):
             assert node_type == log_entry.metadata['objname'], (
                 f'The type ({node_type}) of the linked node of the 0024 schema version should be identical to the '
                 f'objname ({log_entry.metadata["objname"]}) of the 0023 schema version stored in the metadata.')
+
+
+def test_dblog_uuid_addition(perform_migrations: Migrator):
+    """Test that the UUID column is correctly added to the DbLog table,
+    and that the uniqueness constraint is added without problems
+    (if the migration arrives until 375c2db70663 then the constraint is added properly).
+    """
+    # starting revision
+    perform_migrations.migrate_down('041a79fc615f')  # 041a79fc615f_dblog_cleaning
+
+    # setup the database
+    DbLog = perform_migrations.get_current_table('db_dblog')  # pylint: disable=invalid-name
+    DbNode = perform_migrations.get_current_table('db_dbnode')  # pylint: disable=invalid-name
+    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    with perform_migrations.session() as session:
+        user = DbUser(email='user@aiida.net')
+        session.add(user)
+        session.commit()
+
+        calc_1 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
+        calc_2 = DbNode(type='node.process.calculation.CalculationNode.', user_id=user.id)
+
+        session.add(calc_1)
+        session.add(calc_2)
+        session.commit()
+
+        log_1 = DbLog(loggername='CalculationNode logger', dbnode_id=calc_1.id, message='calculation node 1')
+        log_2 = DbLog(loggername='CalculationNode logger', dbnode_id=calc_2.id, message='calculation node 2')
+
+        session.add(log_1)
+        session.add(log_2)
+
+        session.commit()
+
+    # migrate up
+    perform_migrations.migrate_up('375c2db70663')  # 375c2db70663_dblog_uuid_uniqueness_constraint
+
+    # perform some checks
+    DbLog = perform_migrations.get_current_table('db_dblog')  # pylint: disable=invalid-name
+    with perform_migrations.session() as session:
+        l_uuids = list(session.query(DbLog).with_entities(getattr(DbLog, 'uuid')).all())
+        s_uuids = set(l_uuids)
+        assert len(l_uuids) == len(s_uuids), 'The UUIDs are not all unique.'

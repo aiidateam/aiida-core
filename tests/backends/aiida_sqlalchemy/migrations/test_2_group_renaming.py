@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test renaming of type strings"""
+"""Test renaming of type strings: b8b23ddefad4 -> e72ad251bcdb"""
 from .conftest import Migrator
 
 

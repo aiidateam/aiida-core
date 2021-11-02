@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests"""
+"""Tests 041a79fc615f -> 6a5c2ea1439d"""
 from .conftest import Migrator
 
 

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests migration of the keys of certain attribute for ProcessNodes and CalcJobNodes."""
+"""Tests migration of the keys of certain attribute for ProcessNodes and CalcJobNodes: e72ad251bcdb -> 7ca08c391c49"""
 from .conftest import Migrator
 
 KEY_RESOURCES_OLD = 'jobresource_params'

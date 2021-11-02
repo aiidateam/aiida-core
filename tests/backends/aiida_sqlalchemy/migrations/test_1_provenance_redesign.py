@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the provenance redesign"""
+"""Tests for the provenance redesign: 140c971ae0a3 -> 239cea6d2452"""
 from .conftest import Migrator
 
 

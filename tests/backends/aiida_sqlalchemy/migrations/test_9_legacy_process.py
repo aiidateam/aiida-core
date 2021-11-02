@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests"""
+"""Tests for legacy process migrations: 07fac78e6209 -> 118349c10896"""
 from .conftest import Migrator
 
 

@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from inspect import isclass
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Type, Union
 
 from importlib_metadata import EntryPoint
 
@@ -29,22 +29,6 @@ if TYPE_CHECKING:
     from aiida.tools.data.orbital import Orbital
     from aiida.tools.dbimporters import DbImporter
     from aiida.transports import Transport
-
-
-def warn_deprecated_entry_point(entry_point_name: str, deprecated_entry_points: List[str]) -> str:
-    """If the ``entry_point_name`` is part of the list of ``deprecated_entry_points``, raise a warning."""
-    from warnings import warn
-
-    from aiida.common.warnings import AiidaDeprecationWarning
-
-    if entry_point_name in deprecated_entry_points:
-        warn(
-            f'The entry point `{entry_point_name}` is deprecated. Please replace it with `core.{entry_point_name}`.',
-            AiidaDeprecationWarning
-        )
-        entry_point_name = f'core.{entry_point_name}'
-
-    return entry_point_name
 
 
 def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, valid_classes: Tuple[Any, ...]) -> None:
@@ -90,9 +74,6 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Optional[Uni
     from aiida.engine import CalcJob, calcfunction, is_process_function
     from aiida.orm import CalcFunctionNode
 
-    deprecated_entry_points = ['arithmetic.add', 'templatereplacer']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
-
     entry_point_group = 'aiida.calculations'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (CalcJob, calcfunction)
@@ -135,13 +116,6 @@ def DataFactory(entry_point_name: str, load: bool = True) -> Optional[Union[Entr
     """
     from aiida.orm import Data
 
-    deprecated_entry_points = [
-        'array', 'array.bands', 'array.kpoints', 'array.projection', 'array.trajectory', 'array.xy', 'base', 'bool',
-        'cif', 'code', 'dict', 'float', 'folder', 'int', 'list', 'numeric', 'orbital', 'remote', 'remote.stash',
-        'remote.stash.folder', 'singlefile', 'str', 'structure', 'upf'
-    ]
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
-
     entry_point_group = 'aiida.data'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Data,)
@@ -161,9 +135,6 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Unio
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from aiida.tools.dbimporters import DbImporter
-
-    deprecated_entry_points = ['cod', 'icsd', 'materialsproject', 'mpds', 'mpod', 'nninc', 'oqmd', 'pcod', 'tcod']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
 
     entry_point_group = 'aiida.tools.dbimporters'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
@@ -205,9 +176,6 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> Optional[Union[E
     """
     from aiida.tools.data.orbital import Orbital
 
-    deprecated_entry_points = ['orbital', 'realhydrogen']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
-
     entry_point_group = 'aiida.tools.data.orbitals'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Orbital,)
@@ -227,9 +195,6 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> Optional[Union[En
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from aiida.parsers import Parser
-
-    deprecated_entry_points = ['arithmetic.add', 'templatereplacer.doubler']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
 
     entry_point_group = 'aiida.parsers'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
@@ -251,9 +216,6 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     """
     from aiida.schedulers import Scheduler
 
-    deprecated_entry_points = ['direct', 'lsf', 'pbspro', 'sge', 'slurm', 'torque']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
-
     entry_point_group = 'aiida.schedulers'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Scheduler,)
@@ -272,9 +234,6 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from aiida.transports import Transport
-
-    deprecated_entry_points = ['local', 'ssh']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
 
     entry_point_group = 'aiida.transports'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
@@ -296,9 +255,6 @@ def WorkflowFactory(entry_point_name: str, load: bool = True) -> Optional[Union[
     """
     from aiida.engine import WorkChain, is_process_function, workfunction
     from aiida.orm import WorkFunctionNode
-
-    deprecated_entry_points = ['arithmetic.multiply_add', 'arithmetic.add_multiply']
-    entry_point_name = warn_deprecated_entry_point(entry_point_name, deprecated_entry_points)
 
     entry_point_group = 'aiida.workflows'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)

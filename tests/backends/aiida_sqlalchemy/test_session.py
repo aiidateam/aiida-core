@@ -28,123 +28,123 @@ class TestSessionSqla(AiidaTestCase):
     manually to the session and committing it & by using the build-in store
     method of the ORM objects."""
 
-    def set_connection(self, expire_on_commit=True):
-        """Set connection to a database."""
-        # Creating a sessionmaker with the desired parameters
-        # Note: to check if this is still correct with the new
-        # way of managing connections and sessions in SQLA...
-        # For instance, we should use probably a scopedsession wrapper
-        session = sessionmaker(expire_on_commit=expire_on_commit)
-        aiida.backends.sqlalchemy.sessionfactory = session(bind=self._AiidaTestCase__backend_instance.connection)
+    # def set_connection(self, expire_on_commit=True):
+    #     """Set connection to a database."""
+    #     # Creating a sessionmaker with the desired parameters
+    #     # Note: to check if this is still correct with the new
+    #     # way of managing connections and sessions in SQLA...
+    #     # For instance, we should use probably a scopedsession wrapper
+    #     session = sessionmaker(expire_on_commit=expire_on_commit)
+    #     aiida.backends.sqlalchemy.sessionfactory = session(bind=self._AiidaTestCase__backend_instance.connection)
 
-        # Cleaning the database
-        self.clean_db()
-        aiida.backends.sqlalchemy.get_scoped_session().expunge_all()
+    #     # Cleaning the database
+    #     self.clean_db()
+    #     aiida.backends.sqlalchemy.get_scoped_session().expunge_all()
 
-    @staticmethod
-    def drop_connection():
-        """Drop connection to a database."""
-        session = aiida.backends.sqlalchemy.get_scoped_session()
-        session.expunge_all()
-        session.close()
-        aiida.backends.sqlalchemy.SESSION_FACTORY = None
+    # @staticmethod
+    # def drop_connection():
+    #     """Drop connection to a database."""
+    #     session = aiida.backends.sqlalchemy.get_scoped_session()
+    #     session.expunge_all()
+    #     session.close()
+    #     aiida.backends.sqlalchemy.SESSION_FACTORY = None
 
-    def test_session_update_and_expiration_1(self):
-        """expire_on_commit=True & adding manually and committing
-        computer and code objects."""
+    # def test_session_update_and_expiration_1(self):
+    #     """expire_on_commit=True & adding manually and committing
+    #     computer and code objects."""
 
-        self.set_connection(expire_on_commit=True)
+    #     self.set_connection(expire_on_commit=True)
 
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+    #     session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
-        user = self.backend.users.create(email=email)
-        session.add(user.dbmodel)
-        session.commit()
+    #     email = get_manager().get_profile().default_user
+    #     user = self.backend.users.create(email=email)
+    #     session.add(user.dbmodel)
+    #     session.commit()
 
-        defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
-        computer = self.backend.computers.create(**defaults)
-        session.add(computer.dbmodel)
-        session.commit()
+    #     defaults = dict(
+    #         label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+    #     )
+    #     computer = self.backend.computers.create(**defaults)
+    #     session.add(computer.dbmodel)
+    #     session.commit()
 
-        node = self.backend.nodes.create(node_type='', user=user).store()
-        session.add(node.dbmodel)
-        session.commit()
+    #     node = self.backend.nodes.create(node_type='', user=user).store()
+    #     session.add(node.dbmodel)
+    #     session.commit()
 
-        self.drop_connection()
+    #     self.drop_connection()
 
-    def test_session_update_and_expiration_2(self):
-        """expire_on_commit=True & committing computer and code objects with
-        their built-in store function."""
+    # def test_session_update_and_expiration_2(self):
+    #     """expire_on_commit=True & committing computer and code objects with
+    #     their built-in store function."""
 
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+    #     session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        self.set_connection(expire_on_commit=True)
+    #     self.set_connection(expire_on_commit=True)
 
-        email = get_manager().get_profile().default_user
-        user = self.backend.users.create(email=email)
-        session.add(user.dbmodel)
-        session.commit()
+    #     email = get_manager().get_profile().default_user
+    #     user = self.backend.users.create(email=email)
+    #     session.add(user.dbmodel)
+    #     session.commit()
 
-        defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
-        computer = self.backend.computers.create(**defaults)
-        computer.store()
+    #     defaults = dict(
+    #         label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+    #     )
+    #     computer = self.backend.computers.create(**defaults)
+    #     computer.store()
 
-        self.backend.nodes.create(node_type='', user=user).store()
-        self.drop_connection()
+    #     self.backend.nodes.create(node_type='', user=user).store()
+    #     self.drop_connection()
 
-    def test_session_update_and_expiration_3(self):
-        """
-        expire_on_commit=False & adding manually and committing
-        computer and code objects.
-        """
-        self.set_connection(expire_on_commit=False)
+    # def test_session_update_and_expiration_3(self):
+    #     """
+    #     expire_on_commit=False & adding manually and committing
+    #     computer and code objects.
+    #     """
+    #     self.set_connection(expire_on_commit=False)
 
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+    #     session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
-        user = self.backend.users.create(email=email)
-        session.add(user.dbmodel)
-        session.commit()
+    #     email = get_manager().get_profile().default_user
+    #     user = self.backend.users.create(email=email)
+    #     session.add(user.dbmodel)
+    #     session.commit()
 
-        defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
-        computer = self.backend.computers.create(**defaults)
-        session.add(computer.dbmodel)
-        session.commit()
+    #     defaults = dict(
+    #         label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+    #     )
+    #     computer = self.backend.computers.create(**defaults)
+    #     session.add(computer.dbmodel)
+    #     session.commit()
 
-        node = self.backend.nodes.create(node_type='', user=user).store()
-        session.add(node.dbmodel)
-        session.commit()
+    #     node = self.backend.nodes.create(node_type='', user=user).store()
+    #     session.add(node.dbmodel)
+    #     session.commit()
 
-        self.drop_connection()
+    #     self.drop_connection()
 
-    def test_session_update_and_expiration_4(self):
-        """expire_on_commit=False & committing computer and code objects with
-        their built-in store function."""
+    # def test_session_update_and_expiration_4(self):
+    #     """expire_on_commit=False & committing computer and code objects with
+    #     their built-in store function."""
 
-        self.set_connection(expire_on_commit=False)
+    #     self.set_connection(expire_on_commit=False)
 
-        session = aiida.backends.sqlalchemy.get_scoped_session()
+    #     session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
-        user = self.backend.users.create(email=email)
-        session.add(user.dbmodel)
-        session.commit()
+    #     email = get_manager().get_profile().default_user
+    #     user = self.backend.users.create(email=email)
+    #     session.add(user.dbmodel)
+    #     session.commit()
 
-        defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
-        )
-        computer = self.backend.computers.create(**defaults)
-        computer.store()
+    #     defaults = dict(
+    #         label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+    #     )
+    #     computer = self.backend.computers.create(**defaults)
+    #     computer.store()
 
-        self.backend.nodes.create(node_type='', user=user).store()
-        self.drop_connection()
+    #     self.backend.nodes.create(node_type='', user=user).store()
+    #     self.drop_connection()
 
     def test_node_access_with_sessions(self):
         """This checks that changes to a node from a different session (e.g. different interpreter,

@@ -28,6 +28,12 @@ class TestSessionSqla(AiidaTestCase):
     manually to the session and committing it & by using the build-in store
     method of the ORM objects."""
 
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        """Ensure the session is reset."""
+        aiida.backends.sqlalchemy.reset_session()
+        super().tearDownClass(*args, **kwargs)
+
     def set_connection(self, expire_on_commit=True):
         """Set connection to a database."""
         # Creating a sessionmaker with the desired parameters

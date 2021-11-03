@@ -180,7 +180,7 @@ class BackendManager:
 
     @abc.abstractmethod
     def get_schema_version_head(self):
-        """Return the latest schema version."""
+        """Return the head schema version for this backend, i.e. the latest schema this backend can be migrated to."""
 
     @abc.abstractmethod
     def get_schema_version_reset(self, schema_generation_code):
@@ -192,7 +192,7 @@ class BackendManager:
 
     @abc.abstractmethod
     def get_schema_version_backend(self):
-        """Return the current schema version."""
+        """Return the schema version of the currently configured backend instance."""
 
     @abc.abstractmethod
     def set_schema_version_database(self, version):

@@ -27,7 +27,8 @@ class Migrator:
     def migrate_up(self, revision: str) -> None:
         """Migrate up to a given revision."""
         self._manager.migrate_up(revision)
-        assert self._manager.get_schema_version_backend() == revision
+        if revision != 'head':
+            assert self._manager.get_schema_version_backend() == revision
 
     def migrate_down(self, revision: str) -> None:
         """Migrate down to a given revision."""

@@ -496,6 +496,14 @@ class ProcessNode(Sealable, Node):
 
         return is_valid_cache_func(self)
 
+    @is_valid_cache.setter
+    def is_valid_cache(self, valid: bool) -> None:
+        """Set whether this node instance is considered valid for caching or not.
+
+        :param valid: whether the node is valid or invalid for use in caching.
+        """
+        super().is_valid_cache = valid  # type: ignore[misc]
+
     def _get_objects_to_hash(self) -> List[Any]:
         """
         Return a list of objects which should be included in the hash.

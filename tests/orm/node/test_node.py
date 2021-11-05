@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods
+# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods,too-many-lines
 """Tests for the Node ORM class."""
 from decimal import Decimal
 from io import BytesIO
@@ -86,6 +86,33 @@ class TestNode:
 
         node.store()
         assert node.repository_metadata != repository_metadata
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        'process_type, match', (
+            (None, r'no process type for Node<.*>: cannot recreate process class'),
+            ('aiida.calculations:core.non_existing', r'could not load process class for entry point `.*`.*'),
+            ('invalid', r'could not load process class from `.*`.*'),
+            ('aiida.orm.non-existing.some_function', r'could not load process class from `.*`.*'),
+            ('aiida.orm.nodes.node.non-existing-function', r'could not load process class from `.*`.*'),
+        )
+    )
+    def test_process_class_raises(process_type, match):
+        """Test the ``ProcessNode.process_class`` property when it is expected to raise.
+
+        It is not possible to load the function or class correspondign to the given process types and so the property
+        should raise a ``ValueError``. The cases test from top to bottom:
+
+         * No process type whatsoever.
+         * A valid full entry point string but does not correspond to an existing entry point.
+         * An invalid normal identifier (not a single dot).
+         * A normal identifier for an inexisting module.
+         * A normal identifier for existing module but non existing function.
+        """
+        node = CalculationNode(process_type=process_type)
+
+        with pytest.raises(ValueError, match=match):
+            node.process_class  # pylint: disable=pointless-statement
 
 
 @pytest.mark.usefixtures('clear_database_before_test_class')

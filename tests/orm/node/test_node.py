@@ -100,7 +100,7 @@ class TestNode:
     def test_process_class_raises(process_type, match):
         """Test the ``ProcessNode.process_class`` property when it is expected to raise.
 
-        It is not possible to load the function or class correspondign to the given process types and so the property
+        It is not possible to load the function or class corresponding to the given process types and so the property
         should raise a ``ValueError``. The cases test from top to bottom:
 
          * No process type whatsoever.

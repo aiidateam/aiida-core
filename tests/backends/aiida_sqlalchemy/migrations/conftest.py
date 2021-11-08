@@ -86,7 +86,6 @@ def perform_migrations(aiida_profile, backend, request):
         assert marker.args, 'No version given'
         migrator.migrate_down(marker.args[0])
     yield migrator
-    raise ValueError('hi')
     # ensure that the database is migrated back up to the latest version, once finished
     migrator.migrate_up('head')
     aiida_profile.reset_db()

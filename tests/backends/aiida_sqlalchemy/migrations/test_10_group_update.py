@@ -19,6 +19,8 @@ def test_group_typestring(perform_migrations: Migrator):
     # starting revision
     perform_migrations.migrate_down('118349c10896')  # 118349c10896_default_link_label.py
 
+    raise ValueError('hi')
+
     # setup the database
     DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
     DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name

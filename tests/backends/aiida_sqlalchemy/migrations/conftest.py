@@ -87,5 +87,5 @@ def perform_migrations(aiida_profile, backend, request):
         migrator.migrate_down(marker.args[0])
     yield migrator
     # ensure that the database is migrated back up to the latest version, once finished
-    aiida_profile.reset_db(with_user=False)
     migrator.migrate_up('head')
+    aiida_profile.reset_db()

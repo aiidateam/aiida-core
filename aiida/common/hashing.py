@@ -41,9 +41,6 @@ UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
 HASHING_KEY = 'HashingKey'
 
-# The key that is used to store the hash in the node extras
-_HASH_EXTRA_KEY = '_aiida_hash'
-
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
 ###################################################################

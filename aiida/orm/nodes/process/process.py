@@ -110,15 +110,13 @@ class ProcessNode(Sealable, Node):
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
-            raise ValueError(f'no process type for CalcJobNode<{self.pk}>: cannot recreate process class')
+            raise ValueError(f'no process type for Node<{self.pk}>: cannot recreate process class')
 
         try:
             process_class = load_entry_point_from_string(self.process_type)
         except exceptions.EntryPointError as exception:
             raise ValueError(
-                'could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
-                    self.pk, self.process_type, exception
-                )
+                f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
             )
         except ValueError:
             try:
@@ -126,9 +124,9 @@ class ProcessNode(Sealable, Node):
                 module_name, class_name = self.process_type.rsplit('.', 1)
                 module = importlib.import_module(module_name)
                 process_class = getattr(module, class_name)
-            except (ValueError, ImportError):
+            except (AttributeError, ValueError, ImportError) as exception:
                 raise ValueError(
-                    f'could not load process class CalcJobNode<{self.pk}> given its `process_type`: {self.process_type}'
+                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>: {exception}'
                 )
 
         return process_class
@@ -495,6 +493,14 @@ class ProcessNode(Sealable, Node):
             return True
 
         return is_valid_cache_func(self)
+
+    @is_valid_cache.setter
+    def is_valid_cache(self, valid: bool) -> None:
+        """Set whether this node instance is considered valid for caching or not.
+
+        :param valid: whether the node is valid or invalid for use in caching.
+        """
+        super().is_valid_cache = valid  # type: ignore[misc]
 
     def _get_objects_to_hash(self) -> List[Any]:
         """

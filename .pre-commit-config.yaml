@@ -96,6 +96,7 @@ repos:
                 aiida/orm/groups.py|
                 aiida/orm/logs.py|
                 aiida/orm/users.py|
+                aiida/orm/nodes/data/enum.py|
                 aiida/orm/nodes/data/jsonable.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|

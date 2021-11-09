@@ -165,6 +165,7 @@
             "core.cif = aiida.orm.nodes.data.cif:CifData",
             "core.code = aiida.orm.nodes.data.code:Code",
             "core.dict = aiida.orm.nodes.data.dict:Dict",
+            "core.enum = aiida.orm.nodes.data.enum:EnumData",
             "core.float = aiida.orm.nodes.data.float:Float",
             "core.folder = aiida.orm.nodes.data.folder:FolderData",
             "core.int = aiida.orm.nodes.data.int:Int",

@@ -64,6 +64,7 @@ py:class DbImporter
 py:class DiskObjectStoreRepositoryBackend
 py:class EntityType
 py:class EntityTypes
+py:class EnumType
 py:class ExitCode
 py:class File
 py:class FilterType

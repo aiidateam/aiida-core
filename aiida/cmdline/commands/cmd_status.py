@@ -55,7 +55,7 @@ STATUS_SYMBOLS = {
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except,too-many-statements,too-many-branches
+    # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals,
     from aiida import __version__
     from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
@@ -68,16 +68,17 @@ def verdi_status(print_traceback, no_rmq):
     print_status(ServiceStatus.UP, 'config', AIIDA_CONFIG_FOLDER)
 
     manager = get_manager()
-    profile = manager.get_profile()
-
-    if profile is None:
-        print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
-        echo.echo_report('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
-        return
 
     try:
         profile = manager.get_profile()
+
+        if profile is None:
+            print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
+            echo.echo_report('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+            return
+
         print_status(ServiceStatus.UP, 'profile', profile.name)
+
     except Exception as exc:
         message = 'Unable to read AiiDA profile'
         print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
@@ -95,21 +96,31 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.UP, 'repository', repository_status)
 
     # Getting the postgres status by trying to get a database cursor
-    database_data = [profile.database_name, profile.database_username, profile.database_hostname, profile.database_port]
+    backend_manager = manager.get_backend_manager()
+    dbgen = backend_manager.get_schema_generation_database()
+    dbver = backend_manager.get_schema_version_database()
+    database_data = [
+        profile.database_name, dbgen, dbver, profile.database_username, profile.database_hostname, profile.database_port
+    ]
     try:
         with override_log_level():  # temporarily suppress noisy logging
             backend = manager.get_backend()
             backend.cursor()
+
     except IncompatibleDatabaseSchema:
-        message = 'Database schema version is incompatible with the code: run `verdi database migrate`.'
+        message = f'Database schema version `Gen {dbgen} - v{dbver}` is incompatible with the code. '
+        message += 'Run `verdi database migrate` to solve this.'
         print_status(ServiceStatus.DOWN, 'postgres', message)
         exit_code = ExitCode.CRITICAL
+
     except Exception as exc:
-        message = 'Unable to connect to database `{}` as {}@{}:{}'.format(*database_data)
+        message = 'Unable to connect to database `{}` with schema `Gen {} - v{}` as {}@{}:{}'.format(*database_data)
         print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
+
     else:
-        print_status(ServiceStatus.UP, 'postgres', 'Connected to database `{}` as {}@{}:{}'.format(*database_data))
+        message = 'Connected to database `{}` with schema `Gen {} - v{}` as {}@{}:{}'.format(*database_data)
+        print_status(ServiceStatus.UP, 'postgres', message)
 
     # Getting the rmq status
     if not no_rmq:

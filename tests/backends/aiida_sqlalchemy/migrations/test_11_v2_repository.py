@@ -11,15 +11,12 @@
 import hashlib
 import os
 
-import pytest
-
 from aiida.backends.general.migrations import utils
 from aiida.common.utils import get_new_uuid
 
 from .conftest import Migrator
 
 
-@pytest.mark.skip(reason='hanging')
 def test_node_repository_metadata(perform_migrations: Migrator):
     """Test migration adding the `repository_metadata` column to the `Node` model.
 
@@ -52,7 +49,6 @@ def test_node_repository_metadata(perform_migrations: Migrator):
         assert node.repository_metadata == {}
 
 
-@pytest.mark.skip(reason='hanging')
 def test_entry_point_core_prefix(perform_migrations: Migrator):
     """Test migration that updates node types after `core.` prefix was added to entry point names.
 
@@ -108,7 +104,6 @@ def test_entry_point_core_prefix(perform_migrations: Migrator):
         assert workflow.process_type == 'aiida.workflows:core.arithmetic.add_multiply'
 
 
-@pytest.mark.skip(reason='hanging')
 def test_repository_migration(perform_migrations: Migrator):  # pylint: disable=too-many-statements
     """Test migration of the old file repository to the disk object store.
 
@@ -231,7 +226,6 @@ def test_repository_migration(perform_migrations: Migrator):  # pylint: disable=
         assert isinstance(repository_uuid.val, str)
 
 
-@pytest.mark.skip(reason='hanging')
 def test_computer_name_to_label(perform_migrations: Migrator):
     """Test the renaming of `name` to `label` for `DbComputer.
 

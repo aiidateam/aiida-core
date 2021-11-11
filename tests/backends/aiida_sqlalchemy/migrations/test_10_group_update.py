@@ -8,12 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for group migrations: 118349c10896 -> 0edcdd5a30f0"""
-import pytest
-
 from .conftest import Migrator
 
 
-@pytest.mark.skip(reason='hanging')
 def test_group_typestring(perform_migrations: Migrator):
     """Test the migration that renames the DbGroup type strings.
 
@@ -73,7 +70,6 @@ def test_group_typestring(perform_migrations: Migrator):
         assert group_autorun.type_string == 'core.auto'
 
 
-@pytest.mark.skip(reason='hanging')
 def test_group_extras(perform_migrations: Migrator):
     """Test migration to add the `extras` JSONB column to the `DbGroup` model.
 

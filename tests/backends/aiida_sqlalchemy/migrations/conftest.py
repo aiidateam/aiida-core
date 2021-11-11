@@ -78,15 +78,19 @@ class Migrator:
 @pytest.fixture()
 def perform_migrations(aiida_profile, backend, request):
     """A fixture to setup the database for migration tests"""
+    from aiida.backends.sqlalchemy import reset_session, get_scoped_session
     # note downgrading to 1830c8430131 requires adding columns to `DbUser` and hangs if a user is present
     aiida_profile.reset_db(with_user=False)
-    backend.get_session().commit()
+    # reset the connection to the database, to ensure no locking issues
+    reset_session()
+    get_scoped_session()
     migrator = Migrator(backend, SqlaBackendManager())
     marker = request.node.get_closest_marker('migrate_down')
     if marker is not None:
         assert marker.args, 'No version given'
         migrator.migrate_down(marker.args[0])
     yield migrator
+    # clear the database
+    aiida_profile.reset_db(with_user=False)
     # ensure that the database is migrated back up to the latest version, once finished
     migrator.migrate_up('head')
-    aiida_profile.reset_db()

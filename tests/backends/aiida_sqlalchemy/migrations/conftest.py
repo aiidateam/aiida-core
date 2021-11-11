@@ -83,8 +83,8 @@ def perform_migrations(aiida_profile, backend, request):
     # note downgrading to 1830c8430131 requires adding columns to `DbUser` and hangs if a user is present
     aiida_profile.reset_db(with_user=False)
     # reset the connection to the database, to ensure no locking issues
-    reset_session()
-    get_scoped_session()
+    # reset_session()
+    # get_scoped_session()
     migrator = Migrator(backend, SqlaBackendManager())
     marker = request.node.get_closest_marker('migrate_down')
     if marker is not None:
@@ -92,6 +92,7 @@ def perform_migrations(aiida_profile, backend, request):
         migrator.migrate_down(marker.args[0])
     yield migrator
     # clear the database
+    # note this assumes the current schema contains the tables specified in `clean_db`
     aiida_profile.reset_db(with_user=False)
     # ensure that the database is migrated back up to the latest version, once finished
     migrator.migrate_up('head')

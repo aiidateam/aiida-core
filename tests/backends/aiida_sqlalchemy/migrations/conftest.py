@@ -78,7 +78,8 @@ class Migrator:
 @pytest.fixture()
 def perform_migrations(aiida_profile, backend, request):
     """A fixture to setup the database for migration tests"""
-    from aiida.backends.sqlalchemy import reset_session, get_scoped_session
+    from aiida.backends.sqlalchemy import get_scoped_session, reset_session
+
     # note downgrading to 1830c8430131 requires adding columns to `DbUser` and hangs if a user is present
     aiida_profile.reset_db(with_user=False)
     # reset the connection to the database, to ensure no locking issues

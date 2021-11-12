@@ -551,8 +551,8 @@ Below is a list with all available subcommands.
 
     Commands:
       info       Summarise the contents of the storage.
-      integrity  Checks for the integrity of the database and the repository.
-      migrate    Migrate the database to the latest schema version.
+      integrity  Checks for the integrity of the data storage.
+      migrate    Migrate the storage to the latest schema version.
 
 
 .. _reference:command-line:verdi-user:

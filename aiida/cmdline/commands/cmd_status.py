@@ -108,18 +108,22 @@ def verdi_status(print_traceback, no_rmq):
             backend.cursor()
 
     except IncompatibleDatabaseSchema:
-        message = f'Database schema version `Gen {dbgen} - v{dbver}` is incompatible with the code. '
+        message = f'Database schema {dbgen} / {dbver} (generation/version) is incompatible with the code. '
         message += 'Run `verdi database migrate` to solve this.'
         print_status(ServiceStatus.DOWN, 'postgres', message)
         exit_code = ExitCode.CRITICAL
 
     except Exception as exc:
-        message = 'Unable to connect to database `{}` with schema `Gen {} - v{}` as {}@{}:{}'.format(*database_data)
+        message = 'Unable to connect to database `{}` with schema {} / {} (generation/version) as {}@{}:{}'.format(
+            *database_data
+        )
         print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
 
     else:
-        message = 'Connected to database `{}` with schema `Gen {} - v{}` as {}@{}:{}'.format(*database_data)
+        message = 'Connected to database `{}` with schema {} / {} (generation/version) as {}@{}:{}'.format(
+            *database_data
+        )
         print_status(ServiceStatus.UP, 'postgres', message)
 
     # Getting the rmq status

@@ -36,7 +36,7 @@ def database_version():
     """
     echo.echo_warning(
         'This command has been deprecated and will be removed soon. '
-        'The same information should now be available in `verdi status`.\n'
+        'The same information is now available through `verdi status`.\n'
     )
 
 

@@ -22,7 +22,7 @@ def verdi_storage():
     """Inspect and manage the internal storage."""
 
 
-@verdi_database.command('migrate')
+@verdi_storage.command('migrate')
 @options.FORCE()
 def storage_migrate(force):
     """Migrate the storage to the latest schema version."""
@@ -44,7 +44,7 @@ def storage_migrate(force):
             echo.echo_critical(str(exception))
         return
 
-    echo.echo_warning('Migrating your database might take a while and is not reversible.')
+    echo.echo_warning('Migrating your storage might take a while and is not reversible.')
     echo.echo_warning('Before continuing, make sure you have completed the following steps:')
     echo.echo_warning('')
     echo.echo_warning(' 1. Make sure you have no active calculations and workflows.')
@@ -75,12 +75,12 @@ def storage_migrate(force):
             echo.echo_success('migration completed')
 
 
-@verdi_database.group('integrity')
+@verdi_storage.group('integrity')
 def storage_integrity():
     """Checks for the integrity of the data storage."""
 
 
-@verdi_database.command('info')
+@verdi_storage.command('info')
 @click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
 def storage_info(statistics):
     """Summarise the contents of the storage."""

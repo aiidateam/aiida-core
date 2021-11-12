@@ -18,14 +18,14 @@ from aiida.common import exceptions
 
 
 @verdi.group('storage')
-def verdi_database():
+def verdi_storage():
     """Inspect and manage the internal storage."""
 
 
 @verdi_database.command('migrate')
 @options.FORCE()
-def backend_migrate(force):
-    """Migrate the database to the latest schema version."""
+def storage_migrate(force):
+    """Migrate the storage to the latest schema version."""
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.manage.manager import get_manager
 
@@ -76,8 +76,8 @@ def backend_migrate(force):
 
 
 @verdi_database.group('integrity')
-def verdi_database_integrity():
-    """Checks for the integrity of the database and the repository."""
+def storage_integrity():
+    """Checks for the integrity of the data storage."""
 
 
 @verdi_database.command('info')

@@ -103,8 +103,8 @@ def detect_invalid_links():
     .. deprecated:: v3.0.0
     """
     echo.echo_warning(
-        'This integrity test has been deemed no longer necessary: it has been deprecated and will be removed soon.\n'
-        'Please check for available tests at `verdi storage integrity` instead.\n'
+        'This command has been deprecated and will be removed soon.\n'
+        'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
     )
 
 

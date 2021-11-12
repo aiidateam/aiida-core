@@ -160,7 +160,7 @@ class BackendManager:
         logic that is required.
         """
         self.set_schema_generation_database(SCHEMA_GENERATION_VALUE)
-        self.set_schema_version_database(self.get_schema_version_head())
+        self.set_schema_version_backend(self.get_schema_version_head())
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version.
@@ -171,16 +171,16 @@ class BackendManager:
 
     @abc.abstractmethod
     def is_database_schema_ahead(self):
-        """Determine whether the database schema version is ahead of the code schema version.
+        """Determine whether the backend schema version is ahead of the head schema version.
 
         .. warning:: this will not check whether the schema generations are equal
 
-        :return: boolean, True if the database schema version is ahead of the code schema version.
+        :return: boolean, True if the backend schema version is ahead of the head schema version.
         """
 
     @abc.abstractmethod
-    def get_schema_version_head(self):
-        """Return the head schema version for this backend, i.e. the latest schema this backend can be migrated to."""
+    def get_schema_version_head(self) -> str:
+        """Return the head schema version for this backend, i.e. the latest schema this backend can be migrated to"""
 
     @abc.abstractmethod
     def get_schema_version_reset(self, schema_generation_code):
@@ -191,11 +191,11 @@ class BackendManager:
         """
 
     @abc.abstractmethod
-    def get_schema_version_backend(self):
+    def get_schema_version_backend(self) -> str:
         """Return the schema version of the currently configured backend instance."""
 
     @abc.abstractmethod
-    def set_schema_version_database(self, version):
+    def set_schema_version_backend(self, version: str) -> None:
         """Set the database schema version.
 
         :param version: string with schema version to set

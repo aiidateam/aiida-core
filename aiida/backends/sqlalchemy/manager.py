@@ -18,7 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import NotExistent
 
-from ..manager import BackendManager, Setting, SettingsManager
+from ..manager import SCHEMA_GENERATION_VALUE, BackendManager, Setting, SettingsManager
 
 ALEMBIC_REL_PATH = 'migrations'
 
@@ -129,13 +129,13 @@ class SqlaBackendManager(BackendManager):
         with self.migration_context() as context:
             return context.get_current_revision()
 
-    def set_schema_version_database(self, version):
-        """Set the database schema version.
-
-        :param version: string with schema version to set
-        """
+    def set_schema_version_backend(self, version: str) -> None:
         with self.migration_context() as context:
-            return context.stamp(context.script, 'head')
+            return context.stamp(context.script, version)
+
+    def _migrate_database_generation(self):
+        self.set_schema_generation_database(SCHEMA_GENERATION_VALUE)
+        self.set_schema_version_backend('head')
 
     def migrate_up(self, version: str):
         """Migrate the database up to a specific version.

@@ -113,11 +113,7 @@ class DjangoBackendManager(BackendManager):
             result = backend.execute_raw(r"""SELECT tval FROM db_dbsetting WHERE key = 'db|schemaversion';""")
         return result[0][0]
 
-    def set_schema_version_database(self, version):
-        """Set the database schema version.
-
-        :param version: string with schema version to set
-        """
+    def set_schema_version_backend(self, version: str) -> None:
         return self.get_settings_manager().set(SCHEMA_VERSION_KEY, version, description=SCHEMA_VERSION_DESCRIPTION)
 
     def _migrate_database_generation(self):

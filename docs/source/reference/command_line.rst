@@ -182,7 +182,7 @@ Below is a list with all available subcommands.
 
       Inspect and manage the database.
 
-      .. deprecated:: v3.0.0
+      .. deprecated:: v2.0.0
 
     Options:
       --help  Show this message and exit.
@@ -544,7 +544,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Inspect and manage the internal storage.
+      Inspect and manage stored data for a profile.
 
     Options:
       --help  Show this message and exit.

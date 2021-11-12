@@ -15,45 +15,44 @@ import click
 from aiida.backends.general.migrations.duplicate_uuids import TABLES_UUID_DEDUPLICATION
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 
 
 @verdi.group('database')
 def verdi_database():
     """Inspect and manage the database.
 
-    .. deprecated:: v3.0.0
+    .. deprecated:: v2.0.0
     """
 
 
 @verdi_database.command('version')
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'The same information is now available through `verdi status`.\n'
+)
 def database_version():
     """Show the version of the database.
 
     The database version is defined by the tuple of the schema generation and schema revision.
 
-    .. deprecated:: v2.1.0
+    .. deprecated:: v2.0.0
     """
-    echo.echo_warning(
-        'This command has been deprecated and will be removed soon. '
-        'The same information is now available through `verdi status`.\n'
-    )
 
 
 @verdi_database.command('migrate')
 @options.FORCE()
 @click.pass_context
+@decorators.deprecated_command(
+    'This command has been deprecated and will be removed soon (in v3.0). '
+    'Please call `verdi storage migrate` instead.\n'
+)
 def database_migrate(ctx, force):
     """Migrate the database to the latest schema version.
 
-    .. deprecated:: v2.1.0
+    .. deprecated:: v2.0.0
     """
     from aiida.cmdline.commands.cmd_storage import backend_migrate
-
-    echo.echo_warning(
-        'This command has been deprecated and will be removed soon. Please call `verdi storage migrate` instead.\n'
-    )
-
     ctx.forward(backend_migrate)
 
 
@@ -61,7 +60,7 @@ def database_migrate(ctx, force):
 def verdi_database_integrity():
     """Check the integrity of the database and fix potential issues.
 
-    .. deprecated:: v3.0.0
+    .. deprecated:: v2.0.0
     """
 
 
@@ -76,6 +75,10 @@ def verdi_database_integrity():
 @click.option(
     '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.'
 )
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
+)
 def detect_duplicate_uuid(table, apply_patch):
     """Detect and fix entities with duplicate UUIDs.
 
@@ -87,46 +90,43 @@ def detect_duplicate_uuid(table, apply_patch):
     table and solve it by generating new UUIDs. Note that it will not delete or merge any rows.
 
 
-    .. deprecated:: v3.0.0
+    .. deprecated:: v2.0.0
     """
-    echo.echo_warning(
-        'This integrity test has been deemed no longer necessary: it has been deprecated and will be removed soon.\n'
-        'Please check for available tests at `verdi storage integrity` instead.\n',
-    )
 
 
 @verdi_database_integrity.command('detect-invalid-links')
 @decorators.with_dbenv()
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
+)
 def detect_invalid_links():
     """Scan the database for invalid links.
 
-    .. deprecated:: v3.0.0
+    .. deprecated:: v2.0.0
     """
-    echo.echo_warning(
-        'This command has been deprecated and will be removed soon.\n'
-        'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
-    )
 
 
 @verdi_database_integrity.command('detect-invalid-nodes')
 @decorators.with_dbenv()
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
+)
 def detect_invalid_nodes():
     """Scan the database for invalid nodes.
 
-    .. deprecated:: v3.0.0
+    .. deprecated:: v2.0.0
     """
-    echo.echo_warning(
-        'This integrity test has been deemed no longer necessary: it has been deprecated and will be removed soon.\n'
-        'Please check for available tests at `verdi storage integrity` instead.\n'
-    )
 
 
 @verdi_database.command('summary')
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'Please call `verdi storage info` instead.\n'
+)
 def database_summary():
     """Summarise the entities in the database.
 
-    .. deprecated:: v2.1.0
+    .. deprecated:: v2.0.0
     """
-    echo.echo_warning(
-        'This command has been deprecated and will be removed soon. Please call `verdi storage info` instead.\n'
-    )

@@ -62,7 +62,7 @@ def test_database_incompatible(run_cli_command, monkeypatch):
     monkeypatch.setattr(get_manager(), 'get_backend', get_backend)
 
     result = run_cli_command(cmd_status.verdi_status, raises=True)
-    assert 'Database schema version' in result.output
+    assert 'Database schema' in result.output
     assert 'is incompatible with the code.' in result.output
     assert '`verdi database migrate`' in result.output
     assert result.exit_code is ExitCode.CRITICAL
@@ -96,5 +96,4 @@ def tests_database_version(run_cli_command, manager):
     db_ver = backend_manager.get_schema_version_database()
 
     result = run_cli_command(cmd_status.verdi_status)
-    assert f'Gen {db_gen}' in result.output_lines[4]
-    assert f'v{db_ver}' in result.output_lines[4]
+    assert f'{db_gen} / {db_ver}' in result.output_lines[4]

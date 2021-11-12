@@ -19,7 +19,7 @@ from aiida.common import exceptions
 
 @verdi.group('storage')
 def verdi_storage():
-    """Inspect and manage the internal storage."""
+    """Inspect and manage stored data for a profile."""
 
 
 @verdi_storage.command('migrate')

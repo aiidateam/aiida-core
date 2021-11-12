@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1636366554223,
+  "lastUpdate": 1636753312534,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -58197,6 +58197,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0032334",
             "group": "node",
             "extra": "mean: 19.167 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.40",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.12",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "370358d7edd48eea670569bd37e4b43303a8f566",
+          "message": "♻️ REFACTOR: rename schema names (#5230)\n\nMigration methods have been renamed (and their docstrings updated):\r\n\r\n-  `get_schema_version_database()` -> `get_schema_version_backend()`\r\n-  `get_schema_version_code()` -> `get_schema_version_head()`",
+          "timestamp": "2021-11-12T22:31:27+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/370358d7edd48eea670569bd37e4b43303a8f566",
+          "distinct": true,
+          "tree_id": "af971dcdb5ad78ed3af7c323f27c5191ffd4b66f"
+        },
+        "date": 1636753306699,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.094531587225849,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010571",
+            "group": "engine",
+            "extra": "mean: 323.15 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7421011573941905,
+            "unit": "iter/sec",
+            "range": "stddev: 0.057224",
+            "group": "engine",
+            "extra": "mean: 1.3475 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8473422502691108,
+            "unit": "iter/sec",
+            "range": "stddev: 0.078274",
+            "group": "engine",
+            "extra": "mean: 1.1802 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.17038161174209004,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18162",
+            "group": "engine",
+            "extra": "mean: 5.8692 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.20214714019437327,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11956",
+            "group": "engine",
+            "extra": "mean: 4.9469 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.3591652561422807,
+            "unit": "iter/sec",
+            "range": "stddev: 0.059039",
+            "group": "engine",
+            "extra": "mean: 423.88 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5668649680575888,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11180",
+            "group": "engine",
+            "extra": "mean: 1.7641 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6426959093533329,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11203",
+            "group": "engine",
+            "extra": "mean: 1.5559 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.15036200029505886,
+            "unit": "iter/sec",
+            "range": "stddev: 0.20090",
+            "group": "engine",
+            "extra": "mean: 6.6506 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.1795288015775722,
+            "unit": "iter/sec",
+            "range": "stddev: 0.20512",
+            "group": "engine",
+            "extra": "mean: 5.5701 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.4818558345043726,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062717",
+            "group": "import-export",
+            "extra": "mean: 402.92 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.3233580812467394,
+            "unit": "iter/sec",
+            "range": "stddev: 0.057861",
+            "group": "import-export",
+            "extra": "mean: 430.41 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 1.3052060539712393,
+            "unit": "iter/sec",
+            "range": "stddev: 0.049612",
+            "group": "import-export",
+            "extra": "mean: 766.16 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 1.2974194878438712,
+            "unit": "iter/sec",
+            "range": "stddev: 0.039372",
+            "group": "import-export",
+            "extra": "mean: 770.76 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 842.8096426160259,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00060558",
+            "group": "node",
+            "extra": "mean: 1.1865 msec\nrounds: 222"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 193.77872113854676,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00065537",
+            "group": "node",
+            "extra": "mean: 5.1605 msec\nrounds: 128"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 80.29888059190277,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014886",
+            "group": "node",
+            "extra": "mean: 12.453 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 181.6640375700728,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00062237",
+            "group": "node",
+            "extra": "mean: 5.5047 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 47.66557210005896,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0022610",
+            "group": "node",
+            "extra": "mean: 20.980 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 39.35192298682719,
+            "unit": "iter/sec",
+            "range": "stddev: 0.021568",
+            "group": "node",
+            "extra": "mean: 25.412 msec\nrounds: 100"
           }
         ]
       }

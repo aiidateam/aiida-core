@@ -98,7 +98,7 @@ def verdi_status(print_traceback, no_rmq):
     # Getting the postgres status by trying to get a database cursor
     backend_manager = manager.get_backend_manager()
     dbgen = backend_manager.get_schema_generation_database()
-    dbver = backend_manager.get_schema_version_database()
+    dbver = backend_manager.get_schema_version_backend()
     database_data = [
         profile.database_name, dbgen, dbver, profile.database_username, profile.database_hostname, profile.database_port
     ]

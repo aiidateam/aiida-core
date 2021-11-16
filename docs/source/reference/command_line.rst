@@ -182,6 +182,8 @@ Below is a list with all available subcommands.
 
       Inspect and manage the database.
 
+      .. deprecated:: v2.0.0
+
     Options:
       --help  Show this message and exit.
 
@@ -531,6 +533,26 @@ Below is a list with all available subcommands.
       -t, --print-traceback  Print the full traceback in case an exception is raised.
       --no-rmq               Do not check RabbitMQ status
       --help                 Show this message and exit.
+
+
+.. _reference:command-line:verdi-storage:
+
+``verdi storage``
+-----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage stored data for a profile.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      info       Summarise the contents of the storage.
+      integrity  Checks for the integrity of the data storage.
+      migrate    Migrate the storage to the latest schema version.
 
 
 .. _reference:command-line:verdi-user:

@@ -96,4 +96,4 @@ def tests_database_version(run_cli_command, manager):
     db_ver = backend_manager.get_schema_version_backend()
 
     result = run_cli_command(cmd_status.verdi_status)
-    assert f'{db_gen} / {db_ver}' in result.output_lines[4]
+    assert f'{db_gen} / {db_ver}' in result.output

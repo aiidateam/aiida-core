@@ -11,6 +11,7 @@
 import os
 
 from aiida.common import exceptions
+from aiida.common.log import override_log_level
 
 from .data import Data
 
@@ -292,6 +293,32 @@ class Code(Data):
                 raise exceptions.ValidationError('You did not specify a remote computer')
             if not self.get_remote_exec_path():
                 raise exceptions.ValidationError('You did not specify a remote executable')
+
+    def validate_remote_exec_path(self):
+        """Validate the ``remote_exec_path`` attribute.
+
+        Checks whether the executable exists on the remote computer if a transport can be opened to it. This method
+        is intentionally not called in ``_validate`` as to allow the creation of ``Code`` instances whose computers can
+        not yet be connected to and as to not require the overhead of opening transports in storing a new code.
+
+        :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
+            does not exist on the remote computer.
+        """
+        filepath = self.get_remote_exec_path()
+
+        try:
+            with override_log_level():  # Temporarily suppress noisy logging
+                with self.computer.get_transport() as transport:
+                    file_exists = transport.isfile(filepath)
+        except Exception:  # pylint: disable=broad-except
+            raise exceptions.ValidationError(
+                'Could not connect to the configured computer to determine whether the specified executable exists.'
+            )
+
+        if not file_exists:
+            raise exceptions.ValidationError(
+                f'the provided remote absolute path `{filepath}` does not exist on the computer.'
+            )
 
     def set_prepend_text(self, code):
         """

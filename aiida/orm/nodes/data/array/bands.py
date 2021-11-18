@@ -1608,9 +1608,6 @@ AGR_SINGLESET_TEMPLATE = Template("""
     $xydata
     """)
 
-# text.latex.preview=True is needed to have a proper alignment of
-# tick marks with and without subscripts
-# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 MATPLOTLIB_HEADER_AGG_TEMPLATE = Template(
     """# -*- coding: utf-8 -*-
 
@@ -1625,8 +1622,6 @@ rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Time
 rc('mathtext', fontset='cm')
 
 rc('text', usetex=True)
-import matplotlib.pyplot as plt
-plt.rcParams.update({'text.latex.preview': True})
 
 import pylab as pl
 
@@ -1637,9 +1632,6 @@ print_comment = False
 """
 )
 
-# text.latex.preview=True is needed to have a proper alignment of
-# tick marks with and without subscripts
-# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 MATPLOTLIB_HEADER_TEMPLATE = Template(
     """# -*- coding: utf-8 -*-
 
@@ -1651,8 +1643,6 @@ rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Time
 rc('mathtext', fontset='cm')
 
 rc('text', usetex=True)
-import matplotlib.pyplot as plt
-plt.rcParams.update({'text.latex.preview': True})
 
 import pylab as pl
 

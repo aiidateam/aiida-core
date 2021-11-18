@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1637220460506,
+  "lastUpdate": 1637228302929,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "entries": {
     "pytest-benchmarks:ubuntu-18.04,sqlalchemy": [
@@ -58473,6 +58473,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.014599",
             "group": "node",
             "extra": "mean: 19.998 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.30",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.12",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "2f5170d8a8b62c1091024ccaa0e5faa34f2be51f",
+          "message": "`Code`: add `validate_remote_exec_path` method to check executable (#5184)\n\nA common problem is that the filepath of the executable for remote codes\r\nis mistyped by accident. The user often doesn't realize until they\r\nlaunch a calculation and it mysteriously fails with a non-descript\r\nerror. They have to look into the output files to find that the\r\nexecutable could not be found.\r\n\r\nAt that point, it is not trivial to correct the mistake because the\r\n`Code` cannot be edited nor can it be deleted, without first deleting\r\nthe calculation that was just run first. Therefore, it would be nice to\r\nwarn the user at the time of the code creation or storing.\r\n\r\nHowever, the check requires opening a connection to the associated\r\ncomputer which carries both significant overhead, and it may not always\r\nbe available at time of the code creation. Setup scripts for automated\r\nenvironments may want to configure the computers and codes at a time\r\nwhen they cannot be necessarily reached. Therefore, preventing codes\r\nfrom being created in this case is not acceptable.\r\n\r\nThe compromise is to implement the check in `validate_remote_exec_path`\r\nwhich can then freely be called by a user to check if the executable of\r\nthe remote code is usable. The method is added to the CLI through the\r\naddition of the command `verdi code test`. Also here, we decide to not\r\nadd the check by default to `verdi code setup` as that should be able to\r\nfunction without internet connection and with minimal overhead. The docs\r\nare updated to encourage the user to run `verdi code test` before using\r\nit in any calculations if they want to make sure it is functioning. In\r\nthe future, additional checks can be added to this command.",
+          "timestamp": "2021-11-18T10:24:04+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/2f5170d8a8b62c1091024ccaa0e5faa34f2be51f",
+          "distinct": true,
+          "tree_id": "ce5a5c22a57cae2a83421b5199cb7c9d09e1b594"
+        },
+        "date": 1637228296336,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.514690857940416,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015388",
+            "group": "engine",
+            "extra": "mean: 397.66 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.5577614121409853,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10957",
+            "group": "engine",
+            "extra": "mean: 1.7929 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.6136348771463175,
+            "unit": "iter/sec",
+            "range": "stddev: 0.063122",
+            "group": "engine",
+            "extra": "mean: 1.6296 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.15051347984383828,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14885",
+            "group": "engine",
+            "extra": "mean: 6.6439 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.1759746725169593,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14947",
+            "group": "engine",
+            "extra": "mean: 5.6826 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 1.9269882170343668,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019821",
+            "group": "engine",
+            "extra": "mean: 518.94 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.46589556626628076,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053688",
+            "group": "engine",
+            "extra": "mean: 2.1464 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5358795544616706,
+            "unit": "iter/sec",
+            "range": "stddev: 0.069521",
+            "group": "engine",
+            "extra": "mean: 1.8661 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.13409684983781708,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12415",
+            "group": "engine",
+            "extra": "mean: 7.4573 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.15717621296582968,
+            "unit": "iter/sec",
+            "range": "stddev: 0.17342",
+            "group": "engine",
+            "extra": "mean: 6.3623 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "value": 2.2008172186371002,
+            "unit": "iter/sec",
+            "range": "stddev: 0.071409",
+            "group": "import-export",
+            "extra": "mean: 454.38 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "value": 2.082990064165046,
+            "unit": "iter/sec",
+            "range": "stddev: 0.056169",
+            "group": "import-export",
+            "extra": "mean: 480.08 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "value": 0.12915099523310494,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13471",
+            "group": "import-export",
+            "extra": "mean: 7.7429 sec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "value": 0.12980708480975542,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12744",
+            "group": "import-export",
+            "extra": "mean: 7.7037 sec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 287.5244983182855,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023939",
+            "group": "node",
+            "extra": "mean: 3.4780 msec\nrounds: 146"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 107.97530466999726,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00077100",
+            "group": "node",
+            "extra": "mean: 9.2614 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 65.63013701030032,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0020427",
+            "group": "node",
+            "extra": "mean: 15.237 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 162.94689777490598,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013290",
+            "group": "node",
+            "extra": "mean: 6.1370 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 41.430311418202535,
+            "unit": "iter/sec",
+            "range": "stddev: 0.018912",
+            "group": "node",
+            "extra": "mean: 24.137 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 43.15413057010241,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025034",
+            "group": "node",
+            "extra": "mean: 23.173 msec\nrounds: 100"
           }
         ]
       }

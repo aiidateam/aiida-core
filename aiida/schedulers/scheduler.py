@@ -9,10 +9,12 @@
 ###########################################################################
 """Implementation of `Scheduler` base class."""
 import abc
+from typing import Optional
 
 from aiida.common import exceptions, log
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
+from aiida.orm import Computer
 from aiida.schedulers.datastructures import JobResource, JobTemplate
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
@@ -72,8 +74,9 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
         cls._job_resource_class.validate_resources(**resources)
 
-    def __init__(self):
+    def __init__(self, computer: Optional[Computer] = None):
         self._transport = None
+        self._computer = computer
 
         if not issubclass(self._job_resource_class, JobResource):
             raise RuntimeError('the class attribute `_job_resource_class` is not a subclass of `JobResource`.')
@@ -294,6 +297,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         :return: list of active jobs
         """
         with self.transport:
+            if self._computer:
+                self.transport.chdir(self._computer.get_workdir())
             retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
 
         joblist = self._parse_joblist_output(retval, stdout, stderr)
@@ -357,6 +362,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         :param jobid: the job ID to be killed
         :return: True if everything seems ok, False otherwise.
         """
+        if self._computer:
+            self.transport.chdir(self._computer.get_workdir())
         retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
         return self._parse_kill_output(retval, stdout, stderr)
 

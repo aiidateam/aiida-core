@@ -602,7 +602,7 @@ class Computer(entities.Entity['BackendComputer']):
         try:
             scheduler_class = SchedulerFactory(self.scheduler_type)
             # I call the init without any parameter
-            return scheduler_class()
+            return scheduler_class(self)
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(
                 f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'

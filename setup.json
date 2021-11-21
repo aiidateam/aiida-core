@@ -202,6 +202,7 @@
         ],
         "aiida.schedulers": [
             "core.direct = aiida.schedulers.plugins.direct:DirectScheduler",
+            "core.directmanual = aiida.schedulers.plugins.directmanual:DirectManualScheduler",
             "core.lsf = aiida.schedulers.plugins.lsf:LsfScheduler",
             "core.pbspro = aiida.schedulers.plugins.pbspro:PbsproScheduler",
             "core.sge = aiida.schedulers.plugins.sge:SgeScheduler",

@@ -37,7 +37,7 @@ def validate_positive_number(ctx, param, value):  # pylint: disable=unused-argum
 
 
 class Transport(abc.ABC):
-    """Abstract class for a generic transport (ssh, local, ...) ontains the set of minimal methods."""
+    """Abstract class for a generic transport (ssh, local, ...) contains the set of minimal methods."""
     # pylint: disable=too-many-public-methods
 
     # This is used as a global default in case subclasses don't redefine this,

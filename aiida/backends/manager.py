@@ -94,6 +94,13 @@ class SettingsManager:
         :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
         """
 
+    @abc.abstractmethod
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
+        """
+
 
 class BackendManager:
     """Class to manage the database schema and environment."""

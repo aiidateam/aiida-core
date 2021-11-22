@@ -9,19 +9,16 @@
 ###########################################################################
 # pylint: disable=no-member
 """Django Group entity"""
-from collections.abc import Iterable, Iterator, Sized
+from collections.abc import Iterator, Sized
 
 # pylint: disable=no-name-in-module,import-error
 from django.db import transaction
-from django.db.models import Q
 
 from aiida.backends.djsite.db import models
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 
-from . import entities
-from . import users
-from . import utils
+from . import entities, users, utils
 
 __all__ = ('DjangoGroup', 'DjangoGroupCollection')
 
@@ -191,100 +188,6 @@ class DjangoGroupCollection(BackendGroupCollection):
     """The Django Group collection"""
 
     ENTITY_CLASS = DjangoGroup
-
-    def query(
-        self,
-        label=None,
-        type_string=None,
-        pk=None,
-        uuid=None,
-        nodes=None,
-        user=None,
-        node_attributes=None,
-        past_days=None,
-        label_filters=None,
-        **kwargs
-    ):  # pylint: disable=too-many-arguments
-        # pylint: disable=too-many-branches,too-many-locals
-        from .nodes import DjangoNode
-
-        # Analyze args and kwargs to create the query
-        queryobject = Q()
-        if label is not None:
-            queryobject &= Q(label=label)
-
-        if type_string is not None:
-            queryobject &= Q(type_string=type_string)
-
-        if pk is not None:
-            queryobject &= Q(pk=pk)
-
-        if uuid is not None:
-            queryobject &= Q(uuid=uuid)
-
-        if past_days is not None:
-            queryobject &= Q(time__gte=past_days)
-
-        if nodes is not None:
-            pk_list = []
-
-            if not isinstance(nodes, Iterable):
-                nodes = [nodes]
-
-            for node in nodes:
-                if not isinstance(node, (DjangoNode, models.DbNode)):
-                    raise TypeError(
-                        'At least one of the elements passed as '
-                        'nodes for the query on Group is neither '
-                        'a Node nor a DbNode'
-                    )
-                pk_list.append(node.pk)
-
-            queryobject &= Q(dbnodes__in=pk_list)
-
-        if user is not None:
-            if isinstance(user, str):
-                queryobject &= Q(user__email=user)
-            else:
-                queryobject &= Q(user=user.id)
-
-        if label_filters is not None:
-            label_filters_list = {f'name__{key}': value for (key, value) in label_filters.items() if value}
-            queryobject &= Q(**label_filters_list)
-
-        groups_pk = set(models.DbGroup.objects.filter(queryobject, **kwargs).values_list('pk', flat=True))
-
-        if node_attributes is not None:
-            for k, vlist in node_attributes.items():
-                if isinstance(vlist, str) or not isinstance(vlist, Iterable):
-                    vlist = [vlist]
-
-                for value in vlist:
-                    # This will be a dictionary of the type
-                    # {'datatype': 'txt', 'tval': 'xxx') for instance, if
-                    # the passed data is a string
-                    base_query_dict = models.DbAttribute.get_query_dict(value)
-                    # prepend to the key the right django string to SQL-join
-                    # on the right table
-                    query_dict = {f'dbnodes__dbattributes__{k2}': v2 for k2, v2 in base_query_dict.items()}
-
-                    # I narrow down the list of groups.
-                    # I had to do it in this way, with multiple DB hits and
-                    # not a single, complicated query because in SQLite
-                    # there is a maximum of 64 tables in a join.
-                    # Since typically one requires a small number of filters,
-                    # this should be ok.
-                    groups_pk = groups_pk.intersection(
-                        models.DbGroup.objects.filter(pk__in=groups_pk, dbnodes__dbattributes__key=k,
-                                                      **query_dict).values_list('pk', flat=True)
-                    )
-
-        retlist = []
-        # Return sorted by pk
-        for dbgroup in sorted(groups_pk):
-            retlist.append(DjangoGroup.from_dbmodel(models.DbGroup.objects.get(id=dbgroup), self._backend))
-
-        return retlist
 
     def delete(self, id):  # pylint: disable=redefined-builtin
         models.DbGroup.objects.filter(id=id).delete()

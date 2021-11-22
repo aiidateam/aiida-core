@@ -8,19 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA groups"""
-
-from collections.abc import Iterable
 import logging
 
-from aiida.backends import sqlalchemy as sa
-from aiida.backends.sqlalchemy.models.group import DbGroup, table_groups_nodes
-from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from . import entities
-from . import users
-from . import utils
+
+from . import entities, users, utils
 
 __all__ = ('SqlaGroup', 'SqlaGroupCollection')
 
@@ -125,14 +120,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         :return: integer number of entities contained within the group
         """
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
+        session = self.backend.get_session()
         return session.query(self.MODEL_CLASS).join(self.MODEL_CLASS.dbnodes).filter(DbGroup.id == self.pk).count()
 
     def clear(self):
         """Remove all the nodes from this group."""
-        from aiida.backends.sqlalchemy import get_scoped_session
-        session = get_scoped_session()
+        session = self.backend.get_session()
         # Note we have to call `dbmodel` and `_dbmodel` to circumvent the `ModelWrapper`
         self.dbmodel.dbnodes = []
         session.commit()
@@ -182,11 +175,11 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             to create a direct SQL INSERT statement to the group-node relationship
             table (to improve speed).
         """
-        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
         from sqlalchemy.dialects.postgresql import insert  # pylint: disable=import-error, no-name-in-module
-        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
-        from aiida.backends.sqlalchemy import get_scoped_session
+        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
+
         from aiida.backends.sqlalchemy.models.base import Base
+        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
         super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
@@ -199,7 +192,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
-        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+        with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
                 dbnodes = self._dbmodel.dbnodes
@@ -217,7 +210,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
                         # Duplicate entry, skip
                         pass
             else:
-                ins_dict = list()
+                ins_dict = []
                 for node in nodes:
                     check_node(node)
                     ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
@@ -240,7 +233,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
             DELETE statement to the group-node relationship table in order to improve speed.
         """
         from sqlalchemy import and_
-        from aiida.backends.sqlalchemy import get_scoped_session
+
         from aiida.backends.sqlalchemy.models.base import Base
         from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
 
@@ -259,7 +252,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: dis
 
         list_nodes = []
 
-        with utils.disable_expire_on_commit(get_scoped_session()) as session:
+        with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 for node in nodes:
                     check_node(node)
@@ -286,86 +279,8 @@ class SqlaGroupCollection(BackendGroupCollection):
 
     ENTITY_CLASS = SqlaGroup
 
-    def query(
-        self,
-        label=None,
-        type_string=None,
-        pk=None,
-        uuid=None,
-        nodes=None,
-        user=None,
-        node_attributes=None,
-        past_days=None,
-        label_filters=None,
-        **kwargs
-    ):  # pylint: disable=too-many-arguments
-        # pylint: disable=too-many-branches
-        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
-
-        session = sa.get_scoped_session()
-
-        filters = []
-
-        if label is not None:
-            filters.append(DbGroup.label == label)
-        if type_string is not None:
-            filters.append(DbGroup.type_string == type_string)
-        if pk is not None:
-            filters.append(DbGroup.id == pk)
-        if uuid is not None:
-            filters.append(DbGroup.uuid == uuid)
-        if past_days is not None:
-            filters.append(DbGroup.time >= past_days)
-        if nodes:
-            if not isinstance(nodes, Iterable):
-                nodes = [nodes]
-
-            if not all(isinstance(n, (SqlaNode, DbNode)) for n in nodes):
-                raise TypeError(
-                    'At least one of the elements passed as '
-                    'nodes for the query on Group is neither '
-                    'a Node nor a DbNode'
-                )
-
-            # In the case of the Node orm from Sqlalchemy, there is an id
-            # property on it.
-            sub_query = (
-                session.query(table_groups_nodes).filter(
-                    table_groups_nodes.c['dbnode_id'].in_([n.id for n in nodes]),
-                    table_groups_nodes.c['dbgroup_id'] == DbGroup.id
-                ).exists()
-            )
-
-            filters.append(sub_query)
-        if user:
-            if isinstance(user, str):
-                filters.append(DbGroup.user.has(email=user.email))
-            else:
-                type_check(user, users.SqlaUser)
-                filters.append(DbGroup.user == user.dbmodel)
-
-        if label_filters:
-            for key, value in label_filters.items():
-                if not value:
-                    continue
-                if key == 'startswith':
-                    filters.append(DbGroup.label.like(f'{value}%'))
-                elif key == 'endswith':
-                    filters.append(DbGroup.label.like(f'%{value}'))
-                elif key == 'contains':
-                    filters.append(DbGroup.label.like(f'%{value}%'))
-
-        if node_attributes:
-            _LOGGER.warning("SQLA query doesn't support node attribute filters, ignoring '%s'", node_attributes)
-
-        if kwargs:
-            _LOGGER.warning("SQLA query doesn't support additional filters, ignoring '%s'", kwargs)
-        groups = (session.query(DbGroup).filter(*filters).order_by(DbGroup.id).distinct().all())
-
-        return [SqlaGroup.from_dbmodel(group, self._backend) for group in groups]
-
     def delete(self, id):  # pylint: disable=redefined-builtin
-        session = sa.get_scoped_session()
+        session = self.backend.get_session()
 
-        session.query(DbGroup).get(id).delete()
+        session.get(DbGroup, id).delete()
         session.commit()

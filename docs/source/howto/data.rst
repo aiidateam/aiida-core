@@ -58,7 +58,7 @@ If you have such a file that you would like to store in AiiDA, you can use the `
 
 .. code-block:: python
 
-    SinglefileData = DataFactory('singlefile')
+    SinglefileData = DataFactory('core.singlefile')
     singlefile = SinglefileData(file='/absolute/path/to/file.txt')
     singlefile.store()
 
@@ -78,6 +78,40 @@ Ways to find and retrieve data that have previously been imported are described 
 If none of the currently available data types, as listed by ``verdi plugin list``, seem to fit your needs, you can also create your own custom type.
 For details refer to the next section :ref:`"How to add support for custom data types"<topics:data_types:plugin>`.
 
+
+.. _how-to:data:import:provenance:
+
+Provenance
+----------
+
+While AiiDA will automatically keep the provenance of data that is created by it through calculations and workflows, this is clearly not the case when creating data nodes manually, as described in the previous section.
+Typically, the manual creation of data happens at the beginning of a project when data from external databases is imported as a starting point for further calculations.
+To still keep some form of provenance, the :class:`~aiida.orm.nodes.data.Data` base class allows to record the _source_ of the data it contains.
+When constructing a new data node, of any type, you can pass a dictionary with information of the source under the ``source`` keyword argument:
+
+.. code-block:: python
+
+    data = Data(source={'uri': 'http://some.domain.org/files?id=12345', 'id': '12345'})
+
+Once stored, this data can always be retrieved through the ``source`` property:
+
+.. code-block:: python
+
+    data.source   # Will return the ``source`` dictionary that was passed in the constructor, if any
+
+The following list shows all the keys that are allowed to be set in the ``source`` dictionary:
+
+    * 'db_name': The name of the external database.
+    * 'db_uri': The base URI of the external database.
+    * 'uri': The exact URI of where the data can be retrieved. Ideally this is a persistent URI.
+    * 'id': The external ID with which the data is identified in the external database.
+    * 'version': The version of the data, if any.
+    * 'extras': Optional dictionary with other fields for source description.
+    * 'source_md5': MD5 checksum of the data.
+    * 'description': Human-readable free form description of the data's source.
+    * 'license': A string with the type of license that applies to the data, if any.
+
+If any other keys are defined, an exception will be raised by the constructor.
 
 
 .. _how-to:data:organize:
@@ -542,7 +576,7 @@ This includes, notably:
 
 * *Node extras*: These can be deleted using :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra` and :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra_many` methods.
 * *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
-* *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.Group.Collection.delete>`.
+* *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.GroupCollection.delete>`.
   This command will only delete the group, not the nodes contained in the group.
 
 Completely deleting an AiiDA profile

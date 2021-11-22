@@ -15,17 +15,17 @@ from pathlib import Path
 import shutil
 import tarfile
 import tempfile
-from typing import Any, Callable, cast, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Type, Union, cast
 import zipfile
 
 from archive_path import TarPath, ZipPath, read_file_in_tar, read_file_in_zip
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.progress_reporter import get_progress_reporter, create_callback
-from aiida.tools.importexport.common.exceptions import (ArchiveMigrationError, CorruptArchive, DanglingLinkError)
-from aiida.tools.importexport.common.config import ExportFileFormat
+from aiida.common.progress_reporter import create_callback, get_progress_reporter
 from aiida.tools.importexport.archive.common import CacheFolder
 from aiida.tools.importexport.archive.migrations import MIGRATE_FUNCTIONS
+from aiida.tools.importexport.common.config import ExportFileFormat
+from aiida.tools.importexport.common.exceptions import ArchiveMigrationError, CorruptArchive, DanglingLinkError
 
 __all__ = (
     'ArchiveMigratorAbstract', 'ArchiveMigratorJsonBase', 'ArchiveMigratorJsonZip', 'ArchiveMigratorJsonTar',
@@ -124,7 +124,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         if out_compression not in allowed_compressions:
             raise ValueError(f'Output compression must be in: {allowed_compressions}')
 
-        MIGRATE_LOGGER.info('Reading archive version')
+        MIGRATE_LOGGER.report('Reading archive version')
         current_version = self._retrieve_version()
 
         # compute the migration pathway
@@ -141,10 +141,10 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
             prev_version = MIGRATE_FUNCTIONS[prev_version][0]
 
         if not pathway:
-            MIGRATE_LOGGER.info('No migration required')
+            MIGRATE_LOGGER.report('No migration required')
             return None
 
-        MIGRATE_LOGGER.info('Migration pathway: %s', ' -> '.join(pathway + [version]))
+        MIGRATE_LOGGER.report('Migration pathway: %s', ' -> '.join(pathway + [version]))
 
         # perform migrations
         if work_dir is not None:
@@ -162,7 +162,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
         """Perform the migration(s) in the work directory, compress (if necessary),
         then move to the out_path (if not None).
         """
-        MIGRATE_LOGGER.info('Extracting archive to work directory')
+        MIGRATE_LOGGER.report('Extracting archive to work directory')
 
         extracted = Path(work_dir) / 'extracted'
         extracted.mkdir(parents=True)
@@ -185,7 +185,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
 
         # re-compress archive
         if out_compression != 'none':
-            MIGRATE_LOGGER.info(f"Re-compressing archive as '{out_compression}'")
+            MIGRATE_LOGGER.report(f"Re-compressing archive as '{out_compression}'")
             migrated = work_dir / 'compressed'
         else:
             migrated = extracted
@@ -199,7 +199,7 @@ class ArchiveMigratorJsonBase(ArchiveMigratorAbstract):
 
         if out_path is not None:
             # move to final location
-            MIGRATE_LOGGER.info('Moving archive to: %s', out_path)
+            MIGRATE_LOGGER.report('Moving archive to: %s', out_path)
             self._move_file(migrated, Path(out_path))
 
         return Path(out_path) if out_path else migrated

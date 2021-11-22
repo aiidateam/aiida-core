@@ -7,7 +7,7 @@ import tempfile
 from typing import BinaryIO, Dict, Iterable, Iterator, List, Tuple, Union
 
 from aiida.common import exceptions
-from aiida.repository import Repository, File
+from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)
@@ -50,8 +50,7 @@ class NodeRepositoryMixin:
         """
         if self._repository_instance is None:
             if self.is_stored:
-                from aiida.manage.manager import get_manager
-                backend = get_manager().get_profile().get_repository().backend
+                backend = self.backend.get_repository()
                 serialized = self.repository_metadata
                 self._repository_instance = Repository.from_serialized(backend=backend, serialized=serialized)
             else:
@@ -130,6 +129,16 @@ class NodeRepositoryMixin:
             else:
                 yield handle
 
+    def get_object(self, path: FilePath = None) -> File:
+        """Return the object at the given path.
+
+        :param path: the relative path where to store the object in the repository.
+        :return: the `File` representing the object located at the given relative path.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path.
+        """
+        return self._repository.get_object(path)
+
     def get_object_content(self, path: str, mode='r') -> Union[str, bytes]:
         """Return the content of a object identified by key.
 
@@ -205,6 +214,14 @@ class NodeRepositoryMixin:
             ``pathlib.PurePosixPath`` instead of a normal string
         """
         yield from self._repository.walk(path)
+
+    def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
+        """Copy the contents of the entire node repository to another location on the local file system.
+
+        :param target: absolute path of the directory where to copy the contents to.
+        :param path: optional relative path whose contents to copy.
+        """
+        self._repository.copy_tree(target, path)
 
     def delete_object(self, path: str):
         """Delete the object from the repository.

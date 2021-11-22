@@ -11,10 +11,10 @@
 """Module to manage logs for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, String, Text
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common import timezone

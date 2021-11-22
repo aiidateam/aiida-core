@@ -10,6 +10,7 @@
 """`Data` sub class to represent a list."""
 from collections.abc import MutableSequence
 
+from .base import to_aiida_type
 from .data import Data
 
 __all__ = ('List',)
@@ -21,7 +22,7 @@ class List(Data, MutableSequence):
     _LIST_KEY = 'list'
 
     def __init__(self, **kwargs):
-        data = kwargs.pop('list', list())
+        data = kwargs.pop('list', [])
         super().__init__(**kwargs)
         self.set_list(data)
 
@@ -61,13 +62,13 @@ class List(Data, MutableSequence):
         if not self._using_list_reference():
             self.set_list(data)
 
-    def extend(self, value):  # pylint: disable=arguments-differ
+    def extend(self, value):  # pylint: disable=arguments-renamed
         data = self.get_list()
         data.extend(value)
         if not self._using_list_reference():
             self.set_list(data)
 
-    def insert(self, i, value):  # pylint: disable=arguments-differ
+    def insert(self, i, value):  # pylint: disable=arguments-renamed
         data = self.get_list()
         data.insert(i, value)
         if not self._using_list_reference():
@@ -112,7 +113,7 @@ class List(Data, MutableSequence):
         try:
             return self.get_attribute(self._LIST_KEY)
         except AttributeError:
-            self.set_list(list())
+            self.set_list([])
             return self.get_attribute(self._LIST_KEY)
 
     def set_list(self, data):
@@ -139,3 +140,8 @@ class List(Data, MutableSequence):
         :rtype: bool
         """
         return not self.is_stored
+
+
+@to_aiida_type.register(list)
+def _(value):
+    return List(list=value)

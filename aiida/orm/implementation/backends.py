@@ -9,100 +9,93 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
+from typing import TYPE_CHECKING, Any, ContextManager, List, Sequence, TypeVar
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm.session import Session
+
+    from aiida.orm.entities import EntityTypes
+    from aiida.orm.implementation import (
+        BackendAuthInfoCollection,
+        BackendCommentCollection,
+        BackendComputerCollection,
+        BackendGroupCollection,
+        BackendLogCollection,
+        BackendNodeCollection,
+        BackendQueryBuilder,
+        BackendUserCollection,
+    )
+    from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
 __all__ = ('Backend',)
 
+TransactionType = TypeVar('TransactionType')
+
 
 class Backend(abc.ABC):
-    """The public interface that defines a backend factory that creates backend specific concrete objects."""
+    """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
+
+    AiiDA splits data storage into two sources:
+
+    - Searchable data, which is stored in the database and can be queried using the QueryBuilder
+    - Non-searchable data, which is stored in the repository and can be loaded using the RepositoryBackend
+
+    The two sources are inter-linked by the ``Node.repository_metadata``.
+    Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
+    """
 
     @abc.abstractmethod
-    def migrate(self):
+    def migrate(self) -> None:
         """Migrate the database to the latest schema generation or version."""
 
-    @abc.abstractproperty
-    def authinfos(self):
-        """
-        Return the collection of authorisation information objects
+    @property
+    @abc.abstractmethod
+    def authinfos(self) -> 'BackendAuthInfoCollection':
+        """Return the collection of authorisation information objects"""
 
-        :return: the authinfo collection
-        :rtype: :class:`aiida.orm.implementation.BackendAuthInfoCollection`
-        """
+    @property
+    @abc.abstractmethod
+    def comments(self) -> 'BackendCommentCollection':
+        """Return the collection of comments"""
 
-    @abc.abstractproperty
-    def comments(self):
-        """
-        Return the collection of comments
+    @property
+    @abc.abstractmethod
+    def computers(self) -> 'BackendComputerCollection':
+        """Return the collection of computers"""
 
-        :return: the comment collection
-        :rtype: :class:`aiida.orm.implementation.BackendCommentCollection`
-        """
+    @property
+    @abc.abstractmethod
+    def groups(self) -> 'BackendGroupCollection':
+        """Return the collection of groups"""
 
-    @abc.abstractproperty
-    def computers(self):
-        """
-        Return the collection of computers
+    @property
+    @abc.abstractmethod
+    def logs(self) -> 'BackendLogCollection':
+        """Return the collection of logs"""
 
-        :return: the computers collection
-        :rtype: :class:`aiida.orm.implementation.BackendComputerCollection`
-        """
+    @property
+    @abc.abstractmethod
+    def nodes(self) -> 'BackendNodeCollection':
+        """Return the collection of nodes"""
 
-    @abc.abstractproperty
-    def groups(self):
-        """
-        Return the collection of groups
+    @property
+    @abc.abstractmethod
+    def users(self) -> 'BackendUserCollection':
+        """Return the collection of users"""
 
-        :return: the groups collection
-        :rtype: :class:`aiida.orm.implementation.BackendGroupCollection`
-        """
+    @abc.abstractmethod
+    def query(self) -> 'BackendQueryBuilder':
+        """Return an instance of a query builder implementation for this backend"""
 
-    @abc.abstractproperty
-    def logs(self):
-        """
-        Return the collection of logs
+    @abc.abstractmethod
+    def get_session(self) -> 'Session':
+        """Return a database session that can be used by the `QueryBuilder` to perform its query.
 
-        :return: the log collection
-        :rtype: :class:`aiida.orm.implementation.BackendLogCollection`
-        """
-
-    @abc.abstractproperty
-    def nodes(self):
-        """
-        Return the collection of nodes
-
-        :return: the nodes collection
-        :rtype: :class:`aiida.orm.implementation.BackendNodeCollection`
-        """
-
-    @abc.abstractproperty
-    def query_manager(self):
-        """
-        Return the query manager for the objects stored in the backend
-
-        :return: The query manger
-        :rtype: :class:`aiida.backends.general.abstractqueries.AbstractQueryManager`
+        :return: an instance of :class:`sqlalchemy.orm.session.Session`
         """
 
     @abc.abstractmethod
-    def query(self):
-        """
-        Return an instance of a query builder implementation for this backend
-
-        :return: a new query builder instance
-        :rtype: :class:`aiida.orm.implementation.BackendQueryBuilder`
-        """
-
-    @abc.abstractproperty
-    def users(self):
-        """
-        Return the collection of users
-
-        :return: the users collection
-        :rtype: :class:`aiida.orm.implementation.BackendUserCollection`
-        """
-
-    @abc.abstractmethod
-    def transaction(self):
+    def transaction(self) -> ContextManager[Any]:
         """
         Get a context manager that can be used as a transaction context for a series of backend operations.
         If there is an exception within the context then the changes will be rolled back and the state will
@@ -111,9 +104,48 @@ class Backend(abc.ABC):
         :return: a context manager to group database operations
         """
 
+    @property
     @abc.abstractmethod
-    def get_session(self):
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
+    def in_transaction(self) -> bool:
+        """Return whether a transaction is currently active."""
 
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
+    @abc.abstractmethod
+    def bulk_insert(self, entity_type: 'EntityTypes', rows: List[dict], allow_defaults: bool = False) -> List[int]:
+        """Insert a list of entities into the database, directly into a backend transaction.
+
+        :param entity_type: The type of the entity
+        :param data: A list of dictionaries, containing all fields of the backend model,
+            except the `id` field (a.k.a primary key), which will be generated dynamically
+        :param allow_defaults: If ``False``, assert that each row contains all fields (except primary key(s)),
+            otherwise, allow default values for missing fields.
+
+        :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
+
+        :returns: The list of generated primary keys for the entities
         """
+
+    @abc.abstractmethod
+    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict]) -> None:
+        """Update a list of entities in the database, directly with a backend transaction.
+
+        :param entity_type: The type of the entity
+        :param data: A list of dictionaries, containing fields of the backend model to update,
+            and the `id` field (a.k.a primary key)
+
+        :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
+        """
+
+    @abc.abstractmethod
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+        """Delete all nodes corresponding to pks in the input and any links to/from them.
+
+        This method is intended to be used within a transaction context.
+
+        :param pks_to_delete: a sequence of node pks to delete
+
+        :raises: ``AssertionError`` if a transaction is not active
+        """
+
+    @abc.abstractmethod
+    def get_repository(self) -> 'AbstractRepositoryBackend':
+        """Return the object repository configured for this backend."""

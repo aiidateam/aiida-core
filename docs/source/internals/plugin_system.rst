@@ -45,9 +45,7 @@ Interfaces
 
 Pluginloader
 ^^^^^^^^^^^^
-The plugin loading functionality is defined in :py:mod:`aiida.plugins.entry_point` and relies on the `reentry package <https://pypi.org/project/reentry/>`_ to find and load entry points.
-``reentry`` is about 10x faster than the equivalent functionality in ``pkg_resources`` from ``setuptools``, leading to significant speedup of tab-autocompletion in the ``verdi`` cli.
-If, for some reason, ``reentry`` is not found, the plugin system falls back on ``pkg_resources``.
+The plugin loading functionality is defined in :py:mod:`aiida.plugins.entry_point`.
 
 Registry Tools
 ^^^^^^^^^^^^^^

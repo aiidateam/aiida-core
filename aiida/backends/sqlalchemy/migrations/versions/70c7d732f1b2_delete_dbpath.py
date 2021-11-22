@@ -18,6 +18,7 @@ Create Date: 2017-10-17 10:30:23.327195
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.orm.session import Session
+
 from aiida.backends.sqlalchemy.utils import install_tc
 
 # revision identifiers, used by Alembic.
@@ -31,8 +32,8 @@ def upgrade():
     """Migrations for the upgrade."""
     op.drop_table('db_dbpath')
     conn = op.get_bind()
-    conn.execute('DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink')
-    conn.execute('DROP FUNCTION IF EXISTS update_tc()')
+    conn.execute(sa.text('DROP TRIGGER IF EXISTS autoupdate_tc ON db_dblink'))
+    conn.execute(sa.text('DROP FUNCTION IF EXISTS update_tc()'))
 
 
 def downgrade():

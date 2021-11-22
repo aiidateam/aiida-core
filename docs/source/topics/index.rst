@@ -12,6 +12,7 @@ Topics
    provenance/index
    data_types
    database
+   repository
    plugins
    schedulers
    transport
@@ -19,4 +20,3 @@ Topics
 .. todo::
 
     daemon  // after provenance
-    repository // after database

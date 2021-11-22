@@ -8,16 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the SLURM scheduler plugin."""
+import datetime
+import logging
 #pylint: disable=no-self-use,line-too-long
 import unittest
-import logging
 import uuid
-import datetime
 
 import pytest
 
-from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler, JobState
 from aiida.schedulers import SchedulerError
+from aiida.schedulers.plugins.slurm import JobState, SlurmJobResource, SlurmScheduler
 
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
 # See SlurmScheduler.fields
@@ -195,8 +195,8 @@ class TestSubmitScript:
         """
         Test the creation of a simple submission script.
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 
@@ -223,8 +223,8 @@ class TestSubmitScript:
 
     def test_submit_script_bad_shebang(self):
         """Test that first line of submit script is as expected."""
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
         code_info = CodeInfo()
@@ -244,15 +244,15 @@ class TestSubmitScript:
             submit_script_text = scheduler.get_submit_script(job_tmpl)
 
             # This tests if the implementation correctly chooses the default:
-            assert submit_script_text.split('\n')[0] == expected_first_line
+            assert submit_script_text.split('\n', maxsplit=1)[0] == expected_first_line
 
     def test_submit_script_with_num_cores_per_machine(self):  # pylint: disable=invalid-name
         """
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 
@@ -283,8 +283,8 @@ class TestSubmitScript:
         """
         Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 
@@ -318,8 +318,8 @@ class TestSubmitScript:
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.schedulers.datastructures import JobTemplate
         from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
 
         scheduler = SlurmScheduler()
 
@@ -363,6 +363,34 @@ class TestSubmitScript:
             job_tmpl.job_resource = scheduler.create_job_resource(
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
+
+    def test_submit_script_rerunnable(self):
+        """
+        Test the creation of a submission script with the `rerunnable` option.
+        """
+        from aiida.common.datastructures import CodeInfo, CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate
+
+        scheduler = SlurmScheduler()
+
+        # minimal job template setup
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+        code_info = CodeInfo()
+        code_info.cmdline_params = []
+        job_tmpl.codes_info = [code_info]
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+        # Test the `rerunnable` setting
+        job_tmpl.rerunnable = True
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#SBATCH --requeue' in submit_script_text
+        assert '#SBATCH --no-requeue' not in submit_script_text
+
+        job_tmpl.rerunnable = False
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#SBATCH --requeue' not in submit_script_text
+        assert '#SBATCH --no-requeue' in submit_script_text
 
 
 class TestJoblistCommand:

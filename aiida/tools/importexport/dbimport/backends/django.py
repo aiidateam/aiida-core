@@ -17,22 +17,34 @@ from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.utils import get_object_from_string, validate_uuid
 from aiida.manage.configuration import get_config_option
 from aiida.orm import Group
-
-from aiida.tools.importexport.common import exceptions
-from aiida.tools.importexport.common.config import DUPL_SUFFIX
-from aiida.tools.importexport.common.config import (
-    NODE_ENTITY_NAME, GROUP_ENTITY_NAME, COMPUTER_ENTITY_NAME, USER_ENTITY_NAME, LOG_ENTITY_NAME, COMMENT_ENTITY_NAME
-)
-from aiida.tools.importexport.common.config import entity_names_to_signatures
-from aiida.tools.importexport.dbimport.utils import (
-    deserialize_field, merge_comment, merge_extras, start_summary, result_summary, IMPORT_LOGGER
-)
-
 from aiida.tools.importexport.archive.common import detect_archive_type
 from aiida.tools.importexport.archive.readers import ArchiveReaderAbstract, get_reader
-
+from aiida.tools.importexport.common import exceptions
+from aiida.tools.importexport.common.config import (
+    COMMENT_ENTITY_NAME,
+    COMPUTER_ENTITY_NAME,
+    DUPL_SUFFIX,
+    GROUP_ENTITY_NAME,
+    LOG_ENTITY_NAME,
+    NODE_ENTITY_NAME,
+    USER_ENTITY_NAME,
+    entity_names_to_signatures,
+)
 from aiida.tools.importexport.dbimport.backends.common import (
-    _copy_node_repositories, _make_import_group, _sanitize_extras, _strip_checkpoints, MAX_COMPUTERS, MAX_GROUPS
+    MAX_COMPUTERS,
+    MAX_GROUPS,
+    _copy_node_repositories,
+    _make_import_group,
+    _sanitize_extras,
+    _strip_checkpoints,
+)
+from aiida.tools.importexport.dbimport.utils import (
+    IMPORT_LOGGER,
+    deserialize_field,
+    merge_comment,
+    merge_extras,
+    result_summary,
+    start_summary,
 )
 
 
@@ -144,7 +156,7 @@ def import_data_dj(
             raise exceptions.DanglingLinkError(
                 'The import file refers to {} nodes with unknown UUID, therefore it cannot be imported. Either first '
                 'import the unknown nodes, or export also the parents when exporting. The unknown UUIDs are:\n'
-                ''.format(len(unknown_nodes)) + '\n'.join('* {}'.format(uuid) for uuid in unknown_nodes)
+                ''.format(len(unknown_nodes)) + '\n'.join(f'* {uuid}' for uuid in unknown_nodes)
             )
 
         ###################################
@@ -458,7 +470,7 @@ def _store_entity_data(
                     import_entry_uuid = str(node.uuid)
                     import_entry_pk = import_existing_entry_pks[import_entry_uuid]
 
-                    pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-')[0]} - "
+                    pbar_node_base_str = f"{pbar_base_str}UUID={import_entry_uuid.split('-', maxsplit=1)[0]} - "
                     progress.set_description_str(f'{pbar_node_base_str}Extras', refresh=False)
                     progress.update()
 

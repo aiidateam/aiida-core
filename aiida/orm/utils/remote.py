@@ -37,13 +37,13 @@ def clean_remote(transport, path):
         pass
 
 
-def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computers=None, user=None):
+def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computers=None, user=None, backend=None):
     """
     Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
     calcjobs will be determined by a query with filters based on the pks, past_days, older_than,
     computers and user arguments.
 
-    :param pks: onlu include calcjobs with a pk in this list
+    :param pks: only include calcjobs with a pk in this list
     :param past_days: only include calcjobs created since past_days
     :param older_than: only include calcjobs older than
     :param computers: only include calcjobs that were ran on these computers
@@ -53,8 +53,8 @@ def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computer
     from datetime import timedelta
 
     from aiida import orm
-    from aiida.orm import CalcJobNode
     from aiida.common import timezone
+    from aiida.orm import CalcJobNode
 
     filters_calc = {}
     filters_computer = {}
@@ -74,7 +74,7 @@ def get_calcjob_remote_paths(pks=None, past_days=None, older_than=None, computer
     if pks:
         filters_calc['id'] = {'in': pks}
 
-    query = orm.QueryBuilder()
+    query = orm.QueryBuilder(backend=backend)
     query.append(CalcJobNode, tag='calc', project=['attributes.remote_workdir'], filters=filters_calc)
     query.append(orm.Computer, with_node='calc', tag='computer', project=['*'], filters=filters_computer)
     query.append(orm.User, with_node='calc', filters={'email': user.email})

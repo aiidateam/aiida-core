@@ -7,15 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Tests for the `ComputerParamType`."""
 import pytest
 
+from aiida import orm
 from aiida.cmdline.params.types import ComputerParamType
 from aiida.orm.utils.loaders import OrmEntityLoader
-
-from aiida import orm
-
-# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture
@@ -33,7 +31,12 @@ def setup_computers(clear_database_before_test):  # pylint: disable=unused-argum
     exactly the ID and UUID, respectively, of the first one. This allows us to test the rules implemented to solve
     ambiguities that arise when determing the identifier type.
     """
-    kwargs = {'hostname': 'localhost', 'transport_type': 'local', 'scheduler_type': 'direct', 'workdir': '/tmp/aiida'}
+    kwargs = {
+        'hostname': 'localhost',
+        'transport_type': 'core.local',
+        'scheduler_type': 'core.direct',
+        'workdir': '/tmp/aiida'
+    }
 
     entity_01 = orm.Computer(label='computer_01', **kwargs).store()
     entity_02 = orm.Computer(label=str(entity_01.pk), **kwargs).store()
@@ -44,7 +47,12 @@ def setup_computers(clear_database_before_test):  # pylint: disable=unused-argum
 
 def test_complete(setup_computers, parameter_type):
     """Test the `complete` method that provides auto-complete functionality."""
-    kwargs = {'hostname': 'localhost', 'transport_type': 'local', 'scheduler_type': 'direct', 'workdir': '/tmp/aiida'}
+    kwargs = {
+        'hostname': 'localhost',
+        'transport_type': 'core.local',
+        'scheduler_type': 'core.direct',
+        'workdir': '/tmp/aiida'
+    }
     entity_01, entity_02, entity_03 = setup_computers
     entity_04 = orm.Computer(label='xavier', **kwargs).store()
 

@@ -15,6 +15,8 @@ import click
 
 from .. import types
 
+__all__ = ('MultipleValueOption',)
+
 
 def collect_usage_pieces(self, ctx):
     """Returns all the pieces that go into the usage line and returns it as a list of strings."""
@@ -22,7 +24,7 @@ def collect_usage_pieces(self, ctx):
 
     # If the command contains a `MultipleValueOption` make sure to add `[--]` to the help string before the
     # arguments, which hints the use of the optional `endopts` marker
-    if any([isinstance(param, MultipleValueOption) for param in self.get_params(ctx)]):
+    if any(isinstance(param, MultipleValueOption) for param in self.get_params(ctx)):
         result.append('[--]')
 
     for param in self.get_params(ctx):

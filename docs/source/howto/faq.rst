@@ -13,14 +13,13 @@ First, make sure that your daemon is not running.
 You can check this with ``verdi daemon status``.
 If you find that your daemon was actually still running, that is likely the problem, so stop it first using ``verdi daemon stop``.
 It is very important that each time you want to :ref:`update your AiiDA installation<how-to:installation:update>`, you should *always* first finish all running processes and stop the daemon before doing so.
-After you have stopped the daemon, make sure to run ``reentry scan`` before you restart the daemon with ``verdi daemon start``.
+Restart the daemon with ``verdi daemon start``.
 
 
 I get a :py:class:`~aiida.common.exceptions.MissingEntryPointError` or :py:class:`~aiida.common.exceptions.MultipleEntryPointError` exception, saying that a particular entry point cannot be found. How can I fix this?
 ========================================================================================================================================================================================================================
 Often this is caused by an outdated entry point cache.
 This can happen for example when you have updated your AiiDA installation or installed a new plugin using ``pip install``.
-In both cases, you can fix the problem by running ``reentry scan``.
 Make sure to also restart all daemons, to ensure that the changes are picked up by the daemons as well.
 
 
@@ -75,9 +74,17 @@ To determine exactly what might be going wrong, first :ref:`set the loglevel <in
 
 Then restart the daemon with ``verdi daemon restart`` for the changes to take effect.
 Run the command ``verdi daemon logshow`` in a separate terminal to see the logging output of the daemon and then submit the problematic calculation or workflow again.
+
 If the root cause is indeed due to an import problem, it will probably appear as an ``ImportError`` exception in the daemon log.
 To solve these issues, make sure that all the Python code that is being run is properly importable, which means that it is part of the `PYTHONPATH <https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH>`_.
-Make sure that the PYTHONPATH is correctly defined automatically when starting your shell, so for example if you are using bash, add it to your ``.bashrc``.
+Make sure that the PYTHONPATH is correctly defined automatically when starting your shell, so for example if you are using bash, add it to your ``.bashrc`` and completely reset daemon.
+For example, go to the directory that contains the file where you defined the process and run:
+
+.. code-block:: console
+
+    $ echo "export PYTHONPATH=\$PYTHONPATH:$PWD" >> $HOME/.bashrc
+    $ source $HOME/.bashrc
+    $ verdi daemon restart --reset
 
 .. _how-to:faq:caching-not-enabled:
 

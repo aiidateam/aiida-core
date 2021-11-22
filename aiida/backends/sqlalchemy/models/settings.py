@@ -10,12 +10,11 @@
 # pylint: disable=import-error,no-name-in-module
 """Module to manage node settings for the SQLA backend."""
 from pytz import UTC
-
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import Integer, String, DateTime
+from sqlalchemy.types import DateTime, Integer, String
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base

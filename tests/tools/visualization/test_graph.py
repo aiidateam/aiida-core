@@ -11,8 +11,8 @@
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common.links import LinkType
 from aiida.common import AttributeDict
+from aiida.common.links import LinkType
 from aiida.engine import ProcessState
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.visualization import graph as graph_mod
@@ -247,10 +247,6 @@ class TestVisGraph(AiidaTestCase):
 
         graph = graph_mod.Graph()
         graph.recurse_descendants(nodes.pd0)
-
-        # print()
-        # print(graph.graphviz.source)
-        # graph.graphviz.render("test_graphviz", cleanup=True)
 
         expected = """\
         digraph {{

@@ -11,8 +11,8 @@ import pathlib
 
 from alembic import op
 from sqlalchemy import Integer, cast
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.sql import table, column, select, func, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.sql import column, func, select, table, text
 
 from aiida.backends.general.migrations import utils
 from aiida.cmdline.utils import echo
@@ -29,11 +29,13 @@ def upgrade():
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     import json
     from tempfile import NamedTemporaryFile
+
     from disk_objectstore import Container
 
     from aiida.common import exceptions
-    from aiida.common.progress_reporter import set_progress_bar_tqdm, get_progress_reporter, set_progress_reporter
+    from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
     from aiida.manage.configuration import get_profile
+    from aiida.manage.manager import get_manager
 
     connection = op.get_bind()
 
@@ -45,7 +47,8 @@ def upgrade():
     )
 
     profile = get_profile()
-    node_count = connection.execute(select([func.count()]).select_from(DbNode)).scalar()
+    backend = get_manager().get_backend()
+    node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()
     missing_repo_folder = []
     shard_count = 256
 
@@ -105,7 +108,7 @@ def upgrade():
     # Store the UUID of the repository container in the `DbSetting` table. Note that for new databases, the profile
     # setup will already have stored the UUID and so it should be skipped, or an exception for a duplicate key will be
     # raised. This migration step is only necessary for existing databases that are migrated.
-    container_id = profile.get_repository().uuid
+    container_id = backend.get_repository().uuid
     statement = text(
         f"""
         INSERT INTO db_dbsetting (key, val, description)

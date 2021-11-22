@@ -19,7 +19,7 @@ def dictionary():
 
 
 @dictionary.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:dict',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.dict',)))
 @options.DICT_FORMAT()
 def dictionary_show(data, fmt):
     """Show contents of Dict nodes."""

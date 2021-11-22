@@ -11,18 +11,18 @@
 
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import SQLAlchemyError
 
-from aiida.backends.sqlalchemy import get_scoped_session
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
+
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm.implementation.utils import clean_value
 
-from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils as sqla_utils
+from .. import BackendNode, BackendNodeCollection
 from .computers import SqlaComputer
 from .users import SqlaUser
 
@@ -106,12 +106,55 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         return clone
 
     @property
-    def computer(self):
-        """Return the computer of this node.
+    def ctime(self):
+        return self._dbmodel.ctime
 
-        :return: the computer or None
-        :rtype: `BackendComputer` or None
-        """
+    @property
+    def mtime(self):
+        return self._dbmodel.mtime
+
+    @property
+    def uuid(self):
+        return str(self._dbmodel.uuid)
+
+    @property
+    def node_type(self):
+        return self._dbmodel.node_type
+
+    @property
+    def process_type(self):
+        return self._dbmodel.process_type
+
+    @process_type.setter
+    def process_type(self, value):
+        self._dbmodel.process_type = value
+
+    @property
+    def label(self):
+        return self._dbmodel.label
+
+    @label.setter
+    def label(self, value):
+        self._dbmodel.label = value
+
+    @property
+    def description(self):
+        return self._dbmodel.description
+
+    @description.setter
+    def description(self, value):
+        self._dbmodel.description = value
+
+    @property
+    def repository_metadata(self):
+        return self._dbmodel.repository_metadata
+
+    @repository_metadata.setter
+    def repository_metadata(self, value):
+        self._dbmodel.repository_metadata = value
+
+    @property
+    def computer(self):
         try:
             return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
         except TypeError:
@@ -119,10 +162,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
     @computer.setter
     def computer(self, computer):
-        """Set the computer of this node.
-
-        :param computer: a `BackendComputer`
-        """
         type_check(computer, SqlaComputer, allow_none=True)
 
         if computer is not None:
@@ -132,32 +171,15 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
     @property
     def user(self):
-        """Return the user of this node.
-
-        :return: the user
-        :rtype: `BackendUser`
-        """
         return self.backend.users.from_dbmodel(self._dbmodel.user)
 
     @user.setter
     def user(self, user):
-        """Set the user of this node.
-
-        :param user: a `BackendUser`
-        """
         type_check(user, SqlaUser)
         self._dbmodel.user = user.dbmodel
 
     def add_incoming(self, source, link_type, link_label):
-        """Add a link of the given type from a given node to ourself.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :return: True if the proposed link is allowed, False otherwise
-        :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         type_check(source, SqlaNode)
 
@@ -171,15 +193,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         session.commit()
 
     def _add_link(self, source, link_type, link_label):
-        """Add a link of the given type from a given node to ourself.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        """
+        """Add a single link"""
         from aiida.backends.sqlalchemy.models.node import DbLink
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             with session.begin_nested():
@@ -193,13 +210,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         self._dbmodel.extras = clean_value(self._dbmodel.extras)
 
     def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
-        """Store the node in the database.
-
-        :param links: optional links to add before storing
-        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
-        :param clean: boolean, if True, will clean the attributes and extras before attempting to store
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if clean:
             self.clean_values()
@@ -226,11 +237,7 @@ class SqlaNodeCollection(BackendNodeCollection):
     ENTITY_CLASS = SqlaNode
 
     def get(self, pk):
-        """Return a Node entry from the collection with the given id
-
-        :param pk: id of the node
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
@@ -238,11 +245,7 @@ class SqlaNodeCollection(BackendNodeCollection):
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
     def delete(self, pk):
-        """Remove a Node entry from the collection with the given id
-
-        :param pk: id of the node to delete
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbNode).filter_by(id=pk).one().delete()

@@ -13,6 +13,7 @@ import typing
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.lang import type_check
+
 from . import utils
 
 ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
@@ -68,11 +69,6 @@ class SqlaModelEntity(typing.Generic[ModelType]):
 
     @property
     def dbmodel(self):
-        """
-        Get the underlying database model instance
-
-        :return: the database model instance
-        """
         return self._dbmodel._model  # pylint: disable=protected-access
 
     @property

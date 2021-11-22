@@ -10,9 +10,7 @@
 """Tool to automatically determine k-points for a given structure using SeeK-path."""
 import seekpath
 
-from aiida.orm import KpointsData, Dict
-
-__all__ = ('get_explicit_kpoints_path', 'get_kpoints_path')
+from aiida.orm import Dict, KpointsData
 
 
 def get_explicit_kpoints_path(structure, parameters):

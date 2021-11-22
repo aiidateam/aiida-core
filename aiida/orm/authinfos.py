@@ -8,63 +8,76 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
-from aiida.plugins import TransportFactory
+from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
-from . import entities
-from . import users
+from aiida.plugins import TransportFactory
+
+from . import entities, users
+
+if TYPE_CHECKING:
+    from aiida.orm import Computer, User
+    from aiida.orm.implementation import Backend, BackendAuthInfo
+    from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
 
 
-class AuthInfo(entities.Entity):
+class AuthInfoCollection(entities.Collection['AuthInfo']):
+    """The collection of `AuthInfo` entries."""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['AuthInfo']:
+        return AuthInfo
+
+    def delete(self, pk: int) -> None:
+        """Delete an entry from the collection.
+
+        :param pk: the pk of the entry to delete
+        """
+        self._backend.authinfos.delete(pk)
+
+
+class AuthInfo(entities.Entity['BackendAuthInfo']):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
-    class Collection(entities.Collection):
-        """The collection of `AuthInfo` entries."""
+    Collection = AuthInfoCollection
 
-        def delete(self, pk):
-            """Delete an entry from the collection.
-
-            :param pk: the pk of the entry to delete
-            """
-            self._backend.authinfos.delete(pk)
+    @classproperty
+    def objects(cls) -> AuthInfoCollection:  # pylint: disable=no-self-argument
+        return AuthInfoCollection.get_cached(cls, get_manager().get_backend())
 
     PROPERTY_WORKDIR = 'workdir'
 
-    def __init__(self, computer, user, backend=None):
+    def __init__(self, computer: 'Computer', user: 'User', backend: Optional['Backend'] = None) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
         :param computer: a `Computer` instance
-        :type computer: :class:`aiida.orm.Computer`
-
         :param user: a `User` instance
-        :type user: :class:`aiida.orm.User`
-
-        :rtype: :class:`aiida.orm.authinfos.AuthInfo`
+        :param backend: the backend to use for the instance, or use the default backend if None
         """
         backend = backend or get_manager().get_backend()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
         super().__init__(model)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.enabled:
             return f'AuthInfo for {self.user.email} on {self.computer.label}'
 
         return f'AuthInfo for {self.user.email} on {self.computer.label} [DISABLED]'
 
     @property
-    def enabled(self):
+    def enabled(self) -> bool:
         """Return whether this instance is enabled.
 
         :return: True if enabled, False otherwise
-        :rtype: bool
         """
         return self._backend_entity.enabled
 
     @enabled.setter
-    def enabled(self, enabled):
+    def enabled(self, enabled: bool) -> None:
         """Set the enabled state
 
         :param enabled: boolean, True to enable the instance, False to disable it
@@ -72,71 +85,58 @@ class AuthInfo(entities.Entity):
         self._backend_entity.enabled = enabled
 
     @property
-    def computer(self):
-        """Return the computer associated with this instance.
-
-        :rtype: :class:`aiida.orm.computers.Computer`
-        """
+    def computer(self) -> 'Computer':
+        """Return the computer associated with this instance."""
         from . import computers  # pylint: disable=cyclic-import
         return computers.Computer.from_backend_entity(self._backend_entity.computer)
 
     @property
-    def user(self):
-        """Return the user associated with this instance.
-
-        :rtype: :class:`aiida.orm.users.User`
-        """
+    def user(self) -> 'User':
+        """Return the user associated with this instance."""
         return users.User.from_backend_entity(self._backend_entity.user)
 
-    def get_auth_params(self):
+    def get_auth_params(self) -> Dict[str, Any]:
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
-        :rtype: dict
         """
         return self._backend_entity.get_auth_params()
 
-    def set_auth_params(self, auth_params):
+    def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
         """Set the dictionary of authentication parameters
 
         :param auth_params: a dictionary with authentication parameters
         """
         self._backend_entity.set_auth_params(auth_params)
 
-    def get_metadata(self):
+    def get_metadata(self) -> Dict[str, Any]:
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
-        :rtype: dict
         """
         return self._backend_entity.get_metadata()
 
-    def set_metadata(self, metadata):
+    def set_metadata(self, metadata: Dict[str, Any]) -> None:
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata
-        :type metadata: dict
         """
         self._backend_entity.set_metadata(metadata)
 
-    def get_workdir(self):
+    def get_workdir(self) -> str:
         """Return the working directory.
 
         If no explicit work directory is set for this instance, the working directory of the computer will be returned.
 
         :return: the working directory
-        :rtype: str
         """
         try:
             return self.get_metadata()[self.PROPERTY_WORKDIR]
         except KeyError:
             return self.computer.get_workdir()
 
-    def get_transport(self):
-        """Return a fully configured transport that can be used to connect to the computer set for this instance.
-
-        :rtype: :class:`aiida.transports.Transport`
-        """
+    def get_transport(self) -> 'Transport':
+        """Return a fully configured transport that can be used to connect to the computer set for this instance."""
         computer = self.computer
         transport_type = computer.transport_type
 

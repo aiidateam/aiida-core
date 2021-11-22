@@ -11,8 +11,8 @@
 
 import plumpy
 
-from aiida.orm import Data, WorkflowNode, CalcJobNode, Bool
 from aiida.engine import Process
+from aiida.orm import Bool, CalcJobNode, Data, WorkflowNode
 
 
 class DummyProcess(Process):

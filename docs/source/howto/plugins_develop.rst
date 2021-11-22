@@ -121,11 +121,6 @@ Adding a new entry point consists of the following steps:
      }
      ...
 
- #. Let setuptools and reentry know about your entry point by installing your plugin again::
-
-     pip install -e .
-     reentry scan
-
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
 .. note::
@@ -243,7 +238,7 @@ When adding new types of calculations or workflows, make sure to use `docstrings
 Users of your plugin can then inspect which inputs the calculations/workflows expect and which outputs they produce directly through the ``verdi`` cli.
 For example, try::
 
-    verdi plugin list aiida.calculations arithmetic.add
+    verdi plugin list aiida.calculations core.arithmetic.add
 
 Documentation website
 ---------------------

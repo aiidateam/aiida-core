@@ -15,6 +15,8 @@ import collections.abc
 
 from .array import ArrayData
 
+__all__ = ('TrajectoryData',)
+
 
 class TrajectoryData(ArrayData):
     """
@@ -37,7 +39,7 @@ class TrajectoryData(ArrayData):
 
         if not isinstance(symbols, collections.abc.Iterable):
             raise TypeError('TrajectoryData.symbols must be of type list')
-        if any([not isinstance(i, str) for i in symbols]):
+        if any(not isinstance(i, str) for i in symbols):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
         if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
             raise TypeError('TrajectoryData.positions must be a numpy array of floats')
@@ -375,7 +377,7 @@ class TrajectoryData(ArrayData):
           meaning that the strings in the ``symbols`` array must be valid
           chemical symbols.
         """
-        from aiida.orm.nodes.data.structure import StructureData, Kind, Site
+        from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 
         # ignore step, time, and velocities
         _, _, cell, symbols, positions, _ = self.get_step_data(index)
@@ -438,7 +440,7 @@ class TrajectoryData(ArrayData):
         for idx in indices:
             return_string += f'PRIMVEC {idx + 1}\n'
             for cell_vector in cells[idx]:
-                return_string += ' '.join(['{:18.5f}'.format(i) for i in cell_vector])
+                return_string += ' '.join([f'{i:18.5f}' for i in cell_vector])
                 return_string += '\n'
             return_string += f'PRIMCOORD {idx + 1}\n'
             return_string += f'{nat} 1\n'
@@ -454,9 +456,8 @@ class TrajectoryData(ArrayData):
         """
         Write the given trajectory to a string of format CIF.
         """
-        from aiida.orm.nodes.data.cif \
-            import ase_loops, cif_from_ase, pycifrw_from_cif
         from aiida.common.utils import Capturing
+        from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
 
         cif = ''
         indices = list(range(self.numsteps))
@@ -523,9 +524,10 @@ class TrajectoryData(ArrayData):
             t.importfile('some-calc/AIIDA-PROJECT-pos-1.xyz', 'xyz_pos')
         """
 
+        from numpy import array
+
         from aiida.common.exceptions import ValidationError
         from aiida.tools.data.structure import xyz_parser_iterator
-        from numpy import array
 
         numsteps = self.numsteps
         if numsteps == 0:
@@ -557,9 +559,10 @@ class TrajectoryData(ArrayData):
             :py:meth:`._parse_xyz_pos`
         """
 
+        from numpy import array
+
         from aiida.common.exceptions import ValidationError
         from aiida.tools.data.structure import xyz_parser_iterator
-        from numpy import array
 
         numsteps = self.numsteps
         if numsteps == 0:
@@ -608,11 +611,11 @@ class TrajectoryData(ArrayData):
         # Try to get the units.
         try:
             positions_unit = self.get_attribute('units|positions')
-        except KeyError:
+        except AttributeError:
             positions_unit = 'A'
         try:
             times_unit = self.get_attribute('units|times')
-        except KeyError:
+        except AttributeError:
             times_unit = 'ps'
 
         # Getting the keyword input
@@ -690,8 +693,8 @@ class TrajectoryData(ArrayData):
                 'and requires that you already installed the python numpy '
                 'package, as well as the vtk package'
             )
-        from ase.data.colors import jmol_colors
         from ase.data import atomic_numbers
+        from ase.data.colors import jmol_colors
 
         # pylint: disable=invalid-name
 
@@ -702,7 +705,7 @@ class TrajectoryData(ArrayData):
             point given results in the point being given as a multiples of lattice vectors
             Than take the integer of the rows to find how many times you have to shift
             the point back"""
-            invcell = np.matrix(cell).T.I
+            invcell = np.matrix(cell).T.I  # pylint: disable=no-member
             # point in crystal coordinates
             points_in_crystal = np.dot(invcell, point).tolist()[0]
             #point collapsed into unit cell
@@ -731,7 +734,7 @@ class TrajectoryData(ArrayData):
             if self.get_attribute('units|positions') in ('bohr', 'atomic'):
                 bohr_to_ang = 0.52917720859
                 positions *= bohr_to_ang
-        except KeyError:
+        except AttributeError:
             pass
 
         symbols = self.symbols

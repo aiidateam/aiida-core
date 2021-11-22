@@ -37,11 +37,11 @@ class _DetachedProxyCommand(ProxyCommand):
 
     def __init__(self, command_line):  # pylint: disable=super-init-not-called
         # Note that the super().__init__ MUST NOT be called here, otherwise two subprocesses will be created.
-        from subprocess import Popen, PIPE
         from shlex import split as shlsplit
+        from subprocess import PIPE, Popen
 
         self.cmd = shlsplit(command_line)
-        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, start_new_session=True)
+        self.process = Popen(self.cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, bufsize=0, start_new_session=True)  # pylint: disable=consider-using-with
         self.timeout = None
 
     def close(self):

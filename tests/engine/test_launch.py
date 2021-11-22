@@ -13,7 +13,7 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.engine import launch, Process, CalcJob, WorkChain, calcfunction
+from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
 
 
 @calcfunction
@@ -156,6 +156,7 @@ class TestLaunchersDryRun(AiidaTestCase):
     def tearDown(self):
         import os
         import shutil
+
         from aiida.common.folders import CALC_JOB_DRY_RUN_BASE_PATH
 
         super().tearDown()
@@ -172,9 +173,10 @@ class TestLaunchersDryRun(AiidaTestCase):
         """All launchers should work with `dry_run=True`, even `submit` which forwards to `run`."""
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -212,9 +214,10 @@ class TestLaunchersDryRun(AiidaTestCase):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         from aiida.plugins import CalculationFactory
 
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         inputs = {
             'code': code,
@@ -262,7 +265,8 @@ class TestLaunchersDryRun(AiidaTestCase):
         import os
         import tempfile
 
-        code = orm.Code(input_plugin_name='arithmetic.add', remote_computer_exec=[self.computer, '/bin/true']).store()
+        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
+                                                                                       '/bin/true']).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')

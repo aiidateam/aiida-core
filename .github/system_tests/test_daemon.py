@@ -16,20 +16,28 @@ import sys
 import tempfile
 import time
 
-from aiida.common import exceptions, StashMode
+from workchains import (
+    ArithmeticAddBaseWorkChain,
+    CalcFunctionRunnerWorkChain,
+    DynamicDbInput,
+    DynamicMixedInput,
+    DynamicNonDbInput,
+    ListEcho,
+    NestedInputNamespace,
+    NestedWorkChain,
+    SerializeWorkChain,
+    WorkFunctionRunnerWorkChain,
+)
+
+from aiida.common import StashMode, exceptions
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage.caching import enable_caching
 from aiida.engine.processes import Process
-from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
+from aiida.manage.caching import enable_caching
+from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
 from aiida.plugins import CalculationFactory, WorkflowFactory
-from aiida.workflows.arithmetic.add_multiply import add_multiply, add
-from workchains import (
-    NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
-    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
-)
-
+from aiida.workflows.arithmetic.add_multiply import add, add_multiply
 from tests.utils.memory import get_instances  # pylint: disable=import-error
 
 CODENAME_ADD = 'add@localhost'
@@ -276,7 +284,7 @@ def create_calculation_process(code, inputval):
     """
     Create the process and inputs for a submitting / running a calculation.
     """
-    TemplatereplacerCalculation = CalculationFactory('templatereplacer')
+    TemplatereplacerCalculation = CalculationFactory('core.templatereplacer')
     parameters = Dict(dict={'value': inputval})
     template = Dict(
         dict={
@@ -299,7 +307,7 @@ def create_calculation_process(code, inputval):
         },
         'max_wallclock_seconds': 5 * 60,
         'withmpi': False,
-        'parser_name': 'templatereplacer.doubler',
+        'parser_name': 'core.templatereplacer.doubler',
     }
 
     expected_result = {'value': 2 * inputval, 'retrieved_temporary_files': {'triple_value.tmp': str(inputval * 3)}}
@@ -317,7 +325,7 @@ def create_calculation_process(code, inputval):
 
 def run_arithmetic_add():
     """Run the `ArithmeticAddCalculation`."""
-    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
     code = load_code(CODENAME_ADD)
     inputs = {
@@ -377,7 +385,7 @@ def run_base_restart_workchain():
 
 def run_multiply_add_workchain():
     """Run the `MultiplyAddWorkChain`."""
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
     code = load_code(CODENAME_ADD)
     inputs = {
@@ -523,7 +531,7 @@ def relaunch_cached(results):
     """Launch the same calculations but with caching enabled -- these should be FINISHED immediately."""
     code_doubler = load_code(CODENAME_DOUBLER)
     cached_calcs = []
-    with enable_caching(identifier='aiida.calculations:templatereplacer'):
+    with enable_caching(identifier='aiida.calculations:core.templatereplacer'):
         for counter in range(1, NUMBER_CALCULATIONS + 1):
             inputval = counter
             calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)

@@ -13,6 +13,8 @@ Module for the calculation parameter type
 
 from .identifier import IdentifierParamType
 
+__all__ = ('CalculationParamType',)
+
 
 class CalculationParamType(IdentifierParamType):
     """

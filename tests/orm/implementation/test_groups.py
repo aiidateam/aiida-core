@@ -14,62 +14,6 @@ from aiida import orm
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_query(backend):
-    """Test if queries are working."""
-    from aiida.common.exceptions import NotExistent, MultipleObjectsError
-
-    default_user = backend.users.create('simple@ton.com')
-
-    g_1 = backend.groups.create(label='testquery1', user=default_user).store()
-    g_2 = backend.groups.create(label='testquery2', user=default_user).store()
-
-    n_1 = orm.Data().store().backend_entity
-    n_2 = orm.Data().store().backend_entity
-    n_3 = orm.Data().store().backend_entity
-    n_4 = orm.Data().store().backend_entity
-
-    g_1.add_nodes([n_1, n_2])
-    g_2.add_nodes([n_1, n_3])
-
-    newuser = backend.users.create(email='test@email.xx')
-    g_3 = backend.groups.create(label='testquery3', user=newuser).store()
-
-    # I should find it
-    g_1copy = backend.groups.get(uuid=g_1.uuid)
-    assert g_1.pk == g_1copy.pk
-
-    # Try queries
-    res = backend.groups.query(nodes=n_4)
-    assert [_.pk for _ in res] == []
-
-    res = backend.groups.query(nodes=n_1)
-    assert [_.pk for _ in res] == [_.pk for _ in [g_1, g_2]]
-
-    res = backend.groups.query(nodes=n_2)
-    assert [_.pk for _ in res] == [_.pk for _ in [g_1]]
-
-    # I try to use 'get' with zero or multiple results
-    with pytest.raises(NotExistent):
-        backend.groups.get(nodes=n_4)
-    with pytest.raises(MultipleObjectsError):
-        backend.groups.get(nodes=n_1)
-
-    assert backend.groups.get(nodes=n_2).pk == g_1.pk
-
-    # Query by user
-    res = backend.groups.query(user=newuser)
-    assert set(_.pk for _ in res) == set(_.pk for _ in [g_3])
-
-    # Same query, but using a string (the username=email) instead of a DbUser object
-    res = backend.groups.query(user=newuser)
-    assert set(_.pk for _ in res) == set(_.pk for _ in [g_3])
-
-    res = backend.groups.query(user=default_user)
-
-    assert set(_.pk for _ in res) == set(_.pk for _ in [g_1, g_2])
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
 def test_creation_from_dbgroup(backend):
     """Test creation of a group from another group."""
     node = orm.Data().store()

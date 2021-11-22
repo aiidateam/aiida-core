@@ -20,10 +20,10 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
-from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, launch, calcfunction, append_
+from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
-from aiida.orm import load_node, Bool, Float, Int, Str
+from aiida.orm import Bool, Float, Int, Str, load_node
 
 
 def run_until_paused(proc):
@@ -1014,12 +1014,12 @@ class TestWorkchain(AiidaTestCase):
         wc = ExitCodeWorkChain()
 
         # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
-        self.assertEqual(wc.exit_codes(status).status, status)
-        self.assertEqual(wc.exit_codes(label).status, status)
-        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)
+        self.assertEqual(wc.exit_codes(status).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes(label).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
 
         with self.assertRaises(AttributeError):
-            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=pointless-statement
+            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=no-member,pointless-statement
 
         self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
         self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)  # pylint: disable=no-member

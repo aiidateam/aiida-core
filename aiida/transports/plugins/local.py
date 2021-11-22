@@ -20,11 +20,11 @@ Local transport
 ### in the exact same way as paramiko does already.
 
 import errno
+import glob
 import io
 import os
 import shutil
 import subprocess
-import glob
 
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import Transport, TransportInternalError
@@ -747,7 +747,7 @@ class LocalTransport(Transport):
 
         command = bash_commmand + escape_for_bash(command)
 
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # pylint: disable=consider-using-with
             command,
             shell=True,
             stdin=subprocess.PIPE,
@@ -882,4 +882,4 @@ class LocalTransport(Transport):
         return os.path.exists(os.path.join(self.curdir, path))
 
 
-CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('local')
+CONFIGURE_LOCAL_CMD = transport_cli.create_configure_cmd('core.local')

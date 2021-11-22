@@ -16,7 +16,7 @@ import click
 
 from aiida.backends import BACKEND_DJANGO
 from aiida.cmdline.params import options, types
-from aiida.manage.configuration import get_config, get_config_option, Profile
+from aiida.manage.configuration import Profile, get_config, get_config_option
 from aiida.manage.external.postgres import DEFAULT_DBINFO
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 
@@ -61,6 +61,7 @@ def get_repository_uri_default(ctx):
     :return: default repository URI
     """
     import os
+
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 
     validate_profile_parameter(ctx)

@@ -81,8 +81,8 @@ class TestGroups(AiidaTestCase):
         nodes_sliced = group.nodes[1:3]
         self.assertTrue(isinstance(nodes_sliced, list))
         self.assertEqual(len(nodes_sliced), 2)
-        self.assertTrue(all([isinstance(node, orm.Data) for node in nodes_sliced]))
-        self.assertTrue(all([node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced]))
+        self.assertTrue(all(isinstance(node, orm.Data) for node in nodes_sliced))
+        self.assertTrue(all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced))
 
     def test_description(self):
         """Test the update of the description both for stored and unstored groups."""
@@ -345,7 +345,7 @@ class TestGroupsSubclasses(AiidaTestCase):
         # Removing it as other methods might get a warning instead
         group_pk = group.pk
         del group
-        orm.Group.objects.delete(id=group_pk)
+        orm.Group.objects.delete(pk=group_pk)
 
     @staticmethod
     def test_querying():
@@ -367,7 +367,7 @@ class TestGroupsSubclasses(AiidaTestCase):
         # Removing it as other methods might get a warning instead
         group_pk = group.pk
         del group
-        orm.Group.objects.delete(id=group_pk)
+        orm.Group.objects.delete(pk=group_pk)
 
     @staticmethod
     def test_querying_node_subclasses():

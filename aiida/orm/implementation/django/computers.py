@@ -15,9 +15,8 @@ from django.db import IntegrityError, transaction
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
 
-from ..computers import BackendComputerCollection, BackendComputer
-from . import entities
-from . import utils
+from . import entities, utils
+from ..computers import BackendComputer, BackendComputerCollection
 
 
 class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendComputer):
@@ -84,20 +83,11 @@ class DjangoComputer(entities.DjangoModelEntity[models.DbComputer], BackendCompu
     def set_metadata(self, metadata):
         self._dbmodel.metadata = metadata
 
-    def get_label(self):
-        return self._dbmodel.label
-
     def set_label(self, val):
         self._dbmodel.label = val
 
-    def get_hostname(self):
-        return self._dbmodel.hostname
-
     def set_hostname(self, val):
         self._dbmodel.hostname = val
-
-    def get_description(self):
-        return self._dbmodel.description
 
     def set_description(self, val):
         self._dbmodel.description = val

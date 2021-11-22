@@ -7,17 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-self-use,too-many-public-methods
+# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods,too-many-lines
 """Tests for the Node ORM class."""
+from decimal import Decimal
+from io import BytesIO
 import logging
 import os
 import tempfile
-from decimal import Decimal
 
 import pytest
 
-from aiida.common import exceptions, LinkType
-from aiida.orm import Computer, Data, Log, Node, User, CalculationNode, WorkflowNode, load_node
+from aiida.common import LinkType, exceptions, timezone
+from aiida.manage.manager import get_manager
+from aiida.orm import CalculationNode, Computer, Data, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -32,8 +34,8 @@ class TestNode:
             label='localhost',
             description='localhost computer set up by test manager',
             hostname='localhost',
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         self.computer.store()
 
@@ -84,6 +86,33 @@ class TestNode:
 
         node.store()
         assert node.repository_metadata != repository_metadata
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        'process_type, match', (
+            (None, r'no process type for Node<.*>: cannot recreate process class'),
+            ('aiida.calculations:core.non_existing', r'could not load process class for entry point `.*`.*'),
+            ('invalid', r'could not load process class from `.*`.*'),
+            ('aiida.orm.non-existing.some_function', r'could not load process class from `.*`.*'),
+            ('aiida.orm.nodes.node.non-existing-function', r'could not load process class from `.*`.*'),
+        )
+    )
+    def test_process_class_raises(process_type, match):
+        """Test the ``ProcessNode.process_class`` property when it is expected to raise.
+
+        It is not possible to load the function or class corresponding to the given process types and so the property
+        should raise a ``ValueError``. The cases test from top to bottom:
+
+         * No process type whatsoever.
+         * A valid full entry point string but does not correspond to an existing entry point.
+         * An invalid normal identifier (not a single dot).
+         * A normal identifier for an inexisting module.
+         * A normal identifier for existing module but non existing function.
+        """
+        node = CalculationNode(process_type=process_type)
+
+        with pytest.raises(ValueError, match=match):
+            node.process_class  # pylint: disable=pointless-statement
 
 
 @pytest.mark.usefixtures('clear_database_before_test_class')
@@ -800,10 +829,9 @@ class TestNodeDelete:
     # pylint: disable=no-member,no-self-use
 
     @pytest.mark.usefixtures('clear_database_before_test')
-    def test_delete_through_utility_method(self):
-        """Test deletion works correctly through the `aiida.backends.utils.delete_nodes_and_connections`."""
-        from aiida.common import timezone
-        from aiida.backends.utils import delete_nodes_and_connections
+    def test_delete_through_backend(self):
+        """Test deletion works correctly through the backend."""
+        backend = get_manager().get_backend()
 
         data_one = Data().store()
         data_two = Data().store()
@@ -820,7 +848,8 @@ class TestNodeDelete:
         assert len(Log.objects.get_logs_for(data_two)) == 1
         assert Log.objects.get_logs_for(data_two)[0].pk == log_two.pk
 
-        delete_nodes_and_connections([data_two.pk])
+        with backend.transaction():
+            backend.delete_nodes_and_connections([data_two.pk])
 
         assert len(Log.objects.get_logs_for(data_one)) == 1
         assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
@@ -829,8 +858,6 @@ class TestNodeDelete:
     @pytest.mark.usefixtures('clear_database_before_test')
     def test_delete_collection_logs(self):
         """Test deletion works correctly through objects collection."""
-        from aiida.common import timezone
-
         data_one = Data().store()
         data_two = Data().store()
 
@@ -917,53 +944,82 @@ class TestNodeComments:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_store_from_cache():
-    """Regression test for storing a Node with (nested) repository content with caching."""
-    data = Data()
-    with tempfile.TemporaryDirectory() as tmpdir:
-        dir_path = os.path.join(tmpdir, 'directory')
-        os.makedirs(dir_path)
-        with open(os.path.join(dir_path, 'file'), 'w') as file:
-            file.write('content')
-        data.put_object_from_tree(tmpdir)
+class TestNodeCaching:
+    """Tests the caching behavior of the ``Node`` class."""
 
-    data.store()
+    def test_is_valid_cache(self):
+        """Test the ``Node.is_valid_cache`` property."""
+        node = Node()
+        assert node.is_valid_cache
 
-    clone = data.clone()
-    clone._store_from_cache(data, with_transaction=True)  # pylint: disable=protected-access
+        node.is_valid_cache = False
+        assert not node.is_valid_cache
 
-    assert clone.is_stored
-    assert clone.get_cache_source() == data.uuid
-    assert data.get_hash() == clone.get_hash()
+        with pytest.raises(TypeError):
+            node.is_valid_cache = 'false'
+
+    def test_store_from_cache(self):
+        """Regression test for storing a Node with (nested) repository content with caching."""
+        data = Data()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dir_path = os.path.join(tmpdir, 'directory')
+            os.makedirs(dir_path)
+            with open(os.path.join(dir_path, 'file'), 'w', encoding='utf8') as file:
+                file.write('content')
+            data.put_object_from_tree(tmpdir)
+
+        data.store()
+
+        clone = data.clone()
+        clone._store_from_cache(data, with_transaction=True)  # pylint: disable=protected-access
+
+        assert clone.is_stored
+        assert clone.get_cache_source() == data.uuid
+        assert data.get_hash() == clone.get_hash()
+
+    def test_hashing_errors(self, aiida_caplog):
+        """Tests that ``get_hash`` fails in an expected manner."""
+        node = Data().store()
+        node.__module__ = 'unknown'  # this will inhibit package version determination
+        result = node.get_hash(ignore_errors=True)
+        assert result is None
+        assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
+
+        with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
+            result = node.get_hash(ignore_errors=False)
+        assert result is None
+
+    def test_uuid_equality_fallback(self):
+        """Tests the fallback mechanism of checking equality by comparing uuids and hash."""
+        node_0 = Data().store()
+
+        nodepk = Data().store().pk
+        node_a = load_node(pk=nodepk)
+        node_b = load_node(pk=nodepk)
+
+        assert node_a == node_b
+        assert node_a != node_0
+        assert node_b != node_0
+
+        assert hash(node_a) == hash(node_b)
+        assert hash(node_a) != hash(node_0)
+        assert hash(node_b) != hash(node_0)
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_hashing_errors(aiida_caplog):
-    """Tests that ``get_hash`` fails in an expected manner."""
-    node = Data().store()
-    node.__module__ = 'unknown'  # this will inhibit package version determination
-    result = node.get_hash(ignore_errors=True)
-    assert result is None
-    assert aiida_caplog.record_tuples == [(node.logger.name, logging.ERROR, 'Node hashing failed')]
-
-    with pytest.raises(exceptions.HashingError, match='package version could not be determined'):
-        result = node.get_hash(ignore_errors=False)
-    assert result is None
-
-
-@pytest.mark.usefixtures('clear_database_before_test')
-def test_uuid_equality_fallback():
-    """Tests the fallback mechanism of checking equality by comparing uuids and hash."""
-    node_0 = Data().store()
-
-    nodepk = Data().store().pk
-    node_a = load_node(pk=nodepk)
-    node_b = load_node(pk=nodepk)
-
-    assert node_a == node_b
-    assert node_a != node_0
-    assert node_b != node_0
-
-    assert hash(node_a) == hash(node_b)
-    assert hash(node_a) != hash(node_0)
-    assert hash(node_b) != hash(node_0)
+def test_iter_repo_keys():
+    """Test the ``iter_repo_keys`` method."""
+    data1 = Data()
+    data1.put_object_from_filelike(BytesIO(b'value1'), 'key1')
+    data1.put_object_from_filelike(BytesIO(b'value1'), 'key2')
+    data1.put_object_from_filelike(BytesIO(b'value3'), 'folder/key3')
+    data1.store()
+    data2 = Data()
+    data2.put_object_from_filelike(BytesIO(b'value1'), 'key1')
+    data2.put_object_from_filelike(BytesIO(b'value4'), 'key2')
+    data2.store()
+    assert set(Data.objects.iter_repo_keys()) == {
+        '31cd97ebe10a80abe1b3f401824fc2040fb8b03aafd0d37acf6504777eddee11',
+        '3c9683017f9e4bf33d0fbedd26bf143fd72de9b9dd145441b75f0604047ea28e',
+        '89dc6ae7f06a9f46b565af03eab0ece0bf6024d3659b7e3a1d03573cfeb0b59d'
+    }

@@ -79,11 +79,32 @@ Configuring your installation
 Activating tab-completion
 -------------------------
 The ``verdi`` command line interface has many commands and parameters, which can be tab-completed to simplify its use.
-To enable tab-completion, the following shell command should be executed:
+To enable tab-completion, the following shell command should be executed (depending on the shell you use):
 
-.. code:: bash
+.. panels::
+    :container: container-lg pb-3
+    :column: col-lg-12 p-2
 
-    $ eval "$(_VERDI_COMPLETE=source verdi)"
+    Enable tab-completion for ``verdi`` one of the following supported shells
+
+    .. tabbed:: bash
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=bash_source verdi)"
+
+    .. tabbed:: zsh
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=zsh_source verdi)"
+
+    .. tabbed:: fish
+
+        .. code-block:: console
+
+            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.
 This file is shell specific, but likely one of the following:
@@ -443,9 +464,7 @@ Failing to do so, may leave your installation in a broken state, or worse may ev
         * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
         * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-    6. Run `reentry scan` to update the cache of registered entry points.
-
-    7. Migrate your database with ``verdi -p <profile_name> database migrate``.
+    6. Migrate your database with ``verdi -p <profile_name> database migrate``.
        Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.

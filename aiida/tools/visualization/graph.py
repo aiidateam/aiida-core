@@ -10,16 +10,20 @@
 """ provides functionality to create graphs of the AiiDa data providence,
 *via* graphviz.
 """
-
 import os
 from types import MappingProxyType  # pylint: disable=no-name-in-module,useless-suppression
+from typing import TYPE_CHECKING, Optional
 
 from graphviz import Digraph
 
 from aiida import orm
 from aiida.common import LinkType
+from aiida.manage.manager import get_manager
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'pstate_node_styles', 'default_node_sublabels')
 
@@ -95,7 +99,7 @@ def default_node_styles(node):
         }
 
     node_type_map = {
-        'data.code.Code.': {
+        'data.core.code.Code.': {
             'shape': 'ellipse',
             'style': 'filled',
             'fillcolor': '#4ca4b9aa',  # blue
@@ -212,23 +216,23 @@ def default_node_sublabels(node):
     # pylint: disable=too-many-branches
 
     class_node_type = node.class_node_type
-    if class_node_type == 'data.int.Int.':
+    if class_node_type == 'data.core.int.Int.':
         sublabel = f"value: {node.get_attribute('value', '')}"
-    elif class_node_type == 'data.float.Float.':
+    elif class_node_type == 'data.core.float.Float.':
         sublabel = f"value: {node.get_attribute('value', '')}"
-    elif class_node_type == 'data.str.Str.':
+    elif class_node_type == 'data.core.str.Str.':
         sublabel = f"{node.get_attribute('value', '')}"
-    elif class_node_type == 'data.bool.Bool.':
+    elif class_node_type == 'data.core.bool.Bool.':
         sublabel = f"{node.get_attribute('value', '')}"
-    elif class_node_type == 'data.code.Code.':
+    elif class_node_type == 'data.core.code.Code.':
         sublabel = f'{os.path.basename(node.get_execname())}@{node.computer.label}'
-    elif class_node_type == 'data.singlefile.SinglefileData.':
+    elif class_node_type == 'data.core.singlefile.SinglefileData.':
         sublabel = node.filename
-    elif class_node_type == 'data.remote.RemoteData.':
+    elif class_node_type == 'data.core.remote.RemoteData.':
         sublabel = f'@{node.computer.label}'
-    elif class_node_type == 'data.structure.StructureData.':
+    elif class_node_type == 'data.core.structure.StructureData.':
         sublabel = node.get_formula()
-    elif class_node_type == 'data.cif.CifData.':
+    elif class_node_type == 'data.core.cif.CifData.':
         formulae = [str(f).replace(' ', '') for f in node.get_formulae() or []]
         sg_numbers = [str(s) for s in node.get_spacegroup_numbers() or []]
         sublabel_lines = []
@@ -237,7 +241,7 @@ def default_node_sublabels(node):
         if sg_numbers:
             sublabel_lines.append(', '.join(sg_numbers))
         sublabel = '; '.join(sublabel_lines)
-    elif class_node_type == 'data.upf.UpfData.':
+    elif class_node_type == 'data.core.upf.UpfData.':
         sublabel = f"{node.get_attribute('element', '')}"
     elif isinstance(node, orm.ProcessNode):
         sublabel = []
@@ -359,7 +363,8 @@ class Graph:
         link_style_fn=None,
         node_style_fn=None,
         node_sublabel_fn=None,
-        node_id_type='pk'
+        node_id_type='pk',
+        backend: Optional['Backend'] = None
     ):
         """a class to create graphviz graphs of the AiiDA node provenance
 
@@ -398,9 +403,15 @@ class Graph:
         self._node_styles = node_style_fn or default_node_styles
         self._node_sublabels = node_sublabel_fn or default_node_sublabels
         self._node_id_type = node_id_type
+        self._backend = backend or get_manager().get_backend()
 
         self._ignore_node_style = _OVERRIDE_STYLES_DICT['ignore_node']
         self._origin_node_style = _OVERRIDE_STYLES_DICT['origin_node']
+
+    @property
+    def backend(self) -> 'Backend':
+        """The backend used to create the graph"""
+        return self._backend
 
     @property
     def graphviz(self):
@@ -417,16 +428,17 @@ class Graph:
         """return a copy of the edges"""
         return self._edges.copy()
 
-    @staticmethod
-    def _load_node(node):
+    def _load_node(self, node):
         """ load a node (if not already loaded)
 
         :param node: node or node pk/uuid
         :type node: int or str or aiida.orm.nodes.node.Node
         :returns: aiida.orm.nodes.node.Node
         """
-        if isinstance(node, (int, str)):
-            return orm.load_node(node)
+        if isinstance(node, int):
+            return orm.Node.Collection.get_cached(orm.Node, self._backend).get(pk=node)
+        if isinstance(node, str):
+            return orm.Node.Collection.get_cached(orm.Node, self._backend).get(uuid=node)
         return node
 
     @staticmethod
@@ -510,7 +522,7 @@ class Graph:
             return None
         if isinstance(link_types, str):
             link_types = [link_types]
-        link_types = tuple([getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types])
+        link_types = tuple(getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types)
         return link_types
 
     def add_incoming(self, node, link_types=(), annotate_links=None, return_pks=True):
@@ -539,10 +551,11 @@ class Graph:
             (node_pk,),
             max_iterations=1,
             get_links=True,
+            backend=self.backend,
             links_backward=valid_link_types,
         )
 
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -595,10 +608,11 @@ class Graph:
             (node_pk,),
             max_iterations=1,
             get_links=True,
+            backend=self.backend,
             links_forward=valid_link_types,
         )
 
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -664,6 +678,7 @@ class Graph:
             (origin_pk,),
             max_iterations=depth,
             get_links=True,
+            backend=self.backend,
             links_forward=valid_link_types,
         )
 
@@ -674,13 +689,14 @@ class Graph:
                 traversed_graph['nodes'],
                 max_iterations=1,
                 get_links=True,
+                backend=self.backend,
                 links_backward=[LinkType.INPUT_WORK, LinkType.INPUT_CALC]
             )
             traversed_graph['nodes'] = traversed_graph['nodes'].union(traversed_outputs['nodes'])
             traversed_graph['links'] = traversed_graph['links'].union(traversed_outputs['links'])
 
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -755,6 +771,7 @@ class Graph:
             (origin_pk,),
             max_iterations=depth,
             get_links=True,
+            backend=self.backend,
             links_backward=valid_link_types,
         )
 
@@ -765,13 +782,14 @@ class Graph:
                 traversed_graph['nodes'],
                 max_iterations=1,
                 get_links=True,
+                backend=self.backend,
                 links_forward=[LinkType.CREATE, LinkType.RETURN]
             )
             traversed_graph['nodes'] = traversed_graph['nodes'].union(traversed_outputs['nodes'])
             traversed_graph['links'] = traversed_graph['links'].union(traversed_outputs['links'])
 
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
-        traversed_nodes = orm.QueryBuilder().append(
+        traversed_nodes = orm.QueryBuilder(backend=self.backend).append(
             orm.Node,
             filters={'id': {
                 'in': traversed_graph['nodes']
@@ -842,6 +860,7 @@ class Graph:
         self.add_node(origin_node, style_override=dict(origin_style))
 
         query = orm.QueryBuilder(
+            backend=self.backend,
             **{
                 'path': [{
                     'cls': origin_node.__class__,
@@ -902,6 +921,7 @@ class Graph:
             origin_filters = {}
 
         query = orm.QueryBuilder(
+            backend=self.backend,
             **{'path': [{
                 'cls': origin_cls,
                 'filters': origin_filters,

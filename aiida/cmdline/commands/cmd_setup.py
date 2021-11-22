@@ -77,7 +77,7 @@ def setup(
     echo.echo_success(f'created new profile `{profile.name}`.')
 
     # Migrate the database
-    echo.echo_info('migrating the database.')
+    echo.echo_report('migrating the database.')
     manager = get_manager()
     backend = manager._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
@@ -94,7 +94,7 @@ def setup(
     # with that UUID and we have to make sure that the provided repository corresponds to it.
     backend_manager = manager.get_backend_manager()
     repository_uuid_database = backend_manager.get_repository_uuid()
-    repository_uuid_profile = profile.get_repository().uuid
+    repository_uuid_profile = backend.get_repository().uuid
 
     if repository_uuid_database != repository_uuid_profile:
         echo.echo_critical(

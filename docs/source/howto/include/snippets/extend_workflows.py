@@ -10,11 +10,11 @@
 # pylint: disable=no-member
 # start-marker for docs
 """Code snippets for the "How to extend workflows" section."""
-from aiida.orm import Code, Int, Bool
-from aiida.engine import calcfunction, WorkChain, ToContext
+from aiida.engine import ToContext, WorkChain, calcfunction
+from aiida.orm import Bool, Code, Int
 from aiida.plugins.factories import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 @calcfunction

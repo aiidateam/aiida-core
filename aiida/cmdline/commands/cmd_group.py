@@ -8,14 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
-import logging
 import click
 
-from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.exceptions import UniquenessError
 from aiida.common.links import GraphTraversalRules
 
 
@@ -45,7 +44,7 @@ def group_add_nodes(group, force, nodes):
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
-    from aiida.orm import QueryBuilder, Group, Node
+    from aiida.orm import Group, Node, QueryBuilder
 
     if nodes and clear:
         echo.echo_critical(
@@ -93,21 +92,16 @@ def group_remove_nodes(group, nodes, clear, force):
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
-@options.VERBOSE()
 @with_dbenv()
-def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules):
+def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
     """Delete a group and (optionally) the nodes it contains."""
-    from aiida.common.log import override_log_formatter_context
-    from aiida.tools import delete_group_nodes, DELETE_LOGGER
     from aiida import orm
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
+    from aiida.tools import delete_group_nodes
 
     if not (force or dry_run):
         click.confirm(f'Are you sure you want to delete {group}?', abort=True)
     elif dry_run:
-        echo.echo_info(f'Would have deleted {group}.')
+        echo.echo_report(f'Would have deleted {group}.')
 
     if delete_nodes:
 
@@ -117,8 +111,7 @@ def group_delete(group, delete_nodes, dry_run, force, verbose, **traversal_rules
             echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
             return not click.confirm('Do you want to continue?', abort=True)
 
-        with override_log_formatter_context('%(message)s'):
-            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
         if not nodes_deleted:
             # don't delete the group if the nodes were not deleted
             return
@@ -175,8 +168,8 @@ def group_show(group, raw, limit, uuid):
     """Show information for a given group."""
     from tabulate import tabulate
 
-    from aiida.common.utils import str_timedelta
     from aiida.common import timezone
+    from aiida.common.utils import str_timedelta
 
     if limit:
         node_iterator = group.nodes[:limit]
@@ -263,10 +256,12 @@ def group_list(
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
+
+    from tabulate import tabulate
+
     from aiida import orm
     from aiida.common import timezone
     from aiida.common.escaping import escape_for_sql_like
-    from tabulate import tabulate
 
     builder = orm.QueryBuilder()
     filters = {}
@@ -341,10 +336,10 @@ def group_list(
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
     if not all_entries:
-        echo.echo_info('To show groups of all types, use the `-a/--all` option.')
+        echo.echo_report('To show groups of all types, use the `-a/--all` option.')
 
     if not table:
-        echo.echo_info('No groups found matching the specified criteria.')
+        echo.echo_report('No groups found matching the specified criteria.')
     else:
         echo.echo(tabulate(table, headers=projection_header))
 
@@ -361,7 +356,7 @@ def group_create(group_label):
     if created:
         echo.echo_success(f"Group created with PK = {group.pk} and label '{group.label}'.")
     else:
-        echo.echo_info(f"Group with label '{group.label}' already exists: {group}.")
+        echo.echo_report(f"Group with label '{group.label}' already exists: {group}.")
 
 
 @verdi_group.command('copy')

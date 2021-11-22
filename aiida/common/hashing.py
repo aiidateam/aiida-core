@@ -8,24 +8,24 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common password and hash generation functions."""
+from collections import OrderedDict, abc
 import datetime
+from decimal import Decimal
+from functools import singledispatch
 import hashlib
+from itertools import chain
 import numbers
+from operator import itemgetter
 import random
 import time
 import typing
 import uuid
-from collections import abc, OrderedDict
-from functools import singledispatch
-from itertools import chain
-from operator import itemgetter
-from decimal import Decimal
 
 import pytz
 
-from aiida.common.utils import DatetimePrecision
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
+from aiida.common.utils import DatetimePrecision
 
 from .folders import Folder
 
@@ -40,9 +40,6 @@ UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
 HASHING_KEY = 'HashingKey'
-
-# The key that is used to store the hash in the node extras
-_HASH_EXTRA_KEY = '_aiida_hash'
 
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED

@@ -9,79 +9,54 @@
 ###########################################################################
 """Backend group module"""
 import abc
+from datetime import datetime
+from typing import Any, Dict, List
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendLog', 'BackendLogCollection')
 
 
 class BackendLog(BackendEntity):
+    """Backend implementation for the `Log` ORM class.
+
+    A log is a record of logging call for a particular node.
     """
-    Backend Log interface
-    """
 
-    @abc.abstractproperty
-    def uuid(self):
-        """
-        Get the UUID of the log entry
+    @property
+    @abc.abstractmethod
+    def uuid(self) -> str:
+        """Return the UUID of the log entry."""
 
-        :return: The entry's UUID
-        :rtype: uuid.UUID
-        """
+    @property
+    @abc.abstractmethod
+    def time(self) -> datetime:
+        """Return the time corresponding to the log entry."""
 
-    @abc.abstractproperty
-    def time(self):
-        """
-        Get the time corresponding to the entry
+    @property
+    @abc.abstractmethod
+    def loggername(self) -> str:
+        """Return the name of the logger that created this entry."""
 
-        :return: The entry timestamp
-        :rtype: :class:`!datetime.datetime`
-        """
+    @property
+    @abc.abstractmethod
+    def levelname(self) -> str:
+        """Return the name of the log level."""
 
-    @abc.abstractproperty
-    def loggername(self):
-        """
-        The name of the logger that created this entry
+    @property
+    @abc.abstractmethod
+    def dbnode_id(self) -> int:
+        """Return the id of the object that created the log entry."""
 
-        :return: The entry loggername
-        :rtype: str
-        """
+    @property
+    @abc.abstractmethod
+    def message(self) -> str:
+        """Return the message corresponding to the log entry."""
 
-    @abc.abstractproperty
-    def levelname(self):
-        """
-        The name of the log level
-
-        :return: The entry log level name
-        :rtype: str
-        """
-
-    @abc.abstractproperty
-    def dbnode_id(self):
-        """
-        Get the id of the object that created the log entry
-
-        :return: The id of the object that created the log entry
-        :rtype: int
-        """
-
-    @abc.abstractproperty
-    def message(self):
-        """
-        Get the message corresponding to the entry
-
-        :return: The entry message
-        :rtype: str
-        """
-
-    @abc.abstractproperty
-    def metadata(self):
-        """
-        Get the metadata corresponding to the entry
-
-        :return: The entry metadata
-        :rtype: dict
-        """
+    @property
+    @abc.abstractmethod
+    def metadata(self) -> Dict[str, Any]:
+        """Return the metadata corresponding to the log entry."""
 
 
 class BackendLogCollection(BackendCollection[BackendLog]):
@@ -90,19 +65,18 @@ class BackendLogCollection(BackendCollection[BackendLog]):
     ENTITY_CLASS = BackendLog
 
     @abc.abstractmethod
-    def delete(self, log_id):
+    def delete(self, log_id: int) -> None:
         """
         Remove a Log entry from the collection with the given id
 
         :param log_id: id of the Log to delete
-        :type log_id: int
 
         :raises TypeError: if ``log_id`` is not an `int`
         :raises `~aiida.common.exceptions.NotExistent`: if Log with ID ``log_id`` is not found
         """
 
     @abc.abstractmethod
-    def delete_all(self):
+    def delete_all(self) -> None:
         """
         Delete all Log entries.
 
@@ -110,15 +84,13 @@ class BackendLogCollection(BackendCollection[BackendLog]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters):
+    def delete_many(self, filters: dict) -> List[int]:
         """
         Delete Logs based on ``filters``
 
         :param filters: similar to QueryBuilder filter
-        :type filters: dict
 
         :return: (former) ``PK`` s of deleted Logs
-        :rtype: list
 
         :raises TypeError: if ``filters`` is not a `dict`
         :raises `~aiida.common.exceptions.ValidationError`: if ``filters`` is empty

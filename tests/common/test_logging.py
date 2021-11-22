@@ -7,21 +7,32 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the logging module."""
-
+"""Tests for the :mod:`aiida.common.log` module."""
 import logging
-import unittest
 
 
-class TestLogger(unittest.TestCase):
-    """Test global python logging module."""
+def test_logging_before_dbhandler_loaded(caplog):
+    """Test that logging still works even if no database is loaded.
 
-    def test_logger(self):
-        """
-        The python logging module is configured with a DbLogHandler
-        upon runtime, but we do not want any fired log messages to
-        crash when they reach the handler and no database is set yet
-        """
-        # pylint: disable=no-self-use
-        logger = logging.getLogger('aiida')
-        logger.critical('Test critical log')
+    When a profile is loaded, the ``DbLogHandler`` logging handler is configured that redirects log messages to the
+    database. This should not break the logging functionality when no database has been loaded yet.
+    """
+    msg = 'Testing a critical message'
+    logger = logging.getLogger()
+    logging.getLogger().critical(msg)
+    assert caplog.record_tuples == [(logger.name, logging.CRITICAL, msg)]
+
+
+def test_log_report(caplog):
+    """Test that the ``logging`` module is patched such that the ``Logger`` class has the ``report`` method.
+
+    The ``report`` method corresponds to a call to the :meth:``Logger.log`` method where the log level used is the
+    :data:`aiida.common.log.LOG_LEVEL_REPORT`.
+    """
+    msg = 'Testing a report message'
+    logger = logging.getLogger()
+
+    with caplog.at_level(logging.REPORT):  # pylint: disable=no-member
+        logger.report(msg)
+
+    assert caplog.record_tuples == [(logger.name, logging.REPORT, msg)]  # pylint: disable=no-member

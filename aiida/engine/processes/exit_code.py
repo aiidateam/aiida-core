@@ -9,6 +9,7 @@
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
 from typing import NamedTuple, Optional
+
 from aiida.common.extendeddicts import AttributeDict
 
 __all__ = ('ExitCode', 'ExitCodesNamespace')

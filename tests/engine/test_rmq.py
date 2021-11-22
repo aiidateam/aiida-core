@@ -17,7 +17,6 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ProcessState
 from aiida.manage.manager import get_manager
 from aiida.orm import Int
-
 from tests.utils import processes as test_processes
 
 

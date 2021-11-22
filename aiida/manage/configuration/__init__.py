@@ -7,25 +7,56 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .config import *
+from .migrations import *
+from .options import *
+from .profile import *
+
+__all__ = (
+    'CURRENT_CONFIG_VERSION',
+    'Config',
+    'ConfigValidationError',
+    'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'Option',
+    'Profile',
+    'check_and_migrate_config',
+    'config_needs_migrating',
+    'config_schema',
+    'get_current_version',
+    'get_option',
+    'get_option_names',
+    'parse_option',
+)
+
+# yapf: enable
+
+# END AUTO-GENERATED
+
+# pylint: disable=global-statement,redefined-outer-name,wrong-import-order
+
+__all__ += (
+    'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_documentation_profile', 'load_profile',
+    'reset_config', 'reset_profile', 'CONFIG', 'PROFILE', 'BACKEND_UUID'
+)
+
 import os
 import shutil
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
-from .config import *
-from .options import *
-from .profile import *
+
+from . import options
 
 CONFIG = None
 PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
-
-__all__ = (
-    config.__all__ + options.__all__ + profile.__all__ +
-    ('get_config', 'get_config_option', 'get_config_path', 'load_profile', 'reset_config')
-)
 
 
 def load_profile(profile=None):
@@ -43,8 +74,8 @@ def load_profile(profile=None):
     from aiida.common import InvalidOperation
     from aiida.common.log import configure_logging
 
-    global PROFILE
-    global BACKEND_UUID
+    global PROFILE  # pylint: disable=global-variable-not-assigned
+    global BACKEND_UUID  # pylint: disable=global-variable-not-assigned
 
     # If a profile is loaded and the specified profile name is None or that of the currently loaded, do nothing
     if PROFILE and (profile is None or PROFILE.name is profile):
@@ -85,6 +116,7 @@ def load_config(create=False):
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from aiida.common import exceptions
+
     from .config import Config
 
     filepath = get_config_path()
@@ -142,7 +174,7 @@ def get_profile():
     :return: the globally loaded `Profile` instance or `None`
     :rtype: :class:`~aiida.manage.configuration.Profile`
     """
-    global PROFILE
+    global PROFILE  # pylint: disable=global-variable-not-assigned
     return PROFILE
 
 
@@ -248,7 +280,9 @@ def load_documentation_profile():
     the documentation to be built without having to install and configure AiiDA nor having an actual database present.
     """
     import tempfile
+
     from aiida.manage.manager import get_manager
+
     from .config import Config
     from .profile import Profile
 

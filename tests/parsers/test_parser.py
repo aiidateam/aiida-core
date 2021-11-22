@@ -18,11 +18,11 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
-from aiida.plugins import CalculationFactory, ParserFactory
 from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
+from aiida.plugins import CalculationFactory, ParserFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
-ArithmeticAddParser = ParserFactory('arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
 class CustomCalcJob(CalcJob):

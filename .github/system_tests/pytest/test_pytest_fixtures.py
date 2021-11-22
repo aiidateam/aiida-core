@@ -23,5 +23,5 @@ def test_aiida_localhost(aiida_localhost):
 def test_aiida_local_code(aiida_local_code_factory):
     """Test aiida_local_code_factory fixture.
     """
-    code = aiida_local_code_factory(entry_point='templatereplacer', executable='diff')
+    code = aiida_local_code_factory(entry_point='core.templatereplacer', executable='diff')
     assert code.computer.label == 'localhost-test'

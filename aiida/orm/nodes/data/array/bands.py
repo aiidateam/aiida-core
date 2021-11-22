@@ -17,8 +17,11 @@ from string import Template
 import numpy
 
 from aiida.common.exceptions import ValidationError
-from aiida.common.utils import prettify_labels, join_labels
+from aiida.common.utils import join_labels, prettify_labels
+
 from .kpoints import KpointsData
+
+__all__ = ('BandsData', 'find_bandgap')
 
 
 def prepare_header_comment(uuid, plot_info, comment_char='#'):
@@ -36,7 +39,7 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
     for label in plot_info['raw_labels']:
         filetext.append(f'\t{label[1]}\t{label[0]:.8f}')
 
-    return '\n'.join('{} {}'.format(comment_char, line) for line in filetext)
+    return '\n'.join(f'{comment_char} {line}' for line in filetext)
 
 
 def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
@@ -303,7 +306,7 @@ class BandsData(KpointsData):
         if labels is not None:
             if isinstance(labels, str):
                 the_labels = [str(labels)]
-            elif isinstance(labels, (tuple, list)) and all([isinstance(_, str) for _ in labels]):
+            elif isinstance(labels, (tuple, list)) and all(isinstance(_, str) for _ in labels):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
@@ -859,9 +862,9 @@ class BandsData(KpointsData):
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import os
-        import tempfile
         import subprocess
         import sys
+        import tempfile
 
         from aiida.common import json
 
@@ -910,9 +913,9 @@ class BandsData(KpointsData):
         """
         import json
         import os
-        import tempfile
         import subprocess
         import sys
+        import tempfile
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -1022,7 +1025,7 @@ class BandsData(KpointsData):
         # first prepare the xy coordinates of the sets
         raw_data, _ = self._prepare_dat_blocks(plot_info, comments=comments)
 
-        xtics_string = ', '.join('"{}" {}'.format(label, pos) for pos, label in plot_info['labels'])
+        xtics_string = ', '.join(f'"{label}" {pos}' for pos, label in plot_info['labels'])
 
         script = []
         # Start with some useful comments
@@ -1130,6 +1133,7 @@ class BandsData(KpointsData):
         )
 
         import math
+
         # load the x and y of every set
         if color_number > MAX_NUM_AGR_COLORS:
             raise ValueError(f'Color number is too high (should be less than {MAX_NUM_AGR_COLORS})')
@@ -1608,9 +1612,6 @@ AGR_SINGLESET_TEMPLATE = Template("""
     $xydata
     """)
 
-# text.latex.preview=True is needed to have a proper alignment of
-# tick marks with and without subscripts
-# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 MATPLOTLIB_HEADER_AGG_TEMPLATE = Template(
     """# -*- coding: utf-8 -*-
 
@@ -1625,8 +1626,6 @@ rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Time
 rc('mathtext', fontset='cm')
 
 rc('text', usetex=True)
-import matplotlib.pyplot as plt
-plt.rcParams.update({'text.latex.preview': True})
 
 import pylab as pl
 
@@ -1637,9 +1636,6 @@ print_comment = False
 """
 )
 
-# text.latex.preview=True is needed to have a proper alignment of
-# tick marks with and without subscripts
-# see e.g. http://matplotlib.org/1.3.0/examples/pylab_examples/usetex_baseline_test.html
 MATPLOTLIB_HEADER_TEMPLATE = Template(
     """# -*- coding: utf-8 -*-
 
@@ -1651,8 +1647,6 @@ rc('font', **{'family': 'serif', 'serif': ['Computer Modern', 'CMU Serif', 'Time
 rc('mathtext', fontset='cm')
 
 rc('text', usetex=True)
-import matplotlib.pyplot as plt
-plt.rcParams.update({'text.latex.preview': True})
 
 import pylab as pl
 
@@ -1797,3 +1791,142 @@ MATPLOTLIB_FOOTER_TEMPLATE_SHOW = Template("""pl.show()""")
 MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE = Template("""pl.savefig("$fname", format="$format")""")
 
 MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE_WITH_DPI = Template("""pl.savefig("$fname", format="$format", dpi=$dpi)""")
+
+
+def get_bands_and_parents_structure(args, backend=None):
+    """Search for bands and return bands and the closest structure that is a parent of the instance.
+
+    :returns:
+        A list of sublists, each latter containing (in order):
+            pk as string, formula as string, creation date, bandsdata-label
+    """
+    # pylint: disable=too-many-locals,too-many-branches
+
+    import datetime
+
+    from aiida import orm
+    from aiida.common import timezone
+
+    q_build = orm.QueryBuilder(backend=backend)
+    if args.all_users is False:
+        q_build.append(orm.User, tag='creator', filters={'email': orm.User.objects.get_default().email})
+    else:
+        q_build.append(orm.User, tag='creator')
+
+    group_filters = {}
+    with_args = {}
+
+    if args.group_name is not None:
+        group_filters.update({'label': {'in': args.group_name}})
+    if args.group_pk is not None:
+        group_filters.update({'id': {'in': args.group_pk}})
+
+    if group_filters:
+        q_build.append(orm.Group, tag='group', filters=group_filters, with_user='creator')
+        with_args = {'with_group': 'group'}
+    else:
+        # Note: This is a workaround for the QB constraint of not allowing multiple ``with_*`` criteria. Correctly we
+        # would like to specify with_user always on the ``BandsData`` directly and optionally add with_group. Until this
+        # is resolved, add the ``with_user`` on the group if specified and on the ``BandsData`` if not.
+        with_args = {'with_user': 'creator'}
+
+    bdata_filters = {}
+    if args.past_days is not None:
+        bdata_filters.update({'ctime': {'>=': timezone.now() - datetime.timedelta(days=args.past_days)}})
+
+    q_build.append(orm.BandsData, tag='bdata', filters=bdata_filters, project=['id', 'label', 'ctime'], **with_args)
+    bands_list_data = q_build.all()
+
+    q_build.append(
+        orm.StructureData,
+        tag='sdata',
+        with_descendants='bdata',
+        # We don't care about the creator of StructureData
+        project=['id', 'attributes.kinds', 'attributes.sites']
+    )
+
+    q_build.order_by({orm.StructureData: {'ctime': 'desc'}})
+
+    structure_dict = {}
+    list_data = q_build.distinct().all()
+    for bid, _, _, _, akinds, asites in list_data:
+        structure_dict[bid] = (akinds, asites)
+
+    entry_list = []
+    already_visited_bdata = set()
+
+    for [bid, blabel, bdate] in bands_list_data:
+
+        # We process only one StructureData per BandsData.
+        # We want to process the closest StructureData to
+        # every BandsData.
+        # We hope that the StructureData with the latest
+        # creation time is the closest one.
+        # This will be updated when the QueryBuilder supports
+        # order_by by the distance of two nodes.
+        if already_visited_bdata.__contains__(bid):
+            continue
+        already_visited_bdata.add(bid)
+        strct = structure_dict.get(bid, None)
+
+        if strct is not None:
+            akinds, asites = strct
+            formula = _extract_formula(akinds, asites, args)
+        else:
+            if args.element is not None or args.element_only is not None:
+                formula = None
+            else:
+                formula = '<<NOT FOUND>>'
+
+        if formula is None:
+            continue
+        entry_list.append([str(bid), str(formula), bdate.strftime('%d %b %Y'), blabel])
+
+    return entry_list
+
+
+def _extract_formula(akinds, asites, args):
+    """
+    Extract formula from the structure object.
+
+    :param akinds: list of kinds, e.g. [{'mass': 55.845, 'name': 'Fe', 'symbols': ['Fe'], 'weights': [1.0]},
+                                        {'mass': 15.9994, 'name': 'O', 'symbols': ['O'], 'weights': [1.0]}]
+    :param asites: list of structure sites e.g. [{'position': [0.0, 0.0, 0.0], 'kind_name': 'Fe'},
+                                                    {'position': [2.0, 2.0, 2.0], 'kind_name': 'O'}]
+    :param args: a namespace with parsed command line parameters, here only 'element' and 'element_only' are used
+    :type args: dict
+
+    :return: a string with formula if the formula is found
+    """
+    from aiida.orm.nodes.data.structure import get_formula, get_symbols_string
+
+    if args.element is not None:
+        all_symbols = [_['symbols'][0] for _ in akinds]
+        if not any(s in args.element for s in all_symbols):
+            return None
+
+    if args.element_only is not None:
+        all_symbols = [_['symbols'][0] for _ in akinds]
+        if not all(s in all_symbols for s in args.element_only):
+            return None
+
+    # We want only the StructureData that have attributes
+    if akinds is None or asites is None:
+        return '<<UNKNOWN>>'
+
+    symbol_dict = {}
+    for k in akinds:
+        symbols = k['symbols']
+        weights = k['weights']
+        symbol_dict[k['name']] = get_symbols_string(symbols, weights)
+
+    try:
+        symbol_list = []
+        for site in asites:
+            symbol_list.append(symbol_dict[site['kind_name']])
+        formula = get_formula(symbol_list, mode=args.formulamode)
+    # If for some reason there is no kind with the name
+    # referenced by the site
+    except KeyError:
+        formula = '<<UNKNOWN>>'
+    return formula

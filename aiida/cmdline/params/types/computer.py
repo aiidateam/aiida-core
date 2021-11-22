@@ -13,8 +13,10 @@ Module for the custom click param type computer
 
 from click.types import StringParamType
 
-from ...utils import decorators
+from ...utils import decorators  # pylint: disable=no-name-in-module
 from .identifier import IdentifierParamType
+
+__all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')
 
 
 class ComputerParamType(IdentifierParamType):
@@ -82,7 +84,7 @@ class MpirunCommandParamType(StringParamType):
     def convert(self, value, param, ctx):
         newval = super().convert(value, param, ctx)
 
-        scheduler_ep = ctx.params['scheduler']
+        scheduler_ep = ctx.params.get('scheduler', None)
         if scheduler_ep is not None:
             try:
                 job_resource_keys = scheduler_ep.load().job_resource_class.get_valid_keys()

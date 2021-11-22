@@ -38,7 +38,7 @@ def test_reader(archive_reader):
 
     with archive_reader() as archive:
         assert archive.export_version == EXPORT_VERSION
-        assert archive.metadata.aiida_version == '1.6.2'
+        assert archive.metadata.aiida_version == '2.0.0a1'
         assert sorted(archive.entity_names) == ['Comment', 'Computer', 'Group', 'Log', 'Node', 'User']
         assert archive.entity_count('Node') == 10
         assert sum(1 for _ in archive.iter_entity_fields('Node')) == 10
@@ -51,7 +51,7 @@ def test_reader(archive_reader):
         assert next(archive.iter_entity_fields('Node', fields=('label', 'node_type', 'attributes'))) == (
             837, {
                 'label': 'pw.x',
-                'node_type': 'data.code.Code.',
+                'node_type': 'data.core.code.Code.',
                 'attributes': {
                     'is_local': False,
                     'append_text': '',

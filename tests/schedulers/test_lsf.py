@@ -11,11 +11,12 @@
 """Tests for the `LsfScheduler` plugin."""
 import logging
 import uuid
+
 import pytest
 
 from aiida.schedulers.datastructures import JobState
-from aiida.schedulers.scheduler import SchedulerError
 from aiida.schedulers.plugins.lsf import LsfScheduler
+from aiida.schedulers.scheduler import SchedulerError
 
 BJOBS_STDOUT_TO_TEST = '764213236|EXIT|TERM_RUNLIMIT: job killed after reaching LSF run time limit' \
                        '|b681e480bd|inewton|1|-|b681e480bd|test|Feb  2 00:46|Feb  2 00:45|-|Feb  2 00:44' \
@@ -111,8 +112,8 @@ def test_parse_common_joblist_output():
 
 def test_submit_script():
     """Test the creation of a simple submission script"""
-    from aiida.schedulers.datastructures import JobTemplate
     from aiida.common.datastructures import CodeInfo, CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate
 
     scheduler = LsfScheduler()
 
@@ -137,6 +138,31 @@ def test_submit_script():
     assert '#BSUB -W 24:00' in submit_script_text
     assert '#BSUB -G account_id' in submit_script_text
     assert "'mpirun' '-np' '2' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text
+
+
+def test_submit_script_rerunnable():
+    """Test the `rerunnable` option of the submit script."""
+    from aiida.common.datastructures import CodeInfo, CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate
+
+    scheduler = LsfScheduler()
+
+    job_tmpl = JobTemplate()
+    job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
+    code_info = CodeInfo()
+    code_info.cmdline_params = []
+    job_tmpl.codes_info = [code_info]
+    job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+
+    job_tmpl.rerunnable = True
+    submit_script_text = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -r\n' in submit_script_text
+    assert '#BSUB -rn' not in submit_script_text
+
+    job_tmpl.rerunnable = False
+    submit_script_text = scheduler.get_submit_script(job_tmpl)
+    assert '#BSUB -r\n' not in submit_script_text
+    assert '#BSUB -rn' in submit_script_text
 
 
 def test_create_job_resource():
@@ -189,8 +215,8 @@ def test_kill_output():
 
 def test_job_tmpl_errors():
     """Test the raising of the appropriate errors"""
-    from aiida.schedulers.datastructures import JobTemplate
     from aiida.common.datastructures import CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate
 
     scheduler = LsfScheduler()
     job_tmpl = JobTemplate()

@@ -9,26 +9,28 @@
 ###########################################################################
 """Classes and methods for backend non-specific entities"""
 import abc
-import typing
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Set, Type, TypeVar
 
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
 
 __all__ = (
     'BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityAttributesMixin', 'BackendEntityExtrasMixin'
 )
 
-EntityType = typing.TypeVar('EntityType')  # pylint: disable=invalid-name
+EntityType = TypeVar('EntityType', bound='BackendEntity')  # pylint: disable=invalid-name
 
 
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend):
+    def __init__(self, backend: 'Backend', **kwargs: Any):
         self._backend = backend
-        self._dbmodel = None
 
     @property
-    def backend(self):
+    def backend(self) -> 'Backend':
         """Return the backend this entity belongs to
 
         :return: the backend instance
@@ -36,11 +38,8 @@ class BackendEntity(abc.ABC):
         return self._backend
 
     @property
-    def dbmodel(self):
-        return self._dbmodel
-
-    @abc.abstractproperty
-    def id(self):  # pylint: disable=invalid-name
+    @abc.abstractmethod
+    def id(self) -> int:  # pylint: disable=invalid-name
         """Return the id for this entity.
 
         This is unique only amongst entities of this type for a particular backend.
@@ -49,7 +48,7 @@ class BackendEntity(abc.ABC):
         """
 
     @property
-    def pk(self):
+    def pk(self) -> int:
         """Return the id for this entity.
 
         This is unique only amongst entities of this type for a particular backend.
@@ -59,34 +58,34 @@ class BackendEntity(abc.ABC):
         return self.id
 
     @abc.abstractmethod
-    def store(self):
+    def store(self: EntityType) -> EntityType:
         """Store this entity in the backend.
 
         Whether it is possible to call store more than once is delegated to the object itself
         """
 
-    @abc.abstractproperty
-    def is_stored(self):
+    @property
+    @abc.abstractmethod
+    def is_stored(self) -> bool:
         """Return whether the entity is stored.
 
         :return: True if stored, False otherwise
-        :rtype: bool
         """
 
-    def _flush_if_stored(self, fields):
-        if self._dbmodel.is_saved():
-            self._dbmodel._flush(fields)  # pylint: disable=protected-access
+    @classmethod
+    @abc.abstractmethod
+    def from_dbmodel(cls, dbmodel: Any, backend: 'Backend') -> EntityType:
+        """Create this entity from a dbmodel."""
 
 
-class BackendCollection(typing.Generic[EntityType]):
+class BackendCollection(Generic[EntityType]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
-    ENTITY_CLASS = None  # type: EntityType
+    ENTITY_CLASS: ClassVar[Type[EntityType]]
 
-    def __init__(self, backend):
+    def __init__(self, backend: 'Backend'):
         """
         :param backend: the backend this collection belongs to
-        :type backend: :class:`aiida.orm.implementation.Backend`
         """
         assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
@@ -101,25 +100,29 @@ class BackendCollection(typing.Generic[EntityType]):
         return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     @property
-    def backend(self):
-        """
-        Return the backend.
-
-        :rtype: :class:`aiida.orm.implementation.Backend`
-        """
+    def backend(self) -> 'Backend':
+        """Return the backend."""
         return self._backend
 
-    def create(self, **kwargs):
+    def create(self, **kwargs: Any) -> EntityType:
         """
         Create new a entry and set the attributes to those specified in the keyword arguments
 
         :return: the newly created entry of type ENTITY_CLASS
         """
-        return self.ENTITY_CLASS(backend=self._backend, **kwargs)  # pylint: disable=not-callable
+        return self.ENTITY_CLASS(backend=self._backend, **kwargs)
 
 
 class BackendEntityAttributesMixin(abc.ABC):
     """Mixin class that adds all methods for the attributes column to a backend entity"""
+
+    _dbmodel: Any
+    dbmodel: Any
+    is_stored: Any
+
+    def _flush_if_stored(self, fields: Set[str]) -> None:
+        if self._dbmodel.is_saved():
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
     @property
     def attributes(self):
@@ -274,21 +277,17 @@ class BackendEntityAttributesMixin(abc.ABC):
         for key in self._dbmodel.attributes.keys():
             yield key
 
-    @abc.abstractproperty
-    def is_stored(self):
-        """Return whether the entity is stored.
-
-        :return: True if stored, False otherwise
-        :rtype: bool
-        """
-
-    @abc.abstractmethod
-    def _flush_if_stored(self, fields):
-        """Flush the fields"""
-
 
 class BackendEntityExtrasMixin(abc.ABC):
     """Mixin class that adds all methods for the extras column to a backend entity"""
+
+    _dbmodel: Any
+    dbmodel: Any
+    is_stored: Any
+
+    def _flush_if_stored(self, fields: Set[str]) -> None:
+        if self._dbmodel.is_saved():
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
     @property
     def extras(self):
@@ -438,15 +437,3 @@ class BackendEntityExtrasMixin(abc.ABC):
         """
         for key in self._dbmodel.extras.keys():
             yield key
-
-    @abc.abstractproperty
-    def is_stored(self):
-        """Return whether the entity is stored.
-
-        :return: True if stored, False otherwise
-        :rtype: bool
-        """
-
-    @abc.abstractmethod
-    def _flush_if_stored(self, fields):
-        """Flush the fields"""

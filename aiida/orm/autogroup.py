@@ -26,8 +26,8 @@ class Autogroup:
     `AutoGroup` instance.
 
     The exclude/include lists are lists of strings like:
-    ``aiida.data:int``, ``aiida.calculation:quantumespresso.pw``,
-    ``aiida.data:array.%``, ...
+    ``aiida.data:core.int``, ``aiida.calculation:quantumespresso.pw``,
+    ``aiida.data:core.array.%``, ...
     i.e.: a string identifying the base class, followed a colona and by the path to the class
     as accepted by CalculationFactory/DataFactory.
     Each string can contain one or more wildcard characters ``%``;

@@ -23,7 +23,6 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
        $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
        $ conda activate aiida
-       (aiida) $ reentry scan
 
    ---
 

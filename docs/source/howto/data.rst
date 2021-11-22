@@ -367,7 +367,7 @@ To achieve the same result as above one would need to do something as follows:
     group = load_group(label='promising_structures')
 
     # Here make sure to include only structures, as group can contain any nodes.
-    structures = [s for s in group.nodes if isinstance(nodes, StructureData)]
+    structures = [node for node in group.nodes if isinstance(node, StructureData)]
     for structure in structures:
         builder = SomeWorkChain.get_builder()
         builder.structure = structure

@@ -138,7 +138,7 @@ COMPUTER = options.COMPUTER.clone(
 )
 
 WITHMPI = OverridableOption(
-    '--withmpi/--withoutmpi',
+    '--with-mpi/--without-mpi',
     is_eager=False,
     default=True,
     cls=InteractiveOption,

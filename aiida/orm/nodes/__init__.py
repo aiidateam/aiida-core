@@ -31,6 +31,7 @@ __all__ = (
     'Code',
     'Data',
     'Dict',
+    'EnumData',
     'Float',
     'FolderData',
     'Int',

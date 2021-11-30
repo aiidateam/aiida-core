@@ -119,13 +119,45 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return super().get_object_hash(key)
         return key
 
-    def maintain(self, full: bool = False, **kwargs) -> dict:
-        # By default it will do only pack_loose if full=False or all operations
-        # if full=True. Then each can be overriden by the respective kwarg.
-        pack_loose = kwargs.get('override_pack_loose', True)
-        do_repack = kwargs.get('override_do_repack', full)
-        clean_storage = kwargs.get('override_clean_storage', full)
-        do_vacuum = kwargs.get('override_do_vacuum', full)
+    def maintain(  # pylint: disable=arguments-differ
+        self,
+        full: bool = False,
+        override_pack_loose: bool = None,
+        override_do_repack: bool = None,
+        override_clean_storage: bool = None,
+        override_do_vacuum: bool = None,
+    ) -> dict:
+        """Performs maintenance operations.
+
+        :param full:
+            a flag to perform operations that require to stop using the maintained profile.
+        :param override_pack_loose:
+            override flag for forcing the packing of loose files.
+        :param override_do_repack:
+            override flag for forcing the re-packing of already packed files.
+        :param override_clean_storage:
+            override flag for forcing the cleaning of soft-deleted files from the repository.
+        :param override_do_vacuum:
+            override flag for forcing the vacuuming of the internal database when cleaning the repository.
+        :return:
+            a dictionary with information on the operations performed.
+        """
+        pack_loose = True
+        do_repack = full
+        clean_storage = full
+        do_vacuum = full
+
+        if override_pack_loose is not None:
+            pack_loose = override_pack_loose
+
+        if override_do_repack is not None:
+            do_repack = override_do_repack
+
+        if override_clean_storage is not None:
+            clean_storage = override_clean_storage
+
+        if override_do_vacuum is not None:
+            do_vacuum = override_do_vacuum
 
         operation_results = {}
 
@@ -135,15 +167,20 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         if do_repack:
             self.container.repack()
-            operation_results['repack'] = {'decription': 'Repacked all packages for optimal access.'}
+            operation_results['repack'] = {'decription': 'Repacked all pack files to optimize file access.'}
 
         if clean_storage:
             self.container.clean_storage(vacuum=do_vacuum)
-            operation_results['clean_storage'] = {'decription': 'Cleaned up the internal repo database.'}
+            operation_results['clean_storage'] = {
+                'decription': f'Cleaned up the internal repo database (with `vacuum={do_vacuum}`).'
+            }
 
         return operation_results
 
-    def get_info(self, statistics=False, **kwargs) -> dict:
+    def get_info(  # pylint: disable=arguments-differ
+        self,
+        statistics=False,
+        ) -> dict:
         bytes_to_mb = 9.53674316E-7
 
         output_info = {}

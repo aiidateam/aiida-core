@@ -99,12 +99,12 @@ def storage_info(statistics):
 @click.option(
     '--full',
     is_flag=True,
-    help='Performs maintenance tasks that are safe to run while other AiiDA instances are working with the profile.'
+    help='Perform all maintenance tasks, including the ones that should not be executed while the profile is in use.'
 )
 @click.option(
     '--dry-run',
     is_flag=True,
-    help='Performs maintenance tasks that are safe to run while other AiiDA instances are working with the profile.'
+    help='Returns information that allows to estimate the impact of the maintenance operations.'
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
@@ -115,13 +115,13 @@ def storage_maintain(full, dry_run):
 
     if dry_run:
         maintainance_report = get_repository_report()['user_info']
-        click.echo('Repository:')
-        click.echo(maintainance_report)
+        echo.echo('Repository:')
+        echo.echo(maintainance_report)
         return
 
     if full:
 
-        click.echo(
+        echo.echo_warning(
             '\nIn order to safely perform the full maintenance operations on the internal storage, no other '
             'process should be using the AiiDA profile being maintained. '
             'This includes daemon workers, verdi shells, scripts with the profile loaded, etc). '
@@ -133,7 +133,7 @@ def storage_maintain(full, dry_run):
 
     else:
 
-        click.echo(
+        echo.echo(
             '\nThis command will perform all maintenance operations on the internal storage that can be safely '
             'executed while still running AiiDA. '
             'However, not all operations that are required to fully optimize disk usage and future performance '
@@ -146,6 +146,5 @@ def storage_maintain(full, dry_run):
         return
 
     maintainance_report = repository_maintain(full=full)
-    click.echo('\nMaintainance procedures finished:\n')
-    if 'user_info' in maintainance_report:
-        click.echo(maintainance_report['user_info'])
+    echo.echo('\nMaintainance procedures finished:\n')
+    echo.echo(maintainance_report['user_info'])

@@ -88,9 +88,11 @@ def test_get_unreferenced_keyset():
     repository_backend = aiida_backend.get_repository()
     repository_backend.delete_objects(keys)
 
-    with pytest.raises(RuntimeError, match='Database seems corrupted') as exc:
+    with pytest.raises(
+        RuntimeError, match='There are objects referenced in the database that are not present in the repository'
+    ) as exc:
         get_unreferenced_keyset()
-    assert 'not in the repository' in str(exc.value)
+    assert 'aborting' in str(exc.value).lower()
 
 
 def test_repository_maintain(monkeypatch):

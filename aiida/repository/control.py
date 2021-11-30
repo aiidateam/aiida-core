@@ -22,17 +22,17 @@ def repository_maintain(full: bool = False, backend: Backend = None, **kwargs) -
 
     if backend is None:
         backend = get_manager().get_backend()
-    repository_backend = backend.get_repository()
+    repository = backend.get_repository()
 
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
 
     maintainance_report['repository']['unreferenced'] = len(unreferenced_objects)  # type: ignore
-    maintainance_report['repository']['info'] = repository_backend.get_info()  # type: ignore
+    maintainance_report['repository']['info'] = repository.get_info()  # type: ignore
 
-    repository_backend.delete_objects(list(unreferenced_objects))
+    repository.delete_objects(list(unreferenced_objects))
 
     # Perform the maintainance operations in the repository
-    maintainance_report['repository']['maintain'] = repository_backend.maintain(full=full, **kwargs)  # type: ignore
+    maintainance_report['repository']['maintain'] = repository.maintain(full=full, **kwargs)  # type: ignore
 
     return maintainance_report
 
@@ -41,8 +41,8 @@ def repository_info(statistics: bool = False, backend: Backend = None, **kwargs)
     """Returns relevant information on the repository."""
     if backend is None:
         backend = get_manager().get_backend()
-    repository_backend = backend.get_repository()
-    return repository_backend.get_info(statistics)
+    repository = backend.get_repository()
+    return repository.get_info(statistics)
 
 
 def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Backend = None, **kwargs) -> set:
@@ -55,14 +55,17 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Backe
     if aiida_backend is None:
         aiida_backend = get_manager().get_backend()
 
-    repository_backend = aiida_backend.get_repository()
+    repository = aiida_backend.get_repository()
 
-    keyset_backend = set(repository_backend.list_objects())
+    keyset_backend = set(repository.list_objects())
     keyset_aiidadb = set(orm.Node.objects(aiida_backend).iter_repo_keys())
 
     if check_consistency:
-        if len(keyset_aiidadb - keyset_backend) > 0:
-            raise RuntimeError('Database seems corrupted (some tracked objects are not in the repository). Aborting!')
+        keyset_missing = keyset_aiidadb - keyset_backend
+        if len(keyset_missing) > 0:
+            raise RuntimeError(
+                'There are objects referenced in the database that are not present in the repository. Aborting!'
+            )
 
     return keyset_backend - keyset_aiidadb
 

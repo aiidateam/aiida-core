@@ -85,7 +85,7 @@ def storage_integrity():
 def storage_info(statistics):
     """Summarise the contents of the storage."""
     from aiida.cmdline.utils.common import get_database_summary
-    from aiida.repository.control import repository_info
+    from aiida.backends.control import repository_info
     from aiida.orm import QueryBuilder
 
     data = {}
@@ -108,7 +108,7 @@ def storage_info(statistics):
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
-    from aiida.repository.control import get_repository_report, repository_maintain
+    from aiida.backends.control import get_repository_report, repository_maintain
 
     if dry_run and full:
         echo.echo_critical('You cannot request both `--dry-run` and `--full` at the same time.')

@@ -114,7 +114,7 @@ def tests_storage_maintain_full_dry(run_cli_command):
 
 def tests_storage_maintain_text(run_cli_command, monkeypatch):
     """Test all the information and cases of the storage maintain command."""
-    from aiida.repository import control
+    from aiida.backends import control
 
     def reporter_mock(**kwargs):
         return {'user_info': 'Underlying message'}

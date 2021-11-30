@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.repository.control` module."""
+"""Tests for the :mod:`aiida.backends.control` module."""
 import pytest
 
 from aiida.manage.manager import get_manager
@@ -70,7 +70,7 @@ def test_get_unreferenced_keyset():
     from io import BytesIO
 
     from aiida import orm
-    from aiida.repository.control import get_unreferenced_keyset
+    from aiida.backends.control import get_unreferenced_keyset
 
     # Coverage code pass
     unreferenced_keyset = get_unreferenced_keyset()
@@ -97,7 +97,7 @@ def test_get_unreferenced_keyset():
 
 def test_repository_maintain(monkeypatch):
     """Test the ``repository_maintain`` method."""
-    from aiida.repository import control
+    from aiida.backends import control
     monkeypatch.setattr(control, 'get_unreferenced_keyset', lambda **kwargs: set([1, 2, 3]))
 
     BackendClass = get_manager().get_backend().__class__  # pylint: disable=invalid-name
@@ -118,7 +118,7 @@ def test_repository_maintain(monkeypatch):
 
 def test_repository_info(monkeypatch):
     """Test the ``repository_info`` method."""
-    from aiida.repository.control import repository_info
+    from aiida.backends.control import repository_info
 
     def mock_get_info(self, statistics=False, **kwargs):  # pylint: disable=unused-argument
         text = 'Info from repo'
@@ -138,7 +138,7 @@ def test_repository_info(monkeypatch):
 
 def test_get_repository_report(monkeypatch):
     """Test the ``get_repository_report`` method."""
-    from aiida.repository import control
+    from aiida.backends import control
 
     monkeypatch.setattr(control, 'get_unreferenced_keyset', lambda **kwargs: set())
 

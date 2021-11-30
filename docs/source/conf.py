@@ -132,6 +132,7 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'plumpy': ('https://plumpy.readthedocs.io/en/latest/', None),
     'python': ('https://docs.python.org/3', None),
+    'sqlalchemy': ('https://docs.sqlalchemy.org/en/14/', None),
 }
 
 # -- Options for HTML output ---------------------------------------------------

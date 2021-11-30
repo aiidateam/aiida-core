@@ -22,7 +22,7 @@
     "install_requires": [
         "aldjemy~=2.4",
         "alembic~=1.2",
-        "archive-path~=0.2.1",
+        "archive-path~=0.3.6",
         "aio-pika~=6.6",
         "circus~=0.17.1",
         "click-config-file~=0.6.0",

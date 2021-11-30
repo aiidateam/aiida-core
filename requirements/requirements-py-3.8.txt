@@ -6,7 +6,7 @@ aldjemy==2.4
 alembic==1.6.5
 aniso8601==9.0.1
 appnope==0.1.2
-archive-path==0.2.1
+archive-path==0.3.6
 argon2-cffi==20.1.0
 ase==3.22.0
 asn1crypto==1.4.0

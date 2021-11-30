@@ -33,6 +33,7 @@ table_groups_nodes = Table(  # pylint: disable=invalid-name
 
 class DbGroupNode(Base):
     """Class to store group to nodes relation using SQLA backend."""
+    __tablename__ = table_groups_nodes.name
     __table__ = table_groups_nodes
 
 

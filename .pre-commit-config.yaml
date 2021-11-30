@@ -105,9 +105,7 @@ repos:
                 aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
-                aiida/tools/importexport/archive/.*py|
-                aiida/tools/importexport/dbexport/__init__.py|
-                aiida/tools/importexport/dbimport/backends/.*.py|
+                aiida/tools/archive/.*py|
             )$
 
     -   id: pylint

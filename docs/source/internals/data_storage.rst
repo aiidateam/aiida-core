@@ -23,6 +23,8 @@ Data storage
 AiiDA archive format
 ====================
 
+TODO
+
 An AiiDA archive file is a file usually ending with extension ``.aiida``, typically compressed in ``.zip`` or ``.tar.gz`` format, with the following content:
 
 * ``metadata.json`` file containing information on the version of AiiDA as well as the database schema.

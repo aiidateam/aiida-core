@@ -19,6 +19,7 @@ Tell AiiDA the **final results** you would like to be reproducible, and AiiDA wi
 
 Exporting individual nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Let's say the key results of your study are contained in three AiiDA nodes with PKs ``12``, ``123``, ``1234``.
 Exporting those results together with their provenance is as easy as:
 
@@ -34,19 +35,16 @@ See ``verdi archive create --help`` for ways to modify the traversal rules.
 
 .. tip::
 
-    If you want to make sure the archive includes everything you intended, you can create a new profile and import it:
+    To see what would be exported, before exporting, you can use the ``--test-run`` option:
 
     .. code-block:: console
 
-        $ verdi quicksetup --profile test-export  # create new profile
-        $ verdi --profile test-export import my-calculations.aiida
-
-    Now use, e.g. the :py:class:`~aiida.orm.querybuilder.QueryBuilder` to query the database.
+        $ verdi archive create --test-run my-calculations.aiida
 
 Please remember to use **UUIDs** when pointing your colleagues to data *inside* an AiiDA archive, since UUIDs are guaranteed to be universally unique (while PKs aren't).
 
-Using groups for data exporting
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Exporting large numbers of nodes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the number of results to be exported is large, for example in a high-throughput study, use the ``QueryBuilder`` to add the corresponding nodes to a group ``my-results`` (see :ref:`how-to:data:organize:group`).
 Then export the group:
@@ -54,6 +52,12 @@ Then export the group:
 .. code-block:: console
 
     $ verdi archive create my-calculations.aiida --groups my-results
+
+Alternatively, export your entire profile with:
+
+.. code-block:: console
+
+    $ verdi archive create my-calculations.aiida --all
 
 Publishing AiiDA archive files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -65,6 +69,73 @@ When publishing AiiDA archives on the `Materials Cloud Archive`_, you also get a
 .. _Open Science Framework: https://osf.io
 .. _Materials Cloud Archive: https://archive.materialscloud.org
 
+Inspecting an archive
+^^^^^^^^^^^^^^^^^^^^^
+
+In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive inspect``:
+
+.. code-block:: console
+
+    $ verdi archive inspect sssp-efficiency.aiida
+    ---------------  -------
+    Version archive  1.0
+    Version aiida    2.0.0
+    Compression      6
+    ---------------  -------
+
+    Database statistics
+    -------------------
+    Users:
+        count: 7
+        emails:
+        - a@b.com
+    Computers:
+        count: 1
+        labels:
+        - bellatrix
+    Nodes:
+        count: 109547
+        node_types:
+        - data.array.kpoints.KpointsData.
+        - data.core.array.ArrayData.
+        - data.core.array.bands.BandsData.
+        - data.core.array.trajectory.TrajectoryData.
+        - data.core.cif.CifData.
+        - data.core.code.Code.
+        - data.core.dict.Dict.
+        - data.core.folder.FolderData.
+        - data.core.remote.RemoteData.
+        - process.calculation.calcfunction.CalcFunctionNode.
+        - process.calculation.calcjob.CalcJobNode.
+        process_types:
+        - aiida.calculations:codtools.ciffilter
+        - aiida.calculations:quantumespresso.matdyn
+        - aiida.calculations:quantumespresso.ph
+        - aiida.calculations:quantumespresso.pw
+        - aiida.calculations:quantumespresso.q2r
+    Groups:
+        count: 1
+        type_strings:
+        - core.import
+    Comments:
+        count: 0
+    Logs:
+        count: 0
+    Links:
+        count: 159905
+    Repo Files:
+        count: 199565
+
+You can also use the Python API to inspect an archive file, using the :py:class:`~aiida.orm.querybuilder.QueryBuilder` to query the database:
+
+.. code-block:: python
+
+    from aiida import orm
+    from aiida.tools.archive import get_format
+    archive_format = get_format()
+    with archive_format.open('', mode='r') as reader:
+        qb = reader.querybuilder()
+        print(qb.append(orm.Node).count())
 
 Importing an archive
 ^^^^^^^^^^^^^^^^^^^^
@@ -80,28 +151,16 @@ During import, AiiDA will avoid identifier collisions and node duplication based
 By default, existing entities will be updated with the most recent changes.
 Node extras and comments have special modes for determining how to import them - for more details, see ``verdi archive import --help``.
 
+To see what would be imported, before importing, you can use the ``--test-run`` option:
+
+.. code-block:: console
+
+    $ verdi archive import --test-run my-calculations.aiida
+
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
     If an outdated archive version is detected during import, the archive file will be automatically migrated to the newest version (within a temporary folder) and the import retried.
 
     You can also use ``verdi archive migrate`` to create updated archive files from existing archive files (or update them in place).
-
-.. tip:: In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive inspect``:
-
-    .. code-block:: console
-
-        $ verdi archive inspect sssp-efficiency.aiida
-        --------------  -----
-        Version aiida   1.2.1
-        Version format  0.9
-        Computers       0
-        Groups          0
-        Links           0
-        Nodes           85
-        Users           1
-        --------------  -----
-
-    Note: For archive versions 0.2 and below, the overview may be inaccurate.
-
 
 .. _how-to:share:serve:
 

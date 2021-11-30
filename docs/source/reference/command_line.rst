@@ -25,7 +25,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      create   Export subsets of the provenance graph to file for sharing.
+      create   Write subsets of the provenance graph to a single file.
       import   Import data from an AiiDA archive file.
       inspect  Inspect contents of an archive without importing it.
       migrate  Migrate an export archive to a more recent format version.

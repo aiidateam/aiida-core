@@ -60,7 +60,7 @@ def clear_database(clear_database_after_test):
 @pytest.fixture(scope='function')
 def clear_database_after_test(aiida_profile):
     """Clear the database after the test."""
-    yield
+    yield aiida_profile
     aiida_profile.reset_db()
 
 
@@ -68,7 +68,7 @@ def clear_database_after_test(aiida_profile):
 def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
     aiida_profile.reset_db()
-    yield
+    yield aiida_profile
 
 
 @pytest.fixture(scope='class')

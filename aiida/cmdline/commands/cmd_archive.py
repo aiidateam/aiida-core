@@ -273,6 +273,12 @@ class ExtrasImportCode(Enum):
     help='Discover all URL targets pointing to files with the .aiida extension for these HTTP addresses. '
     'Automatically discovered archive URLs will be downloaded and added to ARCHIVES for importing.'
 )
+@click.option(
+    '--import-group/--no-import-group',
+    default=True,
+    show_default=True,
+    help='Add all imported nodes to the specified group, or an automatically created one'
+)
 @options.GROUP(
     type=GroupParamType(create_if_not_exist=True),
     help='Specify group to which all the import nodes will be added. If such a group does not exist, it will be'
@@ -328,7 +334,7 @@ class ExtrasImportCode(Enum):
 @click.pass_context
 def import_archive(
     ctx, archives, webpages, extras_mode_existing, extras_mode_new, comment_mode, include_authinfos, migration,
-    batch_size, group, test_run
+    batch_size, import_group, group, test_run
 ):
     """Import data from an AiiDA archive file.
 
@@ -355,6 +361,7 @@ def import_archive(
         'merge_comments': comment_mode,
         'include_authinfos': include_authinfos,
         'batch_size': batch_size,
+        'create_group': import_group,
         'group': group,
         'test_run': test_run,
     }

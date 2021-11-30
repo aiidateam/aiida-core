@@ -211,3 +211,20 @@ def test_import_to_group(tmp_path, clear_database_before_test):
         'Nodes'.format(imported_group.count(), len(node_uuids))
     for node in imported_group.nodes:
         assert node.uuid in node_uuids
+
+
+def test_create_group(tmp_path, clear_database_before_test):  # pylint: disable=unused-argument
+    """Test create_group argument"""
+    node = orm.Data().store()
+    filename = tmp_path / 'export.aiida'
+    create_archive([node], filename=filename)
+    assert orm.Group.objects.count() == 0
+    # this should create an ImportGroup
+    import_archive(filename)
+    assert orm.Group.objects.count() == 1
+    # this should create another ImportGroup
+    import_archive(filename, create_group=True)
+    assert orm.Group.objects.count() == 2
+    # this should not create a new ImportGroup
+    import_archive(filename, create_group=False)
+    assert orm.Group.objects.count() == 2

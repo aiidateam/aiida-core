@@ -67,6 +67,7 @@ def import_archive(
     merge_extras: MergeExtrasType = ('k', 'n', 'l'),
     merge_comments: MergeCommentsType = 'leave',
     include_authinfos: bool = False,
+    create_group: bool = True,
     group: Optional[orm.Group] = None,
     test_run: bool = False,
     backend: Optional[Backend] = None,
@@ -91,6 +92,7 @@ def import_archive(
         'l' (leave the old value),
         'u' (update with a new value),
         'd' (delete the extra)
+    :param create_group: Add all imported nodes to the specified group, or an automatically created one
     :param group: Group wherein all imported Nodes will be placed.
         If None, one will be auto-generated.
     :param test_run: if True, do not write to file
@@ -178,7 +180,9 @@ def import_archive(
             group_labels = _import_groups(
                 backend_from, backend, batch_size, user_ids_archive_backend, node_ids_archive_backend
             )
-            import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, batch_size)
+            import_group_id = None
+            if create_group:
+                import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, batch_size)
             new_repo_keys = _get_new_object_keys(archive_format.key_format, backend_from, backend, batch_size)
 
             if test_run:

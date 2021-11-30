@@ -132,6 +132,36 @@ class TestVerdiImport:
         assert not new_group, 'The Group should not have been created now, but instead when it was imported.'
         assert not group.is_empty, 'The Group should not be empty.'
 
+    def test_no_import_group(self):
+        """Test '--import-group/--no-import-group' options."""
+        archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
+
+        assert Group.objects.count() == 0, 'There should be no Groups.'
+
+        # Invoke `verdi import`
+        options = archives
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
+        assert result.exception is None, result.output
+        assert result.exit_code == 0, result.output
+
+        assert Group.objects.count() == 5
+
+        # Invoke `verdi import` again, creating another import group
+        options = ['--import-group'] + archives
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
+        assert result.exception is None, result.output
+        assert result.exit_code == 0, result.output
+
+        assert Group.objects.count() == 6
+
+        # Invoke `verdi import` again, but with no import group created
+        options = ['--no-import-group'] + archives
+        result = self.cli_runner.invoke(cmd_archive.import_archive, options)
+        assert result.exception is None, result.output
+        assert result.exit_code == 0, result.output
+
+        assert Group.objects.count() == 6
+
     @pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')  # pylint: disable=not-callable
     def test_comment_mode(self):
         """Test toggling comment mode flag"""

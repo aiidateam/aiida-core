@@ -175,6 +175,8 @@ def test_get_object():
     file_object = node.get_object(None)
     assert isinstance(file_object, File)
     assert file_object.file_type == FileType.DIRECTORY
+    assert file_object.is_file() is False
+    assert file_object.is_dir() is True
 
     file_object = node.get_object('relative')
     assert isinstance(file_object, File)
@@ -185,6 +187,8 @@ def test_get_object():
     assert isinstance(file_object, File)
     assert file_object.file_type == FileType.FILE
     assert file_object.name == 'file_b'
+    assert file_object.is_file() is True
+    assert file_object.is_dir() is False
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -213,6 +217,15 @@ def test_walk():
         (pathlib.Path('.'), ['relative'], []),
         (pathlib.Path('relative'), [], ['path']),
     ]
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_glob():
+    """Test the ``NodeRepositoryMixin.glob`` method."""
+    node = Data()
+    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+
+    assert {path.as_posix() for path in node.glob()} == {'relative', 'relative/path'}
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

@@ -84,42 +84,8 @@ def storage_integrity():
 @click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
 def storage_info(statistics):
     """Summarise the contents of the storage."""
-    from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
-    data = {}
+    from aiida.cmdline.utils.common import get_database_summary
+    from aiida.orm import QueryBuilder
 
-    # User
-    query_user = QueryBuilder().append(User, project=['email'])
-    data['Users'] = {'count': query_user.count()}
-    if statistics:
-        data['Users']['emails'] = query_user.distinct().all(flat=True)
-
-    # Computer
-    query_comp = QueryBuilder().append(Computer, project=['label'])
-    data['Computers'] = {'count': query_comp.count()}
-    if statistics:
-        data['Computers']['labels'] = query_comp.distinct().all(flat=True)
-
-    # Node
-    count = QueryBuilder().append(Node).count()
-    data['Nodes'] = {'count': count}
-    if statistics:
-        node_types = QueryBuilder().append(Node, project=['node_type']).distinct().all(flat=True)
-        data['Nodes']['node_types'] = node_types
-        process_types = QueryBuilder().append(Node, project=['process_type']).distinct().all(flat=True)
-        data['Nodes']['process_types'] = [p for p in process_types if p]
-
-    # Group
-    query_group = QueryBuilder().append(Group, project=['type_string'])
-    data['Groups'] = {'count': query_group.count()}
-    if statistics:
-        data['Groups']['type_strings'] = query_group.distinct().all(flat=True)
-
-    # Comment
-    count = QueryBuilder().append(Comment).count()
-    data['Comments'] = {'count': count}
-
-    # Log
-    count = QueryBuilder().append(Log).count()
-    data['Logs'] = {'count': count}
-
+    data = get_database_summary(QueryBuilder, statistics)
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')

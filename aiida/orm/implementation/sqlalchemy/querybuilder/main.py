@@ -33,7 +33,8 @@ from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
-from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, EntityTypes, QueryDictType
+from aiida.orm.entities import EntityTypes
+from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
 
 from .joiner import SqlaJoiner
 
@@ -271,6 +272,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             EntityTypes.NODE.value: self.Node,
             EntityTypes.LOG.value: self.Log,
             EntityTypes.USER.value: self.User,
+            EntityTypes.LINK.value: self.Link,
         }
         self._tag_to_alias = {}
         for path in self._data['path']:

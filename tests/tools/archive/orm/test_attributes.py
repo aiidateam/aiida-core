@@ -37,3 +37,28 @@ def test_import_of_attributes(tmp_path, aiida_profile):
 
     assert imported_node.get_attribute('b') == 2
     assert imported_node.get_attribute('c') == 3
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_strip_checkpoints(tmp_path):
+    """Test that `ProcessNode` checkpoints are stripped.
+
+    These can be used as an attack vector through arbitrary code execution.
+    """
+    # Create a `ProcessNode` with a checkpoint
+    process = orm.CalcJobNode()
+    process.set_checkpoint({'foo': 'bar'})
+    process.seal()
+    process.store()
+
+    # Export with checkpoints
+    export_file = tmp_path / 'export1.aiida'
+    create_archive([process], filename=export_file, strip_checkpoints=False)
+    with get_format().open(export_file, 'r') as archive:
+        assert archive.get(orm.ProcessNode, uuid=process.uuid).checkpoint == {'foo': 'bar'}
+
+    # Export without checkpoints
+    export_file = tmp_path / 'export2.aiida'
+    create_archive([process], filename=export_file, strip_checkpoints=True)
+    with get_format().open(export_file, 'r') as archive:
+        assert archive.get(orm.ProcessNode, uuid=process.uuid).checkpoint is None

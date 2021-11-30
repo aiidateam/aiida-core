@@ -55,6 +55,7 @@ def create_archive(
     include_authinfos: bool = False,
     allowed_licenses: Optional[Union[list, Callable]] = None,
     forbidden_licenses: Optional[Union[list, Callable]] = None,
+    strip_checkpoints: bool = True,
     batch_size: int = 1000,
     compression: int = 6,
     test_run: bool = False,
@@ -127,6 +128,9 @@ def create_archive(
 
     :param include_logs: In-/exclude export of logs for given node(s) in ``entities``.
         Default: True, *include* logs in export.
+
+    :param strip_checkpoints: Remove checkpoint keys from process node attributes.
+        These contain serialized code and can cause security issues.
 
     :param compression: level of compression to use (integer from 0 to 9)
 
@@ -289,7 +293,15 @@ def create_archive(
             # stream entity data to the archive
             with get_progress_reporter()(desc='Archiving database: ', total=sum(entity_counts.values())) as progress:
                 for etype, ids in entity_ids.items():
-                    transform = lambda row: row['entity']
+                    if etype == EntityTypes.NODE and strip_checkpoints:
+
+                        def transform(row):
+                            data = row['entity']
+                            if data.get('node_type', '').startswith('process.'):
+                                data['attributes'].pop(orm.ProcessNode.CHECKPOINT_KEY, None)
+                            return data
+                    else:
+                        transform = lambda row: row['entity']
                     progress.set_description_str(f'Archiving database: {etype.value}s')
                     if ids:
                         for nrows, rows in batch_iter(

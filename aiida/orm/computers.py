@@ -78,7 +78,7 @@ class Computer(entities.Entity['BackendComputer']):
     Collection = ComputerCollection
 
     @classproperty
-    def objects(cls) -> ComputerCollection:  # pylint: disable=no-self-argument
+    def objects(cls: Type['Computer']) -> ComputerCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
         return ComputerCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(  # pylint: disable=too-many-arguments

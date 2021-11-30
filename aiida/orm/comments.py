@@ -69,7 +69,7 @@ class Comment(entities.Entity['BackendComment']):
     Collection = CommentCollection
 
     @classproperty
-    def objects(cls) -> CommentCollection:  # pylint: disable=no-self-argument
+    def objects(cls: Type['Comment']) -> CommentCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
         return CommentCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['Backend'] = None):

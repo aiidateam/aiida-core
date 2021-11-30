@@ -131,7 +131,7 @@ class Log(entities.Entity['BackendLog']):
     Collection = LogCollection
 
     @classproperty
-    def objects(cls) -> LogCollection:  # pylint: disable=no-self-argument
+    def objects(cls: Type['Log']) -> LogCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
         return LogCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(

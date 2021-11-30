@@ -78,7 +78,7 @@ class User(entities.Entity['BackendUser']):
     Collection = UserCollection
 
     @classproperty
-    def objects(cls) -> UserCollection:  # pylint: disable=no-self-argument
+    def objects(cls: Type['User']) -> UserCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
         return UserCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(

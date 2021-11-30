@@ -139,7 +139,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
-        if entity_type in (EntityTypes.COMPUTER, EntityTypes.LOG):
+        if entity_type in (EntityTypes.COMPUTER, EntityTypes.LOG, EntityTypes.AUTHINFO):
             for row in rows:
                 row['_metadata'] = row.pop('metadata')
         if allow_defaults:

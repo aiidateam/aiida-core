@@ -29,12 +29,19 @@ def repository_maintain(full: bool = False, backend: Optional[Backend] = None, *
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
 
     maintainance_report['repository']['unreferenced'] = len(unreferenced_objects)  # type: ignore
-    maintainance_report['repository']['info'] = repository.get_info()  # type: ignore
+
+    try:
+        maintainance_report['repository']['info'] = repository.get_info()  # type: ignore
+    except NotImplementedError:
+        maintainance_report['repository']['info'] = {}  # type: ignore
 
     repository.delete_objects(list(unreferenced_objects))
 
     # Perform the maintainance operations in the repository
-    maintainance_report['repository']['maintain'] = repository.maintain(full=full, **kwargs)  # type: ignore
+    try:
+        maintainance_report['repository']['maintain'] = repository.maintain(full=full, **kwargs)  # type: ignore
+    except NotImplementedError:
+        maintainance_report['repository']['maintain'] = {}  # type: ignore
 
     return maintainance_report
 
@@ -44,7 +51,11 @@ def get_repository_info(statistics: bool = False, backend: Optional[Backend] = N
     if backend is None:
         backend = get_manager().get_backend()
     repository = backend.get_repository()
-    return repository.get_info(statistics)
+    try:
+        output_info = repository.get_info(statistics)
+    except NotImplementedError:
+        output_info = {}
+    return output_info
 
 
 def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optional[Backend] = None) -> Set[str]:

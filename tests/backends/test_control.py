@@ -37,18 +37,6 @@ class MockRepositoryBackend():
 @pytest.mark.usefixtures('clear_database_before_test')
 def clear_storage_before_test():
     """Clears the storage before a test."""
-    #-----------------------------------------------------------------#
-    # For some reason `clear_database_before_test` is not cleaning out
-    # the nodes so I have to do it manually.
-
-    from aiida import orm
-    from aiida.tools import delete_nodes
-    query = orm.QueryBuilder().append(orm.Node, project=['id'])
-    delete_nodes(query.all(flat=True), dry_run=False)
-
-    # Also would be good to disable the logging in delete_nodes
-    #-----------------------------------------------------------------#
-
     repository = get_manager().get_backend().get_repository()
     object_keys = list(repository.list_objects())
     repository.delete_objects(object_keys)

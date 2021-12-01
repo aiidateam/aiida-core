@@ -124,7 +124,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
         :return: a dictionary with the information.
         """
-        return {}
+        raise NotImplementedError
 
     def maintain(self, full: bool = False, **kwargs) -> dict:  # pylint: disable=unused-argument,no-self-use
         """Performs maintenance operations.
@@ -134,7 +134,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return:
             a dictionary with information on the operations performed.
         """
-        return {}
+        raise NotImplementedError
 
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:

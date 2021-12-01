@@ -136,7 +136,15 @@ def test_delete_objects_test(repository, monkeypatch):
 
 def test_default_methods(repository):
     """Checks the behaviour of the default methods."""
-    assert repository.get_info() == {}
-    assert repository.get_info(statistics=True) == {}
-    assert repository.maintain() == {}
-    assert repository.maintain(full=True) == {}
+
+    with pytest.raises(NotImplementedError):
+        repository.get_info()
+
+    with pytest.raises(NotImplementedError):
+        repository.get_info(statistics=True)
+
+    with pytest.raises(NotImplementedError):
+        repository.maintain()
+
+    with pytest.raises(NotImplementedError):
+        repository.maintain(full=True)

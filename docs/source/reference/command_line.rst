@@ -25,7 +25,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      create   Export subsets of the provenance graph to file for sharing.
+      create   Write subsets of the provenance graph to a single file.
       import   Import data from an AiiDA archive file.
       inspect  Inspect contents of an archive without importing it.
       migrate  Migrate an export archive to a more recent format version.
@@ -78,6 +78,7 @@ Below is a list with all available subcommands.
       reveal     Reveal one or more hidden codes in `verdi code list`.
       setup      Setup a new code.
       show       Display detailed information for a code.
+      test       Run tests for the given code to check whether it is usable.
 
 
 .. _reference:command-line:verdi-computer:
@@ -181,6 +182,8 @@ Below is a list with all available subcommands.
     Usage:  [OPTIONS] COMMAND [ARGS]...
 
       Inspect and manage the database.
+
+      .. deprecated:: v2.0.0
 
     Options:
       --help  Show this message and exit.
@@ -531,6 +534,26 @@ Below is a list with all available subcommands.
       -t, --print-traceback  Print the full traceback in case an exception is raised.
       --no-rmq               Do not check RabbitMQ status
       --help                 Show this message and exit.
+
+
+.. _reference:command-line:verdi-storage:
+
+``verdi storage``
+-----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage stored data for a profile.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      info       Summarise the contents of the storage.
+      integrity  Checks for the integrity of the data storage.
+      migrate    Migrate the storage to the latest schema version.
 
 
 .. _reference:command-line:verdi-user:

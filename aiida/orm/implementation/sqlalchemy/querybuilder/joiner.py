@@ -116,6 +116,7 @@ class SqlaJoiner:
                 'with_node': self._join_node_group,
                 'with_user': self._join_user_group,
             },
+            'link': {},
             'log': {
                 'with_node': self._join_node_log,
             },

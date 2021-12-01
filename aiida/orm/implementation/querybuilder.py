@@ -9,11 +9,11 @@
 ###########################################################################
 """Abstract `QueryBuilder` definition."""
 import abc
-from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Set, Union
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
+from aiida.orm.entities import EntityTypes
 
 try:
     from typing import Literal, TypedDict  # pylint: disable=ungrouped-imports
@@ -28,29 +28,18 @@ __all__ = ('BackendQueryBuilder',)
 
 QUERYBUILD_LOGGER = AIIDA_LOGGER.getChild('orm.querybuilder')
 
-
-class EntityTypes(Enum):
-    """The entity types and their allowed relationships."""
-    AUTHINFO = 'authinfo'
-    COMMENT = 'comment'
-    COMPUTER = 'computer'
-    GROUP = 'group'
-    LOG = 'log'
-    NODE = 'node'
-    USER = 'user'
-
-
 EntityRelationships: Dict[str, Set[str]] = {
-    'authinfo': {'with_computer', 'with_user'},
-    'comment': {'with_node', 'with_user'},
-    'computer': {'with_node'},
-    'group': {'with_node', 'with_user'},
-    'log': {'with_node'},
-    'node': {
+    EntityTypes.AUTHINFO.value: {'with_computer', 'with_user'},
+    EntityTypes.COMMENT.value: {'with_node', 'with_user'},
+    EntityTypes.COMPUTER.value: {'with_node'},
+    EntityTypes.GROUP.value: {'with_node', 'with_user'},
+    EntityTypes.LOG.value: {'with_node'},
+    EntityTypes.NODE.value: {
         'with_comment', 'with_log', 'with_incoming', 'with_outgoing', 'with_descendants', 'with_ancestors',
         'with_computer', 'with_user', 'with_group'
     },
-    'user': {'with_authinfo', 'with_comment', 'with_group', 'with_node'}
+    EntityTypes.USER.value: {'with_authinfo', 'with_comment', 'with_group', 'with_node'},
+    EntityTypes.LINK.value: set(),
 }
 
 

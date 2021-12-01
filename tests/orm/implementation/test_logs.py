@@ -13,6 +13,8 @@ from datetime import datetime
 import logging
 from uuid import UUID
 
+import pytz
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, timezone
@@ -89,9 +91,7 @@ class TestBackendLog(AiidaTestCase):
         Test creation of a BackendLog when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        from aiida.tools.importexport.dbimport.utils import deserialize_attributes
-
-        time = deserialize_attributes('2019-02-27T16:20:12.245738', 'date')
+        time = datetime(2019, 2, 27, 16, 20, 12, 245738, pytz.utc)
 
         log = self.create_log(time=time)
 

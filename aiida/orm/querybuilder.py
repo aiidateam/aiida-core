@@ -39,11 +39,11 @@ from typing import (
 import warnings
 
 from aiida.manage.manager import get_manager
+from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
     GROUP_ENTITY_TYPE_PREFIX,
     BackendQueryBuilder,
     EntityRelationships,
-    EntityTypes,
     PathItemType,
     QueryDictType,
 )
@@ -1254,12 +1254,15 @@ def _get_ormclass_from_str(type_string: str) -> Tuple[EntityTypes, Classifier]:
     if type_string_lower.startswith(GROUP_ENTITY_TYPE_PREFIX):
         classifiers = Classifier('group.core')
         ormclass = EntityTypes.GROUP
-    elif type_string_lower == 'computer':
+    elif type_string_lower == EntityTypes.COMPUTER.value:
         classifiers = Classifier('computer')
         ormclass = EntityTypes.COMPUTER
-    elif type_string_lower == 'user':
+    elif type_string_lower == EntityTypes.USER.value:
         classifiers = Classifier('user')
         ormclass = EntityTypes.USER
+    elif type_string_lower == EntityTypes.LINK.value:
+        classifiers = Classifier('link')
+        ormclass = EntityTypes.LINK
     else:
         # At this point, we assume it is a node. The only valid type string then is a string
         # that matches exactly the _plugin_type_string of a node class
@@ -1415,7 +1418,7 @@ class _QueryTagMap:
         if isinstance(tag_or_cls, str):
             if tag_or_cls in self:
                 return tag_or_cls
-            raise ValueError(f'Tag {tag_or_cls} is not among my known tags: {list(self)}')
+            raise ValueError(f'Tag {tag_or_cls!r} is not among my known tags: {list(self)}')
         if self._cls_to_tag_map.get(tag_or_cls, None):
             if len(self._cls_to_tag_map[tag_or_cls]) != 1:
                 raise ValueError(

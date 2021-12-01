@@ -18,6 +18,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common import exceptions
 
 
 @verdi.group('code')
@@ -102,6 +103,26 @@ def setup_code(ctx, non_interactive, **kwargs):
 
     code.reveal()
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
+
+
+@verdi_code.command('test')
+@arguments.CODE(callback=set_code_builder)
+@with_dbenv()
+def code_test(code):
+    """Run tests for the given code to check whether it is usable.
+
+    For remote codes the following checks are performed:
+
+     * Whether the remote executable exists.
+
+    """
+    if not code.is_local():
+        try:
+            code.validate_remote_exec_path()
+        except exceptions.ValidationError as exception:
+            echo.echo_critical(f'validation failed: {exception}')
+
+    echo.echo_success('all tests succeeded.')
 
 
 # Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary

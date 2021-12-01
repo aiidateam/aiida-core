@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from aiida.orm.implementation import Backend, BackendEntity
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
-__all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityExtrasMixin')
+__all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityExtrasMixin', 'EntityTypes')
 
 CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')

@@ -13,11 +13,13 @@ import os
 import tempfile
 import textwrap
 
+import click
 import pytest
 
 from aiida.cmdline.commands import cmd_code
-from aiida.common.exceptions import NotExistent
-from aiida.orm import Code, load_code
+from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
+from aiida.common.exceptions import MultipleObjectsError, NotExistent
+from aiida.orm import Code, Computer, load_code
 
 
 @pytest.fixture
@@ -281,10 +283,10 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
 
 @pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_setup_duplicate_full_label_interactive(
+def test_code_setup_remote_duplicate_full_label_interactive(
     run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
 ):
-    """Test ``verdi code setup`` in interactive mode when specifying a full label that already exists."""
+    """Test ``verdi code setup`` for a remote code in interactive mode specifying an existing full label."""
     label = 'some-label'
     aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
     assert isinstance(load_code(label), Code)
@@ -297,11 +299,11 @@ def test_code_setup_duplicate_full_label_interactive(
 
 @pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('label_first', (True, False))
-def test_code_setup_duplicate_full_label_non_interactive(
+def test_code_setup_remote_duplicate_full_label_non_interactive(
     run_cli_command, aiida_local_code_factory, aiida_localhost, label_first
 ):
-    """Test ``verdi code setup`` in non-interactive mode when specifying a full label that already exists."""
-    label = 'some-label'
+    """Test ``verdi code setup`` for a remote code in non-interactive mode specifying an existing full label."""
+    label = f'some-label-{label_first}'
     aiida_local_code_factory('core.arithmetic.add', '/bin/cat', computer=aiida_localhost, label=label)
     assert isinstance(load_code(label), Code)
 
@@ -314,3 +316,84 @@ def test_code_setup_duplicate_full_label_non_interactive(
 
     result = run_cli_command(cmd_code.setup_code, options, raises=True)
     assert f'the code `{label}@{aiida_localhost.label}` already exists.' in result.output
+
+
+@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
+def test_code_setup_local_duplicate_full_label_interactive(
+    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+):
+    """Test ``verdi code setup`` for a local code in interactive mode specifying an existing full label."""
+    label = 'some-label'
+    code = Code(local_executable='bash', files=['/bin/bash'])
+    code.label = label
+    code.store()
+    assert isinstance(load_code(label), Code)
+
+    label_unique = 'label-unique'
+    user_input = '\n'.join(['no', label, label_unique, 'd', 'core.arithmetic.add', '/bin', 'bash'])
+    run_cli_command(cmd_code.setup_code, user_input=user_input)
+    assert isinstance(load_code(label_unique), Code)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_setup_local_duplicate_full_label_non_interactive(
+    run_cli_command, aiida_local_code_factory, aiida_localhost
+):
+    """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
+    label = 'some-label'
+    code = Code(local_executable='bash', files=['/bin/bash'])
+    code.label = label
+    code.store()
+    assert isinstance(load_code(label), Code)
+
+    options = [
+        '-n', '-D', 'd', '-P', 'core.arithmetic.add', '--store-in-db', '--code-folder=/bin', '--code-rel-path=bash',
+        '--label', label
+    ]
+
+    result = run_cli_command(cmd_code.setup_code, options, raises=True)
+    assert f'the code `{label}` already exists.' in result.output
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_validate_label_uniqueness(monkeypatch, aiida_localhost):
+    """Test the ``validate_label_uniqueness`` validator."""
+    from aiida import orm
+
+    def load_code(*args, **kwargs):
+        raise MultipleObjectsError()
+
+    monkeypatch.setattr(orm, 'load_code', load_code)
+
+    ctx = click.Context(cmd_code.setup_code)
+    ctx.params = {'on_computer': False}
+
+    with pytest.raises(click.BadParameter, match=r'multiple copies of the remote code `.*` already exist.'):
+        validate_label_uniqueness(ctx, None, 'some-code')
+
+    ctx = click.Context(cmd_code.setup_code)
+    ctx.params = {'on_computer': None, 'computer': aiida_localhost}
+
+    with pytest.raises(click.BadParameter, match=r'multiple copies of the local code `.*` already exist.'):
+        validate_label_uniqueness(ctx, None, 'some-code')
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_code_test(run_cli_command):
+    """Test the ``verdi code test`` command."""
+    computer = Computer(
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+    ).store()
+    code = Code(remote_computer_exec=[computer, '/bin/invalid']).store()
+
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)], raises=True)
+    assert 'Could not connect to the configured computer' in result.output
+
+    computer.configure()
+
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)], raises=True)
+    assert 'the provided remote absolute path `/bin/invalid` does not exist' in result.output
+
+    code = Code(remote_computer_exec=[computer, '/bin/bash']).store()
+    result = run_cli_command(cmd_code.code_test, [str(code.pk)])
+    assert 'all tests succeeded.' in result.output

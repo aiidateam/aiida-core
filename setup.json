@@ -22,7 +22,7 @@
     "install_requires": [
         "aldjemy~=2.4",
         "alembic~=1.2",
-        "archive-path~=0.2.1",
+        "archive-path~=0.3.6",
         "aio-pika~=6.6",
         "circus~=0.17.1",
         "click-config-file~=0.6.0",
@@ -77,11 +77,13 @@
             "sphinx-panels~=0.5.0",
             "sphinx-copybutton~=0.3.0",
             "sphinx-notfound-page~=0.5",
-            "sphinxext-rediraffe~=0.2.4"
+            "sphinxext-rediraffe~=0.2.4",
+            "sphinx-sqlalchemy~=0.1.1"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",
             "ase~=3.18",
+            "matplotlib~=3.3,>=3.3.4",
             "pymatgen>=2019.7.2,<=2022.02.03,!=2019.9.7",
             "pymysql~=0.9.3",
             "seekpath~=1.9,>=1.9.3",
@@ -164,6 +166,7 @@
             "core.cif = aiida.orm.nodes.data.cif:CifData",
             "core.code = aiida.orm.nodes.data.code:Code",
             "core.dict = aiida.orm.nodes.data.dict:Dict",
+            "core.enum = aiida.orm.nodes.data.enum:EnumData",
             "core.float = aiida.orm.nodes.data.float:Float",
             "core.folder = aiida.orm.nodes.data.folder:FolderData",
             "core.int = aiida.orm.nodes.data.int:Int",

@@ -118,7 +118,7 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
     Collection = GroupCollection
 
     @classproperty
-    def objects(cls) -> GroupCollection:  # pylint: disable=no-self-argument
+    def objects(cls: Type['Group']) -> GroupCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
         return GroupCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(

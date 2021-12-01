@@ -20,7 +20,12 @@ from .base import Base
 
 
 class DbAuthInfo(Base):
-    """Class that keeps the authernification data."""
+    """Database model to keep computer authentication data, per user.
+
+    Specifications are user-specific of how to submit jobs in the computer.
+    The model also has an ``enabled`` logical switch that indicates whether the device is available for use or not.
+    This last one can be set and unset by the user.
+    """
     __tablename__ = 'db_dbauthinfo'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name

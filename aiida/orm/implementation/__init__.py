@@ -36,7 +36,6 @@ __all__ = (
     'BackendComputer',
     'BackendComputerCollection',
     'BackendEntity',
-    'BackendEntityAttributesMixin',
     'BackendEntityExtrasMixin',
     'BackendGroup',
     'BackendGroupCollection',

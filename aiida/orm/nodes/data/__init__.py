@@ -21,6 +21,7 @@ from .cif import *
 from .code import *
 from .data import *
 from .dict import *
+from .enum import *
 from .float import *
 from .folder import *
 from .int import *
@@ -42,6 +43,7 @@ __all__ = (
     'Code',
     'Data',
     'Dict',
+    'EnumData',
     'Float',
     'FolderData',
     'Int',

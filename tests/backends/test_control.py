@@ -34,8 +34,7 @@ class MockRepositoryBackend():
 
 
 @pytest.fixture(scope='function')
-@pytest.mark.usefixtures('clear_database_before_test')
-def clear_storage_before_test():
+def clear_storage_before_test(clear_database_before_test):  # pylint: disable=unused-argument
     """Clears the storage before a test."""
     repository = get_manager().get_backend().get_repository()
     object_keys = list(repository.list_objects())
@@ -43,7 +42,7 @@ def clear_storage_before_test():
     repository.maintain(full=True)
 
 
-@pytest.mark.usefixtures('clear_database_before_test', 'clear_storage_before_test')
+@pytest.mark.usefixtures('clear_storage_before_test')
 def test_get_unreferenced_keyset():
     """Test the ``get_unreferenced_keyset`` method."""
     # NOTE: This tests needs to use the database because there is a call inside

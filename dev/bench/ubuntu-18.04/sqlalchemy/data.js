@@ -1116,7 +1116,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6496 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.0693730252854388,
             "unit": "iter/sec",
             "range": "stddev: 0.0037589",
@@ -1124,7 +1124,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 325.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5697930815053054,
             "unit": "iter/sec",
             "range": "stddev: 0.047302",
@@ -1132,7 +1132,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 389.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15463169040640584,
             "unit": "iter/sec",
             "range": "stddev: 0.059006",
@@ -1140,7 +1140,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4670 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15114226206267115,
             "unit": "iter/sec",
             "range": "stddev: 0.11763",
@@ -1299,7 +1299,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.8458 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.665916673215402,
             "unit": "iter/sec",
             "range": "stddev: 0.058277",
@@ -1307,7 +1307,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 375.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.321089469168484,
             "unit": "iter/sec",
             "range": "stddev: 0.056576",
@@ -1315,7 +1315,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 430.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13714576737917566,
             "unit": "iter/sec",
             "range": "stddev: 0.092181",
@@ -1323,7 +1323,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2915 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14130182311435438,
             "unit": "iter/sec",
             "range": "stddev: 0.068946",
@@ -1482,7 +1482,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1784 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5646427145743407,
             "unit": "iter/sec",
             "range": "stddev: 0.013689",
@@ -1490,7 +1490,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 389.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2337762511792802,
             "unit": "iter/sec",
             "range": "stddev: 0.048692",
@@ -1498,7 +1498,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 447.67 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13628540676689305,
             "unit": "iter/sec",
             "range": "stddev: 0.059875",
@@ -1506,7 +1506,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3375 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14291993810417905,
             "unit": "iter/sec",
             "range": "stddev: 0.088909",
@@ -1665,7 +1665,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8947 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8029792009150083,
             "unit": "iter/sec",
             "range": "stddev: 0.050537",
@@ -1673,7 +1673,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 356.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.443830344544901,
             "unit": "iter/sec",
             "range": "stddev: 0.047955",
@@ -1681,7 +1681,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 409.19 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14876402995942106,
             "unit": "iter/sec",
             "range": "stddev: 0.11539",
@@ -1689,7 +1689,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7221 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14863030268850821,
             "unit": "iter/sec",
             "range": "stddev: 0.12886",
@@ -1848,7 +1848,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.5149 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8458960588685387,
             "unit": "iter/sec",
             "range": "stddev: 0.0021110",
@@ -1856,7 +1856,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 351.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4375769996295964,
             "unit": "iter/sec",
             "range": "stddev: 0.054422",
@@ -1864,7 +1864,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 410.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14106910844294332,
             "unit": "iter/sec",
             "range": "stddev: 0.059946",
@@ -1872,7 +1872,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0887 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14358862296203082,
             "unit": "iter/sec",
             "range": "stddev: 0.11365",
@@ -2031,7 +2031,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6355 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.151688901322415,
             "unit": "iter/sec",
             "range": "stddev: 0.040983",
@@ -2039,7 +2039,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 317.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.9424974868050664,
             "unit": "iter/sec",
             "range": "stddev: 0.011047",
@@ -2047,7 +2047,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 339.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16488234310467934,
             "unit": "iter/sec",
             "range": "stddev: 0.29442",
@@ -2055,7 +2055,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0649 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1659896080097009,
             "unit": "iter/sec",
             "range": "stddev: 0.090055",
@@ -2214,7 +2214,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1307 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.1056348390325006,
             "unit": "iter/sec",
             "range": "stddev: 0.039223",
@@ -2222,7 +2222,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 322.00 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.853504710653694,
             "unit": "iter/sec",
             "range": "stddev: 0.010464",
@@ -2230,7 +2230,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 350.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.162933127934741,
             "unit": "iter/sec",
             "range": "stddev: 0.097152",
@@ -2238,7 +2238,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1375 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1636741726968612,
             "unit": "iter/sec",
             "range": "stddev: 0.13339",
@@ -2397,7 +2397,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6624 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.723736272666573,
             "unit": "iter/sec",
             "range": "stddev: 0.046314",
@@ -2405,7 +2405,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 367.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.488991351997488,
             "unit": "iter/sec",
             "range": "stddev: 0.046353",
@@ -2413,7 +2413,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 401.77 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14178807194194346,
             "unit": "iter/sec",
             "range": "stddev: 0.14555",
@@ -2421,7 +2421,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0528 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1675199437416369,
             "unit": "iter/sec",
             "range": "stddev: 0.29238",
@@ -2580,7 +2580,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8464 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6282049431639476,
             "unit": "iter/sec",
             "range": "stddev: 0.052372",
@@ -2588,7 +2588,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 380.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4684751694371383,
             "unit": "iter/sec",
             "range": "stddev: 0.018775",
@@ -2596,7 +2596,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 405.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13900992407198115,
             "unit": "iter/sec",
             "range": "stddev: 0.17825",
@@ -2604,7 +2604,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1937 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13679992884321612,
             "unit": "iter/sec",
             "range": "stddev: 0.28867",
@@ -2763,7 +2763,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8163 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.146598693463886,
             "unit": "iter/sec",
             "range": "stddev: 0.0095342",
@@ -2771,7 +2771,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 317.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.752140606305879,
             "unit": "iter/sec",
             "range": "stddev: 0.044924",
@@ -2779,7 +2779,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 363.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15539248842895342,
             "unit": "iter/sec",
             "range": "stddev: 0.23615",
@@ -2787,7 +2787,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4353 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1579108043516371,
             "unit": "iter/sec",
             "range": "stddev: 0.15246",
@@ -2946,7 +2946,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.4087 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.399368518357561,
             "unit": "iter/sec",
             "range": "stddev: 0.0063495",
@@ -2954,7 +2954,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 416.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.064720020000934,
             "unit": "iter/sec",
             "range": "stddev: 0.051538",
@@ -2962,7 +2962,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 484.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12108107009555902,
             "unit": "iter/sec",
             "range": "stddev: 0.18063",
@@ -2970,7 +2970,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2589 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12587039009728085,
             "unit": "iter/sec",
             "range": "stddev: 0.10280",
@@ -3129,7 +3129,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.5767 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.348659844505394,
             "unit": "iter/sec",
             "range": "stddev: 0.057357",
@@ -3137,7 +3137,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 425.77 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.095211863451667,
             "unit": "iter/sec",
             "range": "stddev: 0.054768",
@@ -3145,7 +3145,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 477.28 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12624122256809203,
             "unit": "iter/sec",
             "range": "stddev: 0.13672",
@@ -3153,7 +3153,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9213 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1254544121965835,
             "unit": "iter/sec",
             "range": "stddev: 0.049521",
@@ -3312,7 +3312,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7011 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.839975522913684,
             "unit": "iter/sec",
             "range": "stddev: 0.046059",
@@ -3320,7 +3320,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 352.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.54005357942043,
             "unit": "iter/sec",
             "range": "stddev: 0.046068",
@@ -3328,7 +3328,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 393.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15121535785209203,
             "unit": "iter/sec",
             "range": "stddev: 0.083688",
@@ -3336,7 +3336,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6131 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1520557804514787,
             "unit": "iter/sec",
             "range": "stddev: 0.089226",
@@ -3495,7 +3495,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6775 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.868693504689714,
             "unit": "iter/sec",
             "range": "stddev: 0.060036",
@@ -3503,7 +3503,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 348.59 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.615203739042652,
             "unit": "iter/sec",
             "range": "stddev: 0.050302",
@@ -3511,7 +3511,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 382.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15178746914356123,
             "unit": "iter/sec",
             "range": "stddev: 0.10914",
@@ -3519,7 +3519,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5882 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15029077084007628,
             "unit": "iter/sec",
             "range": "stddev: 0.075823",
@@ -3678,7 +3678,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.1241 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.370228702561581,
             "unit": "iter/sec",
             "range": "stddev: 0.066279",
@@ -3686,7 +3686,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 421.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1543975650530824,
             "unit": "iter/sec",
             "range": "stddev: 0.058034",
@@ -3694,7 +3694,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 464.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1262750814632153,
             "unit": "iter/sec",
             "range": "stddev: 0.15666",
@@ -3702,7 +3702,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9192 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12934745137630632,
             "unit": "iter/sec",
             "range": "stddev: 0.18930",
@@ -3861,7 +3861,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.8224 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6117038058043764,
             "unit": "iter/sec",
             "range": "stddev: 0.0090029",
@@ -3869,7 +3869,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 382.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1738491957158224,
             "unit": "iter/sec",
             "range": "stddev: 0.054294",
@@ -3877,7 +3877,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 460.01 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13270678644868067,
             "unit": "iter/sec",
             "range": "stddev: 0.11496",
@@ -3885,7 +3885,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5354 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1327671181238472,
             "unit": "iter/sec",
             "range": "stddev: 0.13765",
@@ -4044,7 +4044,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.5268 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.521137462824367,
             "unit": "iter/sec",
             "range": "stddev: 0.011931",
@@ -4052,7 +4052,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 396.65 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1314225931200856,
             "unit": "iter/sec",
             "range": "stddev: 0.083515",
@@ -4060,7 +4060,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 469.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1351761491634576,
             "unit": "iter/sec",
             "range": "stddev: 0.18062",
@@ -4068,7 +4068,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3978 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13605598300957036,
             "unit": "iter/sec",
             "range": "stddev: 0.19068",
@@ -4227,7 +4227,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2284 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.716068492659833,
             "unit": "iter/sec",
             "range": "stddev: 0.0046675",
@@ -4235,7 +4235,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 269.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.1930110565099095,
             "unit": "iter/sec",
             "range": "stddev: 0.045284",
@@ -4243,7 +4243,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 313.18 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.18728682507310448,
             "unit": "iter/sec",
             "range": "stddev: 0.051215",
@@ -4251,7 +4251,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3394 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.18654984077862524,
             "unit": "iter/sec",
             "range": "stddev: 0.050824",
@@ -4410,7 +4410,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7309 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4297737777407495,
             "unit": "iter/sec",
             "range": "stddev: 0.013266",
@@ -4418,7 +4418,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 411.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.04031872228862,
             "unit": "iter/sec",
             "range": "stddev: 0.062359",
@@ -4426,7 +4426,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 490.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12211535648909673,
             "unit": "iter/sec",
             "range": "stddev: 0.42524",
@@ -4434,7 +4434,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1890 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13015313237332385,
             "unit": "iter/sec",
             "range": "stddev: 0.23317",
@@ -4593,7 +4593,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0629 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.546429504867124,
             "unit": "iter/sec",
             "range": "stddev: 0.045288",
@@ -4601,7 +4601,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.71 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2536269515803244,
             "unit": "iter/sec",
             "range": "stddev: 0.043580",
@@ -4609,7 +4609,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 443.73 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1378052922697814,
             "unit": "iter/sec",
             "range": "stddev: 0.14086",
@@ -4617,7 +4617,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2566 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14408668416411696,
             "unit": "iter/sec",
             "range": "stddev: 0.11890",
@@ -4776,7 +4776,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.8371 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2767286673422316,
             "unit": "iter/sec",
             "range": "stddev: 0.062607",
@@ -4784,7 +4784,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 439.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0663798728513,
             "unit": "iter/sec",
             "range": "stddev: 0.045134",
@@ -4792,7 +4792,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 483.94 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12486812625418073,
             "unit": "iter/sec",
             "range": "stddev: 0.32037",
@@ -4800,7 +4800,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0084 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13212845731066986,
             "unit": "iter/sec",
             "range": "stddev: 0.29338",
@@ -4959,7 +4959,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0710 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6416220491346434,
             "unit": "iter/sec",
             "range": "stddev: 0.045143",
@@ -4967,7 +4967,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3193327259802015,
             "unit": "iter/sec",
             "range": "stddev: 0.064135",
@@ -4975,7 +4975,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13556147611950406,
             "unit": "iter/sec",
             "range": "stddev: 0.24083",
@@ -4983,7 +4983,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3767 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14196935363629096,
             "unit": "iter/sec",
             "range": "stddev: 0.26266",
@@ -5142,7 +5142,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1215 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.530879221527781,
             "unit": "iter/sec",
             "range": "stddev: 0.053968",
@@ -5150,7 +5150,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 395.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2612510774692027,
             "unit": "iter/sec",
             "range": "stddev: 0.049550",
@@ -5158,7 +5158,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 442.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13646881295687216,
             "unit": "iter/sec",
             "range": "stddev: 0.066502",
@@ -5166,7 +5166,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3277 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1384702654349807,
             "unit": "iter/sec",
             "range": "stddev: 0.16701",
@@ -5325,7 +5325,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0166 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.575869727596877,
             "unit": "iter/sec",
             "range": "stddev: 0.057472",
@@ -5333,7 +5333,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 388.22 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.286622278159212,
             "unit": "iter/sec",
             "range": "stddev: 0.048907",
@@ -5341,7 +5341,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 437.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14007330666374246,
             "unit": "iter/sec",
             "range": "stddev: 0.055377",
@@ -5349,7 +5349,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1391 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1396646488810347,
             "unit": "iter/sec",
             "range": "stddev: 0.097339",
@@ -5508,7 +5508,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3407 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5213822321780306,
             "unit": "iter/sec",
             "range": "stddev: 0.057073",
@@ -5516,7 +5516,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 396.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2345661992951293,
             "unit": "iter/sec",
             "range": "stddev: 0.051246",
@@ -5524,7 +5524,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 447.51 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1343156447811141,
             "unit": "iter/sec",
             "range": "stddev: 0.14493",
@@ -5532,7 +5532,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4451 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14036204290156232,
             "unit": "iter/sec",
             "range": "stddev: 0.12769",
@@ -5691,7 +5691,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2909 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4916965991357327,
             "unit": "iter/sec",
             "range": "stddev: 0.047675",
@@ -5699,7 +5699,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 401.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3275437095602056,
             "unit": "iter/sec",
             "range": "stddev: 0.0081139",
@@ -5707,7 +5707,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 429.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13509758691663168,
             "unit": "iter/sec",
             "range": "stddev: 0.071879",
@@ -5715,7 +5715,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4021 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13490658559820062,
             "unit": "iter/sec",
             "range": "stddev: 0.15221",
@@ -5874,7 +5874,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7421 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6400266302126925,
             "unit": "iter/sec",
             "range": "stddev: 0.059103",
@@ -5882,7 +5882,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3989786233360313,
             "unit": "iter/sec",
             "range": "stddev: 0.054355",
@@ -5890,7 +5890,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 416.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14231456170195156,
             "unit": "iter/sec",
             "range": "stddev: 0.16735",
@@ -5898,7 +5898,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0267 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14522509425391306,
             "unit": "iter/sec",
             "range": "stddev: 0.042900",
@@ -6057,7 +6057,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.2821 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4203333272611416,
             "unit": "iter/sec",
             "range": "stddev: 0.066935",
@@ -6065,7 +6065,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 413.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2915678806765065,
             "unit": "iter/sec",
             "range": "stddev: 0.024796",
@@ -6073,7 +6073,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12690227275812874,
             "unit": "iter/sec",
             "range": "stddev: 0.19188",
@@ -6081,7 +6081,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8801 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12969834618623813,
             "unit": "iter/sec",
             "range": "stddev: 0.10575",
@@ -6240,7 +6240,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2881 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.708358750668805,
             "unit": "iter/sec",
             "range": "stddev: 0.058034",
@@ -6248,7 +6248,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 369.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.511794309143921,
             "unit": "iter/sec",
             "range": "stddev: 0.0088517",
@@ -6256,7 +6256,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 398.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.149027209149415,
             "unit": "iter/sec",
             "range": "stddev: 0.068834",
@@ -6264,7 +6264,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7102 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1498360782815068,
             "unit": "iter/sec",
             "range": "stddev: 0.037629",
@@ -6423,7 +6423,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1872 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9411678748810965,
             "unit": "iter/sec",
             "range": "stddev: 0.0041507",
@@ -6431,7 +6431,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 340.00 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.553937445584284,
             "unit": "iter/sec",
             "range": "stddev: 0.048917",
@@ -6439,7 +6439,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 391.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14676604678456923,
             "unit": "iter/sec",
             "range": "stddev: 0.084841",
@@ -6447,7 +6447,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8136 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1453804785009321,
             "unit": "iter/sec",
             "range": "stddev: 0.12661",
@@ -6606,7 +6606,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4654 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.596114513271541,
             "unit": "iter/sec",
             "range": "stddev: 0.0089390",
@@ -6614,7 +6614,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.19 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.256304385632951,
             "unit": "iter/sec",
             "range": "stddev: 0.052208",
@@ -6622,7 +6622,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 443.20 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13327626101464746,
             "unit": "iter/sec",
             "range": "stddev: 0.14075",
@@ -6630,7 +6630,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5032 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13558160236679603,
             "unit": "iter/sec",
             "range": "stddev: 0.16066",
@@ -6789,7 +6789,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8958 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.824268237012944,
             "unit": "iter/sec",
             "range": "stddev: 0.050325",
@@ -6797,7 +6797,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 354.07 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.171074598640243,
             "unit": "iter/sec",
             "range": "stddev: 0.0087292",
@@ -6805,7 +6805,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 460.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15052240691127394,
             "unit": "iter/sec",
             "range": "stddev: 0.073626",
@@ -6813,7 +6813,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6435 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15311476003641447,
             "unit": "iter/sec",
             "range": "stddev: 0.12092",
@@ -6972,7 +6972,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.7354 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.399527544064522,
             "unit": "iter/sec",
             "range": "stddev: 0.057926",
@@ -6980,7 +6980,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 416.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1987636116209317,
             "unit": "iter/sec",
             "range": "stddev: 0.059889",
@@ -6988,7 +6988,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 454.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1212061129442985,
             "unit": "iter/sec",
             "range": "stddev: 0.19100",
@@ -6996,7 +6996,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2504 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12564678136377333,
             "unit": "iter/sec",
             "range": "stddev: 0.10165",
@@ -7155,7 +7155,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0172 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6812805118076177,
             "unit": "iter/sec",
             "range": "stddev: 0.0063126",
@@ -7163,7 +7163,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 372.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.263001613125996,
             "unit": "iter/sec",
             "range": "stddev: 0.051210",
@@ -7171,7 +7171,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 441.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13890092561225278,
             "unit": "iter/sec",
             "range": "stddev: 0.033243",
@@ -7179,7 +7179,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1994 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1400248097136394,
             "unit": "iter/sec",
             "range": "stddev: 0.15368",
@@ -7338,7 +7338,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7397 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.941369318439809,
             "unit": "iter/sec",
             "range": "stddev: 0.056632",
@@ -7346,7 +7346,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 339.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5481228490506616,
             "unit": "iter/sec",
             "range": "stddev: 0.055161",
@@ -7354,7 +7354,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15123556906502617,
             "unit": "iter/sec",
             "range": "stddev: 0.17904",
@@ -7362,7 +7362,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6122 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15386434425310064,
             "unit": "iter/sec",
             "range": "stddev: 0.13055",
@@ -7521,7 +7521,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3511 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.773780637883507,
             "unit": "iter/sec",
             "range": "stddev: 0.056643",
@@ -7529,7 +7529,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 360.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5075806990785336,
             "unit": "iter/sec",
             "range": "stddev: 0.0084038",
@@ -7537,7 +7537,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 398.79 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14394341118244924,
             "unit": "iter/sec",
             "range": "stddev: 0.11538",
@@ -7545,7 +7545,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9472 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14446705064679055,
             "unit": "iter/sec",
             "range": "stddev: 0.14212",
@@ -7704,7 +7704,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6867 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4726913820764844,
             "unit": "iter/sec",
             "range": "stddev: 0.063873",
@@ -7712,7 +7712,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 404.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.234076235693405,
             "unit": "iter/sec",
             "range": "stddev: 0.063064",
@@ -7720,7 +7720,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 447.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12983360272883018,
             "unit": "iter/sec",
             "range": "stddev: 0.11455",
@@ -7728,7 +7728,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7022 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13650943906902963,
             "unit": "iter/sec",
             "range": "stddev: 0.16918",
@@ -7887,7 +7887,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3210 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.108412139134065,
             "unit": "iter/sec",
             "range": "stddev: 0.058351",
@@ -7895,7 +7895,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 321.71 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.9113930481495593,
             "unit": "iter/sec",
             "range": "stddev: 0.049973",
@@ -7903,7 +7903,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 343.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16034720439187553,
             "unit": "iter/sec",
             "range": "stddev: 0.27335",
@@ -7911,7 +7911,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2365 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1562781669114008,
             "unit": "iter/sec",
             "range": "stddev: 0.19972",
@@ -8070,7 +8070,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4668 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8256551374978356,
             "unit": "iter/sec",
             "range": "stddev: 0.050393",
@@ -8078,7 +8078,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 353.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5452044585235836,
             "unit": "iter/sec",
             "range": "stddev: 0.066944",
@@ -8086,7 +8086,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14419293029357796,
             "unit": "iter/sec",
             "range": "stddev: 0.14410",
@@ -8094,7 +8094,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9352 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15358337249104395,
             "unit": "iter/sec",
             "range": "stddev: 0.10413",
@@ -8253,7 +8253,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1249 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.726658576553969,
             "unit": "iter/sec",
             "range": "stddev: 0.061112",
@@ -8261,7 +8261,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 366.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4410278315873466,
             "unit": "iter/sec",
             "range": "stddev: 0.058267",
@@ -8269,7 +8269,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 409.66 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14511129335633327,
             "unit": "iter/sec",
             "range": "stddev: 0.083659",
@@ -8277,7 +8277,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8913 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15083373775023778,
             "unit": "iter/sec",
             "range": "stddev: 0.090036",
@@ -8436,7 +8436,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2696 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.818638124902657,
             "unit": "iter/sec",
             "range": "stddev: 0.053616",
@@ -8444,7 +8444,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 354.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.512678565111862,
             "unit": "iter/sec",
             "range": "stddev: 0.051775",
@@ -8452,7 +8452,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 397.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14545413170365648,
             "unit": "iter/sec",
             "range": "stddev: 0.033514",
@@ -8460,7 +8460,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8750 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14588062698011064,
             "unit": "iter/sec",
             "range": "stddev: 0.057725",
@@ -8619,7 +8619,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0810 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5917756477098925,
             "unit": "iter/sec",
             "range": "stddev: 0.051880",
@@ -8627,7 +8627,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.319752092114734,
             "unit": "iter/sec",
             "range": "stddev: 0.047446",
@@ -8635,7 +8635,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.08 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1396049570590494,
             "unit": "iter/sec",
             "range": "stddev: 0.058768",
@@ -8643,7 +8643,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1631 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13945207386720535,
             "unit": "iter/sec",
             "range": "stddev: 0.10777",
@@ -8802,7 +8802,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6020 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.50270130525285,
             "unit": "iter/sec",
             "range": "stddev: 0.050350",
@@ -8810,7 +8810,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 399.57 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2008022387062653,
             "unit": "iter/sec",
             "range": "stddev: 0.052368",
@@ -8818,7 +8818,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 454.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13301457448762244,
             "unit": "iter/sec",
             "range": "stddev: 0.080163",
@@ -8826,7 +8826,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5180 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13539043961554587,
             "unit": "iter/sec",
             "range": "stddev: 0.12569",
@@ -8985,7 +8985,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6173 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6074206416187384,
             "unit": "iter/sec",
             "range": "stddev: 0.064226",
@@ -8993,7 +8993,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 383.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.401336480147075,
             "unit": "iter/sec",
             "range": "stddev: 0.058382",
@@ -9001,7 +9001,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 416.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14026524452624187,
             "unit": "iter/sec",
             "range": "stddev: 0.053092",
@@ -9009,7 +9009,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1293 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13949375181307885,
             "unit": "iter/sec",
             "range": "stddev: 0.086197",
@@ -9168,7 +9168,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2723 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.3924908969609398,
             "unit": "iter/sec",
             "range": "stddev: 0.045520",
@@ -9176,7 +9176,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 294.77 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8278459735917623,
             "unit": "iter/sec",
             "range": "stddev: 0.050735",
@@ -9184,7 +9184,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 353.63 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1835871961292902,
             "unit": "iter/sec",
             "range": "stddev: 0.31069",
@@ -9192,7 +9192,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4470 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.18787268617094008,
             "unit": "iter/sec",
             "range": "stddev: 0.034790",
@@ -9351,7 +9351,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7518 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.647043490335292,
             "unit": "iter/sec",
             "range": "stddev: 0.060372",
@@ -9359,7 +9359,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 377.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3691213111183926,
             "unit": "iter/sec",
             "range": "stddev: 0.062760",
@@ -9367,7 +9367,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 422.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13722918879087206,
             "unit": "iter/sec",
             "range": "stddev: 0.10418",
@@ -9375,7 +9375,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2871 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1400770916040949,
             "unit": "iter/sec",
             "range": "stddev: 0.20604",
@@ -9534,7 +9534,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.9915 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6275075817311015,
             "unit": "iter/sec",
             "range": "stddev: 0.060910",
@@ -9542,7 +9542,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 380.59 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.357058573737017,
             "unit": "iter/sec",
             "range": "stddev: 0.058186",
@@ -9550,7 +9550,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 424.26 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1379969524371463,
             "unit": "iter/sec",
             "range": "stddev: 0.18103",
@@ -9558,7 +9558,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2465 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14088967080067996,
             "unit": "iter/sec",
             "range": "stddev: 0.16548",
@@ -9717,7 +9717,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3729 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.4661864863012575,
             "unit": "iter/sec",
             "range": "stddev: 0.046288",
@@ -9725,7 +9725,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 288.50 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8516196724590217,
             "unit": "iter/sec",
             "range": "stddev: 0.054475",
@@ -9733,7 +9733,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 350.68 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.18634600783309246,
             "unit": "iter/sec",
             "range": "stddev: 0.10529",
@@ -9741,7 +9741,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3664 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.18427944339703173,
             "unit": "iter/sec",
             "range": "stddev: 0.096272",
@@ -9900,7 +9900,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.5471 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3579344883413507,
             "unit": "iter/sec",
             "range": "stddev: 0.0070140",
@@ -9908,7 +9908,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 424.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1038387723086234,
             "unit": "iter/sec",
             "range": "stddev: 0.010113",
@@ -9916,7 +9916,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 475.32 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12466198369823532,
             "unit": "iter/sec",
             "range": "stddev: 0.15988",
@@ -9924,7 +9924,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0217 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13123887019800154,
             "unit": "iter/sec",
             "range": "stddev: 0.13358",
@@ -10083,7 +10083,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0971 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.2720800778948504,
             "unit": "iter/sec",
             "range": "stddev: 0.014060",
@@ -10091,7 +10091,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 305.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.854505599129458,
             "unit": "iter/sec",
             "range": "stddev: 0.0059172",
@@ -10099,7 +10099,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 350.32 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16633266667307228,
             "unit": "iter/sec",
             "range": "stddev: 0.10839",
@@ -10107,7 +10107,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0120 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1662865630646653,
             "unit": "iter/sec",
             "range": "stddev: 0.090498",
@@ -10266,7 +10266,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3182 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.469194054618142,
             "unit": "iter/sec",
             "range": "stddev: 0.053796",
@@ -10274,7 +10274,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 404.99 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.200964485931205,
             "unit": "iter/sec",
             "range": "stddev: 0.061735",
@@ -10282,7 +10282,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 454.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12480114534553838,
             "unit": "iter/sec",
             "range": "stddev: 0.081744",
@@ -10290,7 +10290,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0127 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12594378483018126,
             "unit": "iter/sec",
             "range": "stddev: 0.16641",
@@ -10449,7 +10449,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4158 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8239326646980016,
             "unit": "iter/sec",
             "range": "stddev: 0.0073018",
@@ -10457,7 +10457,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 354.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.542652032227163,
             "unit": "iter/sec",
             "range": "stddev: 0.0032976",
@@ -10465,7 +10465,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 393.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13331427356939374,
             "unit": "iter/sec",
             "range": "stddev: 0.051203",
@@ -10473,7 +10473,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5011 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1316649791108145,
             "unit": "iter/sec",
             "range": "stddev: 0.082032",
@@ -10632,7 +10632,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0865 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.311703454613889,
             "unit": "iter/sec",
             "range": "stddev: 0.0078284",
@@ -10640,7 +10640,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 301.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.945984139077743,
             "unit": "iter/sec",
             "range": "stddev: 0.0075107",
@@ -10648,7 +10648,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 339.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15611250984451502,
             "unit": "iter/sec",
             "range": "stddev: 0.24633",
@@ -10656,7 +10656,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4056 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15798774352616823,
             "unit": "iter/sec",
             "range": "stddev: 0.21928",
@@ -10815,7 +10815,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 10.189 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.255325933020566,
             "unit": "iter/sec",
             "range": "stddev: 0.023117",
@@ -10823,7 +10823,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 443.39 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9166055070395056,
             "unit": "iter/sec",
             "range": "stddev: 0.040420",
@@ -10831,7 +10831,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 521.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11093535685490676,
             "unit": "iter/sec",
             "range": "stddev: 0.43106",
@@ -10839,7 +10839,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.0143 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11585469215529597,
             "unit": "iter/sec",
             "range": "stddev: 0.22084",
@@ -10998,7 +10998,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.8574 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.386801346098881,
             "unit": "iter/sec",
             "range": "stddev: 0.056392",
@@ -11006,7 +11006,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 418.97 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.074898984952051,
             "unit": "iter/sec",
             "range": "stddev: 0.066899",
@@ -11014,7 +11014,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 481.95 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11724075085780776,
             "unit": "iter/sec",
             "range": "stddev: 0.081154",
@@ -11022,7 +11022,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.5295 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1224221145709684,
             "unit": "iter/sec",
             "range": "stddev: 0.12412",
@@ -11181,7 +11181,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6911 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6451085319122116,
             "unit": "iter/sec",
             "range": "stddev: 0.063619",
@@ -11189,7 +11189,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.395188991296618,
             "unit": "iter/sec",
             "range": "stddev: 0.056841",
@@ -11197,7 +11197,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.50 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12975296244091897,
             "unit": "iter/sec",
             "range": "stddev: 0.17909",
@@ -11205,7 +11205,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7070 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1291869557712535,
             "unit": "iter/sec",
             "range": "stddev: 0.20690",
@@ -11364,7 +11364,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9569 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.557356292083614,
             "unit": "iter/sec",
             "range": "stddev: 0.053466",
@@ -11372,7 +11372,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 391.03 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.27610976409898,
             "unit": "iter/sec",
             "range": "stddev: 0.053565",
@@ -11380,7 +11380,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 439.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12941243176023154,
             "unit": "iter/sec",
             "range": "stddev: 0.078985",
@@ -11388,7 +11388,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7272 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1355044958443508,
             "unit": "iter/sec",
             "range": "stddev: 0.16873",
@@ -11547,7 +11547,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0492 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.795315195783732,
             "unit": "iter/sec",
             "range": "stddev: 0.048454",
@@ -11555,7 +11555,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 357.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3015585086488195,
             "unit": "iter/sec",
             "range": "stddev: 0.061916",
@@ -11563,7 +11563,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 434.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13200035335253776,
             "unit": "iter/sec",
             "range": "stddev: 0.19194",
@@ -11571,7 +11571,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5757 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1382880117188995,
             "unit": "iter/sec",
             "range": "stddev: 0.12440",
@@ -11730,7 +11730,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0933 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.1577263710269734,
             "unit": "iter/sec",
             "range": "stddev: 0.049492",
@@ -11738,7 +11738,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 316.68 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8729758730097994,
             "unit": "iter/sec",
             "range": "stddev: 0.047278",
@@ -11746,7 +11746,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 348.07 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15451371062050565,
             "unit": "iter/sec",
             "range": "stddev: 0.057897",
@@ -11754,7 +11754,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4719 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15382853155920811,
             "unit": "iter/sec",
             "range": "stddev: 0.096637",
@@ -11913,7 +11913,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.9901 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.45246829655768,
             "unit": "iter/sec",
             "range": "stddev: 0.059545",
@@ -11921,7 +11921,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 407.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1367496530089234,
             "unit": "iter/sec",
             "range": "stddev: 0.060160",
@@ -11929,7 +11929,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 468.00 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11706196681880236,
             "unit": "iter/sec",
             "range": "stddev: 0.084600",
@@ -11937,7 +11937,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.5425 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12464854526085903,
             "unit": "iter/sec",
             "range": "stddev: 0.17326",
@@ -12096,7 +12096,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6117 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7494499933787266,
             "unit": "iter/sec",
             "range": "stddev: 0.053813",
@@ -12104,7 +12104,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 363.71 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3779671531765016,
             "unit": "iter/sec",
             "range": "stddev: 0.049919",
@@ -12112,7 +12112,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 420.53 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12644335206903096,
             "unit": "iter/sec",
             "range": "stddev: 0.21392",
@@ -12120,7 +12120,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9087 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12583773190764896,
             "unit": "iter/sec",
             "range": "stddev: 0.13866",
@@ -12279,7 +12279,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7056 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3823983894722405,
             "unit": "iter/sec",
             "range": "stddev: 0.058849",
@@ -12287,7 +12287,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 419.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1133757418396724,
             "unit": "iter/sec",
             "range": "stddev: 0.055078",
@@ -12295,7 +12295,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 473.18 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14155943466263446,
             "unit": "iter/sec",
             "range": "stddev: 0.14710",
@@ -12303,7 +12303,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0642 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14001791671432545,
             "unit": "iter/sec",
             "range": "stddev: 0.28747",
@@ -12462,7 +12462,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6669 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7416778572836256,
             "unit": "iter/sec",
             "range": "stddev: 0.045858",
@@ -12470,7 +12470,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 364.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4135541935557367,
             "unit": "iter/sec",
             "range": "stddev: 0.049316",
@@ -12478,7 +12478,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16348882384508498,
             "unit": "iter/sec",
             "range": "stddev: 0.053017",
@@ -12486,7 +12486,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1166 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16123486165007267,
             "unit": "iter/sec",
             "range": "stddev: 0.066488",
@@ -12645,7 +12645,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5433 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4254424126109853,
             "unit": "iter/sec",
             "range": "stddev: 0.053929",
@@ -12653,7 +12653,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 412.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.125779048884854,
             "unit": "iter/sec",
             "range": "stddev: 0.050881",
@@ -12661,7 +12661,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 470.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14379896498549227,
             "unit": "iter/sec",
             "range": "stddev: 0.18349",
@@ -12669,7 +12669,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9542 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14529909236670638,
             "unit": "iter/sec",
             "range": "stddev: 0.13263",
@@ -12828,7 +12828,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7709 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.942054223177421,
             "unit": "iter/sec",
             "range": "stddev: 0.054459",
@@ -12836,7 +12836,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 514.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.6806015438280222,
             "unit": "iter/sec",
             "range": "stddev: 0.058162",
@@ -12844,7 +12844,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 595.03 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11964562438774355,
             "unit": "iter/sec",
             "range": "stddev: 0.048692",
@@ -12852,7 +12852,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3580 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1180150574088798,
             "unit": "iter/sec",
             "range": "stddev: 0.093871",
@@ -13011,7 +13011,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6201 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0463645260877334,
             "unit": "iter/sec",
             "range": "stddev: 0.061851",
@@ -13019,7 +13019,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 488.67 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7964215994917387,
             "unit": "iter/sec",
             "range": "stddev: 0.058379",
@@ -13027,7 +13027,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 556.66 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12320193600936545,
             "unit": "iter/sec",
             "range": "stddev: 0.098784",
@@ -13035,7 +13035,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1168 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12929377710348283,
             "unit": "iter/sec",
             "range": "stddev: 0.27163",
@@ -13194,7 +13194,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8700 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6847430697961356,
             "unit": "iter/sec",
             "range": "stddev: 0.047021",
@@ -13202,7 +13202,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 372.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3391369824745847,
             "unit": "iter/sec",
             "range": "stddev: 0.044393",
@@ -13210,7 +13210,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 427.51 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15958271731259913,
             "unit": "iter/sec",
             "range": "stddev: 0.11080",
@@ -13218,7 +13218,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2663 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1569843329832566,
             "unit": "iter/sec",
             "range": "stddev: 0.084083",
@@ -13377,7 +13377,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.5917 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.8239023369752487,
             "unit": "iter/sec",
             "range": "stddev: 0.059413",
@@ -13385,7 +13385,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 548.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7045900046347586,
             "unit": "iter/sec",
             "range": "stddev: 0.016745",
@@ -13393,7 +13393,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 586.65 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.10949255032494806,
             "unit": "iter/sec",
             "range": "stddev: 0.44665",
@@ -13401,7 +13401,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.1330 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1170073275430233,
             "unit": "iter/sec",
             "range": "stddev: 0.10234",
@@ -13560,7 +13560,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5221 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2582266914681135,
             "unit": "iter/sec",
             "range": "stddev: 0.055460",
@@ -13568,7 +13568,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 442.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9686259944029632,
             "unit": "iter/sec",
             "range": "stddev: 0.057787",
@@ -13576,7 +13576,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 507.97 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13890289987006185,
             "unit": "iter/sec",
             "range": "stddev: 0.048147",
@@ -13584,7 +13584,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1993 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13703944014141498,
             "unit": "iter/sec",
             "range": "stddev: 0.049137",
@@ -13743,7 +13743,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6531 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1258480172493806,
             "unit": "iter/sec",
             "range": "stddev: 0.050911",
@@ -13751,7 +13751,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 470.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7986169707471045,
             "unit": "iter/sec",
             "range": "stddev: 0.046233",
@@ -13759,7 +13759,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 555.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12592632695145103,
             "unit": "iter/sec",
             "range": "stddev: 0.28078",
@@ -13767,7 +13767,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9412 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1283840122166861,
             "unit": "iter/sec",
             "range": "stddev: 0.46162",
@@ -13926,7 +13926,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4301 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.064984906718117,
             "unit": "iter/sec",
             "range": "stddev: 0.057068",
@@ -13934,7 +13934,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 484.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.888171174045912,
             "unit": "iter/sec",
             "range": "stddev: 0.054017",
@@ -13942,7 +13942,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 529.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1308649705399588,
             "unit": "iter/sec",
             "range": "stddev: 0.056611",
@@ -13950,7 +13950,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6415 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13139150812704403,
             "unit": "iter/sec",
             "range": "stddev: 0.10578",
@@ -14109,7 +14109,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.6004 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1300229584363874,
             "unit": "iter/sec",
             "range": "stddev: 0.064907",
@@ -14117,7 +14117,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 469.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7738328172153772,
             "unit": "iter/sec",
             "range": "stddev: 0.060937",
@@ -14125,7 +14125,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 563.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11723248555413543,
             "unit": "iter/sec",
             "range": "stddev: 0.29293",
@@ -14133,7 +14133,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.5301 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12787276488987329,
             "unit": "iter/sec",
             "range": "stddev: 0.24063",
@@ -14292,7 +14292,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.9929 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.8887607838985034,
             "unit": "iter/sec",
             "range": "stddev: 0.065301",
@@ -14300,7 +14300,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 529.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.4356567154339352,
             "unit": "iter/sec",
             "range": "stddev: 0.061630",
@@ -14308,7 +14308,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 696.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11559597237652432,
             "unit": "iter/sec",
             "range": "stddev: 0.044733",
@@ -14316,7 +14316,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.6508 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11805916299224607,
             "unit": "iter/sec",
             "range": "stddev: 0.077311",
@@ -14475,7 +14475,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4124 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1443353929197486,
             "unit": "iter/sec",
             "range": "stddev: 0.055597",
@@ -14483,7 +14483,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 466.34 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8996914615005458,
             "unit": "iter/sec",
             "range": "stddev: 0.055184",
@@ -14491,7 +14491,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 526.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13724962959026998,
             "unit": "iter/sec",
             "range": "stddev: 0.10044",
@@ -14499,7 +14499,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2860 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13901734459023934,
             "unit": "iter/sec",
             "range": "stddev: 0.064657",
@@ -14658,7 +14658,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7044 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.206149060952171,
             "unit": "iter/sec",
             "range": "stddev: 0.058458",
@@ -14666,7 +14666,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 453.28 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9340925923796997,
             "unit": "iter/sec",
             "range": "stddev: 0.063167",
@@ -14674,7 +14674,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 517.04 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12875769884961885,
             "unit": "iter/sec",
             "range": "stddev: 0.077675",
@@ -14682,7 +14682,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7665 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13203645192108063,
             "unit": "iter/sec",
             "range": "stddev: 0.16950",
@@ -14841,7 +14841,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3115 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6220684566696684,
             "unit": "iter/sec",
             "range": "stddev: 0.050610",
@@ -14849,7 +14849,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 381.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3014738130825214,
             "unit": "iter/sec",
             "range": "stddev: 0.041806",
@@ -14857,7 +14857,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 434.50 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14964755573528066,
             "unit": "iter/sec",
             "range": "stddev: 0.095691",
@@ -14865,7 +14865,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6824 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14786026396776952,
             "unit": "iter/sec",
             "range": "stddev: 0.15032",
@@ -15024,7 +15024,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7459 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.98723105678075,
             "unit": "iter/sec",
             "range": "stddev: 0.063054",
@@ -15032,7 +15032,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 503.21 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7449608009912063,
             "unit": "iter/sec",
             "range": "stddev: 0.058640",
@@ -15040,7 +15040,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 573.08 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12027449584150429,
             "unit": "iter/sec",
             "range": "stddev: 0.096706",
@@ -15048,7 +15048,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3143 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13056492315327303,
             "unit": "iter/sec",
             "range": "stddev: 0.19075",
@@ -15207,7 +15207,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0617 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0731564720355853,
             "unit": "iter/sec",
             "range": "stddev: 0.055094",
@@ -15215,7 +15215,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 482.36 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8221685686779199,
             "unit": "iter/sec",
             "range": "stddev: 0.045137",
@@ -15223,7 +15223,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 548.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12812284781492406,
             "unit": "iter/sec",
             "range": "stddev: 0.10940",
@@ -15231,7 +15231,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8050 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12815600090701657,
             "unit": "iter/sec",
             "range": "stddev: 0.16168",
@@ -15390,7 +15390,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3403 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.446285362971211,
             "unit": "iter/sec",
             "range": "stddev: 0.0070950",
@@ -15398,7 +15398,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0745091776848605,
             "unit": "iter/sec",
             "range": "stddev: 0.052863",
@@ -15406,7 +15406,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 482.04 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14867249620273654,
             "unit": "iter/sec",
             "range": "stddev: 0.11705",
@@ -15414,7 +15414,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7262 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14956536912463478,
             "unit": "iter/sec",
             "range": "stddev: 0.052299",
@@ -15573,7 +15573,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6432 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.602737939200095,
             "unit": "iter/sec",
             "range": "stddev: 0.056826",
@@ -15581,7 +15581,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 384.21 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.302245474268808,
             "unit": "iter/sec",
             "range": "stddev: 0.053430",
@@ -15589,7 +15589,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 434.36 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15832338500152646,
             "unit": "iter/sec",
             "range": "stddev: 0.060523",
@@ -15597,7 +15597,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3162 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1577254420251481,
             "unit": "iter/sec",
             "range": "stddev: 0.091226",
@@ -15756,7 +15756,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1350 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.776911916715314,
             "unit": "iter/sec",
             "range": "stddev: 0.052197",
@@ -15764,7 +15764,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 360.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5848855838190348,
             "unit": "iter/sec",
             "range": "stddev: 0.0072721",
@@ -15772,7 +15772,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 386.86 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17553529596275294,
             "unit": "iter/sec",
             "range": "stddev: 0.077939",
@@ -15780,7 +15780,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6969 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17407141130208384,
             "unit": "iter/sec",
             "range": "stddev: 0.049193",
@@ -15939,7 +15939,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8318 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.535006252545386,
             "unit": "iter/sec",
             "range": "stddev: 0.065144",
@@ -15947,7 +15947,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 394.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2400486509296536,
             "unit": "iter/sec",
             "range": "stddev: 0.060961",
@@ -15955,7 +15955,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 446.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15303382004240634,
             "unit": "iter/sec",
             "range": "stddev: 0.068673",
@@ -15963,7 +15963,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5345 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1518467087538669,
             "unit": "iter/sec",
             "range": "stddev: 0.029799",
@@ -16122,7 +16122,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9139 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5481058901713443,
             "unit": "iter/sec",
             "range": "stddev: 0.056169",
@@ -16130,7 +16130,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.194095858343573,
             "unit": "iter/sec",
             "range": "stddev: 0.060104",
@@ -16138,7 +16138,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 455.77 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1531724502014761,
             "unit": "iter/sec",
             "range": "stddev: 0.10672",
@@ -16146,7 +16146,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5286 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15407743643010977,
             "unit": "iter/sec",
             "range": "stddev: 0.12367",
@@ -16305,7 +16305,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9341 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3252824834400405,
             "unit": "iter/sec",
             "range": "stddev: 0.16076",
@@ -16313,7 +16313,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 430.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2886672305436537,
             "unit": "iter/sec",
             "range": "stddev: 0.052999",
@@ -16321,7 +16321,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.94 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15185842631630517,
             "unit": "iter/sec",
             "range": "stddev: 0.17684",
@@ -16329,7 +16329,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5851 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14830312064138373,
             "unit": "iter/sec",
             "range": "stddev: 0.24762",
@@ -16488,7 +16488,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0997 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2586829787446026,
             "unit": "iter/sec",
             "range": "stddev: 0.060018",
@@ -16496,7 +16496,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 442.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.02550270417387,
             "unit": "iter/sec",
             "range": "stddev: 0.067476",
@@ -16504,7 +16504,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 493.70 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14617110515032752,
             "unit": "iter/sec",
             "range": "stddev: 0.32999",
@@ -16512,7 +16512,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8413 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15065038107793532,
             "unit": "iter/sec",
             "range": "stddev: 0.29332",
@@ -16671,7 +16671,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8748 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.640917600341694,
             "unit": "iter/sec",
             "range": "stddev: 0.040885",
@@ -16679,7 +16679,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.66 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3649840420169737,
             "unit": "iter/sec",
             "range": "stddev: 0.036902",
@@ -16687,7 +16687,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 422.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1704522264520046,
             "unit": "iter/sec",
             "range": "stddev: 0.12171",
@@ -16695,7 +16695,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8667 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1663605774257223,
             "unit": "iter/sec",
             "range": "stddev: 0.12879",
@@ -16854,7 +16854,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6808 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3646589191836274,
             "unit": "iter/sec",
             "range": "stddev: 0.040735",
@@ -16862,7 +16862,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 422.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9921187505812443,
             "unit": "iter/sec",
             "range": "stddev: 0.065518",
@@ -16870,7 +16870,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 501.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14381235874195306,
             "unit": "iter/sec",
             "range": "stddev: 0.082838",
@@ -16878,7 +16878,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9535 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1410658613376018,
             "unit": "iter/sec",
             "range": "stddev: 0.094687",
@@ -17037,7 +17037,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7373 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4385969656563544,
             "unit": "iter/sec",
             "range": "stddev: 0.072164",
@@ -17045,7 +17045,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 410.07 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1668106100322513,
             "unit": "iter/sec",
             "range": "stddev: 0.070791",
@@ -17053,7 +17053,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 461.51 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14763776901212478,
             "unit": "iter/sec",
             "range": "stddev: 0.13980",
@@ -17061,7 +17061,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7733 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1429215295098151,
             "unit": "iter/sec",
             "range": "stddev: 0.29217",
@@ -17220,7 +17220,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6463 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1144593373648832,
             "unit": "iter/sec",
             "range": "stddev: 0.043477",
@@ -17228,7 +17228,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 472.93 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9044390612293196,
             "unit": "iter/sec",
             "range": "stddev: 0.035131",
@@ -17236,7 +17236,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 525.09 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.135164768464141,
             "unit": "iter/sec",
             "range": "stddev: 0.21701",
@@ -17244,7 +17244,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3984 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13507652410794033,
             "unit": "iter/sec",
             "range": "stddev: 0.16107",
@@ -17403,7 +17403,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3238 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.139045195487096,
             "unit": "iter/sec",
             "range": "stddev: 0.047669",
@@ -17411,7 +17411,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 467.50 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9279378918959598,
             "unit": "iter/sec",
             "range": "stddev: 0.051936",
@@ -17419,7 +17419,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 518.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1313127768951933,
             "unit": "iter/sec",
             "range": "stddev: 0.10651",
@@ -17427,7 +17427,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6154 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13113763823592806,
             "unit": "iter/sec",
             "range": "stddev: 0.11249",
@@ -17586,7 +17586,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8191 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.338511247007893,
             "unit": "iter/sec",
             "range": "stddev: 0.038290",
@@ -17594,7 +17594,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 427.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1075096174700514,
             "unit": "iter/sec",
             "range": "stddev: 0.055839",
@@ -17602,7 +17602,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 474.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14505262318310014,
             "unit": "iter/sec",
             "range": "stddev: 0.10121",
@@ -17610,7 +17610,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8940 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1450387080617885,
             "unit": "iter/sec",
             "range": "stddev: 0.11792",
@@ -17769,7 +17769,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2333 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0812196683175626,
             "unit": "iter/sec",
             "range": "stddev: 0.042058",
@@ -17777,7 +17777,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 480.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7939637677676232,
             "unit": "iter/sec",
             "range": "stddev: 0.052348",
@@ -17785,7 +17785,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 557.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1285723148667725,
             "unit": "iter/sec",
             "range": "stddev: 0.13125",
@@ -17793,7 +17793,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7777 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12733895108273446,
             "unit": "iter/sec",
             "range": "stddev: 0.21207",
@@ -17952,7 +17952,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5143 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.364643597334668,
             "unit": "iter/sec",
             "range": "stddev: 0.048020",
@@ -17960,7 +17960,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 422.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0870168270885063,
             "unit": "iter/sec",
             "range": "stddev: 0.042016",
@@ -17968,7 +17968,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 479.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14700597663371437,
             "unit": "iter/sec",
             "range": "stddev: 0.11331",
@@ -17976,7 +17976,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8024 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14661870976982702,
             "unit": "iter/sec",
             "range": "stddev: 0.074852",
@@ -18135,7 +18135,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8665 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5806565528077545,
             "unit": "iter/sec",
             "range": "stddev: 0.018259",
@@ -18143,7 +18143,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 387.50 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.52890864490116,
             "unit": "iter/sec",
             "range": "stddev: 0.052680",
@@ -18151,7 +18151,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 395.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17131842474129086,
             "unit": "iter/sec",
             "range": "stddev: 0.25713",
@@ -18159,7 +18159,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8371 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16925878490513666,
             "unit": "iter/sec",
             "range": "stddev: 0.25586",
@@ -18318,7 +18318,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1949 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0230598735945584,
             "unit": "iter/sec",
             "range": "stddev: 0.036555",
@@ -18326,7 +18326,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 494.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8390486626892528,
             "unit": "iter/sec",
             "range": "stddev: 0.011066",
@@ -18334,7 +18334,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 543.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12923044170675196,
             "unit": "iter/sec",
             "range": "stddev: 0.085681",
@@ -18342,7 +18342,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7381 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12841082883548766,
             "unit": "iter/sec",
             "range": "stddev: 0.074170",
@@ -18501,7 +18501,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7036 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0433424496397397,
             "unit": "iter/sec",
             "range": "stddev: 0.055533",
@@ -18509,7 +18509,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 489.39 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8343506990836718,
             "unit": "iter/sec",
             "range": "stddev: 0.052194",
@@ -18517,7 +18517,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 545.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12544166688152772,
             "unit": "iter/sec",
             "range": "stddev: 0.23022",
@@ -18525,7 +18525,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9718 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12340110710174662,
             "unit": "iter/sec",
             "range": "stddev: 0.14038",
@@ -18684,7 +18684,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7323 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3199409189461933,
             "unit": "iter/sec",
             "range": "stddev: 0.044862",
@@ -18692,7 +18692,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.05 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0251012084576114,
             "unit": "iter/sec",
             "range": "stddev: 0.046709",
@@ -18700,7 +18700,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 493.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.144443818015145,
             "unit": "iter/sec",
             "range": "stddev: 0.11101",
@@ -18708,7 +18708,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9231 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14516602893453268,
             "unit": "iter/sec",
             "range": "stddev: 0.063622",
@@ -18867,7 +18867,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5862 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.197337610607103,
             "unit": "iter/sec",
             "range": "stddev: 0.056818",
@@ -18875,7 +18875,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 455.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9062258111458186,
             "unit": "iter/sec",
             "range": "stddev: 0.052223",
@@ -18883,7 +18883,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 524.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.140238417783271,
             "unit": "iter/sec",
             "range": "stddev: 0.11407",
@@ -18891,7 +18891,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1307 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13895035740061965,
             "unit": "iter/sec",
             "range": "stddev: 0.18169",
@@ -19050,7 +19050,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8559 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6394440762766274,
             "unit": "iter/sec",
             "range": "stddev: 0.040949",
@@ -19058,7 +19058,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.87 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.33762063633184,
             "unit": "iter/sec",
             "range": "stddev: 0.038905",
@@ -19066,7 +19066,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 427.79 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16715841516131202,
             "unit": "iter/sec",
             "range": "stddev: 0.071683",
@@ -19074,7 +19074,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9823 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1651036174250763,
             "unit": "iter/sec",
             "range": "stddev: 0.074312",
@@ -19233,7 +19233,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3093 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.052234181998078,
             "unit": "iter/sec",
             "range": "stddev: 0.046468",
@@ -19241,7 +19241,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 487.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8852751276791453,
             "unit": "iter/sec",
             "range": "stddev: 0.041239",
@@ -19249,7 +19249,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 530.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12434485693663519,
             "unit": "iter/sec",
             "range": "stddev: 0.10515",
@@ -19257,7 +19257,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0422 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12986651135482977,
             "unit": "iter/sec",
             "range": "stddev: 0.13526",
@@ -19416,7 +19416,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3113 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9904903266367673,
             "unit": "iter/sec",
             "range": "stddev: 0.038577",
@@ -19424,7 +19424,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 502.39 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.771179765532892,
             "unit": "iter/sec",
             "range": "stddev: 0.035777",
@@ -19432,7 +19432,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 564.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12831315870817636,
             "unit": "iter/sec",
             "range": "stddev: 0.16873",
@@ -19440,7 +19440,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7934 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13239259736197154,
             "unit": "iter/sec",
             "range": "stddev: 0.093894",
@@ -19599,7 +19599,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5325 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.8925444605310286,
             "unit": "iter/sec",
             "range": "stddev: 0.057201",
@@ -19607,7 +19607,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 528.39 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.6884208393466904,
             "unit": "iter/sec",
             "range": "stddev: 0.035299",
@@ -19615,7 +19615,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 592.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12453031721119824,
             "unit": "iter/sec",
             "range": "stddev: 0.19736",
@@ -19623,7 +19623,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0302 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12634400080833583,
             "unit": "iter/sec",
             "range": "stddev: 0.091780",
@@ -19782,7 +19782,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1295 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9284007436866404,
             "unit": "iter/sec",
             "range": "stddev: 0.044911",
@@ -19790,7 +19790,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 518.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.729182742929714,
             "unit": "iter/sec",
             "range": "stddev: 0.050656",
@@ -19798,7 +19798,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 578.31 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13122360816276002,
             "unit": "iter/sec",
             "range": "stddev: 0.19293",
@@ -19806,7 +19806,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6206 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1326972090471393,
             "unit": "iter/sec",
             "range": "stddev: 0.12793",
@@ -19965,7 +19965,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9785 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.808299099822428,
             "unit": "iter/sec",
             "range": "stddev: 0.053221",
@@ -19973,7 +19973,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 356.09 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4959826535196488,
             "unit": "iter/sec",
             "range": "stddev: 0.054902",
@@ -19981,7 +19981,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 400.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1541210208424618,
             "unit": "iter/sec",
             "range": "stddev: 0.12342",
@@ -19989,7 +19989,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4884 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1549679738252792,
             "unit": "iter/sec",
             "range": "stddev: 0.15355",
@@ -20148,7 +20148,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9196 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1547570383222103,
             "unit": "iter/sec",
             "range": "stddev: 0.049424",
@@ -20156,7 +20156,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 464.09 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9417711741329713,
             "unit": "iter/sec",
             "range": "stddev: 0.055299",
@@ -20164,7 +20164,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 514.99 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13587906691192006,
             "unit": "iter/sec",
             "range": "stddev: 0.11704",
@@ -20172,7 +20172,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3595 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13586281485066876,
             "unit": "iter/sec",
             "range": "stddev: 0.12623",
@@ -20331,7 +20331,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1097 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.7618141502020117,
             "unit": "iter/sec",
             "range": "stddev: 0.053915",
@@ -20339,7 +20339,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 567.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.3618434605079501,
             "unit": "iter/sec",
             "range": "stddev: 0.056058",
@@ -20347,7 +20347,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 734.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1073403595920067,
             "unit": "iter/sec",
             "range": "stddev: 0.20858",
@@ -20355,7 +20355,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 9.3162 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11480871692167421,
             "unit": "iter/sec",
             "range": "stddev: 0.20544",
@@ -20514,7 +20514,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4146 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.937624132457029,
             "unit": "iter/sec",
             "range": "stddev: 0.064686",
@@ -20522,7 +20522,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 516.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7236977823291886,
             "unit": "iter/sec",
             "range": "stddev: 0.047508",
@@ -20530,7 +20530,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 580.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12338220416189166,
             "unit": "iter/sec",
             "range": "stddev: 0.11401",
@@ -20538,7 +20538,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1049 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12269061597191201,
             "unit": "iter/sec",
             "range": "stddev: 0.13200",
@@ -20697,7 +20697,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5831 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3936133894775944,
             "unit": "iter/sec",
             "range": "stddev: 0.045601",
@@ -20705,7 +20705,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.130493958699479,
             "unit": "iter/sec",
             "range": "stddev: 0.047270",
@@ -20713,7 +20713,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 469.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14841625590477708,
             "unit": "iter/sec",
             "range": "stddev: 0.056448",
@@ -20721,7 +20721,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7378 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14489083500890046,
             "unit": "iter/sec",
             "range": "stddev: 0.082600",
@@ -20880,7 +20880,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2999 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9158583223084193,
             "unit": "iter/sec",
             "range": "stddev: 0.045834",
@@ -20888,7 +20888,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 521.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8106515818944757,
             "unit": "iter/sec",
             "range": "stddev: 0.051054",
@@ -20896,7 +20896,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 552.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12319699709837743,
             "unit": "iter/sec",
             "range": "stddev: 0.29485",
@@ -20904,7 +20904,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1171 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12537346685022935,
             "unit": "iter/sec",
             "range": "stddev: 0.14862",
@@ -21063,7 +21063,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5215 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.352923230586606,
             "unit": "iter/sec",
             "range": "stddev: 0.038419",
@@ -21071,7 +21071,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 425.00 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1036270324456945,
             "unit": "iter/sec",
             "range": "stddev: 0.038230",
@@ -21079,7 +21079,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 475.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14839345445663363,
             "unit": "iter/sec",
             "range": "stddev: 0.079993",
@@ -21087,7 +21087,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7388 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1468587131449824,
             "unit": "iter/sec",
             "range": "stddev: 0.10978",
@@ -21246,7 +21246,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6300 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1984559896228166,
             "unit": "iter/sec",
             "range": "stddev: 0.064772",
@@ -21254,7 +21254,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 454.86 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0035883790346865,
             "unit": "iter/sec",
             "range": "stddev: 0.077434",
@@ -21262,7 +21262,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 499.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.136760563484528,
             "unit": "iter/sec",
             "range": "stddev: 0.51370",
@@ -21270,7 +21270,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3120 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14427185754713961,
             "unit": "iter/sec",
             "range": "stddev: 0.61188",
@@ -21429,7 +21429,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8774 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2549742444444245,
             "unit": "iter/sec",
             "range": "stddev: 0.041994",
@@ -21437,7 +21437,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 443.46 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9696826411760078,
             "unit": "iter/sec",
             "range": "stddev: 0.058680",
@@ -21445,7 +21445,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 507.70 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1440908330957823,
             "unit": "iter/sec",
             "range": "stddev: 0.20532",
@@ -21453,7 +21453,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9401 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14740537771277068,
             "unit": "iter/sec",
             "range": "stddev: 0.094482",
@@ -21612,7 +21612,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8672 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1642003639508194,
             "unit": "iter/sec",
             "range": "stddev: 0.042330",
@@ -21620,7 +21620,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 462.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9445088111969833,
             "unit": "iter/sec",
             "range": "stddev: 0.034293",
@@ -21628,7 +21628,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 514.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1400572846343751,
             "unit": "iter/sec",
             "range": "stddev: 0.14952",
@@ -21636,7 +21636,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1399 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1408648067343385,
             "unit": "iter/sec",
             "range": "stddev: 0.11927",
@@ -21795,7 +21795,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5323 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4108191333145332,
             "unit": "iter/sec",
             "range": "stddev: 0.043359",
@@ -21803,7 +21803,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.105927549218575,
             "unit": "iter/sec",
             "range": "stddev: 0.041545",
@@ -21811,7 +21811,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 474.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1485004237408546,
             "unit": "iter/sec",
             "range": "stddev: 0.085741",
@@ -21819,7 +21819,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7340 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15378381890992318,
             "unit": "iter/sec",
             "range": "stddev: 0.11817",
@@ -21978,7 +21978,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9694 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.594522466308953,
             "unit": "iter/sec",
             "range": "stddev: 0.044079",
@@ -21986,7 +21986,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.29326741485975,
             "unit": "iter/sec",
             "range": "stddev: 0.042255",
@@ -21994,7 +21994,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16204121244210548,
             "unit": "iter/sec",
             "range": "stddev: 0.069795",
@@ -22002,7 +22002,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1713 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15985281093336068,
             "unit": "iter/sec",
             "range": "stddev: 0.085619",
@@ -22161,7 +22161,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2957 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9637499888528003,
             "unit": "iter/sec",
             "range": "stddev: 0.039433",
@@ -22169,7 +22169,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 509.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7218915819540521,
             "unit": "iter/sec",
             "range": "stddev: 0.047486",
@@ -22177,7 +22177,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 580.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1294180545933555,
             "unit": "iter/sec",
             "range": "stddev: 0.16162",
@@ -22185,7 +22185,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7269 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13041816487497412,
             "unit": "iter/sec",
             "range": "stddev: 0.082147",
@@ -22344,7 +22344,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9699 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.142184918726561,
             "unit": "iter/sec",
             "range": "stddev: 0.030321",
@@ -22352,7 +22352,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 466.81 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8718685067182073,
             "unit": "iter/sec",
             "range": "stddev: 0.034189",
@@ -22360,7 +22360,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 534.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13248134292008934,
             "unit": "iter/sec",
             "range": "stddev: 0.077328",
@@ -22368,7 +22368,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5482 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1307693790363077,
             "unit": "iter/sec",
             "range": "stddev: 0.077215",
@@ -22527,7 +22527,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8284 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.86281058455174,
             "unit": "iter/sec",
             "range": "stddev: 0.045106",
@@ -22535,7 +22535,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 536.82 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.6524883976913722,
             "unit": "iter/sec",
             "range": "stddev: 0.051270",
@@ -22543,7 +22543,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 605.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12236473401715278,
             "unit": "iter/sec",
             "range": "stddev: 0.15303",
@@ -22551,7 +22551,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1723 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12132182363539956,
             "unit": "iter/sec",
             "range": "stddev: 0.13850",
@@ -22710,7 +22710,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8781 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.648729766522901,
             "unit": "iter/sec",
             "range": "stddev: 0.035123",
@@ -22718,7 +22718,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 377.54 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3460245037473477,
             "unit": "iter/sec",
             "range": "stddev: 0.038970",
@@ -22726,7 +22726,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 426.25 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16404022237534663,
             "unit": "iter/sec",
             "range": "stddev: 0.084273",
@@ -22734,7 +22734,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0961 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16291544575460895,
             "unit": "iter/sec",
             "range": "stddev: 0.068124",
@@ -22893,7 +22893,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6874 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.83131905121447,
             "unit": "iter/sec",
             "range": "stddev: 0.036977",
@@ -22901,7 +22901,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 546.05 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.6092357766063883,
             "unit": "iter/sec",
             "range": "stddev: 0.049966",
@@ -22909,7 +22909,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 621.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1215602883711425,
             "unit": "iter/sec",
             "range": "stddev: 0.11700",
@@ -22917,7 +22917,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2264 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12012914398693,
             "unit": "iter/sec",
             "range": "stddev: 0.18951",
@@ -23076,7 +23076,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0143 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5920637181517874,
             "unit": "iter/sec",
             "range": "stddev: 0.037488",
@@ -23084,7 +23084,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.79 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.298421064101019,
             "unit": "iter/sec",
             "range": "stddev: 0.040429",
@@ -23092,7 +23092,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 435.08 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16027471359017426,
             "unit": "iter/sec",
             "range": "stddev: 0.084472",
@@ -23100,7 +23100,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2393 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15744687203832983,
             "unit": "iter/sec",
             "range": "stddev: 0.089904",
@@ -23259,7 +23259,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8112 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.180135513986011,
             "unit": "iter/sec",
             "range": "stddev: 0.041636",
@@ -23267,7 +23267,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 458.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0191352637929416,
             "unit": "iter/sec",
             "range": "stddev: 0.026905",
@@ -23275,7 +23275,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 495.26 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14026205206689757,
             "unit": "iter/sec",
             "range": "stddev: 0.28199",
@@ -23283,7 +23283,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1295 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14062902600960672,
             "unit": "iter/sec",
             "range": "stddev: 0.35191",
@@ -23442,7 +23442,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0090 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2287849753372906,
             "unit": "iter/sec",
             "range": "stddev: 0.038678",
@@ -23450,7 +23450,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 448.67 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9859045565254607,
             "unit": "iter/sec",
             "range": "stddev: 0.037659",
@@ -23458,7 +23458,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 503.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1398810056065077,
             "unit": "iter/sec",
             "range": "stddev: 0.15797",
@@ -23466,7 +23466,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1489 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13629526643129244,
             "unit": "iter/sec",
             "range": "stddev: 0.12869",
@@ -23625,7 +23625,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5090 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.971929334178291,
             "unit": "iter/sec",
             "range": "stddev: 0.047207",
@@ -23633,7 +23633,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 507.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7231792320984858,
             "unit": "iter/sec",
             "range": "stddev: 0.043247",
@@ -23641,7 +23641,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 580.32 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11823553809269831,
             "unit": "iter/sec",
             "range": "stddev: 0.22576",
@@ -23649,7 +23649,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4577 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11130426321987721,
             "unit": "iter/sec",
             "range": "stddev: 0.32164",
@@ -23808,7 +23808,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9104 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2359934129027144,
             "unit": "iter/sec",
             "range": "stddev: 0.041168",
@@ -23816,7 +23816,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 447.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9851318425703137,
             "unit": "iter/sec",
             "range": "stddev: 0.036944",
@@ -23824,7 +23824,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 503.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13853586204838003,
             "unit": "iter/sec",
             "range": "stddev: 0.10405",
@@ -23832,7 +23832,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2183 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1372907297572317,
             "unit": "iter/sec",
             "range": "stddev: 0.17722",
@@ -23991,7 +23991,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5350 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.993879263542687,
             "unit": "iter/sec",
             "range": "stddev: 0.037358",
@@ -23999,7 +23999,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 501.53 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7733789548921919,
             "unit": "iter/sec",
             "range": "stddev: 0.040834",
@@ -24007,7 +24007,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 563.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11830708423510823,
             "unit": "iter/sec",
             "range": "stddev: 0.57157",
@@ -24015,7 +24015,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4526 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12352130741819559,
             "unit": "iter/sec",
             "range": "stddev: 0.39889",
@@ -24174,7 +24174,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1488 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.619959731620647,
             "unit": "iter/sec",
             "range": "stddev: 0.042560",
@@ -24182,7 +24182,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 381.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3190115188664784,
             "unit": "iter/sec",
             "range": "stddev: 0.042683",
@@ -24190,7 +24190,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.22 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15839687698432145,
             "unit": "iter/sec",
             "range": "stddev: 0.10483",
@@ -24198,7 +24198,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3133 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15896492154319816,
             "unit": "iter/sec",
             "range": "stddev: 0.096228",
@@ -24357,7 +24357,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8848 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9377087696354143,
             "unit": "iter/sec",
             "range": "stddev: 0.039486",
@@ -24365,7 +24365,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 340.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5180134575241544,
             "unit": "iter/sec",
             "range": "stddev: 0.051040",
@@ -24373,7 +24373,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 397.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1686028369803358,
             "unit": "iter/sec",
             "range": "stddev: 0.16173",
@@ -24381,7 +24381,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9311 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16920228964846307,
             "unit": "iter/sec",
             "range": "stddev: 0.22193",
@@ -24540,7 +24540,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9446 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.131343929331641,
             "unit": "iter/sec",
             "range": "stddev: 0.034591",
@@ -24548,7 +24548,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 469.19 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.825271623123075,
             "unit": "iter/sec",
             "range": "stddev: 0.045383",
@@ -24556,7 +24556,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 547.86 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12865261042107276,
             "unit": "iter/sec",
             "range": "stddev: 0.076344",
@@ -24564,7 +24564,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7729 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1273054101453219,
             "unit": "iter/sec",
             "range": "stddev: 0.094709",
@@ -24723,7 +24723,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2452 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9735679362132348,
             "unit": "iter/sec",
             "range": "stddev: 0.062939",
@@ -24731,7 +24731,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 506.70 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7442734556546384,
             "unit": "iter/sec",
             "range": "stddev: 0.045791",
@@ -24739,7 +24739,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 573.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12479566902481036,
             "unit": "iter/sec",
             "range": "stddev: 0.095834",
@@ -24747,7 +24747,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0131 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12581124200571078,
             "unit": "iter/sec",
             "range": "stddev: 0.18863",
@@ -24906,7 +24906,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2608 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.394808225319864,
             "unit": "iter/sec",
             "range": "stddev: 0.027303",
@@ -24914,7 +24914,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.57 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9554762921925857,
             "unit": "iter/sec",
             "range": "stddev: 0.056705",
@@ -24922,7 +24922,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 511.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14210480649512416,
             "unit": "iter/sec",
             "range": "stddev: 0.19343",
@@ -24930,7 +24930,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0371 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13673956377130383,
             "unit": "iter/sec",
             "range": "stddev: 0.27313",
@@ -25089,7 +25089,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7456 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0726893394975594,
             "unit": "iter/sec",
             "range": "stddev: 0.039699",
@@ -25097,7 +25097,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 482.46 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7934122553549323,
             "unit": "iter/sec",
             "range": "stddev: 0.056761",
@@ -25105,7 +25105,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 557.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13262001884101476,
             "unit": "iter/sec",
             "range": "stddev: 0.071999",
@@ -25113,7 +25113,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5403 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13147445367109206,
             "unit": "iter/sec",
             "range": "stddev: 0.11105",
@@ -25272,7 +25272,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3257 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2930408342062027,
             "unit": "iter/sec",
             "range": "stddev: 0.044108",
@@ -25280,7 +25280,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9565207544900693,
             "unit": "iter/sec",
             "range": "stddev: 0.038204",
@@ -25288,7 +25288,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 511.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14503268089684893,
             "unit": "iter/sec",
             "range": "stddev: 0.24501",
@@ -25296,7 +25296,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8950 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15184292833946833,
             "unit": "iter/sec",
             "range": "stddev: 0.092305",
@@ -25455,7 +25455,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2362 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.178044859681694,
             "unit": "iter/sec",
             "range": "stddev: 0.029351",
@@ -25463,7 +25463,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 459.13 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9146081286829777,
             "unit": "iter/sec",
             "range": "stddev: 0.051203",
@@ -25471,7 +25471,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 522.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14350774864677393,
             "unit": "iter/sec",
             "range": "stddev: 0.19987",
@@ -25479,7 +25479,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9683 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14342632657164844,
             "unit": "iter/sec",
             "range": "stddev: 0.11535",
@@ -25638,7 +25638,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9970 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9601467801488934,
             "unit": "iter/sec",
             "range": "stddev: 0.039553",
@@ -25646,7 +25646,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 510.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7187252311553065,
             "unit": "iter/sec",
             "range": "stddev: 0.043954",
@@ -25654,7 +25654,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 581.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12567061530855736,
             "unit": "iter/sec",
             "range": "stddev: 0.10474",
@@ -25662,7 +25662,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9573 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12396925645883553,
             "unit": "iter/sec",
             "range": "stddev: 0.11310",
@@ -25821,7 +25821,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1053 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4591818192776946,
             "unit": "iter/sec",
             "range": "stddev: 0.038971",
@@ -25829,7 +25829,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 406.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1290728556720158,
             "unit": "iter/sec",
             "range": "stddev: 0.033134",
@@ -25837,7 +25837,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 469.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15650941929823894,
             "unit": "iter/sec",
             "range": "stddev: 0.077540",
@@ -25845,7 +25845,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3894 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15017175483551903,
             "unit": "iter/sec",
             "range": "stddev: 0.15511",
@@ -26004,7 +26004,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5686 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2931235758978956,
             "unit": "iter/sec",
             "range": "stddev: 0.036769",
@@ -26012,7 +26012,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.09 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0512406852962526,
             "unit": "iter/sec",
             "range": "stddev: 0.036139",
@@ -26020,7 +26020,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 487.51 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14315588367394688,
             "unit": "iter/sec",
             "range": "stddev: 0.072245",
@@ -26028,7 +26028,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9854 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14307558609890914,
             "unit": "iter/sec",
             "range": "stddev: 0.076991",
@@ -26187,7 +26187,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1605 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4134304387125867,
             "unit": "iter/sec",
             "range": "stddev: 0.033221",
@@ -26195,7 +26195,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1632236298827694,
             "unit": "iter/sec",
             "range": "stddev: 0.029732",
@@ -26203,7 +26203,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 462.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15204541866880897,
             "unit": "iter/sec",
             "range": "stddev: 0.072955",
@@ -26211,7 +26211,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5770 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15059487785346642,
             "unit": "iter/sec",
             "range": "stddev: 0.073034",
@@ -26370,7 +26370,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5199 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3141307110832843,
             "unit": "iter/sec",
             "range": "stddev: 0.035360",
@@ -26378,7 +26378,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 432.13 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.040723395527255,
             "unit": "iter/sec",
             "range": "stddev: 0.036842",
@@ -26386,7 +26386,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 490.02 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14314933940632607,
             "unit": "iter/sec",
             "range": "stddev: 0.10131",
@@ -26394,7 +26394,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9857 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14211112891759234,
             "unit": "iter/sec",
             "range": "stddev: 0.12160",
@@ -26553,7 +26553,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4019 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3248029125664615,
             "unit": "iter/sec",
             "range": "stddev: 0.036808",
@@ -26561,7 +26561,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 430.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0347974368927453,
             "unit": "iter/sec",
             "range": "stddev: 0.037640",
@@ -26569,7 +26569,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 491.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.145488973224498,
             "unit": "iter/sec",
             "range": "stddev: 0.070768",
@@ -26577,7 +26577,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8734 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14355587253497695,
             "unit": "iter/sec",
             "range": "stddev: 0.10134",
@@ -26736,7 +26736,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4224 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3334170051299563,
             "unit": "iter/sec",
             "range": "stddev: 0.037122",
@@ -26744,7 +26744,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 428.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0403682547217543,
             "unit": "iter/sec",
             "range": "stddev: 0.036805",
@@ -26752,7 +26752,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 490.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1444261359490542,
             "unit": "iter/sec",
             "range": "stddev: 0.094315",
@@ -26760,7 +26760,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9240 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1446072300593966,
             "unit": "iter/sec",
             "range": "stddev: 0.079564",
@@ -26919,7 +26919,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5512 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.8325731917725079,
             "unit": "iter/sec",
             "range": "stddev: 0.048902",
@@ -26927,7 +26927,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 545.68 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.6380794537071934,
             "unit": "iter/sec",
             "range": "stddev: 0.040889",
@@ -26935,7 +26935,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 610.47 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11819025885349428,
             "unit": "iter/sec",
             "range": "stddev: 0.11072",
@@ -26943,7 +26943,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4609 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11973830095009995,
             "unit": "iter/sec",
             "range": "stddev: 0.19222",
@@ -27102,7 +27102,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9848 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0010666669191903,
             "unit": "iter/sec",
             "range": "stddev: 0.036060",
@@ -27110,7 +27110,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 499.73 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7311867181817244,
             "unit": "iter/sec",
             "range": "stddev: 0.040773",
@@ -27118,7 +27118,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 577.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12501645025314376,
             "unit": "iter/sec",
             "range": "stddev: 0.089597",
@@ -27126,7 +27126,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9989 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12216538710855034,
             "unit": "iter/sec",
             "range": "stddev: 0.11284",
@@ -27285,7 +27285,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7934 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.222599279192969,
             "unit": "iter/sec",
             "range": "stddev: 0.043073",
@@ -27293,7 +27293,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 449.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9304043727220355,
             "unit": "iter/sec",
             "range": "stddev: 0.041921",
@@ -27301,7 +27301,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 518.03 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13312695535940156,
             "unit": "iter/sec",
             "range": "stddev: 0.20868",
@@ -27309,7 +27309,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5116 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13070170179173377,
             "unit": "iter/sec",
             "range": "stddev: 0.19725",
@@ -27468,7 +27468,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3284 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.124105257544367,
             "unit": "iter/sec",
             "range": "stddev: 0.053235",
@@ -27476,7 +27476,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 470.79 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9183248729880613,
             "unit": "iter/sec",
             "range": "stddev: 0.033629",
@@ -27484,7 +27484,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 521.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13371790543655276,
             "unit": "iter/sec",
             "range": "stddev: 0.16575",
@@ -27492,7 +27492,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4784 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13382054781873617,
             "unit": "iter/sec",
             "range": "stddev: 0.14372",
@@ -27651,7 +27651,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4339 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2933727957967047,
             "unit": "iter/sec",
             "range": "stddev: 0.037266",
@@ -27659,7 +27659,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.04 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9806363751597098,
             "unit": "iter/sec",
             "range": "stddev: 0.054634",
@@ -27667,7 +27667,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 504.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14401395575821546,
             "unit": "iter/sec",
             "range": "stddev: 0.12190",
@@ -27675,7 +27675,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9438 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14339598880803123,
             "unit": "iter/sec",
             "range": "stddev: 0.16946",
@@ -27834,7 +27834,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6378 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9851928859836074,
             "unit": "iter/sec",
             "range": "stddev: 0.061030",
@@ -27842,7 +27842,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 503.73 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7995174643406509,
             "unit": "iter/sec",
             "range": "stddev: 0.037725",
@@ -27850,7 +27850,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 555.70 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1333104209928068,
             "unit": "iter/sec",
             "range": "stddev: 0.089872",
@@ -27858,7 +27858,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5013 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13110685486987675,
             "unit": "iter/sec",
             "range": "stddev: 0.10556",
@@ -28017,7 +28017,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.3614 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8965354838628032,
             "unit": "iter/sec",
             "range": "stddev: 0.033758",
@@ -28025,7 +28025,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 345.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5705206257201687,
             "unit": "iter/sec",
             "range": "stddev: 0.032330",
@@ -28033,7 +28033,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 389.03 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.18562087426062954,
             "unit": "iter/sec",
             "range": "stddev: 0.094273",
@@ -28041,7 +28041,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3873 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.18232596199533888,
             "unit": "iter/sec",
             "range": "stddev: 0.076415",
@@ -28200,7 +28200,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2957 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2514404131797106,
             "unit": "iter/sec",
             "range": "stddev: 0.034227",
@@ -28208,7 +28208,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 444.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9872309824063517,
             "unit": "iter/sec",
             "range": "stddev: 0.037766",
@@ -28216,7 +28216,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 503.21 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14286120424301144,
             "unit": "iter/sec",
             "range": "stddev: 0.088143",
@@ -28224,7 +28224,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9998 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13771647309937152,
             "unit": "iter/sec",
             "range": "stddev: 0.13590",
@@ -28383,7 +28383,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5352 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.8213072078422026,
             "unit": "iter/sec",
             "range": "stddev: 0.041236",
@@ -28391,7 +28391,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 549.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.6051781310775728,
             "unit": "iter/sec",
             "range": "stddev: 0.044510",
@@ -28399,7 +28399,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 622.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11194078248740374,
             "unit": "iter/sec",
             "range": "stddev: 0.11028",
@@ -28407,7 +28407,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.9333 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11025756885908189,
             "unit": "iter/sec",
             "range": "stddev: 0.13045",
@@ -28566,7 +28566,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5110 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2400901101634085,
             "unit": "iter/sec",
             "range": "stddev: 0.054007",
@@ -28574,7 +28574,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 446.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.96006326762132,
             "unit": "iter/sec",
             "range": "stddev: 0.034738",
@@ -28582,7 +28582,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 510.19 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13787575450167983,
             "unit": "iter/sec",
             "range": "stddev: 0.11478",
@@ -28590,7 +28590,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2529 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13615703184133932,
             "unit": "iter/sec",
             "range": "stddev: 0.094057",
@@ -28749,7 +28749,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6339 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0273910224824374,
             "unit": "iter/sec",
             "range": "stddev: 0.040540",
@@ -28757,7 +28757,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 493.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7615357715456674,
             "unit": "iter/sec",
             "range": "stddev: 0.044967",
@@ -28765,7 +28765,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 567.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13104502312292363,
             "unit": "iter/sec",
             "range": "stddev: 0.11342",
@@ -28773,7 +28773,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6310 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13401053058197857,
             "unit": "iter/sec",
             "range": "stddev: 0.18378",
@@ -28932,7 +28932,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7132 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1311598987995275,
             "unit": "iter/sec",
             "range": "stddev: 0.049580",
@@ -28940,7 +28940,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 469.23 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.813617536938458,
             "unit": "iter/sec",
             "range": "stddev: 0.038952",
@@ -28948,7 +28948,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 551.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12746141232159786,
             "unit": "iter/sec",
             "range": "stddev: 0.21663",
@@ -28956,7 +28956,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8455 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13340726273636624,
             "unit": "iter/sec",
             "range": "stddev: 0.11711",
@@ -29115,7 +29115,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9712 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.040654020614323,
             "unit": "iter/sec",
             "range": "stddev: 0.038411",
@@ -29123,7 +29123,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 490.04 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.779380076585343,
             "unit": "iter/sec",
             "range": "stddev: 0.033601",
@@ -29131,7 +29131,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 561.99 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12595764925807834,
             "unit": "iter/sec",
             "range": "stddev: 0.13031",
@@ -29139,7 +29139,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9392 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12552468483653273,
             "unit": "iter/sec",
             "range": "stddev: 0.19661",
@@ -29298,7 +29298,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7183 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1215946560866743,
             "unit": "iter/sec",
             "range": "stddev: 0.038209",
@@ -29306,7 +29306,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 471.34 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9206042140960238,
             "unit": "iter/sec",
             "range": "stddev: 0.038989",
@@ -29314,7 +29314,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 520.67 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1345049358872807,
             "unit": "iter/sec",
             "range": "stddev: 0.19077",
@@ -29322,7 +29322,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4347 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.132732536454069,
             "unit": "iter/sec",
             "range": "stddev: 0.097930",
@@ -29481,7 +29481,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3658 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4520268657385826,
             "unit": "iter/sec",
             "range": "stddev: 0.038243",
@@ -29489,7 +29489,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 407.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.101139580786563,
             "unit": "iter/sec",
             "range": "stddev: 0.040790",
@@ -29497,7 +29497,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 475.93 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1506637533141285,
             "unit": "iter/sec",
             "range": "stddev: 0.15116",
@@ -29505,7 +29505,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6373 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1427379383096413,
             "unit": "iter/sec",
             "range": "stddev: 0.13128",
@@ -29664,7 +29664,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6723 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2658857435713213,
             "unit": "iter/sec",
             "range": "stddev: 0.039875",
@@ -29672,7 +29672,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 441.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0201541918611823,
             "unit": "iter/sec",
             "range": "stddev: 0.036239",
@@ -29680,7 +29680,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 495.01 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1399916365104578,
             "unit": "iter/sec",
             "range": "stddev: 0.080169",
@@ -29688,7 +29688,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1433 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14521800235881435,
             "unit": "iter/sec",
             "range": "stddev: 0.14711",
@@ -29847,7 +29847,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4023 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.292149410046058,
             "unit": "iter/sec",
             "range": "stddev: 0.032962",
@@ -29855,7 +29855,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.27 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.013483568902064,
             "unit": "iter/sec",
             "range": "stddev: 0.043388",
@@ -29863,7 +29863,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 496.65 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14323525656802294,
             "unit": "iter/sec",
             "range": "stddev: 0.10108",
@@ -29871,7 +29871,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9815 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1468141439910263,
             "unit": "iter/sec",
             "range": "stddev: 0.12804",
@@ -30030,7 +30030,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8101 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.09710528258552,
             "unit": "iter/sec",
             "range": "stddev: 0.031202",
@@ -30038,7 +30038,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 476.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8361628473769245,
             "unit": "iter/sec",
             "range": "stddev: 0.035878",
@@ -30046,7 +30046,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 544.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12974797574431135,
             "unit": "iter/sec",
             "range": "stddev: 0.099622",
@@ -30054,7 +30054,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7072 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12865366768541645,
             "unit": "iter/sec",
             "range": "stddev: 0.096856",
@@ -30213,7 +30213,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3102 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.404303700257539,
             "unit": "iter/sec",
             "range": "stddev: 0.044563",
@@ -30221,7 +30221,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 415.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.142024204887487,
             "unit": "iter/sec",
             "range": "stddev: 0.038739",
@@ -30229,7 +30229,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 466.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15158919099683318,
             "unit": "iter/sec",
             "range": "stddev: 0.068618",
@@ -30237,7 +30237,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5968 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14985054436988218,
             "unit": "iter/sec",
             "range": "stddev: 0.078065",
@@ -30396,7 +30396,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6693 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.599777557789419,
             "unit": "iter/sec",
             "range": "stddev: 0.047432",
@@ -30404,7 +30404,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 384.65 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3433255024660897,
             "unit": "iter/sec",
             "range": "stddev: 0.037611",
@@ -30412,7 +30412,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 426.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16707897992208648,
             "unit": "iter/sec",
             "range": "stddev: 0.073609",
@@ -30420,7 +30420,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9852 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1656630613740335,
             "unit": "iter/sec",
             "range": "stddev: 0.075059",
@@ -30579,7 +30579,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6506 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.161558772572673,
             "unit": "iter/sec",
             "range": "stddev: 0.061161",
@@ -30587,7 +30587,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 462.63 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9386309835334732,
             "unit": "iter/sec",
             "range": "stddev: 0.033831",
@@ -30595,7 +30595,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 515.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13744748035834284,
             "unit": "iter/sec",
             "range": "stddev: 0.12172",
@@ -30603,7 +30603,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2755 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13700070944514728,
             "unit": "iter/sec",
             "range": "stddev: 0.14491",
@@ -30762,7 +30762,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.7907 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.519268399191639,
             "unit": "iter/sec",
             "range": "stddev: 0.064895",
@@ -30770,7 +30770,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 396.94 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.307757942103423,
             "unit": "iter/sec",
             "range": "stddev: 0.045834",
@@ -30778,7 +30778,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 433.32 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1636270718737598,
             "unit": "iter/sec",
             "range": "stddev: 0.12861",
@@ -30786,7 +30786,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1115 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16131806331399665,
             "unit": "iter/sec",
             "range": "stddev: 0.12245",
@@ -30945,7 +30945,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5964 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.7598344277377398,
             "unit": "iter/sec",
             "range": "stddev: 0.063136",
@@ -30953,7 +30953,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 568.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.602205128590619,
             "unit": "iter/sec",
             "range": "stddev: 0.054806",
@@ -30961,7 +30961,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 624.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11355861082871715,
             "unit": "iter/sec",
             "range": "stddev: 0.13361",
@@ -30969,7 +30969,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.8060 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11285999046702319,
             "unit": "iter/sec",
             "range": "stddev: 0.10968",
@@ -31128,7 +31128,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6469 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5754221519960785,
             "unit": "iter/sec",
             "range": "stddev: 0.045832",
@@ -31136,7 +31136,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 388.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.32632497221506,
             "unit": "iter/sec",
             "range": "stddev: 0.033372",
@@ -31144,7 +31144,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 429.86 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1655803803711926,
             "unit": "iter/sec",
             "range": "stddev: 0.075924",
@@ -31152,7 +31152,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0394 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16380828833127128,
             "unit": "iter/sec",
             "range": "stddev: 0.075941",
@@ -31311,7 +31311,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0089 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1323855552426423,
             "unit": "iter/sec",
             "range": "stddev: 0.037690",
@@ -31319,7 +31319,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 468.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.8589183135206033,
             "unit": "iter/sec",
             "range": "stddev: 0.038114",
@@ -31327,7 +31327,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 537.95 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1256290699680172,
             "unit": "iter/sec",
             "range": "stddev: 0.14905",
@@ -31335,7 +31335,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9599 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12725399592837314,
             "unit": "iter/sec",
             "range": "stddev: 0.13992",
@@ -31494,7 +31494,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1131 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1205917927953752,
             "unit": "iter/sec",
             "range": "stddev: 0.047672",
@@ -31502,7 +31502,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 471.57 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.798695668551239,
             "unit": "iter/sec",
             "range": "stddev: 0.049445",
@@ -31510,7 +31510,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 555.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13215437675236463,
             "unit": "iter/sec",
             "range": "stddev: 0.34076",
@@ -31518,7 +31518,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5669 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13610798382198747,
             "unit": "iter/sec",
             "range": "stddev: 0.082740",
@@ -31677,7 +31677,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5913 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.257938330031557,
             "unit": "iter/sec",
             "range": "stddev: 0.039357",
@@ -31685,7 +31685,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 442.88 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0143426135941147,
             "unit": "iter/sec",
             "range": "stddev: 0.040257",
@@ -31693,7 +31693,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 496.44 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14026867555909087,
             "unit": "iter/sec",
             "range": "stddev: 0.099604",
@@ -31701,7 +31701,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1292 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1388309719512245,
             "unit": "iter/sec",
             "range": "stddev: 0.096738",
@@ -31860,7 +31860,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8794 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.000360816082398,
             "unit": "iter/sec",
             "range": "stddev: 0.046479",
@@ -31868,7 +31868,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 499.91 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.7989069825882722,
             "unit": "iter/sec",
             "range": "stddev: 0.044601",
@@ -31876,7 +31876,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 555.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1138306563739521,
             "unit": "iter/sec",
             "range": "stddev: 0.30262",
@@ -31884,7 +31884,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7850 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11366735811466241,
             "unit": "iter/sec",
             "range": "stddev: 0.50964",
@@ -32043,7 +32043,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2639 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2185915398956633,
             "unit": "iter/sec",
             "range": "stddev: 0.054508",
@@ -32051,7 +32051,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 450.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.121327857270804,
             "unit": "iter/sec",
             "range": "stddev: 0.036945",
@@ -32059,7 +32059,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 471.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1251416858625508,
             "unit": "iter/sec",
             "range": "stddev: 0.081749",
@@ -32067,7 +32067,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9909 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1241459442048306,
             "unit": "iter/sec",
             "range": "stddev: 0.070823",
@@ -32226,7 +32226,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1067 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3948679469505274,
             "unit": "iter/sec",
             "range": "stddev: 0.040690",
@@ -32234,7 +32234,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.165214264965619,
             "unit": "iter/sec",
             "range": "stddev: 0.057626",
@@ -32242,7 +32242,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 461.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13774010831936453,
             "unit": "iter/sec",
             "range": "stddev: 0.10526",
@@ -32250,7 +32250,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2600 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1448077632527262,
             "unit": "iter/sec",
             "range": "stddev: 0.21117",
@@ -32409,7 +32409,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0338 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.316761393579602,
             "unit": "iter/sec",
             "range": "stddev: 0.058427",
@@ -32417,7 +32417,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.242773609055919,
             "unit": "iter/sec",
             "range": "stddev: 0.039922",
@@ -32425,7 +32425,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 445.88 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13785828024597852,
             "unit": "iter/sec",
             "range": "stddev: 0.081187",
@@ -32433,7 +32433,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2538 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13626514083219832,
             "unit": "iter/sec",
             "range": "stddev: 0.10865",
@@ -32592,7 +32592,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6701 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5563500768994216,
             "unit": "iter/sec",
             "range": "stddev: 0.051424",
@@ -32600,7 +32600,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 391.18 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.470748792689676,
             "unit": "iter/sec",
             "range": "stddev: 0.037091",
@@ -32608,7 +32608,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 404.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13629085292382767,
             "unit": "iter/sec",
             "range": "stddev: 0.22697",
@@ -32616,7 +32616,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3372 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13475238933476022,
             "unit": "iter/sec",
             "range": "stddev: 0.13252",
@@ -32775,7 +32775,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.5778 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.101065896690257,
             "unit": "iter/sec",
             "range": "stddev: 0.031688",
@@ -32783,7 +32783,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 322.47 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.864792420407016,
             "unit": "iter/sec",
             "range": "stddev: 0.030850",
@@ -32791,7 +32791,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 349.07 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17676957004454116,
             "unit": "iter/sec",
             "range": "stddev: 0.22510",
@@ -32799,7 +32799,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6571 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17959413121074477,
             "unit": "iter/sec",
             "range": "stddev: 0.20089",
@@ -32958,7 +32958,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6130 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4940242902623546,
             "unit": "iter/sec",
             "range": "stddev: 0.036392",
@@ -32966,7 +32966,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 400.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.384181135548557,
             "unit": "iter/sec",
             "range": "stddev: 0.038013",
@@ -32974,7 +32974,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 419.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13785459932689245,
             "unit": "iter/sec",
             "range": "stddev: 0.098422",
@@ -32982,7 +32982,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2540 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13772802580907745,
             "unit": "iter/sec",
             "range": "stddev: 0.091664",
@@ -33141,7 +33141,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9599 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8883779141358636,
             "unit": "iter/sec",
             "range": "stddev: 0.036104",
@@ -33149,7 +33149,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 346.22 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7275339605571043,
             "unit": "iter/sec",
             "range": "stddev: 0.031834",
@@ -33157,7 +33157,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 366.63 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16658742136581187,
             "unit": "iter/sec",
             "range": "stddev: 0.067549",
@@ -33165,7 +33165,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0029 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16602694676459911,
             "unit": "iter/sec",
             "range": "stddev: 0.066136",
@@ -33324,7 +33324,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2354 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2997092504616345,
             "unit": "iter/sec",
             "range": "stddev: 0.050847",
@@ -33332,7 +33332,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 434.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1008734072361737,
             "unit": "iter/sec",
             "range": "stddev: 0.039979",
@@ -33340,7 +33340,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 475.99 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1336736705890676,
             "unit": "iter/sec",
             "range": "stddev: 0.11737",
@@ -33348,7 +33348,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4809 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1317679356341315,
             "unit": "iter/sec",
             "range": "stddev: 0.12502",
@@ -33507,7 +33507,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8372 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.121709408551284,
             "unit": "iter/sec",
             "range": "stddev: 0.055669",
@@ -33515,7 +33515,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 320.34 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.86900343071937,
             "unit": "iter/sec",
             "range": "stddev: 0.037431",
@@ -33523,7 +33523,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 348.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16943768573753887,
             "unit": "iter/sec",
             "range": "stddev: 0.22025",
@@ -33531,7 +33531,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9019 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17207324219329428,
             "unit": "iter/sec",
             "range": "stddev: 0.18078",
@@ -33690,7 +33690,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4300 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 1.9347032269530589,
             "unit": "iter/sec",
             "range": "stddev: 0.19244",
@@ -33698,7 +33698,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 516.88 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.3649828237983408,
             "unit": "iter/sec",
             "range": "stddev: 0.28482",
@@ -33706,7 +33706,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 732.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13798052490604498,
             "unit": "iter/sec",
             "range": "stddev: 2.0485",
@@ -33714,7 +33714,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2474 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16408051251414532,
             "unit": "iter/sec",
             "range": "stddev: 0.14860",
@@ -33873,7 +33873,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1673 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.299099952182532,
             "unit": "iter/sec",
             "range": "stddev: 0.032795",
@@ -33881,7 +33881,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 434.95 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1523899592207076,
             "unit": "iter/sec",
             "range": "stddev: 0.040548",
@@ -33889,7 +33889,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 464.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12715058458423525,
             "unit": "iter/sec",
             "range": "stddev: 0.16230",
@@ -33897,7 +33897,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8647 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12425074454126261,
             "unit": "iter/sec",
             "range": "stddev: 0.12092",
@@ -34056,7 +34056,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6607 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.517069510556581,
             "unit": "iter/sec",
             "range": "stddev: 0.037089",
@@ -34064,7 +34064,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 397.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3990243810780796,
             "unit": "iter/sec",
             "range": "stddev: 0.046473",
@@ -34072,7 +34072,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 416.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1448624743097553,
             "unit": "iter/sec",
             "range": "stddev: 0.077460",
@@ -34080,7 +34080,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9031 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14367932125908153,
             "unit": "iter/sec",
             "range": "stddev: 0.067487",
@@ -34239,7 +34239,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6379 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5616386393879034,
             "unit": "iter/sec",
             "range": "stddev: 0.038182",
@@ -34247,7 +34247,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 390.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.420285279324403,
             "unit": "iter/sec",
             "range": "stddev: 0.037694",
@@ -34255,7 +34255,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 413.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14296332886966107,
             "unit": "iter/sec",
             "range": "stddev: 0.10880",
@@ -34263,7 +34263,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9948 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14390692454189305,
             "unit": "iter/sec",
             "range": "stddev: 0.16464",
@@ -34422,7 +34422,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1708 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.217920078287882,
             "unit": "iter/sec",
             "range": "stddev: 0.045535",
@@ -34430,7 +34430,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 450.87 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.251344778610056,
             "unit": "iter/sec",
             "range": "stddev: 0.040231",
@@ -34438,7 +34438,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 444.18 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12711250498085438,
             "unit": "iter/sec",
             "range": "stddev: 0.23004",
@@ -34446,7 +34446,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8670 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12475108762450245,
             "unit": "iter/sec",
             "range": "stddev: 0.17635",
@@ -34605,7 +34605,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5076 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.573263393329454,
             "unit": "iter/sec",
             "range": "stddev: 0.034143",
@@ -34613,7 +34613,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 388.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4458808036180315,
             "unit": "iter/sec",
             "range": "stddev: 0.034537",
@@ -34621,7 +34621,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14220678139388704,
             "unit": "iter/sec",
             "range": "stddev: 0.061041",
@@ -34629,7 +34629,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0320 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14197935379013227,
             "unit": "iter/sec",
             "range": "stddev: 0.075147",
@@ -34788,7 +34788,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9996 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8632017875197566,
             "unit": "iter/sec",
             "range": "stddev: 0.039003",
@@ -34796,7 +34796,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 349.26 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6703360775371463,
             "unit": "iter/sec",
             "range": "stddev: 0.053438",
@@ -34804,7 +34804,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 374.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16283045383955824,
             "unit": "iter/sec",
             "range": "stddev: 0.10122",
@@ -34812,7 +34812,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1414 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1619404909890042,
             "unit": "iter/sec",
             "range": "stddev: 0.081210",
@@ -34971,7 +34971,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8503 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.070125790267263,
             "unit": "iter/sec",
             "range": "stddev: 0.044787",
@@ -34979,7 +34979,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 483.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0436452863105585,
             "unit": "iter/sec",
             "range": "stddev: 0.046137",
@@ -34987,7 +34987,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 489.32 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11455312658838773,
             "unit": "iter/sec",
             "range": "stddev: 0.22738",
@@ -34995,7 +34995,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.7296 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11437683425844929,
             "unit": "iter/sec",
             "range": "stddev: 0.17779",
@@ -35154,7 +35154,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8439 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4508660073970936,
             "unit": "iter/sec",
             "range": "stddev: 0.047655",
@@ -35162,7 +35162,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.02 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3959462960657856,
             "unit": "iter/sec",
             "range": "stddev: 0.032837",
@@ -35170,7 +35170,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1409807761928395,
             "unit": "iter/sec",
             "range": "stddev: 0.14371",
@@ -35178,7 +35178,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0932 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13968674245263715,
             "unit": "iter/sec",
             "range": "stddev: 0.16667",
@@ -35337,7 +35337,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3574 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.716225255786402,
             "unit": "iter/sec",
             "range": "stddev: 0.061785",
@@ -35345,7 +35345,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 368.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6094801016021214,
             "unit": "iter/sec",
             "range": "stddev: 0.045896",
@@ -35353,7 +35353,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 383.22 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1534523975829732,
             "unit": "iter/sec",
             "range": "stddev: 0.083000",
@@ -35361,7 +35361,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5167 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15209465035555833,
             "unit": "iter/sec",
             "range": "stddev: 0.10246",
@@ -35520,7 +35520,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6077 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.528315031430734,
             "unit": "iter/sec",
             "range": "stddev: 0.041369",
@@ -35528,7 +35528,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 395.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4324243523461573,
             "unit": "iter/sec",
             "range": "stddev: 0.033498",
@@ -35536,7 +35536,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 411.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1398010655740113,
             "unit": "iter/sec",
             "range": "stddev: 0.38392",
@@ -35544,7 +35544,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1530 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1390476637258625,
             "unit": "iter/sec",
             "range": "stddev: 0.37379",
@@ -35703,7 +35703,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7036 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.42133625819989,
             "unit": "iter/sec",
             "range": "stddev: 0.062913",
@@ -35711,7 +35711,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 413.00 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3464525707443293,
             "unit": "iter/sec",
             "range": "stddev: 0.039719",
@@ -35719,7 +35719,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 426.18 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1427782734391972,
             "unit": "iter/sec",
             "range": "stddev: 0.079529",
@@ -35727,7 +35727,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0039 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14105335463027185,
             "unit": "iter/sec",
             "range": "stddev: 0.080446",
@@ -35886,7 +35886,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8276 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4040814263469303,
             "unit": "iter/sec",
             "range": "stddev: 0.038056",
@@ -35894,7 +35894,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 415.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2867513095746186,
             "unit": "iter/sec",
             "range": "stddev: 0.036898",
@@ -35902,7 +35902,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 437.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1400031292120411,
             "unit": "iter/sec",
             "range": "stddev: 0.086436",
@@ -35910,7 +35910,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1427 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13908063058285722,
             "unit": "iter/sec",
             "range": "stddev: 0.083603",
@@ -36069,7 +36069,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4830 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8243329417966474,
             "unit": "iter/sec",
             "range": "stddev: 0.040227",
@@ -36077,7 +36077,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 354.07 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.712936625548043,
             "unit": "iter/sec",
             "range": "stddev: 0.030013",
@@ -36085,7 +36085,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 368.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1636385283985553,
             "unit": "iter/sec",
             "range": "stddev: 0.13705",
@@ -36093,7 +36093,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1110 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1615461635677565,
             "unit": "iter/sec",
             "range": "stddev: 0.11983",
@@ -36252,7 +36252,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1683 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6720492837151286,
             "unit": "iter/sec",
             "range": "stddev: 0.031656",
@@ -36260,7 +36260,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 374.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6783326390747604,
             "unit": "iter/sec",
             "range": "stddev: 0.034594",
@@ -36268,7 +36268,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 373.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16059535570446987,
             "unit": "iter/sec",
             "range": "stddev: 0.063148",
@@ -36276,7 +36276,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2268 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1605506484430727,
             "unit": "iter/sec",
             "range": "stddev: 0.14185",
@@ -36435,7 +36435,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3398 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1950027190733152,
             "unit": "iter/sec",
             "range": "stddev: 0.043173",
@@ -36443,7 +36443,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 455.58 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1247483926515383,
             "unit": "iter/sec",
             "range": "stddev: 0.039751",
@@ -36451,7 +36451,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 470.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12393094836619406,
             "unit": "iter/sec",
             "range": "stddev: 0.095170",
@@ -36459,7 +36459,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0690 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12309924689177403,
             "unit": "iter/sec",
             "range": "stddev: 0.095246",
@@ -36618,7 +36618,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4912 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.248147004174411,
             "unit": "iter/sec",
             "range": "stddev: 0.053723",
@@ -36626,7 +36626,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 444.81 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1472352062865667,
             "unit": "iter/sec",
             "range": "stddev: 0.047673",
@@ -36634,7 +36634,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 465.72 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12201383866957098,
             "unit": "iter/sec",
             "range": "stddev: 0.081935",
@@ -36642,7 +36642,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1958 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1214375605920834,
             "unit": "iter/sec",
             "range": "stddev: 0.088900",
@@ -36801,7 +36801,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8434 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9141208186759764,
             "unit": "iter/sec",
             "range": "stddev: 0.037940",
@@ -36809,7 +36809,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 343.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8063822124064024,
             "unit": "iter/sec",
             "range": "stddev: 0.033761",
@@ -36817,7 +36817,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 356.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16537692266450602,
             "unit": "iter/sec",
             "range": "stddev: 0.075328",
@@ -36825,7 +36825,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0468 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16510557629020792,
             "unit": "iter/sec",
             "range": "stddev: 0.062587",
@@ -36984,7 +36984,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4105 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7006931588933494,
             "unit": "iter/sec",
             "range": "stddev: 0.043429",
@@ -36992,7 +36992,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 370.28 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4185595344158313,
             "unit": "iter/sec",
             "range": "stddev: 0.039633",
@@ -37000,7 +37000,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 413.47 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14925342622955354,
             "unit": "iter/sec",
             "range": "stddev: 0.12545",
@@ -37008,7 +37008,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7000 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14931253915281673,
             "unit": "iter/sec",
             "range": "stddev: 0.16030",
@@ -37167,7 +37167,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3699 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5842489948817593,
             "unit": "iter/sec",
             "range": "stddev: 0.033517",
@@ -37175,7 +37175,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 386.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.413435645472341,
             "unit": "iter/sec",
             "range": "stddev: 0.033177",
@@ -37183,7 +37183,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14431018851659302,
             "unit": "iter/sec",
             "range": "stddev: 0.098499",
@@ -37191,7 +37191,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9295 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14465666405501967,
             "unit": "iter/sec",
             "range": "stddev: 0.088628",
@@ -37350,7 +37350,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9777 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.442909887576273,
             "unit": "iter/sec",
             "range": "stddev: 0.042224",
@@ -37358,7 +37358,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 409.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2653155348465157,
             "unit": "iter/sec",
             "range": "stddev: 0.054990",
@@ -37366,7 +37366,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 441.44 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1389177830240316,
             "unit": "iter/sec",
             "range": "stddev: 0.096480",
@@ -37374,7 +37374,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1985 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13683394976446345,
             "unit": "iter/sec",
             "range": "stddev: 0.13100",
@@ -37533,7 +37533,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7971 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5194259625002373,
             "unit": "iter/sec",
             "range": "stddev: 0.039917",
@@ -37541,7 +37541,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 396.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.330151245975457,
             "unit": "iter/sec",
             "range": "stddev: 0.036934",
@@ -37549,7 +37549,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 429.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14006736425425415,
             "unit": "iter/sec",
             "range": "stddev: 0.087425",
@@ -37557,7 +37557,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1394 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14005286149041718,
             "unit": "iter/sec",
             "range": "stddev: 0.12511",
@@ -37716,7 +37716,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0089 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7377545697066425,
             "unit": "iter/sec",
             "range": "stddev: 0.037269",
@@ -37724,7 +37724,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 365.26 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.658602191573172,
             "unit": "iter/sec",
             "range": "stddev: 0.050324",
@@ -37732,7 +37732,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 376.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1625236429441181,
             "unit": "iter/sec",
             "range": "stddev: 0.092405",
@@ -37740,7 +37740,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1530 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.160735888692353,
             "unit": "iter/sec",
             "range": "stddev: 0.15086",
@@ -37899,7 +37899,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0369 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4946123301415066,
             "unit": "iter/sec",
             "range": "stddev: 0.040030",
@@ -37907,7 +37907,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 400.86 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2177497544675338,
             "unit": "iter/sec",
             "range": "stddev: 0.050734",
@@ -37915,7 +37915,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 450.91 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13601747425187777,
             "unit": "iter/sec",
             "range": "stddev: 0.22200",
@@ -37923,7 +37923,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3520 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13531785484825193,
             "unit": "iter/sec",
             "range": "stddev: 0.13295",
@@ -38082,7 +38082,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9770 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.486684161702601,
             "unit": "iter/sec",
             "range": "stddev: 0.037358",
@@ -38090,7 +38090,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 402.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.234046387254784,
             "unit": "iter/sec",
             "range": "stddev: 0.052044",
@@ -38098,7 +38098,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 447.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14118886688603494,
             "unit": "iter/sec",
             "range": "stddev: 0.12566",
@@ -38106,7 +38106,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0827 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14044037774486223,
             "unit": "iter/sec",
             "range": "stddev: 0.18292",
@@ -38265,7 +38265,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6854 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.1189609208517477,
             "unit": "iter/sec",
             "range": "stddev: 0.042853",
@@ -38273,7 +38273,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 320.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.840452766523285,
             "unit": "iter/sec",
             "range": "stddev: 0.040575",
@@ -38281,7 +38281,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 352.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1710115579464547,
             "unit": "iter/sec",
             "range": "stddev: 0.16432",
@@ -38289,7 +38289,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8476 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1619963753343417,
             "unit": "iter/sec",
             "range": "stddev: 0.19196",
@@ -38448,7 +38448,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.7493 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9890070239891204,
             "unit": "iter/sec",
             "range": "stddev: 0.036390",
@@ -38456,7 +38456,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 334.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7432752292887237,
             "unit": "iter/sec",
             "range": "stddev: 0.051537",
@@ -38464,7 +38464,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 364.53 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16869608055795224,
             "unit": "iter/sec",
             "range": "stddev: 0.073169",
@@ -38472,7 +38472,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9278 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1679356443153503,
             "unit": "iter/sec",
             "range": "stddev: 0.072683",
@@ -38631,7 +38631,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8413 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.513240652334257,
             "unit": "iter/sec",
             "range": "stddev: 0.036976",
@@ -38639,7 +38639,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 397.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3732170677994593,
             "unit": "iter/sec",
             "range": "stddev: 0.037701",
@@ -38647,7 +38647,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 421.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1428828122204285,
             "unit": "iter/sec",
             "range": "stddev: 0.083746",
@@ -38655,7 +38655,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9987 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1428416430492383,
             "unit": "iter/sec",
             "range": "stddev: 0.074833",
@@ -38814,7 +38814,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8501 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4540451963726007,
             "unit": "iter/sec",
             "range": "stddev: 0.037409",
@@ -38822,7 +38822,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 407.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4127731831095383,
             "unit": "iter/sec",
             "range": "stddev: 0.040646",
@@ -38830,7 +38830,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.46 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14162783904278567,
             "unit": "iter/sec",
             "range": "stddev: 0.098870",
@@ -38838,7 +38838,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0608 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1407969408358572,
             "unit": "iter/sec",
             "range": "stddev: 0.099575",
@@ -38997,7 +38997,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9054 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8317498549978835,
             "unit": "iter/sec",
             "range": "stddev: 0.060701",
@@ -39005,7 +39005,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 353.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.905549955157722,
             "unit": "iter/sec",
             "range": "stddev: 0.041468",
@@ -39013,7 +39013,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 344.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16656306372157234,
             "unit": "iter/sec",
             "range": "stddev: 0.078789",
@@ -39021,7 +39021,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0037 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16825836553077939,
             "unit": "iter/sec",
             "range": "stddev: 0.19207",
@@ -39180,7 +39180,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0298 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.863919716956669,
             "unit": "iter/sec",
             "range": "stddev: 0.041388",
@@ -39188,7 +39188,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 349.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7398062630615194,
             "unit": "iter/sec",
             "range": "stddev: 0.042554",
@@ -39196,7 +39196,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 364.99 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.160157373881432,
             "unit": "iter/sec",
             "range": "stddev: 0.12862",
@@ -39204,7 +39204,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2439 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15912388427166574,
             "unit": "iter/sec",
             "range": "stddev: 0.095395",
@@ -39363,7 +39363,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4226 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.795221208202131,
             "unit": "iter/sec",
             "range": "stddev: 0.039311",
@@ -39371,7 +39371,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 357.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.588218928301974,
             "unit": "iter/sec",
             "range": "stddev: 0.037567",
@@ -39379,7 +39379,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 386.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15525696717709994,
             "unit": "iter/sec",
             "range": "stddev: 0.16086",
@@ -39387,7 +39387,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4409 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15411249243666827,
             "unit": "iter/sec",
             "range": "stddev: 0.14768",
@@ -39546,7 +39546,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5607 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.573692960726857,
             "unit": "iter/sec",
             "range": "stddev: 0.034554",
@@ -39554,7 +39554,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 388.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5162669080594,
             "unit": "iter/sec",
             "range": "stddev: 0.036003",
@@ -39562,7 +39562,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 397.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1507441665733742,
             "unit": "iter/sec",
             "range": "stddev: 0.098261",
@@ -39570,7 +39570,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6338 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1545814251890718,
             "unit": "iter/sec",
             "range": "stddev: 0.21916",
@@ -39729,7 +39729,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6331 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5486786990791632,
             "unit": "iter/sec",
             "range": "stddev: 0.034091",
@@ -39737,7 +39737,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.36 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.503716445231046,
             "unit": "iter/sec",
             "range": "stddev: 0.039324",
@@ -39745,7 +39745,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 399.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1475770808262566,
             "unit": "iter/sec",
             "range": "stddev: 0.061098",
@@ -39753,7 +39753,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7761 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14610968700598023,
             "unit": "iter/sec",
             "range": "stddev: 0.11204",
@@ -39912,7 +39912,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8635 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9817779583203494,
             "unit": "iter/sec",
             "range": "stddev: 0.016711",
@@ -39920,7 +39920,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 335.37 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8124659113752153,
             "unit": "iter/sec",
             "range": "stddev: 0.037617",
@@ -39928,7 +39928,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 355.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16701098701367015,
             "unit": "iter/sec",
             "range": "stddev: 0.071161",
@@ -39936,7 +39936,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9876 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16650724321741378,
             "unit": "iter/sec",
             "range": "stddev: 0.074467",
@@ -40095,7 +40095,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9850 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.419685175495867,
             "unit": "iter/sec",
             "range": "stddev: 0.042524",
@@ -40103,7 +40103,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 413.28 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.375283197345395,
             "unit": "iter/sec",
             "range": "stddev: 0.041572",
@@ -40111,7 +40111,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 421.00 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13945927486479393,
             "unit": "iter/sec",
             "range": "stddev: 0.13598",
@@ -40119,7 +40119,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1706 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13936552205519925,
             "unit": "iter/sec",
             "range": "stddev: 0.14995",
@@ -40278,7 +40278,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8437 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8836644539771905,
             "unit": "iter/sec",
             "range": "stddev: 0.047022",
@@ -40286,7 +40286,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 346.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.817455775281883,
             "unit": "iter/sec",
             "range": "stddev: 0.036543",
@@ -40294,7 +40294,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 354.93 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16713090805394187,
             "unit": "iter/sec",
             "range": "stddev: 0.085793",
@@ -40302,7 +40302,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9833 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16627626750039023,
             "unit": "iter/sec",
             "range": "stddev: 0.072030",
@@ -40461,7 +40461,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.5646 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.262496705306545,
             "unit": "iter/sec",
             "range": "stddev: 0.032669",
@@ -40469,7 +40469,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 306.51 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.007675743392407,
             "unit": "iter/sec",
             "range": "stddev: 0.044102",
@@ -40477,7 +40477,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 332.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17963770290031542,
             "unit": "iter/sec",
             "range": "stddev: 0.19457",
@@ -40485,7 +40485,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5668 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17477743749751548,
             "unit": "iter/sec",
             "range": "stddev: 0.21136",
@@ -40644,7 +40644,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.7620 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9694348572321907,
             "unit": "iter/sec",
             "range": "stddev: 0.030506",
@@ -40652,7 +40652,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 336.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.817398420018505,
             "unit": "iter/sec",
             "range": "stddev: 0.038180",
@@ -40660,7 +40660,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 354.94 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16984848036227948,
             "unit": "iter/sec",
             "range": "stddev: 0.062310",
@@ -40668,7 +40668,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8876 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16871558506411757,
             "unit": "iter/sec",
             "range": "stddev: 0.054265",
@@ -40827,7 +40827,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9518 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9954092118787132,
             "unit": "iter/sec",
             "range": "stddev: 0.0061994",
@@ -40835,7 +40835,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 333.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.80324499903425,
             "unit": "iter/sec",
             "range": "stddev: 0.039468",
@@ -40843,7 +40843,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 356.73 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1632600453040492,
             "unit": "iter/sec",
             "range": "stddev: 0.093534",
@@ -40851,7 +40851,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1252 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16565288287227115,
             "unit": "iter/sec",
             "range": "stddev: 0.083204",
@@ -41010,7 +41010,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3866 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6651118682382706,
             "unit": "iter/sec",
             "range": "stddev: 0.034546",
@@ -41018,7 +41018,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 375.22 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6526660303497183,
             "unit": "iter/sec",
             "range": "stddev: 0.027409",
@@ -41026,7 +41026,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 376.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1506261157278853,
             "unit": "iter/sec",
             "range": "stddev: 0.099141",
@@ -41034,7 +41034,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6390 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14524318972853587,
             "unit": "iter/sec",
             "range": "stddev: 0.28956",
@@ -41193,7 +41193,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0121 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3821686718469692,
             "unit": "iter/sec",
             "range": "stddev: 0.042378",
@@ -41201,7 +41201,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 419.79 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2330858648791136,
             "unit": "iter/sec",
             "range": "stddev: 0.049065",
@@ -41209,7 +41209,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 447.81 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13512724299350903,
             "unit": "iter/sec",
             "range": "stddev: 0.12957",
@@ -41217,7 +41217,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4004 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1354348850798431,
             "unit": "iter/sec",
             "range": "stddev: 0.11456",
@@ -41376,7 +41376,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9577 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8559059017389075,
             "unit": "iter/sec",
             "range": "stddev: 0.032728",
@@ -41384,7 +41384,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 350.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7165234089522166,
             "unit": "iter/sec",
             "range": "stddev: 0.036465",
@@ -41392,7 +41392,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 368.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16617528662108666,
             "unit": "iter/sec",
             "range": "stddev: 0.063619",
@@ -41400,7 +41400,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0177 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16290884527809626,
             "unit": "iter/sec",
             "range": "stddev: 0.075766",
@@ -41559,7 +41559,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1281 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7564668308305094,
             "unit": "iter/sec",
             "range": "stddev: 0.036411",
@@ -41567,7 +41567,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 362.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.643975953399936,
             "unit": "iter/sec",
             "range": "stddev: 0.036492",
@@ -41575,7 +41575,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.22 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15451690880750363,
             "unit": "iter/sec",
             "range": "stddev: 0.26329",
@@ -41583,7 +41583,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4718 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1509710450788023,
             "unit": "iter/sec",
             "range": "stddev: 0.13352",
@@ -41742,7 +41742,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8943 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4673711766803006,
             "unit": "iter/sec",
             "range": "stddev: 0.042317",
@@ -41750,7 +41750,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 405.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.268124565827613,
             "unit": "iter/sec",
             "range": "stddev: 0.061005",
@@ -41758,7 +41758,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 440.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13620031610834168,
             "unit": "iter/sec",
             "range": "stddev: 0.088055",
@@ -41766,7 +41766,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3421 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13611625594075,
             "unit": "iter/sec",
             "range": "stddev: 0.10396",
@@ -41925,7 +41925,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0675 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3892915274853346,
             "unit": "iter/sec",
             "range": "stddev: 0.041992",
@@ -41933,7 +41933,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 418.53 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1731785721114982,
             "unit": "iter/sec",
             "range": "stddev: 0.058459",
@@ -41941,7 +41941,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 460.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13036541776587504,
             "unit": "iter/sec",
             "range": "stddev: 0.21248",
@@ -41949,7 +41949,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6707 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12804621124389454,
             "unit": "iter/sec",
             "range": "stddev: 0.16367",
@@ -42108,7 +42108,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8277 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4757020780549435,
             "unit": "iter/sec",
             "range": "stddev: 0.036633",
@@ -42116,7 +42116,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 403.93 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2913815269107167,
             "unit": "iter/sec",
             "range": "stddev: 0.049555",
@@ -42124,7 +42124,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14174876194342131,
             "unit": "iter/sec",
             "range": "stddev: 0.084973",
@@ -42132,7 +42132,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0547 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14048974651432924,
             "unit": "iter/sec",
             "range": "stddev: 0.12223",
@@ -42291,7 +42291,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5343 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1598978871122996,
             "unit": "iter/sec",
             "range": "stddev: 0.045749",
@@ -42299,7 +42299,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 462.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 1.9560403240138948,
             "unit": "iter/sec",
             "range": "stddev: 0.064658",
@@ -42307,7 +42307,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 511.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11924618954382034,
             "unit": "iter/sec",
             "range": "stddev: 0.14237",
@@ -42315,7 +42315,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3860 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11734224105706786,
             "unit": "iter/sec",
             "range": "stddev: 0.20530",
@@ -42474,7 +42474,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2647 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.238267171218683,
             "unit": "iter/sec",
             "range": "stddev: 0.036795",
@@ -42482,7 +42482,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 446.77 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.053619465863165,
             "unit": "iter/sec",
             "range": "stddev: 0.041608",
@@ -42490,7 +42490,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 486.95 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12120359836729569,
             "unit": "iter/sec",
             "range": "stddev: 0.095467",
@@ -42498,7 +42498,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2506 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12180506604916837,
             "unit": "iter/sec",
             "range": "stddev: 0.096562",
@@ -42657,7 +42657,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8310 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.953170751155702,
             "unit": "iter/sec",
             "range": "stddev: 0.035578",
@@ -42665,7 +42665,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 338.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7209420567124747,
             "unit": "iter/sec",
             "range": "stddev: 0.050040",
@@ -42673,7 +42673,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 367.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16719783494660836,
             "unit": "iter/sec",
             "range": "stddev: 0.058678",
@@ -42681,7 +42681,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9809 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16619457708397903,
             "unit": "iter/sec",
             "range": "stddev: 0.072976",
@@ -42840,7 +42840,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2459 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3333753029771183,
             "unit": "iter/sec",
             "range": "stddev: 0.036992",
@@ -42848,7 +42848,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 428.56 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.145844701657121,
             "unit": "iter/sec",
             "range": "stddev: 0.058297",
@@ -42856,7 +42856,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 466.02 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12603200721483632,
             "unit": "iter/sec",
             "range": "stddev: 0.13710",
@@ -42864,7 +42864,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9345 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1248513885234828,
             "unit": "iter/sec",
             "range": "stddev: 0.12736",
@@ -43023,7 +43023,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6107 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1975614291886783,
             "unit": "iter/sec",
             "range": "stddev: 0.029927",
@@ -43031,7 +43031,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 455.05 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0528948310786377,
             "unit": "iter/sec",
             "range": "stddev: 0.045318",
@@ -43039,7 +43039,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 487.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12127786539413843,
             "unit": "iter/sec",
             "range": "stddev: 0.13282",
@@ -43047,7 +43047,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2455 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12113165457231521,
             "unit": "iter/sec",
             "range": "stddev: 0.16021",
@@ -43206,7 +43206,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1033 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3831456064036325,
             "unit": "iter/sec",
             "range": "stddev: 0.055721",
@@ -43214,7 +43214,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 419.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.269760228400633,
             "unit": "iter/sec",
             "range": "stddev: 0.043031",
@@ -43222,7 +43222,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 440.58 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13140185989286318,
             "unit": "iter/sec",
             "range": "stddev: 0.16647",
@@ -43230,7 +43230,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6102 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13003083121986483,
             "unit": "iter/sec",
             "range": "stddev: 0.10585",
@@ -43389,7 +43389,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9069 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9468326768423636,
             "unit": "iter/sec",
             "range": "stddev: 0.035716",
@@ -43397,7 +43397,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 339.35 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.768502334951928,
             "unit": "iter/sec",
             "range": "stddev: 0.037775",
@@ -43405,7 +43405,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 361.21 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16048892651669963,
             "unit": "iter/sec",
             "range": "stddev: 0.061013",
@@ -43413,7 +43413,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2310 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1598996131211433,
             "unit": "iter/sec",
             "range": "stddev: 0.069224",
@@ -43572,7 +43572,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5388 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.46736057664159,
             "unit": "iter/sec",
             "range": "stddev: 0.040693",
@@ -43580,7 +43580,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 405.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1839430504003086,
             "unit": "iter/sec",
             "range": "stddev: 0.056329",
@@ -43588,7 +43588,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 457.89 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13671734926644818,
             "unit": "iter/sec",
             "range": "stddev: 0.13779",
@@ -43596,7 +43596,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3144 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13697229281788312,
             "unit": "iter/sec",
             "range": "stddev: 0.12121",
@@ -43755,7 +43755,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8392 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.494832665161638,
             "unit": "iter/sec",
             "range": "stddev: 0.046516",
@@ -43763,7 +43763,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 400.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3577320672276367,
             "unit": "iter/sec",
             "range": "stddev: 0.040279",
@@ -43771,7 +43771,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 424.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13781947614027854,
             "unit": "iter/sec",
             "range": "stddev: 0.14712",
@@ -43779,7 +43779,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.2559 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13602770587946253,
             "unit": "iter/sec",
             "range": "stddev: 0.14717",
@@ -43938,7 +43938,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8816 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4158614776855125,
             "unit": "iter/sec",
             "range": "stddev: 0.044459",
@@ -43946,7 +43946,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 413.93 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3512416367767903,
             "unit": "iter/sec",
             "range": "stddev: 0.035974",
@@ -43954,7 +43954,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 425.31 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13545402021462974,
             "unit": "iter/sec",
             "range": "stddev: 0.11811",
@@ -43962,7 +43962,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3826 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1330236078544142,
             "unit": "iter/sec",
             "range": "stddev: 0.19665",
@@ -44121,7 +44121,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2766 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.245122531497654,
             "unit": "iter/sec",
             "range": "stddev: 0.041986",
@@ -44129,7 +44129,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 445.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.04464405598576,
             "unit": "iter/sec",
             "range": "stddev: 0.064917",
@@ -44137,7 +44137,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 489.08 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12106484995669703,
             "unit": "iter/sec",
             "range": "stddev: 0.28572",
@@ -44145,7 +44145,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2600 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11831359921044,
             "unit": "iter/sec",
             "range": "stddev: 0.19947",
@@ -44304,7 +44304,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3706 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.248551432012974,
             "unit": "iter/sec",
             "range": "stddev: 0.043956",
@@ -44312,7 +44312,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 444.73 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1836263880408815,
             "unit": "iter/sec",
             "range": "stddev: 0.045051",
@@ -44320,7 +44320,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 457.95 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11906047956847796,
             "unit": "iter/sec",
             "range": "stddev: 0.21417",
@@ -44328,7 +44328,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.3991 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11482290840513167,
             "unit": "iter/sec",
             "range": "stddev: 0.19616",
@@ -44487,7 +44487,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4951 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6728049723582634,
             "unit": "iter/sec",
             "range": "stddev: 0.034612",
@@ -44495,7 +44495,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 374.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4884870390801788,
             "unit": "iter/sec",
             "range": "stddev: 0.046038",
@@ -44503,7 +44503,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 401.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13939670814739702,
             "unit": "iter/sec",
             "range": "stddev: 0.13246",
@@ -44511,7 +44511,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1738 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13844384210319152,
             "unit": "iter/sec",
             "range": "stddev: 0.15551",
@@ -44670,7 +44670,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2799 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.609963787052521,
             "unit": "iter/sec",
             "range": "stddev: 0.039838",
@@ -44678,7 +44678,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 383.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.539093192776702,
             "unit": "iter/sec",
             "range": "stddev: 0.031561",
@@ -44686,7 +44686,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 393.84 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1556165390913969,
             "unit": "iter/sec",
             "range": "stddev: 0.10387",
@@ -44694,7 +44694,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.4261 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15189471779631436,
             "unit": "iter/sec",
             "range": "stddev: 0.19234",
@@ -44853,7 +44853,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3016 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.517666946797818,
             "unit": "iter/sec",
             "range": "stddev: 0.035128",
@@ -44861,7 +44861,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 397.19 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.374311746629711,
             "unit": "iter/sec",
             "range": "stddev: 0.039825",
@@ -44869,7 +44869,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 421.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11780853204155528,
             "unit": "iter/sec",
             "range": "stddev: 0.31698",
@@ -44877,7 +44877,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4883 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12311447541254386,
             "unit": "iter/sec",
             "range": "stddev: 0.12451",
@@ -45036,7 +45036,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9519 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4257716973678547,
             "unit": "iter/sec",
             "range": "stddev: 0.040428",
@@ -45044,7 +45044,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 412.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.30062611156211,
             "unit": "iter/sec",
             "range": "stddev: 0.037088",
@@ -45052,7 +45052,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 434.66 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.133374032557188,
             "unit": "iter/sec",
             "range": "stddev: 0.087185",
@@ -45060,7 +45060,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4977 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13171049401573756,
             "unit": "iter/sec",
             "range": "stddev: 0.11382",
@@ -45219,7 +45219,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3984 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2649244334660987,
             "unit": "iter/sec",
             "range": "stddev: 0.038771",
@@ -45227,7 +45227,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 441.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.122057402373479,
             "unit": "iter/sec",
             "range": "stddev: 0.042475",
@@ -45235,7 +45235,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 471.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12103885232833503,
             "unit": "iter/sec",
             "range": "stddev: 0.10728",
@@ -45243,7 +45243,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.2618 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12106651744653496,
             "unit": "iter/sec",
             "range": "stddev: 0.070951",
@@ -45402,7 +45402,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7497 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4622628410835348,
             "unit": "iter/sec",
             "range": "stddev: 0.046929",
@@ -45410,7 +45410,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 406.13 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2913599224729744,
             "unit": "iter/sec",
             "range": "stddev: 0.035925",
@@ -45418,7 +45418,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13100914456698554,
             "unit": "iter/sec",
             "range": "stddev: 0.14125",
@@ -45426,7 +45426,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6331 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1316203818860548,
             "unit": "iter/sec",
             "range": "stddev: 0.12823",
@@ -45585,7 +45585,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7561 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.545808309974459,
             "unit": "iter/sec",
             "range": "stddev: 0.036389",
@@ -45593,7 +45593,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4343017473829573,
             "unit": "iter/sec",
             "range": "stddev: 0.030138",
@@ -45601,7 +45601,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 410.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1413909876289953,
             "unit": "iter/sec",
             "range": "stddev: 0.10458",
@@ -45609,7 +45609,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0726 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14127089882093052,
             "unit": "iter/sec",
             "range": "stddev: 0.14709",
@@ -45768,7 +45768,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4065 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.682865529117284,
             "unit": "iter/sec",
             "range": "stddev: 0.042173",
@@ -45776,7 +45776,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 372.74 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.50221870898856,
             "unit": "iter/sec",
             "range": "stddev: 0.030912",
@@ -45784,7 +45784,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 399.65 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14605519286766933,
             "unit": "iter/sec",
             "range": "stddev: 0.11843",
@@ -45792,7 +45792,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8467 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14399743523288167,
             "unit": "iter/sec",
             "range": "stddev: 0.14432",
@@ -45951,7 +45951,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5285 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5933685290166135,
             "unit": "iter/sec",
             "range": "stddev: 0.033686",
@@ -45959,7 +45959,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.60 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.46483797404224,
             "unit": "iter/sec",
             "range": "stddev: 0.035211",
@@ -45967,7 +45967,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 405.71 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1430962539326402,
             "unit": "iter/sec",
             "range": "stddev: 0.062332",
@@ -45975,7 +45975,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9883 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14229715670602422,
             "unit": "iter/sec",
             "range": "stddev: 0.086017",
@@ -46134,7 +46134,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6040 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.1692777641555403,
             "unit": "iter/sec",
             "range": "stddev: 0.038285",
@@ -46142,7 +46142,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 460.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.02350715103554,
             "unit": "iter/sec",
             "range": "stddev: 0.042385",
@@ -46150,7 +46150,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 494.19 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11644944242295097,
             "unit": "iter/sec",
             "range": "stddev: 0.13054",
@@ -46158,7 +46158,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.5874 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1156640701065719,
             "unit": "iter/sec",
             "range": "stddev: 0.17186",
@@ -46317,7 +46317,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7496 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9076232881745145,
             "unit": "iter/sec",
             "range": "stddev: 0.029846",
@@ -46325,7 +46325,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 343.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.642380428361747,
             "unit": "iter/sec",
             "range": "stddev: 0.034438",
@@ -46333,7 +46333,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 378.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14339095043219005,
             "unit": "iter/sec",
             "range": "stddev: 0.67190",
@@ -46341,7 +46341,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9739 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14278290984553518,
             "unit": "iter/sec",
             "range": "stddev: 0.81637",
@@ -46500,7 +46500,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0879 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8351261684836606,
             "unit": "iter/sec",
             "range": "stddev: 0.039317",
@@ -46508,7 +46508,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 352.72 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6960819906302755,
             "unit": "iter/sec",
             "range": "stddev: 0.040572",
@@ -46516,7 +46516,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 370.91 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15695318357819593,
             "unit": "iter/sec",
             "range": "stddev: 0.091874",
@@ -46524,7 +46524,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3713 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.15400789024129605,
             "unit": "iter/sec",
             "range": "stddev: 0.11110",
@@ -46683,7 +46683,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7608 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.456865021965306,
             "unit": "iter/sec",
             "range": "stddev: 0.043180",
@@ -46691,7 +46691,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 407.02 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.309373112966845,
             "unit": "iter/sec",
             "range": "stddev: 0.057409",
@@ -46699,7 +46699,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 433.02 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12999898378375216,
             "unit": "iter/sec",
             "range": "stddev: 0.11375",
@@ -46707,7 +46707,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6924 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12701924389636648,
             "unit": "iter/sec",
             "range": "stddev: 0.20759",
@@ -46866,7 +46866,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0447 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4462744202067888,
             "unit": "iter/sec",
             "range": "stddev: 0.036032",
@@ -46874,7 +46874,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.249002021798683,
             "unit": "iter/sec",
             "range": "stddev: 0.048483",
@@ -46882,7 +46882,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 444.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13193198345700177,
             "unit": "iter/sec",
             "range": "stddev: 0.10329",
@@ -46890,7 +46890,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5797 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13263871837626676,
             "unit": "iter/sec",
             "range": "stddev: 0.093408",
@@ -47049,7 +47049,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7272 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.438935670984538,
             "unit": "iter/sec",
             "range": "stddev: 0.034693",
@@ -47057,7 +47057,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 410.01 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.134904399043363,
             "unit": "iter/sec",
             "range": "stddev: 0.060574",
@@ -47065,7 +47065,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 468.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12427777068119235,
             "unit": "iter/sec",
             "range": "stddev: 0.23131",
@@ -47073,7 +47073,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0465 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1225779993276961,
             "unit": "iter/sec",
             "range": "stddev: 0.26806",
@@ -47232,7 +47232,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0702 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2827390518999064,
             "unit": "iter/sec",
             "range": "stddev: 0.040906",
@@ -47240,7 +47240,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 438.07 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0562118857094953,
             "unit": "iter/sec",
             "range": "stddev: 0.063892",
@@ -47248,7 +47248,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 486.33 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1177100430360377,
             "unit": "iter/sec",
             "range": "stddev: 0.12898",
@@ -47256,7 +47256,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.4955 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11726604733392455,
             "unit": "iter/sec",
             "range": "stddev: 0.11670",
@@ -47415,7 +47415,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6050 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6014973587500196,
             "unit": "iter/sec",
             "range": "stddev: 0.038417",
@@ -47423,7 +47423,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 384.39 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.44950371914613,
             "unit": "iter/sec",
             "range": "stddev: 0.053741",
@@ -47431,7 +47431,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.25 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14052662147376058,
             "unit": "iter/sec",
             "range": "stddev: 0.18939",
@@ -47439,7 +47439,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1161 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1403713330903443,
             "unit": "iter/sec",
             "range": "stddev: 0.069700",
@@ -47598,7 +47598,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4464 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6675605353769276,
             "unit": "iter/sec",
             "range": "stddev: 0.029281",
@@ -47606,7 +47606,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 374.87 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4423728606005404,
             "unit": "iter/sec",
             "range": "stddev: 0.035234",
@@ -47614,7 +47614,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 409.44 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13941712342973947,
             "unit": "iter/sec",
             "range": "stddev: 0.10946",
@@ -47622,7 +47622,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1727 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1393315160007412,
             "unit": "iter/sec",
             "range": "stddev: 0.094015",
@@ -47781,7 +47781,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0661 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2584927287789167,
             "unit": "iter/sec",
             "range": "stddev: 0.039067",
@@ -47789,7 +47789,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 442.77 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.117013168170768,
             "unit": "iter/sec",
             "range": "stddev: 0.053286",
@@ -47797,7 +47797,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 472.36 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1232839192569432,
             "unit": "iter/sec",
             "range": "stddev: 0.12631",
@@ -47805,7 +47805,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1114 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1229249110191201,
             "unit": "iter/sec",
             "range": "stddev: 0.13001",
@@ -47964,7 +47964,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1571 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7315808033087774,
             "unit": "iter/sec",
             "range": "stddev: 0.058638",
@@ -47972,7 +47972,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 366.09 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7099735079131633,
             "unit": "iter/sec",
             "range": "stddev: 0.045026",
@@ -47980,7 +47980,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 369.01 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1495882676966575,
             "unit": "iter/sec",
             "range": "stddev: 0.10569",
@@ -47988,7 +47988,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6850 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14884826987248603,
             "unit": "iter/sec",
             "range": "stddev: 0.12105",
@@ -48147,7 +48147,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2205 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6728622532672626,
             "unit": "iter/sec",
             "range": "stddev: 0.038951",
@@ -48155,7 +48155,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 374.13 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.600909331958073,
             "unit": "iter/sec",
             "range": "stddev: 0.041806",
@@ -48163,7 +48163,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 384.48 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14533128210754512,
             "unit": "iter/sec",
             "range": "stddev: 0.10764",
@@ -48171,7 +48171,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8808 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1451107930562109,
             "unit": "iter/sec",
             "range": "stddev: 0.10963",
@@ -48330,7 +48330,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9040 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.912969684643716,
             "unit": "iter/sec",
             "range": "stddev: 0.034911",
@@ -48338,7 +48338,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 343.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6806207775161903,
             "unit": "iter/sec",
             "range": "stddev: 0.048231",
@@ -48346,7 +48346,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 373.05 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15848925323925434,
             "unit": "iter/sec",
             "range": "stddev: 0.064767",
@@ -48354,7 +48354,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3096 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1577857219290381,
             "unit": "iter/sec",
             "range": "stddev: 0.045559",
@@ -48513,7 +48513,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4203 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.8126658163183227,
             "unit": "iter/sec",
             "range": "stddev: 0.045367",
@@ -48521,7 +48521,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 355.53 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.6318695698340813,
             "unit": "iter/sec",
             "range": "stddev: 0.042713",
@@ -48529,7 +48529,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 379.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14847285532060883,
             "unit": "iter/sec",
             "range": "stddev: 0.13932",
@@ -48537,7 +48537,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7352 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1487069482571942,
             "unit": "iter/sec",
             "range": "stddev: 0.18175",
@@ -48696,7 +48696,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2590 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4502816344931238,
             "unit": "iter/sec",
             "range": "stddev: 0.062865",
@@ -48704,7 +48704,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3295791721706367,
             "unit": "iter/sec",
             "range": "stddev: 0.061426",
@@ -48712,7 +48712,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 429.26 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1298718095525615,
             "unit": "iter/sec",
             "range": "stddev: 0.095034",
@@ -48720,7 +48720,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6999 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12595472541581315,
             "unit": "iter/sec",
             "range": "stddev: 0.22096",
@@ -48879,7 +48879,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.5995 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.234713714075319,
             "unit": "iter/sec",
             "range": "stddev: 0.054452",
@@ -48887,7 +48887,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 309.15 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.0447778488367745,
             "unit": "iter/sec",
             "range": "stddev: 0.049167",
@@ -48895,7 +48895,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 328.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1784639437270032,
             "unit": "iter/sec",
             "range": "stddev: 0.096730",
@@ -48903,7 +48903,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6034 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17787667678052724,
             "unit": "iter/sec",
             "range": "stddev: 0.072069",
@@ -49062,7 +49062,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.4230 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.379485451953309,
             "unit": "iter/sec",
             "range": "stddev: 0.043709",
@@ -49070,7 +49070,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 295.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.2249903131974467,
             "unit": "iter/sec",
             "range": "stddev: 0.044224",
@@ -49078,7 +49078,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 310.08 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1914278532864783,
             "unit": "iter/sec",
             "range": "stddev: 0.22376",
@@ -49086,7 +49086,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2239 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.18033377284813543,
             "unit": "iter/sec",
             "range": "stddev: 0.24571",
@@ -49245,7 +49245,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6686 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.2400613724971894,
             "unit": "iter/sec",
             "range": "stddev: 0.044841",
@@ -49253,7 +49253,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 308.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8810472996452754,
             "unit": "iter/sec",
             "range": "stddev: 0.067304",
@@ -49261,7 +49261,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 347.10 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17827152765167273,
             "unit": "iter/sec",
             "range": "stddev: 0.10864",
@@ -49269,7 +49269,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6094 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17677871656690514,
             "unit": "iter/sec",
             "range": "stddev: 0.10708",
@@ -49428,7 +49428,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5266 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.33557439481765,
             "unit": "iter/sec",
             "range": "stddev: 0.067274",
@@ -49436,7 +49436,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 428.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.226367011757302,
             "unit": "iter/sec",
             "range": "stddev: 0.062439",
@@ -49444,7 +49444,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 449.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13134312309948173,
             "unit": "iter/sec",
             "range": "stddev: 0.14237",
@@ -49452,7 +49452,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6136 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.126843153375951,
             "unit": "iter/sec",
             "range": "stddev: 0.19280",
@@ -49611,7 +49611,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.3562 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.4905061103286985,
             "unit": "iter/sec",
             "range": "stddev: 0.056627",
@@ -49619,7 +49619,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 286.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.2125126880899835,
             "unit": "iter/sec",
             "range": "stddev: 0.068910",
@@ -49627,7 +49627,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 311.28 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.18973831742869052,
             "unit": "iter/sec",
             "range": "stddev: 0.17708",
@@ -49635,7 +49635,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2704 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.18285119457752366,
             "unit": "iter/sec",
             "range": "stddev: 0.26717",
@@ -49794,7 +49794,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8184 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.1464669155640106,
             "unit": "iter/sec",
             "range": "stddev: 0.064012",
@@ -49802,7 +49802,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 317.82 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.960654977430553,
             "unit": "iter/sec",
             "range": "stddev: 0.055530",
@@ -49810,7 +49810,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 337.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1732521184144206,
             "unit": "iter/sec",
             "range": "stddev: 0.089540",
@@ -49818,7 +49818,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7719 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1766142490133517,
             "unit": "iter/sec",
             "range": "stddev: 0.078392",
@@ -49977,7 +49977,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0025 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.0184589988904307,
             "unit": "iter/sec",
             "range": "stddev: 0.062704",
@@ -49985,7 +49985,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 331.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8513274668310915,
             "unit": "iter/sec",
             "range": "stddev: 0.058380",
@@ -49993,7 +49993,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 350.71 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16662500783202092,
             "unit": "iter/sec",
             "range": "stddev: 0.13181",
@@ -50001,7 +50001,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0015 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1660959652370726,
             "unit": "iter/sec",
             "range": "stddev: 0.16067",
@@ -50160,7 +50160,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6858 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.2656910287900915,
             "unit": "iter/sec",
             "range": "stddev: 0.043270",
@@ -50168,7 +50168,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 306.21 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.0899432627553507,
             "unit": "iter/sec",
             "range": "stddev: 0.048153",
@@ -50176,7 +50176,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 323.63 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1784469027329584,
             "unit": "iter/sec",
             "range": "stddev: 0.095506",
@@ -50184,7 +50184,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6039 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17803216313012468,
             "unit": "iter/sec",
             "range": "stddev: 0.11010",
@@ -50343,7 +50343,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6710 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.231147877804292,
             "unit": "iter/sec",
             "range": "stddev: 0.051987",
@@ -50351,7 +50351,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 309.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.0429165471848885,
             "unit": "iter/sec",
             "range": "stddev: 0.047998",
@@ -50359,7 +50359,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 328.63 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17903135691169728,
             "unit": "iter/sec",
             "range": "stddev: 0.080682",
@@ -50367,7 +50367,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5856 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17872983732626913,
             "unit": "iter/sec",
             "range": "stddev: 0.072411",
@@ -50526,7 +50526,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6745 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.1878467482670287,
             "unit": "iter/sec",
             "range": "stddev: 0.044288",
@@ -50534,7 +50534,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 313.69 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.9944889627258657,
             "unit": "iter/sec",
             "range": "stddev: 0.044164",
@@ -50542,7 +50542,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 333.95 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17724519074328388,
             "unit": "iter/sec",
             "range": "stddev: 0.085456",
@@ -50550,7 +50550,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6419 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1764844367302718,
             "unit": "iter/sec",
             "range": "stddev: 0.081593",
@@ -50709,7 +50709,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6495 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.7077802401201283,
             "unit": "iter/sec",
             "range": "stddev: 0.055895",
@@ -50717,7 +50717,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 369.31 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.581341619472073,
             "unit": "iter/sec",
             "range": "stddev: 0.051777",
@@ -50725,7 +50725,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 387.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1474447356212483,
             "unit": "iter/sec",
             "range": "stddev: 0.14372",
@@ -50733,7 +50733,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7822 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14657870122310604,
             "unit": "iter/sec",
             "range": "stddev: 0.12669",
@@ -50892,7 +50892,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.3488 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.047782928938917,
             "unit": "iter/sec",
             "range": "stddev: 0.051267",
@@ -50900,7 +50900,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 328.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7933559053048267,
             "unit": "iter/sec",
             "range": "stddev: 0.052618",
@@ -50908,7 +50908,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 357.99 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15708060260257162,
             "unit": "iter/sec",
             "range": "stddev: 0.16913",
@@ -50916,7 +50916,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3662 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16008012447782435,
             "unit": "iter/sec",
             "range": "stddev: 0.089276",
@@ -51075,7 +51075,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.8040 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.4031430107860974,
             "unit": "iter/sec",
             "range": "stddev: 0.015895",
@@ -51083,7 +51083,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 293.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.1740230446403714,
             "unit": "iter/sec",
             "range": "stddev: 0.054689",
@@ -51091,7 +51091,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 315.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.18035034270533606,
             "unit": "iter/sec",
             "range": "stddev: 0.23801",
@@ -51099,7 +51099,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.5448 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17618917402579123,
             "unit": "iter/sec",
             "range": "stddev: 0.20675",
@@ -51258,7 +51258,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0512 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5669315349195645,
             "unit": "iter/sec",
             "range": "stddev: 0.042298",
@@ -51266,7 +51266,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 389.57 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4224081606338563,
             "unit": "iter/sec",
             "range": "stddev: 0.049214",
@@ -51274,7 +51274,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 412.81 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.134363366053546,
             "unit": "iter/sec",
             "range": "stddev: 0.11661",
@@ -51282,7 +51282,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4425 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13355064756880955,
             "unit": "iter/sec",
             "range": "stddev: 0.11794",
@@ -51441,7 +51441,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9798 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.218358405917176,
             "unit": "iter/sec",
             "range": "stddev: 0.065862",
@@ -51449,7 +51449,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 450.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.0720053566573573,
             "unit": "iter/sec",
             "range": "stddev: 0.055954",
@@ -51457,7 +51457,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 482.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.11664650330844369,
             "unit": "iter/sec",
             "range": "stddev: 0.098261",
@@ -51465,7 +51465,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.5729 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11671561608336352,
             "unit": "iter/sec",
             "range": "stddev: 0.090584",
@@ -51624,7 +51624,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0134 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6324574139949597,
             "unit": "iter/sec",
             "range": "stddev: 0.053816",
@@ -51632,7 +51632,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 379.87 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3942494605207907,
             "unit": "iter/sec",
             "range": "stddev: 0.056308",
@@ -51640,7 +51640,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.67 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13622850337892,
             "unit": "iter/sec",
             "range": "stddev: 0.090430",
@@ -51648,7 +51648,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3406 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13478714711270554,
             "unit": "iter/sec",
             "range": "stddev: 0.15245",
@@ -51807,7 +51807,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3734 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3880821979397457,
             "unit": "iter/sec",
             "range": "stddev: 0.063643",
@@ -51815,7 +51815,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 418.75 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.241170468130576,
             "unit": "iter/sec",
             "range": "stddev: 0.070393",
@@ -51823,7 +51823,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 446.20 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1250091373644973,
             "unit": "iter/sec",
             "range": "stddev: 0.37449",
@@ -51831,7 +51831,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.9994 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.11982597473340435,
             "unit": "iter/sec",
             "range": "stddev: 0.21849",
@@ -51990,7 +51990,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1770 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4526443515466823,
             "unit": "iter/sec",
             "range": "stddev: 0.061340",
@@ -51998,7 +51998,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 407.72 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.278244654868816,
             "unit": "iter/sec",
             "range": "stddev: 0.045028",
@@ -52006,7 +52006,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 438.93 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1312927471977318,
             "unit": "iter/sec",
             "range": "stddev: 0.13132",
@@ -52014,7 +52014,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6166 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13405599807626406,
             "unit": "iter/sec",
             "range": "stddev: 0.12394",
@@ -52173,7 +52173,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5214 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.40067505878342,
             "unit": "iter/sec",
             "range": "stddev: 0.058622",
@@ -52181,7 +52181,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 416.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.223076687271178,
             "unit": "iter/sec",
             "range": "stddev: 0.059417",
@@ -52189,7 +52189,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 449.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12473029021702478,
             "unit": "iter/sec",
             "range": "stddev: 0.12003",
@@ -52197,7 +52197,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0173 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12750996859545963,
             "unit": "iter/sec",
             "range": "stddev: 0.13382",
@@ -52356,7 +52356,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1442 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.489294449018483,
             "unit": "iter/sec",
             "range": "stddev: 0.054981",
@@ -52364,7 +52364,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 401.72 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3624747678317846,
             "unit": "iter/sec",
             "range": "stddev: 0.047214",
@@ -52372,7 +52372,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 423.28 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1325933659573872,
             "unit": "iter/sec",
             "range": "stddev: 0.086294",
@@ -52380,7 +52380,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.5419 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13257343655384962,
             "unit": "iter/sec",
             "range": "stddev: 0.082576",
@@ -52539,7 +52539,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9646 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6325119361543967,
             "unit": "iter/sec",
             "range": "stddev: 0.044801",
@@ -52547,7 +52547,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 379.87 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.461628078434132,
             "unit": "iter/sec",
             "range": "stddev: 0.054980",
@@ -52555,7 +52555,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 406.24 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14336714713969195,
             "unit": "iter/sec",
             "range": "stddev: 0.096832",
@@ -52563,7 +52563,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9751 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14088196533075012,
             "unit": "iter/sec",
             "range": "stddev: 0.086187",
@@ -52722,7 +52722,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5794 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4775608961344306,
             "unit": "iter/sec",
             "range": "stddev: 0.079302",
@@ -52730,7 +52730,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 403.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.3159119387824605,
             "unit": "iter/sec",
             "range": "stddev: 0.077062",
@@ -52738,7 +52738,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.80 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13091190623675664,
             "unit": "iter/sec",
             "range": "stddev: 0.14156",
@@ -52746,7 +52746,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6387 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13119843191760117,
             "unit": "iter/sec",
             "range": "stddev: 0.12681",
@@ -52905,7 +52905,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6609 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.379258527762756,
             "unit": "iter/sec",
             "range": "stddev: 0.048716",
@@ -52913,7 +52913,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 295.92 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.203443481345557,
             "unit": "iter/sec",
             "range": "stddev: 0.045490",
@@ -52921,7 +52921,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 312.16 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.18194351179787618,
             "unit": "iter/sec",
             "range": "stddev: 0.20635",
@@ -52929,7 +52929,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4962 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17197803389110808,
             "unit": "iter/sec",
             "range": "stddev: 0.68469",
@@ -53088,7 +53088,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0108 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5501074290451147,
             "unit": "iter/sec",
             "range": "stddev: 0.052272",
@@ -53096,7 +53096,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.411581424937528,
             "unit": "iter/sec",
             "range": "stddev: 0.053582",
@@ -53104,7 +53104,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.67 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1347040562836571,
             "unit": "iter/sec",
             "range": "stddev: 0.22339",
@@ -53112,7 +53112,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.4237 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1379439785923484,
             "unit": "iter/sec",
             "range": "stddev: 0.16942",
@@ -53271,7 +53271,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7364 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2497833544402175,
             "unit": "iter/sec",
             "range": "stddev: 0.062809",
@@ -53279,7 +53279,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 444.49 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.1481436603445587,
             "unit": "iter/sec",
             "range": "stddev: 0.054815",
@@ -53287,7 +53287,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 465.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1222036265151585,
             "unit": "iter/sec",
             "range": "stddev: 0.098078",
@@ -53295,7 +53295,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1831 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12082226088520531,
             "unit": "iter/sec",
             "range": "stddev: 0.086730",
@@ -53454,7 +53454,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9539 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.585447356754695,
             "unit": "iter/sec",
             "range": "stddev: 0.053080",
@@ -53462,7 +53462,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 386.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.537192494399814,
             "unit": "iter/sec",
             "range": "stddev: 0.038369",
@@ -53470,7 +53470,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 394.14 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14033799700772726,
             "unit": "iter/sec",
             "range": "stddev: 0.099893",
@@ -53478,7 +53478,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1257 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14065102624445724,
             "unit": "iter/sec",
             "range": "stddev: 0.13592",
@@ -53637,7 +53637,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1632 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.01314656486286,
             "unit": "iter/sec",
             "range": "stddev: 0.061599",
@@ -53645,7 +53645,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 331.88 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8952787861663154,
             "unit": "iter/sec",
             "range": "stddev: 0.054788",
@@ -53653,7 +53653,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 345.39 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16739348224765488,
             "unit": "iter/sec",
             "range": "stddev: 0.089319",
@@ -53661,7 +53661,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9739 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1651209576857028,
             "unit": "iter/sec",
             "range": "stddev: 0.078148",
@@ -53820,7 +53820,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1947 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.672955332836112,
             "unit": "iter/sec",
             "range": "stddev: 0.047323",
@@ -53828,7 +53828,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 374.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.374162430439309,
             "unit": "iter/sec",
             "range": "stddev: 0.045267",
@@ -53836,7 +53836,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 421.20 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13582441198639478,
             "unit": "iter/sec",
             "range": "stddev: 0.20785",
@@ -53844,7 +53844,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3624 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13911467838477642,
             "unit": "iter/sec",
             "range": "stddev: 0.15327",
@@ -54003,7 +54003,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.7725 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.247650503346375,
             "unit": "iter/sec",
             "range": "stddev: 0.048012",
@@ -54011,7 +54011,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 307.91 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.062347053261521,
             "unit": "iter/sec",
             "range": "stddev: 0.049776",
@@ -54019,7 +54019,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 326.55 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1745068181901775,
             "unit": "iter/sec",
             "range": "stddev: 0.064788",
@@ -54027,7 +54027,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.7304 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17335962249527823,
             "unit": "iter/sec",
             "range": "stddev: 0.10961",
@@ -54186,7 +54186,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2106 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.57459113757567,
             "unit": "iter/sec",
             "range": "stddev: 0.038057",
@@ -54194,7 +54194,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 388.41 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.448558204464163,
             "unit": "iter/sec",
             "range": "stddev: 0.048114",
@@ -54202,7 +54202,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 408.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13518200594260102,
             "unit": "iter/sec",
             "range": "stddev: 0.086065",
@@ -54210,7 +54210,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3974 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13574891570184522,
             "unit": "iter/sec",
             "range": "stddev: 0.10155",
@@ -54369,7 +54369,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.5467 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4798793588123558,
             "unit": "iter/sec",
             "range": "stddev: 0.060946",
@@ -54377,7 +54377,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 403.25 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2109469569427054,
             "unit": "iter/sec",
             "range": "stddev: 0.086004",
@@ -54385,7 +54385,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 452.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13032730973115447,
             "unit": "iter/sec",
             "range": "stddev: 0.12006",
@@ -54393,7 +54393,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6730 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13041786415977313,
             "unit": "iter/sec",
             "range": "stddev: 0.069889",
@@ -54552,7 +54552,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9674 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6341905237131416,
             "unit": "iter/sec",
             "range": "stddev: 0.069653",
@@ -54560,7 +54560,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 379.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.591695257545094,
             "unit": "iter/sec",
             "range": "stddev: 0.050080",
@@ -54568,7 +54568,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13917314077487392,
             "unit": "iter/sec",
             "range": "stddev: 0.13127",
@@ -54576,7 +54576,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1853 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1385128809117716,
             "unit": "iter/sec",
             "range": "stddev: 0.11869",
@@ -54735,7 +54735,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9667 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.637354054659065,
             "unit": "iter/sec",
             "range": "stddev: 0.062026",
@@ -54743,7 +54743,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 379.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5063903528927587,
             "unit": "iter/sec",
             "range": "stddev: 0.044516",
@@ -54751,7 +54751,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 398.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1452186072150421,
             "unit": "iter/sec",
             "range": "stddev: 0.16174",
@@ -54759,7 +54759,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.8862 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1459400867255951,
             "unit": "iter/sec",
             "range": "stddev: 0.094816",
@@ -54918,7 +54918,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6004 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3956814961422634,
             "unit": "iter/sec",
             "range": "stddev: 0.054087",
@@ -54926,7 +54926,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 417.42 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2558276522858542,
             "unit": "iter/sec",
             "range": "stddev: 0.054677",
@@ -54934,7 +54934,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 443.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12459265215365316,
             "unit": "iter/sec",
             "range": "stddev: 0.17337",
@@ -54942,7 +54942,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.0262 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12666731887169563,
             "unit": "iter/sec",
             "range": "stddev: 0.12644",
@@ -55101,7 +55101,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9597 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.593266961340767,
             "unit": "iter/sec",
             "range": "stddev: 0.056998",
@@ -55109,7 +55109,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.52490159102958,
             "unit": "iter/sec",
             "range": "stddev: 0.047449",
@@ -55117,7 +55117,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 396.06 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13908272808941824,
             "unit": "iter/sec",
             "range": "stddev: 0.11794",
@@ -55125,7 +55125,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1900 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.13966687611495104,
             "unit": "iter/sec",
             "range": "stddev: 0.17283",
@@ -55284,7 +55284,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6814 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.6665207712418963,
             "unit": "iter/sec",
             "range": "stddev: 0.054133",
@@ -55292,7 +55292,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 375.02 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.5386852941312803,
             "unit": "iter/sec",
             "range": "stddev: 0.059733",
@@ -55300,7 +55300,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 393.90 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1446583170598662,
             "unit": "iter/sec",
             "range": "stddev: 0.13589",
@@ -55308,7 +55308,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9128 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14559871165135785,
             "unit": "iter/sec",
             "range": "stddev: 0.081029",
@@ -55467,7 +55467,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3896 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3912045156440103,
             "unit": "iter/sec",
             "range": "stddev: 0.067051",
@@ -55475,7 +55475,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 418.20 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.217567289764744,
             "unit": "iter/sec",
             "range": "stddev: 0.053585",
@@ -55483,7 +55483,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 450.94 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12838398945854052,
             "unit": "iter/sec",
             "range": "stddev: 0.11292",
@@ -55491,7 +55491,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7891 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12820983734149563,
             "unit": "iter/sec",
             "range": "stddev: 0.15672",
@@ -55650,7 +55650,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9298 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.0833762268008718,
             "unit": "iter/sec",
             "range": "stddev: 0.056570",
@@ -55658,7 +55658,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 324.32 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.945961926522108,
             "unit": "iter/sec",
             "range": "stddev: 0.054146",
@@ -55666,7 +55666,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 339.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1697936246461089,
             "unit": "iter/sec",
             "range": "stddev: 0.098273",
@@ -55674,7 +55674,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8895 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17121068801726633,
             "unit": "iter/sec",
             "range": "stddev: 0.069137",
@@ -55833,7 +55833,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6637 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.872141392168021,
             "unit": "iter/sec",
             "range": "stddev: 0.011712",
@@ -55841,7 +55841,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 348.17 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.65422394615484,
             "unit": "iter/sec",
             "range": "stddev: 0.049524",
@@ -55849,7 +55849,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 376.76 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14005116056430864,
             "unit": "iter/sec",
             "range": "stddev: 0.38989",
@@ -55857,7 +55857,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.1402 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14640809026199858,
             "unit": "iter/sec",
             "range": "stddev: 0.13076",
@@ -56016,7 +56016,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1334 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5938969193278365,
             "unit": "iter/sec",
             "range": "stddev: 0.053090",
@@ -56024,7 +56024,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 385.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.4763097732784676,
             "unit": "iter/sec",
             "range": "stddev: 0.054446",
@@ -56032,7 +56032,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 403.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14220238197903765,
             "unit": "iter/sec",
             "range": "stddev: 0.15724",
@@ -56040,7 +56040,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.0322 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1429973733095871,
             "unit": "iter/sec",
             "range": "stddev: 0.096192",
@@ -56199,7 +56199,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3466 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.369885676436483,
             "unit": "iter/sec",
             "range": "stddev: 0.056584",
@@ -56207,7 +56207,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 421.96 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2687230165635563,
             "unit": "iter/sec",
             "range": "stddev: 0.049677",
@@ -56215,7 +56215,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 440.78 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12883147639730033,
             "unit": "iter/sec",
             "range": "stddev: 0.10606",
@@ -56223,7 +56223,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7621 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12897274910198767,
             "unit": "iter/sec",
             "range": "stddev: 0.13898",
@@ -56382,7 +56382,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8250 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.769220381671789,
             "unit": "iter/sec",
             "range": "stddev: 0.045939",
@@ -56390,7 +56390,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 361.11 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.553448765623415,
             "unit": "iter/sec",
             "range": "stddev: 0.048714",
@@ -56398,7 +56398,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 391.63 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.15087938456004515,
             "unit": "iter/sec",
             "range": "stddev: 0.11491",
@@ -56406,7 +56406,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.6278 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14974078753920875,
             "unit": "iter/sec",
             "range": "stddev: 0.086946",
@@ -56565,7 +56565,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.7089 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.3115311523814626,
             "unit": "iter/sec",
             "range": "stddev: 0.056630",
@@ -56573,7 +56573,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 432.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.213133836073962,
             "unit": "iter/sec",
             "range": "stddev: 0.052603",
@@ -56581,7 +56581,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 451.85 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12309178939752037,
             "unit": "iter/sec",
             "range": "stddev: 0.11112",
@@ -56589,7 +56589,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 8.1240 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12314375179412934,
             "unit": "iter/sec",
             "range": "stddev: 0.12254",
@@ -56748,7 +56748,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.1571 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.0501229750994114,
             "unit": "iter/sec",
             "range": "stddev: 0.066753",
@@ -56756,7 +56756,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 327.86 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.872582538935526,
             "unit": "iter/sec",
             "range": "stddev: 0.055058",
@@ -56764,7 +56764,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 348.12 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16308255488398363,
             "unit": "iter/sec",
             "range": "stddev: 0.092360",
@@ -56772,7 +56772,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.1319 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1636920974167801,
             "unit": "iter/sec",
             "range": "stddev: 0.090166",
@@ -56931,7 +56931,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.6904 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.2518765060419663,
             "unit": "iter/sec",
             "range": "stddev: 0.063694",
@@ -56939,7 +56939,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 307.51 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 3.1545109983213115,
             "unit": "iter/sec",
             "range": "stddev: 0.050367",
@@ -56947,7 +56947,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 317.01 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1779245983200619,
             "unit": "iter/sec",
             "range": "stddev: 0.18654",
@@ -56955,7 +56955,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6204 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17676086453191572,
             "unit": "iter/sec",
             "range": "stddev: 0.13057",
@@ -57114,7 +57114,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.6796 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.678826293181383,
             "unit": "iter/sec",
             "range": "stddev: 0.12011",
@@ -57122,7 +57122,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 373.30 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.7186289928252294,
             "unit": "iter/sec",
             "range": "stddev: 0.069454",
@@ -57130,7 +57130,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 367.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14377632291980494,
             "unit": "iter/sec",
             "range": "stddev: 0.25452",
@@ -57138,7 +57138,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9552 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.14623047275601353,
             "unit": "iter/sec",
             "range": "stddev: 0.76241",
@@ -57297,7 +57297,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2691 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.5491027096327517,
             "unit": "iter/sec",
             "range": "stddev: 0.050606",
@@ -57305,7 +57305,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.29 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.31778367214711,
             "unit": "iter/sec",
             "range": "stddev: 0.048905",
@@ -57313,7 +57313,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 431.45 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1314147171283893,
             "unit": "iter/sec",
             "range": "stddev: 0.11534",
@@ -57321,7 +57321,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.6095 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1330340645239751,
             "unit": "iter/sec",
             "range": "stddev: 0.11013",
@@ -57480,7 +57480,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0810 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.553822041064348,
             "unit": "iter/sec",
             "range": "stddev: 0.068074",
@@ -57488,7 +57488,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 391.57 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.473029913734912,
             "unit": "iter/sec",
             "range": "stddev: 0.051049",
@@ -57496,7 +57496,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 404.36 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.14387931549657965,
             "unit": "iter/sec",
             "range": "stddev: 0.14145",
@@ -57504,7 +57504,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.9503 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1438104443713599,
             "unit": "iter/sec",
             "range": "stddev: 0.094794",
@@ -57663,7 +57663,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.2060 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.9955763111404683,
             "unit": "iter/sec",
             "range": "stddev: 0.061392",
@@ -57671,7 +57671,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 333.83 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.8538749630645257,
             "unit": "iter/sec",
             "range": "stddev: 0.053134",
@@ -57679,7 +57679,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 350.40 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16111873866017093,
             "unit": "iter/sec",
             "range": "stddev: 0.14794",
@@ -57687,7 +57687,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.2066 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16247007437129543,
             "unit": "iter/sec",
             "range": "stddev: 0.087316",
@@ -57846,7 +57846,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0759 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.1057559065835205,
             "unit": "iter/sec",
             "range": "stddev: 0.062522",
@@ -57854,7 +57854,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 321.98 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.88698885240758,
             "unit": "iter/sec",
             "range": "stddev: 0.059287",
@@ -57862,7 +57862,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 346.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.16745010936280785,
             "unit": "iter/sec",
             "range": "stddev: 0.11544",
@@ -57870,7 +57870,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.9719 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.16776608358926695,
             "unit": "iter/sec",
             "range": "stddev: 0.10462",
@@ -58029,7 +58029,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3118 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.4113752116336977,
             "unit": "iter/sec",
             "range": "stddev: 0.077039",
@@ -58037,7 +58037,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 414.70 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.2908515565471745,
             "unit": "iter/sec",
             "range": "stddev: 0.067190",
@@ -58045,7 +58045,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 436.52 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12762566356216504,
             "unit": "iter/sec",
             "range": "stddev: 0.19317",
@@ -58053,7 +58053,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.8354 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1255850853006197,
             "unit": "iter/sec",
             "range": "stddev: 0.13779",
@@ -58212,7 +58212,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.0925 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.0616788444985277,
             "unit": "iter/sec",
             "range": "stddev: 0.062328",
@@ -58220,7 +58220,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 326.62 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.901609787406743,
             "unit": "iter/sec",
             "range": "stddev: 0.054700",
@@ -58228,7 +58228,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 344.64 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.1653017770588641,
             "unit": "iter/sec",
             "range": "stddev: 0.11923",
@@ -58236,7 +58236,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.0495 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.1646638651903708,
             "unit": "iter/sec",
             "range": "stddev: 0.068537",
@@ -58395,7 +58395,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.4341 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.0600200800079977,
             "unit": "iter/sec",
             "range": "stddev: 0.22151",
@@ -58403,7 +58403,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 485.43 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.546824749904068,
             "unit": "iter/sec",
             "range": "stddev: 0.052705",
@@ -58411,7 +58411,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 392.65 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.13560545991618142,
             "unit": "iter/sec",
             "range": "stddev: 0.35975",
@@ -58419,7 +58419,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.3743 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.151555927809751,
             "unit": "iter/sec",
             "range": "stddev: 0.15539",
@@ -58578,7 +58578,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 6.3623 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 2.2008172186371002,
             "unit": "iter/sec",
             "range": "stddev: 0.071409",
@@ -58586,7 +58586,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 454.38 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.082990064165046,
             "unit": "iter/sec",
             "range": "stddev: 0.056169",
@@ -58594,7 +58594,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 480.08 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.12915099523310494,
             "unit": "iter/sec",
             "range": "stddev: 0.13471",
@@ -58602,7 +58602,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 7.7429 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.12980708480975542,
             "unit": "iter/sec",
             "range": "stddev: 0.12744",
@@ -58761,7 +58761,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 4.9690 sec\nrounds: 10"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
             "value": 3.0671907407133014,
             "unit": "iter/sec",
             "range": "stddev: 0.060691",
@@ -58769,7 +58769,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 326.03 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_export[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
             "value": 2.9359516287621488,
             "unit": "iter/sec",
             "range": "stddev: 0.056272",
@@ -58777,7 +58777,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 340.61 msec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[no-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
             "value": 0.17165654489331733,
             "unit": "iter/sec",
             "range": "stddev: 0.082876",
@@ -58785,7 +58785,7 @@ window.BENCHMARK_DATA = {
             "extra": "mean: 5.8256 sec\nrounds: 12"
           },
           {
-            "name": "tests/benchmark/test_importexport.py::test_import[with-objects]",
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
             "value": 0.17181022528044068,
             "unit": "iter/sec",
             "range": "stddev: 0.091265",

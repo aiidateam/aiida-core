@@ -22,7 +22,7 @@
     "install_requires": [
         "aldjemy~=2.4",
         "alembic~=1.2",
-        "archive-path~=0.2.1",
+        "archive-path~=0.3.6",
         "aio-pika~=6.6",
         "circus~=0.17.1",
         "click-config-file~=0.6.0",
@@ -77,7 +77,8 @@
             "sphinx-panels~=0.5.0",
             "sphinx-copybutton~=0.3.0",
             "sphinx-notfound-page~=0.5",
-            "sphinxext-rediraffe~=0.2.4"
+            "sphinxext-rediraffe~=0.2.4",
+            "sphinx-sqlalchemy~=0.1.1"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",

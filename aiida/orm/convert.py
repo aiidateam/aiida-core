@@ -51,6 +51,10 @@ def _(backend_entity):
 
     Note that we do not register on `collections.abc.Sequence` because that will also match strings.
     """
+    if hasattr(backend_entity, '_asdict'):
+        # it is a NamedTuple, so return as is
+        return backend_entity
+
     converted = []
 
     # Note that we cannot use a simple comprehension because raised `TypeError` should be caught here otherwise only

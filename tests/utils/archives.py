@@ -65,18 +65,18 @@ def get_archive_file(archive: str, filepath=None, external_module=None) -> str:
     return dirpath_archive
 
 
-def import_archive(archive, filepath=None, external_module=None):
+def import_test_archive(archive, filepath=None, external_module=None):
     """Import a test archive that is an AiiDA export archive
 
     :param archive: the relative filename of the archive
     :param filepath: str of directories of where to find archive (starting "/"s are irrelevant)
     :param external_module: string with name of external module, where archive can be found
     """
-    from aiida.tools.importexport import import_data
+    from aiida.tools.archive import import_archive
 
     dirpath_archive = get_archive_file(archive, filepath=filepath, external_module=external_module)
 
-    import_data(dirpath_archive)
+    import_archive(dirpath_archive)
 
 
 def read_json_files(path, *, names=('metadata.json', 'data.json')) -> List[dict]:

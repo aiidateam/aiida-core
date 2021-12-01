@@ -118,8 +118,10 @@ module = [
     'django.*',
     'kiwipy.*',
     'numpy.*',
+    'pytz.*',
     'ruamel.*',
     'scipy.*',
+    'tabulate.*',
     'tqdm.*',
     'wrapt.*',
 ]

@@ -21,6 +21,7 @@ from aiida import orm, plugins
 from aiida.common.links import LinkType
 from aiida.manage import configuration
 from aiida.orm.querybuilder import _get_ormclass
+from aiida.orm.utils.links import LinkQuadruple
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -671,6 +672,27 @@ class TestBasic:
         assert isinstance(result, list)
         assert len(result) == 20
         assert result == list(chain.from_iterable(zip(pks, uuids)))
+
+    def test_query_links(self):
+        """Test querying for links"""
+        d1, d2, d3, d4 = [orm.Data().store() for _ in range(4)]
+        c1, c2 = [orm.CalculationNode() for _ in range(2)]
+        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
+        c1.store()
+        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
+        d4.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
+        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
+        c2.store()
+        d3.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
+
+        builder = orm.QueryBuilder().append(entity_type='link')
+        assert builder.count() == 5
+
+        builder = orm.QueryBuilder().append(entity_type='link', filters={'type': LinkType.CREATE.value})
+        assert builder.count() == 3
+
+        builder = orm.QueryBuilder().append(entity_type='link', filters={'label': 'link_d2c2'})
+        assert builder.one()[0] == LinkQuadruple(d2.id, c2.id, LinkType.INPUT_CALC.value, 'link_d2c2')
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

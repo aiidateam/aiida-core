@@ -19,7 +19,7 @@ from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
-from tests.utils.archives import import_archive
+from tests.utils.archives import import_test_archive
 
 
 def get_result_lines(result):
@@ -94,7 +94,7 @@ class TestVerdiCalculation(AiidaTestCase):
         cls.calcs.append(calc)
 
         # Load the fixture containing a single ArithmeticAddCalculation node
-        import_archive('calcjob/arithmetic.add.aiida')
+        import_test_archive('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
@@ -268,16 +268,17 @@ class TestVerdiCalculation(AiidaTestCase):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
 
         # Import old archive of ArithmeticAddCalculation
-        import_archive('calcjob/arithmetic.add_old.aiida')
+        import_test_archive('calcjob/arithmetic.add_old.aiida')
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
+        add_job = None
         for job in calculations:
             if job[0].uuid == self.arithmetic_job.uuid:
                 continue
 
             add_job = job[0]
-            return
-
+            break
+        assert add_job
         # Make sure add_job does not specify options 'input_filename' and 'output_filename'
         self.assertIsNone(
             add_job.get_option('input_filename'), msg=f"'input_filename' should not be an option for {add_job}"

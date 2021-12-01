@@ -25,7 +25,20 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbNode(Base):
-    """Class to store nodes using SQLA backend."""
+    """Database model to store nodes.
+
+    Each node can be categorized according to its ``node_type``,
+    which indicates what kind of data or process node it is.
+    Additionally, process nodes also have a ``process_type`` that further indicates what is the specific plugin it uses.
+
+    Nodes can also store two kind of properties:
+
+    - ``attributes`` are determined by the ``node_type``,
+      and are set before storing the node and can't be modified afterwards.
+    - ``extras``, on the other hand,
+      can be added and removed after the node has been stored and are usually set by the user.
+
+    """
 
     __tablename__ = 'db_dbnode'
 
@@ -146,7 +159,14 @@ class DbNode(Base):
 
 
 class DbLink(Base):
-    """Class to store links between nodes using SQLA backend."""
+    """Database model to store links between nodes.
+
+    Each entry in this table contains not only the ``id`` information of the two nodes that are linked,
+    but also some extra properties of the link themselves.
+    This includes the ``type`` of the link (see the :ref:`topics:provenance:concepts` section for all possible types)
+    as well as a ``label`` which is more specific and typically determined by
+    the procedure generating the process node that links the data nodes.
+    """
 
     __tablename__ = 'db_dblink'
 

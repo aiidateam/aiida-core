@@ -8,9 +8,9 @@ The database is the main tool that AiiDA uses to keep track of the provenance.
 It directly stores the most critical data and contains the access information for everything that gets stored in the repository.
 Its content is organized into different tables, and although the exact structure will depend on the backend used (django or sqlalchemy), most of it is the same for both possibilities.
 
-In the following section, we will first go through the main 9 tables that are related to the AiiDA entities and their relationships.
+In the following section, we will first go through the main tables that are related to the AiiDA entities and their relationships.
 These tables also have the property of being the same for both backends.
-We will give a general overview and explanation of how they work, and provide a more exaustive technical description of their internal structure.
+We will give a general overview and explanation of how they work, and provide a more exhaustive technical description of their internal structure.
 After that, we will introduce the remaining tables that either serve a more auxiliary purpose or are backend specific.
 
 
@@ -43,7 +43,7 @@ However, this number is only unique within the table, and thus there can be a us
 
 What most of the entities also have (all the aforementioned except for users and authinfos) is a ``uuid`` value.
 The ``uuid`` is meant to serve as an identifier that is unique within all tables of all AiiDA databases in the world.
-This is a 32-position exadecimal sequence that is stored as a string with some dash separated sections (for example: ``479a312d-e9b6-4bbb-93b4-f0a7174ccbf4``).
+This is a 32-position hexadecimal sequence that is stored as a string with some dash separated sections (for example: ``479a312d-e9b6-4bbb-93b4-f0a7174ccbf4``).
 
 When going over the descriptions for the entities before, you may have noticed that all of them have some kind of "interaction" or "relationship" with at least one other entity in some way.
 Some of these relationships can be tracked inside of one of the related entity's tables, whilst others require the creation of a whole new table with the only purpose of keeping track of them.
@@ -89,172 +89,32 @@ There are only two many-to-many relationships in AiiDA:
    This relationship is tracked in the **db_dblinks** table.
 
 
-In depth table descriptions
-===========================
+Table schema
+============
 
-In the following section you can find a complete list of all the columns for each of the tables.
-Each table will also feature a brief description of its more specific and relevant columns.
-There are some that are common in many of the tables and so will be described here:
+The following section provides a complete schema for each of the tables of the SQLAlchemy backend.
 
-    1. The ``id`` and the ``uuid`` columns were already mentioned above.
+``*`` indicates columns with a unique constraint, ``→`` indicate foreign keys, and ``?`` indicate value types that are nullable.
 
-    2. The `foreign key` columns were already introduced in the many-to-one section and are easy to recognize.
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.node.DbNode
 
-    4. The columns formatted for timestamps are used to store either the creation time (``time``, ``ctime``) or the last modification time (``mtime``).
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.node.DbLink
 
-    5. The columns for ``label`` and ``description`` are for what the name intuitively implies, and their content is ultimately more free-form and up to the user.
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.group.DbGroup
 
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.group.DbGroupNode
 
-db_dbnode
----------
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.user.DbUser
 
-Each node can be cathegorized according to its ``node_type``, which indicates what kind of data or process node it is.
-Additionally, process nodes also have a ``process_type`` that further indicates what is the specific plugin it uses.
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.computer.DbComputer
 
-Nodes can also store two kind of properties: ``attributes`` and ``extras``.
-The ``attributes`` are determined by the ``node_type``, and are set before storing the node and can't be modified afterwards.
-The ``extras``, on the other hand, can be added and removed after the node has been stored and are usually set by the user.
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.authinfo.DbAuthInfo
 
- * ``id`` (primary key)
- * ``uuid`` (uuid)
- * ``label`` (varchar255)
- * ``description`` (text)
- * ``node_type`` (varchar255)
- * ``process_type`` (varchar255)
- * ``attributes`` (jsonb)
- * ``extras`` (jsonb)
- * ``ctime`` (timestamp)
- * ``mtime`` (timestamp)
- * ``user_id`` (foreign key)
- * ``dbcomputer_id`` (foreign key)
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.comment.DbComment
 
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.log.DbLog
 
-db_dblink
----------
-
-Each entry in this table contains not only the ``id`` information of the two nodes that are linked, but also some extra properties of the link themselves.
-This includes the ``type`` of the link (see the :ref:`topics:provenance:concepts` section for all possible types) as well as a ``label``.
-This last one is more specific and tipically determined by the procedure generating the process node that links the data nodes.
-
- * ``id`` (primary key)
- * ``type`` (varchar255)
- * ``label`` (varchar255)
- * ``input_id`` (foreign key)
- * ``output_id`` (foreign key)
-
-
-db_dbgroup
-----------
-
-Users will tipically identify and handle groups by using their ``label`` (which, unlike the ``labels`` in other tables, must be unique).
-Groups also have a ``type``, which serves to identify what plugin is being instanced, and the ``extras`` property for users to set any relevant information.
-
- * ``id`` (primary key)
- * ``uuid`` (uuid)
- * ``label`` (varchar255)
- * ``description`` (text)
- * ``type_string`` (varchar255)
- * ``extras`` (jsonb)
- * ``time`` (timestamp)
- * ``user_id`` (foreign key)
-
-
-db_dbgroup_dbnodes
-------------------
-
-Unlike the table for the many-to-many relationship between nodes, which adds a bit of extra contextual information, the table for the relationship between nodes and groups just assigns an ``id`` for each relation and records the two elements related.
-
- * ``id`` (primary key)
- * ``dbnode_id`` (foreign key)
- * ``dbgroup_id`` (foreign key)
-
-
-db_dbuser
----------
-
-The user information consists of the most basic personal contact details.
-
- * ``id`` (primary key)
- * ``email`` (varchar255)
- * ``first_name`` (varchar255)
- * ``last_name`` (varchar255)
- * ``institution`` (varchar255)
-
-
-db_dbcomputer
--------------
-
-Just like groups do with ``labels``, computers are identified within AiiDA by their ``name`` (and thus it must be unique for each one in the database).
-On the other hand, the ``hostname`` is the label that identifies the computer within the network from which one can access it.
-
-The ``scheduler_type`` column contains the information of the scheduler (and plugin) that the computer uses to manage jobs, whereas the ``transport_type`` the information of the transport (and plugin) required to copy files and communicate to and from the computer.
-The ``metadata`` contains some general settings for these communication and management protocols.
-
- * ``id`` (primary key)
- * ``uuid`` (uuid)
- * ``name`` (varchar255)
- * ``hostname`` (varchar255)
- * ``description`` (text)
- * ``metadata`` (jsonb)
- * ``transport_type`` (varchar255)
- * ``scheduler_type`` (varchar255)
-
-
-db_dbauthinfo
--------------
-
-The ``auth_params`` contains the specifications that are user-specific of how to submit jobs in the computer.
-The table also has an ``enabled`` logical switch that indicates whether the device is available for use or not.
-This last one can be set and unset by the user.
-
- * ``id`` (primary key)
- * ``metadata`` (jsonb)
- * ``enabled`` (boolean)
- * ``auth_params`` (jsonb)
- * ``aiidauser_id`` (foreign key)
- * ``dbcomputer_id`` (foreign key)
-
-
-db_dbcomment
-------------
-
-The comment table only has the ``content`` column that is specific to it, while the rest of the columns just track the contextual information of the entry.
-
- * ``id`` (primary key)
- * ``uuid`` (uuid)
- * ``content`` (text)
- * ``ctime`` (timestamp)
- * ``mtime`` (timestamp)
- * ``user_id`` (foreign key)
- * ``dbnode_id`` (foreign key)
-
-
-db_dblog
---------
-
-The log table not only keeps track of the ``messages`` being recorded, but also of the ``levelname`` (how critical the message is, from a simple report to an irrecoverable error) and the ``loggername`` (what process recorded the message).
-
- * ``id`` (primary key)
- * ``uuid`` (uuid)
- * ``time`` (timestamp)
- * ``message`` (text)
- * ``metadata`` (jsonb)
- * ``levelname`` (varchar255)
- * ``loggername`` (varchar255)
- * ``dbnode_id`` (foreign key)
-
-
-The auxiliary tables
-====================
-
-db_dbsetting
-------------
-
- * ``id`` (primary key)
- * ``key`` (varchar1024)
- * ``val`` (jsonb)
- * ``time`` (timestamp)
- * ``description`` (text)
+.. sqla-model:: ~aiida.backends.sqlalchemy.models.settings.DbSetting
 
 
 Sequence tables
@@ -273,3 +133,6 @@ Backend specific tables
  - **django_content_type** (django)
  - **django_migrations** (django)
  - **alembic_version** (sqlalchemy)
+
+
+.. todo:: Database migrations (#4035)

@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Django implementation of the `BackendNode` and `BackendNodeCollection` classes."""
-
 # pylint: disable=import-error,no-name-in-module
 from datetime import datetime
+from typing import Any, Dict, Iterable, Set, Tuple
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
@@ -18,7 +18,7 @@ from django.db import IntegrityError, transaction
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.orm.implementation.utils import clean_value
+from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
 from . import entities
 from . import utils as dj_utils
@@ -231,6 +231,83 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
                         self._add_link(*link_triple)
 
         return self
+
+    def _flush_if_stored(self, fields: Set[str]) -> None:
+        if self._dbmodel.is_saved():
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access
+
+    @property
+    def attributes(self):
+        return self._dbmodel.attributes
+
+    def get_attribute(self, key: str) -> Any:
+        try:
+            return self._dbmodel.attributes[key]
+        except KeyError as exception:
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        validate_attribute_extra_key(key)
+
+        if self.is_stored:
+            value = clean_value(value)
+
+        self._dbmodel.attributes[key] = value
+        self._flush_if_stored({'attributes'})
+
+    def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
+        for key in attributes:
+            validate_attribute_extra_key(key)
+
+        if self.is_stored:
+            attributes = {key: clean_value(value) for key, value in attributes.items()}
+
+        for key, value in attributes.items():
+            # We need to use `self.dbmodel` without the underscore, because otherwise the second iteration will refetch
+            # what is in the database and we lose the initial changes.
+            self.dbmodel.attributes[key] = value
+        self._flush_if_stored({'attributes'})
+
+    def reset_attributes(self, attributes: Dict[str, Any]) -> None:
+        for key in attributes:
+            validate_attribute_extra_key(key)
+
+        if self.is_stored:
+            attributes = clean_value(attributes)
+
+        self.dbmodel.attributes = attributes
+        self._flush_if_stored({'attributes'})
+
+    def delete_attribute(self, key: str) -> None:
+        try:
+            self._dbmodel.attributes.pop(key)
+        except KeyError as exception:
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+        else:
+            self._flush_if_stored({'attributes'})
+
+    def delete_attribute_many(self, keys: Iterable[str]) -> None:
+        non_existing_keys = [key for key in keys if key not in self._dbmodel.attributes]
+
+        if non_existing_keys:
+            raise AttributeError(f"attributes `{', '.join(non_existing_keys)}` do not exist")
+
+        for key in keys:
+            self.dbmodel.attributes.pop(key)
+
+        self._flush_if_stored({'attributes'})
+
+    def clear_attributes(self):
+        self._dbmodel.attributes = {}
+        self._flush_if_stored({'attributes'})
+
+    def attributes_items(self) -> Iterable[Tuple[str, Any]]:
+        for key, value in self._dbmodel.attributes.items():
+            yield key, value
+
+    def attributes_keys(self) -> Iterable[str]:
+        for key in self._dbmodel.attributes.keys():
+            yield key
 
 
 class DjangoNodeCollection(BackendNodeCollection):

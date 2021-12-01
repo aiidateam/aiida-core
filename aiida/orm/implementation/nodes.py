@@ -10,9 +10,9 @@
 """Abstract BackendNode and BackendNodeCollection implementation."""
 import abc
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar
 
-from .entities import BackendCollection, BackendEntity, BackendEntityAttributesMixin, BackendEntityExtrasMixin
+from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 
 if TYPE_CHECKING:
     from ..utils import LinkTriple
@@ -24,7 +24,7 @@ __all__ = ('BackendNode', 'BackendNodeCollection')
 BackendNodeType = TypeVar('BackendNodeType', bound='BackendNode')
 
 
-class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttributesMixin, metaclass=abc.ABCMeta):
+class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta):
     """Backend implementation for the `Node` ORM class.
 
     A node stores data input or output from a computation.
@@ -201,6 +201,119 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, BackendEntityAttribut
         This method is called before storing the node.
         The purpose of this method is to convert data to a type which can be serialized and deserialized
         for storage in the DB without its value changing.
+        """
+
+    @property
+    @abc.abstractmethod
+    def attributes(self) -> Dict[str, Any]:
+        """Return the complete attributes dictionary.
+
+        .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
+
+        :return: the attributes as a dictionary
+        """
+
+    @abc.abstractmethod
+    def get_attribute(self, key: str) -> Any:
+        """Return the value of an attribute.
+
+        .. warning:: While the entity is unstored, this will return a reference of the attribute on the database model,
+            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
+            attribute will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods.
+
+        :param key: name of the attribute
+        :return: the value of the attribute
+        :raises AttributeError: if the attribute does not exist
+        """
+
+    def get_attribute_many(self, keys: Iterable[str]) -> List[Any]:
+        """Return the values of multiple attributes.
+
+        .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
+            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
+            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
+            attributes will be a deep copy and mutations of the database attributes will have to go through the
+            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
+            only need the keys or some values, use the iterators `attributes_keys` and `attributes_items`, or the
+            getters `get_attribute` and `get_attribute_many` instead.
+
+        :param keys: a list of attribute names
+        :return: a list of attribute values
+        :raises AttributeError: if at least one attribute does not exist
+        """
+        try:
+            return [self.get_attribute(key) for key in keys]
+        except KeyError as exception:
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+
+    @abc.abstractmethod
+    def set_attribute(self, key: str, value: Any) -> None:
+        """Set an attribute to the given value.
+
+        :param key: name of the attribute
+        :param value: value of the attribute
+        """
+
+    def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
+        """Set multiple attributes.
+
+        .. note:: This will override any existing attributes that are present in the new dictionary.
+
+        :param attributes: a dictionary with the attributes to set
+        """
+        for key, value in attributes.items():
+            self.set_attribute(key, value)
+
+    @abc.abstractmethod
+    def reset_attributes(self, attributes: Dict[str, Any]) -> None:
+        """Reset the attributes.
+
+        .. note:: This will completely clear any existing attributes and replace them with the new dictionary.
+
+        :param attributes: a dictionary with the attributes to set
+        """
+
+    @abc.abstractmethod
+    def delete_attribute(self, key: str) -> None:
+        """Delete an attribute.
+
+        :param key: name of the attribute
+        :raises AttributeError: if the attribute does not exist
+        """
+
+    def delete_attribute_many(self, keys: Iterable[str]) -> None:
+        """Delete multiple attributes.
+
+        :param keys: names of the attributes to delete
+        :raises AttributeError: if at least one of the attribute does not exist
+        """
+        for key in keys:
+            self.delete_attribute(key)
+
+    @abc.abstractmethod
+    def clear_attributes(self):
+        """Delete all attributes."""
+
+    @abc.abstractmethod
+    def attributes_items(self) -> Iterable[Tuple[str, Any]]:
+        """Return an iterator over the attributes.
+
+        :return: an iterator with attribute key value pairs
+        """
+
+    @abc.abstractmethod
+    def attributes_keys(self) -> Iterable[str]:
+        """Return an iterator over the attribute keys.
+
+        :return: an iterator with attribute keys
         """
 
 

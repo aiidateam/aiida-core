@@ -12,11 +12,13 @@
 # This is because they have to go through all the nodes to gather the list of keys that AiiDA is keeping
 # track of (since they are descentralized in each node entry).
 # See the get_unreferenced_keyset function
+from typing import Optional, Set
+
 from aiida.manage.manager import get_manager
 from aiida.orm.implementation import Backend
 
 
-def repository_maintain(full: bool = False, backend: Backend = None, **kwargs) -> dict:
+def repository_maintain(full: bool = False, backend: Optional[Backend] = None, **kwargs) -> dict:
     """Performs maintenance tasks on the repository."""
     maintainance_report = {'database': {}, 'repository': {}, 'user_info': ''}
 
@@ -37,7 +39,7 @@ def repository_maintain(full: bool = False, backend: Backend = None, **kwargs) -
     return maintainance_report
 
 
-def repository_info(statistics: bool = False, backend: Backend = None, **kwargs) -> dict:
+def repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:
     """Returns relevant information on the repository."""
     if backend is None:
         backend = get_manager().get_backend()
@@ -45,7 +47,7 @@ def repository_info(statistics: bool = False, backend: Backend = None, **kwargs)
     return repository.get_info(statistics)
 
 
-def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Backend = None, **kwargs) -> set:
+def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optional[Backend] = None) -> Set[str]:
     """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
     This should be all the soft-deleted files.
@@ -70,7 +72,7 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Backe
     return keyset_backend - keyset_aiidadb
 
 
-def get_repository_report(backend: Backend = None, **kwargs) -> dict:
+def get_repository_report(backend: Optional[Backend] = None) -> dict:
     """Performs a report on the status of the repository."""
     report = {'user_info': ''}
 
@@ -79,6 +81,6 @@ def get_repository_report(backend: Backend = None, **kwargs) -> dict:
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
 
     num_unref = len(unreferenced_objects)
-    report['user_info'] += f' > Unreferenced files to delete: {num_unref}'
+    report['user_info'] += f'Unreferenced files to delete: {num_unref}'
 
     return report

@@ -70,6 +70,7 @@ repos:
         pass_filenames: true
         files: >-
             (?x)^(
+                aiida/backends/control.py|
                 aiida/common/progress_reporter.py|
                 aiida/engine/.*py|
                 aiida/manage/manager.py|

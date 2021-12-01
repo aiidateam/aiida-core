@@ -39,7 +39,7 @@ def repository_maintain(full: bool = False, backend: Optional[Backend] = None, *
     return maintainance_report
 
 
-def repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:
+def get_repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:
     """Returns relevant information on the repository."""
     if backend is None:
         backend = get_manager().get_backend()

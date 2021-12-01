@@ -118,7 +118,7 @@ def test_repository_maintain(monkeypatch):
 
 def test_repository_info(monkeypatch):
     """Test the ``repository_info`` method."""
-    from aiida.backends.control import repository_info
+    from aiida.backends.control import get_repository_info
 
     def mock_get_info(self, statistics=False, **kwargs):  # pylint: disable=unused-argument
         text = 'Info from repo'
@@ -129,10 +129,10 @@ def test_repository_info(monkeypatch):
     RepositoryClass = get_manager().get_backend().get_repository().__class__  # pylint: disable=invalid-name
     monkeypatch.setattr(RepositoryClass, 'get_info', mock_get_info)
 
-    repository_info_out = repository_info()
+    repository_info_out = get_repository_info()
     assert 'Info from repo' in repository_info_out
 
-    repository_info_out = repository_info(statistics=True)
+    repository_info_out = get_repository_info(statistics=True)
     assert 'with statistics' in repository_info_out
 
 

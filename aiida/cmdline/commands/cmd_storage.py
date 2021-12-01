@@ -84,13 +84,13 @@ def storage_integrity():
 @click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
 def storage_info(statistics):
     """Summarise the contents of the storage."""
-    from aiida.backends.control import repository_info
+    from aiida.backends.control import get_repository_info
     from aiida.cmdline.utils.common import get_database_summary
     from aiida.orm import QueryBuilder
 
     data = {}
     data['database'] = get_database_summary(QueryBuilder, statistics)
-    data['repository'] = repository_info(statistics=statistics)
+    data['repository'] = get_repository_info(statistics=statistics)
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 

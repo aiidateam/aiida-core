@@ -22,14 +22,14 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbLog(Base):
-    """Class to store logs using SQLA backend."""
+    """Database model to store log levels and messages relating to a process node."""
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
     time = Column(DateTime(timezone=True), default=timezone.now)
-    loggername = Column(String(255), index=True)
-    levelname = Column(String(255), index=True)
+    loggername = Column(String(255), index=True, doc='What process recorded the message')
+    levelname = Column(String(255), index=True, doc='How critical the message is')
     dbnode_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
     )

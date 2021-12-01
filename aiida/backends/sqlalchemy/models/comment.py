@@ -22,7 +22,8 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbComment(Base):
-    """Class to store comments using SQLA backend."""
+    """Database model to store comments, relating to a node."""
+
     __tablename__ = 'db_dbcomment'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name

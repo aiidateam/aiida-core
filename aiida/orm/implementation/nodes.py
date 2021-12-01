@@ -203,6 +203,8 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         for storage in the DB without its value changing.
         """
 
+    # attributes methods
+
     @property
     @abc.abstractmethod
     def attributes(self) -> Dict[str, Any]:

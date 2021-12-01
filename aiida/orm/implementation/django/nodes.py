@@ -10,7 +10,7 @@
 """Django implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 # pylint: disable=import-error,no-name-in-module
 from datetime import datetime
-from typing import Any, Dict, Iterable, Set, Tuple
+from typing import Any, Dict, Iterable, Tuple
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError, transaction
@@ -18,6 +18,7 @@ from django.db import IntegrityError, transaction
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.orm.implementation.sql.extras import SqlExtrasMixin
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
 from . import entities
@@ -27,7 +28,7 @@ from .computers import DjangoComputer
 from .users import DjangoUser
 
 
-class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
+class DjangoNode(entities.DjangoModelEntity[models.DbNode], SqlExtrasMixin, BackendNode):
     """Django Node backend entity"""
 
     # pylint: disable=too-many-public-methods
@@ -231,10 +232,6 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], BackendNode):
                         self._add_link(*link_triple)
 
         return self
-
-    def _flush_if_stored(self, fields: Set[str]) -> None:
-        if self._dbmodel.is_saved():
-            self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
     @property
     def attributes(self):

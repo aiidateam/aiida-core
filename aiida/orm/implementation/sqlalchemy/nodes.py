@@ -10,7 +10,7 @@
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime
-from typing import Any, Dict, Iterable, Set, Tuple
+from typing import Any, Dict, Iterable, Tuple
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
@@ -18,6 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.orm.implementation.sql.extras import SqlExtrasMixin
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
 from . import entities
@@ -27,7 +28,7 @@ from .computers import SqlaComputer
 from .users import SqlaUser
 
 
-class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
+class SqlaNode(entities.SqlaModelEntity[models.DbNode], SqlExtrasMixin, BackendNode):
     """SQLA Node backend entity"""
 
     # pylint: disable=too-many-public-methods
@@ -229,10 +230,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
                 raise
 
         return self
-
-    def _flush_if_stored(self, fields: Set[str]) -> None:
-        if self._dbmodel.is_saved():
-            self._dbmodel._flush(fields)  # pylint: disable=protected-access
 
     @property
     def attributes(self):

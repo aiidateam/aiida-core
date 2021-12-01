@@ -14,6 +14,7 @@ from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
+from aiida.orm.implementation.sql.extras import SqlExtrasMixin
 
 from . import entities, users, utils
 
@@ -24,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Unfortunately the linter doesn't seem to be able to pick up on the fact that the abstract property 'id'
 # of BackendGroup is actually implemented in SqlaModelEntity so disable the abstract check
-class SqlaGroup(entities.SqlaModelEntity[DbGroup], BackendGroup):  # pylint: disable=abstract-method
+class SqlaGroup(entities.SqlaModelEntity[DbGroup], SqlExtrasMixin, BackendGroup):  # pylint: disable=abstract-method
     """The SQLAlchemy Group object"""
 
     MODEL_CLASS = DbGroup

@@ -9,9 +9,7 @@
 ###########################################################################
 """Classes and methods for backend non-specific entities"""
 import abc
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Set, Type, TypeVar
-
-from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend
@@ -112,18 +110,11 @@ class BackendCollection(Generic[EntityType]):
 
 
 class BackendEntityExtrasMixin(abc.ABC):
-    """Mixin class that adds all methods for the extras column to a backend entity"""
-
-    _dbmodel: Any
-    dbmodel: Any
-    is_stored: Any
-
-    def _flush_if_stored(self, fields: Set[str]) -> None:
-        if self._dbmodel.is_saved():
-            self._dbmodel._flush(fields)  # pylint: disable=protected-access
+    """Mixin class that adds all abstract methods for the extras column to a backend entity"""
 
     @property
-    def extras(self):
+    @abc.abstractmethod
+    def extras(self) -> Dict[str, Any]:
         """Return the complete extras dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -136,9 +127,9 @@ class BackendEntityExtrasMixin(abc.ABC):
 
         :return: the extras as a dictionary
         """
-        return self._dbmodel.extras
 
-    def get_extra(self, key):
+    @abc.abstractmethod
+    def get_extra(self, key: str) -> Any:
         """Return the value of an extra.
 
         .. warning:: While the entity is unstored, this will return a reference of the extra on the database model,
@@ -151,12 +142,8 @@ class BackendEntityExtrasMixin(abc.ABC):
         :return: the value of the extra
         :raises AttributeError: if the extra does not exist
         """
-        try:
-            return self._dbmodel.extras[key]
-        except KeyError as exception:
-            raise AttributeError(f'extra `{exception}` does not exist') from exception
 
-    def get_extra_many(self, keys):
+    def get_extra_many(self, keys: Iterable[str]) -> List[Any]:
         """Return the values of multiple extras.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -173,100 +160,58 @@ class BackendEntityExtrasMixin(abc.ABC):
         """
         return [self.get_extra(key) for key in keys]
 
-    def set_extra(self, key, value):
+    @abc.abstractmethod
+    def set_extra(self, key: str, value: Any) -> None:
         """Set an extra to the given value.
 
         :param key: name of the extra
         :param value: value of the extra
         """
-        validate_attribute_extra_key(key)
 
-        if self.is_stored:
-            value = clean_value(value)
-
-        self._dbmodel.extras[key] = value
-        self._flush_if_stored({'extras'})
-
-    def set_extra_many(self, extras):
+    def set_extra_many(self, extras: Dict[str, Any]) -> None:
         """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
 
         :param extras: a dictionary with the extras to set
         """
-        for key in extras:
-            validate_attribute_extra_key(key)
-
-        if self.is_stored:
-            extras = {key: clean_value(value) for key, value in extras.items()}
-
         for key, value in extras.items():
-            self.dbmodel.extras[key] = value
+            self.set_extra(key, value)
 
-        self._flush_if_stored({'extras'})
-
-    def reset_extras(self, extras):
+    @abc.abstractmethod
+    def reset_extras(self, extras: Dict[str, Any]) -> None:
         """Reset the extras.
 
         .. note:: This will completely clear any existing extras and replace them with the new dictionary.
 
         :param extras: a dictionary with the extras to set
         """
-        for key in extras:
-            validate_attribute_extra_key(key)
 
-        if self.is_stored:
-            extras = clean_value(extras)
-
-        self.dbmodel.extras = extras
-        self._flush_if_stored({'extras'})
-
-    def delete_extra(self, key):
+    @abc.abstractmethod
+    def delete_extra(self, key: str) -> None:
         """Delete an extra.
 
         :param key: name of the extra
         :raises AttributeError: if the extra does not exist
         """
-        try:
-            self._dbmodel.extras.pop(key)
-        except KeyError as exception:
-            raise AttributeError(f'extra `{exception}` does not exist') from exception
-        else:
-            self._flush_if_stored({'extras'})
 
-    def delete_extra_many(self, keys):
+    def delete_extra_many(self, keys: Iterable[str]) -> None:
         """Delete multiple extras.
 
         :param keys: names of the extras to delete
         :raises AttributeError: if at least one of the extra does not exist
         """
-        non_existing_keys = [key for key in keys if key not in self._dbmodel.extras]
-
-        if non_existing_keys:
-            raise AttributeError(f"extras `{', '.join(non_existing_keys)}` do not exist")
-
         for key in keys:
-            self.dbmodel.extras.pop(key)
+            self.delete_extra(key)
 
-        self._flush_if_stored({'extras'})
-
-    def clear_extras(self):
+    @abc.abstractmethod
+    def clear_extras(self) -> None:
         """Delete all extras."""
-        self._dbmodel.extras = {}
-        self._flush_if_stored({'extras'})
 
-    def extras_items(self):
-        """Return an iterator over the extras.
+    @abc.abstractmethod
+    def extras_items(self) -> Iterable[Tuple[str, Any]]:
+        """Return an iterator over the extras key/value pairs."""
 
-        :return: an iterator with extra key value pairs
-        """
-        for key, value in self._dbmodel.extras.items():
-            yield key, value
-
-    def extras_keys(self):
-        """Return an iterator over the extra keys.
-
-        :return: an iterator with extra keys
-        """
-        for key in self._dbmodel.extras.keys():
-            yield key
+    @abc.abstractmethod
+    def extras_keys(self) -> Iterable[str]:
+        """Return an iterator over the extra keys."""

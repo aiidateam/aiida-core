@@ -25,6 +25,7 @@ from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.engine.processes.ports import PortNamespace
+from aiida.orm.nodes.data.container_code import ContainerCode
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
@@ -251,6 +252,36 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
     file_regression.check(content, extension='.sh')
 
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_container_code(aiida_local_code_factory, file_regression):
+    """test run container code"""
+    computer = orm.Computer(
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+    ).store()
+    code = ContainerCode(computer=computer, container_cmd_params=['sarus', 'tmp_params'], image='cscs/qe-mpich', container_exec_path='/usr/bin/pw.x')
+    
+    inputs = {
+        'code': code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 128,
+                },
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
 
 @pytest.mark.requires_rmq
 class TestCalcJob(AiidaTestCase):

@@ -107,7 +107,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
     * ``cmdline_params``: a list of strings, containing parameters to be written on
       the command line right after the call to the code, as for example::
 
-        code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
+        ??? code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
 
     * ``stdin_name``: (optional) the name of the standard input file. Note, it is
       only possible to use the stdin with the syntax::

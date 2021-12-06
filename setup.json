@@ -1,0 +1,242 @@
+{
+    "name": "aiida-core",
+    "version": "2.0.0a1",
+    "url": "http://www.aiida.net/",
+    "license": "MIT License",
+    "author": "The AiiDA team",
+    "author_email": "developers@aiida.net",
+    "description": "AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.",
+    "include_package_data": true,
+    "python_requires": ">=3.7",
+    "classifiers": [
+        "Development Status :: 5 - Production/Stable",
+        "Framework :: AiiDA",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS :: MacOS X",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Topic :: Scientific/Engineering"
+    ],
+    "install_requires": [
+        "aldjemy~=2.4",
+        "alembic~=1.2",
+        "archive-path~=0.3.6",
+        "aio-pika~=6.6",
+        "circus~=0.17.1",
+        "click-config-file~=0.6.0",
+        "click-spinner~=0.1.8",
+        "click~=8.0,>=8.0.3",
+        "disk-objectstore~=0.6.0",
+        "django~=2.2",
+        "graphviz~=0.13",
+        "ipython~=7.20",
+        "jinja2~=3.0",
+        "jsonschema~=3.0",
+        "kiwipy[rmq]~=0.7.4",
+        "importlib-metadata~=4.3",
+        "numpy~=1.17",
+        "pamqp~=2.3",
+        "paramiko~=2.7,>=2.7.2",
+        "plumpy~=0.20.0",
+        "pgsu~=0.2.0",
+        "psutil~=5.6",
+        "psycopg2-binary~=2.8.3",
+        "python-dateutil~=2.8",
+        "pytz~=2021.1",
+        "pyyaml~=5.4",
+        "simplejson~=3.16",
+        "sqlalchemy~=1.4.22",
+        "tabulate~=0.8.5",
+        "typing-extensions; python_version < '3.8'",
+        "tqdm~=4.45",
+        "tzlocal~=2.0",
+        "upf_to_json~=0.9.2",
+        "wrapt~=1.11.1"
+    ],
+    "extras_require": {
+        "ssh_kerberos": [
+            "gssapi~=1.6",
+            "pyasn1~=0.4.8"
+        ],
+        "rest": [
+            "flask-cors~=3.0",
+            "flask-restful~=0.3.7",
+            "flask~=1.1",
+            "pyparsing~=2.4",
+            "python-memcached~=1.59",
+            "seekpath~=1.9,>=1.9.3"
+        ],
+        "docs": [
+            "docutils==0.15.2",
+            "pygments~=2.5",
+            "pydata-sphinx-theme~=0.6.3",
+            "sphinx~=3.2.1",
+            "sphinxcontrib-details-directive~=0.1.0",
+            "sphinx-panels~=0.5.0",
+            "sphinx-copybutton~=0.3.0",
+            "sphinx-notfound-page~=0.5",
+            "sphinxext-rediraffe~=0.2.4",
+            "sphinx-sqlalchemy~=0.1.1"
+        ],
+        "atomic_tools": [
+            "PyCifRW~=4.4",
+            "ase~=3.18",
+            "matplotlib~=3.3,>=3.3.4",
+            "pymatgen>=2019.7.2,<=2022.02.03,!=2019.9.7",
+            "pymysql~=0.9.3",
+            "seekpath~=1.9,>=1.9.3",
+            "spglib~=1.14"
+        ],
+        "notebook": [
+            "jupyter-client~=6.1,<6.1.13",
+            "jupyter~=1.0",
+            "notebook~=6.1,>=6.1.5"
+        ],
+        "pre-commit": [
+            "mypy==0.910",
+            "packaging==20.3",
+            "pre-commit~=2.2",
+            "pylint~=2.11.1",
+            "pylint-aiida~=0.1.1",
+            "pylint-django",
+            "sqlalchemy2-stubs"
+        ],
+        "tests": [
+            "aiida-export-migration-tests==0.9.0",
+            "pg8000~=1.13",
+            "pgtest~=1.3,>=1.3.1",
+            "pytest~=6.2",
+            "pytest-asyncio~=0.12",
+            "pytest-timeout~=1.3",
+            "pytest-cov~=2.7,<2.11",
+            "pytest-rerunfailures~=9.1,>=9.1.1",
+            "pytest-benchmark~=3.2",
+            "pytest-regressions~=2.2",
+            "pympler~=0.9",
+            "coverage<5.0",
+            "sqlalchemy-diff~=0.1.3",
+            "sqlalchemy-utils~=0.37.2",
+            "sphinx~=3.2.1"
+        ],
+        "bpython": [
+            "bpython~=0.18.0"
+        ]
+    },
+    "entry_points": {
+        "console_scripts": [
+            "verdi=aiida.cmdline.commands.cmd_verdi:verdi",
+            "runaiida=aiida.cmdline.commands.cmd_run:run"
+        ],
+        "aiida.calculations": [
+            "core.transfer = aiida.calculations.transfer:TransferCalculation",
+            "core.arithmetic.add = aiida.calculations.arithmetic.add:ArithmeticAddCalculation",
+            "core.templatereplacer = aiida.calculations.templatereplacer:TemplatereplacerCalculation"
+        ],
+        "aiida.calculations.importers": [
+            "core.arithmetic.add = aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter"
+        ],
+        "aiida.cmdline.computer.configure": [
+            "core.local = aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD",
+            "core.ssh = aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD"
+        ],
+        "aiida.cmdline.data": [
+            "core.array = aiida.cmdline.commands.cmd_data.cmd_array:array",
+            "core.bands = aiida.cmdline.commands.cmd_data.cmd_bands:bands",
+            "core.cif = aiida.cmdline.commands.cmd_data.cmd_cif:cif",
+            "core.dict = aiida.cmdline.commands.cmd_data.cmd_dict:dictionary",
+            "core.remote = aiida.cmdline.commands.cmd_data.cmd_remote:remote",
+            "core.singlefile = aiida.cmdline.commands.cmd_data.cmd_singlefile:singlefile",
+            "core.structure = aiida.cmdline.commands.cmd_data.cmd_structure:structure",
+            "core.trajectory = aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory",
+            "core.upf = aiida.cmdline.commands.cmd_data.cmd_upf:upf"
+        ],
+        "aiida.cmdline.data.structure.import": [
+        ],
+        "aiida.data": [
+            "core.array = aiida.orm.nodes.data.array.array:ArrayData",
+            "core.array.bands = aiida.orm.nodes.data.array.bands:BandsData",
+            "core.array.kpoints = aiida.orm.nodes.data.array.kpoints:KpointsData",
+            "core.array.projection = aiida.orm.nodes.data.array.projection:ProjectionData",
+            "core.array.trajectory = aiida.orm.nodes.data.array.trajectory:TrajectoryData",
+            "core.array.xy = aiida.orm.nodes.data.array.xy:XyData",
+            "core.base = aiida.orm.nodes.data:BaseType",
+            "core.bool = aiida.orm.nodes.data.bool:Bool",
+            "core.cif = aiida.orm.nodes.data.cif:CifData",
+            "core.code = aiida.orm.nodes.data.code:Code",
+            "core.container_code = aiida.orm.nodes.data.container_code:ContainerCode",
+            "core.dict = aiida.orm.nodes.data.dict:Dict",
+            "core.enum = aiida.orm.nodes.data.enum:EnumData",
+            "core.float = aiida.orm.nodes.data.float:Float",
+            "core.folder = aiida.orm.nodes.data.folder:FolderData",
+            "core.int = aiida.orm.nodes.data.int:Int",
+            "core.list = aiida.orm.nodes.data.list:List",
+            "core.jsonable = aiida.orm.nodes.data.jsonable:JsonableData",
+            "core.numeric = aiida.orm.nodes.data.numeric:NumericType",
+            "core.orbital = aiida.orm.nodes.data.orbital:OrbitalData",
+            "core.remote = aiida.orm.nodes.data.remote.base:RemoteData",
+            "core.remote.stash = aiida.orm.nodes.data.remote.stash.base:RemoteStashData",
+            "core.remote.stash.folder = aiida.orm.nodes.data.remote.stash.folder:RemoteStashFolderData",
+            "core.singlefile = aiida.orm.nodes.data.singlefile:SinglefileData",
+            "core.str = aiida.orm.nodes.data.str:Str",
+            "core.structure = aiida.orm.nodes.data.structure:StructureData",
+            "core.upf = aiida.orm.nodes.data.upf:UpfData"
+        ],
+        "aiida.groups": [
+            "core = aiida.orm.groups:Group",
+            "core.auto = aiida.orm.groups:AutoGroup",
+            "core.import = aiida.orm.groups:ImportGroup",
+            "core.upf = aiida.orm.groups:UpfFamily"
+        ],
+        "aiida.node": [
+            "data = aiida.orm.nodes.data.data:Data",
+            "process = aiida.orm.nodes.process.process:ProcessNode",
+            "process.calculation = aiida.orm.nodes.process.calculation.calculation:CalculationNode",
+            "process.calculation.calcfunction = aiida.orm.nodes.process.calculation.calcfunction:CalcFunctionNode",
+            "process.calculation.calcjob = aiida.orm.nodes.process.calculation.calcjob:CalcJobNode",
+            "process.workflow = aiida.orm.nodes.process.workflow.workflow:WorkflowNode",
+            "process.workflow.workchain = aiida.orm.nodes.process.workflow.workchain:WorkChainNode",
+            "process.workflow.workfunction = aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode"
+        ],
+        "aiida.parsers": [
+            "core.arithmetic.add = aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser",
+            "core.templatereplacer.doubler = aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"
+        ],
+        "aiida.schedulers": [
+            "core.direct = aiida.schedulers.plugins.direct:DirectScheduler",
+            "core.lsf = aiida.schedulers.plugins.lsf:LsfScheduler",
+            "core.pbspro = aiida.schedulers.plugins.pbspro:PbsproScheduler",
+            "core.sge = aiida.schedulers.plugins.sge:SgeScheduler",
+            "core.slurm = aiida.schedulers.plugins.slurm:SlurmScheduler",
+            "core.torque = aiida.schedulers.plugins.torque:TorqueScheduler"
+        ],
+        "aiida.transports": [
+            "core.local = aiida.transports.plugins.local:LocalTransport",
+            "core.ssh = aiida.transports.plugins.ssh:SshTransport"
+        ],
+        "aiida.tools.calculations": [],
+        "aiida.tools.dbexporters": [],
+        "aiida.tools.dbimporters": [
+            "core.cod = aiida.tools.dbimporters.plugins.cod:CodDbImporter",
+            "core.icsd = aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter",
+            "core.materialsproject = aiida.tools.dbimporters.plugins.materialsproject:MaterialsProjectImporter",
+            "core.mpds = aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter",
+            "core.mpod = aiida.tools.dbimporters.plugins.mpod:MpodDbImporter",
+            "core.nninc = aiida.tools.dbimporters.plugins.nninc:NnincDbImporter",
+            "core.oqmd = aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter",
+            "core.pcod = aiida.tools.dbimporters.plugins.pcod:PcodDbImporter",
+            "core.tcod = aiida.tools.dbimporters.plugins.tcod:TcodDbImporter"
+        ],
+        "aiida.tools.data.orbitals": [
+            "core.orbital = aiida.tools.data.orbital.orbital:Orbital",
+            "core.realhydrogen = aiida.tools.data.orbital.realhydrogen:RealhydrogenOrbital"
+        ],
+        "aiida.workflows": [
+            "core.arithmetic.multiply_add = aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain",
+            "core.arithmetic.add_multiply = aiida.workflows.arithmetic.add_multiply:add_multiply"
+        ]
+    }
+}

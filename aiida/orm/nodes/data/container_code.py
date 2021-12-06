@@ -14,23 +14,24 @@ from aiida.common import exceptions
 from aiida.common.log import override_log_level
 
 from .data import Data
+from .code import Code
 
 __all__ = ('ContainerCode',)
 
 
-class ContainerCode(Data):
+class ContainerCode(Code):
     """
     A container code entity.
     """
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, computer=None, container_thing=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs):
+    def __init__(self, computer=None, container_cmd_params=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs):
         super().__init__(**kwargs)
 
         # do some check of parameters
 
-        self.set_container_exec(computer, container_thing, image, container_exec_path)
+        self.set_container_exec(computer, container_cmd_params, image, container_exec_path)
 
         if input_plugin_name:
             self.set_input_plugin_name(input_plugin_name)
@@ -233,7 +234,8 @@ class ContainerCode(Data):
         return [c.pk for c in valid_codes]
 
     def _validate(self):
-        super()._validate()
+        pass
+        # super()._validate()
 
         # do bunch of validate here
         
@@ -328,7 +330,7 @@ class ContainerCode(Data):
         """
         return self.get_attribute('append_text', '')
 
-    def set_container_exec(self, computer, container_thing, image, container_exec_path):
+    def set_container_exec(self, computer, container_cmd_params, image, container_exec_path):
         """
         Set the code as container
         """
@@ -343,7 +345,7 @@ class ContainerCode(Data):
         
         # self._set_container(container_thing)
         
-        self.set_attribute('container_thing', container_thing)
+        self.set_attribute('container_cmd_params', container_cmd_params)
         
         self.set_attribute('image', image)
         
@@ -359,8 +361,8 @@ class ContainerCode(Data):
         """Get image name"""
         return self.get_attribute('image', '')
     
-    def get_container_thing(self):
-        return self.get_attribute('container_thing', '')
+    def container_cmd_params(self):
+        return self.get_attribute('container_cmd_params', [])
 
 
     # This should be _set_container method for setting container related info from container thing

@@ -32,6 +32,7 @@ from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
 from aiida.transports import Transport
+from aiida.orm.nodes.data.container_code import ContainerCode
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -86,7 +87,7 @@ def upload_calculation(
     computer = node.computer
 
     codes_info = calc_info.codes_info
-    input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
+    input_codes = [load_node(_.code_uuid, sub_classes=(Code, ContainerCode)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(node)
     transport.set_logger_extra(logger_extra)

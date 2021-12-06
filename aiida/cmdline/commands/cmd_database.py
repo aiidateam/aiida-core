@@ -52,8 +52,8 @@ def database_migrate(ctx, force):
 
     .. deprecated:: v2.0.0
     """
-    from aiida.cmdline.commands.cmd_storage import backend_migrate
-    ctx.forward(backend_migrate)
+    from aiida.cmdline.commands.cmd_storage import storage_migrate
+    ctx.forward(storage_migrate)
 
 
 @verdi_database.group('integrity')

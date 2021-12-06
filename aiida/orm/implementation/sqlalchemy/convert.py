@@ -21,7 +21,7 @@ from aiida.backends.sqlalchemy.models.comment import DbComment
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.backends.sqlalchemy.models.log import DbLog
-from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
 from aiida.backends.sqlalchemy.models.user import DbUser
 
 __all__ = ('get_backend_entity',)
@@ -105,3 +105,12 @@ def _(dbmodel, backend):
     """
     from . import logs
     return logs.SqlaLog.from_dbmodel(dbmodel, backend)
+
+
+@get_backend_entity.register(DbLink)
+def _(dbmodel, backend):
+    """
+    Convert a dblink to the backend entity
+    """
+    from aiida.orm.utils.links import LinkQuadruple
+    return LinkQuadruple(dbmodel.input_id, dbmodel.output_id, dbmodel.type, dbmodel.label)

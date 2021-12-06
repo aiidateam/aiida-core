@@ -46,7 +46,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo']):
     Collection = AuthInfoCollection
 
     @classproperty
-    def objects(cls) -> AuthInfoCollection:  # pylint: disable=no-self-argument
+    def objects(cls: Type['AuthInfo']) -> AuthInfoCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
         return AuthInfoCollection.get_cached(cls, get_manager().get_backend())
 
     PROPERTY_WORKDIR = 'workdir'

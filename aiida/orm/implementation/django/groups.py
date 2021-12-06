@@ -11,19 +11,19 @@
 """Django Group entity"""
 from collections.abc import Iterator, Sized
 
-# pylint: disable=no-name-in-module,import-error
 from django.db import transaction
 
 from aiida.backends.djsite.db import models
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
+from aiida.orm.implementation.sql.extras import SqlExtrasMixin
 
 from . import entities, users, utils
 
 __all__ = ('DjangoGroup', 'DjangoGroupCollection')
 
 
-class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], BackendGroup):  # pylint: disable=abstract-method
+class DjangoGroup(entities.DjangoModelEntity[models.DbGroup], SqlExtrasMixin, BackendGroup):  # pylint: disable=abstract-method
     """The Django group object"""
     MODEL_CLASS = models.DbGroup
 

@@ -32,12 +32,19 @@ table_groups_nodes = Table(  # pylint: disable=invalid-name
 
 
 class DbGroupNode(Base):
-    """Class to store group to nodes relation using SQLA backend."""
+    """Database model to store group-to-nodes relations."""
+    __tablename__ = table_groups_nodes.name
     __table__ = table_groups_nodes
 
 
 class DbGroup(Base):
-    """Class to store groups using SQLA backend."""
+    """Database model to store groups of nodes.
+
+    Users will typically identify and handle groups by using their ``label``
+    (which, unlike the ``labels`` in other models, must be unique).
+    Groups also have a ``type``, which serves to identify what plugin is being instanced,
+    and the ``extras`` property for users to set any relevant information.
+    """
 
     __tablename__ = 'db_dbgroup'
 

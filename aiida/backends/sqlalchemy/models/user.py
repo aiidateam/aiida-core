@@ -17,7 +17,10 @@ from aiida.backends.sqlalchemy.models.base import Base
 
 
 class DbUser(Base):
-    """Store users using the SQLA backend."""
+    """Database model to store users.
+
+    The user information consists of the most basic personal contact details.
+    """
     __tablename__ = 'db_dbuser'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name

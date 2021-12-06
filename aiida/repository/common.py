@@ -107,6 +107,14 @@ class File():
         """Return the file type of the file object."""
         return self._file_type
 
+    def is_file(self) -> bool:
+        """Return whether this instance is a file object."""
+        return self.file_type == FileType.FILE
+
+    def is_dir(self) -> bool:
+        """Return whether this instance is a directory object."""
+        return self.file_type == FileType.DIRECTORY
+
     @property
     def key(self) -> typing.Union[str, None]:
         """Return the key of the file object."""

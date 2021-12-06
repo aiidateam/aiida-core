@@ -22,7 +22,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
     - run: python .github/workflows/check_release_tag.py $GITHUB_REF setup.json
 
   pre-commit:
@@ -36,7 +36,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
     - name: Install system dependencies
       # note libkrb5-dev is required as a dependency for the gssapi pip install
       run: |
@@ -77,7 +77,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
     - name: Install system dependencies
       run: |
         sudo apt update
@@ -104,7 +104,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
     - name: Build package
       run: |
         pip install wheel

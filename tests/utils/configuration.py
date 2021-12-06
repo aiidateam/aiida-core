@@ -8,11 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines methods to mock an AiiDA instance complete with mock configuration and profile."""
-
-import contextlib
 import os
-import shutil
-import tempfile
 
 
 def create_mock_profile(name, repository_dirpath=None, **kwargs):
@@ -41,27 +37,3 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
     }
 
     return Profile(name, profile_dictionary)
-
-
-@contextlib.contextmanager
-def temporary_directory():
-    """Create a temporary directory."""
-    try:
-        temp_dir = tempfile.mkdtemp()
-        yield temp_dir
-    finally:
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def with_temp_dir(function):
-    """Create a temporary directory for the duration of the wrapped function.
-
-    The path of the temporary directory is passed to the wrapped function via
-    the 'temp_dir' parameter (which it must accept).
-    """
-
-    def decorated_function(*args, **kwargs):
-        with temporary_directory() as tmpdir:
-            function(*args, temp_dir=tmpdir, **kwargs)
-
-    return decorated_function

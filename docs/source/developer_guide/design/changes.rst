@@ -105,7 +105,7 @@ The plugin system
 
 The plugin system was designed with the following goals in mind.
 
-* **Sharing of calculations, workflows and data types**: plugins are bundled in a python package, distributed as a zip source archive, python ``egg`` or PyPI package. There is extensive documentation available for how to distribute python packages `here <https://packaging.python.org/>`_.
+* **Sharing of calculations, workflows and data types**: plugins are bundled in a python package, distributed as a zip source archive, python ``egg`` or PyPI package. There is extensive documentation available for how to distribute python packages `here <https://packaging.python.org/en/latest/>`_.
 
 * **Ease of use**: plugins are listed on the `AiiDA plugin registry <registry>`_ and can be installed with one simple command. This process is familiar to every regular python user.
 

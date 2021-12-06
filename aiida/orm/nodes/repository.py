@@ -215,6 +215,14 @@ class NodeRepositoryMixin:
         """
         yield from self._repository.walk(path)
 
+    def glob(self) -> Iterable[pathlib.PurePosixPath]:
+        """Yield a recursive list of all paths (files and directories)."""
+        for dirpath, dirnames, filenames in self.walk():
+            for dirname in dirnames:
+                yield dirpath / dirname
+            for filename in filenames:
+                yield dirpath / filename
+
     def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 

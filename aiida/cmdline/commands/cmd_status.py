@@ -109,7 +109,7 @@ def verdi_status(print_traceback, no_rmq):
 
     except IncompatibleDatabaseSchema:
         message = f'Database schema {dbgen} / {dbver} (generation/version) is incompatible with the code. '
-        message += 'Run `verdi database migrate` to solve this.'
+        message += 'Run `verdi storage migrate` to solve this.'
         print_status(ServiceStatus.DOWN, 'postgres', message)
         exit_code = ExitCode.CRITICAL
 

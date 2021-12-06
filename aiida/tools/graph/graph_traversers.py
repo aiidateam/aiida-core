@@ -69,13 +69,13 @@ def get_nodes_delete(
         missing_callback=missing_callback,
     )
 
-    function_output = {
+    function_output: TraverseGraphOutput = {
         'nodes': traverse_output['nodes'],
         'links': traverse_output['links'],
         'rules': traverse_links['rules_applied']
     }
 
-    return cast(TraverseGraphOutput, function_output)
+    return function_output
 
 
 def get_nodes_export(
@@ -112,13 +112,13 @@ def get_nodes_export(
         links_backward=traverse_links['backward']
     )
 
-    function_output = {
+    function_output: TraverseGraphOutput = {
         'nodes': traverse_output['nodes'],
         'links': traverse_output['links'],
         'rules': traverse_links['rules_applied']
     }
 
-    return cast(TraverseGraphOutput, function_output)
+    return function_output
 
 
 def validate_traversal_rules(
@@ -296,10 +296,10 @@ def traverse_graph(
 
     results = rulesequence.run(basket)
 
-    output = {}
+    output: TraverseGraphOutput = {}
     output['nodes'] = results.nodes.keyset
     output['links'] = None
     if get_links:
         output['links'] = results['nodes_nodes'].keyset
 
-    return cast(TraverseGraphOutput, output)
+    return output

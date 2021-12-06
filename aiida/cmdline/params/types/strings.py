@@ -106,7 +106,7 @@ class EmailType(StringParamType):
 class EntryPointType(NonEmptyStringParamType):
     """Parameter whose values have to be valid Python entry point strings.
 
-    See https://packaging.python.org/specifications/entry-points/
+    See https://packaging.python.org/en/latest/specifications/entry-points/
     """
     name = 'entrypoint'
 

@@ -64,7 +64,7 @@ def test_database_incompatible(run_cli_command, monkeypatch):
     result = run_cli_command(cmd_status.verdi_status, raises=True)
     assert 'Database schema' in result.output
     assert 'is incompatible with the code.' in result.output
-    assert '`verdi database migrate`' in result.output
+    assert '`verdi storage migrate`' in result.output
     assert result.exit_code is ExitCode.CRITICAL
 
 

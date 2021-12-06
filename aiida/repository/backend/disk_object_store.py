@@ -142,6 +142,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :return:
             a dictionary with information on the operations performed.
         """
+        from aiida.backends.control import MAINTAIN_LOGGER
+        DOSTORE_LOGGER = MAINTAIN_LOGGER.getChild('disk_object_store')  # pylint: disable=invalid-name
+
         pack_loose = True
         do_repack = full
         clean_storage = full
@@ -162,18 +165,19 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         operation_results = {}
 
         if pack_loose:
+            DOSTORE_LOGGER.info('Packing all loose files ...')
             self.container.pack_all_loose()
-            operation_results['pack_loose'] = {'decription': 'Packed all loose files.'}
+            operation_results['packing'] = 'All loose files have been packed.'
 
         if do_repack:
+            DOSTORE_LOGGER.info('Re-packing all pack files ...')
             self.container.repack()
-            operation_results['repack'] = {'decription': 'Repacked all pack files to optimize file access.'}
+            operation_results['repacking'] = 'All pack files have been re-packed.'
 
         if clean_storage:
+            DOSTORE_LOGGER.info(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
             self.container.clean_storage(vacuum=do_vacuum)
-            operation_results['clean_storage'] = {
-                'decription': f'Cleaned up the internal repo database (with `vacuum={do_vacuum}`).'
-            }
+            operation_results['cleaning'] = f'The repository database has been cleaned (with `vacuum={do_vacuum}`).'
 
         return operation_results
 

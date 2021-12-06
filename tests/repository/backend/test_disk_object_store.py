@@ -243,12 +243,17 @@ def test_get_info(populated_repository):
 @pytest.mark.parametrize(('kwargs', 'output_keys', 'output_info'), (
     (
         {'full': False},
-        ['pack_loose'],
+        ['packing'],
         {'unpacked': 2, 'packed': 4}
     ),
     (
         {'full': True},
-        ['pack_loose', 'repack', 'clean_storage'],
+        ['packing', 'repacking', 'cleaning'],
+        {'unpacked': 0, 'packed': 4}
+    ),
+    (
+        {'full': True, 'override_do_vacuum': False},
+        ['packing', 'repacking', 'cleaning'],
         {'unpacked': 0, 'packed': 4}
     ),
     (
@@ -267,12 +272,38 @@ def test_get_info(populated_repository):
 def test_maintain(populated_repository, kwargs, output_keys, output_info):
     """Test the ``maintain`` method."""
     maintainance_info = populated_repository.maintain(**kwargs)
+    print(maintainance_info)
+    assert len(maintainance_info) == len(output_keys)
+    for keyword in output_keys:
+        assert keyword in maintainance_info
+
     repository_info = populated_repository.get_info(statistics=True)
-
-    for output_key in output_keys:
-        assert output_key in maintainance_info
-        maintainance_info.pop(output_key)
-    assert len(maintainance_info) == 0
-
     assert repository_info['Objects']['unpacked'] == output_info['unpacked']
     assert repository_info['Objects']['packed'] == output_info['packed']
+
+
+@pytest.mark.parametrize('do_vacuum', [True, False])
+def test_maintain_logging(caplog, populated_repository, do_vacuum):
+    """Test the logging of the ``maintain`` method."""
+    import logging
+
+    from aiida.backends.control import MAINTAIN_LOGGER
+
+    MAINTAIN_LOGGER.setLevel(logging.INFO)
+    maintainance_info = populated_repository.maintain(full=True, override_do_vacuum=do_vacuum)
+    assert len(maintainance_info) == 3
+
+    list_of_logmsg = []
+    for record in caplog.records:
+        assert record.levelname == 'INFO'
+        assert record.name == 'aiida.maintain.disk_object_store'
+        list_of_logmsg.append(record.msg)
+
+    assert 'packing' in list_of_logmsg[0].lower()
+    assert 're-packing' in list_of_logmsg[1].lower()
+    assert 'cleaning' in list_of_logmsg[2].lower()
+
+    if do_vacuum:
+        assert 'vacuum=true' in list_of_logmsg[2].lower()
+    else:
+        assert 'vacuum=false' in list_of_logmsg[2].lower()

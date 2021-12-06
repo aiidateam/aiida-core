@@ -14,48 +14,35 @@
 # See the get_unreferenced_keyset function
 from typing import Optional, Set
 
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.manager import get_manager
 from aiida.orm.implementation import Backend
+
+__all__ = ('MAINTAIN_LOGGER',)
+
+MAINTAIN_LOGGER = AIIDA_LOGGER.getChild('maintain')
 
 
 def repository_maintain(full: bool = False, backend: Optional[Backend] = None, **kwargs) -> dict:
     """Performs maintenance tasks on the repository."""
-    maintainance_report = {'database': {}, 'repository': {}, 'user_info': ''}
+    maintainance_report = {'database': {}, 'repository': {}}  # type: ignore
 
     if backend is None:
         backend = get_manager().get_backend()
     repository = backend.get_repository()
 
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
-
-    maintainance_report['repository']['unreferenced'] = len(unreferenced_objects)  # type: ignore
-
-    try:
-        maintainance_report['repository']['info'] = repository.get_info()  # type: ignore
-    except NotImplementedError:
-        maintainance_report['repository']['info'] = {}  # type: ignore
-
+    MAINTAIN_LOGGER.info('Deleting unreferenced objects ...')
     repository.delete_objects(list(unreferenced_objects))
-
+    maintainance_report['repository']['unreferenced'] = {'files deleted': len(unreferenced_objects)}
     # Perform the maintainance operations in the repository
+    MAINTAIN_LOGGER.info('Performing repository-specific maintenance ...')
     try:
-        maintainance_report['repository']['maintain'] = repository.maintain(full=full, **kwargs)  # type: ignore
+        maintainance_report['repository']['maintain'] = repository.maintain(full=full, **kwargs)
     except NotImplementedError:
-        maintainance_report['repository']['maintain'] = {}  # type: ignore
+        maintainance_report['repository']['maintain'] = {}
 
     return maintainance_report
-
-
-def get_repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:
-    """Returns relevant information on the repository."""
-    if backend is None:
-        backend = get_manager().get_backend()
-    repository = backend.get_repository()
-    try:
-        output_info = repository.get_info(statistics)
-    except NotImplementedError:
-        output_info = {}
-    return output_info
 
 
 def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optional[Backend] = None) -> Set[str]:
@@ -64,6 +51,7 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
     This should be all the soft-deleted files.
     """
     from aiida import orm
+    MAINTAIN_LOGGER.info('Obtaining unreferenced object keys ...')
 
     if aiida_backend is None:
         aiida_backend = get_manager().get_backend()
@@ -83,15 +71,27 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
     return keyset_backend - keyset_aiidadb
 
 
-def get_repository_report(backend: Optional[Backend] = None) -> dict:
-    """Performs a report on the status of the repository."""
-    report = {'user_info': ''}
-
+def get_repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:
+    """Returns general information on the repository."""
     if backend is None:
         backend = get_manager().get_backend()
+    repository = backend.get_repository()
+
+    try:
+        output_info = repository.get_info(statistics)
+    except NotImplementedError:
+        output_info = {}
+
+    return output_info
+
+
+def get_repository_report(backend: Optional[Backend] = None) -> dict:
+    """Returns information specifically related to the maintenance needs of the repository."""
+    if backend is None:
+        backend = get_manager().get_backend()
+
+    report_items = {}
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
+    report_items['Unreferenced files to delete'] = len(unreferenced_objects)
 
-    num_unref = len(unreferenced_objects)
-    report['user_info'] += f'Unreferenced files to delete: {num_unref}'
-
-    return report
+    return report_items

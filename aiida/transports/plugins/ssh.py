@@ -1274,7 +1274,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         else:
             base_dir = os.path.join(self.getcwd(), path)
 
-        filtered_list = glob.glob(os.path.join(base_dir, pattern))
+        filtered_list = self.glob(os.path.join(base_dir, pattern))
         if not base_dir.endswith('/'):
             base_dir += '/'
         return [re.sub(base_dir, '', i) for i in filtered_list]

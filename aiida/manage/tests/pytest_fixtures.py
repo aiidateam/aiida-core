@@ -169,7 +169,7 @@ def aiida_local_code_factory(aiida_localhost):
         executable,
         computer=aiida_localhost,
         label=None,
-        withmpi=False,
+        with_mpi=False,
         prepend_text=None,
         append_text=None
     ):
@@ -209,7 +209,7 @@ def aiida_local_code_factory(aiida_localhost):
         code.label = label
         code.description = label
 
-        code.set_withmpi(withmpi)
+        code.set_with_mpi(with_mpi)
 
         if prepend_text is not None:
             code.set_prepend_text(prepend_text)

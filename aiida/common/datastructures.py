@@ -134,7 +134,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
         code.x ... > stdout_name 2> stderr_name
 
-    * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
+    * ``with_mpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     """
@@ -144,7 +144,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'stdout_name',
         'stderr_name',
         'join_files',
-        'withmpi',
+        'with_mpi',
         'code_uuid'
     )
 

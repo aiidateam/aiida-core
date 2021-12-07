@@ -137,7 +137,7 @@ COMPUTER = options.COMPUTER.clone(
     help='Name of the computer, on which the code is installed.'
 )
 
-WITHMPI = OverridableOption(
+WITH_MPI = OverridableOption(
     '--with-mpi/--without-mpi',
     is_eager=False,
     default=True,

@@ -65,7 +65,7 @@ class CodeBuilder:
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
         code.set_input_plugin_name(self._get_and_count('input_plugin', used))
-        code.set_withmpi(self._get_and_count('withmpi', used))
+        code.set_with_mpi(self._get_and_count('with_mpi', used))
         code.set_prepend_text(self._get_and_count('prepend_text', used))
         code.set_append_text(self._get_and_count('append_text', used))
 
@@ -101,7 +101,7 @@ class CodeBuilder:
         spec['label'] = code.label
         spec['description'] = code.description
         spec['input_plugin'] = code.get_input_plugin_name()
-        spec['withmpi'] = code.get_withmpi()
+        spec['with_mpi'] = code.get_with_mpi()
         spec['prepend_text'] = code.get_prepend_text()
         spec['append_text'] = code.get_append_text()
 

@@ -356,7 +356,9 @@ class Code(Data):
         Set whether a code is compiled with mpi support or not, to be used
         for the automatic generation of a new calculation.
         """
-        self.set_attribute('with_mpi', bool(with_mpi))
+        from aiida.common.lang import type_check
+        type_check(with_mpi, bool)
+        self.set_attribute('with_mpi', with_mpi)
 
     def get_with_mpi(self):
         """

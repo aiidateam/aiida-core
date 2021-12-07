@@ -82,8 +82,8 @@ def test_correct_raises(dictionary):
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_eq(dictionary):
-    """Test the ``__eq__`` method.
+def test_equality(dictionary):
+    """Test the equality comparison for the ``Dict`` type.
 
     A node should compare equal to a the plain dictionary that has the same value, as well as any other ``Dict`` node
     that has the same content. For context, the discussion on whether to compare nodes by content was started in the
@@ -95,12 +95,19 @@ def test_eq(dictionary):
 
     https://github.com/aiidateam/aiida-core/discussions/5187
     """
+    different_dict = {'I': {'am': 'different'}}
     node = Dict(dictionary)
+    different_node = Dict(different_dict)
     clone = Dict(dictionary)
 
-    assert node is node  # pylint: disable=comparison-with-itself
+    # Test equality comparison with Python base type
     assert node == dictionary
+    assert node != different_dict
+
+    # Test equality comparison between `Dict` nodes
+    assert node is node  # pylint: disable=comparison-with-itself
     assert node == clone
+    assert node != different_node
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

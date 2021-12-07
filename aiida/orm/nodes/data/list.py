@@ -56,9 +56,6 @@ class List(Data, MutableSequence):
             return self.get_list() == other.get_list()
         return self.get_list() == other
 
-    def __ne__(self, other):
-        return not self == other
-
     def append(self, value):
         data = self.get_list()
         data.append(value)

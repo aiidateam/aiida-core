@@ -205,3 +205,25 @@ def test_operator(opera):
         c_val = opera(node_x.value, node_y.value)
         assert res._type == type(c_val)  # pylint: disable=protected-access
         assert res == opera(node_x.value, node_y.value)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('node_type, a, b', [
+    (Bool, False, True),
+    (Int, 2, 5),
+    (Float, 2.5, 5.5),
+    (Str, 'a', 'b'),
+])
+def test_equality(node_type, a, b):
+    """Test equality comparison for the base types."""
+    node_a = node_type(a)
+    node_a_clone = node_type(a)
+    node_b = node_type(b)
+
+    # Test equality comparison with Python base types
+    assert node_a == a
+    assert node_a != b
+
+    # Test equality comparison with other `BaseType` nodes
+    assert node_a == node_a_clone
+    assert node_a != node_b

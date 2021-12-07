@@ -75,9 +75,6 @@ class Dict(Data):
             return self.get_dict() == other.get_dict()
         return self.get_dict() == other
 
-    def __ne__(self, other):
-        return not self == other
-
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.
 

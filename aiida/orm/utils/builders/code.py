@@ -10,11 +10,14 @@
 """Manage code objects with lazy loading of the db env"""
 import enum
 import os
+from types import CodeType
 
 import importlib_metadata
+from aiida.cmdline.params.options.commands.code import ON_CONTAINER
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
+from aiida.orm.nodes.data.container_code import ContainerCode
 
 
 class CodeBuilder:
@@ -49,12 +52,20 @@ class CodeBuilder:
         passed_keys = set(k for k in self._code_spec.keys() if self._code_spec[k] is not None)
         used = set()
 
-        if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:
+        code_type = self._get_and_count('code_type', used)
+        if code_type == self.CodeType.STORE_AND_UPLOAD:
             file_list = [
                 os.path.realpath(os.path.join(self.code_folder, f))
                 for f in os.listdir(self._get_and_count('code_folder', used))
             ]
             code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
+        elif code_type == self.CodeType.ON_CONTAINER:
+            ct = self._get_and_count('container_tech', used)
+            image = self._get_and_count('image', used)
+            sarus_params = self._get_and_count('sarus_params', used)
+            code = ContainerCode(computer=self._get_and_count('computer', used), 
+                                 container_cmd_params=[f'{ct}', f'{sarus_params}'], image=f'{image}',
+                                 container_exec_path=self._get_and_count('remote_abs_path', used))
         else:
             code = Code(
                 remote_computer_exec=(
@@ -224,3 +235,4 @@ class CodeBuilder:
     class CodeType(enum.Enum):
         STORE_AND_UPLOAD = 'store in the db and upload'
         ON_COMPUTER = 'on computer'
+        ON_CONTAINER = 'on container'

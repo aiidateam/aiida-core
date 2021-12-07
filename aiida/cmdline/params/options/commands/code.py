@@ -14,14 +14,23 @@ from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
+def is_on_container(ctx):
+    return bool(ctx.params.get('on_container'))
+
+def is_not_on_container(ctx):
+    return bool(not is_on_container(ctx))
 
 def is_on_computer(ctx):
     return bool(ctx.params.get('on_computer'))
 
-
 def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
+def is_on_computer_or_container(ctx):
+    return is_on_computer(ctx) or is_on_container(ctx)
+
+def is_on_sarus(ctx):
+    return bool(ctx.params.get('container_tech') == 'sarus')
 
 def validate_label_uniqueness(ctx, _, value):
     """Validate the uniqueness of the label of the code.
@@ -67,12 +76,47 @@ def validate_label_uniqueness(ctx, _, value):
 
     return value
 
+ON_CONTAINER = OverridableOption(
+    '--on-container/--not-on-container',
+    is_eager=False,
+    default=False,
+    help='Whether the code is installed on the container.'
+)
+
+IMAGE = OverridableOption(
+    '--image',
+    prompt='image name.',
+    required_fn=is_on_container,
+    prompt_fn=is_on_container,
+    cls=InteractiveOption,
+    help='image name.'
+)
+
+CONTAINER_TECH = OverridableOption(
+    '--container-tech',
+    prompt='container tech',
+    required_fn=is_on_container,
+    prompt_fn=is_on_container,
+    cls=InteractiveOption,
+    help='container tech.'
+)
+
+SARUS_PARAMS = OverridableOption(
+    '--sarus-params',
+    prompt='sarus params',
+    required_fn=is_on_sarus,
+    prompt_fn=is_on_sarus,
+    cls=InteractiveOption,
+    help='sarus params.'
+)
 
 ON_COMPUTER = OverridableOption(
     '--on-computer/--store-in-db',
     is_eager=False,
     default=True,
     cls=InteractiveOption,
+    required_fn=is_not_on_container,
+    prompt_fn=is_not_on_container,
     prompt='Installed on target computer?',
     help='Whether the code is installed on the target computer, or should be copied to the target computer each time '
     'from a local path.'
@@ -81,8 +125,8 @@ ON_COMPUTER = OverridableOption(
 REMOTE_ABS_PATH = OverridableOption(
     '--remote-abs-path',
     prompt='Remote absolute path',
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
+    required_fn=is_on_computer_or_container,
+    prompt_fn=is_on_computer_or_container,
     type=types.AbsolutePathParamType(dir_okay=False),
     cls=InteractiveOption,
     help='[if --on-computer]: Absolute path to the executable on the target computer.'
@@ -141,8 +185,8 @@ INPUT_PLUGIN = options.INPUT_PLUGIN.clone(
 COMPUTER = options.COMPUTER.clone(
     prompt='Computer',
     cls=InteractiveOption,
-    required_fn=is_on_computer,
-    prompt_fn=is_on_computer,
+    required_fn=is_on_computer_or_container,
+    prompt_fn=is_on_computer_or_container,
     help='Name of the computer, on which the code is installed.'
 )
 

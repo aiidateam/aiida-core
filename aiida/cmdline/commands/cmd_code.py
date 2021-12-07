@@ -64,6 +64,11 @@ def set_code_builder(ctx, param, value):
 # guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
 # once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('setup')
+@options_code.ON_CONTAINER()
+@options_code.CONTAINER_TECH()
+@options_code.SARUS_PARAMS()
+# @options_code.SIGULARITY_PARAMS()
+@options_code.IMAGE()
 @options_code.ON_COMPUTER()
 @options_code.COMPUTER()
 @options_code.LABEL()
@@ -84,8 +89,11 @@ def setup_code(ctx, non_interactive, **kwargs):
     from aiida.orm.utils.builders.code import CodeBuilder
 
     options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
-
-    if kwargs.pop('on_computer'):
+    
+    if kwargs.pop('on_container'):
+        kwargs['code_type'] = CodeBuilder.CodeType.ON_CONTAINER
+        kwargs.pop('on_computer')
+    elif kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
     else:
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD

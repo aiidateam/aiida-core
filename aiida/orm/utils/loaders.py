@@ -18,6 +18,7 @@ from aiida.orm.querybuilder import QueryBuilder
 
 if TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, Node
+    from aiida.orm.nodes.data.container_code import ContainerCode
 
 __all__ = (
     'load_code', 'load_computer', 'load_group', 'load_node', 'load_entity', 'get_loader', 'OrmEntityLoader',
@@ -112,6 +113,36 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     """
     return load_entity(
         CodeEntityLoader,
+        identifier=identifier,
+        pk=pk,
+        uuid=uuid,
+        label=label,
+        sub_classes=sub_classes,
+        query_with_dashes=query_with_dashes
+    )
+
+def load_container_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'ContainerCode':
+    """
+    Load a Code instance by one of its identifiers: pk, uuid or label
+
+    If the type of the identifier is unknown simply pass it without a keyword and the loader will attempt to
+    automatically infer the type.
+
+    :param identifier: pk (integer), uuid (string) or label (string) of a Code
+    :param pk: pk of a Code
+    :param uuid: uuid of a Code, or the beginning of the uuid
+    :param label: label of a Code
+    :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
+        of the ORM class of the given entity loader.
+    :param bool query_with_dashes: allow to query for a uuid with dashes
+    :return: the Code instance
+    :raise ValueError: if none or more than one of the identifiers are supplied
+    :raise TypeError: if the provided identifier has the wrong type
+    :raise aiida.common.NotExistent: if no matching Code is found
+    :raise aiida.common.MultipleObjectsError: if more than one Code was found
+    """
+    return load_entity(
+        ContainerCodeEntityLoader,
         identifier=identifier,
         pk=pk,
         uuid=uuid,
@@ -669,6 +700,54 @@ class CodeEntityLoader(OrmEntityLoader):
 
         return builder
 
+
+class ContainerCodeEntityLoader(OrmEntityLoader):
+    """Loader for the `Code` entity and sub classes."""
+
+    @classproperty
+    def orm_base_class(self):
+        """
+        Return the orm base class to which loaded entities should be mapped. Actual queries to load an entity
+        may further narrow the query set by defining a more specific set of orm classes, as long as each of
+        those is a strict sub class of the orm base class.
+
+        :returns: the orm base class
+        """
+        from aiida.orm.nodes.data.container_code import ContainerCode
+        return ContainerCode
+
+    @classmethod
+    def _get_query_builder_label_identifier(cls, identifier, classes, operator='==', project='*'):
+        """
+        Return the query builder instance that attempts to map the identifier onto an entity of the orm class,
+        defined for this loader class, interpreting the identifier as a LABEL like identifier
+
+        :param identifier: the LABEL identifier
+        :param classes: a tuple of orm classes to which the identifier should be mapped
+        :param operator: the operator to use in the query
+        :param project: the property or properties to project for entities matching the query
+        :returns: the query builder instance that should retrieve the entity corresponding to the identifier
+        :raises ValueError: if the identifier is invalid
+        :raises aiida.common.NotExistent: if the orm base class does not support a LABEL like identifier
+        """
+        from aiida.common.escaping import escape_for_sql_like
+        from aiida.orm import Computer
+
+        try:
+            identifier, _, machinename = identifier.partition('@')
+        except AttributeError:
+            raise ValueError('the identifier needs to be a string')
+
+        if operator == 'like':
+            identifier = f'{escape_for_sql_like(identifier)}%'
+
+        builder = QueryBuilder()
+        builder.append(cls=classes, tag='code', project=project, filters={'label': {operator: identifier}})
+
+        if machinename:
+            builder.append(Computer, filters={'label': {'==': machinename}}, with_node='code')
+
+        return builder
 
 class ComputerEntityLoader(OrmEntityLoader):
     """Loader for the `Computer` entity and sub classes."""

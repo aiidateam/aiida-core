@@ -30,7 +30,7 @@ class MockRepositoryBackend():
         text = 'this is a report on the maintenance procedure'
         if full:
             text += ' with the full flag on'
-        return text
+        return {'procedure': text}
 
 
 @pytest.fixture(scope='function')
@@ -93,14 +93,17 @@ def test_repository_maintain(monkeypatch):
     final_data = control.repository_maintain()
     assert 'database' in final_data
     assert 'repository' in final_data
-    assert 'user_info' in final_data
 
-    assert final_data['repository']['info'] == 'this is information about the repo'
-    assert final_data['repository']['maintain'] == 'this is a report on the maintenance procedure'
-    assert final_data['repository']['unreferenced'] == 3
+    assert final_data['repository']['unreferenced']['deleted_files'] == 3
+    assert 'procedure' in final_data['repository']['maintain']
+    procedure_text = 'this is a report on the maintenance procedure'
+    assert final_data['repository']['maintain']['procedure'] == procedure_text
 
     final_data = control.repository_maintain(full=True)
-    assert final_data['repository']['maintain'] == 'this is a report on the maintenance procedure with the full flag on'
+    assert final_data['repository']['unreferenced']['deleted_files'] == 3
+    assert 'procedure' in final_data['repository']['maintain']
+    procedure_text = 'this is a report on the maintenance procedure with the full flag on'
+    assert final_data['repository']['maintain']['procedure'] == procedure_text
 
 
 def test_repository_info(monkeypatch):
@@ -131,5 +134,4 @@ def test_get_repository_report(monkeypatch):
 
     repository_report = control.get_repository_report()
 
-    assert 'user_info' in repository_report
-    assert 'Unreferenced files to delete' in repository_report['user_info']
+    assert 'Unreferenced files to delete' in repository_report

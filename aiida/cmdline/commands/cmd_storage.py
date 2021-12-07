@@ -114,7 +114,7 @@ def storage_maintain(full, dry_run):
         echo.echo_critical('You cannot request both `--dry-run` and `--full` at the same time.')
 
     if dry_run:
-        maintainance_report = get_repository_report()
+        maintainance_report = {'repository': get_repository_report()}
         echo.echo('\nReport on storage maintainance status:\n')
         echo.echo_dictionary(maintainance_report, sort_keys=False, fmt='yaml')
         return

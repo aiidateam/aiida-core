@@ -34,7 +34,7 @@ def repository_maintain(full: bool = False, backend: Optional[Backend] = None, *
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
     MAINTAIN_LOGGER.info('Deleting unreferenced objects ...')
     repository.delete_objects(list(unreferenced_objects))
-    maintainance_report['repository']['unreferenced'] = {'files deleted': len(unreferenced_objects)}
+    maintainance_report['repository']['unreferenced'] = {'deleted_files': len(unreferenced_objects)}
     # Perform the maintainance operations in the repository
     MAINTAIN_LOGGER.info('Performing repository-specific maintenance ...')
     try:

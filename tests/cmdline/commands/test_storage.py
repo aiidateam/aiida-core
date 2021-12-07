@@ -117,21 +117,24 @@ def tests_storage_maintain_text(run_cli_command, monkeypatch):
     from aiida.backends import control
 
     def reporter_mock(**kwargs):
-        return {'user_info': 'Underlying message'}
+        return {'piece_of_data': 'data_value'}
 
     monkeypatch.setattr(control, 'get_repository_report', reporter_mock)
     monkeypatch.setattr(control, 'repository_maintain', reporter_mock)
 
     result = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
     assert 'repository:' in result.output.lower()
-    assert 'Underlying message' in result.output
+    assert 'piece_of_data' in result.output
+    assert 'data_value' in result.output
 
     result = run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
     assert 'no other process should be using the aiida profile' in result.output.lower()
     assert 'finished' in result.output.lower()
-    assert 'Underlying message' in result.output
+    assert 'piece_of_data' in result.output
+    assert 'data_value' in result.output
 
     result = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
     assert 'can be safely executed while still running aiida' in result.output.lower()
     assert 'finished' in result.output.lower()
-    assert 'Underlying message' in result.output
+    assert 'piece_of_data' in result.output
+    assert 'data_value' in result.output

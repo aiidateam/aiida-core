@@ -52,10 +52,9 @@ class List(Data, MutableSequence):
         return f'{super().__str__()} value: {self.get_list()}'
 
     def __eq__(self, other):
-        try:
+        if isinstance(other, List):
             return self.get_list() == other.get_list()
-        except AttributeError:
-            return self.get_list() == other
+        return self.get_list() == other
 
     def __ne__(self, other):
         return not self == other

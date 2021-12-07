@@ -85,27 +85,22 @@ def test_correct_raises(dictionary):
 def test_eq(dictionary):
     """Test the ``__eq__`` method.
 
-    A node should compare equal to itself and to the plain dictionary that represents its value. However, it should not
-    compare equal to another node that has the same content. This is a hot issue and is being discussed in the following
-    ticket: https://github.com/aiidateam/aiida-core/issues/1917
+    A node should compare equal to a the plain dictionary that has the same value, as well as any other ``Dict`` node
+    that has the same content. For context, the discussion on whether to compare nodes by content was started in the
+    following issue:
+
+    https://github.com/aiidateam/aiida-core/issues/1917
+
+    A summary and the final conclusion can be found in this discussion:
+
+    https://github.com/aiidateam/aiida-core/discussions/5187
     """
     node = Dict(dictionary)
     clone = Dict(dictionary)
 
     assert node is node  # pylint: disable=comparison-with-itself
     assert node == dictionary
-    assert node != clone
-
-    # To test the fallback, where two ``Dict`` nodes are equal if their UUIDs are even if the content is different, we
-    # create a different node with other content, but artificially give it the same UUID as ``node``. In practice this
-    # wouldn't happen unless, by accident, two different nodes get the same UUID, the probability of which is minimal.
-    # Note that we have to set the UUID directly through the database model instance of the backend entity, since it is
-    # forbidden to change it through the front-end or backend entity instance, for good reasons.
-    other = Dict({})
-    other.backend_entity._dbmodel.uuid = node.uuid  # pylint: disable=protected-access
-    assert other.uuid == node.uuid
-    assert other.dict != node.dict
-    assert node == other
+    assert node == clone
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

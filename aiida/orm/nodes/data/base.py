@@ -50,10 +50,5 @@ class BaseType(Data):
             return self.value == other.value
         return self.value == other
 
-    def __ne__(self, other):
-        if isinstance(other, BaseType):
-            return self.value != other.value
-        return self.value != other
-
     def new(self, value=None):
         return self.__class__(value)

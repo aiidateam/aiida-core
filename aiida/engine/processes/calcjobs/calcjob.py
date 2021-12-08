@@ -744,15 +744,12 @@ class CalcJob(Process):
         priority = self.node.get_option('priority')
         if priority is not None:
             job_tmpl.priority = priority
-        max_memory_kb = self.node.get_option('max_memory_kb')
-        if max_memory_kb is not None:
-            job_tmpl.max_memory_kb = max_memory_kb
+
+        job_tmpl.max_memory_kb = self.node.get_option('max_memory_kb') or computer.get_default_memory_per_machine()
+
         max_wallclock_seconds = self.node.get_option('max_wallclock_seconds')
         if max_wallclock_seconds is not None:
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
-        max_memory_kb = self.node.get_option('max_memory_kb')
-        if max_memory_kb is not None:
-            job_tmpl.max_memory_kb = max_memory_kb
 
         submit_script_filename = self.node.get_option('submit_script_filename')
         script_content = scheduler.get_submit_script(job_tmpl)

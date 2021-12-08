@@ -109,6 +109,15 @@ MPI_PROCS_PER_MACHINE = OverridableOption(
     'Use 0 to specify no default value.',
 )
 
+DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
+    '--default-memory-per-machine',
+    prompt='Default amount of memory per machine (kB).',
+    cls=InteractiveOption,
+    type=click.INT,
+    help='The default amount of RAM memory that should be allocated per machine (node), if not otherwise specified.'
+    'Use 0 to specify no default value.',
+)
+
 PREPEND_TEXT = OverridableOption(
     '--prepend-text',
     cls=TemplateInteractiveOption,

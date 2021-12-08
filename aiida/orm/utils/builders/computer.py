@@ -45,6 +45,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         spec['shebang'] = computer.get_shebang()
         spec['mpirun_command'] = ' '.join(computer.get_mpirun_command())
         spec['mpiprocs_per_machine'] = computer.get_default_mpiprocs_per_machine()
+        spec['default_memory_per_machine'] = computer.get_default_memory_per_machine()
 
         return spec
 
@@ -98,6 +99,24 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
                     'must be positive'
                 )
             computer.set_default_mpiprocs_per_machine(mpiprocs_per_machine)
+
+        def_memory_per_machine = self._get_and_count('default_memory_per_machine', used)
+        if def_memory_per_machine == 0:
+            def_memory_per_machine = None
+        # In the command line, 0 means unspecified
+        if def_memory_per_machine is not None:
+            try:
+                def_memory_per_machine = int(def_memory_per_machine)
+            except ValueError:
+                raise self.ComputerValidationError(
+                    'Invalid value provided for memory_per_machine, '
+                    'must be a valid integer'
+                )
+            if def_memory_per_machine <= 0:
+                raise self.ComputerValidationError(
+                    'Invalid value provided for default_memory_per_machine, must be positive'
+                )
+            computer.set_default_memory_per_machine(def_memory_per_machine)
 
         mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(' ')
         if mpirun_command_internal == ['']:

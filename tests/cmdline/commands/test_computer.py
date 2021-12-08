@@ -56,6 +56,7 @@ def generate_setup_options_dict(replace_args=None, non_interactive=True):
     valid_noninteractive_options['work-dir'] = '/scratch/{username}/aiida_run'
     valid_noninteractive_options['mpirun-command'] = 'mpirun -np {tot_num_mpiprocs}'
     valid_noninteractive_options['mpiprocs-per-machine'] = '2'
+    valid_noninteractive_options['default-memory-per-machine'] = '1000000'
     # Make them multiline to test also multiline options
     valid_noninteractive_options['prepend-text'] = "date\necho 'second line'"
     valid_noninteractive_options['append-text'] = "env\necho '444'\necho 'third line'"
@@ -162,6 +163,8 @@ def test_mixed(run_cli_command):
     assert new_computer.get_shebang() == options_dict_full['shebang']
     assert new_computer.get_workdir() == options_dict_full['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict_full['mpiprocs-per-machine'])
+    assert new_computer.get_default_memory_per_machine() == int(options_dict_full['default-memory-per-machine'])
+
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == options_dict_full['prepend-text']
     assert new_computer.get_append_text() == options_dict_full['append-text']
@@ -190,6 +193,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
     assert new_computer.get_shebang() == options_dict['shebang']
     assert new_computer.get_workdir() == options_dict['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict['mpiprocs-per-machine'])
+    assert new_computer.get_default_memory_per_machine() == int(options_dict['default-memory-per-machine'])
     assert new_computer.get_prepend_text() == options_dict['prepend-text']
     assert new_computer.get_append_text() == options_dict['append-text']
 
@@ -246,6 +250,47 @@ def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):  # pylint:
     assert isinstance(result.exception, SystemExit)
     assert 'mpiprocs_per_machine, must be positive' in result.output
 
+def test_noninteractive_optional_default_memory(run_cli_command):  # pylint: disable=invalid-name
+    """
+    Check that if is ok not to specify default-memory-per-machine
+    """
+    options_dict = generate_setup_options_dict({'label': 'computer_default_mem'})
+    options_dict.pop('default-memory-per-machine')
+    options = generate_setup_options(options_dict)
+    result = run_cli_command(computer_setup, options)
+
+    assert result.exception is None, result.output[-1000:]
+
+    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    assert isinstance(new_computer, orm.Computer)
+    assert new_computer.get_default_memory_per_machine() is None
+
+def test_noninteractive_optional_default_memory_2(run_cli_command):  # pylint: disable=invalid-name
+    """
+    Check that if is the specified value is zero, it means unspecified
+    """
+    options_dict = generate_setup_options_dict({'label': 'computer_default_memory_2'})
+    options_dict['default-memory-per-machine'] = 0
+    options = generate_setup_options(options_dict)
+    result = run_cli_command(computer_setup, options)
+
+    assert result.exception is None, result.output[-1000:]
+
+    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    assert isinstance(new_computer,orm.Computer)
+    assert new_computer.get_default_memory_per_machine() is None
+
+def test_noninteractive_optional_default_mem_3(run_cli_command):  # pylint: disable=invalid-name
+    """
+    Check that it fails for a negative number of default_memory
+    """
+    options_dict = generate_setup_options_dict({'label': 'computer_default_memory_3'})
+    options_dict['default-memory-per-machine'] = -1
+    options = generate_setup_options(options_dict)
+    result = run_cli_command(computer_setup, options, catch_exceptions=False)
+
+    assert isinstance(result.exception, SystemExit)
+    assert 'default_memory_per_machine, must be positive' in result.output
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_noninteractive_wrong_transport_fail(run_cli_command):
@@ -338,6 +383,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
         self.comp_builder.mpiprocs_per_machine = 8
+        self.comp_builder.default_memory_per_machine = 0
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
 
@@ -556,6 +602,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
             workdir='/tmp/aiida'
         )
         cls.comp.set_default_mpiprocs_per_machine(1)
+        cls.comp.set_default_memory_per_machine(1000000)
         cls.comp.set_prepend_text('text to prepend')
         cls.comp.set_append_text('text to append')
         cls.comp.store()
@@ -707,7 +754,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     """Test 'verdi computer duplicate' in interactive mode."""
     label = 'computer_duplicate_interactive'
     computer = aiida_localhost
-    user_input = f'{label}\n\n\n\n\n\n\n\n\n'
+    user_input = f'{label}\n\n\n\n\n\n\n\n\n\n'
     result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input, catch_exceptions=False)
     assert result.exception is None, result.output
 

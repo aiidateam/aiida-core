@@ -25,12 +25,20 @@ class MockRepositoryBackend():
     def delete_objects(self, *args, **kwargs):
         """Method to delete objects."""
 
-    def maintain(self, full=False, **kwargs):
+    def maintain(self, live=True, dry_run=False, **kwargs):
         """Method to perform maintainance operations."""
-        text = 'this is a report on the maintenance procedure'
-        if full:
-            text += ' with the full flag on'
-        return {'procedure': text}
+
+        if live:
+            raise ValueError('Signal that live=True')
+
+        elif dry_run:
+            raise ValueError('Signal that dry_run=True')
+
+        elif len(kwargs) > 0:
+            raise ValueError('Signal that kwargs were passed')
+
+        else:
+            raise ValueError('Signal that live and dry_run are False')
 
 
 @pytest.fixture(scope='function')
@@ -39,7 +47,7 @@ def clear_storage_before_test(clear_database_before_test):  # pylint: disable=un
     repository = get_manager().get_backend().get_repository()
     object_keys = list(repository.list_objects())
     repository.delete_objects(object_keys)
-    repository.maintain(full=True)
+    repository.maintain(live=False)
 
 
 @pytest.mark.usefixtures('clear_storage_before_test')
@@ -82,28 +90,46 @@ def test_get_unreferenced_keyset():
     assert 'aborting' in str(exc.value).lower()
 
 
-def test_repository_maintain(monkeypatch):
+#yapf: disable
+@pytest.mark.parametrize(('kwargs', 'logged_texts'), (
+    (
+        {},
+        [' > live: True', ' > dry_run: False']
+    ),
+    (
+        {'full': True, 'dry_run': True},
+        [' > live: False', ' > dry_run: True']
+    ),
+    (
+        {'extra_kwarg': 'molly'},
+        [' > live: True', ' > dry_run: False', ' > extra_kwarg: molly']
+    ),
+))
+# yapf: enable
+@pytest.mark.usefixtures('clear_storage_before_test')
+def test_repository_maintain(caplog, monkeypatch, kwargs, logged_texts):
     """Test the ``repository_maintain`` method."""
-    from aiida.backends import control
-    monkeypatch.setattr(control, 'get_unreferenced_keyset', lambda **kwargs: set([1, 2, 3]))
+    import logging
 
-    BackendClass = get_manager().get_backend().__class__  # pylint: disable=invalid-name
-    monkeypatch.setattr(BackendClass, 'get_repository', lambda *args, **kwargs: MockRepositoryBackend())
+    from aiida.backends.control import repository_maintain
 
-    final_data = control.repository_maintain()
-    assert 'database' in final_data
-    assert 'repository' in final_data
+    def mock_maintain(self, live=True, dry_run=False, **kwargs):  # pylint: disable=unused-argument
+        logmsg = 'keywords provided:\n'
+        logmsg += f' > live: {live}\n'
+        logmsg += f' > dry_run: {dry_run}\n'
+        for key, val in kwargs.items():
+            logmsg += f' > {key}: {val}\n'
+        logging.info(logmsg)
 
-    assert final_data['repository']['unreferenced']['deleted_files'] == 3
-    assert 'procedure' in final_data['repository']['maintain']
-    procedure_text = 'this is a report on the maintenance procedure'
-    assert final_data['repository']['maintain']['procedure'] == procedure_text
+    RepoBackendClass = get_manager().get_backend().get_repository().__class__  # pylint: disable=invalid-name
+    monkeypatch.setattr(RepoBackendClass, 'maintain', mock_maintain)
 
-    final_data = control.repository_maintain(full=True)
-    assert final_data['repository']['unreferenced']['deleted_files'] == 3
-    assert 'procedure' in final_data['repository']['maintain']
-    procedure_text = 'this is a report on the maintenance procedure with the full flag on'
-    assert final_data['repository']['maintain']['procedure'] == procedure_text
+    with caplog.at_level(logging.INFO):
+        repository_maintain(**kwargs)
+
+    message_list = caplog.records[0].msg.splitlines()
+    for text in logged_texts:
+        assert text in message_list
 
 
 def test_repository_info(monkeypatch):
@@ -111,27 +137,21 @@ def test_repository_info(monkeypatch):
     from aiida.backends.control import get_repository_info
 
     def mock_get_info(self, statistics=False, **kwargs):  # pylint: disable=unused-argument
-        text = 'Info from repo'
+        output = {'value': 42}
         if statistics:
-            text += ' with statistics'
-        return text
+            output['extra_value'] = 0
+        return output
 
-    RepositoryClass = get_manager().get_backend().get_repository().__class__  # pylint: disable=invalid-name
-    monkeypatch.setattr(RepositoryClass, 'get_info', mock_get_info)
+    RepoBackendClass = get_manager().get_backend().get_repository().__class__  # pylint: disable=invalid-name
+    monkeypatch.setattr(RepoBackendClass, 'get_info', mock_get_info)
 
     repository_info_out = get_repository_info()
-    assert 'Info from repo' in repository_info_out
+    assert 'value' in repository_info_out
+    assert 'extra_value' not in repository_info_out
+    assert repository_info_out['value'] == 42
 
     repository_info_out = get_repository_info(statistics=True)
-    assert 'with statistics' in repository_info_out
-
-
-def test_get_repository_report(monkeypatch):
-    """Test the ``get_repository_report`` method."""
-    from aiida.backends import control
-
-    monkeypatch.setattr(control, 'get_unreferenced_keyset', lambda **kwargs: set())
-
-    repository_report = control.get_repository_report()
-
-    assert 'Unreferenced files to delete' in repository_report
+    assert 'value' in repository_info_out
+    assert 'extra_value' in repository_info_out
+    assert repository_info_out['value'] == 42
+    assert repository_info_out['extra_value'] == 0

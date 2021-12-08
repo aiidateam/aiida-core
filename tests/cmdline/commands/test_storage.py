@@ -112,29 +112,43 @@ def tests_storage_maintain_full_dry(run_cli_command):
     assert '--full' in result.output.lower()
 
 
-def tests_storage_maintain_text(run_cli_command, monkeypatch):
+def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     """Test all the information and cases of the storage maintain command."""
+    import logging
+
     from aiida.backends import control
 
-    def reporter_mock(**kwargs):
-        return {'piece_of_data': 'data_value'}
+    def mock_maintain(**kwargs):
+        logmsg = 'Provided kwargs:\n'
+        for key, val in kwargs.items():
+            logmsg += f' > {key}: {val}\n'
+        logging.info(logmsg)
 
-    monkeypatch.setattr(control, 'get_repository_report', reporter_mock)
-    monkeypatch.setattr(control, 'repository_maintain', reporter_mock)
+    monkeypatch.setattr(control, 'repository_maintain', mock_maintain)
 
-    result = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
-    assert 'repository:' in result.output.lower()
-    assert 'piece_of_data' in result.output
-    assert 'data_value' in result.output
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
 
-    result = run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
-    assert 'no other process should be using the aiida profile' in result.output.lower()
-    assert 'finished' in result.output.lower()
-    assert 'piece_of_data' in result.output
-    assert 'data_value' in result.output
+    message_list = caplog.records[0].msg.splitlines()
+    assert ' > full: False' in message_list
+    assert ' > dry_run: False' in message_list
 
-    result = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
-    assert 'can be safely executed while still running aiida' in result.output.lower()
-    assert 'finished' in result.output.lower()
-    assert 'piece_of_data' in result.output
-    assert 'data_value' in result.output
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
+
+    message_list = caplog.records[1].msg.splitlines()
+    assert ' > full: False' in message_list
+    assert ' > dry_run: True' in message_list
+
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
+
+    message_list = caplog.records[2].msg.splitlines()
+    assert ' > full: True' in message_list
+    assert ' > dry_run: False' in message_list
+
+    with pytest.raises(AssertionError) as execinfo:
+        _ = run_cli_command(cmd_storage.storage_maintain, options=['--full', '--dry-run'])
+
+    error_message = str(execinfo.value)
+    assert 'cannot request both `--dry-run` and `--full` at the same time' in error_message

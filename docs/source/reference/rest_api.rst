@@ -1055,7 +1055,7 @@ Option 1: HTTPie
           "url_root": "http://localhost:5000/"
       }
 
-  The easiest way to construct the query json file is by using the :ref:`QueryBuilder <topics:database:advancedquery>`_ from AiiDA as we will demonstrate next.
+  The easiest way to construct the query json file is by using the :ref:`QueryBuilder <topics:database:advancedquery>` from AiiDA as we will demonstrate next.
   Open a ``verdi shell`` section:
 
   .. code-block :: console

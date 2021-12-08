@@ -108,19 +108,12 @@ def storage_info(statistics):
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
-    from aiida.backends.control import get_repository_report, repository_maintain
+    from aiida.backends.control import repository_maintain
 
     if dry_run and full:
         echo.echo_critical('You cannot request both `--dry-run` and `--full` at the same time.')
 
-    if dry_run:
-        maintainance_report = {'repository': get_repository_report()}
-        echo.echo('\nReport on storage maintainance status:\n')
-        echo.echo_dictionary(maintainance_report, sort_keys=False, fmt='yaml')
-        return
-
     if full:
-
         echo.echo_warning(
             '\nIn order to safely perform the full maintenance operations on the internal storage, no other '
             'process should be using the AiiDA profile being maintained. '
@@ -131,8 +124,7 @@ def storage_maintain(full, dry_run):
             '`verdi storage maintain`, without the `--full` flag.\n'
         )
 
-    else:
-
+    elif not dry_run:
         echo.echo(
             '\nThis command will perform all maintenance operations on the internal storage that can be safely '
             'executed while still running AiiDA. '
@@ -142,11 +134,9 @@ def storage_maintain(full, dry_run):
             '--full` for a more complete optimization.\n'
         )
 
-    if not click.confirm('Are you sure you want continue in this mode?'):
-        return
+    if not dry_run:
+        if not click.confirm('Are you sure you want continue in this mode?'):
+            return
 
-    maintainance_report = repository_maintain(full=full)
-    echo.echo('\nMaintainance procedures finished.')
-    if len(maintainance_report) > 0:
-        echo.echo('\nMaintainance report:\n')
-        echo.echo_dictionary(maintainance_report, sort_keys=False, fmt='yaml')
+    repository_maintain(full=full, dry_run=dry_run)
+    echo.echo('\nRequested maintainance procedures finished.')

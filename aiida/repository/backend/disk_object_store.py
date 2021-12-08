@@ -12,6 +12,8 @@ from .abstract import AbstractRepositoryBackend
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
+BYTES_TO_MB = 9.53674316E-7
+
 
 class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-object-store`` as the backend."""
@@ -119,9 +121,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return super().get_object_hash(key)
         return key
 
-    def maintain(  # pylint: disable=arguments-differ
+    def maintain(  # type: ignore # pylint: disable=arguments-differ,too-many-branches
         self,
-        full: bool = False,
+        dry_run: bool = False,
+        live: bool = True,
         override_pack_loose: bool = None,
         override_do_repack: bool = None,
         override_clean_storage: bool = None,
@@ -146,9 +149,20 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         DOSTORE_LOGGER = MAINTAIN_LOGGER.getChild('disk_object_store')  # pylint: disable=invalid-name
 
         pack_loose = True
-        do_repack = full
-        clean_storage = full
-        do_vacuum = full
+        do_repack = not live
+        clean_storage = not live
+        do_vacuum = not live
+
+        if live:
+            if override_do_repack or override_clean_storage or override_do_vacuum:
+                errmsg = 'a specifically resquest keyword cannot be applied while the profile is in use:\n'
+                if override_do_repack is not None:
+                    errmsg = ' > override_do_repack = {override_do_repack}\n'
+                if override_clean_storage is not None:
+                    errmsg = ' > override_clean_storage = {override_clean_storage}\n'
+                if override_do_vacuum is not None:
+                    errmsg = ' > override_do_vacuum = {override_do_vacuum}\n'
+                raise ValueError(errmsg)
 
         if override_pack_loose is not None:
             pack_loose = override_pack_loose
@@ -162,30 +176,40 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         if override_do_vacuum is not None:
             do_vacuum = override_do_vacuum
 
-        operation_results = {}
-
         if pack_loose:
-            DOSTORE_LOGGER.info('Packing all loose files ...')
-            self.container.pack_all_loose()
-            operation_results['packing'] = 'All loose files have been packed.'
+            files_numb = self.container.count_objects()['loose']
+            files_size = self.container.get_total_size()['total_size_loose'] * BYTES_TO_MB
+            if dry_run:
+                DOSTORE_LOGGER.report(f'Would pack all loose files ({files_numb} files occupying {files_size} MB) ...')
+            else:
+                DOSTORE_LOGGER.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
+                self.container.pack_all_loose()
 
         if do_repack:
-            DOSTORE_LOGGER.info('Re-packing all pack files ...')
-            self.container.repack()
-            operation_results['repacking'] = 'All pack files have been re-packed.'
+            files_numb = self.container.count_objects()['packed']
+            files_size = self.container.get_total_size()['total_size_packfiles_on_disk'] * BYTES_TO_MB
+            if dry_run:
+                DOSTORE_LOGGER.report(
+                    f'Would re-pack all pack files ({files_numb} files in packs, occupying {files_size} MB) ...'
+                )
+            else:
+                DOSTORE_LOGGER.report(
+                    f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...'
+                )
+                self.container.repack()
 
         if clean_storage:
-            DOSTORE_LOGGER.info(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
-            self.container.clean_storage(vacuum=do_vacuum)
-            operation_results['cleaning'] = f'The repository database has been cleaned (with `vacuum={do_vacuum}`).'
+            if dry_run:
+                DOSTORE_LOGGER.report(f'Would clean the repository database (with `vacuum={do_vacuum}`) ...')
+            else:
+                DOSTORE_LOGGER.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
+                self.container.clean_storage(vacuum=do_vacuum)
 
-        return operation_results
 
-    def get_info(  # pylint: disable=arguments-differ
+    def get_info(  # type: ignore # pylint: disable=arguments-differ
         self,
         statistics=False,
         ) -> dict:
-        bytes_to_mb = 9.53674316E-7
 
         output_info = {}
         output_info['SHA-hash algorithm'] = self.container.hash_type
@@ -204,8 +228,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             'packed': files_data['packed'],
         }
         output_info['Size (MB)'] = {  # type: ignore
-            'unpacked': size_data['total_size_loose'] * bytes_to_mb,
-            'packed': size_data['total_size_packfiles_on_disk'] * bytes_to_mb,
-            'other': size_data['total_size_packindexes_on_disk'] * bytes_to_mb,
+            'unpacked': size_data['total_size_loose'] * BYTES_TO_MB,
+            'packed': size_data['total_size_packfiles_on_disk'] * BYTES_TO_MB,
+            'other': size_data['total_size_packindexes_on_disk'] * BYTES_TO_MB,
         }
         return output_info

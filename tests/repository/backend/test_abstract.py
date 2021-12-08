@@ -49,6 +49,12 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def iter_object_streams(self, keys: List[str]):
         raise NotImplementedError
 
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+        raise NotImplementedError
+
 
 @pytest.fixture(scope='function')
 def repository():
@@ -132,19 +138,3 @@ def test_delete_objects_test(repository, monkeypatch):
         repository.delete_objects(['object_key'])
     assert 'exist' in str(execinfo.value)
     assert 'object_key' in str(execinfo.value)
-
-
-def test_default_methods(repository):
-    """Checks the behaviour of the default methods."""
-
-    with pytest.raises(NotImplementedError):
-        repository.get_info()
-
-    with pytest.raises(NotImplementedError):
-        repository.get_info(statistics=True)
-
-    with pytest.raises(NotImplementedError):
-        repository.maintain()
-
-    with pytest.raises(NotImplementedError):
-        repository.maintain(full=True)

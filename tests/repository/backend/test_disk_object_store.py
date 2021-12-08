@@ -33,12 +33,12 @@ def populated_repository(repository):
     content = BytesIO(b'Packed file number 2')
     repository.put_object_from_filelike(content)
 
-    repository.maintain(full=True)
+    repository.maintain(live=False)
 
     content = BytesIO(b'Packed file number 3 (also loose)')
     repository.put_object_from_filelike(content)
 
-    repository.maintain(full=False)
+    repository.maintain(live=True)
 
     content = BytesIO(b'Unpacked file')
     repository.put_object_from_filelike(content)
@@ -240,62 +240,47 @@ def test_get_info(populated_repository):
 
 
 #yapf: disable
-@pytest.mark.parametrize(('kwargs', 'output_keys', 'output_info'), (
+@pytest.mark.parametrize(('kwargs', 'output_info'), (
     (
-        {'full': False},
-        ['packing'],
+        {'live': True},
         {'unpacked': 2, 'packed': 4}
     ),
     (
-        {'full': True},
-        ['packing', 'repacking', 'cleaning'],
+        {'live': False},
         {'unpacked': 0, 'packed': 4}
     ),
     (
-        {'full': True, 'override_do_vacuum': False},
-        ['packing', 'repacking', 'cleaning'],
+        {'live': False, 'override_do_vacuum': False},
         {'unpacked': 0, 'packed': 4}
     ),
     (
         {
-            'full': True,
+            'live': False,
             'override_pack_loose': False,
             'override_do_repack': False,
             'override_clean_storage': False,
             'override_do_vacuum': False,
         },
-        [],
         {'unpacked': 2, 'packed': 3}
     ),
 ))
 # yapf: enable
-def test_maintain(populated_repository, kwargs, output_keys, output_info):
+def test_maintain(populated_repository, kwargs, output_info):
     """Test the ``maintain`` method."""
-    maintainance_info = populated_repository.maintain(**kwargs)
-    print(maintainance_info)
-    assert len(maintainance_info) == len(output_keys)
-    for keyword in output_keys:
-        assert keyword in maintainance_info
-
-    repository_info = populated_repository.get_info(statistics=True)
-    assert repository_info['Objects']['unpacked'] == output_info['unpacked']
-    assert repository_info['Objects']['packed'] == output_info['packed']
+    populated_repository.maintain(**kwargs)
+    file_info = populated_repository.container.count_objects()
+    assert file_info['loose'] == output_info['unpacked']
+    assert file_info['packed'] == output_info['packed']
 
 
 @pytest.mark.parametrize('do_vacuum', [True, False])
 def test_maintain_logging(caplog, populated_repository, do_vacuum):
     """Test the logging of the ``maintain`` method."""
-    import logging
-
-    from aiida.backends.control import MAINTAIN_LOGGER
-
-    MAINTAIN_LOGGER.setLevel(logging.INFO)
-    maintainance_info = populated_repository.maintain(full=True, override_do_vacuum=do_vacuum)
-    assert len(maintainance_info) == 3
+    populated_repository.maintain(live=False, override_do_vacuum=do_vacuum)
 
     list_of_logmsg = []
     for record in caplog.records:
-        assert record.levelname == 'INFO'
+        assert record.levelname == 'REPORT'
         assert record.name == 'aiida.maintain.disk_object_store'
         list_of_logmsg.append(record.msg)
 
@@ -307,3 +292,17 @@ def test_maintain_logging(caplog, populated_repository, do_vacuum):
         assert 'vacuum=true' in list_of_logmsg[2].lower()
     else:
         assert 'vacuum=false' in list_of_logmsg[2].lower()
+
+
+#yapf: disable
+@pytest.mark.parametrize('kwargs', [
+    {'override_do_repack': True},
+    {'override_clean_storage': True},
+    {'override_do_vacuum': True}
+])
+# yapf: enable
+def test_maintain_live_overload(populated_repository, kwargs):
+    """Test the ``maintain`` method."""
+
+    with pytest.raises(ValueError):
+        populated_repository.maintain(live=True, **kwargs)

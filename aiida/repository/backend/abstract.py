@@ -119,22 +119,30 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return: An iterable for all the available object keys.
         """
 
-    def get_info(self, statistics=False, **kwargs) -> dict:  # pylint: disable=unused-argument,no-self-use
+    @abc.abstractmethod
+    def get_info(self, statistics: bool = False, **kwargs) -> dict:
         """Returns relevant information about the content of the repository.
+
+        :param statistics:
+            flag to enable extra information (statistics=False by default, only returns basic information).
 
         :return: a dictionary with the information.
         """
-        raise NotImplementedError
 
-    def maintain(self, full: bool = False, **kwargs) -> dict:  # pylint: disable=unused-argument,no-self-use
+    @abc.abstractmethod
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         """Performs maintenance operations.
 
-        :param full:
-            a flag to perform operations that require to stop using the maintained profile.
-        :return:
-            a dictionary with information on the operations performed.
+        :param dry_run:
+            flag to only run
+
+        :param live:
+            flag to indicate to the backend whether AiiDA is live or not (i.e. if the profile of the
+            backend is currently being used/accessed). The backend is expected then to only allow (and
+            thus set by default) the operations that are safe to perform in this state.
+
+        :return: None
         """
-        raise NotImplementedError
 
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:

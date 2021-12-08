@@ -23,26 +23,27 @@ __all__ = ('MAINTAIN_LOGGER',)
 MAINTAIN_LOGGER = AIIDA_LOGGER.getChild('maintain')
 
 
-def repository_maintain(full: bool = False, backend: Optional[Backend] = None, **kwargs) -> dict:
+def repository_maintain(
+    full: bool = False,
+    dry_run: bool = False,
+    backend: Optional[Backend] = None,
+    **kwargs,
+) -> dict:
     """Performs maintenance tasks on the repository."""
-    maintainance_report = {'database': {}, 'repository': {}}  # type: ignore
 
     if backend is None:
         backend = get_manager().get_backend()
     repository = backend.get_repository()
 
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
-    MAINTAIN_LOGGER.info('Deleting unreferenced objects ...')
-    repository.delete_objects(list(unreferenced_objects))
-    maintainance_report['repository']['unreferenced'] = {'deleted_files': len(unreferenced_objects)}
-    # Perform the maintainance operations in the repository
-    MAINTAIN_LOGGER.info('Performing repository-specific maintenance ...')
-    try:
-        maintainance_report['repository']['maintain'] = repository.maintain(full=full, **kwargs)
-    except NotImplementedError:
-        maintainance_report['repository']['maintain'] = {}
+    if dry_run:
+        MAINTAIN_LOGGER.info(f'Would delete {len(unreferenced_objects)} unreferenced objects ...')
+    else:
+        MAINTAIN_LOGGER.info(f'Deleting {len(unreferenced_objects)} unreferenced objects ...')
+        repository.delete_objects(list(unreferenced_objects))
 
-    return maintainance_report
+    MAINTAIN_LOGGER.info('Starting repository-specific operations ...')
+    repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
 
 def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optional[Backend] = None) -> Set[str]:
@@ -76,22 +77,4 @@ def get_repository_info(statistics: bool = False, backend: Optional[Backend] = N
     if backend is None:
         backend = get_manager().get_backend()
     repository = backend.get_repository()
-
-    try:
-        output_info = repository.get_info(statistics)
-    except NotImplementedError:
-        output_info = {}
-
-    return output_info
-
-
-def get_repository_report(backend: Optional[Backend] = None) -> dict:
-    """Returns information specifically related to the maintenance needs of the repository."""
-    if backend is None:
-        backend = get_manager().get_backend()
-
-    report_items = {}
-    unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
-    report_items['Unreferenced files to delete'] = len(unreferenced_objects)
-
-    return report_items
+    return repository.get_info(statistics)

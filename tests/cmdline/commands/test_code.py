@@ -166,7 +166,7 @@ def test_noninteractive_container(run_cli_command, aiida_localhost, non_interact
     ct = 'sarus'
     options = [
         '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--on-container', f'--container-tech={ct}', '--sarus-params=params', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+        '--on-container', f'--container-tech={ct}', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_container_code(label), ContainerCode)

@@ -101,13 +101,55 @@ CONTAINER_TECH = OverridableOption(
     help='container tech.'
 )
 
-SARUS_PARAMS = OverridableOption(
+SARUS_CMD_PARAMS = OverridableOption(
     '--sarus-params',
     prompt='sarus params',
+    default='{sarus_exec} run --mount=src={source_dir},dst={dist_dir},type=bind  --workdir {workdir} {image}',
     required_fn=is_on_sarus,
     prompt_fn=is_on_sarus,
     cls=InteractiveOption,
     help='sarus params.'
+)
+
+SARUS_EXEC = OverridableOption(
+    '--sarus-exec',
+    prompt='sarus executable path',
+    default='/usr/bin/sarus',
+    required_fn=is_on_sarus,
+    prompt_fn=is_on_sarus,
+    type=types.AbsolutePathParamType(dir_okay=False),
+    cls=InteractiveOption,
+    help='sarus executable path.'
+)
+
+MOUNT_SOURCE_DIR = OverridableOption(
+    '--mount-source-dir',
+    prompt='sarus bind source dir',
+    default='${PWD}',
+    required_fn=is_on_sarus,
+    prompt_fn=is_on_sarus,
+    cls=InteractiveOption,
+    help='sarus bind source dir.'
+)
+
+MOUNT_DIST_DIR = OverridableOption(
+    '--mount-dist-dir',
+    prompt='sarus bind dist dir',
+    default='/workdir',
+    required_fn=is_on_sarus,
+    prompt_fn=is_on_sarus,
+    cls=InteractiveOption,
+    help='sarus bind dist dir.'
+)
+
+WORK_DIR = OverridableOption(
+    '--work-dir',
+    prompt='sarus work dir',
+    default='/workdir',
+    required_fn=is_on_sarus,
+    prompt_fn=is_on_sarus,
+    cls=InteractiveOption,
+    help='sarus workdir dir.'
 )
 
 ON_COMPUTER = OverridableOption(

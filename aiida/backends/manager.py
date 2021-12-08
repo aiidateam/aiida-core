@@ -33,14 +33,14 @@ TEMPLATE_INVALID_SCHEMA_GENERATION = """
 Database schema generation `{schema_generation_database}` is incompatible with the required schema generation `{schema_generation_code}`.
 To migrate the database schema generation to the current one, run the following command:
 
-    verdi -p {profile_name} database migrate
+    verdi -p {profile_name} storage migrate
 """
 
 TEMPLATE_INVALID_SCHEMA_VERSION = """
 Database schema version `{schema_version_database}` is incompatible with the required schema version `{schema_version_code}`.
 To migrate the database schema version to the current one, run the following command:
 
-    verdi -p {profile_name} database migrate
+    verdi -p {profile_name} storage migrate
 """
 
 TEMPLATE_MIGRATE_SCHEMA_VERSION_INVALID_VERSION = """
@@ -92,6 +92,13 @@ class SettingsManager:
 
         :param key: the key identifying the setting
         :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+
+    @abc.abstractmethod
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
         """
 
 

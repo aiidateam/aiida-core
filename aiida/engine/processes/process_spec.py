@@ -118,7 +118,7 @@ class CalcJobProcessSpec(ProcessSpec):
 
         if valid_type_port is not valid_type_required:
             raise ValueError(
-                f'the valid type of a default output has to be a {valid_type_port} but it is {valid_type_required}'
+                f'the valid type of a default output has to be a {valid_type_required} but it is {valid_type_port}'
             )
 
         self._default_output_node = port_name

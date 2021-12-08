@@ -318,4 +318,4 @@ This makes it possible for users to simply ``pip install aiida-myplugin``.
 .. _ghactions: https://github.com/features/actions
 .. _registry: https://github.com/aiidateam/aiida-registry
 .. _pypi: https://pypi.python.org
-.. _packaging: https://packaging.python.org/tutorials/packaging-projects/
+.. _packaging: https://packaging.python.org/en/latest/tutorials/packaging-projects/

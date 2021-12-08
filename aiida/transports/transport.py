@@ -140,17 +140,17 @@ class Transport(abc.ABC):
     def is_open(self):
         return self._is_open
 
+    @abc.abstractmethod
     def open(self):
         """
         Opens a local transport channel
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def close(self):
         """
         Closes the local transport channel
         """
-        raise NotImplementedError
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {str(self)}>'
@@ -257,6 +257,7 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
+    @abc.abstractmethod
     def chdir(self, path):
         """
         Change directory to 'path'
@@ -266,8 +267,7 @@ class Transport(abc.ABC):
         :rtype: str
         """
 
-        raise NotImplementedError
-
+    @abc.abstractmethod
     def chmod(self, path, mode):
         """
         Change permissions of a path.
@@ -275,8 +275,8 @@ class Transport(abc.ABC):
         :param str path: path to file
         :param int mode: new permissions
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def chown(self, path, uid, gid):
         """
         Change the owner (uid) and group (gid) of a file.
@@ -288,8 +288,8 @@ class Transport(abc.ABC):
         :param int uid: new owner's uid
         :param int gid: new group id
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
         """
         Copy a file or a directory from remote source to remote destination
@@ -304,8 +304,8 @@ class Transport(abc.ABC):
 
         :raises: IOError, if one of src or dst does not exist
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def copyfile(self, remotesource, remotedestination, dereference=False):
         """
         Copy a file from remote source to remote destination
@@ -318,8 +318,8 @@ class Transport(abc.ABC):
 
         :raises IOError: if one of src or dst does not exist
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def copytree(self, remotesource, remotedestination, dereference=False):
         """
         Copy a folder from remote source to remote destination
@@ -332,7 +332,6 @@ class Transport(abc.ABC):
 
         :raise IOError: if one of src or dst does not exist
         """
-        raise NotImplementedError
 
     def copy_from_remote_to_remote(self, transportdestination, remotesource, remotedestination, **kwargs):
         """
@@ -384,6 +383,7 @@ class Transport(abc.ABC):
             for filename in sandbox.get_content_list():
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
+    @abc.abstractmethod
     def _exec_command_internal(self, command, **kwargs):
         """
         Execute the command on the shell, similarly to os.system.
@@ -398,8 +398,8 @@ class Transport(abc.ABC):
         :return: stdin, stdout, stderr and the session, when this exists \
                  (can be None).
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
         """
         Execute the command on the shell, waits for it to finish,
@@ -413,7 +413,6 @@ class Transport(abc.ABC):
         :param stdin: (optional,default=None) can be a string or a file-like object.
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
-        raise NotImplementedError
 
     def exec_command_wait(self, command, stdin=None, encoding='utf-8', **kwargs):
         """
@@ -439,6 +438,7 @@ class Transport(abc.ABC):
         # Return the decoded strings
         return (retval, stdout_bytes.decode(encoding), stderr_bytes.decode(encoding))
 
+    @abc.abstractmethod
     def get(self, remotepath, localpath, *args, **kwargs):
         """
         Retrieve a file or folder from remote source to local destination
@@ -447,8 +447,8 @@ class Transport(abc.ABC):
         :param remotepath: (str) remote_folder_path
         :param localpath: (str) local_folder_path
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """
         Retrieve a file from remote source to local destination
@@ -457,8 +457,8 @@ class Transport(abc.ABC):
         :param str remotepath: remote_folder_path
         :param str localpath: local_folder_path
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def gettree(self, remotepath, localpath, *args, **kwargs):
         """
         Retrieve a folder recursively from remote source to local destination
@@ -467,16 +467,16 @@ class Transport(abc.ABC):
         :param str remotepath: remote_folder_path
         :param str localpath: local_folder_path
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def getcwd(self):
         """
         Get working directory
 
         :return: a string identifying the current working directory
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def get_attribute(self, path):
         """
         Return an object FixedFieldsAttributeDict for file in a given path,
@@ -498,7 +498,6 @@ class Transport(abc.ABC):
         :param str path: path to file
         :return: object FixedFieldsAttributeDict
         """
-        raise NotImplementedError
 
     def get_mode(self, path):
         """
@@ -511,6 +510,7 @@ class Transport(abc.ABC):
 
         return stat.S_IMODE(self.get_attribute(path).st_mode)
 
+    @abc.abstractmethod
     def isdir(self, path):
         """
         True if path is an existing directory.
@@ -518,8 +518,8 @@ class Transport(abc.ABC):
         :param str path: path to directory
         :return: boolean
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def isfile(self, path):
         """
         Return True if path is an existing file.
@@ -527,8 +527,8 @@ class Transport(abc.ABC):
         :param str path: path to file
         :return: boolean
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def listdir(self, path='.', pattern=None):
         """
         Return a list of the names of the entries in the given path.
@@ -540,7 +540,6 @@ class Transport(abc.ABC):
                             filters in Unix style. Unix only.
         :return: a list of strings
         """
-        raise NotImplementedError
 
     def listdir_withattributes(self, path='.', pattern=None):  # pylint: disable=unused-argument
         """
@@ -573,6 +572,7 @@ class Transport(abc.ABC):
             retlist.append({'name': file_name, 'attributes': attributes, 'isdir': self.isdir(filepath)})
         return retlist
 
+    @abc.abstractmethod
     def makedirs(self, path, ignore_existing=False):
         """
         Super-mkdir; create a leaf directory and all intermediate ones.
@@ -585,8 +585,8 @@ class Transport(abc.ABC):
 
         :raises: OSError, if directory at path already exists
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def mkdir(self, path, ignore_existing=False):
         """
         Create a folder (directory) named path.
@@ -597,8 +597,8 @@ class Transport(abc.ABC):
 
         :raises: OSError, if directory at path already exists
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def normalize(self, path='.'):
         """
         Return the normalized path (on the server) of a given path.
@@ -609,8 +609,8 @@ class Transport(abc.ABC):
 
         :raise IOError: if the path can't be resolved on the server
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def put(self, localpath, remotepath, *args, **kwargs):
         """
         Put a file or a directory from local src to remote dst.
@@ -620,8 +620,8 @@ class Transport(abc.ABC):
         :param str localpath: absolute path to local source
         :param str remotepath: path to remote destination
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def putfile(self, localpath, remotepath, *args, **kwargs):
         """
         Put a file from local src to remote dst.
@@ -630,8 +630,8 @@ class Transport(abc.ABC):
         :param str localpath: absolute path to local file
         :param str remotepath: path to remote file
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def puttree(self, localpath, remotepath, *args, **kwargs):
         """
         Put a folder recursively from local src to remote dst.
@@ -640,8 +640,8 @@ class Transport(abc.ABC):
         :param str localpath: absolute path to local folder
         :param str remotepath: path to remote folder
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def remove(self, path):
         """
         Remove the file at the given path. This only works on files;
@@ -651,8 +651,8 @@ class Transport(abc.ABC):
 
         :raise IOError: if the path is a directory
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def rename(self, oldpath, newpath):
         """
         Rename a file or folder from oldpath to newpath.
@@ -663,8 +663,8 @@ class Transport(abc.ABC):
         :raises IOError: if oldpath/newpath is not found
         :raises ValueError: if oldpath/newpath is not a valid string
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def rmdir(self, path):
         """
         Remove the folder named path.
@@ -672,16 +672,16 @@ class Transport(abc.ABC):
 
         :param str path: absolute path to the folder to remove
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def rmtree(self, path):
         """
         Remove recursively the content at path
 
         :param str path: absolute path to remove
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def gotocomputer_command(self, remotedir):
         """
         Return a string to be run using os.system in order to connect
@@ -695,8 +695,8 @@ class Transport(abc.ABC):
 
         :param str remotedir: the full path of the remote directory
         """
-        raise NotImplementedError
 
+    @abc.abstractmethod
     def symlink(self, remotesource, remotedestination):
         """
         Create a symbolic link between the remote source and the remote
@@ -705,7 +705,6 @@ class Transport(abc.ABC):
         :param remotesource: remote source
         :param remotedestination: remote destination
         """
-        raise NotImplementedError
 
     def whoami(self):
         """
@@ -728,11 +727,11 @@ class Transport(abc.ABC):
         self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
         raise IOError(f'Error while executing whoami. Exit code: {retval}')
 
+    @abc.abstractmethod
     def path_exists(self, path):
         """
         Returns True if path exists, False otherwise.
         """
-        raise NotImplementedError
 
     # The following definitions are almost copied and pasted
     # from the python module glob.

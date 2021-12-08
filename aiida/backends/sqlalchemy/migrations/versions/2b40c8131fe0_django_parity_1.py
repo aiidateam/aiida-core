@@ -18,7 +18,7 @@ Create Date: 2021-08-24 18:52:45.882712
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid

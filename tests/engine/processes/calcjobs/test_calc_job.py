@@ -260,10 +260,10 @@ def test_container_code(aiida_local_code_factory, file_regression):
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
-    sarus_cmd_tmpl = '{sarus_exec} run --mount=src={source_dir},dst={dist_dir},type=bind  --workdir {workdir}'
+    cmd_tmpl = '{sarus_exec} run --mount=src={source_dir},dst={dist_dir},type=bind  --workdir {workdir}'
     code = ContainerCode(computer=computer, 
-                         sarus_cmd_tmpl=sarus_cmd_tmpl,
-                         sarus_cmd_params_dict={
+                         cmd_tmpl=cmd_tmpl,
+                         cmd_params_dict={
                              'sarus_exec': '/bin/sarus',
                              'source_dir': '$PWD',
                              'dist_dir': '/workdir',

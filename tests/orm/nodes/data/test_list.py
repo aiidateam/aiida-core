@@ -71,7 +71,7 @@ def test_store_load(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_special_methods(listing):
     """Test the special methods of the ``List`` class."""
-    node = List(list=listing)
+    node = List(listing)
 
     # __getitem__
     for i, value in enumerate(listing):
@@ -91,11 +91,19 @@ def test_special_methods(listing):
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_equality(listing):
-    """Test that two ``List`` nodes with equal content compare equal."""
-    node1 = List(list=listing)
-    node2 = List(list=listing)
+    """Test equality comparison for ``List`` nodes."""
+    different_list = ['I', 'am', 'different']
+    node = List(listing)
+    different_node = List(different_list)
+    clone = List(listing)
 
-    assert node1 == node2
+    # Test equality comparison with Python base type
+    assert node == listing
+    assert node != different_list
+
+    # Test equality comparison with other `BaseType` nodes
+    assert node == clone
+    assert node != different_node
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -114,7 +122,7 @@ def test_append(listing):
     node.store()
     do_checks(node)
 
-    node = List(list=listing)
+    node = List(listing)
     node.append('more')
     assert node[-1] == 'more'
 
@@ -145,7 +153,7 @@ def test_extend(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_insert(listing):
     """Test the ``List.insert()`` method."""
-    node = List(list=listing)
+    node = List(listing)
     node.insert(1, 'new')
     assert node[1] == 'new'
     assert len(node) == 4
@@ -154,7 +162,7 @@ def test_insert(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_remove(listing):
     """Test the ``List.remove()`` method."""
-    node = List(list=listing)
+    node = List(listing)
     node.remove(1)
     listing.remove(1)
     assert node.get_list() == listing
@@ -166,7 +174,7 @@ def test_remove(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_pop(listing):
     """Test the ``List.pop()`` method."""
-    node = List(list=listing)
+    node = List(listing)
     node.pop()
     assert node.get_list() == listing[:-1]
 
@@ -174,7 +182,7 @@ def test_pop(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_index(listing):
     """Test the ``List.index()`` method."""
-    node = List(list=listing)
+    node = List(listing)
 
     assert node.index(True) == listing.index(True)
 
@@ -182,7 +190,7 @@ def test_index(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_count(listing):
     """Test the ``List.count()`` method."""
-    node = List(list=listing)
+    node = List(listing)
     for value in listing:
         assert node.count(value) == listing.count(value)
 
@@ -190,12 +198,12 @@ def test_count(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_sort(listing, int_listing):
     """Test the ``List.sort()`` method."""
-    node = List(list=int_listing)
+    node = List(int_listing)
     node.sort()
     int_listing.sort()
     assert node.get_list() == int_listing
 
-    node = List(list=listing)
+    node = List(listing)
     with pytest.raises(TypeError, match=r"'<' not supported between instances of 'int' and 'str'"):
         node.sort()
 
@@ -203,7 +211,7 @@ def test_sort(listing, int_listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_reverse(listing):
     """Test the ``List.reverse()`` method."""
-    node = List(list=listing)
+    node = List(listing)
     node.reverse()
     listing.reverse()
     assert node.get_list() == listing
@@ -212,5 +220,5 @@ def test_reverse(listing):
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_initialise_with_list_kwarg(listing):
     """Test that the ``List`` node can be initialized with the ``list`` keyword argument for backwards compatibility."""
-    node = List(list=listing)
+    node = List(listing)
     assert node.get_list() == listing

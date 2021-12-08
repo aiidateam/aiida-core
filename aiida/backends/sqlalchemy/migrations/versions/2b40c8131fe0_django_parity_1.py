@@ -25,7 +25,7 @@ from aiida.common.utils import get_new_uuid
 
 # revision identifiers, used by Alembic.
 revision = '2b40c8131fe0'
-down_revision = '535039300e4a'
+down_revision = '34a831f4286d'
 branch_labels = None
 depends_on = None
 

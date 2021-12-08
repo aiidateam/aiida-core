@@ -101,14 +101,14 @@ CONTAINER_TECH = OverridableOption(
     help='container tech.'
 )
 
-SARUS_CMD_PARAMS = OverridableOption(
-    '--sarus-params',
-    prompt='sarus params',
+SARUS_CMD_TMPL = OverridableOption(
+    '--sarus-cmd-tmlp',
+    prompt='sarus params tmpl',
     default='{sarus_exec} run --mount=src={source_dir},dst={dist_dir},type=bind  --workdir {workdir} {image}',
     required_fn=is_on_sarus,
     prompt_fn=is_on_sarus,
     cls=InteractiveOption,
-    help='sarus params.'
+    help='sarus tmpl.'
 )
 
 SARUS_EXEC = OverridableOption(

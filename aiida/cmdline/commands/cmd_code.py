@@ -66,7 +66,7 @@ def set_code_builder(ctx, param, value):
 @verdi_code.command('setup')
 @options_code.ON_CONTAINER()
 @options_code.CONTAINER_TECH()
-@options_code.SARUS_PARAMS()
+@options_code.SARUS_CMD_TMPL()
 # @options_code.SIGULARITY_PARAMS()
 @options_code.IMAGE()
 @options_code.ON_COMPUTER()

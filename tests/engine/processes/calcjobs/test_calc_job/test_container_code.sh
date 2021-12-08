@@ -8,4 +8,4 @@
 #SBATCH --ntasks-per-node=128
 
 
-'sarus' 'tmp_params' 'cscs/qe-mpich' '/usr/bin/pw.x'   
+'/bin/sarus run --mount=src=$PWD,dst=/workdir,type=bind  --workdir /workdir' 'cscs/qe-mpich' '/usr/bin/pw.x'   

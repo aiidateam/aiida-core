@@ -26,11 +26,18 @@ class ContainerCode(Code):
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, computer=None, container_cmd_params=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs):
+    def __init__(self, 
+                computer=None, 
+                sarus_cmd_tmpl=None,
+                sarus_cmd_params_dict=None,
+                image=None,
+                container_exec_path=None,
+                input_plugin_name=None, **kwargs):
         super().__init__(**kwargs)
 
         # do some check of parameters
-
+        
+        container_cmd_params = sarus_cmd_tmpl.format(**sarus_cmd_params_dict)
         self.set_container_exec(computer, container_cmd_params, image, container_exec_path)
 
         if input_plugin_name:

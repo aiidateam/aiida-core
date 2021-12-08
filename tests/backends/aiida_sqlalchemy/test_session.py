@@ -1,4 +1,4 @@
-# # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # ###########################################################################
 # # Copyright (c), The AiiDA team. All rights reserved.                     #
 # # This file is part of the AiiDA code.                                    #
@@ -15,7 +15,6 @@
 # import aiida.backends
 # from aiida.backends.utils import create_scoped_session_factory
 # from aiida.manage.manager import get_manager
-
 
 # class TestSessionSqla:
 #     """The following tests check that the session works as expected in some
@@ -187,12 +186,10 @@
 #         custom_session.commit()
 #         assert node.attributes == dbnode_reloaded.attributes
 
-
 # def check_attrs_match(name, dbnode_original, dbnode_reloaded):
 #     original_attr = getattr(dbnode_original, name)
 #     reloaded_attr = getattr(dbnode_reloaded, name)
 #     assert original_attr == reloaded_attr, f"Values of '{name}' don't match ({original_attr} != {reloaded_attr})"
-
 
 # def do_value_checks(session, dbnode_original, dbnode_reloaded, attr_name, original, changed):
 #     """Run the value check"""

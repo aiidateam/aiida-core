@@ -117,8 +117,8 @@ class TestManager:
     def has_profile_open(self):
         return self._manager and self._manager.has_profile_open()
 
-    def reset_db(self):
-        return self._manager.reset_db()
+    def reset_db(self, with_user=True):
+        return self._manager.reset_db(with_user=with_user)
 
     def destroy_all(self):
         if self._manager:
@@ -166,12 +166,12 @@ class ProfileManager:
             self._test_case = SqlAlchemyTests()
             self._test_case.test_session = get_scoped_session()
 
-    def reset_db(self):
+    def reset_db(self, with_user=True):
         self._test_case.clean_db()  # will drop all users
         manager.reset_manager()
-        self.init_db()
+        self.init_db(with_user=with_user)
 
-    def init_db(self):
+    def init_db(self, with_user=True):
         """Initialise the database state for running of tests.
 
         Adds default user if necessary.
@@ -179,7 +179,7 @@ class ProfileManager:
         from aiida.cmdline.commands.cmd_user import set_default_user
         from aiida.orm import User
 
-        if not User.objects.get_default():
+        if with_user and not User.objects.get_default():
             user_dict = get_user_dict(_DEFAULT_PROFILE_INFO)
             try:
                 user = User(**user_dict)

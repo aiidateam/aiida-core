@@ -139,7 +139,7 @@ simplejson==3.17.6
 six==1.16.0
 snowballstemmer==2.2.0
 soupsieve==2.3.1
-spglib==1.16.2
+spglib==1.16.1
 Sphinx==3.2.1
 sphinx-copybutton==0.3.3
 sphinx-notfound-page==0.8

@@ -147,7 +147,6 @@ class TestSessionSqla:
         self.backend.nodes.create(node_type='', user=user).store()
         self.drop_connection()
 
-    @pytest.mark.skip(reason='This test is causing the subsequent migrations to hang')
     def test_node_access_with_sessions(self):
         """This checks that changes to a node from a different session (e.g. different interpreter,
         or the daemon) are immediately reflected on the AiiDA node when read directly e.g. a change
@@ -160,34 +159,37 @@ class TestSessionSqla:
         session = sessionmaker(bind=sa.ENGINE, future=True)
         custom_session = session()
 
-        user = self.backend.users.create(email='test@localhost').store()
-        node = self.backend.nodes.create(node_type='', user=user).store()
-        master_session = node.dbmodel.session
-        assert master_session is not custom_session
+        try:
+            user = self.backend.users.create(email='test@localhost').store()
+            node = self.backend.nodes.create(node_type='', user=user).store()
+            master_session = node.dbmodel.session
+            assert master_session is not custom_session
 
-        # Manually load the DbNode in a different session
-        dbnode_reloaded = custom_session.get(sa.models.node.DbNode, node.id)
+            # Manually load the DbNode in a different session
+            dbnode_reloaded = custom_session.get(sa.models.node.DbNode, node.id)
 
-        # Now, go through one by one changing the possible attributes (of the model)
-        # and check that they're updated when the user reads them from the aiida node
+            # Now, go through one by one changing the possible attributes (of the model)
+            # and check that they're updated when the user reads them from the aiida node
 
-        for str_attr in ['label', 'description']:
-            do_value_checks(custom_session, node, dbnode_reloaded, str_attr, 'original', 'changed')
+            for str_attr in ['label', 'description']:
+                do_value_checks(custom_session, node, dbnode_reloaded, str_attr, 'original', 'changed')
 
-        for str_attr in ['ctime', 'mtime']:
-            do_value_checks(custom_session, node, dbnode_reloaded, str_attr, timezone.now(), timezone.now())
+            for str_attr in ['ctime', 'mtime']:
+                do_value_checks(custom_session, node, dbnode_reloaded, str_attr, timezone.now(), timezone.now())
 
-        # Attributes
-        assert node.attributes == dbnode_reloaded.attributes
-        dbnode_reloaded.attributes['test_attrs'] = 'Boo!'
-        custom_session.commit()
-        assert node.attributes == dbnode_reloaded.attributes
+            # Attributes
+            assert node.attributes == dbnode_reloaded.attributes
+            dbnode_reloaded.attributes['test_attrs'] = 'Boo!'
+            custom_session.commit()
+            assert node.attributes == dbnode_reloaded.attributes
 
-        # Extras
-        assert node.extras == dbnode_reloaded.extras
-        dbnode_reloaded.extras['test_extras'] = 'Boo!'
-        custom_session.commit()
-        assert node.attributes == dbnode_reloaded.attributes
+            # Extras
+            assert node.extras == dbnode_reloaded.extras
+            dbnode_reloaded.extras['test_extras'] = 'Boo!'
+            custom_session.commit()
+            assert node.attributes == dbnode_reloaded.attributes
+        finally:
+            custom_session.close()
 
 
 def check_attrs_match(name, dbnode_original, dbnode_reloaded):

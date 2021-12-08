@@ -89,8 +89,8 @@ def storage_info(statistics):
     from aiida.orm import QueryBuilder
 
     data = {
-        'database': get_database_summary(QueryBuilder, statistics).
-        'repository': get_repository_info(statistics=statistics)
+        'database': get_database_summary(QueryBuilder, statistics),
+        'repository': get_repository_info(statistics=statistics),
     }
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
@@ -105,14 +105,12 @@ def storage_info(statistics):
 @click.option(
     '--dry-run',
     is_flag=True,
-    help='Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
+    help=
+    'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
     from aiida.backends.control import repository_maintain
-
-    if dry_run and full:
-        echo.echo_critical('You cannot request both `--dry-run` and `--full` at the same time.')
 
     if full:
         echo.echo_warning(
@@ -125,7 +123,7 @@ def storage_maintain(full, dry_run):
             '`verdi storage maintain`, without the `--full` flag.\n'
         )
 
-    elif not dry_run:
+    else:
         echo.echo(
             '\nThis command will perform all maintenance operations on the internal storage that can be safely '
             'executed while still running AiiDA. '

@@ -105,13 +105,6 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     assert 'passed error message' in result.output
 
 
-def tests_storage_maintain_full_dry(run_cli_command):
-    """Test that ``verdi storage migrate`` detects the cancelling of the interactive prompt."""
-    result = run_cli_command(cmd_storage.storage_maintain, options=['--full', '--dry-run'], raises=True)
-    assert '--dry-run' in result.output.lower()
-    assert '--full' in result.output.lower()
-
-
 def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     """Test all the information and cases of the storage maintain command."""
     import logging
@@ -141,14 +134,8 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     assert ' > dry_run: True' in message_list
 
     with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
+        run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
 
     message_list = caplog.records[2].msg.splitlines()
     assert ' > full: True' in message_list
     assert ' > dry_run: False' in message_list
-
-    with pytest.raises(AssertionError) as execinfo:
-        _ = run_cli_command(cmd_storage.storage_maintain, options=['--full', '--dry-run'])
-
-    error_message = str(execinfo.value)
-    assert 'cannot request both `--dry-run` and `--full` at the same time' in error_message

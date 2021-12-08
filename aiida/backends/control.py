@@ -28,18 +28,26 @@ def repository_maintain(
     dry_run: bool = False,
     backend: Optional[Backend] = None,
     **kwargs,
-) -> dict:
-    """Performs maintenance tasks on the repository."""
+) -> None:
+    """Performs maintenance tasks on the repository.
+
+        :param full:
+            flag to perform operations that require to stop using the maintained profile.
+
+        :param dry_run:
+            flag to only print the actions that would be taken without actually executing them.
+
+        :param backend:
+            specific backend in which to apply the maintenance (defaults to current profile).
+    """
 
     if backend is None:
         backend = get_manager().get_backend()
     repository = backend.get_repository()
 
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
-    if dry_run:
-        MAINTAIN_LOGGER.info(f'Would delete {len(unreferenced_objects)} unreferenced objects ...')
-    else:
-        MAINTAIN_LOGGER.info(f'Deleting {len(unreferenced_objects)} unreferenced objects ...')
+    MAINTAIN_LOGGER.info(f'Deleting {len(unreferenced_objects)} unreferenced objects ...')
+    if not dry_run:
         repository.delete_objects(list(unreferenced_objects))
 
     MAINTAIN_LOGGER.info('Starting repository-specific operations ...')
@@ -50,6 +58,16 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
     """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
     This should be all the soft-deleted files.
+
+        :param check_consistency:
+            toggle for a check that raises if there are references in the database with no actual object in the
+            underlying repository.
+
+        :param aiida_backend:
+            specific backend in which to apply the operation (defaults to current profile).
+
+        :return:
+            a set with all the objects in the underlying repository that are not referenced in the database.
     """
     from aiida import orm
     MAINTAIN_LOGGER.info('Obtaining unreferenced object keys ...')
@@ -59,17 +77,17 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
 
     repository = aiida_backend.get_repository()
 
-    keyset_backend = set(repository.list_objects())
-    keyset_aiidadb = set(orm.Node.objects(aiida_backend).iter_repo_keys())
+    keyset_repository = set(repository.list_objects())
+    keyset_database = set(orm.Node.objects(aiida_backend).iter_repo_keys())
 
     if check_consistency:
-        keyset_missing = keyset_aiidadb - keyset_backend
+        keyset_missing = keyset_database - keyset_repository
         if len(keyset_missing) > 0:
             raise RuntimeError(
                 'There are objects referenced in the database that are not present in the repository. Aborting!'
             )
 
-    return keyset_backend - keyset_aiidadb
+    return keyset_repository - keyset_database
 
 
 def get_repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:

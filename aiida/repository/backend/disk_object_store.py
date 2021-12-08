@@ -12,7 +12,7 @@ from .abstract import AbstractRepositoryBackend
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
-BYTES_TO_MB = 1 / 1024 ** 2
+BYTES_TO_MB = 1 / 1024**2
 
 
 class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
@@ -125,15 +125,15 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         self,
         dry_run: bool = False,
         live: bool = True,
-        override_pack_loose: bool = None,
-        override_do_repack: bool = None,
-        override_clean_storage: bool = None,
-        override_do_vacuum: bool = None,
+        pack_loose: bool = None,
+        do_repack: bool = None,
+        clean_storage: bool = None,
+        do_vacuum: bool = None,
     ) -> dict:
         """Performs maintenance operations.
 
         :param full:
-            a flag to perform operations that require to stop using the maintained profile.
+            flag to perform operations that require to stop using the maintained profile.
         :param override_pack_loose:
             override flag for forcing the packing of loose files.
         :param override_do_repack:
@@ -148,60 +148,41 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         from aiida.backends.control import MAINTAIN_LOGGER
         DOSTORE_LOGGER = MAINTAIN_LOGGER.getChild('disk_object_store')  # pylint: disable=invalid-name
 
-        pack_loose = True
-        do_repack = not live
-        clean_storage = not live
-        do_vacuum = not live
+        if live and (do_repack or clean_storage or do_vacuum):
+            overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
+            keys = ', '.join([key for key, override in overrides if override is True])  # type: ignore
+            raise ValueError(f'The following overrides were enabled but cannot be if `live=True`: {keys}')
 
-        if live and (override_do_repack or override_clean_storage or override_do_vacuum):
-                errmsg = 'a specifically resquest keyword cannot be applied while the profile is in use:\n'
-                if override_do_repack is not None:
-                    errmsg = ' > override_do_repack = {override_do_repack}\n'
-                if override_clean_storage is not None:
-                    errmsg = ' > override_clean_storage = {override_clean_storage}\n'
-                if override_do_vacuum is not None:
-                    errmsg = ' > override_do_vacuum = {override_do_vacuum}\n'
-                raise ValueError(errmsg)
+        pack_loose = True if pack_loose is None else pack_loose
 
-        if override_pack_loose is not None:
-            pack_loose = override_pack_loose
-
-        if override_do_repack is not None:
-            do_repack = override_do_repack
-
-        if override_clean_storage is not None:
-            clean_storage = override_clean_storage
-
-        if override_do_vacuum is not None:
-            do_vacuum = override_do_vacuum
+        if live:
+            do_repack = False
+            clean_storage = False
+            do_vacuum = False
+        else:
+            do_repack = True if do_repack is None else do_repack
+            clean_storage = True if clean_storage is None else clean_storage
+            do_vacuum = True if do_vacuum is None else do_vacuum
 
         if pack_loose:
             files_numb = self.container.count_objects()['loose']
             files_size = self.container.get_total_size()['total_size_loose'] * BYTES_TO_MB
-            if dry_run:
-                DOSTORE_LOGGER.report(f'Would pack all loose files ({files_numb} files occupying {files_size} MB) ...')
-            else:
-                DOSTORE_LOGGER.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
+            DOSTORE_LOGGER.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
+            if not dry_run:
                 self.container.pack_all_loose()
 
         if do_repack:
             files_numb = self.container.count_objects()['packed']
             files_size = self.container.get_total_size()['total_size_packfiles_on_disk'] * BYTES_TO_MB
-            if dry_run:
-                DOSTORE_LOGGER.report(
-                    f'Would re-pack all pack files ({files_numb} files in packs, occupying {files_size} MB) ...'
-                )
-            else:
-                DOSTORE_LOGGER.report(
-                    f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...'
-                )
+            DOSTORE_LOGGER.report(
+                f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...'
+            )
+            if not dry_run:
                 self.container.repack()
 
         if clean_storage:
-            if dry_run:
-                DOSTORE_LOGGER.report(f'Would clean the repository database (with `vacuum={do_vacuum}`) ...')
-            else:
-                DOSTORE_LOGGER.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
+            DOSTORE_LOGGER.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
+            if not dry_run:
                 self.container.clean_storage(vacuum=do_vacuum)
 
 

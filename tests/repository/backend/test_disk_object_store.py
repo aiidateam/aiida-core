@@ -250,16 +250,16 @@ def test_get_info(populated_repository):
         {'unpacked': 0, 'packed': 4}
     ),
     (
-        {'live': False, 'override_do_vacuum': False},
+        {'live': False, 'do_vacuum': False},
         {'unpacked': 0, 'packed': 4}
     ),
     (
         {
             'live': False,
-            'override_pack_loose': False,
-            'override_do_repack': False,
-            'override_clean_storage': False,
-            'override_do_vacuum': False,
+            'pack_loose': False,
+            'do_repack': False,
+            'clean_storage': False,
+            'do_vacuum': False,
         },
         {'unpacked': 2, 'packed': 3}
     ),
@@ -276,7 +276,7 @@ def test_maintain(populated_repository, kwargs, output_info):
 @pytest.mark.parametrize('do_vacuum', [True, False])
 def test_maintain_logging(caplog, populated_repository, do_vacuum):
     """Test the logging of the ``maintain`` method."""
-    populated_repository.maintain(live=False, override_do_vacuum=do_vacuum)
+    populated_repository.maintain(live=False, do_vacuum=do_vacuum)
 
     list_of_logmsg = []
     for record in caplog.records:
@@ -294,13 +294,7 @@ def test_maintain_logging(caplog, populated_repository, do_vacuum):
         assert 'vacuum=false' in list_of_logmsg[2].lower()
 
 
-#yapf: disable
-@pytest.mark.parametrize('kwargs', [
-    {'override_do_repack': True},
-    {'override_clean_storage': True},
-    {'override_do_vacuum': True}
-])
-# yapf: enable
+@pytest.mark.parametrize('kwargs', [{'do_repack': True}, {'clean_storage': True}, {'do_vacuum': True}])
 def test_maintain_live_overload(populated_repository, kwargs):
     """Test the ``maintain`` method."""
 

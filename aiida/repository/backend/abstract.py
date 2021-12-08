@@ -134,14 +134,12 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """Performs maintenance operations.
 
         :param dry_run:
-            flag to only run
+            flag to only print the actions that would be taken without actually executing them.
 
         :param live:
             flag to indicate to the backend whether AiiDA is live or not (i.e. if the profile of the
             backend is currently being used/accessed). The backend is expected then to only allow (and
             thus set by default) the operations that are safe to perform in this state.
-
-        :return: None
         """
 
     @contextlib.contextmanager

@@ -32,7 +32,12 @@ class ProfileParamType(LabelStringType):
         """Attempt to match the given value to a valid profile."""
         from aiida.common import extendeddicts
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import get_config, load_profile, Profile
+        from aiida.manage.configuration import Profile, get_config, load_profile
+
+        # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
+        # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
+        if isinstance(value, Profile):
+            return value
 
         value = super().convert(value, param, ctx)
 

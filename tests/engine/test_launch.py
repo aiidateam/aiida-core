@@ -13,7 +13,7 @@ import pytest
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
-from aiida.engine import launch, Process, CalcJob, WorkChain, calcfunction
+from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
 
 
 @calcfunction
@@ -156,6 +156,7 @@ class TestLaunchersDryRun(AiidaTestCase):
     def tearDown(self):
         import os
         import shutil
+
         from aiida.common.folders import CALC_JOB_DRY_RUN_BASE_PATH
 
         super().tearDown()

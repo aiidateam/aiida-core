@@ -399,4 +399,4 @@ In particular:
 .. _unittest: https://docs.python.org/library/unittest.html
 .. _fixture: https://docs.pytest.org/en/latest/fixture.html
 .. _click: https://click.palletsprojects.com/
-.. _Entry points: https://packaging.python.org/guides/creating-and-discovering-plugins/
+.. _Entry points: https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/

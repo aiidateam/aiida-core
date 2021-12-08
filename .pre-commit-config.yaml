@@ -20,6 +20,11 @@ repos:
     -   id: check-yaml
 
 
+-   repo: https://github.com/pycqa/isort
+    rev: 5.9.3
+    hooks:
+    - id: isort
+
 -   repo: https://github.com/ikamensh/flynt/
     rev: '0.66'
     hooks:
@@ -70,8 +75,28 @@ repos:
                 aiida/manage/manager.py|
                 aiida/manage/database/delete/nodes.py|
                 aiida/orm/querybuilder.py|
+                aiida/orm/implementation/entities.py|
+                aiida/orm/implementation/backends.py|
+                aiida/orm/implementation/authinfos.py|
+                aiida/orm/implementation/comments.py|
+                aiida/orm/implementation/computers.py|
+                aiida/orm/implementation/groups.py|
+                aiida/orm/implementation/logs.py|
+                aiida/orm/implementation/nodes.py|
+                aiida/orm/implementation/users.py|
+                aiida/orm/implementation/sql/backends.py|
+                aiida/orm/implementation/django/backend.py|
+                aiida/orm/implementation/sqlalchemy/backend.py|
                 aiida/orm/implementation/querybuilder.py|
                 aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
+                aiida/orm/entities.py|
+                aiida/orm/authinfos.py|
+                aiida/orm/comments.py|
+                aiida/orm/computers.py|
+                aiida/orm/groups.py|
+                aiida/orm/logs.py|
+                aiida/orm/users.py|
+                aiida/orm/nodes/data/enum.py|
                 aiida/orm/nodes/data/jsonable.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
@@ -80,9 +105,7 @@ repos:
                 aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
-                aiida/tools/importexport/archive/.*py|
-                aiida/tools/importexport/dbexport/__init__.py|
-                aiida/tools/importexport/dbimport/backends/.*.py|
+                aiida/tools/archive/.*py|
             )$
 
     -   id: pylint

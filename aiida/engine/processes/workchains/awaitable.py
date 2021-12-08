@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Union
 
 from plumpy.utils import AttributesDict
+
 from aiida.orm import ProcessNode
 
 __all__ = ('Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable')

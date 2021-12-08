@@ -8,18 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
-
-import typing
+from typing import Generic, Set, TypeVar
 
 from django.db.models import Model  # pylint: disable=import-error, no-name-in-module
 
 from aiida.common.lang import type_check
+
 from . import utils
 
-ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
+ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
 
 
-class DjangoModelEntity(typing.Generic[ModelType]):
+class DjangoModelEntity(Generic[ModelType]):
     """A mixin that adds some common Django backend entity methods"""
 
     MODEL_CLASS = None
@@ -93,3 +93,7 @@ class DjangoModelEntity(typing.Generic[ModelType]):
         """
         self._dbmodel.save()
         return self
+
+    def _flush_if_stored(self, fields: Set[str]) -> None:
+        if self._dbmodel.is_saved():
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access

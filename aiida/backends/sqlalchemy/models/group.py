@@ -11,11 +11,10 @@
 """Module to manage computers for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import Column, Table, UniqueConstraint, Index
-from sqlalchemy.types import Integer, String, DateTime, Text
-
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import Column, Index, Table, UniqueConstraint
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
@@ -32,8 +31,20 @@ table_groups_nodes = Table(  # pylint: disable=invalid-name
 )
 
 
+class DbGroupNode(Base):
+    """Database model to store group-to-nodes relations."""
+    __tablename__ = table_groups_nodes.name
+    __table__ = table_groups_nodes
+
+
 class DbGroup(Base):
-    """Class to store groups using SQLA backend."""
+    """Database model to store groups of nodes.
+
+    Users will typically identify and handle groups by using their ``label``
+    (which, unlike the ``labels`` in other models, must be unique).
+    Groups also have a ``type``, which serves to identify what plugin is being instanced,
+    and the ``extras`` property for users to set any relevant information.
+    """
 
     __tablename__ = 'db_dbgroup'
 

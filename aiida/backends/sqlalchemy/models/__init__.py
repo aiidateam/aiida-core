@@ -9,6 +9,7 @@
 ###########################################################################
 """Module to define the database models for the SqlAlchemy backend."""
 import sqlalchemy as sa
+from sqlalchemy.orm import mapper
 
 # SqlAlchemy does not set default values for table columns upon construction of a new instance, but will only do so
 # when storing the instance. Any attributes that do not have a value but have a defined default, will be populated with
@@ -34,4 +35,4 @@ def instant_defaults_listener(target, _, __):
                 setattr(target, key, column.default.arg)
 
 
-sa.event.listen(sa.orm.mapper, 'init', instant_defaults_listener)
+sa.event.listen(mapper, 'init', instant_defaults_listener)

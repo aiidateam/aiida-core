@@ -11,10 +11,10 @@
 """Module to manage logs for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, String, Text
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common import timezone
@@ -22,14 +22,14 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbLog(Base):
-    """Class to store logs using SQLA backend."""
+    """Database model to store log levels and messages relating to a process node."""
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    loggername = Column(String(255), default='', index=True, nullable=False)
-    levelname = Column(String(255), default='', index=True, nullable=False)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
+    time = Column(DateTime(timezone=True), default=timezone.now)
+    loggername = Column(String(255), index=True, doc='What process recorded the message')
+    levelname = Column(String(255), index=True, doc='How critical the message is')
     dbnode_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
     )

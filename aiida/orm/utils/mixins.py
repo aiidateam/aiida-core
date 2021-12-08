@@ -13,8 +13,7 @@ import io
 import tempfile
 
 from aiida.common import exceptions
-from aiida.common.lang import override
-from aiida.common.lang import classproperty
+from aiida.common.lang import classproperty, override
 
 
 class FunctionCalculationMixin:

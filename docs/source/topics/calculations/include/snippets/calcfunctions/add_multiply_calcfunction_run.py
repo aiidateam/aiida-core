@@ -2,6 +2,7 @@
 from aiida.engine import calcfunction, run, run_get_node, run_get_pk
 from aiida.orm import Int
 
+
 @calcfunction
 def add(x, y):
     return x + y

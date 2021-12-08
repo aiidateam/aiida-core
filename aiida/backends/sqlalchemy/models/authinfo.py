@@ -11,16 +11,21 @@
 """Module to manage authentification information for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column, UniqueConstraint
-from sqlalchemy.types import Integer, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import Boolean, Integer
 
 from .base import Base
 
 
 class DbAuthInfo(Base):
-    """Class that keeps the authernification data."""
+    """Database model to keep computer authentication data, per user.
+
+    Specifications are user-specific of how to submit jobs in the computer.
+    The model also has an ``enabled`` logical switch that indicates whether the device is available for use or not.
+    This last one can be set and unset by the user.
+    """
     __tablename__ = 'db_dbauthinfo'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
@@ -45,8 +50,8 @@ class DbAuthInfo(Base):
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 
     def __init__(self, *args, **kwargs):
-        self._metadata = dict()
-        self.auth_params = dict()
+        self._metadata = {}
+        self.auth_params = {}
         super().__init__(*args, **kwargs)
 
     def __str__(self):

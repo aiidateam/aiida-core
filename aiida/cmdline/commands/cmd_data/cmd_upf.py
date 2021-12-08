@@ -10,11 +10,12 @@
 """`verdi data upf` command."""
 
 import os
+
 import click
 
 from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 

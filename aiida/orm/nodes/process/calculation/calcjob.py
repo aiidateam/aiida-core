@@ -9,8 +9,7 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 import datetime
-from typing import Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -62,7 +61,7 @@ class CalcJobNode(CalculationNode):
 
         :return: CalculationTools instance
         """
-        from aiida.plugins.entry_point import is_valid_entry_point_string, get_entry_point_from_string, load_entry_point
+        from aiida.plugins.entry_point import get_entry_point_from_string, is_valid_entry_point_string, load_entry_point
         from aiida.tools.calculations import CalculationTools
 
         if self._tools is None:

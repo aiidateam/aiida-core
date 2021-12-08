@@ -14,21 +14,50 @@ WARNING: Changing the representation of things here may break people's current s
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
 for new types though.
 """
+from enum import Enum
 from functools import partial
-import yaml
 
-from plumpy import Bundle
+from plumpy import Bundle, get_object_loader
 from plumpy.utils import AttributesFrozendict
+import yaml
 
 from aiida import orm
 from aiida.common import AttributeDict
 
+_ENUM_TAG = '!enum'
 _NODE_TAG = '!aiida_node'
 _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
 _PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
 _PLUMPY_BUNDLE = '!plumpy:bundle'
+
+
+def represent_enum(dumper, enum):
+    """Represent an arbitrary enum in yaml.
+
+    :param dumper: the dumper to use.
+    :type dumper: :class:`yaml.dumper.Dumper`
+    :param bundle: the bundle to represent
+    :return: the representation
+    """
+    loader = get_object_loader()
+    return dumper.represent_scalar(_ENUM_TAG, f'{loader.identify_object(enum)}|{enum.value}')
+
+
+def enum_constructor(loader, serialized):
+    """Construct an enum from the serialized representation.
+
+    :param loader: the yaml loader.
+    :type loader: :class:`yaml.loader.Loader`
+    :param bundle: the enum representation.
+    :return: the enum.
+    """
+    deserialized = loader.construct_scalar(serialized)
+    identifier, value = deserialized.split('|')
+    cls = get_object_loader().load_object(identifier)
+    enum = cls(value)
+    return enum
 
 
 def represent_node(dumper, node):
@@ -184,6 +213,7 @@ class AiiDALoader(yaml.Loader):
     """
 
 
+yaml.add_representer(Enum, represent_enum, Dumper=AiiDADumper)
 yaml.add_representer(Bundle, represent_bundle, Dumper=AiiDADumper)
 yaml.add_representer(AttributeDict, partial(represent_mapping, _ATTRIBUTE_DICT_TAG), Dumper=AiiDADumper)
 yaml.add_constructor(_ATTRIBUTE_DICT_TAG, partial(mapping_constructor, AttributeDict), Loader=AiiDALoader)
@@ -197,6 +227,7 @@ yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)
 
 
 def serialize(data, encoding=None):

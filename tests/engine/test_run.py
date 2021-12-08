@@ -12,8 +12,7 @@ import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import run, run_get_node
-from aiida.orm import Int, Str, ProcessNode
-
+from aiida.orm import Int, ProcessNode, Str
 from tests.utils.processes import DummyProcess
 
 

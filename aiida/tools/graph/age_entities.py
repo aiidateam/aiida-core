@@ -225,17 +225,6 @@ class AiidaEntitySet(AbstractSetContainer):
         """Class of nodes contained in the entity set (node or group)"""
         return self._aiida_cls
 
-    def get_entities(self):
-        """Iterator that returns the AiiDA entities"""
-        for entity, in orm.QueryBuilder().append(
-            self._aiida_cls, project='*', filters={
-                self._identifier: {
-                    'in': self.keyset
-                }
-            }
-        ).iterall():
-            yield entity
-
 
 class DirectedEdgeSet(AbstractSetContainer):
     """Extension of AbstractSetContainer
@@ -460,14 +449,14 @@ class Basket():
 
     def get_template(self):
         """Create new nasket with the same defining attributes for its internal containers."""
-        new_dict = dict()
+        new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.get_template()
         return Basket(**new_dict)
 
     def copy(self):
         """Create new instance with the same defining attributes and content."""
-        new_dict = dict()
+        new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.copy()
         return Basket(**new_dict)

@@ -11,22 +11,35 @@
 """Module to manage nodes for the SQLA backend."""
 
 from sqlalchemy import ForeignKey, text
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index
-from sqlalchemy.types import Integer, String, DateTime, Text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import Column
+from sqlalchemy.sql.schema import Index
+from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
 
 class DbNode(Base):
-    """Class to store nodes using SQLA backend."""
+    """Database model to store nodes.
+
+    Each node can be categorized according to its ``node_type``,
+    which indicates what kind of data or process node it is.
+    Additionally, process nodes also have a ``process_type`` that further indicates what is the specific plugin it uses.
+
+    Nodes can also store two kind of properties:
+
+    - ``attributes`` are determined by the ``node_type``,
+      and are set before storing the node and can't be modified afterwards.
+    - ``extras``, on the other hand,
+      can be added and removed after the node has been stored and are usually set by the user.
+
+    """
 
     __tablename__ = 'db_dbnode'
 
@@ -109,10 +122,10 @@ class DbNode(Base):
             self.mtime = None
 
         if self.attributes is None:
-            self.attributes = dict()
+            self.attributes = {}
 
         if self.extras is None:
-            self.extras = dict()
+            self.extras = {}
 
     @property
     def outputs(self):
@@ -156,7 +169,14 @@ class DbNode(Base):
 
 
 class DbLink(Base):
-    """Class to store links between nodes using SQLA backend."""
+    """Database model to store links between nodes.
+
+    Each entry in this table contains not only the ``id`` information of the two nodes that are linked,
+    but also some extra properties of the link themselves.
+    This includes the ``type`` of the link (see the :ref:`topics:provenance:concepts` section for all possible types)
+    as well as a ``label`` which is more specific and typically determined by
+    the procedure generating the process node that links the data nodes.
+    """
 
     __tablename__ = 'db_dblink'
 
@@ -166,8 +186,9 @@ class DbLink(Base):
         Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), index=True
     )
 
-    input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id')
-    output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id')
+    # https://docs.sqlalchemy.org/en/14/errors.html#relationship-x-will-copy-column-q-to-column-p-which-conflicts-with-relationship-s-y
+    input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id', overlaps='inputs_q,outputs_q')
+    output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id', overlaps='inputs_q,outputs_q')
 
     label = Column(String(255), index=True, nullable=False)
     type = Column(String(255), index=True, nullable=False)

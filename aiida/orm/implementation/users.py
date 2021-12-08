@@ -10,99 +10,83 @@
 """Backend user"""
 import abc
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
 
 __all__ = ('BackendUser', 'BackendUserCollection')
 
 
 class BackendUser(BackendEntity):
+    """Backend implementation for the `User` ORM class.
+
+    A user can be assigned as the creator of a variety of other entities.
     """
-    This is the base class for User information in AiiDA.  An implementing
-    backend needs to provide a concrete version.
-    """
-    # pylint: disable=invalid-name
 
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-
-    @property
-    def uuid(self):
-        """
-        For now users do not have UUIDs so always return false
-
-        :return: None
-        """
-        return None
-
-    @property
+    @property  # type: ignore[misc]
     @abc.abstractmethod
-    def email(self):
+    def email(self) -> str:
         """
         Get the email address of the user
 
         :return: the email address
         """
 
-    @email.setter
+    @email.setter  # type: ignore[misc]
     @abc.abstractmethod
-    def email(self, val):
+    def email(self, val: str) -> None:
         """
         Set the email address of the user
 
         :param val: the new email address
         """
 
-    @property
+    @property  # type: ignore[misc]
     @abc.abstractmethod
-    def first_name(self):
+    def first_name(self) -> str:
         """
         Get the user's first name
 
         :return: the first name
-        :rtype: str
         """
 
-    @first_name.setter
+    @first_name.setter  # type: ignore[misc]
     @abc.abstractmethod
-    def first_name(self, val):
+    def first_name(self, val: str) -> None:
         """
         Set the user's first name
 
         :param val: the new first name
         """
 
-    @property
+    @property  # type: ignore[misc]
     @abc.abstractmethod
-    def last_name(self):
+    def last_name(self) -> str:
         """
         Get the user's last name
 
         :return: the last name
-        :rtype: str
         """
 
-    @last_name.setter
+    @last_name.setter  # type: ignore[misc]
     @abc.abstractmethod
-    def last_name(self, val):
+    def last_name(self, val: str) -> None:
         """
         Set the user's last name
 
         :param val: the new last name
-        :type val: str
         """
 
-    @property
+    @property  # type: ignore[misc]
     @abc.abstractmethod
-    def institution(self):
+    def institution(self) -> str:
         """
         Get the user's institution
 
         :return: the institution
-        :rtype: str
         """
 
-    @institution.setter
+    @institution.setter  # type: ignore[misc]
     @abc.abstractmethod
-    def institution(self, val):
+    def institution(self, val: str) -> None:
         """
         Set the user's institution
 

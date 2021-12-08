@@ -19,6 +19,7 @@ def run_migrations_online():
 
     # pylint: disable=unused-import
     from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+    from aiida.backends.sqlalchemy.models.base import Base
     from aiida.backends.sqlalchemy.models.comment import DbComment
     from aiida.backends.sqlalchemy.models.computer import DbComputer
     from aiida.backends.sqlalchemy.models.group import DbGroup
@@ -27,7 +28,6 @@ def run_migrations_online():
     from aiida.backends.sqlalchemy.models.settings import DbSetting
     from aiida.backends.sqlalchemy.models.user import DbUser
     from aiida.common.exceptions import DbContentError
-    from aiida.backends.sqlalchemy.models.base import Base
     config = context.config  # pylint: disable=no-member
 
     connection = config.attributes.get('connection', None)

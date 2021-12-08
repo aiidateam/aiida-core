@@ -22,29 +22,38 @@ when instantiated by the user.
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
 from typing import (
-    Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple, Type, Union, TYPE_CHECKING, cast
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
 )
 import warnings
 
 from aiida.manage.manager import get_manager
+from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
-    BackendQueryBuilder, EntityTypes, EntityRelationships, PathItemType, QueryDictType, GROUP_ENTITY_TYPE_PREFIX
+    GROUP_ENTITY_TYPE_PREFIX,
+    BackendQueryBuilder,
+    EntityRelationships,
+    PathItemType,
+    QueryDictType,
 )
 
-from . import authinfos
-from . import comments
-from . import computers
-from . import groups
-from . import logs
-from . import nodes
-from . import users
-from . import entities
-from . import convert
+from . import authinfos, comments, computers, convert, entities, groups, logs, nodes, users
 
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
-    from aiida.orm.implementation import Backend
     from aiida.engine import Process
+    from aiida.orm.implementation import Backend
 
 __all__ = ('QueryBuilder',)
 
@@ -127,8 +136,8 @@ class QueryBuilder:
         :param distinct: Whether to return de-duplicated rows
 
         """
-        backend = backend or get_manager().get_backend()
-        self._impl: BackendQueryBuilder = backend.query()
+        self._backend = backend or get_manager().get_backend()
+        self._impl: BackendQueryBuilder = self._backend.query()
 
         # SERIALISABLE ATTRIBUTES
         # A list storing the path being traversed by the query
@@ -180,6 +189,11 @@ class QueryBuilder:
         if order_by:
             self.order_by(order_by)
 
+    @property
+    def backend(self) -> 'Backend':
+        """Return the backend used by the QueryBuilder."""
+        return self._backend
+
     def as_dict(self, copy: bool = True) -> QueryDictType:
         """Convert to a JSON serialisable dictionary representation of the query."""
         data: QueryDictType = {
@@ -216,7 +230,7 @@ class QueryBuilder:
 
     def __deepcopy__(self, memo) -> 'QueryBuilder':
         """Create deep copy of the instance."""
-        return type(self)(**self.as_dict())  # type: ignore
+        return type(self)(backend=self.backend, **self.as_dict())  # type: ignore
 
     def get_used_tags(self, vertices: bool = True, edges: bool = True) -> List[str]:
         """Returns a list of all the vertices that are being used.
@@ -1189,7 +1203,9 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> Tuple[EntityTypes, Classifier]
         classifiers = Classifier(cls.class_node_type)  # type: ignore[union-attr]
         ormclass = EntityTypes.NODE
     elif issubclass(cls, groups.Group):
-        classifiers = Classifier(GROUP_ENTITY_TYPE_PREFIX + cls._type_string)  # type: ignore[union-attr]
+        type_string = cls._type_string
+        assert type_string is not None, 'Group not registered as entry point'
+        classifiers = Classifier(GROUP_ENTITY_TYPE_PREFIX + type_string)
         ormclass = EntityTypes.GROUP
     elif issubclass(cls, computers.Computer):
         classifiers = Classifier('computer')
@@ -1238,12 +1254,15 @@ def _get_ormclass_from_str(type_string: str) -> Tuple[EntityTypes, Classifier]:
     if type_string_lower.startswith(GROUP_ENTITY_TYPE_PREFIX):
         classifiers = Classifier('group.core')
         ormclass = EntityTypes.GROUP
-    elif type_string_lower == 'computer':
+    elif type_string_lower == EntityTypes.COMPUTER.value:
         classifiers = Classifier('computer')
         ormclass = EntityTypes.COMPUTER
-    elif type_string_lower == 'user':
+    elif type_string_lower == EntityTypes.USER.value:
         classifiers = Classifier('user')
         ormclass = EntityTypes.USER
+    elif type_string_lower == EntityTypes.LINK.value:
+        classifiers = Classifier('link')
+        ormclass = EntityTypes.LINK
     else:
         # At this point, we assume it is a node. The only valid type string then is a string
         # that matches exactly the _plugin_type_string of a node class
@@ -1263,8 +1282,8 @@ def _get_node_type_filter(classifiers: Classifier, subclassing: bool) -> dict:
 
     :returns: dictionary in QueryBuilder filter language to pass into {"type": ... }
     """
-    from aiida.orm.utils.node import get_query_type_from_type_string
     from aiida.common.escaping import escape_for_sql_like
+    from aiida.orm.utils.node import get_query_type_from_type_string
     value = classifiers.ormclass_type_string
 
     if not subclassing:
@@ -1399,7 +1418,7 @@ class _QueryTagMap:
         if isinstance(tag_or_cls, str):
             if tag_or_cls in self:
                 return tag_or_cls
-            raise ValueError(f'Tag {tag_or_cls} is not among my known tags: {list(self)}')
+            raise ValueError(f'Tag {tag_or_cls!r} is not among my known tags: {list(self)}')
         if self._cls_to_tag_map.get(tag_or_cls, None):
             if len(self._cls_to_tag_map[tag_or_cls]) != 1:
                 raise ValueError(

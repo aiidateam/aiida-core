@@ -16,7 +16,7 @@ profiles can be selected at hook-up (-p flag).
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params.options import HOSTNAME, PORT, DEBUG
+from aiida.cmdline.params.options import DEBUG, HOSTNAME, PORT
 from aiida.restapi.common import config
 
 
@@ -54,6 +54,7 @@ def restapi(hostname, port, config_dir, debug, wsgi_profile, posting):
         verdi -p <profile_name> restapi --hostname 127.0.0.5 --port 6789
     """
     from aiida.restapi.run_api import run_api
+
     # Invoke the runner
     run_api(
         hostname=hostname,

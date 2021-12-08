@@ -128,15 +128,6 @@ class Profile:  # pylint: disable=too-many-public-methods
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))
 
-    def get_repository(self) -> 'Repository':
-        """Return the repository configured for this profile."""
-        from disk_objectstore import Container
-        from aiida.repository import Repository
-        from aiida.repository.backend import DiskObjectStoreRepositoryBackend
-        container = Container(self.repository_path / 'container')
-        backend = DiskObjectStoreRepositoryBackend(container=container)
-        return Repository(backend=backend)
-
     @property
     def uuid(self):
         """Return the profile uuid.

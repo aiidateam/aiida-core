@@ -11,7 +11,8 @@
 import enum
 import functools
 import traceback
-from typing import Any, Optional, List, Sequence, Set, Tuple
+from typing import Any, List, Optional, Sequence, Set, Tuple
+from warnings import warn
 
 # importlib.metadata was introduced into the standard library in python 3.8,
 # but was then updated in python 3.10 to use an improved API.
@@ -19,9 +20,10 @@ from typing import Any, Optional, List, Sequence, Set, Tuple
 from importlib_metadata import EntryPoint, EntryPoints
 from importlib_metadata import entry_points as _eps
 
-from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
+from aiida.common.warnings import AiidaDeprecationWarning
 
-__all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
+__all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
@@ -70,6 +72,21 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
     'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',
+}
+
+DEPRECATED_ENTRY_POINTS_MAPPING = {
+    'aiida.calculations': ['arithmetic.add', 'templatereplacer'],
+    'aiida.data': [
+        'array', 'array.bands', 'array.kpoints', 'array.projection', 'array.trajectory', 'array.xy', 'base', 'bool',
+        'cif', 'code', 'dict', 'float', 'folder', 'int', 'list', 'numeric', 'orbital', 'remote', 'remote.stash',
+        'remote.stash.folder', 'singlefile', 'str', 'structure', 'upf'
+    ],
+    'aiida.tools.dbimporters': ['cod', 'icsd', 'materialsproject', 'mpds', 'mpod', 'nninc', 'oqmd', 'pcod', 'tcod'],
+    'aiida.tools.data.orbitals': ['orbital', 'realhydrogen'],
+    'aiida.parsers': ['arithmetic.add', 'templatereplacer.doubler'],
+    'aiida.schedulers': ['direct', 'lsf', 'pbspro', 'sge', 'slurm', 'torque'],
+    'aiida.transports': ['local', 'ssh'],
+    'aiida.workflows': ['arithmetic.multiply_add', 'arithmetic.add_multiply'],
 }
 
 
@@ -260,12 +277,41 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     :raises aiida.common.MissingEntryPointError: entry point was not registered
 
     """
+    # The next line should be removed for ``aiida-core==3.0`` when the old deprecated entry points are fully removed.
+    name = convert_potentially_deprecated_entry_point(group, name)
     found = eps().select(group=group, name=name)
     if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
     if len(found.names) > 1:
         raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
     return found[name]
+
+
+def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
+    """Check whether the specified entry point is deprecated, in which case print warning and convert to new name.
+
+    For `aiida-core==2.0` all existing entry points where properly prefixed with ``core.`` and the old entry points were
+    deprecated. To provide a smooth transition these deprecated entry points are detected in ``get_entry_point``, which
+    is the lowest function that tries to resolve an entry point string, by calling this function.
+
+    If the entry point corresponds to a deprecated one, a warning is raised and the new corresponding entry point name
+    is returned.
+
+    This method should be removed in ``aiida-core==3.0``.
+    """
+    try:
+        deprecated_entry_points = DEPRECATED_ENTRY_POINTS_MAPPING[group]
+    except KeyError:
+        return name
+    else:
+        if name in deprecated_entry_points:
+            warn(
+                f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.',
+                AiidaDeprecationWarning
+            )
+            name = f'core.{name}'
+
+        return name
 
 
 @functools.lru_cache(maxsize=100)

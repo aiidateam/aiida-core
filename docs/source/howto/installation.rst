@@ -79,18 +79,39 @@ Configuring your installation
 Activating tab-completion
 -------------------------
 The ``verdi`` command line interface has many commands and parameters, which can be tab-completed to simplify its use.
-To enable tab-completion, the following shell command should be executed:
+To enable tab-completion, the following shell command should be executed (depending on the shell you use):
 
-.. code:: bash
+.. panels::
+    :container: container-lg pb-3
+    :column: col-lg-12 p-2
 
-    $ eval "$(_VERDI_COMPLETE=source verdi)"
+    Enable tab-completion for ``verdi`` one of the following supported shells
+
+    .. tabbed:: bash
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=bash_source verdi)"
+
+    .. tabbed:: zsh
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=zsh_source verdi)"
+
+    .. tabbed:: fish
+
+        .. code-block:: console
+
+            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.
 This file is shell specific, but likely one of the following:
 
     * the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
     * the `activators <https://virtualenv.pypa.io/en/latest/user_guide.html#activators>`_ of your virtual environment
-    * a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+    * a `startup file <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
 
 
 .. important::
@@ -314,7 +335,35 @@ Tuning performance
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
 However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
-Here are a few general tips that might improve the AiiDA performance:
+
+Here are a few tips for tuning AiiDA performance:
+
+
+    .. dropdown:: Increase the number of daemon workers
+
+        By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
+        If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, you can use ``verdi daemon incr X`` to add ``X`` parallel daemon workers.
+
+        Keep in mind that other processes need to run on your computer (e.g. rabbitmq, the PostgreSQL database, ...), i.e. it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
+
+        To make the change permanent, set
+        ::
+
+            verdi config set daemon.default_workers 5
+
+    .. dropdown:: Increase the number of daemon worker slots
+
+
+        Each daemon worker accepts only a limited number of tasks at a time.
+        If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
+        Increasing it to 1000 should typically work.
+
+        Set the corresponding config variable and restart the daemon
+        ::
+
+            verdi config set daemon.worker_process_slots 1000
+
+
 
     .. dropdown:: Prevent your operating system from indexing the file repository.
 
@@ -322,13 +371,6 @@ Here are a few general tips that might improve the AiiDA performance:
         A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
 
         In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
-
-    .. dropdown:: Optimize the number of daemon workers
-
-        The verdi deamon can manage an arbitrary number of parallel workers; by default only one is activated.
-        If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
-        It is recommended that the number of workers does not exceed the number of CPU cores.
-        Ideally, if possible, one should use one or two cores less than the machine has, to avoid to degrade the PostgreSQL database performance.
 
     .. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
@@ -385,6 +427,19 @@ Here are a few general tips that might improve the AiiDA performance:
         and try a simple AiiDA query with the new database.
         If everything went fine, you can delete the old database location.
 
+If you're still encountering performance issues, the following tips can help with pinpointing performance bottlenecks.
+
+    .. dropdown:: Analyze the RabbitMQ message rate
+
+        If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
+
+        Enable the management plugin via something like::
+
+            sudo rabbitmq-plugins enable rabbitmq_management
+
+        Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
+
+
 .. _how-to:installation:update:
 
 Updating your installation
@@ -409,7 +464,7 @@ Failing to do so, may leave your installation in a broken state, or worse may ev
         * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
         * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-    6. Migrate your database with ``verdi -p <profile_name> database migrate``.
+    6. Migrate your database with ``verdi -p <profile_name> storage migrate``.
        Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.

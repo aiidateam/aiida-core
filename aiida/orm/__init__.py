@@ -53,6 +53,8 @@ __all__ = (
     'Entity',
     'EntityAttributesMixin',
     'EntityExtrasMixin',
+    'EntityTypes',
+    'EnumData',
     'Float',
     'FolderData',
     'Group',

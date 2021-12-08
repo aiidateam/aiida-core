@@ -18,9 +18,10 @@ import warnings
 import pytest
 
 from aiida import orm, plugins
-from aiida.orm.querybuilder import _get_ormclass
 from aiida.common.links import LinkType
 from aiida.manage import configuration
+from aiida.orm.querybuilder import _get_ormclass
+from aiida.orm.utils.links import LinkQuadruple
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -112,7 +113,7 @@ class TestBasic:
 
     def test_get_group_type_filter(self):
         """Test the `aiida.orm.querybuilder.get_group_type_filter` function."""
-        from aiida.orm.querybuilder import _get_group_type_filter, Classifier
+        from aiida.orm.querybuilder import Classifier, _get_group_type_filter
 
         classifiers = Classifier('group.core')
         assert _get_group_type_filter(classifiers, False) == {'==': 'core'}
@@ -133,8 +134,8 @@ class TestBasic:
         """
         Test querying for a process class.
         """
-        from aiida.engine import run, WorkChain, if_, return_, ExitCode
         from aiida.common.warnings import AiidaEntryPointWarning
+        from aiida.engine import ExitCode, WorkChain, if_, return_, run
 
         class PotentialFailureWorkChain(WorkChain):
             EXIT_STATUS = 1
@@ -672,6 +673,27 @@ class TestBasic:
         assert len(result) == 20
         assert result == list(chain.from_iterable(zip(pks, uuids)))
 
+    def test_query_links(self):
+        """Test querying for links"""
+        d1, d2, d3, d4 = [orm.Data().store() for _ in range(4)]
+        c1, c2 = [orm.CalculationNode() for _ in range(2)]
+        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
+        c1.store()
+        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
+        d4.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
+        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
+        c2.store()
+        d3.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
+
+        builder = orm.QueryBuilder().append(entity_type='link')
+        assert builder.count() == 5
+
+        builder = orm.QueryBuilder().append(entity_type='link', filters={'type': LinkType.CREATE.value})
+        assert builder.count() == 3
+
+        builder = orm.QueryBuilder().append(entity_type='link', filters={'label': 'link_d2c2'})
+        assert builder.one()[0] == LinkQuadruple(d2.id, c2.id, LinkType.INPUT_CALC.value, 'link_d2c2')
+
 
 @pytest.mark.usefixtures('clear_database_before_test')
 class TestMultipleProjections:
@@ -983,7 +1005,7 @@ class TestQueryBuilderLimitOffsets:
 @pytest.mark.usefixtures('clear_database_before_test')
 class TestQueryBuilderJoins:
 
-    def test_joins1(self):
+    def test_joins_node_incoming(self):
         # Creating n1, who will be a parent:
         parent = orm.Data()
         parent.label = 'mother'
@@ -1017,7 +1039,7 @@ class TestQueryBuilderJoins:
         qb.append(orm.Node, tag='children', outerjoin=True, project='label', filters={'attributes.is_good': True})
         assert qb.count() == 1
 
-    def test_joins2(self):
+    def test_joins_node_incoming2(self):
         # Creating n1, who will be a parent:
 
         students = [orm.Data() for i in range(10)]
@@ -1061,7 +1083,7 @@ class TestQueryBuilderJoins:
                 }
             }, tag='student').count() == number_students
 
-    def test_joins3_user_group(self):
+    def test_joins_user_group(self):
         # Create another user
         new_email = 'newuser@new.n'
         user = orm.User(email=new_email).store()
@@ -1083,6 +1105,39 @@ class TestQueryBuilderJoins:
         qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
 
         assert qb.count() == 1, 'The expected user that owns the selected group was not found.'
+
+    def test_joins_user_authinfo(self):
+        """Test querying for user with particular authinfo"""
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+        qb = orm.QueryBuilder()
+        qb.append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.id}})
+        qb.append(orm.User, with_authinfo='auth')
+        assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
+        assert qb.one()[0].pk == user.pk
+
+    def test_joins_authinfo(self):
+        """Test querying for AuthInfo with specific computer/user."""
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+
+        # Search for the user of the authinfo
+        qb = orm.QueryBuilder()
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
+        qb.append(orm.AuthInfo, with_user='user', filters={'id': {'==': authinfo.id}})
+        assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
+
+        # Search for the computer of the authinfo
+        qb = orm.QueryBuilder()
+        qb.append(orm.Computer, tag='computer', filters={'id': {'==': computer.id}})
+        qb.append(orm.AuthInfo, with_computer='computer', filters={'id': {'==': authinfo.id}})
+        assert qb.count() == 1, 'The expected computer that owns the selected authinfo was not found.'
 
     def test_joins_group_node(self):
         """
@@ -1466,6 +1521,23 @@ class TestDoubleStar:
     @pytest.fixture(autouse=True)
     def init_db(self, clear_database_before_test, aiida_localhost):
         self.computer = aiida_localhost
+
+    def test_authinfo(self):
+        user = orm.User(email='email@new.com').store()
+        computer = orm.Computer(
+            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        ).store()
+        authinfo = computer.configure(user)
+        result = orm.QueryBuilder().append(
+            orm.AuthInfo, tag='auth', filters={
+                'id': {
+                    '==': authinfo.id
+                }
+            }, project=['**']
+        ).dict()
+        assert len(result) == 1
+        print(result)
+        assert result[0]['auth']['id'] == authinfo.id
 
     def test_statistics_default_class(self):
 

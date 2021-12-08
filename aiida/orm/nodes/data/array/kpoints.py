@@ -242,6 +242,7 @@ class KpointsData(ArrayData):
             Default = [0.,0.,0.].
         """
         from aiida.common.exceptions import ModificationNotAllowed
+
         # validate
         try:
             the_mesh = [int(i) for i in mesh]

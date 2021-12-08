@@ -18,12 +18,11 @@ Create Date: 2019-01-21 15:35:07.280805
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-member,no-name-in-module,import-error
 
-import numpy
-
 from alembic import op
-from sqlalchemy.sql import table, column, select, func, text
-from sqlalchemy import String, Integer, cast
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+import numpy
+from sqlalchemy import Integer, String, cast
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.sql import column, func, select, table, text
 
 from aiida.backends.general.migrations import utils
 

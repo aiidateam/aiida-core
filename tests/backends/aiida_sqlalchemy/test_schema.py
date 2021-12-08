@@ -13,15 +13,13 @@ import warnings
 
 from sqlalchemy import exc as sa_exc
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.backends.sqlalchemy.models.node import DbNode
-from aiida.common.links import LinkType
-from aiida.orm import Data
-from aiida.orm import CalculationNode
 import aiida
-
+from aiida.backends.sqlalchemy.models.node import DbNode
+from aiida.backends.sqlalchemy.models.user import DbUser
+from aiida.backends.testbase import AiidaTestCase
+from aiida.common.links import LinkType
 from aiida.common.utils import get_new_uuid
+from aiida.orm import CalculationNode, Data
 
 
 class TestRelationshipsSQLA(AiidaTestCase):

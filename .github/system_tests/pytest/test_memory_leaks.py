@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for testing memory leakage."""
-from tests.utils import processes as test_processes  # pylint: disable=no-name-in-module,import-error
-from tests.utils.memory import get_instances  # pylint: disable=no-name-in-module,import-error
+from aiida import orm
 from aiida.engine import processes, run_get_node
 from aiida.plugins import CalculationFactory
-from aiida import orm
+from tests.utils import processes as test_processes  # pylint: disable=no-name-in-module,import-error
+from tests.utils.memory import get_instances  # pylint: disable=no-name-in-module,import-error
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 

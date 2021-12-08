@@ -265,6 +265,13 @@ Use this, for instance, to load modules or set variables that are needed by the 
 
 At the end, you receive a confirmation, with the *PK* and the *UUID* of your new code.
 
+.. tip::
+
+    The ``verdi code setup`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
+    If you want additional checks to verify the code is properly configured and usable, run the `verdi code test` command.
+    For remote codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
+    Look at the command help to see what other checks may be run.
+
 .. admonition:: Using configuration files
     :class: tip title-icon-lightbulb
 
@@ -497,7 +504,7 @@ Besides the on/off switch set by ``caching.default_enabled``, caching can be con
     caching.default_enabled  profile   True
     caching.disabled_for     profile   aiida.calculations:core.templatereplacer
     caching.enabled_for      profile   aiida.calculations:quantumespresso.pw
-                                    aiida.calculations:other
+                                       aiida.calculations:other
 
 In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:core.templatereplacer`` entry point string.
 It also shows how to enable caching for particular calculations (which has no effect here due to the profile-wide default).
@@ -573,22 +580,9 @@ Caching can be enabled or disabled on a case-by-case basis by using the :class:`
     This affects only the current Python interpreter and won't change the behavior of the daemon workers.
     This means that this technique is only useful when using :py:class:`~aiida.engine.run`, and **not** with :py:class:`~aiida.engine.submit`.
 
-If you suspect a node is being reused in error (e.g. during development), you can also manually *prevent* a specific node from being reused:
 
-#. Load one of the nodes you suspect to be a clone.
-   Check that :meth:`~aiida.orm.nodes.Node.get_cache_source` returns a UUID.
-   If it returns `None`, the node was not cloned.
-
-#. Clear the hashes of all nodes that are considered identical to this node:
-
-    .. code:: python
-
-        for node in node.get_all_same_nodes():
-            node.clear_hash()
-
-#. Run your calculation again.
-   The node in question should no longer be reused.
-
+Besides controlling which process classes are cached, it may be useful or necessary to control what already _stored_ nodes are used as caching _sources_.
+Section :ref:`topics:provenance:caching:control-caching` provides details how AiiDA decides which stored nodes are equivalent to the node being stored and which are considered valid caching sources.
 
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`

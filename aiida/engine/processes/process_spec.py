@@ -15,7 +15,7 @@ import plumpy.process_spec
 from aiida.orm import Dict
 
 from .exit_code import ExitCode, ExitCodesNamespace
-from .ports import InputPort, PortNamespace, CalcJobOutputPort
+from .ports import CalcJobOutputPort, InputPort, PortNamespace
 
 __all__ = ('ProcessSpec', 'CalcJobProcessSpec')
 
@@ -118,7 +118,7 @@ class CalcJobProcessSpec(ProcessSpec):
 
         if valid_type_port is not valid_type_required:
             raise ValueError(
-                f'the valid type of a default output has to be a {valid_type_port} but it is {valid_type_required}'
+                f'the valid type of a default output has to be a {valid_type_required} but it is {valid_type_port}'
             )
 
         self._default_output_node = port_name

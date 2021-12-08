@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from aiida.orm import Bool, Float, Int
 from aiida.engine import WorkChain
+from aiida.orm import Bool, Float, Int
 
 
 class ChildWorkChain(WorkChain):

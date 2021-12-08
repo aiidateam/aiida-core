@@ -2,6 +2,7 @@
 from aiida.engine import calcfunction, workfunction
 from aiida.orm import Int
 
+
 @calcfunction
 def add(x, y):
     return Int(x + y)

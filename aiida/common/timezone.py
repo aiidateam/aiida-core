@@ -9,7 +9,8 @@
 ###########################################################################
 """Utility functions to operate on datetime objects."""
 from datetime import datetime
-import dateutil.parser
+
+from dateutil import parser
 
 
 def get_current_timezone():
@@ -33,6 +34,7 @@ def now():
     :return: datetime object represeting current time
     """
     import pytz
+
     from aiida.manage.configuration import settings
 
     if getattr(settings, 'USE_TZ', None):
@@ -134,4 +136,4 @@ def isoformat_to_datetime(value):
     """
     if value is None:
         return None
-    return dateutil.parser.parse(value)
+    return parser.parse(value)

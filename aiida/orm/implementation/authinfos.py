@@ -8,30 +8,37 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the backend implementation of the `AuthInfo` ORM class."""
-
 import abc
+from typing import TYPE_CHECKING, Any, Dict
 
-from .entities import BackendEntity, BackendCollection
+from .entities import BackendCollection, BackendEntity
+
+if TYPE_CHECKING:
+    from .computers import BackendComputer
+    from .users import BackendUser
 
 __all__ = ('BackendAuthInfo', 'BackendAuthInfoCollection')
 
 
 class BackendAuthInfo(BackendEntity):
-    """Backend implementation for the `AuthInfo` ORM class."""
+    """Backend implementation for the `AuthInfo` ORM class.
+
+    An authinfo is a set of credentials that can be used to authenticate to a remote computer.
+    """
 
     METADATA_WORKDIR = 'workdir'
 
-    @property
+    @property  # type: ignore[misc]
     @abc.abstractmethod
-    def enabled(self):
+    def enabled(self) -> bool:
         """Return whether this instance is enabled.
 
         :return: boolean, True if enabled, False otherwise
         """
 
-    @enabled.setter
+    @enabled.setter  # type: ignore[misc]
     @abc.abstractmethod
-    def enabled(self, value):
+    def enabled(self, value: bool) -> None:
         """Set the enabled state
 
         :param enabled: boolean, True to enable the instance, False to disable it
@@ -39,43 +46,37 @@ class BackendAuthInfo(BackendEntity):
 
     @property
     @abc.abstractmethod
-    def computer(self):
-        """Return the computer associated with this instance.
-
-        :return: :class:`aiida.orm.implementation.computers.BackendComputer`
-        """
+    def computer(self) -> 'BackendComputer':
+        """Return the computer associated with this instance."""
 
     @property
     @abc.abstractmethod
-    def user(self):
-        """Return the user associated with this instance.
-
-        :return: :class:`aiida.orm.implementation.users.BackendUser`
-        """
+    def user(self) -> 'BackendUser':
+        """Return the user associated with this instance."""
 
     @abc.abstractmethod
-    def get_auth_params(self):
+    def get_auth_params(self) -> Dict[str, Any]:
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
         """
 
     @abc.abstractmethod
-    def set_auth_params(self, auth_params):
+    def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
         """Set the dictionary of authentication parameters
 
         :param auth_params: a dictionary with authentication parameters
         """
 
     @abc.abstractmethod
-    def get_metadata(self):
+    def get_metadata(self) -> Dict[str, Any]:
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
         """
 
     @abc.abstractmethod
-    def set_metadata(self, metadata):
+    def set_metadata(self, metadata: Dict[str, Any]) -> None:
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata
@@ -88,19 +89,8 @@ class BackendAuthInfoCollection(BackendCollection[BackendAuthInfo]):
     ENTITY_CLASS = BackendAuthInfo
 
     @abc.abstractmethod
-    def delete(self, pk):
+    def delete(self, pk: int) -> None:
         """Delete an entry from the collection.
 
         :param pk: the pk of the entry to delete
-        """
-
-    @abc.abstractmethod
-    def get(self, computer, user):
-        """Return an entry from the collection that is configured for the given computer and user
-
-        :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
-        :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
-        :return: :class:`aiida.orm.implementation.authinfos.BackendAuthInfo`
-        :raise aiida.common.exceptions.NotExistent: if no entry exists for the computer/user pair
-        :raise aiida.common.exceptions.MultipleObjectsError: if multiple entries exist for the computer/user pair
         """

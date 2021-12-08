@@ -16,7 +16,8 @@ installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
 import click
-from pgsu import PGSU, PostgresConnectionMode, DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
+from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
+from pgsu import PGSU, PostgresConnectionMode
 
 from aiida.cmdline.utils import echo
 

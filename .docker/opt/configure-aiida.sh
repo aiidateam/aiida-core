@@ -33,6 +33,24 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
 
     # Setup and configure local computer.
     computer_name=localhost
+
+    # Determine the number of physical cores as a default for the number of
+    # available MPI ranks on the localhost. We do not count "logical" cores,
+    # since MPI parallelization over hyper-threaded cores is typically
+    # associated with a significant performance penalty. We use the
+    # `psutil.cpu_count(logical=False)` function as opposed to simply
+    # `os.cpu_count()` since the latter would include hyperthreaded (logical
+    # cores).
+    NUM_PHYSICAL_CORES=$(python -c 'import psutil; print(int(psutil.cpu_count(logical=False)))' 2>/dev/null)
+    LOCALHOST_MPI_PROCS_PER_MACHINE=${LOCALHOST_MPI_PROCS_PER_MACHINE:-${NUM_PHYSICAL_CORES}}
+
+    if [ -z $LOCALHOST_MPI_PROCS_PER_MACHINE ]; then
+      echo "Unable to automatically determine the number of logical CPUs on this "
+      echo "machine. Please set the LOCALHOST_MPI_PROCS_PER_MACHINE variable to "
+      echo "explicitly set the number of available MPI ranks."
+      exit 1
+    fi
+
     verdi computer show ${computer_name} || verdi computer setup   \
         --non-interactive                                          \
         --label "${computer_name}"                                 \
@@ -42,7 +60,7 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
         --scheduler core.direct                                    \
         --work-dir /home/aiida/aiida_run/                          \
         --mpirun-command "mpirun -np {tot_num_mpiprocs}"           \
-        --mpiprocs-per-machine 1 &&                                \
+        --mpiprocs-per-machine ${LOCALHOST_MPI_PROCS_PER_MACHINE} && \
     verdi computer configure core.local "${computer_name}"              \
         --non-interactive                                          \
         --safe-interval 0.0
@@ -56,7 +74,7 @@ verdi profile show || echo "The default profile is not set."
 verdi daemon stop
 
 # Migration will run for the default profile.
-verdi database migrate --force || echo "Database migration failed."
+verdi storage migrate --force || echo "Database migration failed."
 
 # Daemon will start only if the database exists and is migrated to the latest version.
 verdi daemon start || echo "AiiDA daemon is not running."

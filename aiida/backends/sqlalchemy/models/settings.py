@@ -10,12 +10,11 @@
 # pylint: disable=import-error,no-name-in-module
 """Module to manage node settings for the SQLA backend."""
 from pytz import UTC
-
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import Integer, String, DateTime, Text
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
@@ -23,7 +22,7 @@ from aiida.common import timezone
 
 
 class DbSetting(Base):
-    """Class to store node settings using the SQLA backend."""
+    """Database model to store global settings."""
     __tablename__ = 'db_dbsetting'
     __table_args__ = (UniqueConstraint('key'),)
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name

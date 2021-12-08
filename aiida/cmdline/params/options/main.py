@@ -14,11 +14,12 @@ from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-mod
 from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.rmq import BROKER_DEFAULTS
-from ...utils import defaults, echo
+
 from .. import types
+from ...utils import defaults, echo  # pylint: disable=no-name-in-module
+from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
-from .config import ConfigFileOption
 
 __all__ = (
     'ALL', 'ALL_STATES', 'ALL_USERS', 'APPEND_TEXT', 'ARCHIVE_FORMAT', 'BROKER_HOST', 'BROKER_PASSWORD', 'BROKER_PORT',
@@ -532,7 +533,7 @@ TRANSPORT = OverridableOption(
     '--transport',
     type=types.PluginParamType(group='transports'),
     required=True,
-    help="A transport plugin (as listed in 'verdi plugin list aiida.transports')."
+    help='A transport plugin (as listed in `verdi plugin list aiida.transports`).'
 )
 
 SCHEDULER = OverridableOption(
@@ -540,7 +541,7 @@ SCHEDULER = OverridableOption(
     '--scheduler',
     type=types.PluginParamType(group='schedulers'),
     required=True,
-    help="A scheduler plugin (as listed in 'verdi plugin list aiida.schedulers')."
+    help='A scheduler plugin (as listed in `verdi plugin list aiida.schedulers`).'
 )
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), help='Email address of the user.')

@@ -7,15 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Tests for the `ComputerParamType`."""
 import pytest
 
+from aiida import orm
 from aiida.cmdline.params.types import ComputerParamType
 from aiida.orm.utils.loaders import OrmEntityLoader
-
-from aiida import orm
-
-# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture

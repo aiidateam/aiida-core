@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Module to manage computers for the SQLA backend."""
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
 from sqlalchemy.types import Integer, String, Text
 
@@ -18,7 +18,16 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbComputer(Base):
-    """Class to store computers using SQLA backend."""
+    """Database model to store computers.
+
+    Computers are identified within AiiDA by their ``label`` (and thus it must be unique for each one in the database),
+    whereas the ``hostname`` is the label that identifies the computer within the network from which one can access it.
+
+    The ``scheduler_type`` column contains the information of the scheduler (and plugin)
+    that the computer uses to manage jobs, whereas the ``transport_type`` the information of the transport
+    (and plugin) required to copy files and communicate to and from the computer.
+    The ``metadata`` contains some general settings for these communication and management protocols.
+    """
     __tablename__ = 'db_dbcomputer'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
@@ -36,7 +45,7 @@ class DbComputer(Base):
         self.description = ''
 
         # If someone passes metadata in **kwargs we change it to _metadata
-        if 'metadata' in kwargs.keys():
+        if 'metadata' in kwargs:
             kwargs['_metadata'] = kwargs.pop('metadata')
 
         super().__init__(*args, **kwargs)

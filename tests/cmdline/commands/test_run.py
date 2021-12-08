@@ -34,7 +34,7 @@ class TestVerdiRun(AiidaTestCase):
         that are defined within the script will fail, as the inspect module will not correctly be able to determin
         the full path of the source file.
         """
-        from aiida.orm import load_node, WorkFunctionNode
+        from aiida.orm import WorkFunctionNode, load_node
 
         script_content = textwrap.dedent(
             """\
@@ -95,7 +95,7 @@ class TestAutoGroups(AiidaTestCase):
 
     def test_autogroup(self):
         """Check if the autogroup is properly generated."""
-        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
+        from aiida.orm import AutoGroup, Node, QueryBuilder, load_node
 
         script_content = textwrap.dedent(
             """\
@@ -125,7 +125,7 @@ class TestAutoGroups(AiidaTestCase):
 
     def test_autogroup_custom_label(self):
         """Check if the autogroup is properly generated with the label specified."""
-        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
+        from aiida.orm import AutoGroup, Node, QueryBuilder, load_node
 
         script_content = textwrap.dedent(
             """\
@@ -157,7 +157,7 @@ class TestAutoGroups(AiidaTestCase):
 
     def test_no_autogroup(self):
         """Check if the autogroup is not generated if ``verdi run`` is asked not to."""
-        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
+        from aiida.orm import AutoGroup, Node, QueryBuilder, load_node
 
         script_content = textwrap.dedent(
             """\
@@ -186,7 +186,7 @@ class TestAutoGroups(AiidaTestCase):
     @pytest.mark.requires_rmq
     def test_autogroup_filter_class(self):  # pylint: disable=too-many-locals
         """Check if the autogroup is properly generated but filtered classes are skipped."""
-        from aiida.orm import Code, QueryBuilder, Node, AutoGroup, load_node
+        from aiida.orm import AutoGroup, Code, Node, QueryBuilder, load_node
 
         script_content = textwrap.dedent(
             """\
@@ -357,7 +357,7 @@ class TestAutoGroups(AiidaTestCase):
 
     def test_autogroup_clashing_label(self):
         """Check if the autogroup label is properly (re)generated when it clashes with an existing group name."""
-        from aiida.orm import QueryBuilder, Node, AutoGroup, load_node
+        from aiida.orm import AutoGroup, Node, QueryBuilder, load_node
 
         script_content = textwrap.dedent(
             """\

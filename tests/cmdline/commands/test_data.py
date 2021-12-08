@@ -14,9 +14,9 @@ import asyncio
 import io
 import os
 import shutil
-import unittest
-import tempfile
 import subprocess as sp
+import tempfile
+import unittest
 
 from click.testing import CliRunner
 import numpy as np
@@ -24,12 +24,21 @@ import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.cmdline.commands.cmd_data import cmd_array, cmd_bands, cmd_cif, cmd_dict, cmd_remote
-from aiida.cmdline.commands.cmd_data import cmd_structure, cmd_trajectory, cmd_upf, cmd_singlefile
 from aiida.cmdline.commands import cmd_group
+from aiida.cmdline.commands.cmd_data import (
+    cmd_array,
+    cmd_bands,
+    cmd_cif,
+    cmd_dict,
+    cmd_remote,
+    cmd_singlefile,
+    cmd_structure,
+    cmd_trajectory,
+    cmd_upf,
+)
 from aiida.engine import calcfunction
+from aiida.orm import ArrayData, BandsData, CifData, Dict, Group, KpointsData, RemoteData, StructureData, TrajectoryData
 from aiida.orm.nodes.data.cif import has_pycifrw
-from aiida.orm import Group, ArrayData, BandsData, KpointsData, CifData, Dict, RemoteData, StructureData, TrajectoryData
 from tests.static import STATIC_DIR
 
 
@@ -368,7 +377,7 @@ class TestVerdiDataBands(AiidaTestCase, DummyVerdiDataListable):
         with self.cli_runner.isolated_filesystem():
             options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
             self.cli_runner.invoke(cmd_bands.bands_export, options, catch_exceptions=False)
-            with open('bands.gnu', 'r') as gnu_file:
+            with open('bands.gnu', 'r', encoding='utf8') as gnu_file:
                 res = gnu_file.read()
                 self.assertIn('vectors nohead', res, 'The string "vectors nohead" was not found in the gnuplot script')
 

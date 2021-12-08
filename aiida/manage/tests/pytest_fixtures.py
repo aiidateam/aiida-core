@@ -20,10 +20,11 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
 import asyncio
 import shutil
 import tempfile
+
 import pytest
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+from aiida.manage.tests import get_test_backend_name, get_test_profile_name, test_manager
 
 
 @pytest.fixture(scope='function')
@@ -59,7 +60,7 @@ def clear_database(clear_database_after_test):
 @pytest.fixture(scope='function')
 def clear_database_after_test(aiida_profile):
     """Clear the database after the test."""
-    yield
+    yield aiida_profile
     aiida_profile.reset_db()
 
 
@@ -67,7 +68,7 @@ def clear_database_after_test(aiida_profile):
 def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
     aiida_profile.reset_db()
-    yield
+    yield aiida_profile
 
 
 @pytest.fixture(scope='class')
@@ -115,15 +116,15 @@ def aiida_localhost(temp_dir):
     Usage::
 
       def test_1(aiida_localhost):
-          label = aiida_localhost.get_label()
+          label = aiida_localhost.label
           # proceed to set up code or use 'aiida_local_code_factory' instead
 
 
     :return: The computer node
     :rtype: :py:class:`aiida.orm.Computer`
     """
-    from aiida.orm import Computer
     from aiida.common.exceptions import NotExistent
+    from aiida.orm import Computer
 
     label = 'localhost-test'
 

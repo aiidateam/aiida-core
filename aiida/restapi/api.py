@@ -32,8 +32,11 @@ class App(Flask):
         super().__init__(*args, **kwargs)
 
         # Error handler
-        from aiida.restapi.common.exceptions import RestInputValidationError, \
-            RestValidationError, RestFeatureNotAvailable
+        from aiida.restapi.common.exceptions import (
+            RestFeatureNotAvailable,
+            RestInputValidationError,
+            RestValidationError,
+        )
 
         if catch_internal_server:
 
@@ -92,7 +95,14 @@ class AiidaApi(Api):
 
         from aiida.restapi.common.config import CLI_DEFAULTS
         from aiida.restapi.resources import (
-            ProcessNode, CalcJobNode, Computer, User, Group, Node, ServerInfo, QueryBuilder
+            CalcJobNode,
+            Computer,
+            Group,
+            Node,
+            ProcessNode,
+            QueryBuilder,
+            ServerInfo,
+            User,
         )
 
         self.app = app

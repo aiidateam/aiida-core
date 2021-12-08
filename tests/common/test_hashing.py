@@ -12,11 +12,11 @@ Unittests for aiida.common.hashing:make_hash with hardcoded hash values
 """
 
 import collections
-import itertools
 from datetime import datetime
-import hashlib
-import uuid
 from decimal import Decimal
+import hashlib
+import itertools
+import uuid
 
 import numpy as np
 import pytz
@@ -26,11 +26,11 @@ try:
 except ImportError:
     import unittest
 
-from aiida.common.utils import DatetimePrecision
-from aiida.common.exceptions import HashingError
-from aiida.common.hashing import make_hash, float_to_text, chunked_file_hash
-from aiida.common.folders import SandboxFolder
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import HashingError
+from aiida.common.folders import SandboxFolder
+from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash
+from aiida.common.utils import DatetimePrecision
 from aiida.orm import Dict
 
 

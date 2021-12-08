@@ -9,6 +9,7 @@
 ###########################################################################
 """Test the AiiDA iPython magics."""
 from IPython.testing.globalipapp import get_ipython
+
 from aiida.tools.ipython.ipython_magics import register_ipython_extension
 
 

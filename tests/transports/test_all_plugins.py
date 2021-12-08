@@ -17,10 +17,10 @@ Plugin specific tests will be written in the plugin itself.
 import io
 import os
 import random
-import tempfile
-import signal
 import shutil
+import signal
 import string
+import tempfile
 import time
 import unittest
 import uuid

@@ -7,7 +7,7 @@ import tempfile
 from typing import BinaryIO, Dict, Iterable, Iterator, List, Tuple, Union
 
 from aiida.common import exceptions
-from aiida.repository import Repository, File
+from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
 __all__ = ('NodeRepositoryMixin',)
@@ -50,8 +50,7 @@ class NodeRepositoryMixin:
         """
         if self._repository_instance is None:
             if self.is_stored:
-                from aiida.manage.manager import get_manager
-                backend = get_manager().get_profile().get_repository().backend
+                backend = self.backend.get_repository()
                 serialized = self.repository_metadata
                 self._repository_instance = Repository.from_serialized(backend=backend, serialized=serialized)
             else:
@@ -215,6 +214,14 @@ class NodeRepositoryMixin:
             ``pathlib.PurePosixPath`` instead of a normal string
         """
         yield from self._repository.walk(path)
+
+    def glob(self) -> Iterable[pathlib.PurePosixPath]:
+        """Yield a recursive list of all paths (files and directories)."""
+        for dirpath, dirnames, filenames in self.walk():
+            for dirname in dirnames:
+                yield dirpath / dirname
+            for filename in filenames:
+                yield dirpath / filename
 
     def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.

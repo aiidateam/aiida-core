@@ -137,7 +137,7 @@ def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_co
     Specifically, verify that files in the ``local_copy_list`` do not end up in the repository of the node.
     """
     from aiida.common.datastructures import CalcInfo, CodeInfo
-    from aiida.orm import CalcJobNode, SinglefileData, FolderData
+    from aiida.orm import CalcJobNode, FolderData, SinglefileData
 
     create_file_hierarchy(file_hierarchy, tmp_path)
     folder = FolderData()

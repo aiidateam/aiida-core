@@ -8,8 +8,8 @@ import typing as t
 
 import pytest
 
-from aiida.repository import Repository, File, FileType
-from aiida.repository.backend import SandboxRepositoryBackend, DiskObjectStoreRepositoryBackend
+from aiida.repository import File, FileType, Repository
+from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
 
 @contextlib.contextmanager
@@ -37,8 +37,8 @@ def repository(request, tmp_path_factory) -> Repository:
 
     """
     with request.param(tmp_path_factory.mktemp('container')) as backend:
+        backend.initialise()
         repository = Repository(backend=backend)
-        repository.initialise()
         yield repository
 
 
@@ -78,12 +78,12 @@ def test_uuid(repository_uninitialised):
 
     if isinstance(repository.backend, SandboxRepositoryBackend):
         assert repository.uuid is None
-        repository.initialise()
+        repository.backend.initialise()
         assert repository.uuid is None
 
     if isinstance(repository.backend, DiskObjectStoreRepositoryBackend):
         assert repository.uuid is None
-        repository.initialise()
+        repository.backend.initialise()
         assert isinstance(repository.uuid, str)
 
 
@@ -92,7 +92,7 @@ def test_initialise(repository_uninitialised):
     repository = repository_uninitialised
 
     assert not repository.is_initialised
-    repository.initialise()
+    repository.backend.initialise()
     assert repository.is_initialised
 
 
@@ -355,7 +355,7 @@ def test_put_object_from_filelike_raises(repository, generate_directory):
         repository.put_object_from_filelike('file_a', directory / 'file_a')  # String
 
     with pytest.raises(TypeError):
-        with open(directory / 'file_a') as handle:
+        with open(directory / 'file_a', encoding='utf8') as handle:
             repository.put_object_from_filelike(handle, 'file_a')  # Not in binary mode
 
 
@@ -508,26 +508,6 @@ def test_delete_object_hard(repository, generate_directory):
     assert not repository.backend.has_object(key)
 
 
-def test_delete(repository, generate_directory):
-    """Test the ``Repository.delete`` method."""
-    directory = generate_directory({
-        'file_a': b'content_a',
-        'relative': {
-            'file_b': b'content_b',
-        }
-    })
-
-    repository.put_object_from_tree(str(directory))
-
-    assert repository.has_object('file_a')
-    assert repository.has_object('relative/file_b')
-
-    repository.delete()
-
-    assert repository.is_empty()
-    assert not repository.is_initialised
-
-
 def test_erase(repository, generate_directory):
     """Test the ``Repository.erase`` method."""
     directory = generate_directory({
@@ -672,3 +652,31 @@ def test_hash(repository, generate_directory):
     """Test the ``Repository.hash`` method."""
     generate_directory({'empty': {}, 'file_a': b'content', 'relative': {'file_b': None, 'sub': {'file_c': None}}})
     assert isinstance(repository.hash(), str)
+
+
+def test_flatten(repository, generate_directory):
+    """Test the ``Repository.flatten`` classmethod."""
+    directory = generate_directory({
+        'empty': {},
+        'file_a': b'content',
+        'relative': {
+            'file_b': None,
+            'sub': {
+                'file_c': None
+            },
+            'sub_empty': {},
+        }
+    })
+    repository.put_object_from_tree(str(directory))
+    flattened = repository.flatten(repository.serialize())
+    assert isinstance(flattened, dict)
+    if isinstance(repository.backend, DiskObjectStoreRepositoryBackend):
+        assert flattened == {
+            'empty/': None,
+            'relative/': None,
+            'file_a': 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73',
+            'relative/sub/': None,
+            'relative/file_b': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            'relative/sub/file_c': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            'relative/sub_empty/': None,
+        }

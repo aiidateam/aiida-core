@@ -9,8 +9,8 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Module to test process runners."""
-import threading
 import asyncio
+import threading
 
 import plumpy
 import pytest

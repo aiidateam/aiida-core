@@ -10,11 +10,11 @@
 """`verdi group` commands"""
 import click
 
-from aiida.common.exceptions import UniquenessError
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.exceptions import UniquenessError
 from aiida.common.links import GraphTraversalRules
 
 
@@ -44,7 +44,7 @@ def group_add_nodes(group, force, nodes):
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
-    from aiida.orm import QueryBuilder, Group, Node
+    from aiida.orm import Group, Node, QueryBuilder
 
     if nodes and clear:
         echo.echo_critical(
@@ -95,8 +95,8 @@ def group_remove_nodes(group, nodes, clear, force):
 @with_dbenv()
 def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
     """Delete a group and (optionally) the nodes it contains."""
-    from aiida.tools import delete_group_nodes
     from aiida import orm
+    from aiida.tools import delete_group_nodes
 
     if not (force or dry_run):
         click.confirm(f'Are you sure you want to delete {group}?', abort=True)
@@ -168,8 +168,8 @@ def group_show(group, raw, limit, uuid):
     """Show information for a given group."""
     from tabulate import tabulate
 
-    from aiida.common.utils import str_timedelta
     from aiida.common import timezone
+    from aiida.common.utils import str_timedelta
 
     if limit:
         node_iterator = group.nodes[:limit]
@@ -256,10 +256,12 @@ def group_list(
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
+
+    from tabulate import tabulate
+
     from aiida import orm
     from aiida.common import timezone
     from aiida.common.escaping import escape_for_sql_like
-    from tabulate import tabulate
 
     builder = orm.QueryBuilder()
     filters = {}

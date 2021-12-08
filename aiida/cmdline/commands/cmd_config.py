@@ -114,7 +114,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
-    from aiida.manage.configuration import Config, Profile, ConfigValidationError
+    from aiida.manage.configuration import Config, ConfigValidationError, Profile
 
     if append and remove:
         echo.echo_critical('Cannot flag both append and remove')
@@ -179,8 +179,8 @@ def verdi_config_unset(ctx, option, globally):
 @click.option('-d', '--disabled', is_flag=True, help='List disabled types instead.')
 def verdi_config_caching(disabled):
     """List caching-enabled process types for the current profile."""
-    from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
     from aiida.manage.caching import get_use_cache
+    from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
 
     for group in ['aiida.calculations', 'aiida.workflows']:
         for entry_point in get_entry_point_names(group):

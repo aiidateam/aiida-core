@@ -15,23 +15,27 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Union
 import uuid
 import warnings
 
-from sqlalchemy import and_, or_, not_, func as sa_func
+from sqlalchemy import and_
+from sqlalchemy import func as sa_func
+from sqlalchemy import not_, or_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased
+from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql.expression import case, text
 from sqlalchemy.sql.compiler import SQLCompiler, TypeCompiler
-from sqlalchemy.sql.elements import BooleanClauseList, Cast, BinaryExpression, ColumnElement, Label, ColumnClause
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, Cast, ColumnClause, ColumnElement, Label
+from sqlalchemy.sql.expression import case, text
 from sqlalchemy.sql.functions import FunctionElement
-from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-from sqlalchemy.types import Integer, Float, Boolean, DateTime, String
+from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
-from aiida.orm.implementation.querybuilder import (BackendQueryBuilder, EntityTypes, QueryDictType, QUERYBUILD_LOGGER)
+from aiida.orm.entities import EntityTypes
+from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
+
 from .joiner import SqlaJoiner
 
 
@@ -114,9 +118,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def set_field_mappings(self):
         """Set conversions between the field names in the database and used by the `QueryBuilder`"""
+        self.outer_to_inner_schema['db_dbauthinfo'] = {'metadata': '_metadata'}
         self.outer_to_inner_schema['db_dbcomputer'] = {'metadata': '_metadata'}
         self.outer_to_inner_schema['db_dblog'] = {'metadata': '_metadata'}
 
+        self.inner_to_outer_schema['db_dbauthinfo'] = {'_metadata': 'metadata'}
         self.inner_to_outer_schema['db_dbcomputer'] = {'_metadata': 'metadata'}
         self.inner_to_outer_schema['db_dblog'] = {'_metadata': 'metadata'}
 
@@ -266,6 +272,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             EntityTypes.NODE.value: self.Node,
             EntityTypes.LOG.value: self.Log,
             EntityTypes.USER.value: self.User,
+            EntityTypes.LINK.value: self.Link,
         }
         self._tag_to_alias = {}
         for path in self._data['path']:
@@ -461,7 +468,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         for projectable_spec in project_dict:
             for projectable_entity_name, extraspec in projectable_spec.items():
-                property_names = list()
+                property_names = []
                 if projectable_entity_name == '**':
                     # Need to expand
                     property_names.extend(self.modify_expansions(alias, self.get_column_names(alias)))

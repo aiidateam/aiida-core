@@ -60,7 +60,7 @@ class TestAttributesExtrasToJSONMigrationSimple(TestMigrations):
 
     # In the following dictionary we store the generated nodes (ids, attributes and extras)
     # The correct migration of these nodes will be checked at the test
-    nodes_to_verify = dict()
+    nodes_to_verify = {}
 
     def setUpBeforeMigration(self):
         global db_attribute_base_model, db_extra_base_model  # pylint: disable=global-statement
@@ -90,7 +90,7 @@ class TestAttributesExtrasToJSONMigrationSimple(TestMigrations):
         for key, value in SAMPLE_DICT.items():
             DbExtraFunctionality.set_value_for_node(node, key, value)
 
-        self.nodes_to_verify[node.id] = dict()
+        self.nodes_to_verify[node.id] = {}
         self.nodes_to_verify[node.id]['attr'] = copy.deepcopy(SAMPLE_DICT)
         self.nodes_to_verify[node.id]['extr'] = copy.deepcopy(SAMPLE_DICT)
 
@@ -113,7 +113,7 @@ class TestAttributesExtrasToJSONMigrationManyNodes(TestMigrations):
 
     # In the following dictionary we store the generated nodes (ids, attributes and extras)
     # The correct migration of these nodes will be checked at the test
-    nodes_to_verify = dict()
+    nodes_to_verify = {}
 
     # Number of nodes to create
     nodes_no_to_create = 20
@@ -158,7 +158,7 @@ class TestAttributesExtrasToJSONMigrationManyNodes(TestMigrations):
                 for key in extr_copy.keys():
                     DbExtraFunctionality.set_value_for_node(node, key, extr_copy[key])
 
-                self.nodes_to_verify[node.id] = dict()
+                self.nodes_to_verify[node.id] = {}
                 self.nodes_to_verify[node.id]['attr'] = attr_copy
                 self.nodes_to_verify[node.id]['extr'] = extr_copy
 
@@ -179,7 +179,7 @@ class TestSettingsToJSONMigration(TestMigrations):
     migrate_to = '0037_attributes_extras_settings_json'
 
     # The settings to create and verify
-    settings_info = dict()
+    settings_info = {}
 
     def setUpBeforeMigration(self):
         from aiida.common import timezone
@@ -363,6 +363,7 @@ class DbMultipleValueAttributeBaseClass:
                 transaction.savepoint_commit(sid)
         except BaseException as exc:  # All exceptions including CTRL+C, ...
             from django.db.utils import IntegrityError
+
             from aiida.common.exceptions import UniquenessError
 
             if with_transaction:
@@ -406,7 +407,7 @@ class DbMultipleValueAttributeBaseClass:
         import datetime
 
         from aiida.common import json
-        from aiida.common.timezone import is_naive, make_aware, get_current_timezone
+        from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 
         if cls._subspecifier_field_name is None:
             if subspecifier_value is not None:

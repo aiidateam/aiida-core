@@ -158,6 +158,9 @@ class CodeBuilder:
         if key == 'input_plugin' and isinstance(value, importlib_metadata.EntryPoint):
             value = value.name
 
+        if key == 'description' and value is None:
+            value = ''
+
         backup = self._code_spec.copy()
         self._code_spec[key] = value
         success, _ = self.validate(raise_error=False)

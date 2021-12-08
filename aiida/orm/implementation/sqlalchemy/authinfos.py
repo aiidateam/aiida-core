@@ -8,15 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
-
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 
+from . import entities, utils
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
-from . import entities
-from . import utils
 
 
 class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
@@ -31,8 +28,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
         :return: an :class:`aiida.orm.implementation.authinfos.BackendAuthInfo` instance
         """
-        from . import computers
-        from . import users
+        from . import computers, users
         super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
@@ -125,35 +121,10 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         # pylint: disable=import-error,no-name-in-module
         from sqlalchemy.orm.exc import NoResultFound
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(DbAuthInfo).filter_by(id=pk).one().delete()
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
-
-    def get(self, computer, user):
-        """Return an entry from the collection that is configured for the given computer and user
-
-        :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
-        :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
-        :return: :class:`aiida.orm.implementation.authinfos.BackendAuthInfo`
-        :raise aiida.common.exceptions.NotExistent: if no entry exists for the computer/user pair
-        :raise aiida.common.exceptions.MultipleObjectsError: if multiple entries exist for the computer/user pair
-        """
-        # pylint: disable=import-error,no-name-in-module
-        from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
-        session = get_scoped_session()
-
-        try:
-            authinfo = session.query(DbAuthInfo).filter_by(dbcomputer_id=computer.id, aiidauser_id=user.id).one()
-        except NoResultFound:
-            raise exceptions.NotExistent(f'User<{user.email}> has no configuration for Computer<{computer.label}>')
-        except MultipleResultsFound:
-            raise exceptions.MultipleObjectsError(
-                f'User<{user.email}> has multiple configurations for Computer<{computer.label}>'
-            )
-        else:
-            return self.from_dbmodel(authinfo)

@@ -9,6 +9,7 @@
     "include_package_data": true,
     "python_requires": ">=3.7",
     "classifiers": [
+        "Development Status :: 5 - Production/Stable",
         "Framework :: AiiDA",
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX :: Linux",
@@ -17,18 +18,18 @@
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering"
     ],
     "install_requires": [
-        "aldjemy~=2.2",
+        "aldjemy~=2.4",
         "alembic~=1.2",
-        "archive-path~=0.2.1",
+        "archive-path~=0.3.6",
         "aio-pika~=6.6",
         "circus~=0.17.1",
-        "click-completion~=0.5.1",
         "click-config-file~=0.6.0",
         "click-spinner~=0.1.8",
-        "click~=7.1",
+        "click~=8.0,>=8.0.3",
         "disk-objectstore~=0.6.0",
         "django~=2.2",
         "graphviz~=0.13",
@@ -78,11 +79,13 @@
             "sphinx-panels~=0.5.0",
             "sphinx-copybutton~=0.3.0",
             "sphinx-notfound-page~=0.5",
-            "sphinxext-rediraffe~=0.2.4"
+            "sphinxext-rediraffe~=0.2.4",
+            "sphinx-sqlalchemy~=0.1.1"
         ],
         "atomic_tools": [
             "PyCifRW~=4.4",
             "ase~=3.18",
+            "matplotlib~=3.3,>=3.3.4",
             "pymatgen>=2019.7.2,<=2022.02.03,!=2019.9.7",
             "pymysql~=0.9.3",
             "seekpath~=1.9,>=1.9.3",
@@ -97,7 +100,8 @@
             "mypy==0.910",
             "packaging==20.3",
             "pre-commit~=2.2",
-            "pylint~=2.9.4",
+            "pylint~=2.11.1",
+            "pylint-aiida~=0.1.1",
             "pylint-django",
             "sqlalchemy2-stubs"
         ],
@@ -164,6 +168,7 @@
             "core.cif = aiida.orm.nodes.data.cif:CifData",
             "core.code = aiida.orm.nodes.data.code:Code",
             "core.dict = aiida.orm.nodes.data.dict:Dict",
+            "core.enum = aiida.orm.nodes.data.enum:EnumData",
             "core.float = aiida.orm.nodes.data.float:Float",
             "core.folder = aiida.orm.nodes.data.folder:FolderData",
             "core.int = aiida.orm.nodes.data.int:Int",

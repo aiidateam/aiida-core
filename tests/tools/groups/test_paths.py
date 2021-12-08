@@ -12,7 +12,7 @@
 import pytest
 
 from aiida import orm
-from aiida.tools.groups.paths import GroupAttr, GroupPath, InvalidPath, GroupNotFoundError, NoGroupsInPathError
+from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, InvalidPath, NoGroupsInPathError
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ from .abstract import AbstractRepositoryBackend
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
-BYTES_TO_MB = 9.53674316E-7
+BYTES_TO_MB = 1 / 1024 ** 2
 
 
 class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
@@ -153,8 +153,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         clean_storage = not live
         do_vacuum = not live
 
-        if live:
-            if override_do_repack or override_clean_storage or override_do_vacuum:
+        if live and (override_do_repack or override_clean_storage or override_do_vacuum):
                 errmsg = 'a specifically resquest keyword cannot be applied while the profile is in use:\n'
                 if override_do_repack is not None:
                     errmsg = ' > override_do_repack = {override_do_repack}\n'

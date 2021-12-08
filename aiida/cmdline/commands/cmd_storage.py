@@ -88,9 +88,10 @@ def storage_info(statistics):
     from aiida.cmdline.utils.common import get_database_summary
     from aiida.orm import QueryBuilder
 
-    data = {}
-    data['database'] = get_database_summary(QueryBuilder, statistics)
-    data['repository'] = get_repository_info(statistics=statistics)
+    data = {
+        'database': get_database_summary(QueryBuilder, statistics).
+        'repository': get_repository_info(statistics=statistics)
+    }
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 
@@ -104,7 +105,7 @@ def storage_info(statistics):
 @click.option(
     '--dry-run',
     is_flag=True,
-    help='Returns information that allows to estimate the impact of the maintenance operations.'
+    help='Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
@@ -139,4 +140,4 @@ def storage_maintain(full, dry_run):
             return
 
     repository_maintain(full=full, dry_run=dry_run)
-    echo.echo('\nRequested maintainance procedures finished.')
+    echo.echo_success('Requested maintenance procedures finished.')

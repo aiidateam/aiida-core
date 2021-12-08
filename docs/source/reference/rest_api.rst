@@ -943,7 +943,7 @@ Querybuilder
 
     Description:
 
-        Posts a query to the database. The content of the query is passed in a attached JSON file. 
+        Posts a query to the database. The content of the query is passed in a attached JSON file.
 
 To use this endpoint, you need a http operator that allows to pass attachments.
 We will demonstrate two options, the `HTTPie <https://httpie.io/>`_ (to use in the terminal) and the python library `Requests <https://docs.python-requests.org/en/latest/#>`_ (to use in python).
@@ -955,17 +955,17 @@ Option 1: HTTPie
   .. code-block:: console
 
     $ pip install httpie
-  
+
   Then execute the REST API call with
-  
+
   .. code-block:: console
-    
+
     $ http localhost:5000/api/v4/querybuilder < my_query.json
 
   where ``my_query.json`` is the file containing the query dictionary of in the json format.
-  
+
   Response::
-  
+
   .. dropdown::
 
     .. code-block:: python
@@ -1119,7 +1119,7 @@ Option 2: Resquests library (all python approach)
     import requests
 
     load_profile('my_profile')
-    
+
     qb = QueryBuilder()
     qb.append(Code)
 

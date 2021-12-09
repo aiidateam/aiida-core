@@ -7,9 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
+# pylint: disable=invalid-name,no-member
 """Parity with Django backend (rev: 0049),
-part 2: Alter columns to be non-nullable
+part 2: Alter columns to be non-nullable and change type of some columns.
 
 Revision ID: 1de112340b17
 Revises: 2b40c8131fe0
@@ -73,6 +73,8 @@ def upgrade():
 
     # TODO this causes the migration to hang
     # op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
+    op.alter_column('db_dbsetting', 'key', existing_type=sa.String(255), type_=sa.String(1024), nullable=False)
+    op.alter_column('db_dbsetting', 'description', existing_type=sa.String(255), type_=sa.Text(), nullable=False)
 
     op.alter_column('db_dbuser', 'email', existing_type=sa.String(254), nullable=False)
     op.alter_column('db_dbuser', 'first_name', existing_type=sa.String(254), nullable=False)
@@ -86,7 +88,9 @@ def downgrade():
     op.alter_column('db_dbuser', 'first_name', existing_type=sa.String(254), nullable=True)
     op.alter_column('db_dbuser', 'email', existing_type=sa.String(254), nullable=True)
 
-    op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=True)
+    # op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=True)
+    op.alter_column('db_dbsetting', 'key', existing_type=sa.String(1024), type_=sa.String(255), nullable=False)
+    op.alter_column('db_dbsetting', 'description', existing_type=sa.Text(), type_=sa.String(255), nullable=False)
 
     op.alter_column('db_dbnode', 'ctime', existing_type=sa.DateTime(timezone=True), nullable=True)
     op.alter_column('db_dbnode', 'description', existing_type=sa.TEXT(), nullable=True)

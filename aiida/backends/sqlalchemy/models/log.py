@@ -14,6 +14,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
+from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -26,10 +27,10 @@ class DbLog(Base):
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    time = Column(DateTime(timezone=True), default=timezone.now)
-    loggername = Column(String(255), index=True, doc='What process recorded the message')
-    levelname = Column(String(255), index=True, doc='How critical the message is')
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
+    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    loggername = Column(String(255), index=True, nullable=False, doc='What process recorded the message')
+    levelname = Column(String(255), index=True, nullable=False, doc='How critical the message is')
     dbnode_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
     )
@@ -37,6 +38,21 @@ class DbLog(Base):
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)
 
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
+
+    __table_args__ = (
+        Index(
+            'db_dblog_loggername_like',
+            loggername,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dblog_levelname_like',
+            levelname,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+    )
 
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'

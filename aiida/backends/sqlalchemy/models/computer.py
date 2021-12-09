@@ -11,6 +11,7 @@
 """Module to manage computers for the SQLA backend."""
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
+from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -38,6 +39,12 @@ class DbComputer(Base):
     scheduler_type = Column(String(255), default='', nullable=False)
     transport_type = Column(String(255), default='', nullable=False)
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)
+
+    __tableargs__ = (
+        Index(
+            'db_dbcomputer_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         """Provide _metadata and description attributes to the class."""

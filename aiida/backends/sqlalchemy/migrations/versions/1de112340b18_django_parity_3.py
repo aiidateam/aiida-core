@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
+# pylint: disable=invalid-name,no-member
 """Parity with Django backend (rev: 0049),
 part 3: Add PostgreSQL-specific indexes
 
@@ -62,6 +62,8 @@ def downgrade():
             key_name, table_name=tbl_name, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
         )
 
+
+# pylint: disable=line-too-long
 
 # ('db_dbauthinfo', 'db_dbauthinfo_pkey', 'CREATE UNIQUE INDEX db_dbauthinfo_pkey ON public.db_dbauthinfo USING btree (id)')
 # ('db_dbauthinfo', 'db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq', 'CREATE UNIQUE INDEX db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq ON public.db_dbauthinfo USING btree (aiidauser_id, dbcomputer_id)')

@@ -61,14 +61,24 @@ class DbGroup(Base):
     extras = Column(JSONB, default=dict, nullable=False)
 
     user_id = Column(
-        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=True
     )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref='dbgroups', lazy='dynamic')
 
-    __table_args__ = (UniqueConstraint('label', 'type_string'),)
+    __table_args__ = (
+        UniqueConstraint('label', 'type_string'),
+        Index('db_dbgroup_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+        Index(
+            'db_dbgroup_type_string_like',
+            type_string,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+    )
 
+    # TODO move these up to DbGroupNode
     Index('db_dbgroup_dbnodes_dbnode_id_idx', table_groups_nodes.c.dbnode_id)
     Index('db_dbgroup_dbnodes_dbgroup_id_idx', table_groups_nodes.c.dbgroup_id)
 

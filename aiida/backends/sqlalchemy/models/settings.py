@@ -14,6 +14,7 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends import sqlalchemy as sa
@@ -24,7 +25,7 @@ from aiida.common import timezone
 class DbSetting(Base):
     """Database model to store global settings."""
     __tablename__ = 'db_dbsetting'
-    __table_args__ = (UniqueConstraint('key'),)
+
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
     key = Column(String(1024), index=True, nullable=False)
@@ -32,7 +33,12 @@ class DbSetting(Base):
 
     # I also add a description field for the variables
     description = Column(Text, default='', nullable=False)
-    time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
+    time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint('key'),
+        Index('db_dbsetting_key_like', key, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+    )
 
     def __str__(self):
         return f"'{self.key}'={self.getvalue()}"

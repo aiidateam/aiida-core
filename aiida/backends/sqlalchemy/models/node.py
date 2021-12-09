@@ -96,9 +96,13 @@ class DbNode(Base):
     )
 
     __tableargs__ = (
+        Index('db_dbnode_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
         Index(
-            'db_dbnode_node_type_like',
-            node_type,
+            'db_dbnode_type_like', node_type, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dbnode_process_type_like',
+            process_type,
             postgresql_using='btree',
             postgresql_ops={'data': 'varchar_pattern_ops'}
         ),
@@ -202,6 +206,8 @@ class DbLink(Base):
         # I cannot add twice the same link
         # I want unique labels among all inputs of a node
         # UniqueConstraint('output_id', 'label'),
+        Index('db_dblink_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+        Index('db_dblink_type_like', type, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
     )
 
     def __str__(self):

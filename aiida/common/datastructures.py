@@ -99,15 +99,15 @@ class CodeInfo(DefaultFieldsAttributeDict):
     This attribute-dictionary contains the information needed to execute a code.
     Possible attributes are:
 
-    * ``cmdline_params``: a list of strings, containing parameters to be written on
-      the command line right after the call to the code, as for example::
+    * ``cmdline_params``: a list of strings, containing executable commands and parameters to be written on
+      the command line, as for example::
 
-        code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
+        cmdline_params[0] cmdline_params[1] ... < stdin > stdout
 
     * ``stdin_name``: (optional) the name of the standard input file. Note, it is
       only possible to use the stdin with the syntax::
 
-        code.x < stdin_name
+        cmdline_params[0] cmdline_params[1] ... < stdin_name
 
       If no stdin_name is specified, the string "< stdin_name" will not be
       passed to the code.
@@ -117,7 +117,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
     * ``stdout_name``: (optional) the name of the standard output file. Note, it is
       only possible to pass output to stdout_name with the syntax::
 
-        code.x ... > stdout_name
+        cmdline_params[0] cmdline_params[1] ... > stdout_name
 
       If no stdout_name is specified, the string "> stdout_name" will not be
       passed to the code.
@@ -128,11 +128,11 @@ class CodeInfo(DefaultFieldsAttributeDict):
     * ``join_files``: (optional) if True, redirects the error to the output file.
       If join_files=True, the code will be called as::
 
-        code.x ... > stdout_name 2>&1
+        cmdline_params[0] cmdline_params[1] ... > stdout_name 2>&1
 
       otherwise, if join_files=False and stderr is passed::
 
-        code.x ... > stdout_name 2> stderr_name
+        cmdline_params[0] cmdline_params[1] ... > stdout_name 2> stderr_name
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)

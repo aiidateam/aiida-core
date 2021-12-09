@@ -553,6 +553,7 @@ Below is a list with all available subcommands.
     Commands:
       info       Summarise the contents of the storage.
       integrity  Checks for the integrity of the data storage.
+      maintain   Performs maintenance tasks on the repository.
       migrate    Migrate the storage to the latest schema version.
 
 

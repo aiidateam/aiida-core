@@ -20,8 +20,8 @@ from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.orm import Code, Computer, load_code
-from aiida.orm.utils.loaders import load_container_code
 from aiida.orm.nodes.data.container_code import ContainerCode
+from aiida.orm.utils.loaders import load_container_code
 
 
 @pytest.fixture
@@ -158,6 +158,7 @@ def test_noninteractive_remote(run_cli_command, aiida_localhost, non_interactive
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_code(label), Code)
 
+
 @pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_noninteractive_container(run_cli_command, aiida_localhost, non_interactive_editor):
@@ -165,7 +166,8 @@ def test_noninteractive_container(run_cli_command, aiida_localhost, non_interact
     label = 'noninteractive_container'
     options = [
         '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--on-container', '--container-cmdline-tmpl=singularity run {image}', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+        '--on-container', '--container-cmdline-tmpl=singularity run {image}', f'--image=cscs/qe-mpich:u',
+        f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_container_code(label), ContainerCode)

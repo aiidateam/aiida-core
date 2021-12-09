@@ -22,9 +22,7 @@ from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-
 from aiida.orm.nodes.data.container_code import ContainerCode
-
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace

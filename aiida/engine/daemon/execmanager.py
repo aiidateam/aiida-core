@@ -28,11 +28,11 @@ from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import CalcJobNode, Code, FolderData, Node, RemoteData, load_node
+from aiida.orm.nodes.data.container_code import ContainerCode
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
 from aiida.transports import Transport
-from aiida.orm.nodes.data.container_code import ContainerCode
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 

@@ -47,6 +47,7 @@ __all__ = (
     'Comment',
     'Computer',
     'ComputerEntityLoader',
+    'ContainerCode',
     'DESCENDING',
     'Data',
     'Dict',

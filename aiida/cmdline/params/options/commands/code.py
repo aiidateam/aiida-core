@@ -14,20 +14,26 @@ from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
+
 def is_on_container(ctx):
     return bool(ctx.params.get('on_container'))
+
 
 def is_not_on_container(ctx):
     return bool(not is_on_container(ctx))
 
+
 def is_on_computer(ctx):
     return bool(ctx.params.get('on_computer'))
+
 
 def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
+
 def is_on_computer_or_container(ctx):
     return is_on_computer(ctx) or is_on_container(ctx)
+
 
 def validate_label_uniqueness(ctx, _, value):
     """Validate the uniqueness of the label of the code.
@@ -72,6 +78,7 @@ def validate_label_uniqueness(ctx, _, value):
             raise click.BadParameter(f'the code `{full_label}` already exists.')
 
     return value
+
 
 ON_CONTAINER = OverridableOption(
     '--on-container/--not-on-container',

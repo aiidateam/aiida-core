@@ -13,8 +13,8 @@ import os
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
 
-from .data import Data
 from .code import Code
+from .data import Data
 
 __all__ = ('ContainerCode',)
 
@@ -26,21 +26,17 @@ class ContainerCode(Code):
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self, 
-                computer=None, 
-                cmdline_tmpl=None,
-                image=None,
-                container_exec_path=None,
-                input_plugin_name=None, **kwargs):
+    def __init__(
+        self, computer=None, cmdline_tmpl=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs
+    ):
         super().__init__(**kwargs)
 
         # do some check of parameters
-        
+
         self.set_container_exec(computer, cmdline_tmpl, image, container_exec_path)
 
         if input_plugin_name:
             self.set_input_plugin_name(input_plugin_name)
-
 
     def _validate(self):
         pass
@@ -57,9 +53,9 @@ class ContainerCode(Code):
 
         type_check(computer, orm.Computer)
         self.computer = computer
-        
+
         container_cmdline_params = cmdline_tmpl.format(image=image)
-        
+
         self.set_attribute('container_cmdline_params', container_cmdline_params)
         self.set_attribute('image', image)
         self.set_attribute('container_exec_path', container_exec_path)
@@ -69,11 +65,10 @@ class ContainerCode(Code):
 
     def get_remote_computer(self):
         return self.computer
-    
+
     def get_image(self):
         """Get image name"""
         return self.get_attribute('image', '')
-    
+
     def container_cmd_params(self):
         return self.get_attribute('container_cmdline_params', '')
-

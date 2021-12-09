@@ -13,8 +13,8 @@ import os
 from types import CodeType
 
 import importlib_metadata
-from aiida.cmdline.params.options.commands.code import ON_CONTAINER
 
+from aiida.cmdline.params.options.commands.code import ON_CONTAINER
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 from aiida.orm.nodes.data.container_code import ContainerCode
@@ -63,10 +63,12 @@ class CodeBuilder:
             image = self._get_and_count('image', used)
             cmdline_tmpl = self._get_and_count('container_cmdline_tmpl', used)
 
-            code = ContainerCode(computer=self._get_and_count('computer', used), 
-                                 cmdline_tmpl=cmdline_tmpl,
-                                 image=image,
-                                 container_exec_path=self._get_and_count('remote_abs_path', used))
+            code = ContainerCode(
+                computer=self._get_and_count('computer', used),
+                cmdline_tmpl=cmdline_tmpl,
+                image=image,
+                container_exec_path=self._get_and_count('remote_abs_path', used)
+            )
         else:
             code = Code(
                 remote_computer_exec=(

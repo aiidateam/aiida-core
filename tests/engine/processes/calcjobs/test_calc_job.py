@@ -194,6 +194,7 @@ def test_custom_cmdline_string(aiida_local_code_factory, file_regression):
 
     file_regression.check(content, extension='.sh')
 
+
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
@@ -261,11 +262,10 @@ def test_container_code(aiida_local_code_factory, file_regression):
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     cmdline_tmpl = 'singularity run {image}'
-    code = ContainerCode(computer=computer, 
-                         cmdline_tmpl=cmdline_tmpl,
-                         image='cscs/qe-mpich:latest', 
-                         container_exec_path='/usr/bin/pw.x')
-    
+    code = ContainerCode(
+        computer=computer, cmdline_tmpl=cmdline_tmpl, image='cscs/qe-mpich:latest', container_exec_path='/usr/bin/pw.x'
+    )
+
     inputs = {
         'code': code,
         'metadata': {
@@ -286,6 +286,7 @@ def test_container_code(aiida_local_code_factory, file_regression):
         content = handle.read()
 
     file_regression.check(content, extension='.sh')
+
 
 @pytest.mark.requires_rmq
 class TestCalcJob(AiidaTestCase):

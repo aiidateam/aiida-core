@@ -121,7 +121,10 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
         query_with_dashes=query_with_dashes
     )
 
-def load_container_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'ContainerCode':
+
+def load_container_code(
+    identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True
+) -> 'ContainerCode':
     """
     Load a Code instance by one of its identifiers: pk, uuid or label
 
@@ -748,6 +751,7 @@ class ContainerCodeEntityLoader(OrmEntityLoader):
             builder.append(Computer, filters={'label': {'==': machinename}}, with_node='code')
 
         return builder
+
 
 class ComputerEntityLoader(OrmEntityLoader):
     """Loader for the `Computer` entity and sub classes."""

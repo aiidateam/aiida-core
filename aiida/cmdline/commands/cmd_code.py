@@ -87,7 +87,7 @@ def setup_code(ctx, non_interactive, **kwargs):
     from aiida.orm.utils.builders.code import CodeBuilder
 
     options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
-    
+
     if kwargs.pop('on_container'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_CONTAINER
         kwargs.pop('on_computer')

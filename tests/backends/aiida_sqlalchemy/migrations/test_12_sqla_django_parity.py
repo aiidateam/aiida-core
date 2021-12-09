@@ -16,4 +16,20 @@ def test_part_1(perform_migrations: Migrator):
     # starting revision
     perform_migrations.migrate_down('34a831f4286d')
 
-    perform_migrations.migrate_up('2b40c8131fe0')
+    perform_migrations.migrate_up('1de112340b16')
+
+
+def test_part_2(perform_migrations: Migrator):
+    """Alter columns to be non-nullable."""
+    # starting revision
+    perform_migrations.migrate_down('1de112340b16')
+
+    perform_migrations.migrate_up('1de112340b17')
+
+
+def test_part_3(perform_migrations: Migrator):
+    """Alter columns to be non-nullable."""
+    # starting revision
+    perform_migrations.migrate_down('1de112340b17')
+
+    perform_migrations.migrate_up('1de112340b18')

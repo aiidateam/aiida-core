@@ -399,7 +399,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         assert comp.is_user_configured(self.user), result.output
 
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
-        assert new_auth_params['use_login_shell'] == False
+        assert new_auth_params['use_login_shell'] is False
         assert new_auth_params['safe_interval'] == 1.0
 
     def test_ssh_interactive(self):
@@ -440,7 +440,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         assert new_auth_params['port'] == port
         assert new_auth_params['look_for_keys'] == look_for_keys
         assert new_auth_params['key_filename'] == key_filename
-        assert new_auth_params['use_login_shell'] == True
+        assert new_auth_params['use_login_shell'] is True
 
     def test_local_from_config(self):
         """Test configuring a computer from a config file"""
@@ -503,9 +503,9 @@ safe_interval: {interval}
         username = 'TEST'
         options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
         result = self.cli_runner.invoke(computer_configure, options, catch_exceptions=False)
+        auth_info = orm.AuthInfo.objects.get(dbcomputer_id=comp.id, aiidauser_id=self.user.id)
         assert comp.is_user_configured(self.user), result.output
-        assert orm.AuthInfo.objects.get(dbcomputer_id=comp.id, aiidauser_id=self.user.id).get_auth_params()['username'] == \
-            username
+        assert auth_info.get_auth_params()['username'] == username
 
     def test_show(self):
         """Test verdi computer configure show <comp>."""
@@ -701,95 +701,54 @@ class TestVerdiComputerCommands(AiidaTestCase):
             orm.Computer.objects.get(label='computer_for_test_delete')
 
 
-@pytest.fixture(scope='function')
-def comp(temp_dir):
-    """Get an AiiDA computer for localhost.
-
-    Usage::
-
-      def test_1(aiida_localhost):
-          label = aiida_localhost.label
-          # proceed to set up code or use 'aiida_local_code_factory' instead
-
-
-    :return: The computer node
-    :rtype: :py:class:`aiida.orm.Computer`
-    """
-    from aiida.common.exceptions import NotExistent
-    from aiida.orm import Computer
-
-    label = 'computer_duplicate_interactive'
-
-    try:
-        computer = Computer.objects.get(label=label)
-    except NotExistent:
-        computer = Computer(
-            label=label,
-            description='localhost computer set up by test manager',
-            hostname='localhost',
-            workdir=temp_dir,
-            transport_type='core.local',
-            scheduler_type='core.direct'
-        )
-        computer.store()
-        computer.set_minimum_job_poll_interval(0.)
-        computer.configure()
-
-    return computer
-
-
 @pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_computer_duplicate_interactive(run_cli_command, comp, non_interactive_editor):
+def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test 'verdi computer duplicate' in interactive mode."""
-    # os.environ['VISUAL'] = 'sleep 1; vim -cwq'
-    # os.environ['EDITOR'] = 'sleep 1; vim -cwq'
     label = 'computer_duplicate_interactive'
-    hostname = 'localhost'
-    user_input = f'{label}\n\n\n\n\n\n\n\n\nN'
-    result = run_cli_command(computer_duplicate, [str(comp.pk)], user_input=user_input, catch_exceptions=False)
+    computer = aiida_localhost
+    user_input = f'{label}\n\n\n\n\n\n\n\n\n'
+    result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input, catch_exceptions=False)
     assert result.exception is None, result.output
 
     new_computer = orm.Computer.objects.get(label=label)
-    assert comp.description == new_computer.description
-    assert comp.hostname == new_computer.hostname
-    assert comp.transport_type == new_computer.transport_type
-    assert comp.scheduler_type == new_computer.scheduler_type
-    assert comp.get_shebang() == new_computer.get_shebang()
-    assert comp.get_workdir() == new_computer.get_workdir()
-    assert comp.get_mpirun_command() == new_computer.get_mpirun_command()
-    assert comp.get_default_mpiprocs_per_machine() == new_computer.get_default_mpiprocs_per_machine()
-    assert comp.get_prepend_text() == new_computer.get_prepend_text()
-    assert comp.get_append_text() == new_computer.get_append_text()
+    assert new_computer.description == computer.description
+    assert new_computer.hostname == computer.hostname
+    assert new_computer.transport_type == computer.transport_type
+    assert new_computer.scheduler_type == computer.scheduler_type
+    assert new_computer.get_shebang() == computer.get_shebang()
+    assert new_computer.get_workdir() == computer.get_workdir()
+    assert new_computer.get_mpirun_command() == computer.get_mpirun_command()
+    assert new_computer.get_default_mpiprocs_per_machine() == computer.get_default_mpiprocs_per_machine()
+    assert new_computer.get_prepend_text() == computer.get_prepend_text()
+    assert new_computer.get_append_text() == computer.get_append_text()
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_computer_duplicate_non_interactive(run_cli_command, comp, non_interactive_editor):
+def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test if 'verdi computer duplicate' in non-interactive mode."""
     label = 'computer_duplicate_noninteractive'
-    result = run_cli_command(
-        computer_duplicate, ['--non-interactive', f'--label={label}', f'--hostname=localhost',
-                             str(comp.pk)]
-    )
+    computer = aiida_localhost
+    result = run_cli_command(computer_duplicate, ['--non-interactive', f'--label={label}', str(computer.pk)])
     assert result.exception is None, result.output
 
     new_computer = orm.Computer.objects.get(label=label)
-    assert comp.description == new_computer.description
-    assert comp.hostname == new_computer.hostname
-    assert comp.transport_type == new_computer.transport_type
-    assert comp.scheduler_type == new_computer.scheduler_type
-    assert comp.get_shebang() == new_computer.get_shebang()
-    assert comp.get_workdir() == new_computer.get_workdir()
-    assert comp.get_mpirun_command() == new_computer.get_mpirun_command()
-    assert comp.get_default_mpiprocs_per_machine() == new_computer.get_default_mpiprocs_per_machine()
-    assert comp.get_prepend_text() == new_computer.get_prepend_text()
-    assert comp.get_append_text() == new_computer.get_append_text()
+    assert new_computer.description == computer.description
+    assert new_computer.hostname == computer.hostname
+    assert new_computer.transport_type == computer.transport_type
+    assert new_computer.scheduler_type == computer.scheduler_type
+    assert new_computer.get_shebang() == computer.get_shebang()
+    assert new_computer.get_workdir() == computer.get_workdir()
+    assert new_computer.get_mpirun_command() == computer.get_mpirun_command()
+    assert new_computer.get_default_mpiprocs_per_machine() == computer.get_default_mpiprocs_per_machine()
+    assert new_computer.get_prepend_text() == computer.get_prepend_text()
+    assert new_computer.get_append_text() == computer.get_append_text()
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_interactive(run_cli_command, clear_database_before_test, aiida_localhost, non_interactive_editor):
+def test_interactive(run_cli_command, clear_database_before_test, non_interactive_editor):
     """Test verdi computer setup in interactive mode."""
     label = 'interactive_computer'
 

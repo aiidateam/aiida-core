@@ -903,6 +903,8 @@ class Process(plumpy.processes.Process):
         for port_namespace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
             # only the top-level key is stored in _exposed_outputs
             for top_name in top_namespace_map:
+                if namespace is not None and namespace not in self.spec()._exposed_outputs:  # pylint: disable=protected-access
+                    raise KeyError(f'the namespace `{namespace}` is not an exposed namespace.')
                 if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:  # pylint: disable=protected-access
                     output_key_map[top_name] = port_namespace
 

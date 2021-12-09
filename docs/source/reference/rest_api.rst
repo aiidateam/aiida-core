@@ -964,7 +964,7 @@ Option 1: HTTPie
 
   where ``my_query.json`` is the file containing the query dictionary of in the json format.
 
-  Response::
+  Response:
 
   .. dropdown::
 

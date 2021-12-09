@@ -8,13 +8,13 @@ AiiDA's `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>
 
 To use AiiDA's REST API, you must install this component during the AiiDA installation:
 
-.. code-block :: console
+.. code-block:: console
 
   $ pip install aiida-core[rest]
 
 Then, the REST service can be started with:
 
-.. code-block :: console
+.. code-block:: console
 
   $ verdi restapi
 

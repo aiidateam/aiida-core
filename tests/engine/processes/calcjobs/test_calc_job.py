@@ -260,16 +260,10 @@ def test_container_code(aiida_local_code_factory, file_regression):
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
-    cmd_tmpl = '{sarus_exec} run --mount=src={source_dir},dst={dist_dir},type=bind  --workdir {workdir}'
+    cmdline_tmpl = 'singularity run {image}'
     code = ContainerCode(computer=computer, 
-                         cmd_tmpl=cmd_tmpl,
-                         cmd_params_dict={
-                             'sarus_exec': '/bin/sarus',
-                             'source_dir': '$PWD',
-                             'dist_dir': '/workdir',
-                             'workdir': '/workdir',
-                         },
-                         image='cscs/qe-mpich', 
+                         cmdline_tmpl=cmdline_tmpl,
+                         image='cscs/qe-mpich:latest', 
                          container_exec_path='/usr/bin/pw.x')
     
     inputs = {

@@ -8,4 +8,4 @@
 #SBATCH --ntasks-per-node=128
 
 
-"/bin/sarus run --mount=src=$PWD,dst=/workdir,type=bind  --workdir /workdir" 'cscs/qe-mpich' '/usr/bin/pw.x'   
+'singularity run cscs/qe-mpich:latest' 'cscs/qe-mpich:latest' '/usr/bin/pw.x'   

@@ -29,9 +29,6 @@ def is_not_on_computer(ctx):
 def is_on_computer_or_container(ctx):
     return is_on_computer(ctx) or is_on_container(ctx)
 
-def is_on_sarus(ctx):
-    return bool(ctx.params.get('container_tech') == 'sarus')
-
 def validate_label_uniqueness(ctx, _, value):
     """Validate the uniqueness of the label of the code.
 
@@ -85,71 +82,21 @@ ON_CONTAINER = OverridableOption(
 
 IMAGE = OverridableOption(
     '--image',
-    prompt='image name.',
+    prompt='image name',
     required_fn=is_on_container,
     prompt_fn=is_on_container,
     cls=InteractiveOption,
     help='image name.'
 )
 
-CONTAINER_TECH = OverridableOption(
-    '--container-tech',
-    prompt='container tech',
+CONTAINER_CMD_TMPL = OverridableOption(
+    '--container-cmd-tmpl',
+    prompt='container cmdline params tmpl',
+    default='sarus run --mount=src=$PWD,dst=/workir,type=bind --workdir /workdir {image}',
     required_fn=is_on_container,
     prompt_fn=is_on_container,
     cls=InteractiveOption,
-    help='container tech.'
-)
-
-SARUS_CMD_TMPL = OverridableOption(
-    '--sarus-cmd-tmpl',
-    prompt='sarus params tmpl',
-    default='{sarus_exec} run --mount=src={source_dir},dst={dist_dir},type=bind  --workdir {workdir}',
-    required_fn=is_on_sarus,
-    prompt_fn=is_on_sarus,
-    cls=InteractiveOption,
-    help='sarus tmpl.'
-)
-
-SARUS_EXEC = OverridableOption(
-    '--sarus-exec',
-    prompt='sarus executable path',
-    default='/usr/bin/sarus',
-    required_fn=is_on_sarus,
-    prompt_fn=is_on_sarus,
-    type=types.AbsolutePathParamType(dir_okay=False),
-    cls=InteractiveOption,
-    help='sarus executable path.'
-)
-
-MOUNT_SOURCE_DIR = OverridableOption(
-    '--mount-source-dir',
-    prompt='sarus bind source dir',
-    default='${PWD}',
-    required_fn=is_on_sarus,
-    prompt_fn=is_on_sarus,
-    cls=InteractiveOption,
-    help='sarus bind source dir.'
-)
-
-MOUNT_DIST_DIR = OverridableOption(
-    '--mount-dist-dir',
-    prompt='sarus bind dist dir',
-    default='/workdir',
-    required_fn=is_on_sarus,
-    prompt_fn=is_on_sarus,
-    cls=InteractiveOption,
-    help='sarus bind dist dir.'
-)
-
-WORK_DIR = OverridableOption(
-    '--work-dir',
-    prompt='sarus work dir',
-    default='/workdir',
-    required_fn=is_on_sarus,
-    prompt_fn=is_on_sarus,
-    cls=InteractiveOption,
-    help='sarus workdir dir.'
+    help='container cmdline params tmpl.'
 )
 
 ON_COMPUTER = OverridableOption(

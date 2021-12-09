@@ -28,8 +28,7 @@ class ContainerCode(Code):
 
     def __init__(self, 
                 computer=None, 
-                cmd_tmpl=None,
-                cmd_params_dict=None,
+                cmdline_tmpl=None,
                 image=None,
                 container_exec_path=None,
                 input_plugin_name=None, **kwargs):
@@ -37,8 +36,7 @@ class ContainerCode(Code):
 
         # do some check of parameters
         
-        container_cmd_params = cmd_tmpl.format(**cmd_params_dict)
-        self.set_container_exec(computer, container_cmd_params, image, container_exec_path)
+        self.set_container_exec(computer, cmdline_tmpl, image, container_exec_path)
 
         if input_plugin_name:
             self.set_input_plugin_name(input_plugin_name)
@@ -47,7 +45,7 @@ class ContainerCode(Code):
     def _validate(self):
         pass
 
-    def set_container_exec(self, computer, container_cmd_params, image, container_exec_path):
+    def set_container_exec(self, computer, cmdline_tmpl, image, container_exec_path):
         """
         Set the code as container
         """
@@ -60,12 +58,10 @@ class ContainerCode(Code):
         type_check(computer, orm.Computer)
         self.computer = computer
         
-        # self._set_container(container_thing)
+        container_cmdline_params = cmdline_tmpl.format(image=image)
         
-        self.set_attribute('container_cmd_params', container_cmd_params)
-        
+        self.set_attribute('container_cmdline_params', container_cmdline_params)
         self.set_attribute('image', image)
-        
         self.set_attribute('container_exec_path', container_exec_path)
 
     def get_container_exec_path(self):
@@ -79,5 +75,5 @@ class ContainerCode(Code):
         return self.get_attribute('image', '')
     
     def container_cmd_params(self):
-        return self.get_attribute('container_cmd_params', [])
+        return self.get_attribute('container_cmdline_params', '')
 

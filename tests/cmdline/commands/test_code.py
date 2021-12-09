@@ -163,10 +163,9 @@ def test_noninteractive_remote(run_cli_command, aiida_localhost, non_interactive
 def test_noninteractive_container(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test non-interactive container code setup."""
     label = 'noninteractive_container'
-    ct = 'sarus'
     options = [
         '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--on-container', f'--container-tech={ct}', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+        '--on-container', '--container-cmd-tmpl=singularity run {image}', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_container_code(label), ContainerCode)

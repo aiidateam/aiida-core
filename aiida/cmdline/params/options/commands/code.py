@@ -89,8 +89,8 @@ IMAGE = OverridableOption(
     help='image name.'
 )
 
-CONTAINER_CMD_TMPL = OverridableOption(
-    '--container-cmd-tmpl',
+CONTAINER_CMDLINE_TMPL = OverridableOption(
+    '--container-cmdline-tmpl',
     prompt='container cmdline params tmpl',
     default='sarus run --mount=src=$PWD,dst=/workir,type=bind --workdir /workdir {image}',
     required_fn=is_on_container,

@@ -60,19 +60,11 @@ class CodeBuilder:
             ]
             code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
         elif code_type == self.CodeType.ON_CONTAINER:
-            ct = self._get_and_count('container_tech', used)
             image = self._get_and_count('image', used)
-            if ct == 'sarus':
-                cmd_tmpl = self._get_and_count('sarus_cmd_tmpl', used)
-                cmd_params_dict = {
-                    'sarus_exec': self._get_and_count('sarus_exec', used),
-                    'source_dir': self._get_and_count('mount_source_dir', used),
-                    'dist_dir': self._get_and_count('mount_dist_dir', used),
-                    'workdir': self._get_and_count('work_dir', used),
-                }
+            cmdline_tmpl = self._get_and_count('container_cmdline_tmpl', used)
+
             code = ContainerCode(computer=self._get_and_count('computer', used), 
-                                 cmd_tmpl=cmd_tmpl,
-                                 cmd_params_dict=cmd_params_dict,
+                                 cmdline_tmpl=cmdline_tmpl,
                                  image=image,
                                  container_exec_path=self._get_and_count('remote_abs_path', used))
         else:

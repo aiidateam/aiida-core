@@ -165,7 +165,7 @@ def test_noninteractive_container(run_cli_command, aiida_localhost, non_interact
     label = 'noninteractive_container'
     options = [
         '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--on-container', '--container-cmd-tmpl=singularity run {image}', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+        '--on-container', '--container-cmdline-tmpl=singularity run {image}', f'--image=cscs/qe-mpich:u', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_container_code(label), ContainerCode)

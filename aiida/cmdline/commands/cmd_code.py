@@ -65,7 +65,7 @@ def set_code_builder(ctx, param, value):
 # once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('setup')
 @options_code.ON_CONTAINER()
-@options_code.CONTAINER_CMD_TMPL()
+@options_code.CONTAINER_CMDLINE_TMPL()
 @options_code.IMAGE()
 @options_code.ON_COMPUTER()
 @options_code.COMPUTER()

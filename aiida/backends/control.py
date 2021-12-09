@@ -12,11 +12,13 @@
 # This is because they have to go through all the nodes to gather the list of keys that AiiDA is keeping
 # track of (since they are descentralized in each node entry).
 # See the get_unreferenced_keyset function
-from typing import Optional, Set
+from typing import TYPE_CHECKING, Optional, Set
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.manager import get_manager
-from aiida.orm.implementation import Backend
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend
 
 __all__ = ('MAINTAIN_LOGGER',)
 
@@ -26,7 +28,7 @@ MAINTAIN_LOGGER = AIIDA_LOGGER.getChild('maintain')
 def repository_maintain(
     full: bool = False,
     dry_run: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Optional['Backend'] = None,
     **kwargs,
 ) -> None:
     """Performs maintenance tasks on the repository.
@@ -54,7 +56,7 @@ def repository_maintain(
     repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
 
-def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optional[Backend] = None) -> Set[str]:
+def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optional['Backend'] = None) -> Set[str]:
     """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
     This should be all the soft-deleted files.
@@ -90,7 +92,7 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
     return keyset_repository - keyset_database
 
 
-def get_repository_info(statistics: bool = False, backend: Optional[Backend] = None) -> dict:
+def get_repository_info(statistics: bool = False, backend: Optional['Backend'] = None) -> dict:
     """Returns general information on the repository."""
     if backend is None:
         backend = get_manager().get_backend()

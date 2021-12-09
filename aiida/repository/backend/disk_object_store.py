@@ -121,7 +121,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return super().get_object_hash(key)
         return key
 
-    def maintain(  # type: ignore # pylint: disable=arguments-differ,too-many-branches
+    def maintain(  # pylint: disable=arguments-differ,too-many-branches
         self,
         dry_run: bool = False,
         live: bool = True,
@@ -132,16 +132,16 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     ) -> dict:
         """Performs maintenance operations.
 
-        :param full:
-            flag to perform operations that require to stop using the maintained profile.
-        :param override_pack_loose:
-            override flag for forcing the packing of loose files.
-        :param override_do_repack:
-            override flag for forcing the re-packing of already packed files.
-        :param override_clean_storage:
-            override flag for forcing the cleaning of soft-deleted files from the repository.
-        :param override_do_vacuum:
-            override flag for forcing the vacuuming of the internal database when cleaning the repository.
+        :param live:
+            if True, will only perform operations that are safe to do while the repository is in use.
+        :param pack_loose:
+            flag for forcing the packing of loose files.
+        :param do_repack:
+            flag for forcing the re-packing of already packed files.
+        :param clean_storage:
+            flag for forcing the cleaning of soft-deleted files from the repository.
+        :param do_vacuum:
+            flag for forcing the vacuuming of the internal database when cleaning the repository.
         :return:
             a dictionary with information on the operations performed.
         """
@@ -186,7 +186,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 self.container.clean_storage(vacuum=do_vacuum)
 
 
-    def get_info(  # type: ignore # pylint: disable=arguments-differ
+    def get_info(  # pylint: disable=arguments-differ
         self,
         statistics=False,
         ) -> dict:

@@ -193,6 +193,12 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+        raise NotImplementedError
+
 
 class ArchiveBackendQueryBuilder(SqlaQueryBuilder):
     """Archive query builder"""

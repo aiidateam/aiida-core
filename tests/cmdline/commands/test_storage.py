@@ -103,3 +103,39 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     assert result.exc_info[0] is SystemExit
     assert 'Critical:' in result.output
     assert 'passed error message' in result.output
+
+
+def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
+    """Test all the information and cases of the storage maintain command."""
+    import logging
+
+    from aiida.backends import control
+
+    def mock_maintain(**kwargs):
+        logmsg = 'Provided kwargs:\n'
+        for key, val in kwargs.items():
+            logmsg += f' > {key}: {val}\n'
+        logging.info(logmsg)
+
+    monkeypatch.setattr(control, 'repository_maintain', mock_maintain)
+
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
+
+    message_list = caplog.records[0].msg.splitlines()
+    assert ' > full: False' in message_list
+    assert ' > dry_run: False' in message_list
+
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
+
+    message_list = caplog.records[1].msg.splitlines()
+    assert ' > full: False' in message_list
+    assert ' > dry_run: True' in message_list
+
+    with caplog.at_level(logging.INFO):
+        run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
+
+    message_list = caplog.records[2].msg.splitlines()
+    assert ' > full: True' in message_list
+    assert ' > dry_run: False' in message_list

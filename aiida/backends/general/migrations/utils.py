@@ -122,6 +122,12 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def iter_object_streams(self, keys: List[str]):
         raise NotImplementedError()
 
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+        raise NotImplementedError
+
 
 def migrate_legacy_repository(shard=None):
     """Migrate the legacy file repository to the new disk object store and return mapping of repository metadata.

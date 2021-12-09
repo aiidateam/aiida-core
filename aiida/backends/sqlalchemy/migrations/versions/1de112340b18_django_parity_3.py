@@ -24,24 +24,24 @@ down_revision = '1de112340b17'
 branch_labels = None
 depends_on = None
 
-
 # TODO do the names of the indexes need to be exactly the same as in django?
 # if so should we (incorrectly) name them the same as django here, then rename later
 # the django ones include uuid like chars, are these always the same?
 VARCHAR_INDEXES = (
-        ('db_dbcomputer', 'label', 'db_dbcomputer_label_like'),
-        ('db_dbgroup', 'label', 'db_dbgroup_label_like'),
-        ('db_dbgroup', 'type_string', 'db_dbgroup_type_string_like'),
-        ('db_dblink', 'label', 'db_dblink_label_like'),
-        ('db_dblink', 'type', 'db_dblink_type_like'),
-        ('db_dblog', 'levelname', 'db_dblog_levelname_like'),
-        ('db_dblog', 'loggername', 'db_dblog_loggername_like'),
-        ('db_dbnode', 'label', 'db_dbnode_label_like'),
-        ('db_dbnode', 'node_type', 'db_dbnode_type_like'),
-        ('db_dbnode', 'process_type', 'db_dbnode_process_type_like'),
-        ('db_dbsetting', 'key', 'db_dbsetting_key_like'),
-        ('db_dbuser', 'email', 'db_dbuser_email_like'),
-    )
+    ('db_dbcomputer', 'label', 'db_dbcomputer_label_like'),
+    ('db_dbgroup', 'label', 'db_dbgroup_label_like'),
+    ('db_dbgroup', 'type_string', 'db_dbgroup_type_string_like'),
+    ('db_dblink', 'label', 'db_dblink_label_like'),
+    ('db_dblink', 'type', 'db_dblink_type_like'),
+    ('db_dblog', 'levelname', 'db_dblog_levelname_like'),
+    ('db_dblog', 'loggername', 'db_dblog_loggername_like'),
+    ('db_dbnode', 'label', 'db_dbnode_label_like'),
+    ('db_dbnode', 'node_type', 'db_dbnode_type_like'),
+    ('db_dbnode', 'process_type', 'db_dbnode_process_type_like'),
+    ('db_dbsetting', 'key', 'db_dbsetting_key_like'),
+    ('db_dbuser', 'email', 'db_dbuser_email_like'),
+)
+
 
 def upgrade():
 
@@ -59,10 +59,7 @@ def downgrade():
 
     for tbl_name, _, key_name in VARCHAR_INDEXES:
         op.drop_index(
-            key_name,
-            table_name=tbl_name,
-            postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            key_name, table_name=tbl_name, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
         )
 
 

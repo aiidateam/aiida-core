@@ -121,7 +121,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return super().get_object_hash(key)
         return key
 
-    def maintain(  # pylint: disable=arguments-differ,too-many-branches
+    def maintain(  # type: ignore # pylint: disable=arguments-differ,too-many-branches
         self,
         dry_run: bool = False,
         live: bool = True,
@@ -186,7 +186,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 self.container.clean_storage(vacuum=do_vacuum)
 
 
-    def get_info(  # pylint: disable=arguments-differ
+    def get_info(  # type: ignore # pylint: disable=arguments-differ
         self,
         statistics=False,
         ) -> dict:

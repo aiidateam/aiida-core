@@ -1064,7 +1064,7 @@ Option 1: HTTPie
 
   Build your query and save it in a file:
 
-  .. code-block :: ipython
+  .. code-block:: ipython
 
     In [1]: qb = QueryBuilder()
 

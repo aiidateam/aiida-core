@@ -94,7 +94,7 @@ class MultiCodesCalcJob(CalcJob):
 
         codeinfo1 = CodeInfo()
         codeinfo1.code_uuid = self.inputs.code.uuid
-        codeinfo1.withmpi = False
+        codeinfo1.with_mpi = False
 
         codeinfo2 = CodeInfo()
         codeinfo2.code_uuid = self.inputs.code.uuid
@@ -139,9 +139,9 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
-@pytest.mark.parametrize('calcjob_withmpi', [True, False])
-def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
-    """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
+@pytest.mark.parametrize('calcjob_with_mpi', [True, False])
+def test_multi_codes_run_with_mpi(aiida_local_code_factory, file_regression, calcjob_with_mpi):
+    """test with_mpi set in CalcJob only take effect for codes which have codeinfo.with_mpi not set"""
 
     inputs = {
         'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
@@ -153,7 +153,7 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
                     'num_machines': 1,
                     'num_mpiprocs_per_machine': 1
                 },
-                'withmpi': calcjob_withmpi,
+                'with_mpi': calcjob_with_mpi,
             }
         }
     }

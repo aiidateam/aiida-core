@@ -306,7 +306,7 @@ def create_calculation_process(code, inputval):
             'num_machines': 1
         },
         'max_wallclock_seconds': 5 * 60,
-        'withmpi': False,
+        'with_mpi': False,
         'parser_name': 'core.templatereplacer.doubler',
     }
 

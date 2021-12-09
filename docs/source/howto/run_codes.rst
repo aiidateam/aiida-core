@@ -380,7 +380,7 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
         builder = code.get_builder()
         builder.x = Int(4)
         builder.y = Int(5)
-        builder.metadata.options.withmpi = False
+        builder.metadata.options.with_mpi = False
         builder.metadata.options.resources = {
             'num_machines': 1,
             'num_mpiprocs_per_machine': 1,

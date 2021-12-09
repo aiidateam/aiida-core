@@ -4,7 +4,7 @@ description: add
 input_plugin: core.arithmetic.add
 on_computer: true
 computer: localhost
-withmpi: false
+with_mpi: false
 remote_abs_path: /bin/bash
 prepend_text: ' '
 append_text: ' '

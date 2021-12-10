@@ -32,7 +32,10 @@ class DbLog(Base):
     loggername = Column(String(255), index=True, nullable=False, doc='What process recorded the message')
     levelname = Column(String(255), index=True, nullable=False, doc='How critical the message is')
     dbnode_id = Column(
-        Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'),
+        nullable=False,
+        index=True
     )
     message = Column(Text(), default='', nullable=False)
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)

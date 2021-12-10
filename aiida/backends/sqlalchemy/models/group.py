@@ -61,7 +61,10 @@ class DbGroup(Base):
     extras = Column(JSONB, default=dict, nullable=False)
 
     user_id = Column(
-        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=True
+        Integer,
+        ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        nullable=True,
+        index=True
     )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 

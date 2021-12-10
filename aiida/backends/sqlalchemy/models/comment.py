@@ -30,14 +30,20 @@ class DbComment(Base):
 
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
     dbnode_id = Column(
-        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=True
+        Integer,
+        ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        nullable=True,
+        index=True
     )
 
     ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
     user_id = Column(
-        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=True
+        Integer,
+        ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        nullable=True,
+        index=True
     )
     content = Column(Text, default='', nullable=False)
 

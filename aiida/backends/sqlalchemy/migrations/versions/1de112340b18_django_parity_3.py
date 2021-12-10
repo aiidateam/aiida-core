@@ -24,43 +24,76 @@ down_revision = '1de112340b17'
 branch_labels = None
 depends_on = None
 
-# TODO do the names of the indexes need to be exactly the same as in django?
-# if so should we (incorrectly) name them the same as django here, then rename later
-# the django ones include uuid like chars, are these always the same?
-VARCHAR_INDEXES = (
-    ('db_dbcomputer', 'label', 'db_dbcomputer_label_like'),
-    ('db_dbgroup', 'label', 'db_dbgroup_label_like'),
-    ('db_dbgroup', 'type_string', 'db_dbgroup_type_string_like'),
-    ('db_dblink', 'label', 'db_dblink_label_like'),
-    ('db_dblink', 'type', 'db_dblink_type_like'),
-    ('db_dblog', 'levelname', 'db_dblog_levelname_like'),
-    ('db_dblog', 'loggername', 'db_dblog_loggername_like'),
-    ('db_dbnode', 'label', 'db_dbnode_label_like'),
-    ('db_dbnode', 'node_type', 'db_dbnode_type_like'),
-    ('db_dbnode', 'process_type', 'db_dbnode_process_type_like'),
-    ('db_dbsetting', 'key', 'db_dbsetting_key_like'),
-    ('db_dbuser', 'email', 'db_dbuser_email_like'),
+# table name, column name, index name
+MISSING_STANDARD_INDEXES = (
+    ('db_dbauthinfo', ('aiidauser_id',), 'ix_db_dbauthinfo_aiidauser_id'),
+    ('db_dbauthinfo', ('dbcomputer_id',), 'ix_db_dbauthinfo_dbcomputer_id'),
+    ('db_dbcomment', ('dbnode_id',), 'ix_db_dbcomment_dbnode_id'),
+    ('db_dbcomment', ('user_id',), 'ix_db_dbcomment_user_id'),
+    ('db_dbgroup', ('user_id',), 'ix_db_dbgroup_user_id'),
+    ('db_dblog', ('dbnode_id',), 'ix_db_dblog_dbnode_id'),
+    ('db_dbnode', ('ctime',), 'ix_db_dbnode_ctime'),
+    ('db_dbnode', ('mtime',), 'ix_db_dbnode_mtime'),
+    ('db_dbnode', ('dbcomputer_id',), 'ix_db_dbnode_dbcomputer_id'),
+    ('db_dbnode', ('user_id',), 'ix_db_dbnode_user_id'),
+)
+
+# table name, column names, index name
+MISSING_VARCHAR_INDEXES = (
+    ('db_dbcomputer', ('label',), 'db_dbcomputer_label_like'),
+    ('db_dbgroup', ('label',), 'db_dbgroup_label_like'),
+    ('db_dbgroup', ('type_string',), 'db_dbgroup_type_string_like'),
+    ('db_dblink', ('label',), 'db_dblink_label_like'),
+    ('db_dblink', ('type',), 'db_dblink_type_like'),
+    ('db_dblog', ('levelname',), 'db_dblog_levelname_like'),
+    ('db_dblog', ('loggername',), 'db_dblog_loggername_like'),
+    ('db_dbnode', ('label',), 'db_dbnode_label_like'),
+    ('db_dbnode', ('node_type',), 'db_dbnode_type_like'),
+    ('db_dbnode', ('process_type',), 'db_dbnode_process_type_like'),
+    ('db_dbsetting', ('key',), 'db_dbsetting_key_like'),
+    ('db_dbuser', ('email',), 'db_dbuser_email_like'),
 )
 
 
 def upgrade():
-
-    for tbl_name, col_name, key_name in VARCHAR_INDEXES:
+    """Add indexes."""
+    # Add missing standard indexes
+    for tbl_name, col_names, key_name in MISSING_STANDARD_INDEXES:
         op.create_index(
             key_name,
-            tbl_name, [col_name],
+            table_name=tbl_name,
+            columns=col_names,
+            unique=False,
+        )
+
+    # Add missing PostgreSQL-specific indexes for strings
+    # these improve perform for filtering on string regexes
+    for tbl_name, col_names, key_name in MISSING_VARCHAR_INDEXES:
+        op.create_index(
+            key_name,
+            tbl_name,
+            col_names,
             unique=False,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'data': 'varchar_pattern_ops'},
         )
 
 
 def downgrade():
+    """Remove indexes."""
+    # Drop missing standard indexes
+    for tbl_name, _, key_name in MISSING_STANDARD_INDEXES:
+        op.drop_index(
+            key_name,
+            table_name=tbl_name,
+        )
 
-    for tbl_name, _, key_name in VARCHAR_INDEXES:
+    # Drop missing postgresql-specific indexes
+    for tbl_name, _, key_name in MISSING_VARCHAR_INDEXES:
         op.drop_index(
             key_name, table_name=tbl_name, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
         )
+
 
 
 # pylint: disable=line-too-long

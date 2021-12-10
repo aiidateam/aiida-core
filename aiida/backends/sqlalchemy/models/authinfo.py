@@ -31,11 +31,15 @@ class DbAuthInfo(Base):
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
     aiidauser_id = Column(
-        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=True
+        Integer,
+        ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        nullable=True,
+        index=True
     )
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        index=True,
         nullable=True
     )
 

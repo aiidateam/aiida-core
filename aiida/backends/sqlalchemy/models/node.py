@@ -51,8 +51,8 @@ class DbNode(Base):
         String(255), index=True, nullable=False, default=''
     )  # Does it make sense to be nullable and have a default?
     description = Column(Text(), nullable=False, default='')
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False, index=True)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False, index=True)
     attributes = Column(JSONB)
     extras = Column(JSONB)
     repository_metadata = Column(JSONB, nullable=False, default=dict, server_default='{}')
@@ -60,12 +60,16 @@ class DbNode(Base):
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
-        nullable=True
+        nullable=True,
+        index=True
     )
 
     # This should have the same ondelete behaviour as db_computer_id, right?
     user_id = Column(
-        Integer, ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'), nullable=False
+        Integer,
+        ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'),
+        nullable=False,
+        index=True
     )
 
     # pylint: disable=fixme

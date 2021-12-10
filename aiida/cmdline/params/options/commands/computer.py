@@ -115,7 +115,6 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
     cls=InteractiveOption,
     type=click.INT,
     help='The default amount of RAM memory that should be allocated per machine (node), if not otherwise specified.'
-    'Use 0 to specify no default value.',
 )
 
 PREPEND_TEXT = OverridableOption(

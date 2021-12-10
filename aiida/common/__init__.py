@@ -57,6 +57,8 @@ __all__ = (
     'LicensingException',
     'LinkType',
     'LoadingEntryPointError',
+    'LockedProfileError',
+    'LockingProfileError',
     'MissingConfigurationError',
     'MissingEntryPointError',
     'ModificationNotAllowed',

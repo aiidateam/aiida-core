@@ -250,6 +250,7 @@ def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):  # pylint:
     assert isinstance(result.exception, SystemExit)
     assert 'mpiprocs_per_machine, must be positive' in result.output
 
+
 def test_noninteractive_optional_default_memory(run_cli_command):  # pylint: disable=invalid-name
     """
     Check that if is ok not to specify default-memory-per-machine
@@ -265,6 +266,7 @@ def test_noninteractive_optional_default_memory(run_cli_command):  # pylint: dis
     assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_memory_per_machine() is None
 
+
 def test_noninteractive_optional_default_memory_2(run_cli_command):  # pylint: disable=invalid-name
     """
     Check that if is the specified value is zero, it means unspecified
@@ -277,8 +279,9 @@ def test_noninteractive_optional_default_memory_2(run_cli_command):  # pylint: d
     assert result.exception is None, result.output[-1000:]
 
     new_computer = orm.Computer.objects.get(label=options_dict['label'])
-    assert isinstance(new_computer,orm.Computer)
+    assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_memory_per_machine() is None
+
 
 def test_noninteractive_optional_default_mem_3(run_cli_command):  # pylint: disable=invalid-name
     """
@@ -291,6 +294,7 @@ def test_noninteractive_optional_default_mem_3(run_cli_command):  # pylint: disa
 
     assert isinstance(result.exception, SystemExit)
     assert 'default_memory_per_machine, must be positive' in result.output
+
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_noninteractive_wrong_transport_fail(run_cli_command):

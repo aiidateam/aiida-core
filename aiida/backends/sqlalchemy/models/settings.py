@@ -28,16 +28,23 @@ class DbSetting(Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    key = Column(String(1024), index=True, nullable=False)
+    key = Column(String(1024), nullable=False)
     val = Column(JSONB, default={})
 
     # I also add a description field for the variables
     description = Column(Text, default='', nullable=False)
-    time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=True)
+    time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('key'),
-        Index('db_dbsetting_key_like', key, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+        # index names mirror django's auto-generated ones
+        Index('db_dbsetting_key_1b84beb4_uniq', key, unique=True),
+        Index(
+            'db_dbsetting_key_1b84beb4_like',
+            key,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
     )
 
     def __str__(self):

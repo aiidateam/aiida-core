@@ -13,7 +13,7 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
-from sqlalchemy.schema import Column, Index, Table, UniqueConstraint
+from sqlalchemy.schema import Column, Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.common import timezone
@@ -21,20 +21,23 @@ from aiida.common.utils import get_new_uuid
 
 from .base import Base
 
-table_groups_nodes = Table(  # pylint: disable=invalid-name
-    'db_dbgroup_dbnodes',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED')),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED')),
-    UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
-)
-
 
 class DbGroupNode(Base):
     """Database model to store group-to-nodes relations."""
-    __tablename__ = table_groups_nodes.name
-    __table__ = table_groups_nodes
+    __tablename__ = 'db_dbgroup_dbnodes'
+
+    id = Column(Integer, primary_key=True)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False)
+    dbgroup_id = Column(Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED'), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
+        Index('db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d', dbgroup_id),
+        Index('db_dbgroup_dbnodes_dbnode_id_118b9439', dbnode_id),
+    )
+
+
+table_groups_nodes = DbGroupNode.__table__
 
 
 class DbGroup(Base):
@@ -50,10 +53,10 @@ class DbGroup(Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
-    label = Column(String(255), index=True, nullable=False)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    label = Column(String(255), nullable=False)
 
-    type_string = Column(String(255), default='', index=True, nullable=False)
+    type_string = Column(String(255), default='', nullable=False)
 
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
     description = Column(Text, default='', nullable=False)
@@ -63,8 +66,7 @@ class DbGroup(Base):
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
-        nullable=True,
-        index=True
+        nullable=False,
     )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
@@ -72,18 +74,24 @@ class DbGroup(Base):
 
     __table_args__ = (
         UniqueConstraint('label', 'type_string'),
-        Index('db_dbgroup_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+        # index names mirror django's auto-generated ones
+        Index('db_dbgroup_uuid_af896177_uniq', uuid, unique=True),
+        Index('db_dbgroup_label_58d3f722', label),
+        Index('db_dbgroup_type_string_fbc22a27', type_string),
+        Index('db_dbgroup_user_id_100f8a51', user_id),
         Index(
-            'db_dbgroup_type_string_like',
+            'db_dbgroup_label_58d3f722_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dbgroup_type_string_fbc22a27_like',
             type_string,
             postgresql_using='btree',
             postgresql_ops={'data': 'varchar_pattern_ops'}
         ),
     )
-
-    # TODO move these up to DbGroupNode
-    Index('db_dbgroup_dbnodes_dbnode_id_idx', table_groups_nodes.c.dbnode_id)
-    Index('db_dbgroup_dbnodes_dbgroup_id_idx', table_groups_nodes.c.dbgroup_id)
 
     @property
     def pk(self):

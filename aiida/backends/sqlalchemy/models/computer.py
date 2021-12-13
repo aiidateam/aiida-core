@@ -32,17 +32,23 @@ class DbComputer(Base):
     __tablename__ = 'db_dbcomputer'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
-    label = Column(String(255), unique=True, nullable=False)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    label = Column(String(255), nullable=False)
     hostname = Column(String(255), default='', nullable=False)
     description = Column(Text, default='', nullable=False)
     scheduler_type = Column(String(255), default='', nullable=False)
     transport_type = Column(String(255), default='', nullable=False)
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)
 
-    __tableargs__ = (
+    __table_args__ = (
+        # index names mirror django's auto-generated ones
+        Index('db_dbcomputer_uuid_f35defa6_uniq', uuid, unique=True),
+        Index('db_dbcomputer_label_bc480bab_uniq', label, unique=True),
         Index(
-            'db_dbcomputer_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
+            'db_dbcomputer_label_bc480bab_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
         ),
     )
 

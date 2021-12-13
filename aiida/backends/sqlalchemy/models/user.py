@@ -25,13 +25,20 @@ class DbUser(Base):
     __tablename__ = 'db_dbuser'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    email = Column(String(254), unique=True, index=True, nullable=False)
+    email = Column(String(254), nullable=False)
     first_name = Column(String(254), default='', nullable=False)
     last_name = Column(String(254), default='', nullable=False)
     institution = Column(String(254), default='', nullable=False)
 
     __table_args__ = (
-        Index('db_dbuser_email_like', email, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+        # index names mirror django's auto-generated ones
+        Index('db_dbuser_email_30150b7e_uniq', email, unique=True),
+        Index(
+            'db_dbuser_email_30150b7e_like',
+            email,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
     )
 
     def __init__(self, email, first_name='', last_name='', institution='', **kwargs):

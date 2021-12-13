@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member
+# pylint: disable=invalid-name,no-member
 """Parity with Django backend (rev: 0048),
 part 1: Ensure fields to make non-nullable are not currently null
 
@@ -31,7 +31,7 @@ depends_on = None
 
 
 def upgrade():
-
+    """Convert null values to default values"""
     db_dbauthinfo = sa.sql.table(
         'db_dbauthinfo',
         # sa.Column('aiidauser_id', sa.Integer),
@@ -119,6 +119,7 @@ def upgrade():
     )
 
     op.execute(db_dblog.update().where(db_dblog.c.levelname.is_(None)).values(levelname=''))
+    # to-do truncate levelname > 50
     op.execute(db_dblog.update().where(db_dblog.c.loggername.is_(None)).values(loggername=''))
     op.execute(db_dblog.update().where(db_dblog.c.message.is_(None)).values(message=''))
     op.execute(db_dblog.update().where(db_dblog.c.metadata == JSONB.NULL).values(metadata={}))
@@ -164,4 +165,5 @@ def upgrade():
 
 
 def downgrade():
-    pass
+    """Downgrade database schema."""
+    # No need to convert the values back to null

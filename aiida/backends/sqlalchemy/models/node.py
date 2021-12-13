@@ -44,15 +44,13 @@ class DbNode(Base):
     __tablename__ = 'db_dbnode'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True, nullable=False)
-    node_type = Column(String(255), default='', index=True, nullable=False)
-    process_type = Column(String(255), index=True)
-    label = Column(
-        String(255), index=True, nullable=False, default=''
-    )  # Does it make sense to be nullable and have a default?
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    node_type = Column(String(255), default='', nullable=False)
+    process_type = Column(String(255))
+    label = Column(String(255), nullable=False, default='')
     description = Column(Text(), nullable=False, default='')
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False, index=True)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False, index=True)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
     attributes = Column(JSONB)
     extras = Column(JSONB)
     repository_metadata = Column(JSONB, nullable=False, default=dict, server_default='{}')
@@ -60,16 +58,12 @@ class DbNode(Base):
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
-        nullable=True,
-        index=True
+        nullable=True
     )
 
     # This should have the same ondelete behaviour as db_computer_id, right?
     user_id = Column(
-        Integer,
-        ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'),
-        nullable=False,
-        index=True
+        Integer, ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'), nullable=False
     )
 
     # pylint: disable=fixme
@@ -99,13 +93,30 @@ class DbNode(Base):
         passive_deletes=True
     )
 
-    __tableargs__ = (
-        Index('db_dbnode_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+    __table_args__ = (
+        # index names mirror django's auto-generated ones
+        Index('db_dbnode_uuid_62e0bf98_uniq', uuid, unique=True),
+        Index('db_dbnode_label_6469539e', label),
+        Index('db_dbnode_node_type_a839c5c4', node_type),
+        Index('db_dbnode_process_type_df7298d0', process_type),
+        Index('db_dbnode_ctime_71626ef5', ctime),
+        Index('db_dbnode_mtime_0554ea3d', mtime),
+        Index('db_dbnode_dbcomputer_id_315372a3', dbcomputer_id),
+        Index('db_dbnode_user_id_12e7aeaf', user_id),
         Index(
-            'db_dbnode_type_like', node_type, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
+            'db_dbnode_label_6469539e_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
         ),
         Index(
-            'db_dbnode_process_type_like',
+            'db_dbnode_node_type_a839c5c4_like',
+            node_type,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dbnode_process_type_df7298d0_like',
             process_type,
             postgresql_using='btree',
             postgresql_ops={'data': 'varchar_pattern_ops'}
@@ -189,17 +200,17 @@ class DbLink(Base):
     __tablename__ = 'db_dblink'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), index=True)
+    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False)
     output_id = Column(
-        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), index=True
+        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
     )
 
     # https://docs.sqlalchemy.org/en/14/errors.html#relationship-x-will-copy-column-q-to-column-p-which-conflicts-with-relationship-s-y
     input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id', overlaps='inputs_q,outputs_q')
     output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id', overlaps='inputs_q,outputs_q')
 
-    label = Column(String(255), index=True, nullable=False)
-    type = Column(String(255), index=True, nullable=False)
+    label = Column(String(255), nullable=False)
+    type = Column(String(255), nullable=False)
 
     # A calculation can have both a 'return' and a 'create' link to
     # a single data output node, which would violate the unique constraint
@@ -210,8 +221,23 @@ class DbLink(Base):
         # I cannot add twice the same link
         # I want unique labels among all inputs of a node
         # UniqueConstraint('output_id', 'label'),
-        Index('db_dblink_label_like', label, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
-        Index('db_dblink_type_like', type, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}),
+        # index names mirror django's auto-generated ones
+        Index('db_dblink_input_id_9245bd73', input_id),
+        Index('db_dblink_output_id_c0167528', output_id),
+        Index('db_dblink_label_f1343cfb', label),
+        Index('db_dblink_type_229f212b', type),
+        Index(
+            'db_dblink_label_f1343cfb_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dblink_type_229f212b_like',
+            type,
+            postgresql_using='btree',
+            postgresql_ops={'data': 'varchar_pattern_ops'}
+        ),
     )
 
     def __str__(self):

@@ -28,14 +28,15 @@ depends_on = None
 
 
 def upgrade():
-    # op.alter_column('db_dbauthinfo', 'aiidauser_id', existing_type=sa.INTEGER(), nullable=False)
-    # op.alter_column('db_dbauthinfo', 'dbcomputer_id', existing_type=sa.INTEGER(), nullable=False)
+    """Upgrade database schema."""
+    op.alter_column('db_dbauthinfo', 'aiidauser_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('db_dbauthinfo', 'dbcomputer_id', existing_type=sa.INTEGER(), nullable=False)
     op.alter_column('db_dbauthinfo', 'metadata', existing_type=JSONB, nullable=False)
     op.alter_column('db_dbauthinfo', 'auth_params', existing_type=JSONB, nullable=False)
     op.alter_column('db_dbauthinfo', 'enabled', existing_type=sa.BOOLEAN(), nullable=False)
 
-    # op.alter_column('db_dbcomment', 'dbnode_id', existing_type=sa.INTEGER(), nullable=False)
-    # op.alter_column('db_dbcomment', 'user_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('db_dbcomment', 'dbnode_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('db_dbcomment', 'user_id', existing_type=sa.INTEGER(), nullable=False)
     op.alter_column('db_dbcomment', 'content', existing_type=sa.TEXT(), nullable=False)
     op.alter_column('db_dbcomment', 'ctime', existing_type=sa.DateTime(timezone=True), nullable=False)
     op.alter_column('db_dbcomment', 'mtime', existing_type=sa.DateTime(timezone=True), nullable=False)
@@ -48,16 +49,21 @@ def upgrade():
     op.alter_column('db_dbcomputer', 'transport_type', existing_type=sa.String(255), nullable=False)
     op.alter_column('db_dbcomputer', 'uuid', existing_type=UUID(as_uuid=True), nullable=False)
 
-    # op.alter_column('db_dbgroup', 'user_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('db_dbgroup', 'user_id', existing_type=sa.INTEGER(), nullable=False)
     op.alter_column('db_dbgroup', 'description', existing_type=sa.TEXT(), nullable=False)
     op.alter_column('db_dbgroup', 'label', existing_type=sa.String(255), nullable=False)
     op.alter_column('db_dbgroup', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
     op.alter_column('db_dbgroup', 'type_string', existing_type=sa.String(255), nullable=False)
     op.alter_column('db_dbgroup', 'uuid', existing_type=UUID(as_uuid=True), nullable=False)
 
-    op.alter_column('db_dblink', 'type', existing_type=sa.String(255), nullable=False)
+    op.alter_column('db_dbgroup_dbnodes', 'dbnode_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('db_dbgroup_dbnodes', 'dbgroup_id', existing_type=sa.INTEGER(), nullable=False)
 
-    op.alter_column('db_dblog', 'levelname', existing_type=sa.String(255), nullable=False)
+    op.alter_column('db_dblink', 'type', existing_type=sa.String(255), nullable=False)
+    op.alter_column('db_dblink', 'input_id', existing_type=sa.INTEGER(), nullable=False)
+    op.alter_column('db_dblink', 'output_id', existing_type=sa.INTEGER(), nullable=False)
+
+    op.alter_column('db_dblog', 'levelname', existing_type=sa.String(255), type_=sa.String(50), nullable=False)
     op.alter_column('db_dblog', 'loggername', existing_type=sa.String(255), nullable=False)
     op.alter_column('db_dblog', 'message', existing_type=sa.TEXT(), nullable=False)
     op.alter_column('db_dblog', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
@@ -71,8 +77,7 @@ def upgrade():
     op.alter_column('db_dbnode', 'node_type', existing_type=sa.String(255), nullable=False)
     op.alter_column('db_dbnode', 'uuid', existing_type=UUID(as_uuid=True), nullable=False)
 
-    # TODO this causes the migration to hang
-    # op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
+    op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=False)
     op.alter_column('db_dbsetting', 'key', existing_type=sa.String(255), type_=sa.String(1024), nullable=False)
     op.alter_column('db_dbsetting', 'description', existing_type=sa.String(255), type_=sa.Text(), nullable=False)
 
@@ -83,12 +88,13 @@ def upgrade():
 
 
 def downgrade():
+    """Downgrade database schema."""
     op.alter_column('db_dbuser', 'institution', existing_type=sa.String(254), nullable=True)
     op.alter_column('db_dbuser', 'last_name', existing_type=sa.String(254), nullable=True)
     op.alter_column('db_dbuser', 'first_name', existing_type=sa.String(254), nullable=True)
     op.alter_column('db_dbuser', 'email', existing_type=sa.String(254), nullable=True)
 
-    # op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=True)
+    op.alter_column('db_dbsetting', 'time', existing_type=sa.DateTime(timezone=True), nullable=True)
     op.alter_column('db_dbsetting', 'key', existing_type=sa.String(1024), type_=sa.String(255), nullable=False)
     op.alter_column('db_dbsetting', 'description', existing_type=sa.Text(), type_=sa.String(255), nullable=False)
 
@@ -101,14 +107,19 @@ def downgrade():
 
     op.alter_column('db_dblog', 'metadata', existing_type=JSONB, nullable=True)
     op.alter_column('db_dblog', 'message', existing_type=sa.TEXT(), nullable=True)
-    op.alter_column('db_dblog', 'levelname', existing_type=sa.String(255), nullable=True)
+    op.alter_column('db_dblog', 'levelname', existing_type=sa.String(50), type_=sa.String(255), nullable=True)
     op.alter_column('db_dblog', 'loggername', existing_type=sa.String(255), nullable=True)
     op.alter_column('db_dblog', 'time', existing_type=sa.DateTime(timezone=True), nullable=True)
     op.alter_column('db_dblog', 'uuid', existing_type=UUID(as_uuid=True), nullable=True)
 
+    op.alter_column('db_dblink', 'output_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dblink', 'input_id', existing_type=sa.INTEGER(), nullable=True)
     op.alter_column('db_dblink', 'type', existing_type=sa.String(255), nullable=True)
 
-    # op.alter_column('db_dbgroup', 'user_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dbgroup_dbnodes', 'dbgroup_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dbgroup_dbnodes', 'dbnode_id', existing_type=sa.INTEGER(), nullable=True)
+
+    op.alter_column('db_dbgroup', 'user_id', existing_type=sa.INTEGER(), nullable=True)
     op.alter_column('db_dbgroup', 'description', existing_type=sa.TEXT(), nullable=True)
     op.alter_column('db_dbgroup', 'time', existing_type=sa.DateTime(timezone=True), nullable=True)
     op.alter_column('db_dbgroup', 'type_string', existing_type=sa.String(255), nullable=True)
@@ -122,15 +133,15 @@ def downgrade():
     op.alter_column('db_dbcomputer', 'hostname', existing_type=sa.String(255), nullable=True)
     op.alter_column('db_dbcomputer', 'uuid', existing_type=UUID(as_uuid=True), nullable=True)
 
-    # op.alter_column('db_dbcomment', 'user_id', existing_type=sa.INTEGER(), nullable=True)
-    # op.alter_column('db_dbcomment', 'dbnode_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dbcomment', 'user_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dbcomment', 'dbnode_id', existing_type=sa.INTEGER(), nullable=True)
     op.alter_column('db_dbcomment', 'content', existing_type=sa.TEXT(), nullable=True)
     op.alter_column('db_dbcomment', 'ctime', existing_type=sa.DateTime(timezone=True), nullable=True)
     op.alter_column('db_dbcomment', 'mtime', existing_type=sa.DateTime(timezone=True), nullable=True)
     op.alter_column('db_dbcomment', 'uuid', existing_type=UUID(as_uuid=True), nullable=True)
 
-    # op.alter_column('db_dbauthinfo', 'dbcomputer_id', existing_type=sa.INTEGER(), nullable=True)
-    # op.alter_column('db_dbauthinfo', 'aiidauser_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dbauthinfo', 'dbcomputer_id', existing_type=sa.INTEGER(), nullable=True)
+    op.alter_column('db_dbauthinfo', 'aiidauser_id', existing_type=sa.INTEGER(), nullable=True)
     op.alter_column('db_dbauthinfo', 'enabled', existing_type=sa.BOOLEAN(), nullable=True)
     op.alter_column('db_dbauthinfo', 'auth_params', existing_type=JSONB, nullable=True)
     op.alter_column('db_dbauthinfo', 'metadata', existing_type=JSONB, nullable=True)

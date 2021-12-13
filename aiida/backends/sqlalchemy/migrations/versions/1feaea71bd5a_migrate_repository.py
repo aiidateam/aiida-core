@@ -111,8 +111,8 @@ def upgrade():
     container_id = backend.get_repository().uuid
     statement = text(
         f"""
-        INSERT INTO db_dbsetting (key, val, description)
-        VALUES ('repository|uuid', to_json('{container_id}'::text), 'Repository UUID')
+        INSERT INTO db_dbsetting (key, val, description, time)
+        VALUES ('repository|uuid', to_json('{container_id}'::text), 'Repository UUID', NOW())
         ON CONFLICT (key) DO NOTHING;
         """
     )

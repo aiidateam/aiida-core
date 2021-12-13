@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dbnode',
             name='repository_metadata',
-            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=True, encoder=JSONEncoder),
+            field=django.contrib.postgres.fields.jsonb.JSONField(default=dict, null=False, encoder=JSONEncoder),
         ),
         upgrade_schema_version(REVISION, DOWN_REVISION),
     ]

@@ -40,8 +40,8 @@ def upgrade():
     # isolated way, we do not suffer from those problems and can safely use it.
     statement = text(
         """
-        INSERT INTO db_dbsetting (key, val, description)
-        SELECT 'schema_generation', '"1"', 'Database schema generation'
+        INSERT INTO db_dbsetting (key, val, description, time)
+        SELECT 'schema_generation', '"1"', 'Database schema generation', NOW()
         WHERE NOT EXISTS (SELECT * FROM db_dbsetting WHERE key = 'schema_generation');
         """
     )

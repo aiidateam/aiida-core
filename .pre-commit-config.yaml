@@ -21,12 +21,12 @@ repos:
 
 
 -   repo: https://github.com/pycqa/isort
-    rev: 5.9.3
+    rev: 5.10.1
     hooks:
     - id: isort
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.66'
+    rev: '0.69'
     hooks:
     -   id: flynt
         args: [
@@ -70,6 +70,7 @@ repos:
         pass_filenames: true
         files: >-
             (?x)^(
+                aiida/backends/control.py|
                 aiida/common/progress_reporter.py|
                 aiida/engine/.*py|
                 aiida/manage/manager.py|

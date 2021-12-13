@@ -21,6 +21,30 @@ def repository(tmp_path):
     yield DiskObjectStoreRepositoryBackend(container=container)
 
 
+@pytest.fixture(scope='function')
+def populated_repository(repository):
+    """Initializes the storage and database with minimal population."""
+    from io import BytesIO
+    repository.initialise()
+
+    content = BytesIO(b'Packed file number 1')
+    repository.put_object_from_filelike(content)
+
+    content = BytesIO(b'Packed file number 2')
+    repository.put_object_from_filelike(content)
+
+    repository.maintain(live=False)
+
+    content = BytesIO(b'Packed file number 3 (also loose)')
+    repository.put_object_from_filelike(content)
+
+    repository.maintain(live=True)
+
+    content = BytesIO(b'Unpacked file')
+    repository.put_object_from_filelike(content)
+    yield repository
+
+
 def test_str(repository):
     """Test the ``__str__`` method."""
     assert str(repository)
@@ -184,3 +208,95 @@ def test_key_format(repository):
     """Test the ``key_format`` property."""
     repository.initialise()
     assert repository.key_format == repository.container.hash_type
+
+
+def test_get_info(populated_repository):
+    """Test the ``get_info`` method."""
+    repository_info = populated_repository.get_info()
+    assert 'SHA-hash algorithm' in repository_info
+    assert 'Compression algorithm' in repository_info
+    assert repository_info['SHA-hash algorithm'] == 'sha256'
+    assert repository_info['Compression algorithm'] == 'zlib+1'
+
+    repository_info = populated_repository.get_info(statistics=True)
+    assert 'SHA-hash algorithm' in repository_info
+    assert 'Compression algorithm' in repository_info
+    assert repository_info['SHA-hash algorithm'] == 'sha256'
+    assert repository_info['Compression algorithm'] == 'zlib+1'
+
+    assert 'Packs' in repository_info
+    assert repository_info['Packs'] == 1
+
+    assert 'Objects' in repository_info
+    assert 'unpacked' in repository_info['Objects']
+    assert 'packed' in repository_info['Objects']
+    assert repository_info['Objects']['unpacked'] == 2
+    assert repository_info['Objects']['packed'] == 3
+
+    assert 'Size (MB)' in repository_info
+    assert 'unpacked' in repository_info['Size (MB)']
+    assert 'packed' in repository_info['Size (MB)']
+    assert 'other' in repository_info['Size (MB)']
+
+
+#yapf: disable
+@pytest.mark.parametrize(('kwargs', 'output_info'), (
+    (
+        {'live': True},
+        {'unpacked': 2, 'packed': 4}
+    ),
+    (
+        {'live': False},
+        {'unpacked': 0, 'packed': 4}
+    ),
+    (
+        {'live': False, 'do_vacuum': False},
+        {'unpacked': 0, 'packed': 4}
+    ),
+    (
+        {
+            'live': False,
+            'pack_loose': False,
+            'do_repack': False,
+            'clean_storage': False,
+            'do_vacuum': False,
+        },
+        {'unpacked': 2, 'packed': 3}
+    ),
+))
+# yapf: enable
+def test_maintain(populated_repository, kwargs, output_info):
+    """Test the ``maintain`` method."""
+    populated_repository.maintain(**kwargs)
+    file_info = populated_repository.container.count_objects()
+    assert file_info['loose'] == output_info['unpacked']
+    assert file_info['packed'] == output_info['packed']
+
+
+@pytest.mark.parametrize('do_vacuum', [True, False])
+def test_maintain_logging(caplog, populated_repository, do_vacuum):
+    """Test the logging of the ``maintain`` method."""
+    populated_repository.maintain(live=False, do_vacuum=do_vacuum)
+
+    list_of_logmsg = []
+    for record in caplog.records:
+        assert record.levelname == 'REPORT'
+        assert record.name == 'aiida.maintain.disk_object_store'
+        list_of_logmsg.append(record.msg)
+
+    assert 'packing' in list_of_logmsg[0].lower()
+    assert 're-packing' in list_of_logmsg[1].lower()
+    assert 'cleaning' in list_of_logmsg[2].lower()
+
+    if do_vacuum:
+        assert 'vacuum=true' in list_of_logmsg[2].lower()
+    else:
+        assert 'vacuum=false' in list_of_logmsg[2].lower()
+
+
+@pytest.mark.parametrize('kwargs', [{'do_repack': True}, {'clean_storage': True}, {'do_vacuum': True}])
+def test_maintain_live_overload(populated_repository, kwargs):
+    """Test the ``maintain`` method."""
+
+    with pytest.raises(ValueError):
+        populated_repository.maintain(live=True, **kwargs)

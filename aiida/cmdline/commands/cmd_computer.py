@@ -237,7 +237,9 @@ def computer_setup(ctx, non_interactive, **kwargs):
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
     echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
+
+    profile = ctx.obj['profile']
+    echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('duplicate')
@@ -290,7 +292,9 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 
     if not is_configured:
         echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
+
+        profile = ctx.obj['profile']
+        echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('enable')

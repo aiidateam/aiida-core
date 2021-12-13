@@ -14,11 +14,11 @@ class RepositoryBackend(AbstractRepositoryBackend):
     """Concrete implementation of ``AbstractRepositoryBackend``."""
 
     @property
-    def uuid(self) -> Optional[str]:
+    def key_format(self) -> Optional[str]:
         return None
 
     @property
-    def key_format(self) -> Optional[str]:
+    def uuid(self) -> Optional[str]:
         return None
 
     def initialise(self, **kwargs) -> None:
@@ -35,7 +35,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
         pass
 
     # pylint useless-super-delegation needs to be disabled here because it refuses to
-    # recognize that this is an abstract method and thus has to be overriden. See the
+    # recognize that this is an abstract method and thus has to be overwritten. See the
     # following issue: https://github.com/PyCQA/pylint/issues/1594
     def delete_objects(self, keys: List[str]) -> None:  # pylint: disable=useless-super-delegation
         super().delete_objects(keys)
@@ -47,6 +47,12 @@ class RepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError
 
     def iter_object_streams(self, keys: List[str]):
+        raise NotImplementedError
+
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_info(self, statistics: bool = False, **kwargs) -> dict:
         raise NotImplementedError
 
 
@@ -103,7 +109,7 @@ def test_put_object_from_file(repository, generate_directory):
 
 
 def test_passes_to_batch(repository, monkeypatch):
-    """Checks that the single object operations call the batch operations"""
+    """Checks that the single object operations call the batch operations."""
 
     def mock_batch_operation(self, keys):
         raise NotImplementedError('this method was intentionally not implemented')
@@ -122,7 +128,7 @@ def test_passes_to_batch(repository, monkeypatch):
 
 
 def test_delete_objects_test(repository, monkeypatch):
-    """Checks that the super of delete_objects will check for existence of the files"""
+    """Checks that the super of delete_objects will check for existence of the files."""
 
     def has_objects_mock(self, keys):  # pylint: disable=unused-argument
         return [False for key in keys]

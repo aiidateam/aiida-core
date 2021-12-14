@@ -49,13 +49,13 @@ class DbLog(Base):
             'db_dblog_loggername_00b5ba16_like',
             loggername,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'loggername': 'varchar_pattern_ops'}
         ),
         Index(
             'db_dblog_levelname_ad5dc346_like',
             levelname,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'levelname': 'varchar_pattern_ops'}
         ),
     )
 

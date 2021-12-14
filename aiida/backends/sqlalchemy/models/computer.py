@@ -48,7 +48,7 @@ class DbComputer(Base):
             'db_dbcomputer_label_bc480bab_like',
             label,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'label': 'varchar_pattern_ops'}
         ),
     )
 

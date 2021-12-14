@@ -83,13 +83,13 @@ class DbGroup(Base):
             'db_dbgroup_name_66c75272_like',
             label,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'label': 'varchar_pattern_ops'}
         ),
         Index(
             'db_dbgroup_type_23b2a748_like',
             type_string,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'type_string': 'varchar_pattern_ops'}
         ),
     )
 

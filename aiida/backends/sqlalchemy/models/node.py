@@ -107,19 +107,19 @@ class DbNode(Base):
             'db_dbnode_label_6469539e_like',
             label,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'label': 'varchar_pattern_ops'}
         ),
         Index(
             'db_dbnode_type_a8ce9753_like',
             node_type,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'node_type': 'varchar_pattern_ops'}
         ),
         Index(
             'db_dbnode_process_type_df7298d0_like',
             process_type,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'process_type': 'varchar_pattern_ops'}
         ),
     )
 
@@ -230,13 +230,13 @@ class DbLink(Base):
             'db_dblink_label_f1343cfb_like',
             label,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'label': 'varchar_pattern_ops'}
         ),
         Index(
             'db_dblink_type_229f212b_like',
             type,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'type': 'varchar_pattern_ops'}
         ),
     )
 

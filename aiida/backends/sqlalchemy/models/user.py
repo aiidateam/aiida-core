@@ -37,7 +37,7 @@ class DbUser(Base):
             'db_dbuser_email_30150b7e_like',
             email,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'email': 'varchar_pattern_ops'}
         ),
     )
 

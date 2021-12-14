@@ -43,14 +43,8 @@ def test_unique_constraints(backend, data_regression):
 def test_indexes(backend, data_regression):
     """Test parity of indexes."""
     data = {}
-    for tbl_name, name, method, _, is_unique, is_primary, col_names in sorted(get_indexes(backend)):
-        data.setdefault(tbl_name, {})[name] = {
-            'access_method': method,
-            # 'operators': op_name,
-            'is_unique': is_unique,
-            'is_primary': is_primary,
-            'columns': sorted(col_names),
-        }
+    for tbl_name, name, definition in sorted(get_indexes(backend)):
+        data.setdefault(tbl_name, {})[name] = definition
     data_regression.check(data)
 
 
@@ -84,17 +78,11 @@ def get_constraints(backend, ctype):
 
 def get_indexes(backend):
     """Get the indexes of all AiiDA tables."""
-    # see https://www.postgresql.org/docs/9.1/catalog-pg-index.html
+    # see https://www.postgresql.org/docs/9.1/view-pg-indexes.html
     rows = backend.execute_raw(
-        'SELECT tbl.relname,i.relname,am.amname,ARRAY_AGG(opc.opcname),idx.indisunique,idx.indisprimary,'
-        'ARRAY_AGG(a.attname) FROM pg_index AS idx '
-        'INNER JOIN pg_class AS tbl ON tbl.oid = idx.indrelid '
-        'INNER JOIN pg_class AS i ON i.oid = idx.indexrelid '
-        'INNER JOIN pg_am AS am ON am.oid = i.relam '
-        'INNER JOIN pg_opclass AS opc ON opc.oid = ALL(idx.indclass) AND opc.opcmethod = am.oid '
-        'INNER JOIN pg_attribute AS a ON a.attrelid = idx.indrelid AND a.attnum = ANY(idx.indkey) '
-        "WHERE tbl.relname LIKE 'db_%' "
-        'GROUP BY tbl.relname,i.relname,am.amname,idx.indisunique,idx.indisprimary;'
+        'SELECT tablename,indexname,indexdef FROM pg_indexes '
+        "WHERE tablename LIKE 'db_%' "
+        'ORDER BY tablename,indexname;'
     )
     rows = [list(row) for row in rows]
     return rows

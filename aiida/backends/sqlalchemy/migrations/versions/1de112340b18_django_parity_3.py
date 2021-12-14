@@ -30,36 +30,31 @@ MISSING_STANDARD_INDEXES = (
     ('db_dbauthinfo', ('dbcomputer_id',), False, 'db_dbauthinfo_dbcomputer_id_424f7ac4'),
     ('db_dbcomment', ('dbnode_id',), False, 'db_dbcomment_dbnode_id_3b812b6b'),
     ('db_dbcomment', ('user_id',), False, 'db_dbcomment_user_id_8ed5e360'),
-    # ('db_dbcomment', ('uuid',), True, 'db_dbcomment_uuid_49bac08c_uniq'),
-    # ('db_dbcomputer', ('label',), True, 'db_dbcomputer_label_bc480bab_uniq'),
-    # ('db_dbcomputer', ('uuid',), True, 'db_dbcomputer_uuid_f35defa6_uniq'),
     ('db_dbgroup', ('user_id',), False, 'db_dbgroup_user_id_100f8a51'),
     ('db_dblog', ('dbnode_id',), False, 'db_dblog_dbnode_id_da34b732'),
     ('db_dbnode', ('ctime',), False, 'db_dbnode_ctime_71626ef5'),
     ('db_dbnode', ('mtime',), False, 'db_dbnode_mtime_0554ea3d'),
     ('db_dbnode', ('dbcomputer_id',), False, 'db_dbnode_dbcomputer_id_315372a3'),
     ('db_dbnode', ('user_id',), False, 'db_dbnode_user_id_12e7aeaf'),
-    # ('db_dbgroup', ('uuid',), True, 'db_dbgroup_uuid_af896177_uniq'),
-    # ('db_dblog', ('uuid',), True, 'db_dblog_uuid_9cf77df3_uniq'),
-    # ('db_dbnode', ('uuid',), True, 'db_dbnode_uuid_62e0bf98_uniq'),
 )
 
-# table name, column names, index name
+# table name, column name, index name
 MISSING_VARCHAR_INDEXES = (
-    ('db_dbcomputer', ('label',), 'db_dbcomputer_label_bc480bab_like'),
-    ('db_dbgroup', ('label',), 'db_dbgroup_name_66c75272_like'),
-    ('db_dbgroup', ('type_string',), 'db_dbgroup_type_23b2a748_like'),
-    ('db_dblink', ('label',), 'db_dblink_label_f1343cfb_like'),
-    ('db_dblink', ('type',), 'db_dblink_type_229f212b_like'),
-    ('db_dblog', ('levelname',), 'db_dblog_levelname_ad5dc346_like'),
-    ('db_dblog', ('loggername',), 'db_dblog_loggername_00b5ba16_like'),
-    ('db_dbnode', ('label',), 'db_dbnode_label_6469539e_like'),
-    ('db_dbnode', ('node_type',), 'db_dbnode_type_a8ce9753_like'),
-    ('db_dbnode', ('process_type',), 'db_dbnode_process_type_df7298d0_like'),
-    ('db_dbsetting', ('key',), 'db_dbsetting_key_1b84beb4_like'),
-    ('db_dbuser', ('email',), 'db_dbuser_email_30150b7e_like'),
+    ('db_dbcomputer', 'label', 'db_dbcomputer_label_bc480bab_like'),
+    ('db_dbgroup', 'label', 'db_dbgroup_name_66c75272_like'),
+    ('db_dbgroup', 'type_string', 'db_dbgroup_type_23b2a748_like'),
+    ('db_dblink', 'label', 'db_dblink_label_f1343cfb_like'),
+    ('db_dblink', 'type', 'db_dblink_type_229f212b_like'),
+    ('db_dblog', 'levelname', 'db_dblog_levelname_ad5dc346_like'),
+    ('db_dblog', 'loggername', 'db_dblog_loggername_00b5ba16_like'),
+    ('db_dbnode', 'label', 'db_dbnode_label_6469539e_like'),
+    ('db_dbnode', 'node_type', 'db_dbnode_type_a8ce9753_like'),
+    ('db_dbnode', 'process_type', 'db_dbnode_process_type_df7298d0_like'),
+    ('db_dbsetting', 'key', 'db_dbsetting_key_1b84beb4_like'),
+    ('db_dbuser', 'email', 'db_dbuser_email_30150b7e_like'),
 )
 
+# table name, column names, constraint name
 DROP_UNIQUE_CONSTRAINTS = (
     ('db_dbauthinfo', ('aiidauser_id', 'dbcomputer_id'), 'db_dbauthinfo_aiidauser_id_dbcomputer_id_key'),
     ('db_dbcomment', ('uuid',), 'db_dbcomment_uuid_key'),
@@ -73,6 +68,7 @@ DROP_UNIQUE_CONSTRAINTS = (
     ('db_dbsetting', ('key',), 'db_dbsetting_key_key'),
 )
 
+# table name, column names, constraint name
 ADD_UNIQUE_CONSTRAINTS = (
     ('db_dbauthinfo', ('aiidauser_id', 'dbcomputer_id'), 'db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq'),
     ('db_dbcomment', ('uuid',), 'db_dbcomment_uuid_49bac08c_uniq'),
@@ -108,8 +104,6 @@ RENAMED_INDEXES = (
     ('db_dbnode', ('label',), False, 'ix_db_dbnode_label', 'db_dbnode_label_6469539e'),
     ('db_dbnode', ('node_type',), False, 'ix_db_dbnode_node_type', 'db_dbnode_type_a8ce9753'),
     ('db_dbnode', ('process_type',), False, 'ix_db_dbnode_process_type', 'db_dbnode_process_type_df7298d0'),
-    # ('db_dbsetting', ('key',), True, 'ix_db_dbsetting_key', 'db_dbsetting_key_1b84beb4_uniq'),
-    # ('db_dbuser', ('email',), True, 'ix_db_dbuser_email', 'db_dbuser_email_30150b7e_uniq'),
 )
 
 # table name, column names, unique, name
@@ -144,14 +138,14 @@ def upgrade():
 
     # Add missing PostgreSQL-specific indexes for strings
     # these improve perform for filtering on string regexes
-    for tbl_name, col_names, key_name in MISSING_VARCHAR_INDEXES:
+    for tbl_name, col_name, key_name in MISSING_VARCHAR_INDEXES:
         op.create_index(
             key_name,
             tbl_name,
-            col_names,
+            [col_name],
             unique=False,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'},
+            postgresql_ops={col_name: 'varchar_pattern_ops'},
         )
     # rename indexes
     for tbl_name, columns, unique, old_col_name, new_col_name in RENAMED_INDEXES:
@@ -190,9 +184,12 @@ def downgrade():
         )
 
     # Drop missing postgresql-specific indexes
-    for tbl_name, _, key_name in MISSING_VARCHAR_INDEXES:
+    for tbl_name, col_name, key_name in MISSING_VARCHAR_INDEXES:
         op.drop_index(
-            key_name, table_name=tbl_name, postgresql_using='btree', postgresql_ops={'data': 'varchar_pattern_ops'}
+            key_name,
+            table_name=tbl_name,
+            postgresql_using='btree',
+            postgresql_ops={col_name: 'varchar_pattern_ops'},
         )
     # drop renamed indexes
     for tbl_name, _, _, _, new_col_name in RENAMED_INDEXES:

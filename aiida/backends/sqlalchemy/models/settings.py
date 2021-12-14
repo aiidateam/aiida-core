@@ -42,7 +42,7 @@ class DbSetting(Base):
             'db_dbsetting_key_1b84beb4_like',
             key,
             postgresql_using='btree',
-            postgresql_ops={'data': 'varchar_pattern_ops'}
+            postgresql_ops={'key': 'varchar_pattern_ops'}
         ),
     )
 

@@ -241,6 +241,7 @@ class Computer(entities.Entity['BackendComputer']):
         self._transport_type_validator(self.transport_type)
         self._scheduler_type_validator(self.scheduler_type)
         self._workdir_validator(self.get_workdir())
+        self.default_memory_per_machine_validator(self.get_default_memory_per_machine())
 
         try:
             mpirun_cmd = self.get_mpirun_command()
@@ -267,6 +268,9 @@ class Computer(entities.Entity['BackendComputer']):
     @classmethod
     def default_memory_per_machine_validator(cls, def_memory_per_machine: Optional[int]) -> None:
         """Validates the default amount of memory (kB) per machine (node)"""
+        if def_memory_per_machine is None:
+            return
+
         if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
             raise exceptions.ValidationError(
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'

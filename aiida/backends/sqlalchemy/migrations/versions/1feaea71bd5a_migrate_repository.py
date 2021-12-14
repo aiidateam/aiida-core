@@ -95,7 +95,7 @@ def upgrade():
 
             for node_uuid, repository_metadata in mapping_node_repository_metadata.items():
 
-                # If `repository_metadata` is `{}` or `None`, we skip it, as we can leave the column default `null`.
+                # If `repository_metadata` is `{}` or `None`, we skip it, as we can leave the column default `{}`.
                 if not repository_metadata:
                     continue
 

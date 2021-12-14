@@ -11,7 +11,7 @@
 """Module to manage computers for the SQLA backend."""
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index
+from sqlalchemy.sql.schema import Index, UniqueConstraint
 from sqlalchemy.types import Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -42,8 +42,8 @@ class DbComputer(Base):
 
     __table_args__ = (
         # index names mirror django's auto-generated ones
-        Index('db_dbcomputer_uuid_f35defa6_uniq', uuid, unique=True),
-        Index('db_dbcomputer_label_bc480bab_uniq', label, unique=True),
+        UniqueConstraint(uuid, name='db_dbcomputer_uuid_f35defa6_uniq'),
+        UniqueConstraint(label, name='db_dbcomputer_label_bc480bab_uniq'),
         Index(
             'db_dbcomputer_label_bc480bab_like',
             label,

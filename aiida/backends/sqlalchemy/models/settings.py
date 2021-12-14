@@ -36,9 +36,8 @@ class DbSetting(Base):
     time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('key'),
-        # index names mirror django's auto-generated ones
-        Index('db_dbsetting_key_1b84beb4_uniq', key, unique=True),
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(key, name='db_dbsetting_key_1b84beb4_uniq'),
         Index(
             'db_dbsetting_key_1b84beb4_like',
             key,

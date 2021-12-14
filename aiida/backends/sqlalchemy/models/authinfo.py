@@ -51,8 +51,10 @@ class DbAuthInfo(Base):
     enabled = Column(Boolean, default=True, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('aiidauser_id', 'dbcomputer_id'),
-        # index names mirror django's auto-generated ones
+        # constraint/index names mirror django's auto-generated ones
+        UniqueConstraint(
+            'aiidauser_id', 'dbcomputer_id', name='db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq'
+        ),
         Index('db_dbauthinfo_aiidauser_id_0684fdfb', aiidauser_id),
         Index('db_dbauthinfo_dbcomputer_id_424f7ac4', dbcomputer_id),
     )

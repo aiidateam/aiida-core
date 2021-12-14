@@ -14,7 +14,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index
+from sqlalchemy.sql.schema import Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -40,8 +40,8 @@ class DbLog(Base):
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
 
     __table_args__ = (
-        # index names mirror django's auto-generated ones
-        Index('db_dblog_uuid_9cf77df3_uniq', uuid, unique=True),
+        # index/constrain names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dblog_uuid_9cf77df3_uniq'),
         Index('db_dblog_loggername_00b5ba16', loggername),
         Index('db_dblog_levelname_ad5dc346', levelname),
         Index('db_dblog_dbnode_id_da34b732', dbnode_id),

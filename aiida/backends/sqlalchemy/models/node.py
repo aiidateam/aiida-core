@@ -17,7 +17,7 @@ from sqlalchemy import ForeignKey, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index
+from sqlalchemy.sql.schema import Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -53,7 +53,7 @@ class DbNode(Base):
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
     attributes = Column(JSONB)
     extras = Column(JSONB)
-    repository_metadata = Column(JSONB, nullable=False, default=dict, server_default='{}')
+    repository_metadata = Column(JSONB, nullable=True, default=dict)
 
     dbcomputer_id = Column(
         Integer,
@@ -94,10 +94,10 @@ class DbNode(Base):
     )
 
     __table_args__ = (
-        # index names mirror django's auto-generated ones
-        Index('db_dbnode_uuid_62e0bf98_uniq', uuid, unique=True),
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dbnode_uuid_62e0bf98_uniq'),
         Index('db_dbnode_label_6469539e', label),
-        Index('db_dbnode_node_type_a839c5c4', node_type),
+        Index('db_dbnode_type_a8ce9753', node_type),
         Index('db_dbnode_process_type_df7298d0', process_type),
         Index('db_dbnode_ctime_71626ef5', ctime),
         Index('db_dbnode_mtime_0554ea3d', mtime),
@@ -110,7 +110,7 @@ class DbNode(Base):
             postgresql_ops={'data': 'varchar_pattern_ops'}
         ),
         Index(
-            'db_dbnode_node_type_a839c5c4_like',
+            'db_dbnode_type_a8ce9753_like',
             node_type,
             postgresql_using='btree',
             postgresql_ops={'data': 'varchar_pattern_ops'}

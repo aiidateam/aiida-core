@@ -14,7 +14,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index
+from sqlalchemy.sql.schema import Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -46,8 +46,9 @@ class DbComment(Base):
     user = relationship('DbUser')
 
     __table_args__ = (
-        # index names mirror django's auto-generated ones
-        Index('db_dbcomment_uuid_49bac08c_uniq', uuid, unique=True),
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dbcomment_uuid_49bac08c_uniq'),
+        # Index('db_dbcomment_uuid_49bac08c_uniq', uuid, unique=True),
         Index('db_dbcomment_dbnode_id_3b812b6b', dbnode_id),
         Index('db_dbcomment_user_id_8ed5e360', user_id),
     )

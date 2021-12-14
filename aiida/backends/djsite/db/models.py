@@ -128,7 +128,7 @@ class DbNode(m.Model):
     attributes = JSONField(default=dict, null=True, encoder=JSONEncoder)
     # JSON Extras
     extras = JSONField(default=dict, null=True, encoder=JSONEncoder)
-    repository_metadata = JSONField(default=dict, null=False, encoder=JSONEncoder)
+    repository_metadata = JSONField(default=dict, null=True, encoder=JSONEncoder)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances

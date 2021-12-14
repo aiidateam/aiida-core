@@ -31,7 +31,7 @@ class DbGroupNode(Base):
     dbgroup_id = Column(Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED'), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
+        UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq'),
         Index('db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d', dbgroup_id),
         Index('db_dbgroup_dbnodes_dbnode_id_118b9439', dbnode_id),
     )
@@ -73,20 +73,20 @@ class DbGroup(Base):
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref='dbgroups', lazy='dynamic')
 
     __table_args__ = (
-        UniqueConstraint('label', 'type_string'),
-        # index names mirror django's auto-generated ones
-        Index('db_dbgroup_uuid_af896177_uniq', uuid, unique=True),
-        Index('db_dbgroup_label_58d3f722', label),
-        Index('db_dbgroup_type_string_fbc22a27', type_string),
+        # index/constrinat names mirror django's auto-generated ones
+        UniqueConstraint('label', 'type_string', name='db_dbgroup_name_type_12656f33_uniq'),
+        UniqueConstraint(uuid, name='db_dbgroup_uuid_af896177_uniq'),
+        Index('db_dbgroup_name_66c75272', label),
+        Index('db_dbgroup_type_23b2a748', type_string),
         Index('db_dbgroup_user_id_100f8a51', user_id),
         Index(
-            'db_dbgroup_label_58d3f722_like',
+            'db_dbgroup_name_66c75272_like',
             label,
             postgresql_using='btree',
             postgresql_ops={'data': 'varchar_pattern_ops'}
         ),
         Index(
-            'db_dbgroup_type_string_fbc22a27_like',
+            'db_dbgroup_type_23b2a748_like',
             type_string,
             postgresql_using='btree',
             postgresql_ops={'data': 'varchar_pattern_ops'}

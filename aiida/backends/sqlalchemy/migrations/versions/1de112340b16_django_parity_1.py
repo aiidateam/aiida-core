@@ -42,6 +42,8 @@ def upgrade():
     )
 
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.enabled.is_(None)).values(enabled=True))
+    op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.auth_params.is_(None)).values(auth_params={}))
+    op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.metadata.is_(None)).values(metadata={}))
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.auth_params == JSONB.NULL).values(auth_params={}))
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.metadata == JSONB.NULL).values(metadata={}))
 
@@ -72,6 +74,7 @@ def upgrade():
 
     op.execute(db_dbcomputer.update().where(db_dbcomputer.c.description.is_(None)).values(description=''))
     op.execute(db_dbcomputer.update().where(db_dbcomputer.c.hostname.is_(None)).values(hostname=''))
+    op.execute(db_dbcomputer.update().where(db_dbcomputer.c.metadata.is_(None)).values(metadata={}))
     op.execute(db_dbcomputer.update().where(db_dbcomputer.c.metadata == JSONB.NULL).values(metadata={}))
     op.execute(db_dbcomputer.update().where(db_dbcomputer.c.scheduler_type.is_(None)).values(scheduler_type=''))
     op.execute(db_dbcomputer.update().where(db_dbcomputer.c.transport_type.is_(None)).values(transport_type=''))
@@ -122,6 +125,7 @@ def upgrade():
     # to-do truncate levelname > 50
     op.execute(db_dblog.update().where(db_dblog.c.loggername.is_(None)).values(loggername=''))
     op.execute(db_dblog.update().where(db_dblog.c.message.is_(None)).values(message=''))
+    op.execute(db_dblog.update().where(db_dblog.c.metadata.is_(None)).values(metadata={}))
     op.execute(db_dblog.update().where(db_dblog.c.metadata == JSONB.NULL).values(metadata={}))
     op.execute(db_dblog.update().where(db_dblog.c.time.is_(None)).values(time=timezone.now()))
     op.execute(db_dblog.update().where(db_dblog.c.uuid.is_(None)).values(uuid=get_new_uuid()))

@@ -72,7 +72,7 @@ def test_non_nullable(perform_migrations: Migrator):
         session.add(comment)
         session.commit()
         comment_id = comment.id
-        log = Dblog(dbnode_id=node_id)
+        log = Dblog(dbnode_id=node_id, levelname='x' * 100)
         session.add(log)
         session.commit()
         log_id = log.id
@@ -130,6 +130,6 @@ def test_non_nullable(perform_migrations: Migrator):
         assert log.uuid is not None
         assert log.time is not None
         assert log.loggername is not None
-        assert log.levelname is not None
+        assert log.levelname == 'x' * 50
         assert log.message is not None
         assert log.metadata is not None

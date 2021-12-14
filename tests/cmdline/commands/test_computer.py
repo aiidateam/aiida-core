@@ -267,23 +267,7 @@ def test_noninteractive_optional_default_memory(run_cli_command):  # pylint: dis
     assert new_computer.get_default_memory_per_machine() is None
 
 
-def test_noninteractive_optional_default_memory_2(run_cli_command):  # pylint: disable=invalid-name
-    """
-    Check that if is the specified value is zero, it means unspecified
-    """
-    options_dict = generate_setup_options_dict({'label': 'computer_default_memory_2'})
-    options_dict['default-memory-per-machine'] = 0
-    options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options)
-
-    assert result.exception is None, result.output[-1000:]
-
-    new_computer = orm.Computer.objects.get(label=options_dict['label'])
-    assert isinstance(new_computer, orm.Computer)
-    assert new_computer.get_default_memory_per_machine() is None
-
-
-def test_noninteractive_optional_default_mem_3(run_cli_command):  # pylint: disable=invalid-name
+def test_noninteractive_optional_default_mem_2(run_cli_command):  # pylint: disable=invalid-name
     """
     Check that it fails for a negative number of default_memory
     """
@@ -387,7 +371,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
         self.comp_builder.mpiprocs_per_machine = 8
-        self.comp_builder.default_memory_per_machine = 0
+        #self.comp_builder.default_memory_per_machine = 0
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
 

@@ -371,7 +371,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
         self.comp_builder.mpiprocs_per_machine = 8
-        #self.comp_builder.default_memory_per_machine = 0
+        self.comp_builder.default_memory_per_machine = 0
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
 

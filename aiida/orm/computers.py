@@ -265,13 +265,8 @@ class Computer(entities.Entity['BackendComputer']):
             )
 
     @classmethod
-    def _default_memory_per_machine_validator(cls, def_memory_per_machine: Optional[int]) -> None:
-        """
-        Validates the default amount of memory (kB) per machine (node)
-        """
-        if def_memory_per_machine is None:
-            return
-
+    def default_memory_per_machine_validator(cls, def_memory_per_machine: Optional[int]) -> None:
+        """Validates the default amount of memory (kB) per machine (node)"""
         if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
             raise exceptions.ValidationError(
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
@@ -492,10 +487,7 @@ class Computer(entities.Entity['BackendComputer']):
         Set the default amount of memory (kB) per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
-        if def_memory_per_machine is None:
-            self.delete_property('default_memory_per_machine', raise_exception=False)
-        elif not isinstance(def_memory_per_machine, int):
-            raise TypeError('default_memory_per_machine must be an int (or None)')
+        self.default_memory_per_machine_validator(def_memory_per_machine)
         self.set_property('default_memory_per_machine', def_memory_per_machine)
 
     def get_minimum_job_poll_interval(self) -> float:

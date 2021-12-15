@@ -1,0 +1,69 @@
+name: nightly
+
+on:
+    schedule:
+    -   cron: '0 0 * * *'  # Run every day at midnight
+
+jobs:
+
+    tests:
+
+        if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well
+
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                backend: ['django', 'sqlalchemy']
+                python-version: ['3.7', '3.8', '3.9', '3.10']
+
+        services:
+            postgres:
+                image: postgres:12
+                env:
+                    POSTGRES_DB: test_${{ matrix.backend }}
+                    POSTGRES_PASSWORD: ''
+                    POSTGRES_HOST_AUTH_METHOD: trust
+                ports:
+                -    5432:5432
+            rabbitmq:
+                image: rabbitmq:latest
+                ports:
+                -   5672:5672
+
+        steps:
+        -   uses: actions/checkout@v2
+
+        -   name: Cache python dependencies
+            id: cache-pip
+            uses: actions/cache@v1
+            with:
+                path: ~/.cache/pip
+                key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
+                restore-keys:
+                    pip-${{ matrix.python-version }}-tests
+
+        -   name: Set up Python ${{ matrix.python-version }}
+            uses: actions/setup-python@v2
+            with:
+                python-version: ${{ matrix.python-version }}
+
+        -   name: Install python dependencies
+            continue-on-error: true
+            id: install
+            run: |
+                pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
+                pip install --use-feature=2020-resolver --no-deps -e .
+                pip freeze
+
+        -   name: Setup environment
+            env:
+                AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+            run:
+                .github/workflows/setup.sh
+
+        -   name: Run test suite
+            env:
+                AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+            run:
+                .github/system_tests/test_polish_workchains.sh

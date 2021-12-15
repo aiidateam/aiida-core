@@ -8,14 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from legacy JSON format."""
+from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
 import json
 from pathlib import Path, PurePosixPath
 import shutil
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+import tarfile
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from archive_path import TarPath, ZipPath
+from archive_path import ZipPath
 from sqlalchemy import insert, select
 from sqlalchemy.exc import IntegrityError
 
@@ -77,13 +79,22 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
     :param metadata: the metadata to migrate
     :param data: the data to migrate
     """
-    # to-do streaming tar files is a lot slower than streaming zip files,
-    # it would be most performant to extract the entire archive to disk first and then stream it
-
     MIGRATE_LOGGER.report('Initialising new archive...')
     node_repos: Dict[str, List[Tuple[str, Optional[str]]]] = {}
     central_dir: Dict[str, Any] = {}
-    in_archive: Union[TarPath, ZipPath] = TarPath(inpath) if is_tar else ZipPath(inpath)
+    if is_tar:
+        # we cannot stream from a tar file performantly, so we extract it to disk first
+        @contextmanager
+        def in_archive_context(_inpath):
+            temp_folder = working / 'temp_unpack'
+            with tarfile.open(_inpath, 'r') as tar:
+                MIGRATE_LOGGER.report('Extracting tar archive...')
+                tar.extractall(temp_folder)
+            yield temp_folder
+            MIGRATE_LOGGER.report('Removing extracted tar archive...')
+            shutil.rmtree(temp_folder)
+    else:
+        in_archive_context = ZipPath  # type: ignore
     with ZipPath(
         working / archive_name,
         mode='w',
@@ -91,12 +102,13 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
         name_to_info=central_dir,
         info_order=(META_FILENAME, DB_FILENAME)
     ) as new_path:
-        with in_archive as path:
+        with in_archive_context(inpath) as path:
             length = sum(1 for _ in path.glob('**/*'))
+            base_parts = len(path.parts)
             with get_progress_reporter()(desc='Converting repo', total=length) as progress:
                 for subpath in path.glob('**/*'):
                     progress.update()
-                    parts = subpath.parts
+                    parts = subpath.parts[base_parts:]
                     # repository file are stored in the legacy archive as `nodes/uuid[0:2]/uuid[2:4]/uuid[4:]/path/...`
                     if len(parts) < 6 or parts[0] != 'nodes' or parts[4] not in ('raw_input', 'path'):
                         continue

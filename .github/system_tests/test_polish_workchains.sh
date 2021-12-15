@@ -5,10 +5,6 @@ set -ev
 MODULE_POLISH="${GITHUB_WORKSPACE}/.molecule/default/files/polish"
 CLI_SCRIPT="${MODULE_POLISH}/cli.py"
 
-export PYTHONPATH="${PYTHONPATH}:${MODULE_POLISH}"
-
-verdi daemon start 4
-
 declare -a EXPRESSIONS=("1 -2 -1 4 -5 -5 * * * * +" "2 1 3 3 -1 + ^ ^ +" "3 -5 -1 -4 + * ^" "2 4 2 -4 * * +" "3 1 1 5 ^ ^ ^" "3 1 3 4 -4 2 * + + ^ ^")
 NUMBER_WORKCHAINS=5
 TIMEOUT=600

@@ -203,6 +203,7 @@ def set_computer_builder(ctx, param, value):
 @options_computer.WORKDIR()
 @options_computer.MPI_RUN_COMMAND()
 @options_computer.MPI_PROCS_PER_MACHINE()
+@options_computer.DEFAULT_MEMORY_PER_MACHINE()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -253,6 +254,9 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
 @options_computer.MPI_RUN_COMMAND(contextual_default=partial(get_parameter_default, 'mpirun_command'))
 @options_computer.MPI_PROCS_PER_MACHINE(contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'))
+@options_computer.DEFAULT_MEMORY_PER_MACHINE(
+    contextual_default=partial(get_parameter_default, 'default_memory_per_machine')
+)
 @options_computer.PREPEND_TEXT(contextual_default=partial(get_parameter_default, 'prepend_text'))
 @options_computer.APPEND_TEXT(contextual_default=partial(get_parameter_default, 'append_text'))
 @options.NON_INTERACTIVE()
@@ -384,6 +388,7 @@ def computer_show(computer):
         ['Shebang', computer.get_shebang()],
         ['Mpirun command', ' '.join(computer.get_mpirun_command())],
         ['Default #procs/machine', computer.get_default_mpiprocs_per_machine()],
+        ['Default memory (kB)/machine', computer.get_default_memory_per_machine()],
         ['Prepend text', computer.get_prepend_text()],
         ['Append text', computer.get_append_text()],
     ]

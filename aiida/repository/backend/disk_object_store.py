@@ -37,7 +37,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     @property
     def key_format(self) -> Optional[str]:
-        return self.container.hash_type
+        with self.container as container:
+            return container.hash_type
 
     def initialise(self, **kwargs) -> None:
         """Initialise the repository if it hasn't already been initialised.
@@ -50,7 +51,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     @property
     def is_initialised(self) -> bool:
         """Return whether the repository has been initialised."""
-        return self.container.is_initialised
+        with self.container as container:
+            return container.is_initialised
 
     @property
     def container(self) -> Container:
@@ -74,16 +76,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return container.add_streamed_object(handle)
 
     def has_objects(self, keys: List[str]) -> List[bool]:
-        return self.container.has_objects(keys)
-
-    def has_object(self, key: str) -> bool:
-        """Return whether the repository has an object with the given key.
-
-        :param key: fully qualified identifier for the object within the repository.
-        :return: True if the object exists, False otherwise.
-        """
         with self.container as container:
-            return container.has_object(key)
+            return container.has_objects(keys)
 
     @contextlib.contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
@@ -112,10 +106,11 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     def delete_objects(self, keys: List[str]) -> None:
         super().delete_objects(keys)
         with self.container as container:
-            self.container.delete_objects(keys)
+            container.delete_objects(keys)
 
     def list_objects(self) -> Iterable[str]:
-        return self.container.list_all_objects()
+        with self.container as container:
+            return container.list_all_objects()
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.
@@ -130,8 +125,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         if not self.has_object(key):
             raise FileNotFoundError(key)
-        if self.container.hash_type != 'sha256':
-            return super().get_object_hash(key)
+        with self.container as container:
+            if container.hash_type != 'sha256':
+                return super().get_object_hash(key)
         return key
 
     def maintain(  # type: ignore # pylint: disable=arguments-differ,too-many-branches
@@ -145,21 +141,16 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     ) -> dict:
         """Performs maintenance operations.
 
-        :param live:
-            if True, will only perform operations that are safe to do while the repository is in use.
-        :param pack_loose:
-            flag for forcing the packing of loose files.
-        :param do_repack:
-            flag for forcing the re-packing of already packed files.
-        :param clean_storage:
-            flag for forcing the cleaning of soft-deleted files from the repository.
-        :param do_vacuum:
-            flag for forcing the vacuuming of the internal database when cleaning the repository.
-        :return:
-            a dictionary with information on the operations performed.
+        :param live:if True, will only perform operations that are safe to do while the repository is in use.
+        :param pack_loose:flag for forcing the packing of loose files.
+        :param do_repack:flag for forcing the re-packing of already packed files.
+        :param clean_storage:flag for forcing the cleaning of soft-deleted files from the repository.
+        :param do_vacuum:flag for forcing the vacuuming of the internal database when cleaning the repository.
+        :return:a dictionary with information on the operations performed.
         """
         from aiida.backends.control import MAINTAIN_LOGGER
-        DOSTORE_LOGGER = MAINTAIN_LOGGER.getChild('disk_object_store')  # pylint: disable=invalid-name
+
+        logger = MAINTAIN_LOGGER.getChild('disk_object_store')
 
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
@@ -177,52 +168,55 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             clean_storage = True if clean_storage is None else clean_storage
             do_vacuum = True if do_vacuum is None else do_vacuum
 
-        if pack_loose:
-            files_numb = self.container.count_objects()['loose']
-            files_size = self.container.get_total_size()['total_size_loose'] * BYTES_TO_MB
-            DOSTORE_LOGGER.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
-            if not dry_run:
-                self.container.pack_all_loose()
+        with self.container as container:
+            if pack_loose:
+                files_numb = container.count_objects()['loose']
+                files_size = container.get_total_size()['total_size_loose'] * BYTES_TO_MB
+                logger.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
+                if not dry_run:
+                    container.pack_all_loose()
 
-        if do_repack:
-            files_numb = self.container.count_objects()['packed']
-            files_size = self.container.get_total_size()['total_size_packfiles_on_disk'] * BYTES_TO_MB
-            DOSTORE_LOGGER.report(
-                f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...'
-            )
-            if not dry_run:
-                self.container.repack()
+            if do_repack:
+                files_numb = container.count_objects()['packed']
+                files_size = container.get_total_size()['total_size_packfiles_on_disk'] * BYTES_TO_MB
+                logger.report(f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...')
+                if not dry_run:
+                    container.repack()
 
-        if clean_storage:
-            DOSTORE_LOGGER.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
-            if not dry_run:
-                self.container.clean_storage(vacuum=do_vacuum)
+            if clean_storage:
+                logger.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')
+                if not dry_run:
+                    container.clean_storage(vacuum=do_vacuum)
 
 
     def get_info(  # type: ignore # pylint: disable=arguments-differ
         self,
         statistics=False,
-        ) -> dict:
-
+    ) -> dict:
+        """Return information on configuration and content of the repository."""
         output_info = {}
-        output_info['SHA-hash algorithm'] = self.container.hash_type
-        output_info['Compression algorithm'] = self.container.compression_algorithm
 
-        if not statistics:
-            return output_info
+        with self.container as container:
+            output_info['SHA-hash algorithm'] = container.hash_type
+            output_info['Compression algorithm'] = container.compression_algorithm
 
-        files_data = self.container.count_objects()
-        size_data = self.container.get_total_size()
+            if not statistics:
+                return output_info
 
-        output_info['Packs'] = files_data['pack_files']  # type: ignore
+            files_data = container.count_objects()
+            size_data = container.get_total_size()
 
-        output_info['Objects'] = {  # type: ignore
-            'unpacked': files_data['loose'],
-            'packed': files_data['packed'],
-        }
-        output_info['Size (MB)'] = {  # type: ignore
-            'unpacked': size_data['total_size_loose'] * BYTES_TO_MB,
-            'packed': size_data['total_size_packfiles_on_disk'] * BYTES_TO_MB,
-            'other': size_data['total_size_packindexes_on_disk'] * BYTES_TO_MB,
-        }
+            output_info['Packs'] = files_data['pack_files']
+
+            output_info['Objects'] = {
+                'unpacked': files_data['loose'],
+                'packed': files_data['packed'],
+            }
+
+            output_info['Size (MB)'] = {
+                'unpacked': size_data['total_size_loose'] * BYTES_TO_MB,
+                'packed': size_data['total_size_packfiles_on_disk'] * BYTES_TO_MB,
+                'other': size_data['total_size_packindexes_on_disk'] * BYTES_TO_MB,
+            }
+
         return output_info

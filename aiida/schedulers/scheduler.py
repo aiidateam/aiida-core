@@ -152,13 +152,6 @@ class Scheduler(metaclass=abc.ABCMeta):
         script_lines.append(self._get_submit_script_header(job_tmpl))
         script_lines.append(empty_line)
 
-        environment_variables = self._get_submit_script_environment_variables(job_tmpl)
-        if environment_variables:
-            script_lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            script_lines.append(environment_variables)
-            script_lines.append('# ENVIRONMENT VARIABLES END ###')
-            script_lines.append(empty_line)
-
         if job_tmpl.prepend_text:
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
@@ -183,13 +176,16 @@ class Scheduler(metaclass=abc.ABCMeta):
         :parameter template: a `aiida.schedulers.datastrutures.JobTemplate` instance.
         :return: string containing environment variable declarations.
         """
-        if template.job_environment is None:
-            return ''
-
         if not isinstance(template.job_environment, dict):
             raise ValueError('If you provide job_environment, it must be a dictionary')
 
-        lines = [f'export {key.strip()}={escape_for_bash(value)}' for key, value in template.job_environment.items()]
+        lines = ['# ENVIRONMENT VARIABLES BEGIN ###']
+
+        for key, value in template.job_environment.items():
+            lines.append(f'export {key.strip()}={escape_for_bash(value)}')
+
+        lines.append('# ENVIRONMENT VARIABLES END ###')
+
         return '\n'.join(lines)
 
     @abc.abstractmethod

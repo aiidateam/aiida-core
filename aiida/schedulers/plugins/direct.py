@@ -150,6 +150,12 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
+        if job_tmpl.job_resource and job_tmpl.job_resource.num_cores_per_mpiproc:
+            lines.append(f'export OMP_NUM_THREADS={job_tmpl.job_resource.num_cores_per_mpiproc}')
+
+        if job_tmpl.job_environment:
+            lines.append(self._get_submit_script_environment_variables(job_tmpl))
+
         if job_tmpl.rerunnable:
             self.logger.warning(
                 "The 'rerunnable' option is set to 'True', but has no effect when using the direct scheduler."
@@ -172,21 +178,6 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         #     lines.append("timeout {} \\".format(tot_secs))
 
         return '\n'.join(lines)
-
-    def _get_submit_script_environment_variables(self, template):
-        """Return the part of the submit script header that defines environment variables.
-
-        :parameter template: a `aiida.schedulers.datastrutures.JobTemplate` instance.
-        :return: string containing environment variable declarations.
-        """
-        result = super()._get_submit_script_environment_variables(template)
-
-        if template.job_resource and template.job_resource.num_cores_per_mpiproc:
-            # This should be prepended to the environment variables from the template, such that it does not overrule
-            # any explicit OMP_NUM_THREADS that may have been defined in the ``template.job_environment``.
-            result = f'export OMP_NUM_THREADS={template.job_resource.num_cores_per_mpiproc}\n{result}'
-
-        return result
 
     def _get_submit_command(self, submit_script):
         """

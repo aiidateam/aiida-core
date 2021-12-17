@@ -74,16 +74,8 @@ from aiida.cmdline.utils import decorators
     default=False,
     help='Only evaluate the expression and generate the workchain but do not launch it'
 )
-@click.option(
-    '-r',
-    '--retries',
-    type=click.INT,
-    default=1,
-    show_default=True,
-    help='Number of retries for running via the daemon'
-)
 @decorators.with_dbenv()
-def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon, retries):
+def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon):
     """
     Evaluate the expression in Reverse Polish Notation in both a normal way and by procedurally generating
     a workchain that encodes the sequence of operators and gets the stack of operands as an input. Multiplications
@@ -146,15 +138,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             inputs['code'] = code
 
         if daemon:
-            # the daemon tests have been known to fail on Jenkins, when the result node cannot be found
-            # to mitigate this, we can retry multiple times
-            for _ in range(retries):
-                output = run_via_daemon(workchains, inputs, sleep, timeout)
-                if output is not None:
-                    break
-            if output is None:
-                sys.exit(1)
-            result, workchain, total_time = output
+            result, workchain, total_time = run_via_daemon(workchains, inputs, sleep, timeout)
 
         else:
             start_time = time.time()

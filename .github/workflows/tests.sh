@@ -3,8 +3,9 @@ set -ev
 
 # Make sure the folder containing the workchains is in the python path before the daemon is started
 SYSTEM_TESTS="${GITHUB_WORKSPACE}/.github/system_tests"
+MODULE_POLISH="${GITHUB_WORKSPACE}/.molecule/default/files/polish"
 
-export PYTHONPATH="${PYTHONPATH}:${SYSTEM_TESTS}"
+export PYTHONPATH="${PYTHONPATH}:${SYSTEM_TESTS}:${MODULE_POLISH}"
 
 # pytest options:
 # - report timings of tests
@@ -23,6 +24,7 @@ export PYTEST_ADDOPTS="${PYTEST_ADDOPTS} --verbose"
 # daemon tests
 verdi daemon start 4
 verdi -p test_${AIIDA_TEST_BACKEND} run ${SYSTEM_TESTS}/test_daemon.py
+bash ${SYSTEM_TESTS}/test_polish_workchains.sh
 verdi daemon stop
 
 # tests for the testing infrastructure

@@ -8,19 +8,24 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.common.escaping`."""
+import pytest
+
 from aiida.common.escaping import escape_for_bash
 
 
-def test_escape_for_bash():
+@pytest.mark.parametrize(('to_escape, expected_single_quotes, expected_double_quotes'), (
+    (None, '', ''),
+    ('string', "'string'", '"string"'),
+    ('string with space', "'string with space'", '"string with space"'),
+    (
+        """string with ' single and " double quote""", """'string with '"'"' single and " double quote'""",
+        '''"string with ' single and "'"'" double quote"'''
+    ),
+    (1, "'1'", '"1"'),
+    (2.0, "'2.0'", '"2.0"'),
+    ('$PWD', "'$PWD'", '"$PWD"'),
+))
+def test_escape_for_bash(to_escape, expected_single_quotes, expected_double_quotes):
     """Tests various inputs for `aiida.common.escaping.escape_for_bash`."""
-    tests = (
-        [None, ''],
-        ['string', "'string'"],
-        ['string with space', "'string with space'"],
-        ["string with a ' single quote", """'string with a '"'"' single quote'"""],
-        [1, "'1'"],
-        [2.0, "'2.0'"],
-    )
-
-    for string_input, string_escaped in tests:
-        assert escape_for_bash(string_input) == string_escaped
+    assert escape_for_bash(to_escape, use_double_quotes=False) == expected_single_quotes
+    assert escape_for_bash(to_escape, use_double_quotes=True) == expected_double_quotes

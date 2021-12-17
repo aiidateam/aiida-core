@@ -12,7 +12,7 @@
 import re
 
 
-def escape_for_bash(str_to_escape):
+def escape_for_bash(str_to_escape, use_double_quotes=False):
     """
     This function takes any string and escapes it in a way that
     bash will interpret it as a single string.
@@ -34,14 +34,23 @@ def escape_for_bash(str_to_escape):
     Finally, note that for python I have to enclose the string '"'"'
     within triple quotes to make it work, getting finally: the complicated
     string found below.
+
+    :param str_to_escape: the string to escape.
+    :param use_double_quotes: boolean, if ``True``, use double quotes instead of single quotes.
+    :return: the escaped string.
     """
     if str_to_escape is None:
         return ''
 
     str_to_escape = str(str_to_escape)
+    if use_double_quotes:
+        escaped_quotes = str_to_escape.replace('"', '''"'"'"''')
+        escaped = f'"{escaped_quotes}"'
+    else:
+        escaped_quotes = str_to_escape.replace("'", """'"'"'""")
+        escaped = f"'{escaped_quotes}'"
 
-    escaped_quotes = str_to_escape.replace("'", """'"'"'""")
-    return f"'{escaped_quotes}'"
+    return escaped
 
 
 # Mapping of "SQL" tokens into corresponding regex expressions

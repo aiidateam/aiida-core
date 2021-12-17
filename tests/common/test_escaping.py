@@ -11,8 +11,12 @@
 from aiida.common.escaping import escape_for_bash
 
 
-def test_escape_for_bash():
-    """Tests various inputs for `aiida.common.escaping.escape_for_bash`."""
+def test_escape_for_bash_single_quotes():
+    """
+    Tests various inputs for `aiida.common.escaping.escape_for_bash`.
+    sigle quotes tests and also for backward compatible
+    """
+
     tests = (
         [None, ''],
         ['string', "'string'"],
@@ -24,3 +28,23 @@ def test_escape_for_bash():
 
     for string_input, string_escaped in tests:
         assert escape_for_bash(string_input) == string_escaped
+
+
+def test_escape_for_bash_double_quotes():
+    """
+    Tests various inputs for `aiida.common.escaping.escape_for_bash`.
+    double quotes tests especially useful for ENV variables with $ symbol
+    """
+
+    tests = (
+        [None, ''],
+        ['string', '"string"'],
+        ['string with space', '"string with space"'],
+        ['string with a " double quote', '''"string with a "'"'" double quote"'''],
+        [1, '"1"'],
+        [2.0, '"2.0"'],
+        ['$PWD', '"$PWD"'],
+    )
+
+    for string_input, string_escaped in tests:
+        assert escape_for_bash(string_input, use_double_quotes=True) == string_escaped

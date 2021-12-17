@@ -5,7 +5,6 @@ This folder contains configuration for running automated system integration test
 This utilises [molecule](https://molecule.readthedocs.io) to automate the creation/destruction of a docker container environment and the setup and testing within it.
 
 The tests are currently set up to stress-test the AiiDA engine by launching a number of workchains of varying complexity, defined by [reverse polish notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation).
-They  are part of the continuous integration pipeline of AiiDA and are run using [Jenkins](https://www.jenkins.io/) on our own test runner.
 
 ## Running the tests locally
 

@@ -327,6 +327,7 @@ class TestCommand(unittest.TestCase):
         job_tmpl.priority = None
         job_tmpl.max_wallclock_seconds = '3600'  # "23:59:59"
         job_tmpl.job_environment = {'HOME': '/home/users/dorigm7s/', 'WIENROOT': '$HOME:/WIEN2k'}
+        job_tmpl.envvar_double_quotes = True
 
         submit_script_text = sge.get_submit_script(job_tmpl)
 
@@ -335,8 +336,8 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('#$ -q FavQ.q' in submit_script_text)
         self.assertTrue('#$ -l h_rt=01:00:00' in submit_script_text)
         self.assertTrue('# ENVIRONMENT VARIABLES BEGIN ###' in submit_script_text)
-        self.assertTrue("export HOME='/home/users/dorigm7s/'" in submit_script_text)
-        self.assertTrue("export WIENROOT='$HOME:/WIEN2k'" in submit_script_text)
+        self.assertTrue('export HOME="/home/users/dorigm7s/"' in submit_script_text)
+        self.assertTrue('export WIENROOT="$HOME:/WIEN2k"' in submit_script_text)
         self.assertFalse('#$ -r yes' in submit_script_text)
 
     def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use

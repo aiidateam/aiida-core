@@ -244,6 +244,8 @@ class CalcJob(Process):
             help='If set to true, the submission script will load the system environment variables',)
         spec.input('metadata.options.environment_variables', valid_type=dict, default=lambda: {},
             help='Set a dictionary of custom environment variables for this calculation',)
+        spec.input('metadata.options.envvar_double_quotes', valid_type=bool, default=False,
+            help='If set to true, use double quotes for the environment variables.',)
         spec.input('metadata.options.priority', valid_type=str, required=False,
             help='Set the priority of the job to be queued')
         spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
@@ -731,6 +733,7 @@ class CalcJob(Process):
         job_tmpl.import_sys_environment = self.node.get_option('import_sys_environment')
 
         job_tmpl.job_environment = self.node.get_option('environment_variables')
+        job_tmpl.envvar_double_quotes = self.node.get_option('envvar_double_quotes')
 
         queue_name = self.node.get_option('queue_name')
         account = self.node.get_option('account')

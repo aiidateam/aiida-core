@@ -13,7 +13,6 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 import re
 
-from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
@@ -263,8 +262,6 @@ class SlurmScheduler(Scheduler):
         # pylint: disable=too-many-statements,too-many-branches
         import string
 
-        empty_line = ''
-
         lines = []
         if job_tmpl.submit_as_hold:
             lines.append('#SBATCH -H')
@@ -397,24 +394,6 @@ class SlurmScheduler(Scheduler):
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
-
-        # Job environment variables are to be set on one single line.
-        # This is a tough job due to the escaping of commas, etc.
-        # moreover, I am having issues making it work.
-        # Therefore, I assume that this is bash and export variables by
-        # and.
-
-        if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError('If you provide job_environment, it must be a dictionary')
-            for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
-            lines.append('# ENVIRONMENT VARIABLES  END  ###')
-            lines.append(empty_line)
-
-        lines.append(empty_line)
 
         return '\n'.join(lines)
 

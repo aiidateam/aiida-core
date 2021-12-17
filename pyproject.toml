@@ -57,7 +57,7 @@ max-locals = 20
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--benchmark-skip"
+addopts = "--benchmark-skip --durations=50 --cov aiida --cov-report xml --cov-append --verbose"
 testpaths = [
     "tests",
 ]

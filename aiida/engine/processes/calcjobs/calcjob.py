@@ -245,7 +245,8 @@ class CalcJob(Process):
         spec.input('metadata.options.environment_variables', valid_type=dict, default=lambda: {},
             help='Set a dictionary of custom environment variables for this calculation',)
         spec.input('metadata.options.envvar_double_quotes', valid_type=bool, default=False,
-            help='If set to true, use double quotes for the environment variables.',)
+            help='If set to True, use double quotes instead of single quotes to escape the environment variables '
+                 'specified in ``environment_variables``.',)
         spec.input('metadata.options.priority', valid_type=str, required=False,
             help='Set the priority of the job to be queued')
         spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,

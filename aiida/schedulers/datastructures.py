@@ -248,8 +248,8 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
       * ``rerunnable``: if the job is rerunnable (boolean)
       * ``job_environment``: a dictionary with environment variables to set
         before the execution of the code.
-      * ``envvar_double_quotes``: if true, use double quotes to escape the environment
-        variables in bash script.
+      * ``envvar_double_quotes``: if set to True, use double quotes instead of single quotes to escape the
+        environment variables specified in ``environment_variables``.
       * ``working_directory``: the working directory for this job. During
         submission, the transport will first do a 'chdir' to this directory,
         and then possibly set a scheduler parameter, if this is supported

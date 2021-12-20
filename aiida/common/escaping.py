@@ -34,6 +34,10 @@ def escape_for_bash(str_to_escape, use_double_quotes=False):
     Finally, note that for python I have to enclose the string '"'"'
     within triple quotes to make it work, getting finally: the complicated
     string found below.
+
+    :param str_to_escape: the string to escape.
+    :param use_double_quotes: boolean, if ``True``, use double quotes instead of single quotes.
+    :return: the escaped string.
     """
     if str_to_escape is None:
         return ''

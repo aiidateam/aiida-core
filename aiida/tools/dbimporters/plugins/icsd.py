@@ -552,7 +552,8 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
                 raise IcsdImporterExp('Database version not found')
 
         else:
-            raise NotImplementedError('Cannot query the database version with ' 'a web query.')
+            raise NotImplementedError('Cannot query the database version with '
+                                      'a web query.')
 
     def query_page(self):
         """

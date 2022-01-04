@@ -45,8 +45,7 @@ class MpodDbImporter(DbImporter):
         :return: a list containing strings for HTTP GET statement.
         """
         if 'formula' in kwargs and 'element' in kwargs:
-            raise ValueError('can not query both formula and elements '
-                             'in MPOD')
+            raise ValueError('can not query both formula and elements in MPOD')
 
         elements = []
         if 'element' in kwargs:

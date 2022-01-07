@@ -323,8 +323,6 @@ jobs:
       continue-on-error: true
       uses: peter-evans/create-pull-request@v3
       with:
-        committer: GitHub <noreply@github.com>
-        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         branch: update-requirements
         commit-message: "Automated update of requirements/ files."
         title: "Update requirements/ files."

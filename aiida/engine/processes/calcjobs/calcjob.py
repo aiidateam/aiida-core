@@ -755,6 +755,7 @@ class CalcJob(Process):
         if max_wallclock_seconds is not None:
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
+        job_tmpl.run_line_double_quotes = computer.get_use_double_quotes()
         submit_script_filename = self.node.get_option('submit_script_filename')
         script_content = scheduler.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')

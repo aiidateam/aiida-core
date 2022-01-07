@@ -37,6 +37,25 @@ def raise_exception(exception, *args, **kwargs):
     """
     raise exception()
 
+@pytest.mark.requires_rmq
+class DummyCalcJob(CalcJob):
+    """`DummyCalcJob` implementation to test the calcinfo with container code.
+    """
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+
+    def prepare_for_submission(self, folder):
+        from aiida.common.datastructures import CalcInfo, CodeInfo
+
+        codeinfo = CodeInfo()
+        codeinfo.code_uuid = self.inputs.code.uuid
+
+        calcinfo = CalcInfo()
+        calcinfo.codes_info = [codeinfo]
+
+        return calcinfo
 
 @pytest.mark.requires_rmq
 class FileCalcJob(CalcJob):
@@ -106,6 +125,36 @@ class MultiCodesCalcJob(CalcJob):
         else:
             calcinfo.codes_run_mode = CodeRunMode.SERIAL
         return calcinfo
+    
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_double_quote(aiida_local_code_factory, file_regression):
+    """test run container code"""
+    computer = orm.Computer(
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm',
+    ).store()
+    computer.set_use_double_quotes(True)
+    
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                }
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
 
 
 @pytest.mark.requires_rmq

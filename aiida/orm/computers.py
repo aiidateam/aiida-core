@@ -442,6 +442,12 @@ class Computer(entities.Entity['BackendComputer']):
 
     def set_append_text(self, val: str) -> None:
         self.set_property('append_text', str(val))
+        
+    def get_use_double_quotes(self) -> bool:
+        return self.get_property('use_double_quotes', False)
+    
+    def set_use_double_quotes(self, val: bool) -> None:
+        self.set_property('use_double_quotes', bool(val))
 
     def get_mpirun_command(self) -> List[str]:
         """

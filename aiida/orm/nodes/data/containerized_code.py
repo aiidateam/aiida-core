@@ -27,13 +27,13 @@ class ContainerizedCode(Code):
     # pylint: disable=too-many-public-methods
 
     def __init__(
-        self, computer=None, cmdline_tmpl=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs
+        self, computer=None, engine_command=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs
     ):
         super().__init__(**kwargs)
 
         # do some check of parameters
 
-        self.set_container_exec(computer, cmdline_tmpl, image, container_exec_path)
+        self.set_container_exec(computer, engine_command, image, container_exec_path)
 
         if input_plugin_name:
             self.set_input_plugin_name(input_plugin_name)
@@ -41,7 +41,7 @@ class ContainerizedCode(Code):
     def _validate(self):
         pass
 
-    def set_container_exec(self, computer, cmdline_tmpl, image, container_exec_path):
+    def set_container_exec(self, computer, engine_command, image, container_exec_path):
         """
         Set the code as container
         """
@@ -54,7 +54,7 @@ class ContainerizedCode(Code):
         type_check(computer, orm.Computer)
         self.computer = computer
 
-        container_cmdline_params = cmdline_tmpl.format(image=image)
+        container_cmdline_params = engine_command.format(image=image)
 
         self.set_attribute('container_cmdline_params', container_cmdline_params)
         self.set_attribute('image', image)
@@ -70,5 +70,5 @@ class ContainerizedCode(Code):
         """Get image name"""
         return self.get_attribute('image', '')
 
-    def container_cmd_params(self):
+    def container_command(self):
         return self.get_attribute('container_cmdline_params', '')

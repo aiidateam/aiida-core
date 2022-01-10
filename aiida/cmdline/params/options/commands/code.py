@@ -15,12 +15,12 @@ from aiida.cmdline.params.options.interactive import InteractiveOption, Template
 from aiida.cmdline.params.options.overridable import OverridableOption
 
 
-def is_on_container(ctx):
+def is_containerized(ctx):
     return bool(ctx.params.get('on_container'))
 
 
-def is_not_on_container(ctx):
-    return bool(not is_on_container(ctx))
+def is_not_containerized(ctx):
+    return bool(not is_containerized(ctx))
 
 
 def is_on_computer(ctx):
@@ -32,7 +32,7 @@ def is_not_on_computer(ctx):
 
 
 def is_on_computer_or_container(ctx):
-    return is_on_computer(ctx) or is_on_container(ctx)
+    return is_on_computer(ctx) or is_containerized(ctx)
 
 
 def validate_label_uniqueness(ctx, _, value):
@@ -90,18 +90,17 @@ ON_CONTAINER = OverridableOption(
 IMAGE = OverridableOption(
     '--image',
     prompt='image name',
-    required_fn=is_on_container,
-    prompt_fn=is_on_container,
+    required_fn=is_containerized,
+    prompt_fn=is_containerized,
     cls=InteractiveOption,
     help='image name.'
 )
 
-CONTAINER_CMDLINE_TMPL = OverridableOption(
-    '--container-cmdline-tmpl',
+CONTAINER_ENGINE_COMMAND = OverridableOption(
+    '--container-engine-command',
     prompt='container cmdline params tmpl',
-    default='sarus run --mount=src=$PWD,dst=/workir,type=bind --workdir /workdir {image}',
-    required_fn=is_on_container,
-    prompt_fn=is_on_container,
+    required_fn=is_containerized,
+    prompt_fn=is_containerized,
     cls=InteractiveOption,
     help='container cmdline params tmpl.'
 )
@@ -111,8 +110,8 @@ ON_COMPUTER = OverridableOption(
     is_eager=False,
     default=True,
     cls=InteractiveOption,
-    required_fn=is_not_on_container,
-    prompt_fn=is_not_on_container,
+    required_fn=is_not_containerized,
+    prompt_fn=is_not_containerized,
     prompt='Installed on target computer?',
     help='Whether the code is installed on the target computer, or should be copied to the target computer each time '
     'from a local path.'

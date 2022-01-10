@@ -167,7 +167,7 @@
             "core.bool = aiida.orm.nodes.data.bool:Bool",
             "core.cif = aiida.orm.nodes.data.cif:CifData",
             "core.code = aiida.orm.nodes.data.code:Code",
-            "core.container_code = aiida.orm.nodes.data.container_code:ContainerizedCode",
+            "core.containerized_code = aiida.orm.nodes.data.containerized_code:ContainerizedCode",
             "core.dict = aiida.orm.nodes.data.dict:Dict",
             "core.enum = aiida.orm.nodes.data.enum:EnumData",
             "core.float = aiida.orm.nodes.data.float:Float",

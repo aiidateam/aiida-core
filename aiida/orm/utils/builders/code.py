@@ -17,7 +17,7 @@ import importlib_metadata
 from aiida.cmdline.params.options.commands.code import ON_CONTAINER
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
-from aiida.orm.nodes.data.container_code import ContainerizedCode
+from aiida.orm.nodes.data.containerized_code import ContainerizedCode
 
 
 class CodeBuilder:
@@ -61,11 +61,11 @@ class CodeBuilder:
             code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
         elif code_type == self.CodeType.ON_CONTAINER:
             image = self._get_and_count('image', used)
-            cmdline_tmpl = self._get_and_count('container_cmdline_tmpl', used)
+            engine_command = self._get_and_count('container_engine_command', used)
 
             code = ContainerizedCode(
                 computer=self._get_and_count('computer', used),
-                cmdline_tmpl=cmdline_tmpl,
+                engine_command=engine_command,
                 image=image,
                 container_exec_path=self._get_and_count('remote_abs_path', used)
             )

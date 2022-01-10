@@ -18,7 +18,7 @@ from aiida.orm.querybuilder import QueryBuilder
 
 if TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, Node
-    from aiida.orm.nodes.data.container_code import ContainerizedCode
+    from aiida.orm.nodes.data.containerized_code import ContainerizedCode
 
 __all__ = (
     'load_code', 'load_computer', 'load_group', 'load_node', 'load_entity', 'get_loader', 'OrmEntityLoader',
@@ -716,7 +716,7 @@ class ContainerizedCodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.nodes.data.container_code import ContainerizedCode
+        from aiida.orm.nodes.data.containerized_code import ContainerizedCode
         return ContainerizedCode
 
     @classmethod

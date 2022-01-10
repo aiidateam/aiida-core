@@ -203,6 +203,7 @@ def set_computer_builder(ctx, param, value):
 @options_computer.WORKDIR()
 @options_computer.MPI_RUN_COMMAND()
 @options_computer.MPI_PROCS_PER_MACHINE()
+@options_computer.DEFAULT_MEMORY_PER_MACHINE()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()
@@ -237,7 +238,9 @@ def computer_setup(ctx, non_interactive, **kwargs):
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
     echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-    echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
+
+    profile = ctx.obj['profile']
+    echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('duplicate')
@@ -251,6 +254,9 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.WORKDIR(contextual_default=partial(get_parameter_default, 'work_dir'))
 @options_computer.MPI_RUN_COMMAND(contextual_default=partial(get_parameter_default, 'mpirun_command'))
 @options_computer.MPI_PROCS_PER_MACHINE(contextual_default=partial(get_parameter_default, 'mpiprocs_per_machine'))
+@options_computer.DEFAULT_MEMORY_PER_MACHINE(
+    contextual_default=partial(get_parameter_default, 'default_memory_per_machine')
+)
 @options_computer.PREPEND_TEXT(contextual_default=partial(get_parameter_default, 'prepend_text'))
 @options_computer.APPEND_TEXT(contextual_default=partial(get_parameter_default, 'append_text'))
 @options.NON_INTERACTIVE()
@@ -290,7 +296,9 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
 
     if not is_configured:
         echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-        echo.echo_report(f'  verdi computer configure {computer.transport_type} {computer.label}')
+
+        profile = ctx.obj['profile']
+        echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('enable')
@@ -380,6 +388,7 @@ def computer_show(computer):
         ['Shebang', computer.get_shebang()],
         ['Mpirun command', ' '.join(computer.get_mpirun_command())],
         ['Default #procs/machine', computer.get_default_mpiprocs_per_machine()],
+        ['Default memory (kB)/machine', computer.get_default_memory_per_machine()],
         ['Prepend text', computer.get_prepend_text()],
         ['Append text', computer.get_append_text()],
     ]

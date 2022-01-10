@@ -19,7 +19,7 @@ DOWN_REVISION = '1.0.48'
 forward_sql = """
     UPDATE db_dbnode SET node_type = 'data.core.array.ArrayData.' WHERE node_type = 'data.array.ArrayData.';
     UPDATE db_dbnode SET node_type = 'data.core.array.bands.BandsData.' WHERE node_type = 'data.array.bands.BandsData.';
-    UPDATE db_dbnode SET node_type = 'data.core.array.kpoints.KpointData.' WHERE node_type = 'data.array.kpoints.KpointData.';
+    UPDATE db_dbnode SET node_type = 'data.core.array.kpoints.KpointsData.' WHERE node_type = 'data.array.kpoints.KpointsData.';
     UPDATE db_dbnode SET node_type = 'data.core.array.projection.ProjectionData.' WHERE node_type = 'data.array.projection.ProjectionData.';
     UPDATE db_dbnode SET node_type = 'data.core.array.trajectory.TrajectoryData.' WHERE node_type = 'data.array.trajectory.TrajectoryData.';
     UPDATE db_dbnode SET node_type = 'data.core.array.xy.XyData.' WHERE node_type = 'data.array.xy.XyData.';
@@ -36,7 +36,7 @@ forward_sql = """
     UPDATE db_dbnode SET node_type = 'data.core.orbital.OrbitalData.' WHERE node_type = 'data.orbital.OrbitalData.';
     UPDATE db_dbnode SET node_type = 'data.core.remote.RemoteData.' WHERE node_type = 'data.remote.RemoteData.';
     UPDATE db_dbnode SET node_type = 'data.core.remote.stash.RemoteStashData.' WHERE node_type = 'data.remote.stash.RemoteStashData.';
-    UPDATE db_dbnode SET node_type = 'data.core.remote.stash.folder.RemoteStashFolderData.' WHERE node_type = 'data.remote.stash.folder.';
+    UPDATE db_dbnode SET node_type = 'data.core.remote.stash.folder.RemoteStashFolderData.' WHERE node_type = 'data.remote.stash.folder.RemoteStashFolderData.';
     UPDATE db_dbnode SET node_type = 'data.core.singlefile.SinglefileData.' WHERE node_type = 'data.singlefile.SinglefileData.';
     UPDATE db_dbnode SET node_type = 'data.core.str.Str.' WHERE node_type = 'data.str.Str.';
     UPDATE db_dbnode SET node_type = 'data.core.structure.StructureData.' WHERE node_type = 'data.structure.StructureData.';

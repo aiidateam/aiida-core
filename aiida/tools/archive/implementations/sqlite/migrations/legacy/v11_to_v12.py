@@ -16,7 +16,7 @@ from ..utils import update_metadata, verify_metadata_version  # pylint: disable=
 MAPPING_DATA = {
     'data.array.ArrayData.': 'data.core.array.ArrayData.',
     'data.array.bands.BandsData.': 'data.core.array.bands.BandsData.',
-    'data.array.kpoints.KpointData.': 'data.core.array.kpoints.KpointData.',
+    'data.array.kpoints.KpointsData.': 'data.core.array.kpoints.KpointsData.',
     'data.array.projection.ProjectionData.': 'data.core.array.projection.ProjectionData.',
     'data.array.trajectory.TrajectoryData.': 'data.core.array.trajectory.TrajectoryData.',
     'data.array.xy.XyData.': 'data.core.array.xy.XyData.',

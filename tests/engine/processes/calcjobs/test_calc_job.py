@@ -25,7 +25,7 @@ from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.engine.processes.ports import PortNamespace
-from aiida.orm.nodes.data.container_code import ContainerCode
+from aiida.orm.nodes.data.container_code import ContainerizedCode
 from aiida.plugins import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
@@ -262,7 +262,7 @@ def test_container_code(aiida_local_code_factory, file_regression):
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     cmdline_tmpl = 'singularity run {image}'
-    code = ContainerCode(
+    code = ContainerizedCode(
         computer=computer, cmdline_tmpl=cmdline_tmpl, image='cscs/qe-mpich:latest', container_exec_path='/usr/bin/pw.x'
     )
 

@@ -28,7 +28,7 @@ from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.orm import CalcJobNode, Code, FolderData, Node, RemoteData, load_node
-from aiida.orm.nodes.data.container_code import ContainerCode
+from aiida.orm.nodes.data.container_code import ContainerizedCode
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
@@ -87,7 +87,7 @@ def upload_calculation(
     computer = node.computer
 
     codes_info = calc_info.codes_info
-    input_codes = [load_node(_.code_uuid, sub_classes=(Code, ContainerCode)) for _ in codes_info]
+    input_codes = [load_node(_.code_uuid, sub_classes=(Code, ContainerizedCode)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(node)
     transport.set_logger_extra(logger_extra)

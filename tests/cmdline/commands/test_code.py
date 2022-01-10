@@ -20,7 +20,7 @@ from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.orm import Code, Computer, load_code
-from aiida.orm.nodes.data.container_code import ContainerCode
+from aiida.orm.nodes.data.container_code import ContainerizedCode
 from aiida.orm.utils.loaders import load_container_code
 
 
@@ -170,7 +170,7 @@ def test_noninteractive_container(run_cli_command, aiida_localhost, non_interact
         f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
     ]
     run_cli_command(cmd_code.setup_code, options)
-    assert isinstance(load_container_code(label), ContainerCode)
+    assert isinstance(load_container_code(label), ContainerizedCode)
 
 
 @pytest.mark.usefixtures('clear_database_before_test')

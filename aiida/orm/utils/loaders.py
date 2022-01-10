@@ -18,7 +18,7 @@ from aiida.orm.querybuilder import QueryBuilder
 
 if TYPE_CHECKING:
     from aiida.orm import Code, Computer, Group, Node
-    from aiida.orm.nodes.data.container_code import ContainerCode
+    from aiida.orm.nodes.data.container_code import ContainerizedCode
 
 __all__ = (
     'load_code', 'load_computer', 'load_group', 'load_node', 'load_entity', 'get_loader', 'OrmEntityLoader',
@@ -124,7 +124,7 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
 
 def load_container_code(
     identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True
-) -> 'ContainerCode':
+) -> 'ContainerizedCode':
     """
     Load a Code instance by one of its identifiers: pk, uuid or label
 
@@ -145,7 +145,7 @@ def load_container_code(
     :raise aiida.common.MultipleObjectsError: if more than one Code was found
     """
     return load_entity(
-        ContainerCodeEntityLoader,
+        ContainerizedCodeEntityLoader,
         identifier=identifier,
         pk=pk,
         uuid=uuid,
@@ -704,7 +704,7 @@ class CodeEntityLoader(OrmEntityLoader):
         return builder
 
 
-class ContainerCodeEntityLoader(OrmEntityLoader):
+class ContainerizedCodeEntityLoader(OrmEntityLoader):
     """Loader for the `Code` entity and sub classes."""
 
     @classproperty
@@ -716,8 +716,8 @@ class ContainerCodeEntityLoader(OrmEntityLoader):
 
         :returns: the orm base class
         """
-        from aiida.orm.nodes.data.container_code import ContainerCode
-        return ContainerCode
+        from aiida.orm.nodes.data.container_code import ContainerizedCode
+        return ContainerizedCode
 
     @classmethod
     def _get_query_builder_label_identifier(cls, identifier, classes, operator='==', project='*'):

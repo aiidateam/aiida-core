@@ -16,10 +16,10 @@ from aiida.common.log import override_log_level
 from .code import Code
 from .data import Data
 
-__all__ = ('ContainerCode',)
+__all__ = ('ContainerizedCode',)
 
 
-class ContainerCode(Code):
+class ContainerizedCode(Code):
     """
     A container code entity.
     """

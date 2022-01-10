@@ -22,7 +22,7 @@ from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
-from aiida.orm.nodes.data.container_code import ContainerCode
+from aiida.orm.nodes.data.container_code import ContainerizedCode
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -691,7 +691,7 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code, ContainerCode))
+            this_code = load_node(code_info.code_uuid, sub_classes=(Code, ContainerizedCode))
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -718,7 +718,7 @@ class CalcJob(Process):
                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
             
             # set this_argv only for container code
-            if isinstance(this_code, ContainerCode):
+            if isinstance(this_code, ContainerizedCode):
                 # containerized code run line always use its own mpi setting rather config from prepend
                 code_info.prepend_cmdline_params = None
                 

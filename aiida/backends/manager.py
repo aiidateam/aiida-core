@@ -114,17 +114,17 @@ class BackendManager:
         :return: `SettingsManager`
         """
 
-    def load_backend_environment(self, profile, validate_schema=True, verify_lock=True, **kwargs):
+    def load_backend_environment(self, profile, validate_schema=True, **kwargs):
         """Load the backend environment.
 
         :param profile: the profile whose backend environment to load
         :param validate_schema: boolean, if True, validate the schema first before loading the environment.
         :param kwargs: keyword arguments that will be passed on to the backend specific scoped session getter function.
         """
-        from aiida.backends.managers.access import AccessManager
+        from aiida.backends.managers.profile_access import ProfileAccessManager
 
-        access_manager = AccessManager()
-        access_manager.record_process_access(verify_lock=verify_lock)
+        access_manager = ProfileAccessManager(profile)
+        access_manager.request_access()
 
         self._load_backend_environment(**kwargs)
 

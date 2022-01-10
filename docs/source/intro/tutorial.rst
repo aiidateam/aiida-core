@@ -611,7 +611,6 @@ We have compiled how-to guides that are especially relevant for the following us
 .. div:: dropdown-group
 
     .. dropdown:: Run pure Python lightweight computations
-        :container:
 
         Designing a workflow
             After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`writing workflows how-to <how-to:write-workflows>`.
@@ -629,7 +628,6 @@ We have compiled how-to guides that are especially relevant for the following us
             Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.
 
     .. dropdown:: Run compute-intensive codes
-        :container:
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.

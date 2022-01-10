@@ -124,7 +124,8 @@ py:class User
 py:class WorkChain
 py:class WorkChainSpec
 py:func QueryBuilder._get_ormclass
-py:class orm.implementation.Backend
+py:class StorageBackend
+py:class orm.implementation.StorageBackend
 py:class aiida.common.exceptions.UnreachableStorage
 py:class aiida.common.exceptions.IncompatibleDatabaseSchema
 py:class aiida.common.exceptions.DatabaseMigrationError

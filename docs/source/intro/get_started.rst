@@ -28,52 +28,53 @@ There are multiple routes to setting up a working AiiDA environment.
 Which of those is optimal depends on your environment and use case.
 If you are unsure, use the :ref:`system-wide installation <intro:get_started:system-wide-install>` method.
 
-.. panels::
-   :body: bg-light
-   :footer: bg-light border-0
+.. grid:: 1 2 2 2
+   :gutter: 2
 
-   :fa:`desktop,mr-1` **System-wide installation**
+   .. grid-item-card:: :fa:`desktop;mr-1` **System-wide installation**
 
-   .. link-button:: intro:get_started:system-wide-install
-      :type: ref
-      :text: Install all software directly on your workstation or laptop.
-      :classes: stretched-link btn-link
+      .. button-ref:: intro:get_started:system-wide-install
+         :ref-type: ref
+         :click-parent:
+         :class: btn-link
 
-   Install the prerequisite services using standard package managers (apt, homebrew, etc.) with administrative privileges.
+         Install all software directly on your workstation or laptop.
 
-   ---------------
+      Install the prerequisite services using standard package managers (apt, homebrew, etc.) with administrative privileges.
 
-   :fa:`folder,mr-1` **Installation into Conda environment**
+   .. grid-item-card:: :fa:`folder;mr-1` **Installation into Conda environment**
 
-   .. link-button:: intro:get_started:conda-install
-      :type: ref
-      :text: Install all software into an isolated conda environment.
-      :classes: stretched-link btn-link
+      .. button-ref:: intro:get_started:conda-install
+         :ref-type: ref
+         :click-parent:
+         :class: btn-link
 
-   This method does not require administrative privileges, but involves manual management of start-up and shut-down of services.
+         Install all software into an isolated conda environment.
 
-   ---------------
+      This method does not require administrative privileges, but involves manual management of start-up and shut-down of services.
 
-   :fa:`cube,mr-1` **Run via docker container**
+   .. grid-item-card:: :fa:`cube;mr-1` **Run via docker container**
 
-   .. link-button:: intro:get_started:docker
-      :type: ref
-      :text: Run AiiDA and prerequisite services as a single docker container.
-      :classes: stretched-link btn-link
+      .. button-ref:: intro:get_started:docker
+         :ref-type: ref
+         :click-parent:
+         :class: btn-link
 
-   Does not require the separate installation of prerequisite services.
-   Especially well-suited to get directly started on the **tutorials**.
+         Run AiiDA and prerequisite services as a single docker container.
 
-   ---------------
+      Does not require the separate installation of prerequisite services.
+      Especially well-suited to get directly started on the **tutorials**.
 
-   :fa:`cloud,mr-1` **Run via virtual machine**
+   .. grid-item-card:: :fa:`cloud;mr-1` **Run via virtual machine**
 
-   .. link-button:: https://quantum-mobile.readthedocs.io/
-      :text: Use a virtual machine with all the required software pre-installed.
-      :classes: stretched-link btn-link
+      .. button-link:: https://quantum-mobile.readthedocs.io/
+         :click-parent:
+         :class: btn-link
 
-   `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs,
-   also incorporating pre-installed Materials Science codes.
+         Use a virtual machine with all the required software pre-installed.
+
+      `Materials Cloud <https://www.materialscloud.org>`__ provides both downloadable and web based VMs,
+      also incorporating pre-installed Materials Science codes.
 
 .. _intro:get_started:next:
 

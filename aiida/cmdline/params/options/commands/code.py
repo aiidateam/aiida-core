@@ -89,11 +89,11 @@ ON_CONTAINER = OverridableOption(
 
 IMAGE = OverridableOption(
     '--image',
-    prompt='image name',
+    prompt='image name or absolute path to image file',
     required_fn=is_containerized,
     prompt_fn=is_containerized,
     cls=InteractiveOption,
-    help='image name.'
+    help='image name or absolute path to image file.'
 )
 
 CONTAINER_ENGINE_COMMAND = OverridableOption(

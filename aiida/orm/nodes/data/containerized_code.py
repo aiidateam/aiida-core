@@ -54,21 +54,18 @@ class ContainerizedCode(Code):
         type_check(computer, orm.Computer)
         self.computer = computer
 
-        container_cmdline_params = engine_command.format(image=image)
+        container_engine_command = engine_command.format(image=image)
 
-        self.set_attribute('container_cmdline_params', container_cmdline_params)
+        self.set_attribute('container_engine_command', container_engine_command)
         self.set_attribute('image', image)
         self.set_attribute('container_exec_path', container_exec_path)
 
     def get_container_exec_path(self):
-        return self.get_attribute('container_exec_path', '')
-
-    def get_remote_computer(self):
-        return self.computer
+        return self.get_attribute('container_exec_path', None)
 
     def get_image(self):
         """Get image name"""
         return self.get_attribute('image', '')
 
-    def container_command(self):
-        return self.get_attribute('container_cmdline_params', '')
+    def get_container_engine_command(self):
+        return self.get_attribute('container_engine_command', '')

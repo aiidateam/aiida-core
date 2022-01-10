@@ -587,7 +587,7 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import Code, Computer, load_node
+        from aiida.orm import Code, Computer, load_code
         from aiida.schedulers.datastructures import JobTemplate
 
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -691,7 +691,7 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code, ContainerizedCode))
+            this_code = load_code(code_info.code_uuid)
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -722,7 +722,7 @@ class CalcJob(Process):
                 # containerized code run line always use its own mpi setting rather config from prepend
                 code_info.prepend_cmdline_params = None
                 
-                this_argv = [this_code.container_command()] + [this_code.get_image()] + [
+                this_argv = this_code.get_container_engine_command().split(' ') + [
                     this_code.get_container_exec_path()
                 ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
                 

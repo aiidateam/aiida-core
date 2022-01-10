@@ -8,4 +8,4 @@
 #SBATCH --ntasks-per-node=128
 
 
-'singularity run cscs/qe-mpich:latest' 'cscs/qe-mpich:latest' '/usr/bin/pw.x'   
+'singularity' 'run' 'cscs/qe-mpich:latest' '/usr/bin/pw.x'   

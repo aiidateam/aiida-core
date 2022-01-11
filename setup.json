@@ -97,7 +97,7 @@
             "notebook~=6.1,>=6.1.5"
         ],
         "pre-commit": [
-            "mypy==0.910",
+            "mypy==0.931",
             "packaging==20.3",
             "pre-commit~=2.2",
             "pylint~=2.11.1",

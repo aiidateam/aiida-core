@@ -75,6 +75,14 @@ class Dict(Data):
             return self.get_dict() == other.get_dict()
         return self.get_dict() == other
 
+    @property
+    def value(self):
+        return self.attributes
+
+    @value.setter
+    def value(self, value):
+        self.set_dict(value)
+
     def set_dict(self, dictionary):
         """ Replace the current dictionary with another one.
 

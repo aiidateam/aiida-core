@@ -56,6 +56,14 @@ class List(Data, MutableSequence):
             return self.get_list() == other.get_list()
         return self.get_list() == other
 
+    @property
+    def value(self):
+        return self.get_list()
+
+    @value.setter
+    def value(self, value):
+        self.set_list(value)  # pylint: disable=no-member
+
     def append(self, value):
         data = self.get_list()
         data.append(value)

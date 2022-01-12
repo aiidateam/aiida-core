@@ -66,7 +66,7 @@ class Repository:
         :param backend: instance of repository backend to use to actually store the file objects.
         """
         instance = cls.__new__(cls)
-        instance.__init__(backend)
+        instance.__init__(backend)  # type: ignore[misc]
 
         if serialized:
             for name, obj in serialized['o'].items():

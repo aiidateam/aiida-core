@@ -157,6 +157,9 @@ class SqlaBackendManager(BackendManager):
     def _migrate_database_version(self):
         """Migrate the database to the latest schema version."""
         super()._migrate_database_version()
+        transaction = get_scoped_session().get_transaction()
+        if transaction:
+            transaction.close()
         self.migrate_up('head')
 
 

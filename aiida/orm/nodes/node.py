@@ -154,7 +154,7 @@ class Node(
 
     @classproperty
     def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
-        return NodeCollection.get_cached(cls, get_manager().get_backend())  # type: ignore[arg-type]
+        return NodeCollection.get_cached(cls, get_manager().get_backend())
 
     def __init__(
         self,
@@ -293,7 +293,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.process_type = value  # type: ignore[misc]
+        self.backend_entity.process_type = value
 
     @property
     def label(self) -> str:
@@ -309,7 +309,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.label = value  # type: ignore[misc]
+        self.backend_entity.label = value
 
     @property
     def description(self) -> str:
@@ -325,7 +325,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.description = value  # type: ignore[misc]
+        self.backend_entity.description = value
 
     @property
     def repository_metadata(self) -> Dict[str, Any]:
@@ -341,7 +341,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.repository_metadata = value  # type: ignore[misc]
+        self.backend_entity.repository_metadata = value
 
     @property
     def computer(self) -> Optional[Computer]:
@@ -362,7 +362,7 @@ class Node(
 
         type_check(computer, Computer, allow_none=True)
 
-        self.backend_entity.computer = None if computer is None else computer.backend_entity  # type: ignore[misc]
+        self.backend_entity.computer = None if computer is None else computer.backend_entity
 
     @property
     def user(self) -> User:
@@ -379,7 +379,7 @@ class Node(
             raise exceptions.ModificationNotAllowed('cannot set the user on a stored node')
 
         type_check(user, User)
-        self.backend_entity.user = user.backend_entity  # type: ignore[misc]
+        self.backend_entity.user = user.backend_entity
 
     @property
     def ctime(self) -> datetime.datetime:
@@ -835,7 +835,7 @@ class Node(
         assert self._repository is not None, 'repository not initialised'
         top_level_module = self.__module__.split('.', 1)[0]
         try:
-            version = importlib.import_module(top_level_module).__version__  # type: ignore[attr-defined]
+            version = importlib.import_module(top_level_module).__version__
         except (ImportError, AttributeError) as exc:
             raise exceptions.HashingError("The node's package version could not be determined") from exc
         objects = [
@@ -918,7 +918,7 @@ class Node(
         builder = QueryBuilder(backend=self.backend)
         builder.append(self.__class__, filters={f'extras.{self._HASH_EXTRA_KEY}': node_hash}, subclassing=False)
 
-        return (node for node in builder.all(flat=True) if node.is_valid_cache)  # type: ignore[misc,union-attr]
+        return (node for node in builder.all(flat=True) if node.is_valid_cache)
 
     @property
     def is_valid_cache(self) -> bool:

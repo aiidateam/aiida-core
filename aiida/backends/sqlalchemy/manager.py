@@ -41,6 +41,10 @@ class SqlaBackendManager(BackendManager):
 
         from . import ENGINE
 
+        transaction = get_scoped_session().get_transaction()
+        if transaction:
+            transaction.close()
+
         engine_context = ENGINE.begin if start_transaction else ENGINE.connect
         with engine_context() as connection:
             dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -157,9 +161,6 @@ class SqlaBackendManager(BackendManager):
     def _migrate_database_version(self):
         """Migrate the database to the latest schema version."""
         super()._migrate_database_version()
-        transaction = get_scoped_session().get_transaction()
-        if transaction:
-            transaction.close()
         self.migrate_up('head')
 
 

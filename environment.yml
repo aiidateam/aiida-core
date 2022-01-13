@@ -22,7 +22,7 @@ dependencies:
 - jsonschema~=3.0
 - kiwipy[rmq]~=0.7.4
 - importlib-metadata~=4.3
-- numpy~=1.17
+- numpy~=1.19
 - pamqp~=2.3
 - paramiko>=2.7.2,~=2.7
 - plumpy~=0.20.0

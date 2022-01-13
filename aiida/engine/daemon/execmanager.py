@@ -273,7 +273,8 @@ def upload_calculation(
     else:
 
         if remote_copy_list:
-            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:  # pylint: disable=unspecified-encoding
+            filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
+            with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         'would have copied {} to {} in working directory on remote {}'.format(
@@ -282,7 +283,8 @@ def upload_calculation(
                     )
 
         if remote_symlink_list:
-            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:  # pylint: disable=unspecified-encoding
+            filepath = os.path.join(workdir, '_aiida_remote_symlink_list.txt')
+            with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         'would have created symlinks from {} to {} in working directory on remote {}'.format(
@@ -317,7 +319,7 @@ def upload_calculation(
             if relpath not in provenance_exclude_list and all(
                 dirname not in provenance_exclude_list for dirname in dirnames
             ):
-                with open(filepath, 'rb') as handle:
+                with open(filepath, 'rb') as handle:  # type: ignore[assignment]
                     node._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
 
     # Since the node is already stored, we cannot use the normal repository interface since it will raise a

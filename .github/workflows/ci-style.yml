@@ -29,7 +29,8 @@ jobs:
 
     - name: Install python dependencies
       run: |
-        pip install -e .[all]
+        pip install -r requirements/requirements-py-3.8.txt
+        pip install -e .[pre-commit]
         pip freeze
 
     - name: Run pre-commit

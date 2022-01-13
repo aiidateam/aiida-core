@@ -101,6 +101,7 @@ scripts_are_modules = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_warn_no_return = true
+show_traceback = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [[tool.mypy.overrides]]

@@ -228,9 +228,7 @@ def _import_users(backend_from: Backend, backend_to: Backend, batch_size: int) -
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_email = dict(
-        qbuilder.append(orm.User, project=['id', 'email']).all(batch_size=batch_size)  # type: ignore[arg-type]
-    )
+    input_id_email = dict(qbuilder.append(orm.User, project=['id', 'email']).all(batch_size=batch_size))
 
     # get matching emails from the backend
     output_email_id = {}
@@ -258,7 +256,7 @@ def _import_users(backend_from: Backend, backend_to: Backend, batch_size: int) -
         )
 
     # generate mapping of input backend id to output backend id
-    return {i: output_email_id[email] for i, email in input_id_email.items()}
+    return {int(i): output_email_id[email] for i, email in input_id_email.items()}
 
 
 def _import_computers(backend_from: Backend, backend_to: Backend, batch_size: int) -> Dict[int, int]:
@@ -268,9 +266,7 @@ def _import_computers(backend_from: Backend, backend_to: Backend, batch_size: in
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(
-        qbuilder.append(orm.Computer, project=['id', 'uuid']).all(batch_size=batch_size)  # type: ignore[arg-type]
-    )
+    input_id_uuid = dict(qbuilder.append(orm.Computer, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id = {}
@@ -328,7 +324,7 @@ def _import_computers(backend_from: Backend, backend_to: Backend, batch_size: in
             IMPORT_LOGGER.report(f'Re-labelled {relabelled} new Computer(s)')
 
     # generate mapping of input backend id to output backend id
-    return {i: backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+    return {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
 
 
 def _import_authinfos(
@@ -421,9 +417,7 @@ def _import_nodes(
     IMPORT_LOGGER.report('Collecting Node(s) ...')
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(
-        qbuilder.append(orm.Node, project=['id', 'uuid']).all(batch_size=batch_size)  # type: ignore[arg-type]
-    )
+    input_id_uuid = dict(qbuilder.append(orm.Node, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id = {}
@@ -451,7 +445,7 @@ def _import_nodes(
         )
 
     # generate mapping of input backend id to output backend id
-    return {i: backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+    return {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
 
 
 class NodeTransform:
@@ -499,9 +493,7 @@ def _import_logs(backend_from: Backend, backend_to: Backend, batch_size: int,
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(
-        qbuilder.append(orm.Log, project=['id', 'uuid']).all(batch_size=batch_size)  # type: ignore[arg-type]
-    )
+    input_id_uuid = dict(qbuilder.append(orm.Log, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id = {}
@@ -537,7 +529,7 @@ def _import_logs(backend_from: Backend, backend_to: Backend, batch_size: int,
         )
 
     # generate mapping of input backend id to output backend id
-    return {i: backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+    return {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
 
 
 def _merge_node_extras(
@@ -698,9 +690,7 @@ def _import_comments(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(
-        qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=batch_size)  # type: ignore[arg-type]
-    )
+    input_id_uuid = dict(qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id = {}
@@ -764,7 +754,7 @@ def _import_comments(
         )
 
     # generate mapping of input backend id to output backend id
-    return {i: backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
+    return {int(i): backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
 
 
 def _import_links(
@@ -946,9 +936,7 @@ def _import_groups(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(
-        qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=batch_size)  # type: ignore[arg-type]
-    )
+    input_id_uuid = dict(qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id = {}

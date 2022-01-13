@@ -41,7 +41,7 @@ class WithNonDb:
     def __init__(self, *args, **kwargs) -> None:
         self._non_db_explicitly_set: bool = bool('non_db' in kwargs)
         non_db = kwargs.pop('non_db', False)
-        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        super().__init__(*args, **kwargs)
         self._non_db: bool = non_db
 
     @property
@@ -76,7 +76,7 @@ class WithSerialize:
 
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
-        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        super().__init__(*args, **kwargs)
         self._serializer: Callable[[Any], 'Data'] = serializer
 
     def serialize(self, value: Any) -> 'Data':

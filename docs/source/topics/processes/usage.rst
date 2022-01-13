@@ -223,7 +223,7 @@ Exit codes
 Any ``Process`` most likely will have one or multiple expected failure modes.
 To clearly communicate to the caller what went wrong, the ``Process`` supports setting its ``exit_status``.
 This ``exit_status``, a positive integer, is an attribute of the process node and by convention, when it is zero means the process was successful, whereas any other value indicates failure.
-This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://shapeshed.com/unix-exit-codes/>`_ and a standard way for programs to communicate the result of their execution.
+This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://en.wikipedia.org/wiki/Exit_status>`_ and a standard way for programs to communicate the result of their execution.
 
 Potential exit codes for the ``Process`` can be defined through the ``ProcessSpec``, just like inputs and outputs.
 Any exit code consists of a positive non-zero integer, a string label to reference it and a more detailed description of the problem that triggers the exit code.

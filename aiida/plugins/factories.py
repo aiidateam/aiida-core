@@ -100,8 +100,8 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Optional
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (CalcJobImporter,)
 
-    if isclass(entry_point) and issubclass(entry_point, CalcJobImporter):  # type: ignore[arg-type]
-        return entry_point
+    if isclass(entry_point) and issubclass(entry_point, CalcJobImporter):
+        return entry_point  # type: ignore[return-value]
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 

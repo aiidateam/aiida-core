@@ -59,6 +59,31 @@ PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
 
 
+def check_version():
+    """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+
+    The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
+    number. This means it will always append `.post0` to the version of the latest release. This should mean that if
+    this protocol is maintained properly, this method will print a warning if the currently installed version is a
+    post release development branch and not an actual release.
+    """
+    from packaging.version import parse
+
+    from aiida import __version__
+    from aiida.cmdline.utils import echo
+
+    version = parse(__version__)
+
+    # Showing of the warning can be turned off by setting the following option to false.
+    show_warning = get_config_option('warnings.development_version')
+
+    if version.is_postrelease and show_warning:
+        echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
+        echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
+        echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
+        echo.echo_warning('as you might not be able to automatically migrate your data.\n')
+
+
 def load_profile(profile=None):
     """Load a profile.
 
@@ -91,6 +116,10 @@ def load_profile(profile=None):
     # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
     # instead be done lazily in `Manager._load_backend`.
     configure_logging()
+
+    # Check whether a development version is being run. Note that needs to be called after ``configure_logging`` because
+    # this function relies on the logging being properly configured for the warning to show.
+    check_version()
 
     return PROFILE
 

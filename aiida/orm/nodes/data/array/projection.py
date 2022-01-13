@@ -50,7 +50,7 @@ class ProjectionData(OrbitalData, ArrayData):
         # The [0:2] is so that each array, and not collection of arrays
         # is used to make the comparison
         if np.shape(projection_array) != shape_bands:
-            raise AttributeError('These arrays are not the same shape as' ' the bands')
+            raise AttributeError('These arrays are not the same shape as the bands')
 
     def set_reference_bandsdata(self, value):
         """
@@ -76,9 +76,7 @@ class ProjectionData(OrbitalData, ArrayData):
                     uuid = bands.uuid
                 except Exception:  # pylint: disable=bare-except
                     raise exceptions.NotExistent(
-                        'The value passed to '
-                        'set_reference_bandsdata was not '
-                        'associated to any bandsdata'
+                        'The value passed to set_reference_bandsdata was not associated to any bandsdata'
                     )
 
         self.set_attribute('reference_bandsdata_uuid', uuid)

@@ -59,7 +59,7 @@ class ProfileAccessManager:
         If the profile is locked, a ``LockedProfileError`` is raised. Otherwise a PID file is created for this process
         and the function returns ``None``. The PID file contains the command of the process.
 
-        :raises LockedProfileError: if the profile is locked.
+        :raises ~aiida.common.exceptions.LockedProfileError: if the profile is locked.
         """
         error_message = (
             f'process {self.process.pid} cannot access profile `{self.profile.name}`'
@@ -100,8 +100,8 @@ class ProfileAccessManager:
         the profile is currently not in use, nor locked by another process. During the context, the profile will be
         locked, which will be lifted automatically as soon as the context exits.
 
-        :raises LockingProfileError: if there are currently active processes using the profile.
-        :raises LockedProfileError: if there currently already is a lock on the profile.
+        :raises ~aiida.common.exceptions.LockingProfileError: if there are currently active processes using the profile.
+        :raises ~aiida.common.exceptions.LockedProfileError: if there currently already is a lock on the profile.
         """
         error_message = (
             f'process {self.process.pid} cannot lock profile `{self.profile.name}` '
@@ -199,7 +199,7 @@ class ProfileAccessManager:
         """This method will raise the exception given in `ExceptionClass` if the profile is locked.
 
         :param message_start: Text to use as the start of the exception message.
-        :raises LockedProfileError: if the profile is locked.
+        :raises ~aiida.common.exceptions.LockedProfileError: if the profile is locked.
         """
         list_of_files = self._get_tracking_files('.lock', exclude_self=True)
 
@@ -212,7 +212,7 @@ class ProfileAccessManager:
         """This method will raise the exception given in `ExceptionClass` if the profile is being accessed.
 
         :param message_start: Text to use as the start of the exception message.
-        :raises LockingProfileError: if the profile is active.
+        :raises ~aiida.common.exceptions.LockingProfileError: if the profile is active.
         """
         list_of_files = self._get_tracking_files('.pid', exclude_self=True)
 

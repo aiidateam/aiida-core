@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,invalid-name
 """Tests for the 'verdi computer' command."""
 from collections import OrderedDict
 import os
@@ -56,6 +56,7 @@ def generate_setup_options_dict(replace_args=None, non_interactive=True):
     valid_noninteractive_options['work-dir'] = '/scratch/{username}/aiida_run'
     valid_noninteractive_options['mpirun-command'] = 'mpirun -np {tot_num_mpiprocs}'
     valid_noninteractive_options['mpiprocs-per-machine'] = '2'
+    valid_noninteractive_options['default-memory-per-machine'] = '1000000'
     # Make them multiline to test also multiline options
     valid_noninteractive_options['prepend-text'] = "date\necho 'second line'"
     valid_noninteractive_options['append-text'] = "env\necho '444'\necho 'third line'"
@@ -88,7 +89,7 @@ def generate_setup_options(ordereddict):
     return options
 
 
-def generate_setup_options_interactive(ordereddict):  # pylint: disable=invalid-name
+def generate_setup_options_interactive(ordereddict):
     """
     Given an (ordered) dict, returns a list of options
 
@@ -162,6 +163,8 @@ def test_mixed(run_cli_command):
     assert new_computer.get_shebang() == options_dict_full['shebang']
     assert new_computer.get_workdir() == options_dict_full['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict_full['mpiprocs-per-machine'])
+    assert new_computer.get_default_memory_per_machine() == int(options_dict_full['default-memory-per-machine'])
+
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == options_dict_full['prepend-text']
     assert new_computer.get_append_text() == options_dict_full['append-text']
@@ -178,7 +181,6 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
 
     result = run_cli_command(computer_setup, options)
 
-    assert result.exception is None, result.output[-1000:]
     new_computer = orm.Computer.objects.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
 
@@ -190,26 +192,24 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
     assert new_computer.get_shebang() == options_dict['shebang']
     assert new_computer.get_workdir() == options_dict['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict['mpiprocs-per-machine'])
+    assert new_computer.get_default_memory_per_machine() == int(options_dict['default-memory-per-machine'])
     assert new_computer.get_prepend_text() == options_dict['prepend-text']
     assert new_computer.get_append_text() == options_dict['append-text']
 
     # Test that I cannot generate twice a computer with the same label
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-    assert isinstance(result.exception, SystemExit)
+    result = run_cli_command(computer_setup, options, raises=True)
     assert 'already exists' in result.output
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_noninteractive_optional_default_mpiprocs(run_cli_command):  # pylint: disable=invalid-name
+def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     """
     Check that if is ok not to specify mpiprocs-per-machine
     """
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs'})
     options_dict.pop('mpiprocs-per-machine')
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert result.exception is None, result.output[-1000:]
+    run_cli_command(computer_setup, options, catch_exceptions=False)
 
     new_computer = orm.Computer.objects.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
@@ -217,16 +217,14 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):  # pylint: d
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):  # pylint: disable=invalid-name
+def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     """
     Check that if is the specified value is zero, it means unspecified
     """
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert result.exception is None, result.output[-1000:]
+    run_cli_command(computer_setup, options, catch_exceptions=False)
 
     new_computer = orm.Computer.objects.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
@@ -234,17 +232,40 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):  # pylint:
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
-def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):  # pylint: disable=invalid-name
+def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
     """
     Check that it fails for a negative number of mpiprocs
     """
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_3'})
     options_dict['mpiprocs-per-machine'] = -1
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert isinstance(result.exception, SystemExit)
+    result = run_cli_command(computer_setup, options, raises=True)
     assert 'mpiprocs_per_machine, must be positive' in result.output
+
+
+def test_noninteractive_optional_default_memory(run_cli_command):
+    """
+    Check that if is ok not to specify default-memory-per-machine
+    """
+    options_dict = generate_setup_options_dict({'label': 'computer_default_mem'})
+    options_dict.pop('default-memory-per-machine')
+    options = generate_setup_options(options_dict)
+    run_cli_command(computer_setup, options)
+
+    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    assert isinstance(new_computer, orm.Computer)
+    assert new_computer.get_default_memory_per_machine() is None
+
+
+def test_noninteractive_optional_default_memory_invalid(run_cli_command):
+    """
+    Check that it fails for a negative number of default_memory.
+    """
+    options_dict = generate_setup_options_dict({'label': 'computer_default_memory_3'})
+    options_dict['default-memory-per-machine'] = -1
+    options = generate_setup_options(options_dict)
+    result = run_cli_command(computer_setup, options, raises=True)
+    assert 'Invalid value for def_memory_per_machine, must be a positive int, got: -1' in result.output
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
@@ -255,8 +276,7 @@ def test_noninteractive_wrong_transport_fail(run_cli_command):
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['transport'] = 'unknown_transport'
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-    assert isinstance(result.exception, SystemExit)
+    result = run_cli_command(computer_setup, options, raises=True)
     assert "entry point 'unknown_transport' is not valid" in result.output
 
 
@@ -268,9 +288,7 @@ def test_noninteractive_wrong_scheduler_fail(run_cli_command):
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['scheduler'] = 'unknown_scheduler'
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert isinstance(result.exception, SystemExit)
+    result = run_cli_command(computer_setup, options, raises=True)
     assert "entry point 'unknown_scheduler' is not valid" in result.output
 
 
@@ -282,9 +300,7 @@ def test_noninteractive_invalid_shebang_fail(run_cli_command):
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['shebang'] = '/bin/bash'  # Missing #! in front
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert isinstance(result.exception, SystemExit)
+    result = run_cli_command(computer_setup, options, raises=True)
     assert 'The shebang line should start with' in result.output
 
 
@@ -338,6 +354,7 @@ class TestVerdiComputerConfigure(AiidaTestCase):
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
         self.comp_builder.mpiprocs_per_machine = 8
+        self.comp_builder.default_memory_per_machine = 100000
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
 
@@ -556,6 +573,7 @@ class TestVerdiComputerCommands(AiidaTestCase):
             workdir='/tmp/aiida'
         )
         cls.comp.set_default_mpiprocs_per_machine(1)
+        cls.comp.set_default_memory_per_machine(1000000)
         cls.comp.set_prepend_text('text to prepend')
         cls.comp.set_append_text('text to append')
         cls.comp.store()
@@ -707,7 +725,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     """Test 'verdi computer duplicate' in interactive mode."""
     label = 'computer_duplicate_interactive'
     computer = aiida_localhost
-    user_input = f'{label}\n\n\n\n\n\n\n\n\n'
+    user_input = f'{label}\n\n\n\n\n\n\n\n\n\n'
     result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input, catch_exceptions=False)
     assert result.exception is None, result.output
 

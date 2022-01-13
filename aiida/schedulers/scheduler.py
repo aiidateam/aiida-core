@@ -170,6 +170,24 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         return '\n'.join(script_lines)
 
+    def _get_submit_script_environment_variables(self, template):  # pylint: disable=no-self-use
+        """Return the part of the submit script header that defines environment variables.
+
+        :parameter template: a `aiida.schedulers.datastrutures.JobTemplate` instance.
+        :return: string containing environment variable declarations.
+        """
+        if not isinstance(template.job_environment, dict):
+            raise ValueError('If you provide job_environment, it must be a dictionary')
+
+        lines = ['# ENVIRONMENT VARIABLES BEGIN ###']
+
+        for key, value in template.job_environment.items():
+            lines.append(f'export {key.strip()}={escape_for_bash(value)}')
+
+        lines.append('# ENVIRONMENT VARIABLES END ###')
+
+        return '\n'.join(lines)
+
     @abc.abstractmethod
     def _get_submit_script_header(self, job_tmpl):
         """Return the submit script header, using the parameters from the job template.

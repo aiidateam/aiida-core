@@ -241,6 +241,7 @@ class Computer(entities.Entity['BackendComputer']):
         self._transport_type_validator(self.transport_type)
         self._scheduler_type_validator(self.scheduler_type)
         self._workdir_validator(self.get_workdir())
+        self.default_memory_per_machine_validator(self.get_default_memory_per_machine())
 
         try:
             mpirun_cmd = self.get_mpirun_command()
@@ -262,6 +263,17 @@ class Computer(entities.Entity['BackendComputer']):
             raise exceptions.ValidationError(
                 'Invalid value for default_mpiprocs_per_machine, must be a positive integer, or an empty string if you '
                 'do not want to provide a default value.'
+            )
+
+    @classmethod
+    def default_memory_per_machine_validator(cls, def_memory_per_machine: Optional[int]) -> None:
+        """Validates the default amount of memory (kB) per machine (node)"""
+        if def_memory_per_machine is None:
+            return
+
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
+            raise exceptions.ValidationError(
+                f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
             )
 
     def copy(self) -> 'Computer':
@@ -463,10 +475,24 @@ class Computer(entities.Entity['BackendComputer']):
         """
         if def_cpus_per_machine is None:
             self.delete_property('default_mpiprocs_per_machine', raise_exception=False)
-        else:
-            if not isinstance(def_cpus_per_machine, int):
-                raise TypeError('def_cpus_per_machine must be an integer (or None)')
+        elif not isinstance(def_cpus_per_machine, int):
+            raise TypeError('def_cpus_per_machine must be an integer (or None)')
         self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
+
+    def get_default_memory_per_machine(self) -> Optional[int]:
+        """
+        Return the default amount of memory (kB) per machine (node) for this computer,
+        or None if it was not set.
+        """
+        return self.get_property('default_memory_per_machine', None)
+
+    def set_default_memory_per_machine(self, def_memory_per_machine: Optional[int]) -> None:
+        """
+        Set the default amount of memory (kB) per machine (node) for this computer.
+        Accepts None if you do not want to set this value.
+        """
+        self.default_memory_per_machine_validator(def_memory_per_machine)
+        self.set_property('default_memory_per_machine', def_memory_per_machine)
 
     def get_minimum_job_poll_interval(self) -> float:
         """

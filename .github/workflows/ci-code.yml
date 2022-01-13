@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.10']
+        python-version: ['3.8', '3.10']
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -129,10 +129,10 @@ jobs:
         .github/workflows/tests.sh
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.7 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.8 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v1
       with:
-        name: aiida-pytests-py3.7-${{ matrix.backend }}
+        name: aiida-pytests-py3.8-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
@@ -145,7 +145,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.10']
+        python-version: ['3.8', '3.10']
 
     steps:
     - uses: actions/checkout@v2

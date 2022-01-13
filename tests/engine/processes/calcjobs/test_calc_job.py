@@ -256,12 +256,12 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
-def test_container_code(aiida_local_code_factory, file_regression):
+def test_containerized_code(aiida_local_code_factory, file_regression):
     """test run container code"""
     computer = orm.Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct'
     ).store()
-    engine_command = 'singularity run {image}'
+    engine_command = 'docker run {image}'
     code = ContainerizedCode(
         computer=computer, engine_command=engine_command, image='cscs/qe-mpich:latest', container_exec_path='/usr/bin/pw.x'
     )

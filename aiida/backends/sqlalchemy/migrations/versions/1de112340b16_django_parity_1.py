@@ -38,13 +38,16 @@ def upgrade():  # pylint: disable=too-many-statements
 
     Note, it is technically possible that the following foreign keys could also be null
     (due to no explicit nullable=False):
-    db_dbauthinfo.aiidauser_id, db_dbauthinfo.dbcomputer_id,
-    db_dbcomment.dbnode_id, db_dbcomment.user_id,
-    db_dbgroup.user_id, db_dbgroup_dbnode.dbgroup_id, db_dbgroup_dbnode.dbnode_id,
-    db_dblink.input_id, db_dblink.output_id
+    `db_dbauthinfo.aiidauser_id`, `db_dbauthinfo.dbcomputer_id`,
+    `db_dbcomment.dbnode_id`, `db_dbcomment.user_id`,
+    `db_dbgroup.user_id`, `db_dbgroup_dbnode.dbgroup_id`, `db_dbgroup_dbnode.dbnode_id`,
+    `db_dblink.input_id`, `db_dblink.output_id`
 
     However, there is no default value for these fields, and the Python API does not allow them to be set to `None`,
     so it would be extremely unlikely for this to be the case.
+
+    Also, `db_dblink.type` should not be null but, since this would critically corrupt the provence graph,
+    we leave this to fail the non-null migration.
 
     """
     db_dbauthinfo = sa.sql.table(
@@ -101,17 +104,10 @@ def upgrade():  # pylint: disable=too-many-statements
     )
 
     op.execute(db_dbgroup.update().where(db_dbgroup.c.description.is_(None)).values(description=''))
-    op.execute(db_dbgroup.update().where(db_dbgroup.c.label.is_(None)).values(label=''))
+    op.execute(db_dbgroup.update().where(db_dbgroup.c.label.is_(None)).values(label=get_new_uuid()))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.time.is_(None)).values(time=timezone.now()))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string=''))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.uuid.is_(None)).values(uuid=get_new_uuid()))
-
-    db_dblink = sa.sql.table(
-        'db_dblink',
-        sa.Column('type', sa.String(255)),
-    )
-
-    op.execute(db_dblink.update().where(db_dblink.c.type.is_(None)).values(type=''))
 
     db_dblog = sa.sql.table(
         'db_dblog',
@@ -164,7 +160,7 @@ def upgrade():  # pylint: disable=too-many-statements
         sa.Column('institution', sa.String(254)),
     )
 
-    op.execute(db_dbuser.update().where(db_dbuser.c.email.is_(None)).values(email=''))
+    op.execute(db_dbuser.update().where(db_dbuser.c.email.is_(None)).values(email=get_new_uuid()))
     op.execute(db_dbuser.update().where(db_dbuser.c.first_name.is_(None)).values(first_name=''))
     op.execute(db_dbuser.update().where(db_dbuser.c.last_name.is_(None)).values(last_name=''))
     op.execute(db_dbuser.update().where(db_dbuser.c.institution.is_(None)).values(institution=''))

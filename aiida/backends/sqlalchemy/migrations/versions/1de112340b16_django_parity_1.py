@@ -11,8 +11,8 @@
 """Parity with Django backend (rev: 0048),
 part 1: Ensure fields to make non-nullable are not currently null
 
-Revision ID: 2b40c8131fe0
-Revises: 535039300e4a
+Revision ID: 1de112340b16
+Revises: 34a831f4286d
 Create Date: 2021-08-24 18:52:45.882712
 
 """
@@ -46,8 +46,9 @@ def upgrade():  # pylint: disable=too-many-statements
     However, there is no default value for these fields, and the Python API does not allow them to be set to `None`,
     so it would be extremely unlikely for this to be the case.
 
-    Also, `db_dblink.type` should not be null but, since this would critically corrupt the provence graph,
-    we leave this to fail the non-null migration.
+    Also, `db_dbnode.node_type` and `db_dblink.type` should not be null but, since this would critically corrupt
+    the provence graph if we were to set this to an empty string, we leave this to fail the non-null migration.
+    If a user runs into this exception, they will contact us and we can come up with a custom fix for the database.
 
     """
     db_dbauthinfo = sa.sql.table(
@@ -106,7 +107,7 @@ def upgrade():  # pylint: disable=too-many-statements
     op.execute(db_dbgroup.update().where(db_dbgroup.c.description.is_(None)).values(description=''))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.label.is_(None)).values(label=get_new_uuid()))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.time.is_(None)).values(time=timezone.now()))
-    op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string=''))
+    op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string='core'))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.uuid.is_(None)).values(uuid=get_new_uuid()))
 
     db_dblog = sa.sql.table(
@@ -142,7 +143,6 @@ def upgrade():  # pylint: disable=too-many-statements
     op.execute(db_dbnode.update().where(db_dbnode.c.description.is_(None)).values(description=''))
     op.execute(db_dbnode.update().where(db_dbnode.c.label.is_(None)).values(label=''))
     op.execute(db_dbnode.update().where(db_dbnode.c.mtime.is_(None)).values(mtime=timezone.now()))
-    op.execute(db_dbnode.update().where(db_dbnode.c.node_type.is_(None)).values(node_type=''))
     op.execute(db_dbnode.update().where(db_dbnode.c.uuid.is_(None)).values(uuid=get_new_uuid()))
 
     db_dbsetting = sa.sql.table(

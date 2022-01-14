@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Parity with Django backend (rev: 0049),
+"""Parity with Django backend (rev: 0048),
 part 3: Add PostgreSQL-specific indexes
 
-Revision ID: 1de112340b17
-Revises: 2b40c8131fe0
+Revision ID: 1de112340b18
+Revises: 1de112340b17
 Create Date: 2021-08-25 04:28:52.102767
 
 """

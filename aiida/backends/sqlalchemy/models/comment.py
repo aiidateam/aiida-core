@@ -48,7 +48,6 @@ class DbComment(Base):
     __table_args__ = (
         # index/constraint names mirror django's auto-generated ones
         UniqueConstraint(uuid, name='db_dbcomment_uuid_49bac08c_uniq'),
-        # Index('db_dbcomment_uuid_49bac08c_uniq', uuid, unique=True),
         Index('db_dbcomment_dbnode_id_3b812b6b', dbnode_id),
         Index('db_dbcomment_user_id_8ed5e360', user_id),
     )

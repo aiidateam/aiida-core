@@ -41,6 +41,10 @@ class SqlaBackendManager(BackendManager):
 
         from . import ENGINE
 
+        # Certain migrations, such as altering tables, require that there is no existing transactions
+        # locking the tables.
+        # Presently, ``SqlaSettingsManager.get`` has been found to leave idle transactions,
+        # and so we need to ensure that they are closed.
         transaction = get_scoped_session().get_transaction()
         if transaction:
             transaction.close()

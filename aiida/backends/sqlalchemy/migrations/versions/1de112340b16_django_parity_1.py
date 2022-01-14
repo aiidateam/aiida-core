@@ -31,7 +31,22 @@ depends_on = None
 
 
 def upgrade():  # pylint: disable=too-many-statements
-    """Convert null values to default values"""
+    """Convert null values to default values.
+
+    This migration is performed in preparation for the next migration,
+    which will make these fields non-nullable.
+
+    Note, it is technically possible that the following foreign keys could also be null
+    (due to no explicit nullable=False):
+    db_dbauthinfo.aiidauser_id, db_dbauthinfo.dbcomputer_id,
+    db_dbcomment.dbnode_id, db_dbcomment.user_id,
+    db_dbgroup.user_id, db_dbgroup_dbnode.dbgroup_id, db_dbgroup_dbnode.dbnode_id,
+    db_dblink.input_id, db_dblink.output_id
+
+    However, there is no default value for these fields, and the Python API does not allow them to be set to `None`,
+    so it would be extremely unlikely for this to be the case.
+
+    """
     db_dbauthinfo = sa.sql.table(
         'db_dbauthinfo',
         sa.Column('enabled', sa.Boolean),

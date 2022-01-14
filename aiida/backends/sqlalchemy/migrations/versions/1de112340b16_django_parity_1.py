@@ -34,8 +34,6 @@ def upgrade():  # pylint: disable=too-many-statements
     """Convert null values to default values"""
     db_dbauthinfo = sa.sql.table(
         'db_dbauthinfo',
-        # sa.Column('aiidauser_id', sa.Integer),
-        # sa.Column('dbcomputer_id', sa.Integer),
         sa.Column('enabled', sa.Boolean),
         sa.Column('auth_params', JSONB),
         sa.Column('metadata', JSONB),
@@ -49,8 +47,6 @@ def upgrade():  # pylint: disable=too-many-statements
 
     db_dbcomment = sa.sql.table(
         'db_dbcomment',
-        # sa.Column('dbnode_id', sa.Integer),
-        # sa.Column('user_id', sa.Integer),
         sa.Column('content', sa.Text),
         sa.Column('ctime', sa.DateTime(timezone=True)),
         sa.Column('mtime', sa.DateTime(timezone=True)),
@@ -82,7 +78,6 @@ def upgrade():  # pylint: disable=too-many-statements
 
     db_dbgroup = sa.sql.table(
         'db_dbgroup',
-        # sa.Column('user_id', sa.Integer),
         sa.Column('description', sa.Text),
         sa.Column('label', sa.String(255)),
         sa.Column('time', sa.DateTime(timezone=True)),
@@ -96,16 +91,8 @@ def upgrade():  # pylint: disable=too-many-statements
     op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string=''))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.uuid.is_(None)).values(uuid=get_new_uuid()))
 
-    # db_dbgroup_dbnode = sa.sql.table(
-    #     "db_dbgroup_dbnode",
-    #     # sa.Column('dbgroup_id', sa.Integer),
-    #     # sa.Column('dbnode_id', sa.Integer),
-    # )
-
     db_dblink = sa.sql.table(
         'db_dblink',
-        # sa.Column('input_id', sa.Integer),
-        # sa.Column('output_id', sa.Integer),
         sa.Column('type', sa.String(255)),
     )
 

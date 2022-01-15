@@ -10,13 +10,14 @@
 # pylint: disable=import-error,no-name-in-module
 """Module to manage nodes for the SQLA backend."""
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, text
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
+from sqlalchemy.sql.schema import Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -43,18 +44,16 @@ class DbNode(Base):
     __tablename__ = 'db_dbnode'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    node_type = Column(String(255), index=True)
-    process_type = Column(String(255), index=True)
-    label = Column(
-        String(255), index=True, nullable=True, default=''
-    )  # Does it make sense to be nullable and have a default?
-    description = Column(Text(), nullable=True, default='')
-    ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    node_type = Column(String(255), default='', nullable=False)
+    process_type = Column(String(255))
+    label = Column(String(255), nullable=False, default='')
+    description = Column(Text(), nullable=False, default='')
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
     attributes = Column(JSONB)
     extras = Column(JSONB)
-    repository_metadata = Column(JSONB, nullable=False, default=dict, server_default='{}')
+    repository_metadata = Column(JSONB, nullable=True, default=dict)
 
     dbcomputer_id = Column(
         Integer,
@@ -92,6 +91,36 @@ class DbNode(Base):
         backref=backref('inputs_q', passive_deletes=True, lazy='dynamic'),
         lazy='dynamic',
         passive_deletes=True
+    )
+
+    __table_args__ = (
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dbnode_uuid_62e0bf98_uniq'),
+        Index('db_dbnode_label_6469539e', label),
+        Index('db_dbnode_type_a8ce9753', node_type),
+        Index('db_dbnode_process_type_df7298d0', process_type),
+        Index('db_dbnode_ctime_71626ef5', ctime),
+        Index('db_dbnode_mtime_0554ea3d', mtime),
+        Index('db_dbnode_dbcomputer_id_315372a3', dbcomputer_id),
+        Index('db_dbnode_user_id_12e7aeaf', user_id),
+        Index(
+            'db_dbnode_label_6469539e_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'label': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dbnode_type_a8ce9753_like',
+            node_type,
+            postgresql_using='btree',
+            postgresql_ops={'node_type': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dbnode_process_type_df7298d0_like',
+            process_type,
+            postgresql_using='btree',
+            postgresql_ops={'process_type': 'varchar_pattern_ops'}
+        ),
     )
 
     def __init__(self, *args, **kwargs):
@@ -171,17 +200,17 @@ class DbLink(Base):
     __tablename__ = 'db_dblink'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), index=True)
+    input_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False)
     output_id = Column(
-        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), index=True
+        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
     )
 
     # https://docs.sqlalchemy.org/en/14/errors.html#relationship-x-will-copy-column-q-to-column-p-which-conflicts-with-relationship-s-y
     input = relationship('DbNode', primaryjoin='DbLink.input_id == DbNode.id', overlaps='inputs_q,outputs_q')
     output = relationship('DbNode', primaryjoin='DbLink.output_id == DbNode.id', overlaps='inputs_q,outputs_q')
 
-    label = Column(String(255), index=True, nullable=False)
-    type = Column(String(255), index=True)
+    label = Column(String(255), nullable=False)
+    type = Column(String(255), nullable=False)
 
     # A calculation can have both a 'return' and a 'create' link to
     # a single data output node, which would violate the unique constraint
@@ -192,6 +221,23 @@ class DbLink(Base):
         # I cannot add twice the same link
         # I want unique labels among all inputs of a node
         # UniqueConstraint('output_id', 'label'),
+        # index names mirror django's auto-generated ones
+        Index('db_dblink_input_id_9245bd73', input_id),
+        Index('db_dblink_output_id_c0167528', output_id),
+        Index('db_dblink_label_f1343cfb', label),
+        Index('db_dblink_type_229f212b', type),
+        Index(
+            'db_dblink_label_f1343cfb_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'label': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dblink_type_229f212b_like',
+            type,
+            postgresql_using='btree',
+            postgresql_ops={'type': 'varchar_pattern_ops'}
+        ),
     )
 
     def __str__(self):

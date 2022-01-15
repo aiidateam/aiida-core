@@ -1,0 +1,300 @@
+db_dbauthinfo:
+  aiidauser_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  auth_params:
+    data_type: jsonb
+    default: null
+    is_nullable: false
+  dbcomputer_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  enabled:
+    data_type: boolean
+    default: null
+    is_nullable: false
+  id:
+    data_type: integer
+    default: nextval('db_dbauthinfo_id_seq'::regclass)
+    is_nullable: false
+  metadata:
+    data_type: jsonb
+    default: null
+    is_nullable: false
+db_dbcomment:
+  content:
+    data_type: text
+    default: null
+    is_nullable: false
+  ctime:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  dbnode_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  id:
+    data_type: integer
+    default: nextval('db_dbcomment_id_seq'::regclass)
+    is_nullable: false
+  mtime:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  user_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  uuid:
+    data_type: uuid
+    default: null
+    is_nullable: false
+db_dbcomputer:
+  description:
+    data_type: text
+    default: null
+    is_nullable: false
+  hostname:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  id:
+    data_type: integer
+    default: nextval('db_dbcomputer_id_seq'::regclass)
+    is_nullable: false
+  label:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  metadata:
+    data_type: jsonb
+    default: null
+    is_nullable: false
+  scheduler_type:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  transport_type:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  uuid:
+    data_type: uuid
+    default: null
+    is_nullable: false
+db_dbgroup:
+  description:
+    data_type: text
+    default: null
+    is_nullable: false
+  extras:
+    data_type: jsonb
+    default: null
+    is_nullable: false
+  id:
+    data_type: integer
+    default: nextval('db_dbgroup_id_seq'::regclass)
+    is_nullable: false
+  label:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  time:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  type_string:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  user_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  uuid:
+    data_type: uuid
+    default: null
+    is_nullable: false
+db_dbgroup_dbnodes:
+  dbgroup_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  dbnode_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  id:
+    data_type: integer
+    default: nextval('db_dbgroup_dbnodes_id_seq'::regclass)
+    is_nullable: false
+db_dblink:
+  id:
+    data_type: integer
+    default: nextval('db_dblink_id_seq'::regclass)
+    is_nullable: false
+  input_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  label:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  output_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  type:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+db_dblog:
+  dbnode_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  id:
+    data_type: integer
+    default: nextval('db_dblog_id_seq'::regclass)
+    is_nullable: false
+  levelname:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 50
+  loggername:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  message:
+    data_type: text
+    default: null
+    is_nullable: false
+  metadata:
+    data_type: jsonb
+    default: null
+    is_nullable: false
+  time:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  uuid:
+    data_type: uuid
+    default: null
+    is_nullable: false
+db_dbnode:
+  attributes:
+    data_type: jsonb
+    default: null
+    is_nullable: true
+  ctime:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  dbcomputer_id:
+    data_type: integer
+    default: null
+    is_nullable: true
+  description:
+    data_type: text
+    default: null
+    is_nullable: false
+  extras:
+    data_type: jsonb
+    default: null
+    is_nullable: true
+  id:
+    data_type: integer
+    default: nextval('db_dbnode_id_seq'::regclass)
+    is_nullable: false
+  label:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  mtime:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  node_type:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 255
+  process_type:
+    data_type: character varying
+    default: null
+    is_nullable: true
+    max_length: 255
+  repository_metadata:
+    data_type: jsonb
+    default: null
+    is_nullable: true
+  user_id:
+    data_type: integer
+    default: null
+    is_nullable: false
+  uuid:
+    data_type: uuid
+    default: null
+    is_nullable: false
+db_dbsetting:
+  description:
+    data_type: text
+    default: null
+    is_nullable: false
+  id:
+    data_type: integer
+    default: nextval('db_dbsetting_id_seq'::regclass)
+    is_nullable: false
+  key:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 1024
+  time:
+    data_type: timestamp with time zone
+    default: null
+    is_nullable: false
+  val:
+    data_type: jsonb
+    default: null
+    is_nullable: true
+db_dbuser:
+  email:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 254
+  first_name:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 254
+  id:
+    data_type: integer
+    default: nextval('db_dbuser_id_seq'::regclass)
+    is_nullable: false
+  institution:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 254
+  last_name:
+    data_type: character varying
+    default: null
+    is_nullable: false
+    max_length: 254

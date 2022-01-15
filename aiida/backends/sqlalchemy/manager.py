@@ -31,7 +31,7 @@ class SqlaBackendManager(BackendManager):
 
     @staticmethod
     @contextlib.contextmanager
-    def alembic_config():
+    def alembic_config(start_transaction=True):
         """Context manager to return an instance of an Alembic configuration.
 
         The current database connection is added in the `attributes` property, through which it can then also be
@@ -41,7 +41,16 @@ class SqlaBackendManager(BackendManager):
 
         from . import ENGINE
 
-        with ENGINE.begin() as connection:
+        # Certain migrations, such as altering tables, require that there is no existing transactions
+        # locking the tables.
+        # Presently, ``SqlaSettingsManager.get`` has been found to leave idle transactions,
+        # and so we need to ensure that they are closed.
+        transaction = get_scoped_session().get_transaction()
+        if transaction:
+            transaction.close()
+
+        engine_context = ENGINE.begin if start_transaction else ENGINE.connect
+        with engine_context() as connection:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             config = Config()
             config.set_main_option('script_location', os.path.join(dir_path, ALEMBIC_REL_PATH))
@@ -142,7 +151,7 @@ class SqlaBackendManager(BackendManager):
 
         :param version: string with schema version to migrate to
         """
-        with self.alembic_config() as config:
+        with self.alembic_config(start_transaction=False) as config:
             upgrade(config, version)
 
     def migrate_down(self, version: str):
@@ -150,7 +159,7 @@ class SqlaBackendManager(BackendManager):
 
         :param version: string with schema version to migrate to
         """
-        with self.alembic_config() as config:
+        with self.alembic_config(start_transaction=False) as config:
             downgrade(config, version)
 
     def _migrate_database_version(self):

@@ -30,5 +30,13 @@ class Migration(migrations.Migration):
             old_name='name',
             new_name='label',
         ),
+        migrations.RunSQL(
+            'ALTER INDEX db_dbcomputer_name_key rename TO db_dbcomputer_label_bc480bab_uniq',
+            'ALTER INDEX db_dbcomputer_label_bc480bab_uniq rename TO db_dbcomputer_name_key',
+        ),
+        migrations.RunSQL(
+            'ALTER INDEX db_dbcomputer_name_f1800b1a_like rename TO db_dbcomputer_label_bc480bab_like',
+            'ALTER INDEX db_dbcomputer_label_bc480bab_like rename TO db_dbcomputer_name_f1800b1a_like',
+        ),
         upgrade_schema_version(REVISION, DOWN_REVISION),
     ]

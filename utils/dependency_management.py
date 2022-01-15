@@ -42,7 +42,7 @@ class DependencySpecificationError(click.ClickException):
 def _load_pyproject():
     """Load the setup configuration from the 'pyproject.toml' file."""
     try:
-        with open(ROOT / 'pyproject.toml', encoding='utf8') as handle:
+        with open(ROOT / 'pyproject.toml', 'rb') as handle:
             return tomli.load(handle)
     except tomli.TOMLDecodeError as error:  # pylint: disable=no-member
         raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")

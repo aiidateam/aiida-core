@@ -60,7 +60,7 @@ def test_non_nullable(perform_migrations: Migrator):
             mtime=None,
             description=None,
             label=None,
-            node_type=None,
+            node_type="",
             uuid=None,
             attributes={},
             extras={}

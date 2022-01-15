@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    - run: python .github/workflows/check_release_tag.py $GITHUB_REF setup.json
+    - run: python .github/workflows/check_release_tag.py $GITHUB_REF pyproject.toml
 
   pre-commit:
 

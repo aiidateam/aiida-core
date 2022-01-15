@@ -20,10 +20,8 @@ import os
 
 import click
 
-FILENAME_TOML = 'pyproject.toml'
 SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
 ROOT_DIR = os.path.join(SCRIPT_PATH, os.pardir)
-FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
 
 
 def determine_block_positions(lines, block_start_marker, block_end_marker):

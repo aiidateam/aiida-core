@@ -10,7 +10,6 @@
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
 from collections import OrderedDict, defaultdict
-import json
 import os
 from pathlib import Path
 import re
@@ -22,6 +21,7 @@ from packaging.utils import canonicalize_name
 from packaging.version import parse
 from pkg_resources import Requirement, parse_requirements
 import requests
+import tomli
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
@@ -39,12 +39,12 @@ class DependencySpecificationError(click.ClickException):
     """Indicates an issue in a dependency specification."""
 
 
-def _load_setup_cfg():
-    """Load the setup configuration from the 'setup.json' file."""
+def _load_pyproject():
+    """Load the setup configuration from the 'pyproject.toml' file."""
     try:
-        with open(ROOT / 'setup.json', encoding='utf8') as setup_json_file:
-            return json.load(setup_json_file)
-    except json.decoder.JSONDecodeError as error:  # pylint: disable=no-member
+        with open(ROOT / 'pyproject.toml', encoding='utf8') as handle:
+            return tomli.load(handle)
+    except tomli.TOMLDecodeError as error:  # pylint: disable=no-member
         raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")
     except FileNotFoundError:
         raise DependencySpecificationError("The 'setup.json' file is missing!")
@@ -135,8 +135,8 @@ def generate_environment_yml():
     )
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+    pyproject = _load_pyproject()
+    install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
 
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
@@ -172,9 +172,9 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     """Validate that 'environment.yml' is consistent with 'setup.json'."""
 
     # Read the requirements from 'setup.json' and 'environment.yml'.
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-    python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
+    pyproject = _load_pyproject()
+    install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
+    python_requires = Requirement.parse('python' + pyproject['project']['requires-python'])
 
     environment_yml = _load_environment_yml()
     try:
@@ -202,7 +202,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     # The Python version specified in 'setup.json' should be listed as trove classifiers.
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
-        if expected_classifier not in setup_cfg['classifiers']:
+        if expected_classifier not in pyproject['project']['classifiers']:
             raise DependencySpecificationError(f"Trove classifier '{expected_classifier}' missing from 'setup.json'.")
 
         # The Python version should be specified as supported in 'setup.json'.
@@ -279,10 +279,10 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
         extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requires = setup_cfg['install_requires']
+    pyproject = _load_pyproject()
+    install_requires = pyproject['project']['dependencies']
     for extra in extras:
-        install_requires.extend(setup_cfg['extras_require'][extra])
+        install_requires.extend(pyproject['project']['optional-dependencies'][extra])
     install_requires = set(parse_requirements(install_requires))
 
     not_installed = defaultdict(list)
@@ -344,14 +344,14 @@ def show_requirements(extras, fmt):
     """
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
+    pyproject = _load_pyproject()
 
     if 'all' in extras:
-        extras = list(setup_cfg['extras_require'])
+        extras = list(pyproject['project']['optional-dependencies'])
 
-    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     if fmt == 'pip':
         click.echo('\n'.join(sorted(map(str, to_install))))
@@ -374,11 +374,11 @@ def pip_install_extras(extras):
     the installation of the main installations requirements of the aiida-core package.
     """
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
+    pyproject = _load_pyproject()
 
     to_install = set()
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
     subprocess.run(cmd, check=True)
@@ -402,14 +402,11 @@ def identify_outdated(extras, pre_releases):
     """
 
     # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
+    pyproject = _load_pyproject()
 
-    if 'all' in extras:
-        extras = list(setup_cfg['extras_require'])
-
-    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     def get_package_data(name):
         req = requests.get(f'https://pypi.python.org/pypi/{name}/json')

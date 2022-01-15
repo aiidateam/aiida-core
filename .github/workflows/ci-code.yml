@@ -33,7 +33,7 @@ jobs:
       if: failure() && steps.check_reqs.outputs.error
       uses: peter-evans/commit-comment@v1
       with:
-        path: setup.json
+        path: pyproject.toml
         body: |
           ${{ steps.check_reqs.outputs.error }}
 

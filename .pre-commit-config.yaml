@@ -1,7 +1,7 @@
 ci:
     autoupdate_schedule: monthly
     autofix_prs: true
-    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs, version-number]
+    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs]
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks

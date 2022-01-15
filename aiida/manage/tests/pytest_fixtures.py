@@ -142,6 +142,7 @@ def aiida_localhost(temp_dir):
         computer.store()
         computer.set_minimum_job_poll_interval(0.)
         computer.set_default_mpiprocs_per_machine(1)
+        computer.set_default_memory_per_machine(100000)
         computer.configure()
 
     return computer

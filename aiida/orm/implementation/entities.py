@@ -77,7 +77,7 @@ class BackendEntity(abc.ABC):
 class BackendCollection(Generic[EntityType]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
-    ENTITY_CLASS: ClassVar[Type[EntityType]]
+    ENTITY_CLASS: ClassVar[Type[EntityType]]  # type: ignore[misc]
 
     def __init__(self, backend: 'Backend'):
         """

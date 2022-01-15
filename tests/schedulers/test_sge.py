@@ -12,6 +12,7 @@
 import logging
 import unittest
 
+from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.sge import SgeScheduler
 from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError
@@ -310,6 +311,8 @@ class TestCommand(unittest.TestCase):
         sge = SgeScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.codes_info = []
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
         job_tmpl.job_resource = sge.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
         job_tmpl.working_directory = '/home/users/dorigm7s/test'
         job_tmpl.submit_as_hold = None
@@ -325,14 +328,12 @@ class TestCommand(unittest.TestCase):
         job_tmpl.max_wallclock_seconds = '3600'  # "23:59:59"
         job_tmpl.job_environment = {'HOME': '/home/users/dorigm7s/', 'WIENROOT': '$HOME:/WIEN2k'}
 
-        submit_script_text = sge._get_submit_script_header(job_tmpl)
+        submit_script_text = sge.get_submit_script(job_tmpl)
 
         self.assertTrue('#$ -wd /home/users/dorigm7s/test' in submit_script_text)
         self.assertTrue('#$ -N BestJobEver' in submit_script_text)
         self.assertTrue('#$ -q FavQ.q' in submit_script_text)
         self.assertTrue('#$ -l h_rt=01:00:00' in submit_script_text)
-        # self.assertTrue( 'export HOME=/home/users/dorigm7s/'
-        #                 in submit_script_text )
         self.assertTrue('# ENVIRONMENT VARIABLES BEGIN ###' in submit_script_text)
         self.assertTrue("export HOME='/home/users/dorigm7s/'" in submit_script_text)
         self.assertTrue("export WIENROOT='$HOME:/WIEN2k'" in submit_script_text)
@@ -345,15 +346,17 @@ class TestCommand(unittest.TestCase):
         sge = SgeScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.codes_info = []
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
         job_tmpl.job_resource = sge.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
 
         job_tmpl.rerunnable = True
-        submit_script_text = sge._get_submit_script_header(job_tmpl)
+        submit_script_text = sge.get_submit_script(job_tmpl)
         assert '#$ -r yes' in submit_script_text
         assert '#$ -r no' not in submit_script_text
 
         job_tmpl.rerunnable = False
-        submit_script_text = sge._get_submit_script_header(job_tmpl)
+        submit_script_text = sge.get_submit_script(job_tmpl)
         assert '#$ -r yes' not in submit_script_text
         assert '#$ -r no' in submit_script_text
 

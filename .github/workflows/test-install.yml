@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10']
 
     steps:
     - uses: actions/checkout@v2
@@ -139,7 +139,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -183,7 +183,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10']
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -321,10 +321,8 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v2
+      uses: peter-evans/create-pull-request@v3
       with:
-        committer: GitHub <noreply@github.com>
-        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         branch: update-requirements
         commit-message: "Automated update of requirements/ files."
         title: "Update requirements/ files."

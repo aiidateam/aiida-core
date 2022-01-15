@@ -147,7 +147,7 @@ class DjangoNode(entities.DjangoModelEntity[models.DbNode], SqlExtrasMixin, Back
 
     @property
     def repository_metadata(self):
-        return self._dbmodel.repository_metadata
+        return self._dbmodel.repository_metadata or {}
 
     @repository_metadata.setter
     def repository_metadata(self, value):

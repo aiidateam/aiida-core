@@ -122,7 +122,7 @@ class CalcJobNode(CalculationNode):
         """
         from importlib import import_module
         objects = [
-            import_module(self.__module__.split('.', 1)[0]).__version__,  # type: ignore[attr-defined]
+            import_module(self.__module__.split('.', 1)[0]).__version__,
             {
                 key: val
                 for key, val in self.attributes_items()

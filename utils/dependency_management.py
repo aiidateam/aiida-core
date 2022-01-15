@@ -45,9 +45,9 @@ def _load_pyproject():
         with open(ROOT / 'pyproject.toml', 'rb') as handle:
             return tomli.load(handle)
     except tomli.TOMLDecodeError as error:  # pylint: disable=no-member
-        raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")
+        raise DependencySpecificationError(f"Error while parsing 'pyproject.toml' file: {error}")
     except FileNotFoundError:
-        raise DependencySpecificationError("The 'setup.json' file is missing!")
+        raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
 
 
 def _load_environment_yml():
@@ -80,19 +80,19 @@ def _setuptools_to_conda(req):
     return Requirement.parse(str(req))
 
 
-def _find_linenos_of_requirements_in_setup_json(requirements):
-    """Determine the line numbers of requirements specified in 'setup.json'.
+def _find_linenos_of_requirements_in_pyproject(requirements):
+    """Determine the line numbers of requirements specified in 'pyproject.toml'.
 
     Returns a dict that maps a requirement, e.g., `numpy~=1.15.0` to the
-    line numbers at which said requirement is defined within the 'setup.json'
+    line numbers at which said requirement is defined within the 'pyproject.toml'
     file.
     """
     linenos = defaultdict(list)
 
-    with open(ROOT / 'setup.json', encoding='utf8') as setup_json_file:
+    with open(ROOT / 'pyproject.toml', encoding='utf8') as setup_json_file:
         lines = list(setup_json_file)
 
-    # Determine the lines that correspond to affected requirements in setup.json.
+    # Determine the lines that correspond to affected requirements in pyproject.toml.
     for requirement in requirements:
         for lineno, line in enumerate(lines):
             if str(requirement) in line:
@@ -134,7 +134,7 @@ def generate_environment_yml():
         Dumper=yaml.SafeDumper
     )
 
-    # Read the requirements from 'setup.json'
+    # Read the requirements from 'pyproject.toml'
     pyproject = _load_pyproject()
     install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
 
@@ -169,9 +169,9 @@ def generate_all(ctx):
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
 def validate_environment_yml():  # pylint: disable=too-many-branches
-    """Validate that 'environment.yml' is consistent with 'setup.json'."""
+    """Validate that 'environment.yml' is consistent with 'pyproject.toml'."""
 
-    # Read the requirements from 'setup.json' and 'environment.yml'.
+    # Read the requirements from 'pyproject.toml' and 'environment.yml'.
     pyproject = _load_pyproject()
     install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
     python_requires = Requirement.parse('python' + pyproject['project']['requires-python'])
@@ -199,24 +199,26 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     else:  # Failed to find Python dependency specification
         raise DependencySpecificationError("Did not find specification of Python version in 'environment.yml'.")
 
-    # The Python version specified in 'setup.json' should be listed as trove classifiers.
+    # The Python version specified in 'pyproject.toml' should be listed as trove classifiers.
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
         if expected_classifier not in pyproject['project']['classifiers']:
-            raise DependencySpecificationError(f"Trove classifier '{expected_classifier}' missing from 'setup.json'.")
+            raise DependencySpecificationError(
+                f"Trove classifier '{expected_classifier}' missing from 'pyproject.toml'."
+            )
 
-        # The Python version should be specified as supported in 'setup.json'.
+        # The Python version should be specified as supported in 'pyproject.toml'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
             raise DependencySpecificationError(
                 f"Required Python version {spec.version} from 'environment.yaml' is not consistent with " +
-                "required version in 'setup.json'."
+                "required version in 'pyproject.toml'."
             )
 
         break
     else:
         raise DependencySpecificationError(f"Missing specifier: '{conda_python_dependency}'.")
 
-    # Check that all requirements specified in the setup.json file are found in the
+    # Check that all requirements specified in the pyproject.toml file are found in the
     # conda environment specification.
     for req in install_requirements:
         if any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
@@ -232,7 +234,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     if conda_dependencies:
         raise DependencySpecificationError(
             "The 'environment.yml' file contains dependencies that are missing "
-            "in 'setup.json':\n- {}".format('\n- '.join(map(str, conda_dependencies)))
+            "in 'pyproject.toml':\n- {}".format('\n- '.join(map(str, conda_dependencies)))
         )
 
     click.secho('Conda dependency specification is consistent.', fg='green')
@@ -246,7 +248,7 @@ def validate_all(ctx):
     Validates that the specification of requirements/dependencies is consistent across
     the following files:
 
-    - setup.json
+    - pyproject.toml
     - environment.yml
 
     """
@@ -268,7 +270,7 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
     """Check the 'requirements/*.txt' files.
 
     Checks that the environments specified in the requirements files
-    match all the dependencies specified in 'setup.json.
+    match all the dependencies specified in 'pyproject.toml'.
 
     The arguments allow to specify which 'extra' requirements to expect.
     Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'tests'.
@@ -278,7 +280,7 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
     if len(extras) == 1 and extras[0] == 'DEFAULT':
         extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
 
-    # Read the requirements from 'setup.json'
+    # Read the requirements from 'pyproject.toml''
     pyproject = _load_pyproject()
     install_requires = pyproject['project']['dependencies']
     for extra in extras:
@@ -301,12 +303,12 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
             not_installed[dependency].append(fn_req)
 
     if any(not_installed.values()):
-        setup_json_linenos = _find_linenos_of_requirements_in_setup_json(not_installed)
+        setup_json_linenos = _find_linenos_of_requirements_in_pyproject(not_installed)
 
         # Format error message to be presented to user.
-        error_msg = ["The requirements/ files are missing dependencies specified in the 'setup.json' file.", '']
+        error_msg = ["The requirements/ files are missing dependencies specified in the 'pyproject.toml' file.", '']
         for dependency, fn_reqs in not_installed.items():
-            src = 'setup.json:' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
+            src = 'pyproject.toml' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
             error_msg.append(f'{src}: No match for dependency `{dependency}` in:')
             for fn_req in sorted(fn_reqs):
                 error_msg.append(f' - {fn_req.relative_to(ROOT)}')
@@ -316,18 +318,18 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
             print('::set-output name=error::' + '%0A'.join(error_msg))
 
         if GITHUB_ACTIONS and github_annotate:
-            # Annotate the setup.json file with specific warnings.
+            # Annotate the pyproject.toml' file with specific warnings.
             for dependency, fn_reqs in not_installed.items():
                 for lineno in setup_json_linenos[dependency]:
                     print(
-                        f'::warning file=setup.json,line={lineno+1}::'
+                        f'::warning file=pyproject.toml,line={lineno+1}::'
                         f"No match for dependency '{dependency}' in: " +
                         ','.join(str(fn_req.relative_to(ROOT)) for fn_req in fn_reqs)
                     )
 
         raise DependencySpecificationError('\n'.join(error_msg))
 
-    click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
+    click.secho("Requirements files appear to be in sync with specifications in 'pyproject.toml''.", fg='green')
 
 
 @cli.command()
@@ -343,7 +345,7 @@ def show_requirements(extras, fmt):
     This will show all reqiurements including *all* extras in Pipfile format.
     """
 
-    # Read the requirements from 'setup.json'
+    # Read the requirements from 'pyproject.toml''
     pyproject = _load_pyproject()
 
     if 'all' in extras:
@@ -373,7 +375,7 @@ def pip_install_extras(extras):
     This will install *only* the extra the requirements for docs, but without triggering
     the installation of the main installations requirements of the aiida-core package.
     """
-    # Read the requirements from 'setup.json'
+    # Read the requirements from 'pyproject.toml''
     pyproject = _load_pyproject()
 
     to_install = set()
@@ -401,7 +403,7 @@ def identify_outdated(extras, pre_releases):
     specification must be loosened.
     """
 
-    # Read the requirements from 'setup.json'
+    # Read the requirements from 'pyproject.toml''
     pyproject = _load_pyproject()
 
     to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}

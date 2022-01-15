@@ -88,7 +88,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
         def in_archive_context(_inpath):
             temp_folder = working / 'temp_unpack'
             with tarfile.open(_inpath, 'r') as tar:
-                MIGRATE_LOGGER.report('Extracting tar archive...')
+                MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
                 tar.extractall(temp_folder)
             yield temp_folder
             MIGRATE_LOGGER.report('Removing extracted tar archive...')

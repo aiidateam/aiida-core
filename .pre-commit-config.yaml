@@ -1,7 +1,7 @@
 ci:
     autoupdate_schedule: monthly
     autofix_prs: true
-    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs, version-number]
+    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs]
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
@@ -123,8 +123,7 @@ repos:
         pass_filenames: false
         files: >-
             (?x)^(
-                setup.py|
-                setup.json|
+                pyproject.toml|
                 utils/dependency_management.py
             )$
 
@@ -135,8 +134,7 @@ repos:
         pass_filenames: false
         files: >-
             (?x)^(
-                setup.json|
-                setup.py|
+                pyproject.toml|
                 utils/dependency_management.py|
                 environment.yml|
             )$
@@ -152,16 +150,4 @@ repos:
                 aiida/cmdline/params/.*|
                 aiida/cmdline/params/types/.*|
                 utils/validate_consistency.py|
-            )$
-
-    -   id: version-number
-        name: Check version numbers
-        entry: python ./utils/validate_consistency.py version
-        language: system
-        pass_filenames: false
-        files: >-
-            (?x)^(
-                setup.json|
-                utils/validate_consistency.py|
-                aiida/__init__.py
             )$

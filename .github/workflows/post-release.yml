@@ -30,8 +30,9 @@ jobs:
 
     - name: Install python dependencies
       run: |
+        pip install --upgrade pip
         pip install transifex-client sphinx-intl
-        pip install -e .[docs,tests]
+        pip install -e .[docs,tests,rest,atomic_tools]
 
     - name: Build pot files
       env:

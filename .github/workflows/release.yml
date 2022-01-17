@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    - run: python .github/workflows/check_release_tag.py $GITHUB_REF setup.json
+    - run: python .github/workflows/check_release_tag.py $GITHUB_REF
 
   pre-commit:
 
@@ -43,7 +43,11 @@ jobs:
         sudo apt update
         sudo apt install libkrb5-dev ruby ruby-dev
     - name: Install python dependencies
-      run: pip install -e .[all]
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements/requirements-py-3.8.txt
+        pip install -e .[pre-commit]
+        pip freeze
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
@@ -126,12 +130,12 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    - name: Build package
+    - name: install flit
       run: |
-        pip install wheel
-        python setup.py sdist bdist_wheel
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.1.0
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_KEY }}
+        pip install flit~=3.4
+    - name: Build and publish
+      run: |
+        flit publish
+      env:
+        FLIT_USERNAME: __token__
+        FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}

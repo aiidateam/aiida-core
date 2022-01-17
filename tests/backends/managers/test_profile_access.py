@@ -179,31 +179,62 @@ def test_clear_stale_pid_files(profile_access_manager):
 class TestProcess():
     """Object that can start/stop an aiida process.
 
-    After starting an aiida process, there has to be a time delay after the Popen
-    command to allow some time for the process to be recorded.
+    After starting an aiida process, we need to check that the profile was loaded
+    successfully. We do so by having a line in the script that creates a check file.
+    We can then wait for this file to be created before returning control to the caller.
     """
 
     def __init__(self):
         self._process = None
 
-    def start(self, should_raise=False, run_secs=30, wait_secs=1):
-        """Starts a new process."""
-        import time
+    def _write_codefile(self, temppath_codefile, temppath_checkfile, runtime_secs=60):  # pylint: disable=no-self-use
+        """Auxiliary function to write the code for the process."""
+        # pylint: disable=f-string-without-interpolation
+        with temppath_codefile.open('w', encoding='utf-8') as fileobj:
+            fileobj.write(f'import time\n')
+            fileobj.write(f'from pathlib import Path\n')
+            fileobj.write(f'logger_file = Path("{temppath_checkfile.resolve()}")\n')
+            fileobj.write(f'logger_file.touch()\n')
+            fileobj.write(f'time.sleep({runtime_secs})\n')
 
+    def _wait_for_checkfile(self, temppath_checkfile):  # pylint: disable=no-self-use
+        """Auxiliary function that waits for the checkfile to be written."""
+        import time
+        check_count = 0
+
+        while check_count < 100 and not temppath_checkfile.exists():
+            time.sleep(0.1)
+            check_count += 1
+
+        if check_count == 100:
+            raise RuntimeError('Process loading was too slow!')
+
+    def start(self, should_raise=False, runtime_secs=60):
+        """Starts a new process."""
         if self._process is not None:
             self.stop()
 
-        with open('temp_file.py', 'w', encoding='utf-8') as fileobj:
-            fileobj.write('import time\n')
-            fileobj.write(f'time.sleep({run_secs})\n')
+        temppath_codefile = Path('temp_file.py')
+        temppath_checkfile = Path('temp_file.log')
 
-        self._process = Popen(['verdi', 'run', 'temp_file.py'], stderr=PIPE)  # pylint: disable=consider-using-with
-        if should_raise:
-            error = self._process.communicate()
-            return self._process.pid, error
+        try:
+            self._write_codefile(temppath_codefile, temppath_checkfile, runtime_secs)
 
-        time.sleep(wait_secs)
-        return self._process.pid
+            self._process = Popen(['verdi', 'run', 'temp_file.py'], stderr=PIPE)  # pylint: disable=consider-using-with
+
+            if should_raise:
+                error = self._process.communicate()
+                return_vals = (self._process.pid, error)
+
+            else:
+                self._wait_for_checkfile(temppath_checkfile)
+                return_vals = (self._process.pid)
+
+        finally:
+            temppath_codefile.unlink(missing_ok=True)
+            temppath_checkfile.unlink(missing_ok=True)
+
+        return return_vals
 
     def stop(self):
         """Kills the current process."""

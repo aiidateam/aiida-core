@@ -4,7 +4,8 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "aiida-core"
-dynamic = ["version", "description"]  # read from aiida/__init__.py
+dynamic = ["version"]  # read from aiida/__init__.py
+description = "AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility."
 authors = [{name = "The AiiDA team", email = "developers@aiida.net"}]
 readme = "README.md"
 license = {file = "LICENSE.txt"}

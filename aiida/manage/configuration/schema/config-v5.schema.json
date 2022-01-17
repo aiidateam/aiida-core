@@ -164,6 +164,12 @@
                     "default": true,
                     "description": "Whether to print AiiDA deprecation warnings"
                 },
+                "warnings.development_version": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to print a warning when a profile is loaded while a development version is installed",
+                    "global_only": true
+                },
                 "transport.task_retry_initial_interval": {
                     "type": "integer",
                     "default": 20,

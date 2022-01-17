@@ -3,7 +3,6 @@ name: test-install
 on:
   pull_request:
     paths:
-      - 'setup.*'
       - 'environment.yml'
       - '**/requirements*.txt'
       - 'pyproject.toml'
@@ -53,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10']
 
     steps:
     - uses: actions/checkout@v2
@@ -139,7 +138,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -183,7 +182,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10']
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -251,14 +250,14 @@ jobs:
 
     # Add python-version specific requirements/ file to the requirements.txt artifact.
     # This artifact can be used in the next step to automatically create a pull request
-    # updating the requirements (in case they are  inconsistent with the setup.json file).
+    # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
     - uses: actions/upload-artifact@v1
       if: matrix.backend == 'django'  # The requirements are identical between backends.
       with:
         name: requirements.txt
         path: requirements-py-${{ matrix.python-version }}.txt
 
-# Check whether the requirements/ files are consistent with the dependency specification in the setup.json file.
+# Check whether the requirements/ files are consistent with the dependency specification in the pyproject.toml file.
 # If the check fails, warn the user via a comment and try to automatically create a pull request to update the files
 # (does not work on pull requests from forks).
 
@@ -293,7 +292,7 @@ jobs:
       uses: peter-evans/commit-comment@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        path: setup.json
+        path: pyproject.toml
         body: |
           The requirements/ files are inconsistent!
 
@@ -321,16 +320,14 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v2
+      uses: peter-evans/create-pull-request@v3
       with:
-        committer: GitHub <noreply@github.com>
-        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         branch: update-requirements
         commit-message: "Automated update of requirements/ files."
         title: "Update requirements/ files."
         body: |
           Update requirements files to ensure that they are consistent
-          with the dependencies specified in the 'setup.json' file.
+          with the dependencies specified in the 'pyproject.toml' file.
 
           Please note, that this pull request was likely created to
           resolve the inconsistency for a specific dependency, however
@@ -346,7 +343,7 @@ jobs:
         issue-number: ${{ github.event.number }}
         body: |
           I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) that adapts the
-          requirements/ files according to the dependencies specified in the 'setup.json' file.
+          requirements/ files according to the dependencies specified in the 'pyproject.toml' file.
 
     - name: Create PR comment on failure
       if: steps.create_update_requirements_pr.outcome == 'Failure'
@@ -355,4 +352,4 @@ jobs:
         issue-number: ${{ github.event.number }}
         body: |
           Please update the requirements/ files to ensure that they
-          are consistent with the dependencies specified in the 'setup.json' file.
+          are consistent with the dependencies specified in the 'pyproject.toml' file.

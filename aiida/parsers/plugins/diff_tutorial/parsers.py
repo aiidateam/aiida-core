@@ -2,7 +2,7 @@
 """
 Parsers for DiffCalculation of plugin tutorial.
 
-Register parsers via the "aiida.parsers" entry point in the setup.json file.
+Register parsers via the "aiida.parsers" entry point in the pyproject.toml file.
 """
 # START PARSER HEAD
 from aiida.engine import ExitCode

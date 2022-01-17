@@ -1,0 +1,30 @@
+db_dbauthinfo:
+  db_dbauthinfo_pkey:
+  - id
+db_dbcomment:
+  db_dbcomment_pkey:
+  - id
+db_dbcomputer:
+  db_dbcomputer_pkey:
+  - id
+db_dbgroup:
+  db_dbgroup_pkey:
+  - id
+db_dbgroup_dbnodes:
+  db_dbgroup_dbnodes_pkey:
+  - id
+db_dblink:
+  db_dblink_pkey:
+  - id
+db_dblog:
+  db_dblog_pkey:
+  - id
+db_dbnode:
+  db_dbnode_pkey:
+  - id
+db_dbsetting:
+  db_dbsetting_pkey:
+  - id
+db_dbuser:
+  db_dbuser_pkey:
+  - id

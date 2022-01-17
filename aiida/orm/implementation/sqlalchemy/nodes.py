@@ -148,7 +148,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], SqlExtrasMixin, BackendN
 
     @property
     def repository_metadata(self):
-        return self._dbmodel.repository_metadata
+        return self._dbmodel.repository_metadata or {}
 
     @repository_metadata.setter
     def repository_metadata(self, value):

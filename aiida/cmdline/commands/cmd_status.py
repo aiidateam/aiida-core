@@ -132,13 +132,14 @@ def verdi_status(print_traceback, no_rmq):
             with Capturing(capture_stderr=True):
                 with override_log_level():  # temporarily suppress noisy logging
                     comm = manager.create_communicator(with_orm=False)
-                    comm.close()
         except Exception as exc:
             message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
             print_status(ServiceStatus.UP, 'rabbitmq', f'Connected as {profile.get_rmq_url()}')
+        finally:
+            comm.close()
 
     # Getting the daemon status
     try:

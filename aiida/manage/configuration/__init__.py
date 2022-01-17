@@ -59,6 +59,24 @@ PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
 
 
+def check_rabbitmq_version():
+    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
+
+    Versions 3.8 and above are not compatible with AiiDA with default configuration.
+    """
+    from packaging.version import parse
+
+    from aiida.cmdline.utils import echo
+    from aiida.manage.manager import get_manager
+
+    url = 'https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use'
+    communicator = get_manager().get_communicator()
+    version = parse(communicator.server_properties['version'].decode('utf-8'))
+    if version >= parse('3.8'):
+        echo.echo_warning(f'Connected to RabbitMQ v{version} which is known to cause problems)')
+        echo.echo_warning(f'See {url} for details.')
+
+
 def check_version():
     """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
 
@@ -120,6 +138,9 @@ def load_profile(profile=None):
     # Check whether a development version is being run. Note that needs to be called after ``configure_logging`` because
     # this function relies on the logging being properly configured for the warning to show.
     check_version()
+
+    # Check whether a compatible version of RabbitMQ is being used.
+    check_rabbitmq_version()
 
     return PROFILE
 

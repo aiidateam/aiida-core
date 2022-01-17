@@ -11,6 +11,7 @@
 # pylint: disable=protected-access
 
 from os import listdir
+from pathlib import Path
 from subprocess import PIPE, Popen
 
 import psutil
@@ -19,6 +20,15 @@ import pytest
 from aiida.backends.managers.profile_access import ProfileAccessManager
 from aiida.common.exceptions import LockedProfileError, LockingProfileError
 
+###########################################################################
+# SIMPLE UNIT TESTS
+#
+# This first section contains simple unit tests to verify the inner
+# workings of the different methods. They are separated from a more
+# global set of tests for the whole system.
+#
+###########################################################################
+
 
 @pytest.fixture(name='profile_access_manager')
 def fixture_profile_access_manager():
@@ -26,6 +36,144 @@ def fixture_profile_access_manager():
     from aiida.manage.manager import get_manager
     aiida_profile = get_manager().get_profile()
     return ProfileAccessManager(aiida_profile)
+
+
+def test_get_tracking_files(profile_access_manager):
+    """Test the `_get_tracking_files` method for listing `.pid` and `.lock` files."""
+    records_dir = profile_access_manager._dirpath_records
+
+    # POPULATE WITH RECORDS
+    filepath_list = [
+        records_dir / 'file_1.pid',
+        records_dir / 'file_2.pid',
+        records_dir / 'file_3.pid',
+        records_dir / 'file_4.lock',
+        records_dir / 'file_5.lock',
+        records_dir / 'file_6.etc',
+    ]
+
+    for filepath in filepath_list:
+        filepath.touch()
+
+    reference_set = {filename for filename in listdir(records_dir) if filename.endswith('.pid')}
+    resulting_set = {filepath.name for filepath in profile_access_manager._get_tracking_files('.pid')}
+    assert reference_set == resulting_set
+
+    reference_set = {filename for filename in listdir(records_dir) if filename.endswith('.lock')}
+    resulting_set = {filepath.name for filepath in profile_access_manager._get_tracking_files('.lock')}
+    assert reference_set == resulting_set
+
+    for filepath in filepath_list:
+        filepath.unlink()
+
+
+def test_check_methods(profile_access_manager, monkeypatch):
+    """Test the `is_active` and `is_locked` methods.
+
+    The underlying `_get_tracking_files` is tested elsewhere, so here it is mocked. For the
+    tested methods, we just need to check that they evaluate to the right value when files
+    are returned by `_get_tracking_files`, and when they are not.
+    """
+
+    def mockfun_return_path(*args, **kwargs):
+        """Mock of _raise_if_locked."""
+        return [Path('file.txt')]
+
+    monkeypatch.setattr(profile_access_manager, '_get_tracking_files', mockfun_return_path)
+    assert profile_access_manager.is_active()
+    assert profile_access_manager.is_locked()
+
+    def mockfun_return_empty(*args, **kwargs):
+        """Mock of _raise_if_locked."""
+        return []
+
+    monkeypatch.setattr(profile_access_manager, '_get_tracking_files', mockfun_return_empty)
+    assert not profile_access_manager.is_active()
+    assert not profile_access_manager.is_locked()
+
+
+def test_raise_methods(profile_access_manager, monkeypatch):
+    """Test the `_raise_if_active` and `_raise_if_locked` methods.
+
+    The underlying `_get_tracking_files` is tested elsewhere, so here it is mocked so that it
+    always provides a single result of a temporary file with arbitrary content. For the tested
+    methods, we just need to check that all the relevant information is passed and shown on the
+    error message.
+    """
+    pass_message = 'This message should be on the error value'
+    file_content = 'This is the file content'
+    file_stem = '123456'
+
+    tempfile = Path(file_stem + '.txt')
+    tempfile.write_text(file_content, encoding='utf-8')
+
+    def mock_get_tracking_files(*args, **kwargs):
+        """Mock of _raise_if_locked."""
+        return [tempfile]
+
+    monkeypatch.setattr(profile_access_manager, '_get_tracking_files', mock_get_tracking_files)
+
+    with pytest.raises(LockingProfileError) as exc:
+        profile_access_manager._raise_if_active(pass_message)
+    error_message = str(exc.value)
+    assert pass_message in error_message
+    assert tempfile.stem in error_message
+    assert file_content in error_message
+
+    with pytest.raises(LockedProfileError) as exc:
+        profile_access_manager._raise_if_locked(pass_message)
+    error_message = str(exc.value)
+    assert pass_message in error_message
+    assert tempfile.stem in error_message
+
+    tempfile.unlink()
+
+
+def test_clear_locks(profile_access_manager):
+    """Tests the `test_clear_locks` method.
+
+    For this it creates an artificial lock file and uses the `is_locked` method
+    (already tested elsewhere) to check if the profile is recognized as being
+    locked in the different steps.
+    """
+    records_dir = profile_access_manager._dirpath_records
+    lockfile = records_dir / '1234567890.lock'
+
+    assert not profile_access_manager.is_locked()
+    lockfile.touch()
+    assert profile_access_manager.is_locked()
+    profile_access_manager.clear_locks()
+    assert not profile_access_manager.is_locked()
+
+
+def test_clear_stale_pid_files(profile_access_manager):
+    """Tests the `_clear_stale_pid_files` method."""
+    records_dir = profile_access_manager._dirpath_records
+    fake_filename = '1234567890.pid'
+    fake_file = records_dir / fake_filename
+    fake_file.touch()
+
+    assert fake_filename in listdir(records_dir)
+    profile_access_manager._clear_stale_pid_files()
+    assert fake_filename not in listdir(records_dir)
+
+
+###########################################################################
+# SEMI INTEGRATION TESTS
+#
+# This second section contains more complex tests that go through more
+# than one method to test the cohesion of the whole class when working
+# with actual processes. It is therefore also dependant on the call to
+# the class in:
+#
+#    >   aiida.manage.manager::Manager._load_backend
+#
+# Moreover, they also require the use of a separate construct to keep
+# track of processes accessing aiida profiles with ease (TestProcess).
+#
+# This is separated from the more simple unit tests for each method.
+#
+###########################################################################
 
 
 class TestProcess():
@@ -67,40 +215,59 @@ class TestProcess():
 
 
 def test_access_control(profile_access_manager):
-    """Tests the request of access and the `_clear_stale_pid_files` method.
+    """Tests the request_access method indirectly.
 
-    Here we are also testing the `request_access` method indirectly.
+    This test is performed in an integral way because the underlying methods used
+    have all been tested elsewhere, and it is more relevant to indirectly verify
+    that this method works in real life scenarios, rather than checking the specifics
+    of its internal logical structure.
     """
-    records_dir = profile_access_manager._dirpath_records
-
-    # Note: `is_active` will currently also be triggered by the test instance as
-    # well, but this is incidental and we should not depend on it. Moreover, it
-    # is not
     accessing_process = TestProcess()
     accessing_pid = accessing_process.start()
     assert profile_access_manager.is_active()
     accessing_process.stop()
 
     process_file = str(accessing_pid) + '.pid'
-    process_temp = str(accessing_pid) + '.tmp'
+    tracking_files = [filepath.name for filepath in profile_access_manager._get_tracking_files('.pid')]
+    assert process_file in tracking_files
 
-    assert process_file in listdir(records_dir)
-    assert process_temp not in listdir(records_dir)
 
-    profile_access_manager._clear_stale_pid_files()
-    assert process_file not in listdir(records_dir)
+@pytest.mark.parametrize('text_pattern', ['is being locked', 'was locked while'])
+def test_request_access_errors(profile_access_manager, monkeypatch, text_pattern):
+    """Tests the `request_access` method errors when blocked.
+
+    This test requires the use of the TestProcess class because part of what we are
+    checking is that the error shows the process ID that is trying to access the
+    profile (without relying on the test instance). The feature being tested is
+    intrinsically related to the live process instance that is stored as a property
+    of the `ProfileAccessManager` class.
+    """
+    accessing_process = TestProcess()
+    accessing_pid = accessing_process.start()
+
+    def mock_raise_if_locked(error_message):
+        """Mock of _raise_if_locked."""
+        if text_pattern in error_message:
+            raise LockedProfileError(error_message)
+
+    monkeypatch.setattr(profile_access_manager, '_raise_if_locked', mock_raise_if_locked)
+    monkeypatch.setattr(profile_access_manager, 'process', psutil.Process(accessing_pid))
+
+    with pytest.raises(LockedProfileError) as exc:
+        profile_access_manager.request_access()
+    accessing_process.stop()
+
+    assert profile_access_manager.profile.name in str(exc.value)
+    assert str(accessing_pid) in str(exc.value)
 
 
 def test_lock(profile_access_manager, monkeypatch):
-    """Tests the `lock` method.
+    """Tests the locking mechanism.
 
-    Not that all underlying methods are already being tested elsewhere and can be
-    thinker with. This includes:
-
-     - `_raise_if_locked`
-     - `_raise_if_active`
-     - `_clear_stale_pid_files`
-
+    This test is performed in an integral way because the underlying methods used
+    have all been tested elsewhere, and it is more relevant to indirectly verify
+    that this method works in real life scenarios, rather than checking the specifics
+    of its internal logical structure.
     """
     locking_proc = TestProcess()
     locking_pid = locking_proc.start()
@@ -162,89 +329,3 @@ def test_lock(profile_access_manager, monkeypatch):
     assert str(locking_pid) in str(exc.value)
 
     locking_proc.stop()
-
-
-def test_clear_locks(profile_access_manager):
-    """Tests the `test_clear_locks` method."""
-    records_dir = profile_access_manager._dirpath_records
-    lockfile = records_dir / '1234567890.lock'
-
-    assert not profile_access_manager.is_locked()
-    lockfile.touch()
-    assert profile_access_manager.is_locked()
-    profile_access_manager.clear_locks()
-    assert not profile_access_manager.is_locked()
-
-
-@pytest.mark.parametrize('text_pattern', ['is being locked', 'was locked while'])
-def test_access_requested_errors(profile_access_manager, monkeypatch, text_pattern):
-    """Tests the `request_access` method errors when blocked."""
-    accessing_process = TestProcess()
-    accessing_pid = accessing_process.start()
-
-    def mock_raise_if_locked(error_message):
-        """Mock of _raise_if_locked."""
-        if text_pattern in error_message:
-            raise LockedProfileError(error_message)
-
-    monkeypatch.setattr(profile_access_manager, '_raise_if_locked', mock_raise_if_locked)
-    monkeypatch.setattr(profile_access_manager, 'process', psutil.Process(accessing_pid))
-
-    with pytest.raises(LockedProfileError) as exc:
-        profile_access_manager.request_access()
-    accessing_process.stop()
-
-    assert profile_access_manager.profile.name in str(exc.value)
-    assert str(accessing_pid) in str(exc.value)
-
-
-def test_raise_methods(profile_access_manager, monkeypatch):
-    """Test the `_raise_if_active` and `_raise_if_locked` methods.
-
-    The underlying `_get_tracking_files` method is mocked, so it always provides a single
-    result of a temporary file with arbitrary content, and we are just checking that the
-    relevant information is being passed and shown on the error message.
-    """
-    from pathlib import Path
-
-    pass_message = 'This message should be on the error value'
-    file_content = 'This is the file content'
-    file_stem = '123456'
-
-    tempfile = Path(file_stem + '.txt')
-    tempfile.write_text(file_content, encoding='utf-8')
-
-    def mock_get_tracking_files(*args, **kwargs):
-        """Mock of _raise_if_locked."""
-        return [tempfile]
-
-    monkeypatch.setattr(profile_access_manager, '_get_tracking_files', mock_get_tracking_files)
-
-    with pytest.raises(LockingProfileError) as exc:
-        profile_access_manager._raise_if_active(pass_message)
-    error_message = str(exc.value)
-    assert pass_message in error_message
-    assert tempfile.stem in error_message
-    assert file_content in error_message
-
-    with pytest.raises(LockedProfileError) as exc:
-        profile_access_manager._raise_if_locked(pass_message)
-    error_message = str(exc.value)
-    assert pass_message in error_message
-    assert tempfile.stem in error_message
-
-    tempfile.unlink()
-
-
-def test_get_tracking_files(profile_access_manager):
-    """Test the `_get_tracking_files` method for listing `.pid` and `.lock` files."""
-    records_dir = profile_access_manager._dirpath_records
-
-    reference_set = {filename for filename in listdir(records_dir) if filename.endswith('.pid')}
-    resulting_set = {filepath.name for filepath in profile_access_manager._get_tracking_files('.pid')}
-    assert reference_set == resulting_set
-
-    with profile_access_manager.lock():
-        reference_set = {filename for filename in listdir(records_dir) if filename.endswith('.lock')}
-        resulting_set = {filepath.name for filepath in profile_access_manager._get_tracking_files('.lock')}
-        assert reference_set == resulting_set

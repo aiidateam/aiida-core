@@ -22,11 +22,17 @@ from plumpy.loaders import get_object_loader
 
 from aiida.common.lang import type_check
 
+from .base import to_aiida_type
 from .data import Data
 
 __all__ = ('EnumData',)
 
 EnumType = t.TypeVar('EnumType', bound=Enum)
+
+
+@to_aiida_type.register(Enum)
+def _(value):
+    return EnumData(member=value)
 
 
 class EnumData(Data):

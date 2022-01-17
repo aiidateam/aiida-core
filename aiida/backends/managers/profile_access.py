@@ -204,7 +204,7 @@ class ProfileAccessManager:
         list_of_files = self._get_tracking_files('.lock', exclude_self=True)
 
         if len(list_of_files) > 0:
-            error_msg = message_start + '\nThe following processes are blocking the profile:'
+            error_msg = message_start + '\nThe following processes are blocking the profile:\n'
             error_msg += '\n'.join(f' - pid {path.stem}' for path in list_of_files)
             raise LockedProfileError(error_msg)
 
@@ -217,6 +217,6 @@ class ProfileAccessManager:
         list_of_files = self._get_tracking_files('.pid', exclude_self=True)
 
         if len(list_of_files) > 0:
-            error_msg = message_start + '\nThe following processes are accessing the profile:'
+            error_msg = message_start + '\nThe following processes are accessing the profile:\n'
             error_msg += '\n'.join(f' - pid {path.stem} (`{path.read_text()}`)' for path in list_of_files)
             raise LockingProfileError(error_msg)

@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    - run: python .github/workflows/check_release_tag.py $GITHUB_REF setup.json
+    - run: python .github/workflows/check_release_tag.py $GITHUB_REF
 
   pre-commit:
 
@@ -43,7 +43,11 @@ jobs:
         sudo apt update
         sudo apt install libkrb5-dev ruby ruby-dev
     - name: Install python dependencies
-      run: pip install -e .[all]
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements/requirements-py-3.8.txt
+        pip install -e .[pre-commit]
+        pip freeze
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
@@ -82,9 +86,30 @@ jobs:
       run: |
         sudo apt update
         sudo apt install postgresql graphviz
+
+    - name: Upgrade pip
+      run: |
+        pip install --upgrade pip
+        pip --version
+
+    - name: Build pymatgen with compatible numpy
+      run: |
+        # This step is necessary because certain versions of `pymatgen` will not specify an explicit version of
+        # `numpy` in its build requirements, and so the latest version will be used. This causes problems,
+        # however, because this means that the compiled version of `pymatgen` can only be used with that version
+        # of `numpy` or higher, since `numpy` only guarantees forward compatibility of the ABI. If we want to
+        # run with an older version of `numpy`, we need to ensure that `pymatgen` is built with that same
+        # version. This we can accomplish by installing the desired version of `numpy` manually and then calling
+        # the install command for `pymatgen` with the `--no-build-isolation` flag. This flag will ensure that
+        # build dependencies are ignored and won't be installed (preventing the most recent version of `numpy`
+        # to be installed) and the build relies on those requirements already being present in the environment.
+        # We also need to install `wheel` because otherwise the `pymatgen` build will fail because `bdist_wheel`
+        # will not be available.
+        pip install numpy==1.21.4 wheel
+        pip install pymatgen==2022.0.16 --no-cache-dir --no-build-isolation
+
     - name: Install aiida-core
       run: |
-        pip install --upgrade pip setuptools
         pip install -r requirements/requirements-py-3.8.txt
         pip install --no-deps -e .
     - name: Run sub-set of test suite
@@ -105,12 +130,12 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    - name: Build package
+    - name: install flit
       run: |
-        pip install wheel
-        python setup.py sdist bdist_wheel
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.1.0
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_KEY }}
+        pip install flit~=3.4
+    - name: Build and publish
+      run: |
+        flit publish
+      env:
+        FLIT_USERNAME: __token__
+        FLIT_PASSWORD: ${{ secrets.PYPI_KEY }}

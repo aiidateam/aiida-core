@@ -154,7 +154,7 @@ class SqlaBackend(SqlBackend[base.Base]):
         # https://docs.sqlalchemy.org/en/14/changelog/migration_14.html#orm-batch-inserts-with-psycopg2-now-batch-statements-with-returning-in-most-cases
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):  # type: ignore[attr-defined]
+        with (nullcontext() if self.in_transaction else self.transaction()):
             session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
@@ -168,7 +168,7 @@ class SqlaBackend(SqlBackend[base.Base]):
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):  # type: ignore[attr-defined]
+        with (nullcontext() if self.in_transaction else self.transaction()):
             session.bulk_update_mappings(mapper, rows)
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:  # pylint: disable=no-self-use

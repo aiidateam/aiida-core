@@ -2,7 +2,7 @@
 """
 Calculations provided by aiida_diff tutorial plugin.
 
-Register calculations via the "aiida.calculations" entry point in the setup.json file.
+Register calculations via the "aiida.calculations" entry point in the pyproject.toml file.
 """
 from aiida.common import datastructures
 from aiida.engine import CalcJob

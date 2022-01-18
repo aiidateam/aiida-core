@@ -84,8 +84,7 @@ Here is an example of a folder structure for an AiiDA plugin, illustrating diffe
       LICENSE              - license of your plugin
       MANIFEST.in          - lists non-python files to be installed, such as LICENSE
       README.md            - project description for github and PyPI
-      setup.json           - plugin metadata: installation requirements, author, entry points, etc.
-      setup.py             - PyPI installation script, parses setup.json and README.md
+      pyproject.toml       - plugin metadata: installation requirements, author, entry points, etc.
       ...
 
 A minimal plugin package instead might look like::
@@ -93,8 +92,7 @@ A minimal plugin package instead might look like::
    aiida-minimal/
       aiida_minimal/
          __init__.py
-      setup.py
-      setup.json
+      pyproject.toml
 
 .. _how-to:plugins-develop:entrypoints:
 
@@ -111,14 +109,11 @@ Adding a new entry point consists of the following steps:
  #. Finding the right entry point group. You can list the entry point groups defined by AiiDA via ``verdi plugin list``.
     For a documentation of the groups, see :ref:`topics:plugins:entrypointgroups`.
 
- #. Adding the entry point to the ``entry_points`` field in the ``setup.json`` file::
+ #. Adding the entry point to the ``entry_points`` field in the ``pyproject.toml`` file::
 
      ...
-     entry_points={
-       "aiida.calculations": [
-         "mycode.<something> = aiida_mycode.calcs.some:MysomethingCalculation"
-       ]
-     }
+     [project.entry-points."aiida.calculations"]
+     "mycode.<something>" = "aiida_mycode.calcs.some:MysomethingCalculation"
      ...
 
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
@@ -227,7 +222,7 @@ Since the source code of most AiiDA plugins is hosted on GitHub, the first conta
 
  * Make sure to have a useful ``README.md``, describing what your plugin does and how to install it.
  * Leaving a contact email and adding a license is also a good idea.
- * Make sure the information in the ``setup.json`` file is correct and up to date (in particular the version number), since this information is used to advertise your package on the AiiDA plugin registry.
+ * Make sure the information in the ``pyproject.toml`` file is correct and up to date (in particular the version number), since this information is used to advertise your package on the AiiDA plugin registry.
 
 Source-code-level documentation
 -------------------------------
@@ -279,8 +274,7 @@ AiiDA plugin packages are published on the `AiiDA plugin registry <registry_>`_ 
 
 Before publishing your plugin, make sure your plugin comes with:
 
- * a ``setup.json`` file with the plugin metadata
- * a ``setup.py`` file for installing your plugin via ``pip``
+ * a ``pyproject.toml`` file with the plugin metadata and for installing your plugin via ``pip``
  * a license
 
 For examples of these files, see the `aiida-diff demo plugin <aiida-diff_>`_.
@@ -297,7 +291,7 @@ In order to register your plugin package, simply go to the `plugin registry <reg
 
 .. note::
 
-  The plugin registry reads the metadata of your plugin from the ``setup.json`` file in your plugin repository.
+  The plugin registry reads the metadata of your plugin from the ``pyproject.toml`` file in your plugin repository.
 
 
 We encourage you to **get your plugin package listed as soon as possible**, both in order to reserve the plugin name and to inform others of the ongoing development.
@@ -307,10 +301,6 @@ Publishing on PyPI
 
 For distributing AiiDA plugin packages, we recommend to follow the `guidelines for packaging python projects <packaging_>`_, which include making the plugin available on the `python package index <PyPI_>`_.
 This makes it possible for users to simply ``pip install aiida-myplugin``.
-
-.. note::
-    When updating the version of your plugin, don't forget to update the version number both in the ``setup.json`` and in ``aiida_mycode/__init__.py``.
-
 
 .. _plugin-cutter: https://github.com/aiidateam/aiida-plugin-cutter
 .. _aiida-diff: https://github.com/aiidateam/aiida-diff

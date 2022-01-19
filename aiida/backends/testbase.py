@@ -47,10 +47,10 @@ class AiidaTestCase(unittest.TestCase):
 
         # Freeze the __impl_class after the first run
         if not hasattr(cls, '__impl_class'):
-            if PROFILE.database_backend == BACKEND_SQLA:
+            if PROFILE.storage_backend == BACKEND_SQLA:
                 from aiida.backends.sqlalchemy.testbase import SqlAlchemyTests
                 cls.__impl_class = SqlAlchemyTests
-            elif PROFILE.database_backend == BACKEND_DJANGO:
+            elif PROFILE.storage_backend == BACKEND_DJANGO:
                 from aiida.backends.djsite.db.testbase import DjangoTests
                 cls.__impl_class = DjangoTests
             else:
@@ -248,7 +248,7 @@ def get_default_user(**kwargs):
     :returns: the :py:class:`~aiida.orm.User`
     """
     from aiida.manage.configuration import get_config
-    email = get_config().current_profile.default_user
+    email = get_config().current_profile.default_user_email
 
     if kwargs.pop('email', None):
         raise ValueError('Do not specify the user email (must coincide with default user email of profile).')

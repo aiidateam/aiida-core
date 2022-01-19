@@ -28,10 +28,10 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
-        if configuration.PROFILE.database_backend == BACKEND_DJANGO:
+        if configuration.PROFILE.storage_backend == BACKEND_DJANGO:
             pytest.skip('Reenable when #2813 is addressed')
         super().setUp()
-        self.backend = configuration.PROFILE.database_backend
+        self.backend = configuration.PROFILE.storage_backend
         self.cli_runner = CliRunner()
 
     def test_help(self):
@@ -67,10 +67,10 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertIn(profile_name, config.profile_names)
 
         profile = config.get_profile(profile_name)
-        profile.default_user = user_email
+        profile.default_user_email = user_email
 
         # Verify that the backend type of the created profile matches that of the profile for the current test session
-        self.assertEqual(self.backend, profile.database_backend)
+        self.assertEqual(self.backend, profile.storage_backend)
 
         user = orm.User.objects.get(email=user_email)
         self.assertEqual(user.first_name, user_first_name)
@@ -154,10 +154,10 @@ email: 123@234.de"""
         self.assertIn(profile_name, config.profile_names)
 
         profile = config.get_profile(profile_name)
-        profile.default_user = user_email
+        profile.default_user_email = user_email
 
         # Verify that the backend type of the created profile matches that of the profile for the current test session
-        self.assertEqual(self.backend, profile.database_backend)
+        self.assertEqual(self.backend, profile.storage_backend)
 
         user = orm.User.objects.get(email=user_email)
         self.assertEqual(user.first_name, user_first_name)

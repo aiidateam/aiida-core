@@ -26,15 +26,23 @@ class TestProfile(AiidaTestCase):
         super().setUpClass(*args, **kwargs)
         cls.profile_name = 'test_profile'
         cls.profile_dictionary = {
-            'default_user': 'dummy@localhost',
-            'database_engine': 'postgresql_psycopg2',
-            'database_backend': 'django',
-            'database_name': cls.profile_name,
-            'database_port': '5432',
-            'database_hostname': 'localhost',
-            'database_username': 'user',
-            'database_password': 'pass',
-            'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
+            'default_user_email': 'dummy@localhost',
+            'storage_backend': 'django',
+            'storage_config': {
+                'database_engine': 'postgresql_psycopg2',
+                'database_name': cls.profile_name,
+                'database_port': '5432',
+                'database_hostname': 'localhost',
+                'database_username': 'user',
+                'database_password': 'pass',
+                'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
+            },
+            'broker_protocol': 'amqp',
+            'broker_username': 'guest',
+            'broker_password': 'guest',
+            'broker_host': 'localhost',
+            'broker_port': 5672,
+            'broker_virtual_host': '',
         }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 
@@ -49,7 +57,7 @@ class TestProfile(AiidaTestCase):
         uuid.UUID(self.profile.uuid)
 
         # Check that the default user email field is not None
-        self.assertIsNotNone(self.profile.default_user)
+        self.assertIsNotNone(self.profile.default_user_email)
 
         # The RabbitMQ prefix should contain the profile UUID
         self.assertIn(self.profile.uuid, self.profile.rmq_prefix)

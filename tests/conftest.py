@@ -235,14 +235,17 @@ def profile_factory() -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {
-            'default_user': kwargs.pop('default_user', 'dummy@localhost'),
-            'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
-            'database_backend': kwargs.pop('database_backend', 'django'),
-            'database_hostname': kwargs.pop('database_hostname', 'localhost'),
-            'database_port': kwargs.pop('database_port', 5432),
-            'database_name': kwargs.pop('database_name', name),
-            'database_username': kwargs.pop('database_username', 'user'),
-            'database_password': kwargs.pop('database_password', 'pass'),
+            'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
+            'storage_backend': kwargs.pop('storage_backend', 'django'),
+            'storage_config': {
+                'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
+                'database_hostname': kwargs.pop('database_hostname', 'localhost'),
+                'database_port': kwargs.pop('database_port', 5432),
+                'database_name': kwargs.pop('database_name', name),
+                'database_username': kwargs.pop('database_username', 'user'),
+                'database_password': kwargs.pop('database_password', 'pass'),
+                'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+            },
             'broker_protocol': kwargs.pop('broker_protocol', 'amqp'),
             'broker_username': kwargs.pop('broker_username', 'guest'),
             'broker_password': kwargs.pop('broker_password', 'guest'),
@@ -250,7 +253,6 @@ def profile_factory() -> Profile:
             'broker_port': kwargs.pop('broker_port', 5672),
             'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
             'broker_parameters': kwargs.pop('broker_parameters', {}),
-            'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
         }
 
         return Profile(name, profile_dictionary)
@@ -269,7 +271,7 @@ def config_with_profile_factory(empty_config, profile_factory) -> Config:
     Example::
 
         def test_config_with_profile(config_with_profile_factory):
-            config = config_with_profile_factory(set_as_default=True, name='default', database_backend='django')
+            config = config_with_profile_factory(set_as_default=True, name='default', storage_backend='django')
             assert config.current_profile.name == 'default'
 
     As with `empty_config`, the currently loaded configuration and profile are stored in memory,

@@ -924,7 +924,7 @@ class TestAttributes:
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'==': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         assert set(res) == set((n_str.uuid,))
-        if configuration.PROFILE.database_backend == 'sqlalchemy':
+        if configuration.PROFILE.storage_backend == 'sqlalchemy':
             # I can't query the length of an array with Django,
             # so I exclude. Not the nicest way, But I would like to keep this piece
             # of code because of the initialization part, that would need to be

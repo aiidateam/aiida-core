@@ -26,7 +26,7 @@ def set_default_user(profile, user):
     """
     from aiida.manage.configuration import get_config
     config = get_config()
-    profile.default_user = user.email
+    profile.default_user_email = user.email
     config.update_profile(profile)
     config.store()
 

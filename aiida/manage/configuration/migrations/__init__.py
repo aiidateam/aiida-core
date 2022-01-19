@@ -15,14 +15,15 @@
 # pylint: disable=wildcard-import
 
 from .migrations import *
-from .utils import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'check_and_migrate_config',
     'config_needs_migrating',
+    'downgrade_config',
     'get_current_version',
+    'upgrade_config',
 )
 
 # yapf: enable

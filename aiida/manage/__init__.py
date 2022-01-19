@@ -50,6 +50,7 @@ __all__ = (
     'config_needs_migrating',
     'config_schema',
     'disable_caching',
+    'downgrade_config',
     'enable_caching',
     'get_current_version',
     'get_manager',
@@ -58,6 +59,7 @@ __all__ = (
     'get_use_cache',
     'parse_option',
     'reset_manager',
+    'upgrade_config',
     'write_database_integrity_violation',
 )
 

@@ -14,8 +14,7 @@ from unittest.mock import patch
 import uuid
 
 from aiida.common import json
-from aiida.manage.configuration.migrations.migrations import _MIGRATION_LOOKUP
-from aiida.manage.configuration.migrations.utils import check_and_migrate_config
+from aiida.manage.configuration.migrations import check_and_migrate_config, upgrade_config
 
 
 class TestConfigMigration(TestCase):
@@ -45,7 +44,7 @@ class TestConfigMigration(TestCase):
         """Test the step between config versions 0 and 1."""
         config_initial = self.load_config_sample('input/0.json')
         config_reference = self.load_config_sample('reference/1.json')
-        config_migrated = _MIGRATION_LOOKUP[0].apply(config_initial)
+        config_migrated = upgrade_config(config_initial, 1)
         self.assertEqual(config_migrated, config_reference)
 
     def test_1_2_migration(self):
@@ -53,26 +52,26 @@ class TestConfigMigration(TestCase):
         config_initial = self.load_config_sample('input/1.json')
         config_reference = self.load_config_sample('reference/2.json')
         with patch.object(uuid, 'uuid4', return_value=uuid.UUID(hex='0' * 32)):
-            config_migrated = _MIGRATION_LOOKUP[1].apply(config_initial)
+            config_migrated = upgrade_config(config_initial, 2)
         self.assertEqual(config_migrated, config_reference)
 
     def test_2_3_migration(self):
         """Test the step between config versions 2 and 3."""
         config_initial = self.load_config_sample('input/2.json')
         config_reference = self.load_config_sample('reference/3.json')
-        config_migrated = _MIGRATION_LOOKUP[2].apply(config_initial)
+        config_migrated = upgrade_config(config_initial, 3)
         self.assertEqual(config_migrated, config_reference)
 
     def test_3_4_migration(self):
         """Test the step between config versions 3 and 4."""
         config_initial = self.load_config_sample('input/3.json')
         config_reference = self.load_config_sample('reference/4.json')
-        config_migrated = _MIGRATION_LOOKUP[3].apply(config_initial)
+        config_migrated = upgrade_config(config_initial, 4)
         self.assertEqual(config_migrated, config_reference)
 
     def test_4_5_migration(self):
         """Test the step between config versions 4 and 5."""
         config_initial = self.load_config_sample('input/4.json')
         config_reference = self.load_config_sample('reference/5.json')
-        config_migrated = _MIGRATION_LOOKUP[4].apply(config_initial)
+        config_migrated = upgrade_config(config_initial, 5)
         self.assertEqual(config_migrated, config_reference)

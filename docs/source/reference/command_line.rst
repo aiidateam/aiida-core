@@ -123,12 +123,14 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      caching  List caching-enabled process types for the current profile.
-      get      Get the value of an AiiDA option for the current profile.
-      list     List AiiDA options for the current profile.
-      set      Set an AiiDA option.
-      show     Show details of an AiiDA option for the current profile.
-      unset    Unset an AiiDA option.
+      caching    List caching-enabled process types for the current profile.
+      downgrade  Print a configuration, downgraded to a specific version.
+      get        Get the value of an AiiDA option for the current profile.
+      list       List AiiDA options for the current profile.
+      set        Set an AiiDA option.
+      show       Show details of an AiiDA option for the current profile.
+      unset      Unset an AiiDA option.
+      upgrade    Print a configuration, upgraded to a specific version.
 
 
 .. _reference:command-line:verdi-daemon:

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi config` command."""
+import json
+from pathlib import Path
 import textwrap
 
 import click
@@ -190,3 +192,30 @@ def verdi_config_caching(disabled):
                     echo.echo(identifier)
             elif disabled:
                 echo.echo(identifier)
+
+
+@verdi_config.command('upgrade')
+@click.argument('path', required=False, default=None, type=click.Path(exists=True, path_type=Path))
+@click.option('--version', type=int, default=None, help='Upgrade to specific version (default current).')
+def verdi_config_upgrade(version, path):
+    """Print a configuration, upgraded to a specific version."""
+    from aiida.manage.configuration import CURRENT_CONFIG_VERSION, get_config_path, upgrade_config
+    path = path or Path(get_config_path())
+    version = version if version is not None else CURRENT_CONFIG_VERSION
+    echo.echo_report(f'Upgrading configuration to v{version}: {path}')
+    config = json.loads(path.read_text(encoding='utf8'))
+    upgrade_config(config, version)
+    print(json.dumps(config, indent=2))
+
+
+@verdi_config.command('downgrade')
+@click.argument('version', type=int)
+@click.argument('path', required=False, default=None, type=click.Path(exists=True, path_type=Path))
+def verdi_config_downgrade(version, path):
+    """Print a configuration, downgraded to a specific version."""
+    from aiida.manage.configuration import downgrade_config, get_config_path
+    path = path or Path(get_config_path())
+    echo.echo_report(f'Downgrading configuration to v{version}: {path}')
+    config = json.loads(path.read_text(encoding='utf8'))
+    downgrade_config(config, version)
+    print(json.dumps(config, indent=2))

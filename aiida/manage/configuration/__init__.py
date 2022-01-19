@@ -59,22 +59,36 @@ PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
 
 
-def check_rabbitmq_version():
-    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
+def is_rabbitmq_version_supported():
+    """Return whether the version of RabbitMQ configured for the current profile is supported.
 
     Versions 3.8 and above are not compatible with AiiDA with default configuration.
+
+    :return: boolean whether the current RabbitMQ version is supported.
+    """
+    from packaging.version import parse
+    return get_rabbitmq_version() < parse('3.8')
+
+
+def get_rabbitmq_version():
+    """Return the version of the RabbitMQ server that the current profile connects to.
+
+    :return: :class:`packaging.version.Version`
     """
     from packaging.version import parse
 
-    from aiida.cmdline.utils import echo
     from aiida.manage.manager import get_manager
-
-    url = 'https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use'
     communicator = get_manager().get_communicator()
-    version = parse(communicator.server_properties['version'].decode('utf-8'))
-    if version >= parse('3.8'):
-        echo.echo_warning(f'Connected to RabbitMQ v{version} which is known to cause problems)')
-        echo.echo_warning(f'See {url} for details.')
+    return parse(communicator.server_properties['version'].decode('utf-8'))
+
+
+def check_rabbitmq_version():
+    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible."""
+    from aiida.cmdline.utils import echo
+    if not is_rabbitmq_version_supported():
+        echo.echo_warning(f'RabbitMQ v{get_rabbitmq_version()} is not supported and will cause unexpected problems!')
+        echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
+        echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
 
 
 def check_version():

@@ -126,7 +126,7 @@ class Manager:
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
-        backend_manager = get_backend_manager(profile.database_backend)
+        backend_manager = get_backend_manager(profile.storage_backend)
 
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
@@ -135,7 +135,7 @@ class Manager:
             backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 
-        backend_type = profile.database_backend
+        backend_type = profile.storage_backend
 
         # Can only import the backend classes after the backend has been loaded
         if backend_type == BACKEND_DJANGO:
@@ -200,7 +200,7 @@ class Manager:
                 raise ConfigurationError(
                     'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
                 )
-            self._backend_manager = get_backend_manager(profile.database_backend)
+            self._backend_manager = get_backend_manager(profile.storage_backend)
 
         return self._backend_manager
 

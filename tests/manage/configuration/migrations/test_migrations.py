@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration migration functionality."""
+from copy import deepcopy
 import os
 from unittest import TestCase
 from unittest.mock import patch
@@ -44,10 +45,10 @@ class TestConfigMigration(TestCase):
         config_initial = self.load_config_sample('reference/5.json')
         # target lower than initial
         with self.assertRaises(ConfigurationError):
-            upgrade_config(config_initial, 1)
+            upgrade_config(deepcopy(config_initial), 1)
         # no migration available
         with self.assertRaises(ConfigurationError):
-            upgrade_config(config_initial, 100)
+            upgrade_config(deepcopy(config_initial), 100)
         # circular dependency
         with self.assertRaises(ConfigurationError):
             upgrade_config(config_initial, 6, migrations=[CircularMigration])
@@ -57,10 +58,10 @@ class TestConfigMigration(TestCase):
         config_initial = self.load_config_sample('reference/5.json')
         # target higher than initial
         with self.assertRaises(ConfigurationError):
-            downgrade_config(config_initial, 6)
+            downgrade_config(deepcopy(config_initial), 6)
         # no migration available
         with self.assertRaises(ConfigurationError):
-            downgrade_config(config_initial, -1)
+            downgrade_config(deepcopy(config_initial), -1)
         # circular dependency
         with self.assertRaises(ConfigurationError):
             downgrade_config(config_initial, 4, migrations=[CircularMigration])
@@ -107,4 +108,11 @@ class TestConfigMigration(TestCase):
         config_initial = self.load_config_sample('input/4.json')
         config_reference = self.load_config_sample('reference/5.json')
         config_migrated = upgrade_config(config_initial, 5)
+        self.assertEqual(config_migrated, config_reference)
+
+    def test_5_6_migration(self):
+        """Test the step between config versions 4 and 5."""
+        config_initial = self.load_config_sample('input/5.json')
+        config_reference = self.load_config_sample('reference/6.json')
+        config_migrated = upgrade_config(config_initial, 6)
         self.assertEqual(config_migrated, config_reference)

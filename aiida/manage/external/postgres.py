@@ -15,11 +15,16 @@ functionality from within python without knowing details about how postgres is
 installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
+from typing import TYPE_CHECKING
+
 import click
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 from pgsu import PGSU, PostgresConnectionMode
 
 from aiida.cmdline.utils import echo
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Profile
 
 __all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
@@ -61,7 +66,7 @@ class Postgres(PGSU):
         super().__init__(dsn=dbinfo, **kwargs)
 
     @classmethod
-    def from_profile(cls, profile, **kwargs):
+    def from_profile(cls, profile: 'Profile', **kwargs):
         """Create Postgres instance with dbinfo from AiiDA profile data.
 
         Note: This only uses host and port from the profile, since the others are not going to be relevant for the
@@ -75,8 +80,8 @@ class Postgres(PGSU):
         dbinfo = DEFAULT_DBINFO.copy()
         dbinfo.update(
             dict(
-                host=profile.database_hostname or DEFAULT_DBINFO['host'],
-                port=profile.database_port or DEFAULT_DBINFO['port']
+                host=profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
+                port=profile.storage_config['database_port'] or DEFAULT_DBINFO['port']
             )
         )
 

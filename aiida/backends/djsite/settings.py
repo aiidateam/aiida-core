@@ -23,21 +23,19 @@ except exceptions.MissingConfigurationError as exception:
 if PROFILE is None:
     raise exceptions.ProfileConfigurationError('no profile has been loaded')
 
-if PROFILE.database_backend != 'django':
+if PROFILE.storage_backend != 'django':
     raise exceptions.ProfileConfigurationError(
-        f'incommensurate database backend `{PROFILE.database_backend}` for profile `{PROFILE.name}`'
+        f'incommensurate database backend `{PROFILE.storage_backend}` for profile `{PROFILE.name}`'
     )
-
-PROFILE_CONF = PROFILE.dictionary
 
 DATABASES = {
     'default': {
-        'ENGINE': f'django.db.backends.{PROFILE.database_engine}',
-        'NAME': PROFILE.database_name,
-        'PORT': PROFILE.database_port,
-        'HOST': PROFILE.database_hostname,
-        'USER': PROFILE.database_username,
-        'PASSWORD': PROFILE.database_password,
+        'ENGINE': f"django.db.backends.{PROFILE.storage_config['database_engine']}",
+        'NAME': PROFILE.storage_config['database_name'],
+        'PORT': PROFILE.storage_config['database_port'],
+        'HOST': PROFILE.storage_config['database_hostname'],
+        'USER': PROFILE.storage_config['database_username'],
+        'PASSWORD': PROFILE.storage_config['database_password'],
     }
 }
 

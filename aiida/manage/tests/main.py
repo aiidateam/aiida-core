@@ -39,8 +39,8 @@ _DEFAULT_PROFILE_INFO = {
     'first_name': 'AiiDA',
     'last_name': 'Plugintest',
     'institution': 'aiidateam',
+    'storage_backend': 'django',
     'database_engine': 'postgresql_psycopg2',
-    'database_backend': 'django',
     'database_username': 'aiida',
     'database_password': 'aiida_pw',
     'database_name': 'aiida_db',
@@ -150,7 +150,7 @@ class ProfileManager:
             raise TestManagerError('Unable to load test profile \'{}\'.'.format(profile_name))
         check_if_tests_can_run()
 
-        self._select_db_test_case(backend=self._profile.database_backend)
+        self._select_db_test_case(backend=self._profile.storage_backend)
 
     def _select_db_test_case(self, backend):
         """
@@ -258,7 +258,7 @@ class TemporaryProfileManager(ProfileManager):
 
         self.dbinfo = {}
         self.profile_info = _DEFAULT_PROFILE_INFO
-        self.profile_info['database_backend'] = backend
+        self.profile_info['storage_backend'] = backend
         self._pgtest = pgtest or {}
 
         self.pg_cluster = None
@@ -278,20 +278,22 @@ class TemporaryProfileManager(ProfileManager):
         Used to set up AiiDA profile from self.profile_info dictionary.
         """
         dictionary = {
-            'database_engine': self.profile_info.get('database_engine'),
-            'database_backend': self.profile_info.get('database_backend'),
-            'database_port': self.profile_info.get('database_port'),
-            'database_hostname': self.profile_info.get('database_hostname'),
-            'database_name': self.profile_info.get('database_name'),
-            'database_username': self.profile_info.get('database_username'),
-            'database_password': self.profile_info.get('database_password'),
+            'storage_backend': self.profile_info.get('storage_backend'),
+            'storage_config': {
+                'database_engine': self.profile_info.get('database_engine'),
+                'database_port': self.profile_info.get('database_port'),
+                'database_hostname': self.profile_info.get('database_hostname'),
+                'database_name': self.profile_info.get('database_name'),
+                'database_username': self.profile_info.get('database_username'),
+                'database_password': self.profile_info.get('database_password'),
+                'repository_uri': f'file://{self.repo}',
+            },
             'broker_protocol': self.profile_info.get('broker_protocol'),
             'broker_username': self.profile_info.get('broker_username'),
             'broker_password': self.profile_info.get('broker_password'),
             'broker_host': self.profile_info.get('broker_host'),
             'broker_port': self.profile_info.get('broker_port'),
             'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
-            'repository_uri': f'file://{self.repo}',
         }
         return dictionary
 
@@ -355,7 +357,7 @@ class TemporaryProfileManager(ProfileManager):
         backend = manager.get_manager()._load_backend(schema_check=False)
         backend.migrate()
 
-        self._select_db_test_case(backend=self._profile.database_backend)
+        self._select_db_test_case(backend=self._profile.storage_backend)
         self.init_db()
 
     def repo_ok(self):
@@ -488,7 +490,7 @@ def get_test_backend_name():
     test_profile_name = get_test_profile_name()
     backend_env = os.environ.get('AIIDA_TEST_BACKEND', None)
     if test_profile_name is not None:
-        backend_profile = configuration.get_config().get_profile(test_profile_name).database_backend
+        backend_profile = configuration.get_config().get_profile(test_profile_name).storage_backend
         if backend_env is not None and backend_env != backend_profile:
             raise ValueError(
                 "The backend '{}' read from AIIDA_TEST_BACKEND does not match the backend '{}' "

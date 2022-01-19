@@ -51,20 +51,23 @@ def setup(
     from aiida import orm
     from aiida.manage.configuration import get_config
 
-    profile.database_engine = db_engine
-    profile.database_backend = db_backend
-    profile.database_name = db_name
-    profile.database_port = db_port
-    profile.database_hostname = db_host
-    profile.database_username = db_username
-    profile.database_password = db_password
+    profile.set_storage(
+        db_backend, {
+            'database_engine': db_engine,
+            'database_hostname': db_host,
+            'database_port': db_port,
+            'database_name': db_name,
+            'database_username': db_username,
+            'database_password': db_password,
+            'repository_uri': f'file://{repository}',
+        }
+    )
     profile.broker_protocol = broker_protocol
     profile.broker_username = broker_username
     profile.broker_password = broker_password
     profile.broker_host = broker_host
     profile.broker_port = broker_port
     profile.broker_virtual_host = broker_virtual_host
-    profile.repository_uri = f'file://{repository}'
 
     config = get_config()
 
@@ -115,7 +118,7 @@ def setup(
     )
     if created:
         user.store()
-    profile.default_user = user.email
+    profile.default_user_email = user.email
     config.update_profile(profile)
     config.store()
 

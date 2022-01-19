@@ -81,10 +81,10 @@ def test_database_unable_to_connect(run_cli_command, monkeypatch):
 
     result = run_cli_command(cmd_status.verdi_status, raises=True)
     assert 'Unable to connect to database' in result.output
-    assert profile.database_name in result.output
-    assert profile.database_username in result.output
-    assert profile.database_hostname in result.output
-    assert str(profile.database_port) in result.output
+    assert profile.storage_config['database_name'] in result.output
+    assert profile.storage_config['database_username'] in result.output
+    assert profile.storage_config['database_hostname'] in result.output
+    assert str(profile.storage_config['database_port']) in result.output
     assert result.exit_code is ExitCode.CRITICAL
 
 

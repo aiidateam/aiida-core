@@ -76,7 +76,7 @@ def test_nodes_belonging_to_different_users(tmp_path, clear_database_before_test
         node = orm.load_node(uuid=uuid)
         assert node.user.email == new_email
     for uuid in uuids_u2:
-        assert orm.load_node(uuid).user.email == manager.get_profile().default_user
+        assert orm.load_node(uuid).user.email == manager.get_profile().default_user_email
 
 
 def test_non_default_user_nodes(tmp_path, clear_database_before_test, aiida_localhost_factory):  # pylint: disable=too-many-statements
@@ -162,4 +162,4 @@ def test_non_default_user_nodes(tmp_path, clear_database_before_test, aiida_loca
     for uuid in uuids1:
         assert orm.load_node(uuid).user.email == new_email
     for uuid in uuids2:
-        assert orm.load_node(uuid).user.email == manager.get_profile().default_user
+        assert orm.load_node(uuid).user.email == manager.get_profile().default_user_email

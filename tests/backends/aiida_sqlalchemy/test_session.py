@@ -60,7 +60,7 @@ class TestSessionSqla:
         self.set_connection(expire_on_commit=True)
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
+        email = get_manager().get_profile().default_user_email
         user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
@@ -85,7 +85,7 @@ class TestSessionSqla:
         self.set_connection(expire_on_commit=True)
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
+        email = get_manager().get_profile().default_user_email
         user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
@@ -107,7 +107,7 @@ class TestSessionSqla:
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
+        email = get_manager().get_profile().default_user_email
         user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()
@@ -133,7 +133,7 @@ class TestSessionSqla:
 
         session = aiida.backends.sqlalchemy.get_scoped_session()
 
-        email = get_manager().get_profile().default_user
+        email = get_manager().get_profile().default_user_email
         user = self.backend.users.create(email=email)
         session.add(user.dbmodel)
         session.commit()

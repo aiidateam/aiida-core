@@ -54,7 +54,7 @@ class UserCollection(entities.Collection['User']):
         if self._default_user is self.UNDEFINED:
             from aiida.manage.configuration import get_profile
             profile = get_profile()
-            email = profile.default_user
+            email = profile.default_user_email
             if not email:
                 self._default_user = None
 

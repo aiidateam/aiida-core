@@ -51,6 +51,7 @@ __all__ += (
 
 import os
 import shutil
+from typing import Optional
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
@@ -119,16 +120,14 @@ def check_version():
         echo.echo_warning('as you might not be able to automatically migrate your data.\n')
 
 
-def load_profile(profile=None):
+def load_profile(profile: Optional[str] = None) -> Profile:
     """Load a profile.
 
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
 
     :param profile: the name of the profile to load, by default will use the one marked as default in the config
-    :type profile: str
 
     :return: the loaded `Profile` instance
-    :rtype: :class:`~aiida.manage.configuration.Profile`
     :raises `aiida.common.exceptions.InvalidOperation`: if the backend of another profile has already been loaded
     """
     from aiida.common import InvalidOperation
@@ -235,11 +234,10 @@ def _merge_deprecated_cache_yaml(config, filepath):
     shutil.move(cache_path, cache_path_backup)
 
 
-def get_profile():
+def get_profile() -> Profile:
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
-    :rtype: :class:`~aiida.manage.configuration.Profile`
     """
     global PROFILE  # pylint: disable=global-variable-not-assigned
     return PROFILE
@@ -358,17 +356,25 @@ def load_documentation_profile():
 
     with tempfile.NamedTemporaryFile() as handle:
         profile_name = 'readthedocs'
-        profile = {
-            'AIIDADB_ENGINE': 'postgresql_psycopg2',
-            'AIIDADB_BACKEND': 'django',
-            'AIIDADB_PORT': 5432,
-            'AIIDADB_HOST': 'localhost',
-            'AIIDADB_NAME': 'aiidadb',
-            'AIIDADB_PASS': 'aiidadb',
-            'AIIDADB_USER': 'aiida',
-            'AIIDADB_REPOSITORY_URI': 'file:///dev/null',
+        profile_config = {
+            'storage_backend': 'django',
+            'storage_config': {
+                'database_engine': 'postgresql_psycopg2',
+                'database_port': 5432,
+                'database_hostname': 'localhost',
+                'database_name': 'aiidadb',
+                'database_password': 'aiidadb',
+                'database_username': 'aiida',
+                'repository_uri': 'file:///dev/null',
+            },
+            'broker_protocol': 'amqp',
+            'broker_username': 'guest',
+            'broker_password': 'guest',
+            'broker_host': 'localhost',
+            'broker_port': 5672,
+            'broker_virtual_host': '',
         }
-        config = {'default_profile': profile_name, 'profiles': {profile_name: profile}}
-        PROFILE = Profile(profile_name, profile, from_config=True)
+        config = {'default_profile': profile_name, 'profiles': {profile_name: profile_config}}
+        PROFILE = Profile(profile_name, profile_config)
         CONFIG = Config(handle.name, config)
         get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access

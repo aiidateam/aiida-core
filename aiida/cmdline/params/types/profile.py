@@ -49,7 +49,7 @@ class ProfileParamType(LabelStringType):
                 self.fail(str(exception))
 
             # Create a new empty profile
-            profile = Profile(value, {})
+            profile = Profile(value, {}, validate=False)
         else:
             if self._cannot_exist:
                 self.fail(str(f'the profile `{value}` already exists'))

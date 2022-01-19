@@ -26,7 +26,7 @@ from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v5.schema.json'
+SCHEMA_FILE = 'config-v6.schema.json'
 
 
 @lru_cache(1)
@@ -173,9 +173,7 @@ class Config:  # pylint: disable=too-many-public-methods
             self._default_profile = None
 
         for name, config_profile in config.get(self.KEY_PROFILES, {}).items():
-            if Profile.contains_unknown_keys(config_profile):
-                self.handle_invalid(f'encountered unknown keys in profile `{name}` which have been removed')
-            self._profiles[name] = Profile(name, config_profile, from_config=True)
+            self._profiles[name] = Profile(name, config_profile)
 
     def __eq__(self, other):
         """Two configurations are considered equal, when their dictionaries are equal."""
@@ -294,7 +292,7 @@ class Config:  # pylint: disable=too-many-public-methods
         if name not in self.profile_names:
             raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
 
-    def get_profile(self, name=None):
+    def get_profile(self, name: Optional[str] = None) -> Profile:
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
@@ -350,12 +348,13 @@ class Config:  # pylint: disable=too-many-public-methods
         include_database_user: bool = False,
         include_repository: bool = True
     ):
-        """Delete a profile including its contents.
+        """Delete a profile including its storage.
 
         :param include_database: also delete the database configured for the profile.
         :param include_database_user: also delete the database user configured for the profile.
         :param include_repository: also delete the repository configured for the profile.
         """
+        # to-do storage backend specific stuff should be handled by the backend itself
         from aiida.manage.external.postgres import Postgres
 
         profile = self.get_profile(name)
@@ -367,11 +366,11 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if include_database:
             postgres = Postgres.from_profile(profile)
-            if postgres.db_exists(profile.database_name):
-                postgres.drop_db(profile.database_name)
+            if postgres.db_exists(profile.storage_config['database_name']):
+                postgres.drop_db(profile.storage_config['database_name'])
 
-        if include_database_user and postgres.dbuser_exists(profile.database_username):
-            postgres.drop_dbuser(profile.database_username)
+        if include_database_user and postgres.dbuser_exists(profile.storage_config['database_username']):
+            postgres.drop_dbuser(profile.storage_config['database_username'])
 
         self.remove_profile(name)
         self.store()

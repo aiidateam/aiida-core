@@ -101,7 +101,12 @@ def verdi_status(print_traceback, no_rmq):
     dbgen = backend_manager.get_schema_generation_database()
     dbver = backend_manager.get_schema_version_backend()
     database_data = [
-        profile.database_name, dbgen, dbver, profile.database_username, profile.database_hostname, profile.database_port
+        profile.storage_config['database_name'],
+        dbgen,
+        dbver,
+        profile.storage_config['database_username'],
+        profile.storage_config['database_hostname'],
+        profile.storage_config['database_port'],
     ]
     try:
         with override_log_level():  # temporarily suppress noisy logging

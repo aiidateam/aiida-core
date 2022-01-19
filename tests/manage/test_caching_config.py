@@ -64,11 +64,11 @@ def test_merge_deprecated_yaml(tmp_path):
         # Create a temporary folder, set it as the current config directory path
         settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
         config_dictionary = json.loads(
-            Path(__file__).parent.joinpath('configuration/migrations/test_samples/reference/5.json').read_text(
+            Path(__file__).parent.joinpath('configuration/migrations/test_samples/reference/6.json').read_text(
                 encoding='utf-8'
             )
         )
-        config_dictionary['profiles']['default']['AIIDADB_REPOSITORY_URI'] = f"file:///{tmp_path/'repo'}"
+        config_dictionary['profiles']['default']['storage_config']['repository_uri'] = f"file:///{tmp_path/'repo'}"
         cache_dictionary = {
             'default': {
                 'default': True,

@@ -11,6 +11,7 @@
 from typing import Any, Dict, Iterable, Optional, Protocol, Type
 
 from aiida.common import exceptions
+from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
     'CURRENT_CONFIG_VERSION', 'OLDEST_COMPATIBLE_CONFIG_VERSION', 'get_current_version', 'check_and_migrate_config',
@@ -24,8 +25,10 @@ ConfigType = Dict[str, Any]
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 5
-OLDEST_COMPATIBLE_CONFIG_VERSION = 5
+CURRENT_CONFIG_VERSION = 6
+OLDEST_COMPATIBLE_CONFIG_VERSION = 6
+
+CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
 
 class SingleMigration(Protocol):
@@ -171,7 +174,7 @@ class SimplifyOptions(SingleMigration):
         ('user_last_name', 'autofill.user.last_name'),
         ('user_institution', 'autofill.user.institution'),
         ('show_deprecations', 'warnings.showdeprecations'),
-        ('task_retry_down_revision_interval', 'transport.task_retry_initial_interval'),
+        ('task_retry_initial_interval', 'transport.task_retry_initial_interval'),
         ('task_maximum_attempts', 'transport.task_maximum_attempts'),
     )
 
@@ -196,7 +199,48 @@ class SimplifyOptions(SingleMigration):
                 config['options'][current] = config['options'].pop(new)
 
 
-MIGRATIONS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions)
+class AbstractStorage(SingleMigration):
+    """Move the storage configuration under a top-level "storage" key.
+
+    This allows for different storage backends to have different configuration.
+    """
+    down_revision = 5
+    down_compatible = 5
+    up_revision = 6
+    up_compatible = 6
+
+    conversions = (
+        ('AIIDADB_ENGINE', 'database_engine'),
+        ('AIIDADB_HOST', 'database_hostname'),
+        ('AIIDADB_PORT', 'database_port'),
+        ('AIIDADB_USER', 'database_username'),
+        ('AIIDADB_PASS', 'database_password'),
+        ('AIIDADB_NAME', 'database_name'),
+        ('AIIDADB_REPOSITORY_URI', 'repository_uri'),
+    )
+
+    def upgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            if 'AIIDADB_BACKEND' in profile:
+                profile['storage_backend'] = profile.pop('AIIDADB_BACKEND')
+            profile.setdefault('storage_config', {})
+            for old, new in self.conversions:
+                if old in profile:
+                    profile['storage_config'][new] = profile.pop(old)
+                else:
+                    CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected {old!r} key')
+
+    def downgrade(self, config: ConfigType) -> None:
+        for profile in config.get('profiles', {}).values():
+            for old, new in self.conversions:
+                if new in profile.get('storage_config', {}):
+                    profile[old] = profile['storage_config'].pop(new)
+            profile.pop('storage_config', None)
+            if 'storage_backend' in profile:
+                profile['AIIDADB_BACKEND'] = profile.pop('storage_backend')
+
+
+MIGRATIONS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions, AbstractStorage)
 
 
 def get_current_version(config):

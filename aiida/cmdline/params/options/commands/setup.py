@@ -42,6 +42,7 @@ def get_profile_attribute_default(attribute_tuple, ctx):
     :return: profile attribute default value if set, or None
     """
     attribute, default = attribute_tuple
+    parts = attribute.split('.')
 
     try:
         validate_profile_parameter(ctx)
@@ -49,7 +50,10 @@ def get_profile_attribute_default(attribute_tuple, ctx):
         return default
     else:
         try:
-            return getattr(ctx.params['profile'], attribute)
+            data = ctx.params['profile'].dictionary
+            for part in parts:
+                data = data[part]
+            return data
         except KeyError:
             return default
 
@@ -140,8 +144,8 @@ def get_quicksetup_password(ctx, param, value):  # pylint: disable=unused-argume
     config = get_config()
 
     for available_profile in config.profiles:
-        if available_profile.database_username == username:
-            value = available_profile.database_password
+        if available_profile.storage_config['database_username'] == username:
+            value = available_profile.storage_config['database_password']
             break
     else:
         value = get_random_string(16)
@@ -248,46 +252,52 @@ QUICKSETUP_REPOSITORY_URI = options.REPOSITORY_PATH.clone(
 
 SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
     prompt='Database engine',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_engine', 'postgresql_psycopg2')),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('storage_config.database_engine', 'postgresql_psycopg2')
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
     prompt='Database backend',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_backend', BACKEND_DJANGO)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage_backend', BACKEND_DJANGO)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
     prompt='Database host',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_hostname', 'localhost')),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('storage_config.database_hostname', 'localhost')
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
     prompt='Database port',
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_port', DEFAULT_DBINFO['port'])),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('storage_config.database_port', DEFAULT_DBINFO['port'])
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_NAME = QUICKSETUP_DATABASE_NAME.clone(
     prompt='Database name',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_name', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage_config.database_name', None)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_USERNAME = QUICKSETUP_DATABASE_USERNAME.clone(
     prompt='Database username',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_username', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage_config.database_username', None)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     prompt='Database password',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('database_password', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage_config.database_password', None)),
     cls=options.interactive.InteractiveOption
 )
 

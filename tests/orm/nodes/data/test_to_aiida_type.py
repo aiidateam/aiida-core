@@ -11,6 +11,7 @@
 import pytest
 
 from aiida import orm
+from aiida.common.links import LinkType
 
 
 #yapf: disable
@@ -23,6 +24,7 @@ from aiida import orm
         (orm.Int, 5),
         (orm.List, [0, 1, 2]),
         (orm.Str, 'test-string'),
+        (orm.EnumData, LinkType.RETURN),
     )
 )
 # yapf: enable

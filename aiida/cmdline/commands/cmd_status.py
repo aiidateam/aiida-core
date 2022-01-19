@@ -54,11 +54,12 @@ STATUS_SYMBOLS = {
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except,too-many-statements,too-many-branches
+    # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing
-    from aiida.manage.manager import get_manager
+    from aiida.manage.configuration import get_rabbitmq_version, is_rabbitmq_version_supported
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
 
@@ -119,7 +120,12 @@ def verdi_status(print_traceback, no_rmq):
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            print_status(ServiceStatus.UP, 'rabbitmq', f'Connected as {profile.get_rmq_url()}')
+            version = get_rabbitmq_version()
+            connection = f'Connected to RabbitMQ v{version} as {profile.get_rmq_url()}'
+            if is_rabbitmq_version_supported():
+                print_status(ServiceStatus.UP, 'rabbitmq', connection)
+            else:
+                print_status(ServiceStatus.WARNING, 'rabbitmq', 'Incompatible RabbitMQ version detected! ' + connection)
 
     # Getting the daemon status
     try:

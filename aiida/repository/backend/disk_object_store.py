@@ -2,7 +2,7 @@
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
 import shutil
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple
+import typing as t
 
 from disk_objectstore import Container
 
@@ -16,7 +16,16 @@ BYTES_TO_MB = 1 / 1024**2
 
 
 class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
-    """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-object-store`` as the backend."""
+    """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-object-store`` as the backend.
+
+    .. note:: For certain methods, the container may create a sessions which should be closed after the operation is
+        done to make sure the connection to the underlying sqlite database is closed. The best way is to accomplish this
+        is by using the container as a context manager, which will automatically call the ``close`` method when it exits
+        which ensures the session being closed. Note that not all methods may open the session and so need closing it,
+        but to be on the safe side, we put every use of the container in a context manager. If no session is created,
+        the ``close`` method is essentially a no-op.
+
+    """
 
     def __init__(self, container: Container):
         type_check(container, Container)
@@ -25,19 +34,21 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     def __str__(self) -> str:
         """Return the string representation of this repository."""
         if self.is_initialised:
-            return f'DiskObjectStoreRepository: {self.container.container_id} | {self.container.get_folder()}'
+            with self._container as container:
+                return f'DiskObjectStoreRepository: {container.container_id} | {container.get_folder()}'
         return 'DiskObjectStoreRepository: <uninitialised>'
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> t.Optional[str]:
         """Return the unique identifier of the repository."""
         if not self.is_initialised:
             return None
-        return self.container.container_id
+        with self._container as container:
+            return container.container_id
 
     @property
-    def key_format(self) -> Optional[str]:
-        with self.container as container:
+    def key_format(self) -> t.Optional[str]:
+        with self._container as container:
             return container.hash_type
 
     def initialise(self, **kwargs) -> None:
@@ -45,42 +56,39 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         :param kwargs: parameters for the initialisation.
         """
-        with self.container as container:
+        with self._container as container:
             container.init_container(**kwargs)
 
     @property
     def is_initialised(self) -> bool:
         """Return whether the repository has been initialised."""
-        with self.container as container:
+        with self._container as container:
             return container.is_initialised
-
-    @property
-    def container(self) -> Container:
-        return self._container
 
     def erase(self):
         """Delete the repository itself and all its contents."""
         try:
-            shutil.rmtree(self.container.get_folder())
+            with self._container as container:
+                shutil.rmtree(container.get_folder())
         except FileNotFoundError:
             pass
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        with self.container as container:
+        with self._container as container:
             return container.add_streamed_object(handle)
 
-    def has_objects(self, keys: List[str]) -> List[bool]:
-        with self.container as container:
+    def has_objects(self, keys: t.List[str]) -> t.List[bool]:
+        with self._container as container:
             return container.has_objects(keys)
 
     @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> t.Iterator[t.BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -93,23 +101,23 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         super().open(key)
 
-        with self.container as container:
+        with self._container as container:
             with container.get_object_stream(key) as handle:
                 yield handle  # type: ignore[misc]
 
-    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
-        with self.container.get_objects_stream_and_meta(keys) as triplets:
+    def iter_object_streams(self, keys: t.List[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
+        with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]
 
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: t.List[str]) -> None:
         super().delete_objects(keys)
-        with self.container as container:
+        with self._container as container:
             container.delete_objects(keys)
 
-    def list_objects(self) -> Iterable[str]:
-        with self.container as container:
+    def list_objects(self) -> t.Iterable[str]:
+        with self._container as container:
             return container.list_all_objects()
 
     def get_object_hash(self, key: str) -> str:
@@ -125,12 +133,12 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         if not self.has_object(key):
             raise FileNotFoundError(key)
-        with self.container as container:
+        with self._container as container:
             if container.hash_type != 'sha256':
                 return super().get_object_hash(key)
         return key
 
-    def maintain(  # type: ignore # pylint: disable=arguments-differ,too-many-branches
+    def maintain( # type: ignore[override] # pylint: disable=arguments-differ,too-many-branches
         self,
         dry_run: bool = False,
         live: bool = True,
@@ -168,7 +176,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             clean_storage = True if clean_storage is None else clean_storage
             do_vacuum = True if do_vacuum is None else do_vacuum
 
-        with self.container as container:
+        with self._container as container:
             if pack_loose:
                 files_numb = container.count_objects()['loose']
                 files_size = container.get_total_size()['total_size_loose'] * BYTES_TO_MB
@@ -189,14 +197,14 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                     container.clean_storage(vacuum=do_vacuum)
 
 
-    def get_info(  # type: ignore # pylint: disable=arguments-differ
+    def get_info( # type: ignore[override] # pylint: disable=arguments-differ
         self,
         statistics=False,
-    ) -> dict:
+    ) -> t.Dict[str, t.Union[int, str, t.Dict[str, int], t.Dict[str, float]]]:
         """Return information on configuration and content of the repository."""
-        output_info = {}
+        output_info: t.Dict[str, t.Union[int, str, t.Dict[str, int], t.Dict[str, float]]] = {}
 
-        with self.container as container:
+        with self._container as container:
             output_info['SHA-hash algorithm'] = container.hash_type
             output_info['Compression algorithm'] = container.compression_algorithm
 

@@ -184,8 +184,9 @@ class TestProcess():
     We can then wait for this file to be created before returning control to the caller.
     """
 
-    def __init__(self):
+    def __init__(self, profile):
         self._process = None
+        self._profile = profile
 
     def _write_codefile(self, temppath_codefile, temppath_checkfile, runtime_secs=60):  # pylint: disable=no-self-use
         """Auxiliary function to write the code for the process."""
@@ -220,7 +221,7 @@ class TestProcess():
         try:
             self._write_codefile(temppath_codefile, temppath_checkfile, runtime_secs)
 
-            self._process = Popen(['verdi', 'run', 'temp_file.py'], stderr=PIPE)  # pylint: disable=consider-using-with
+            self._process = Popen(['verdi', '-p', self._profile.name, 'run', 'temp_file.py'], stderr=PIPE)  # pylint: disable=consider-using-with
 
             if should_raise:
                 error = self._process.communicate()
@@ -253,7 +254,7 @@ def test_access_control(profile_access_manager):
     that this method works in real life scenarios, rather than checking the specifics
     of its internal logical structure.
     """
-    accessing_process = TestProcess()
+    accessing_process = TestProcess(profile_access_manager.profile)
     accessing_pid = accessing_process.start()
     assert profile_access_manager.is_active()
     accessing_process.stop()
@@ -273,7 +274,7 @@ def test_request_access_errors(profile_access_manager, monkeypatch, text_pattern
     intrinsically related to the live process instance that is stored as a property
     of the `ProfileAccessManager` class.
     """
-    accessing_process = TestProcess()
+    accessing_process = TestProcess(profile_access_manager.profile)
     accessing_pid = accessing_process.start()
 
     def mock_raise_if_locked(error_message):
@@ -300,12 +301,12 @@ def test_lock(profile_access_manager, monkeypatch):
     that this method works in real life scenarios, rather than checking the specifics
     of its internal logical structure.
     """
-    locking_proc = TestProcess()
+    locking_proc = TestProcess(profile_access_manager.profile)
     locking_pid = locking_proc.start()
     monkeypatch.setattr(profile_access_manager, 'process', psutil.Process(locking_pid))
 
     # It will not lock if there is a process accessing.
-    access_proc = TestProcess()
+    access_proc = TestProcess(profile_access_manager.profile)
     access_pid = access_proc.start()
     with pytest.raises(LockingProfileError) as exc:
         with profile_access_manager.lock():
@@ -324,7 +325,7 @@ def test_lock(profile_access_manager, monkeypatch):
 
     with profile_access_manager.lock():
         assert profile_access_manager.is_locked()
-        access_proc = TestProcess()
+        access_proc = TestProcess(profile_access_manager.profile)
         access_pid, error = access_proc.start(should_raise=True)
         access_proc.stop()
         assert str(locking_pid) in str(error[1])

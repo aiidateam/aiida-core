@@ -18,7 +18,7 @@ BYTES_TO_MB = 1 / 1024**2
 class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-object-store`` as the backend."""
 
-    def __init__(self, container):
+    def __init__(self, container: Container):
         type_check(container, Container)
         self._container = container
 

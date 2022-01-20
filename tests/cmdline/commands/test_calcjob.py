@@ -17,6 +17,7 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
+from aiida.orm.nodes.data.remote.base import RemoteData
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 from tests.utils.archives import import_test_archive
@@ -60,7 +61,12 @@ class TestVerdiCalculation(AiidaTestCase):
 
             calc = orm.CalcJobNode(computer=cls.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+            calc.set_remote_workdir('/tmp/aiida/work')
+            remote = RemoteData(remote_path='/tmp/aiida/work')
+            remote.computer = calc.computer
+            remote.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
             calc.store()
+            remote.store()
 
             calc.set_process_state(ProcessState.RUNNING)
             cls.calcs.append(calc)
@@ -91,6 +97,11 @@ class TestVerdiCalculation(AiidaTestCase):
         calc.store()
         calc.set_exit_status(cls.EXIT_STATUS)
         calc.set_process_state(ProcessState.FINISHED)
+        calc.set_remote_workdir('/tmp/aiida/work')
+        remote = RemoteData(remote_path='/tmp/aiida/work')
+        remote.computer = calc.computer
+        remote.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+        remote.store()
         cls.calcs.append(calc)
 
         # Load the fixture containing a single ArithmeticAddCalculation node
@@ -247,13 +258,6 @@ class TestVerdiCalculation(AiidaTestCase):
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         self.assertIsNotNone(result.exception)
 
-        # Cannot specify both -p and -o options
-        for flag_p in ['-p', '--past-days']:
-            for flag_o in ['-o', '--older-than']:
-                options = [flag_p, '5', flag_o, '1']
-                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
-                self.assertIsNotNone(result.exception)
-
         # Without the force flag it should fail
         options = [str(self.result_job.uuid)]
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
@@ -263,6 +267,44 @@ class TestVerdiCalculation(AiidaTestCase):
         options = ['-f', str(self.result_job.uuid)]
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         self.assertIsNone(result.exception, result.output)
+
+        # Do it again should fail as the calcjob has been cleaned
+        options = ['-f', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+        self.assertIsNotNone(result.exception, result.output)
+
+        # The flag should have been set
+        assert self.result_job.outputs.remote_folder.get_extra('cleaned') is True
+
+        # Check applying both p and o filters
+        for flag_p in ['-p', '--past-days']:
+            for flag_o in ['-o', '--older-than']:
+                options = [flag_p, '5', flag_o, '1', '-f']
+                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+                # This should fail - the node was just created in the test
+                self.assertIsNotNone(result.exception)
+
+                options = [flag_p, '5', flag_o, '0', '-f']
+                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+                # This should pass fine
+                self.assertIsNone(result.exception)
+                self.result_job.outputs.remote_folder.delete_extra('cleaned')
+
+                options = [flag_p, '0', flag_o, '0', '-f']
+                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+                # This should not pass
+                self.assertIsNotNone(result.exception)
+
+        # Should fail because the exit code is not 999 - using the failed job for testing
+        options = [str(self.calcs[-1].uuid), '-E', '999', '-f']
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+        self.assertIsNotNone(result.exception)
+
+        # Should be fine because the exit code is 100
+        self.calcs[-1].outputs.remote_folder.set_extra('cleaned', False)
+        options = [str(self.calcs[-1].uuid), '-E', '100', '-f']
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+        self.assertIsNone(result.exception)
 
     def test_calcjob_inoutputcat_old(self):
         """Test most recent process class / plug-in can be successfully used to find filenames"""

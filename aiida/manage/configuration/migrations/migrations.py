@@ -30,10 +30,14 @@ OLDEST_COMPATIBLE_CONFIG_VERSION = 5
 
 class SingleMigration(Protocol):
     """A single migration of the configuration."""
-    initial: int
+    down_revision: int
     """The initial configuration version."""
-    final: int
+    down_compatible: int
+    """The initial oldest backwards compatible configuration version"""
+    up_revision: int
     """The final configuration version."""
+    up_compatible: int
+    """The final oldest backwards compatible configuration version"""
 
     def upgrade(self, config: ConfigType) -> None:
         """Migrate the configuration in-place."""
@@ -50,14 +54,16 @@ class Initial(SingleMigration):
     The profile uuid will be used as a general purpose identifier for the profile, in
     for example the RabbitMQ message queues and exchanges.
     """
-    initial = 0
-    final = 1
+    down_revision = 0
+    down_compatible = 0
+    up_revision = 1
+    up_compatible = 0
 
     def upgrade(self, config: ConfigType) -> None:
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 0
+        pass
 
     def downgrade(self, config: ConfigType) -> None:
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 0
+        pass
 
 
 class AddProfileUuid(SingleMigration):
@@ -68,18 +74,19 @@ class AddProfileUuid(SingleMigration):
     The profile uuid will be used as a general purpose identifier for the profile, in
     for example the RabbitMQ message queues and exchanges.
     """
-    initial = 1
-    final = 2
+    down_revision = 1
+    down_compatible = 0
+    up_revision = 2
+    up_compatible = 0
 
     def upgrade(self, config: ConfigType) -> None:
         from uuid import uuid4  # we require this import here, to patch it in the tests
         for profile in config.get('profiles', {}).values():
             profile.setdefault('PROFILE_UUID', uuid4().hex)
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 0
 
     def downgrade(self, config: ConfigType) -> None:
         # leave the uuid present, so we could migrate back up
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 0
+        pass
 
 
 class SimplifyDefaultProfiles(SingleMigration):
@@ -89,8 +96,10 @@ class SimplifyDefaultProfiles(SingleMigration):
     configuration no longer needs a value per process ('verdi', 'daemon'). We remove the dictionary 'default_profiles'
     and replace it with a simple value 'default_profile'.
     """
-    initial = 2
-    final = 3
+    down_revision = 2
+    down_compatible = 0
+    up_revision = 3
+    up_compatible = 3
 
     def upgrade(self, config: ConfigType) -> None:
         from aiida.manage.configuration import PROFILE
@@ -104,19 +113,18 @@ class SimplifyDefaultProfiles(SingleMigration):
         elif PROFILE is not None:
             config['default_profile'] = PROFILE.name
 
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 3
-
     def downgrade(self, config: ConfigType) -> None:
         if 'default_profile' in config:
             default = config.pop('default_profile')
             config['default_profiles'] = {'daemon': default, 'verdi': default}
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 0
 
 
 class AddMessageBroker(SingleMigration):
     """Add the configuration for the message broker, which was not configurable up to now."""
-    initial = 3
-    final = 4
+    down_revision = 3
+    down_compatible = 3
+    up_revision = 4
+    up_compatible = 3
 
     def upgrade(self, config: ConfigType) -> None:
         from aiida.manage.external.rmq import BROKER_DEFAULTS
@@ -133,16 +141,18 @@ class AddMessageBroker(SingleMigration):
             for key, default in defaults:
                 if key not in profile:
                     profile[key] = default
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 3
 
     def downgrade(self, config: ConfigType) -> None:
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 3
+        pass
 
 
 class SimplifyOptions(SingleMigration):
     """Remove unnecessary difference between file/internal representation of options"""
-    initial = 4
-    final = 5
+    down_revision = 4
+    down_compatible = 3
+    up_revision = 5
+    up_compatible = 5
+
     conversions = (
         ('runner_poll_interval', 'runner.poll.interval'),
         ('daemon_default_workers', 'daemon.default_workers'),
@@ -163,7 +173,7 @@ class SimplifyOptions(SingleMigration):
         ('user_last_name', 'autofill.user.last_name'),
         ('user_institution', 'autofill.user.institution'),
         ('show_deprecations', 'warnings.showdeprecations'),
-        ('task_retry_initial_interval', 'transport.task_retry_initial_interval'),
+        ('task_retry_down_revision_interval', 'transport.task_retry_initial_interval'),
         ('task_maximum_attempts', 'transport.task_maximum_attempts'),
     )
 
@@ -176,7 +186,6 @@ class SimplifyOptions(SingleMigration):
             # replace in global options
             if current in config.get('options', {}):
                 config['options'][new] = config['options'].pop(current)
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 5
 
     def downgrade(self, config: ConfigType) -> None:
         for current, new in self.conversions:
@@ -187,7 +196,6 @@ class SimplifyOptions(SingleMigration):
             # replace in global options
             if new in config.get('options', {}):
                 config['options'][current] = config['options'].pop(new)
-        config.setdefault('CONFIG_VERSION', {})['OLDEST_COMPATIBLE'] = 3
 
 
 _MIGRATION_LOOKUPS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions)
@@ -220,14 +228,16 @@ def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION) -> 
     while current < target:
         current = get_current_version(config)
         try:
-            migrator = next(m for m in _MIGRATION_LOOKUPS if m.initial == current)
+            migrator = next(m for m in _MIGRATION_LOOKUPS if m.down_revision == current)
         except StopIteration:
             raise exceptions.ConfigurationError(f'No migration found to upgrade version {current}')
         if migrator in used:
             raise exceptions.ConfigurationError(f'Circular migration detected, upgrading to {target}')
         used.append(migrator)
         migrator().upgrade(config)
-        config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current = migrator.final
+        current = migrator.up_revision
+        config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current
+        config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.up_compatible
 
     return config
 
@@ -243,14 +253,15 @@ def downgrade_config(config: ConfigType, target: int) -> ConfigType:
     while current > target:
         current = get_current_version(config)
         try:
-            migrator = next(m for m in _MIGRATION_LOOKUPS if m.final == current)
+            migrator = next(m for m in _MIGRATION_LOOKUPS if m.up_revision == current)
         except StopIteration:
             raise exceptions.ConfigurationError(f'No migration found to downgrade version {current}')
         if migrator in used:
             raise exceptions.ConfigurationError(f'Circular migration detected, downgrading to {target}')
         used.append(migrator)
         migrator().downgrade(config)
-        config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current = migrator.initial
+        config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current = migrator.down_revision
+        config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.down_compatible
 
     return config
 

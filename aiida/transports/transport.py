@@ -98,6 +98,9 @@ class Transport(abc.ABC):
         self._is_open = False
         self._enters = 0
 
+        # for accessing the identity of the underlying machine
+        self.hostname = kwargs.get('machine')
+
     def __enter__(self):
         """
         For transports that require opening a connection, opens

@@ -196,7 +196,7 @@ class ProfileAccessManager:
         return list_of_files
 
     def _raise_if_locked(self, message_start):
-        """This method will raise the exception given in `ExceptionClass` if the profile is locked.
+        """Raise a ``LockedProfileError`` if the profile is locked.
 
         :param message_start: Text to use as the start of the exception message.
         :raises ~aiida.common.exceptions.LockedProfileError: if the profile is locked.
@@ -209,7 +209,7 @@ class ProfileAccessManager:
             raise LockedProfileError(error_msg)
 
     def _raise_if_active(self, message_start):
-        """This method will raise the exception given in `ExceptionClass` if the profile is being accessed.
+        """Raise a ``LockingProfileError`` if the profile is being accessed.
 
         :param message_start: Text to use as the start of the exception message.
         :raises ~aiida.common.exceptions.LockingProfileError: if the profile is active.

@@ -169,14 +169,14 @@ def test_clear_stale_pid_files(profile_access_manager):
 #    >   aiida.manage.manager::Manager._load_backend
 #
 # Moreover, they also require the use of a separate construct to keep
-# track of processes accessing aiida profiles with ease (TestProcess).
+# track of processes accessing aiida profiles with ease (MockProcess).
 #
 # This is separated from the more simple unit tests for each method.
 #
 ###########################################################################
 
 
-class TestProcess():
+class MockProcess():
     """Object that can start/stop an aiida process.
 
     After starting an aiida process, we need to check that the profile was loaded
@@ -254,7 +254,7 @@ def test_access_control(profile_access_manager):
     that this method works in real life scenarios, rather than checking the specifics
     of its internal logical structure.
     """
-    accessing_process = TestProcess(profile_access_manager.profile)
+    accessing_process = MockProcess(profile_access_manager.profile)
     accessing_pid = accessing_process.start()
     assert profile_access_manager.is_active()
     accessing_process.stop()
@@ -268,13 +268,13 @@ def test_access_control(profile_access_manager):
 def test_request_access_errors(profile_access_manager, monkeypatch, text_pattern):
     """Tests the `request_access` method errors when blocked.
 
-    This test requires the use of the TestProcess class because part of what we are
+    This test requires the use of the MockProcess class because part of what we are
     checking is that the error shows the process ID that is trying to access the
     profile (without relying on the test instance). The feature being tested is
     intrinsically related to the live process instance that is stored as a property
     of the `ProfileAccessManager` class.
     """
-    accessing_process = TestProcess(profile_access_manager.profile)
+    accessing_process = MockProcess(profile_access_manager.profile)
     accessing_pid = accessing_process.start()
 
     def mock_raise_if_locked(error_message):
@@ -301,12 +301,12 @@ def test_lock(profile_access_manager, monkeypatch):
     that this method works in real life scenarios, rather than checking the specifics
     of its internal logical structure.
     """
-    locking_proc = TestProcess(profile_access_manager.profile)
+    locking_proc = MockProcess(profile_access_manager.profile)
     locking_pid = locking_proc.start()
     monkeypatch.setattr(profile_access_manager, 'process', psutil.Process(locking_pid))
 
     # It will not lock if there is a process accessing.
-    access_proc = TestProcess(profile_access_manager.profile)
+    access_proc = MockProcess(profile_access_manager.profile)
     access_pid = access_proc.start()
     with pytest.raises(LockingProfileError) as exc:
         with profile_access_manager.lock():
@@ -325,7 +325,7 @@ def test_lock(profile_access_manager, monkeypatch):
 
     with profile_access_manager.lock():
         assert profile_access_manager.is_locked()
-        access_proc = TestProcess(profile_access_manager.profile)
+        access_proc = MockProcess(profile_access_manager.profile)
         access_pid, error = access_proc.start(should_raise=True)
         access_proc.stop()
         assert str(locking_pid) in str(error[1])

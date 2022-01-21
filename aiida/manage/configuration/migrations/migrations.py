@@ -51,13 +51,7 @@ class SingleMigration(Protocol):
 
 
 class Initial(SingleMigration):
-    """Add the required values for a new default profile.
-
-        * PROFILE_UUID
-
-    The profile uuid will be used as a general purpose identifier for the profile, in
-    for example the RabbitMQ message queues and exchanges.
-    """
+    """Base migration (no-op)."""
     down_revision = 0
     down_compatible = 0
     up_revision = 1
@@ -289,6 +283,7 @@ def config_needs_migrating(config, filepath: Optional[str] = None):
     If the oldest compatible version of the configuration is higher than the current configuration version defined
     in the code, the config cannot be used and so the function will raise.
 
+    :param filepath: the path to the configuration file (optional, for error reporting)
     :return: True if the configuration has an older version and needs to be migrated, False otherwise
     :raises aiida.common.ConfigurationVersionError: if the config's oldest compatible version is higher than the current
     """

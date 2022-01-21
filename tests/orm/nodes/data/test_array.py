@@ -7,17 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for array related functions."""
+"""Tests for the :mod:`aiida.orm.nodes.data.array.array` module."""
 import numpy
 import pytest
 
-from aiida.manage.manager import get_manager
 from aiida.orm import ArrayData, load_node
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
 def test_read_stored():
-    """Test the `parse_formula` utility function."""
+    """Test reading an array from an ``ArrayData`` after storing and loading it."""
     array = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
     node = ArrayData()
     node.set_array('array', array)
@@ -26,13 +25,6 @@ def test_read_stored():
 
     node.store()
     assert numpy.array_equal(node.get_array('array'), array)
-
-    loaded = load_node(node.uuid)
-    assert numpy.array_equal(loaded.get_array('array'), array)
-
-    # Now pack all the files in the repository
-    container = get_manager().get_backend().get_repository().container
-    container.pack_all_loose()
 
     loaded = load_node(node.uuid)
     assert numpy.array_equal(loaded.get_array('array'), array)

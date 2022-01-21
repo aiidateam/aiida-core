@@ -54,7 +54,8 @@ def restrict_sqlalchemy_queuepool(aiida_profile):
 
     backend_manager = get_manager().get_backend_manager()
     backend_manager.reset_backend_environment()
-    backend_manager.load_backend_environment(aiida_profile, pool_timeout=1, max_overflow=0)
+    actual_profile = aiida_profile._manager._profile  # pylint: disable=protected-access
+    backend_manager.load_backend_environment(actual_profile, pool_timeout=1, max_overflow=0)
 
 
 @pytest.fixture

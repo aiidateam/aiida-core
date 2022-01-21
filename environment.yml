@@ -20,7 +20,7 @@ dependencies:
 - ipython~=7.20
 - jinja2~=3.0
 - jsonschema~=3.0
-- kiwipy[rmq]~=0.7.4
+- kiwipy[rmq]~=0.7.5
 - importlib-metadata~=4.3
 - numpy~=1.19
 - pamqp~=2.3

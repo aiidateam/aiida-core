@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Define the current configuration version and migrations."""
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Dict, Iterable, Optional, Protocol
 
 from aiida.common import exceptions
 
@@ -215,7 +215,11 @@ def get_oldest_compatible_version(config):
     return config.get('CONFIG_VERSION', {}).get('OLDEST_COMPATIBLE', 0)
 
 
-def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations=_MIGRATIONS) -> ConfigType:
+def upgrade_config(
+    config: ConfigType,
+    target: int = CURRENT_CONFIG_VERSION,
+    migrations: Iterable[SingleMigration] = _MIGRATIONS
+) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 
     :param config: the configuration dictionary
@@ -241,7 +245,9 @@ def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION, mig
     return config
 
 
-def downgrade_config(config: ConfigType, target: int, migrations=_MIGRATIONS) -> ConfigType:
+def downgrade_config(
+    config: ConfigType, target: int, migrations: Iterable[SingleMigration] = _MIGRATIONS
+) -> ConfigType:
     """Run the registered configuration migrations down to the target version.
 
     :param config: the configuration dictionary

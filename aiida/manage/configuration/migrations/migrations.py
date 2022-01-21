@@ -30,12 +30,16 @@ OLDEST_COMPATIBLE_CONFIG_VERSION = 5
 
 class SingleMigration(Protocol):
     """A single migration of the configuration."""
+
     down_revision: int
     """The initial configuration version."""
+
     down_compatible: int
     """The initial oldest backwards compatible configuration version"""
+
     up_revision: int
     """The final configuration version."""
+
     up_compatible: int
     """The final oldest backwards compatible configuration version"""
 

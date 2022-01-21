@@ -23,16 +23,19 @@ __all__ = (
     'CURRENT_CONFIG_VERSION',
     'Config',
     'ConfigValidationError',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
     'Profile',
     'check_and_migrate_config',
     'config_needs_migrating',
     'config_schema',
+    'downgrade_config',
     'get_current_version',
     'get_option',
     'get_option_names',
     'parse_option',
+    'upgrade_config',
 )
 
 # yapf: enable

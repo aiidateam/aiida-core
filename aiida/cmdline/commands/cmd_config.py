@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi config` command."""
+import json
+from pathlib import Path
 import textwrap
 
 import click
@@ -15,6 +17,8 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
+from aiida.manage.configuration import MIGRATIONS, downgrade_config, get_config_path
+from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
 
 @verdi.group('config')
@@ -190,3 +194,15 @@ def verdi_config_caching(disabled):
                     echo.echo(identifier)
             elif disabled:
                 echo.echo(identifier)
+
+
+@verdi_config.command('downgrade')
+@click.argument('version', type=click.Choice({str(m.down_revision) for m in MIGRATIONS}))
+def verdi_config_downgrade(version):
+    """Print a configuration, downgraded to a specific version."""
+    path = Path(get_config_path())
+    echo.echo_report(f'Downgrading configuration to v{version}: {path}')
+    config = json.loads(path.read_text(encoding='utf8'))
+    downgrade_config(config, int(version))
+    path.write_text(json.dumps(config, indent=DEFAULT_CONFIG_INDENT_SIZE), encoding='utf8')
+    echo.echo_success('Downgraded')

@@ -39,6 +39,7 @@ __all__ = (
     'ConfigValidationError',
     'DEFAULT_DBINFO',
     'DeliveryFailed',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
     'Postgres',
@@ -50,6 +51,7 @@ __all__ = (
     'config_needs_migrating',
     'config_schema',
     'disable_caching',
+    'downgrade_config',
     'enable_caching',
     'get_current_version',
     'get_manager',
@@ -58,6 +60,7 @@ __all__ = (
     'get_use_cache',
     'parse_option',
     'reset_manager',
+    'upgrade_config',
     'write_database_integrity_violation',
 )
 

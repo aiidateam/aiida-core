@@ -14,7 +14,14 @@ from unittest.mock import patch
 import uuid
 
 from aiida.common import json
-from aiida.manage.configuration.migrations import check_and_migrate_config, upgrade_config
+from aiida.common.exceptions import ConfigurationError
+from aiida.manage.configuration.migrations import check_and_migrate_config
+from aiida.manage.configuration.migrations.migrations import Initial, downgrade_config, upgrade_config
+
+
+class CircularMigration(Initial):
+    up_revision = 5
+    down_revision = 5
 
 
 class TestConfigMigration(TestCase):
@@ -31,6 +38,32 @@ class TestConfigMigration(TestCase):
     def setUp(self):
         super().setUp()
         self.maxDiff = None  # pylint: disable=invalid-name
+
+    def test_upgrade_path_fail(self):
+        """Test failure when no upgrade path is available."""
+        config_initial = self.load_config_sample('reference/5.json')
+        # target lower than initial
+        with self.assertRaises(ConfigurationError):
+            upgrade_config(config_initial, 1)
+        # no migration available
+        with self.assertRaises(ConfigurationError):
+            upgrade_config(config_initial, 100)
+        # circular dependency
+        with self.assertRaises(ConfigurationError):
+            upgrade_config(config_initial, 6, migrations=[CircularMigration])
+
+    def test_downgrade_path_fail(self):
+        """Test failure when no downgrade path is available."""
+        config_initial = self.load_config_sample('reference/5.json')
+        # target higher than initial
+        with self.assertRaises(ConfigurationError):
+            downgrade_config(config_initial, 6)
+        # no migration available
+        with self.assertRaises(ConfigurationError):
+            downgrade_config(config_initial, -1)
+        # circular dependency
+        with self.assertRaises(ConfigurationError):
+            downgrade_config(config_initial, 4, migrations=[CircularMigration])
 
     def test_check_and_migrate(self):
         """Test the full config migration."""

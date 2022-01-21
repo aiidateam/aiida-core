@@ -196,7 +196,7 @@ class SimplifyOptions(SingleMigration):
                 config['options'][current] = config['options'].pop(new)
 
 
-_MIGRATION_LOOKUPS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions)
+_MIGRATIONS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions)
 
 
 def get_current_version(config):
@@ -215,7 +215,7 @@ def get_oldest_compatible_version(config):
     return config.get('CONFIG_VERSION', {}).get('OLDEST_COMPATIBLE', 0)
 
 
-def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION) -> ConfigType:
+def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations=_MIGRATIONS) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 
     :param config: the configuration dictionary
@@ -226,7 +226,7 @@ def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION) -> 
     while current < target:
         current = get_current_version(config)
         try:
-            migrator = next(m for m in _MIGRATION_LOOKUPS if m.down_revision == current)
+            migrator = next(m for m in migrations if m.down_revision == current)
         except StopIteration:
             raise exceptions.ConfigurationError(f'No migration found to upgrade version {current}')
         if migrator in used:
@@ -236,11 +236,12 @@ def upgrade_config(config: ConfigType, target: int = CURRENT_CONFIG_VERSION) -> 
         current = migrator.up_revision
         config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current
         config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.up_compatible
-
+    if current != target:
+        raise exceptions.ConfigurationError(f'Could not upgrade to version {target}, current version is {current}')
     return config
 
 
-def downgrade_config(config: ConfigType, target: int) -> ConfigType:
+def downgrade_config(config: ConfigType, target: int, migrations=_MIGRATIONS) -> ConfigType:
     """Run the registered configuration migrations down to the target version.
 
     :param config: the configuration dictionary
@@ -251,7 +252,7 @@ def downgrade_config(config: ConfigType, target: int) -> ConfigType:
     while current > target:
         current = get_current_version(config)
         try:
-            migrator = next(m for m in _MIGRATION_LOOKUPS if m.up_revision == current)
+            migrator = next(m for m in migrations if m.up_revision == current)
         except StopIteration:
             raise exceptions.ConfigurationError(f'No migration found to downgrade version {current}')
         if migrator in used:
@@ -260,7 +261,8 @@ def downgrade_config(config: ConfigType, target: int) -> ConfigType:
         migrator().downgrade(config)
         config.setdefault('CONFIG_VERSION', {})['CURRENT'] = current = migrator.down_revision
         config['CONFIG_VERSION']['OLDEST_COMPATIBLE'] = migrator.down_compatible
-
+    if current != target:
+        raise exceptions.ConfigurationError(f'Could not downgrade to version {target}, current version is {current}')
     return config
 
 

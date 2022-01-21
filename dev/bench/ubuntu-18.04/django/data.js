@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1642717556366,
+  "lastUpdate": 1642785536347,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -66798,6 +66798,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.019290",
             "group": "node",
             "extra": "mean: 19.218 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.12",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "4cf9d933cad1f4e0b49db4ed7eb51667cf01ebc4",
+          "message": "Add `ProfileAccessManager` to provide exclusive-access profile locks (#5270)\n\nWith the new disk object store repository backend implementation, there\r\nis the need to perform maintenance operations on the repository from\r\ntime to time. Some of these operations do not allow other processes to\r\nread from or write to the repository concurrently. Therefore it is\r\nnecessary for the maintenance functionality to obtain an exlusive-access\r\nlock on the profile's backend.\r\n\r\nTo this end the class `aiida.manage.profile_access.ProfileAccessManager`\r\nis added. From now on, when the storage backend of a profile is loaded\r\nit should call the `request_access` method of the manager. This will\r\ncause a PID file to be written to the `ACCESS_CONTROL_DIR` directory of\r\nthe given profile. Since this access is non-exclusive, multiple processes\r\ncan request access like this concurrently and a PID file will be written\r\nfor each, where the command of the process is written to the file. This\r\ninformation is used in order to be able to determine which PID files\r\nmay have gone stale.\r\n\r\nWhen the maintenance operation requires exclusive-access, it should\r\nuse the `lock` context manager. If the profile is currently being\r\naccessed or already locked by another process, the lock request will\r\nfail. Otherwise, a lock file is created and this will guarantee that\r\nother processes won't be given a lock or be given normal access.\r\n\r\nThe choice was made to use a custom implementation for the PID and lock\r\nfiles instead of using existing libraries such as `filelock`. The reason\r\nfor this decision is because the use case is quite specific, where not\r\nonly do we have exclusive as well as non-exclusive access, we also\r\ndecided that we want to keep a record of the IDs of the processes that\r\nget access, such that when the request for a lock or access is denied,\r\nthe error message can provide those PIDs. This will make it easier for\r\nthe user to debug which (potentially dead) process is blocking the\r\nprofile. The downside of this approach is of course that a custom\r\nimplementation is more prone to bugs and cross-platform incompatibility\r\ncompared to using a well tested library.\r\n\r\nCo-authored-by: Sebastiaan Huber <mail@sphuber.net>",
+          "timestamp": "2022-01-21T18:10:44+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/4cf9d933cad1f4e0b49db4ed7eb51667cf01ebc4",
+          "distinct": true,
+          "tree_id": "9de032eea91c6db0b79a20c1d769e4bcb1a1d19d"
+        },
+        "date": 1642785530057,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.452070348036254,
+            "unit": "iter/sec",
+            "range": "stddev: 0.056368",
+            "group": "import-export",
+            "extra": "mean: 289.68 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.2818918877993872,
+            "unit": "iter/sec",
+            "range": "stddev: 0.058714",
+            "group": "import-export",
+            "extra": "mean: 304.70 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.150944513196128,
+            "unit": "iter/sec",
+            "range": "stddev: 0.078379",
+            "group": "import-export",
+            "extra": "mean: 240.91 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.131279523444745,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076644",
+            "group": "import-export",
+            "extra": "mean: 242.06 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 4.333699996133681,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0032976",
+            "group": "engine",
+            "extra": "mean: 230.75 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 1.0133606237564585,
+            "unit": "iter/sec",
+            "range": "stddev: 0.059687",
+            "group": "engine",
+            "extra": "mean: 986.82 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 1.1332730249098222,
+            "unit": "iter/sec",
+            "range": "stddev: 0.078723",
+            "group": "engine",
+            "extra": "mean: 882.40 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.20975570849800423,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14851",
+            "group": "engine",
+            "extra": "mean: 4.7675 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.24122783227665606,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15329",
+            "group": "engine",
+            "extra": "mean: 4.1455 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 3.0453351247001508,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076535",
+            "group": "engine",
+            "extra": "mean: 328.37 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.753140290913888,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11099",
+            "group": "engine",
+            "extra": "mean: 1.3278 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.8876003025654664,
+            "unit": "iter/sec",
+            "range": "stddev: 0.084417",
+            "group": "engine",
+            "extra": "mean: 1.1266 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1833993368528145,
+            "unit": "iter/sec",
+            "range": "stddev: 0.23423",
+            "group": "engine",
+            "extra": "mean: 5.4526 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.22294835040380157,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11453",
+            "group": "engine",
+            "extra": "mean: 4.4853 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 1310.0629001000405,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000068099",
+            "group": "node",
+            "extra": "mean: 763.32 usec\nrounds: 204"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 268.48436023855186,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000071149",
+            "group": "node",
+            "extra": "mean: 3.7246 msec\nrounds: 142"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 105.56438230377071,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00099542",
+            "group": "node",
+            "extra": "mean: 9.4729 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 289.85080115521595,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00029703",
+            "group": "node",
+            "extra": "mean: 3.4501 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 56.173641056178056,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025396",
+            "group": "node",
+            "extra": "mean: 17.802 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 63.2631241669734,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0019013",
+            "group": "node",
+            "extra": "mean: 15.807 msec\nrounds: 100"
           }
         ]
       }

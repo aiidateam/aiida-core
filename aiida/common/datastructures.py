@@ -103,7 +103,15 @@ class CodeInfo(DefaultFieldsAttributeDict):
       the command line right after the call to the code, as for example::
 
         code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
-
+    
+    * ``folder_path``: (optional) the path, in string, of the folder where to 
+      run the code. If it is specified, the code will be called as:
+      
+        (cd folder_path; code.x ...)
+      
+      The outputs will be produced in this folder. 
+      NOTE: It is assumed that the folder already exists. 
+    
     * ``stdin_name``: (optional) the name of the standard input file. Note, it is
       only possible to use the stdin with the syntax::
 
@@ -140,6 +148,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
     """
     _default_fields = (
         'cmdline_params',  # as a list of strings
+        'folder_path',
         'stdin_name',
         'stdout_name',
         'stderr_name',

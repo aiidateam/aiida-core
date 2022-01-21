@@ -232,7 +232,13 @@ class Scheduler(metaclass=abc.ABCMeta):
             else:
                 stderr_str = f'2> {escape_for_bash(code_info.stderr_name)}' if code_info.stderr_name else ''
 
-            output_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
+            command_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
+            
+            if code_info.folder_path:
+                run_in_folder = f'cd {escape_for_bash(code_info.folder_path)}' 
+                output_string = f'({run_in_folder}; {command_string})'
+            else:
+                output_string = command_string
 
             list_of_runlines.append(output_string)
 

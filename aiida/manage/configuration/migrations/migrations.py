@@ -14,7 +14,7 @@ from aiida.common import exceptions
 
 __all__ = (
     'CURRENT_CONFIG_VERSION', 'OLDEST_COMPATIBLE_CONFIG_VERSION', 'get_current_version', 'check_and_migrate_config',
-    'config_needs_migrating', 'upgrade_config', 'downgrade_config'
+    'config_needs_migrating', 'upgrade_config', 'downgrade_config', 'MIGRATIONS'
 )
 
 ConfigType = Dict[str, Any]
@@ -196,7 +196,7 @@ class SimplifyOptions(SingleMigration):
                 config['options'][current] = config['options'].pop(new)
 
 
-_MIGRATIONS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions)
+MIGRATIONS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions)
 
 
 def get_current_version(config):
@@ -218,7 +218,7 @@ def get_oldest_compatible_version(config):
 def upgrade_config(
     config: ConfigType,
     target: int = CURRENT_CONFIG_VERSION,
-    migrations: Iterable[Type[SingleMigration]] = _MIGRATIONS
+    migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 
@@ -246,7 +246,7 @@ def upgrade_config(
 
 
 def downgrade_config(
-    config: ConfigType, target: int, migrations: Iterable[Type[SingleMigration]] = _MIGRATIONS
+    config: ConfigType, target: int, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations down to the target version.
 

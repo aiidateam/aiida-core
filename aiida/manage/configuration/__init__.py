@@ -23,6 +23,7 @@ __all__ = (
     'CURRENT_CONFIG_VERSION',
     'Config',
     'ConfigValidationError',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
     'Profile',

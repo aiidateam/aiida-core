@@ -39,6 +39,7 @@ __all__ = (
     'ConfigValidationError',
     'DEFAULT_DBINFO',
     'DeliveryFailed',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
     'Postgres',

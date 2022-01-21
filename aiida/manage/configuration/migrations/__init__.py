@@ -18,6 +18,7 @@ from .migrations import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'check_and_migrate_config',
     'config_needs_migrating',

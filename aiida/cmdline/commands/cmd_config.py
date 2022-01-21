@@ -18,6 +18,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
 from aiida.cmdline.utils import echo
 from aiida.manage.configuration import downgrade_config, get_config_path
+from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
 
 @verdi.group('config')
@@ -197,11 +198,27 @@ def verdi_config_caching(disabled):
 
 @verdi_config.command('downgrade')
 @click.argument('version', type=int)
-@click.argument('path', required=False, default=None, type=click.Path(exists=True, path_type=Path))
-def verdi_config_downgrade(version, path):
+@click.option(
+    '-p',
+    '--path',
+    default=None,
+    type=click.Path(exists=True, path_type=Path),
+    help='Path to the config file (default to current configuration).'
+)
+@click.option(
+    '-o',
+    '--output',
+    default=None,
+    type=click.Path(exists=True, path_type=Path),
+    help='Path to write to (default to input path).'
+)
+def verdi_config_downgrade(version, path, output):
     """Print a configuration, downgraded to a specific version."""
     path = path or Path(get_config_path())
     echo.echo_report(f'Downgrading configuration to v{version}: {path}')
     config = json.loads(path.read_text(encoding='utf8'))
     downgrade_config(config, version)
-    print(json.dumps(config, indent=2))
+    output = Path(output or path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(config, indent=DEFAULT_CONFIG_INDENT_SIZE), encoding='utf8')
+    echo.echo_success(f'Downgraded configuration written to: {output}')

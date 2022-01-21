@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Define the current configuration version and migrations."""
-from typing import Any, Dict, Protocol
+from typing import Any, Dict, Optional, Protocol
 
 from aiida.common import exceptions
 
@@ -270,19 +270,20 @@ def downgrade_config(config: ConfigType, target: int) -> ConfigType:
     return config
 
 
-def check_and_migrate_config(config):
+def check_and_migrate_config(config, filepath: Optional[str] = None):
     """Checks if the config needs to be migrated, and performs the migration if needed.
 
     :param config: the configuration dictionary
+    :param filepath: the path to the configuration file (optional, for error reporting)
     :return: the migrated configuration dictionary
     """
-    if config_needs_migrating(config):
+    if config_needs_migrating(config, filepath):
         config = upgrade_config(config)
 
     return config
 
 
-def config_needs_migrating(config):
+def config_needs_migrating(config, filepath: Optional[str] = None):
     """Checks if the config needs to be migrated.
 
     If the oldest compatible version of the configuration is higher than the current configuration version defined
@@ -295,10 +296,11 @@ def config_needs_migrating(config):
     oldest_compatible_version = get_oldest_compatible_version(config)
 
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
+        filepath = filepath if filepath else ''
         raise exceptions.ConfigurationVersionError(
             f'The configuration file has version {current_version} '
-            f'which is not compatible with the current version {CURRENT_CONFIG_VERSION}.'
-            'User a newer version of AiiDA to downgrade this configuration.'
+            f'which is not compatible with the current version {CURRENT_CONFIG_VERSION}: {filepath}\n'
+            'Use a newer version of AiiDA to downgrade this configuration.'
         )
 
     return CURRENT_CONFIG_VERSION > current_version

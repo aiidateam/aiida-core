@@ -130,7 +130,6 @@ Below is a list with all available subcommands.
       set        Set an AiiDA option.
       show       Show details of an AiiDA option for the current profile.
       unset      Unset an AiiDA option.
-      upgrade    Print a configuration, upgraded to a specific version.
 
 
 .. _reference:command-line:verdi-daemon:

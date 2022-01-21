@@ -24,10 +24,12 @@ DEFAULT_CONFIG_FILE_NAME = 'config.json'
 DEFAULT_CONFIG_INDENT_SIZE = 4
 DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
+DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
 AIIDA_CONFIG_FOLDER: typing.Optional[pathlib.Path] = None
 DAEMON_DIR: typing.Optional[pathlib.Path] = None
 DAEMON_LOG_DIR: typing.Optional[pathlib.Path] = None
+ACCESS_CONTROL_DIR: typing.Optional[pathlib.Path] = None
 
 
 def create_instance_directories():
@@ -41,11 +43,19 @@ def create_instance_directories():
     directory_base = pathlib.Path(AIIDA_CONFIG_FOLDER).expanduser()
     directory_daemon = directory_base / DAEMON_DIR
     directory_daemon_log = directory_base / DAEMON_LOG_DIR
+    directory_access = directory_base / ACCESS_CONTROL_DIR
+
+    list_of_paths = [
+        directory_base,
+        directory_daemon,
+        directory_daemon_log,
+        directory_access,
+    ]
 
     umask = os.umask(DEFAULT_UMASK)
 
     try:
-        for path in [directory_base, directory_daemon, directory_daemon_log]:
+        for path in list_of_paths:
 
             if path is directory_base and not path.exists():
                 warnings.warn(f'Creating AiiDA configuration folder `{path}`.')
@@ -75,6 +85,7 @@ def set_configuration_directory():
     global AIIDA_CONFIG_FOLDER
     global DAEMON_DIR
     global DAEMON_LOG_DIR
+    global ACCESS_CONTROL_DIR
 
     environment_variable = os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE, None)
 
@@ -100,6 +111,7 @@ def set_configuration_directory():
 
     DAEMON_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
     DAEMON_LOG_DIR = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
+    ACCESS_CONTROL_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
     create_instance_directories()
 

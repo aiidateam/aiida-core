@@ -17,7 +17,8 @@ __all__ = (
     'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
     'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
     'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError'
+    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError',
+    'LockedProfileError', 'LockingProfileError'
 )
 
 
@@ -259,4 +260,16 @@ class CircusCallError(AiidaException):
 class HashingError(AiidaException):
     """
     Raised when an attempt to hash an object fails via a known failure mode
+    """
+
+
+class LockedProfileError(AiidaException):
+    """
+    Raised if attempting to access a locked profile
+    """
+
+
+class LockingProfileError(AiidaException):
+    """
+    Raised if the profile can`t be locked
     """

@@ -198,27 +198,11 @@ def verdi_config_caching(disabled):
 
 @verdi_config.command('downgrade')
 @click.argument('version', type=int)
-@click.option(
-    '-p',
-    '--path',
-    default=None,
-    type=click.Path(exists=True, path_type=Path),
-    help='Path to the config file (default to current configuration).'
-)
-@click.option(
-    '-o',
-    '--output',
-    default=None,
-    type=click.Path(exists=True, path_type=Path),
-    help='Path to write to (default to input path).'
-)
-def verdi_config_downgrade(version, path, output):
+def verdi_config_downgrade(version):
     """Print a configuration, downgraded to a specific version."""
-    path = path or Path(get_config_path())
+    path = Path(get_config_path())
     echo.echo_report(f'Downgrading configuration to v{version}: {path}')
     config = json.loads(path.read_text(encoding='utf8'))
     downgrade_config(config, version)
-    output = Path(output or path)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(config, indent=DEFAULT_CONFIG_INDENT_SIZE), encoding='utf8')
-    echo.echo_success(f'Downgraded configuration written to: {output}')
+    path.write_text(json.dumps(config, indent=DEFAULT_CONFIG_INDENT_SIZE), encoding='utf8')
+    echo.echo_success('Downgraded')

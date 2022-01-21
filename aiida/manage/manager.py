@@ -111,10 +111,10 @@ class Manager:
         :return: the database backend.
         """
         from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA, get_backend_manager
-        from aiida.backends.managers.profile_access import ProfileAccessManager
         from aiida.common import ConfigurationError, InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage import configuration
+        from aiida.manage.profile_access import ProfileAccessManager
 
         profile = self.get_profile()
 

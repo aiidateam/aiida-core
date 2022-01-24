@@ -131,7 +131,7 @@ class MultiCodesCalcJob(CalcJob):
 def test_double_quote(aiida_local_code_factory, file_regression):
     """test run container code"""
     computer = orm.Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm',
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct',
     ).store()
     computer.set_use_double_quotes(True)
     

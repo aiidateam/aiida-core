@@ -219,7 +219,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         list_of_runlines = []
         
-        escape_for_bash = partial(escape_for_bash, use_double_quotes=run_line_double_quotes)
+        escape_for_bash = partial(escape_for_bash, use_double_quotes=run_line_double_quotes)    # pylint: disable=redefined-outer-name, reimported
 
         for code_info in codes_info:
             command_to_exec_list = []

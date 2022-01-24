@@ -709,6 +709,7 @@ class CalcJob(Process):
             else:
                 computer_cmdline_params = None
                 
+            code_info.use_double_quotes = this_code.get_use_double_quotes()
             this_argv = [this_code.get_execname()
                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 

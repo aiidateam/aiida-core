@@ -136,6 +136,8 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)
+    * ``use_double_quotes``: if True, the code cmdline parameters of bash script escaped by 
+      quotes
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     """
     _default_fields = (
@@ -145,6 +147,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'stderr_name',
         'join_files',
         'withmpi',
+        'use_double_quotes',
         'code_uuid'
     )
 

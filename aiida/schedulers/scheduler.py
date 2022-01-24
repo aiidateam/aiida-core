@@ -224,7 +224,7 @@ class Scheduler(metaclass=abc.ABCMeta):
                 for arg in computer_cmdline_params:
                     command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_cmdline_double_quotes))
             for arg in code_info.cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg))
+                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes))
                 
             command_to_exec = ' '.join(command_to_exec_list)
 

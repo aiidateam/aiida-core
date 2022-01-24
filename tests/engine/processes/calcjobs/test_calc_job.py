@@ -131,8 +131,8 @@ class MultiCodesCalcJob(CalcJob):
     
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
-@pytest.mark.parametrize('calcjob_withmpi', [True, False])
-def test_double_quote(aiida_local_code_factory, file_regression, calcjob_withmpi):
+@pytest.mark.parametrize('code_use_double_quotes', [True, False])
+def test_double_quote(aiida_local_code_factory, file_regression, code_use_double_quotes):
     """test run container code"""
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct',
@@ -140,7 +140,7 @@ def test_double_quote(aiida_local_code_factory, file_regression, calcjob_withmpi
     computer.set_use_double_quotes(True)
     
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer, use_double_quotes=code_use_double_quotes),
         'metadata': {
             'dry_run': True,
             'options': {
@@ -148,7 +148,7 @@ def test_double_quote(aiida_local_code_factory, file_regression, calcjob_withmpi
                     'num_machines': 1,
                     'num_mpiprocs_per_machine': 1
                 },
-                'withmpi': calcjob_withmpi,
+                'withmpi': True,
             }
         }
     }

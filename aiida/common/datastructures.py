@@ -103,7 +103,6 @@ class CodeInfo(DefaultFieldsAttributeDict):
       the command line right after the call to the code, as for example::
 
         code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
-<<<<<<< HEAD
     
     * ``relative_run_directory``: (optional) the absolute path, in string, of the folder where to 
       run the code. If it is specified, the code will be called as:
@@ -119,17 +118,6 @@ class CodeInfo(DefaultFieldsAttributeDict):
       [2.] https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Command-Execution-Environment
       [3.] https://stackoverflow.com/questions/786376/how-do-i-run-a-program-with-a-different-working-directory-from-current-from-lin/786515#786515 
     
-=======
-
-    * ``folder_path``: (optional) the path, in string, of the folder where to
-      run the code. If it is specified, the code will be called as:
-
-        (cd folder_path; code.x ...)
-
-      The outputs will be produced in this folder.
-      NOTE: It is assumed that the folder already exists.
-
->>>>>>> 9687c9f155d5e785734cf8d6cfc5b136a6083c99
     * ``stdin_name``: (optional) the name of the standard input file. Note, it is
       only possible to use the stdin with the syntax::
 

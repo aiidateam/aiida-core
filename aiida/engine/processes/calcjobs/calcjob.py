@@ -705,9 +705,9 @@ class CalcJob(Process):
                 this_withmpi = code_info.withmpi
 
             if this_withmpi:
-                computer_cmdline_params = mpi_args + extra_mpirun_params
+                code_info.computer_cmdline_params = mpi_args + extra_mpirun_params
             else:
-                computer_cmdline_params = None
+                code_info.computer_cmdline_params = None
                 
             code_info.use_double_quotes = this_code.get_use_double_quotes()
             this_argv = [this_code.get_execname()
@@ -716,7 +716,7 @@ class CalcJob(Process):
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
-            codes_info.append((code_info, computer_cmdline_params))
+            codes_info.append(code_info)
             
         job_tmpl.codes_info = codes_info
 

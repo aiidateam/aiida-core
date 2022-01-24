@@ -142,6 +142,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
     """
     _default_fields = (
         'cmdline_params',  # as a list of strings
+        'computer_cmdline_params',
         'stdin_name',
         'stdout_name',
         'stderr_name',

@@ -103,16 +103,18 @@ class CodeInfo(DefaultFieldsAttributeDict):
       the command line right after the call to the code, as for example::
 
         code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
-    
+
     * ``relative_run_directory``: (optional) the absolute path, in string, of the folder where to 
+
+    * ``relative_run_directory``: (optional) the absolute path, in string, of the folder where to
       run the code. If it is specified, the code will be called as:
-      
+
         (cd relative_run_directory && exec code.x ...)
-      
-      producing the outputs in the specified directory. 
+
+      producing the outputs in the specified directory.
       Note: the engine expetcts that the `CalcJob` plugin creates the relative path
       in which the code should be executed. Retrieving lists, such as e.g. `retrieve_list`,
-      shall furthermore be updated accordingly to specify paths that include this relative path. 
+      shall furthermore be updated accordingly to specify paths that include this relative path.
       For more info regarding the command, please visit the following links:
       [1.] https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Command-Grouping
       [2.] https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Command-Execution-Environment

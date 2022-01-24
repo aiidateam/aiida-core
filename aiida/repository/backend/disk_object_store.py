@@ -7,12 +7,15 @@ import typing as t
 from disk_objectstore import Container
 
 from aiida.common.lang import type_check
+from aiida.storage.log import STORAGE_LOGGER
 
 from .abstract import AbstractRepositoryBackend
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
 BYTES_TO_MB = 1 / 1024**2
+
+logger = STORAGE_LOGGER.getChild('disk_object_store')
 
 
 class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
@@ -156,10 +159,6 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param do_vacuum:flag for forcing the vacuuming of the internal database when cleaning the repository.
         :return:a dictionary with information on the operations performed.
         """
-        from aiida.storage.control import MAINTAIN_LOGGER
-
-        logger = MAINTAIN_LOGGER.getChild('disk_object_store')
-
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
             keys = ', '.join([key for key, override in overrides if override is True])  # type: ignore

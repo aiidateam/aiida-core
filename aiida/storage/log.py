@@ -7,17 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module for implementations of database backends."""
+"""Initialize the storage logger."""
 
-# AUTO-GENERATED
+from aiida.common.log import AIIDA_LOGGER
 
-# yapf: disable
-# pylint: disable=wildcard-import
-
-
-__all__ = (
-)
-
-# yapf: enable
-
-# END AUTO-GENERATED
+STORAGE_LOGGER = AIIDA_LOGGER.getChild('storage')

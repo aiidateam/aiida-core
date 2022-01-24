@@ -93,13 +93,16 @@ def storage_integrity():
 def storage_info(statistics):
     """Summarise the contents of the storage."""
     from aiida.cmdline.utils.common import get_database_summary
+    from aiida.manage.manager import get_manager
     from aiida.orm import QueryBuilder
-    from aiida.storage.control import get_repository_info
+
+    manager = get_manager()
+    storage = manager.get_profile_storage()
 
     with spinner():
         data = {
             'database': get_database_summary(QueryBuilder, statistics),
-            'repository': get_repository_info(statistics=statistics),
+            'repository': storage.get_info(statistics=statistics),
         }
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
@@ -119,17 +122,22 @@ def storage_info(statistics):
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
-    from aiida.storage.control import repository_maintain
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    profile = manager.get_profile()
+    storage = manager.get_profile_storage()
 
     if full:
         echo.echo_warning(
-            '\nIn order to safely perform the full maintenance operations on the internal storage, no other '
-            'process should be using the AiiDA profile being maintained. '
-            'This includes daemon workers, verdi shells, scripts with the profile loaded, etc). '
-            'Please make sure there is nothing like this currently running and that none is started until '
-            'these procedures conclude. '
-            'For performing maintanance operations that are safe to run while actively using AiiDA, just run '
-            '`verdi storage maintain`, without the `--full` flag.\n'
+            '\nIn order to safely perform the full maintenance operations on the internal storage, the profile '
+            f'{profile.name} needs to be locked. '
+            'This means that no other process will be able to access it and will fail instead. '
+            'Moreover, if any process is already using the profile, the locking attempt will fail and you will '
+            'have to either look for these processes and kill them or wait for them to stop by themselves. '
+            'Note that this includes verdi shells, daemon workers, scripts that manually load it, etc.\n'
+            'For performing maintenance operations that are safe to run while actively using AiiDA, just run '
+            '`verdi storage maintain` without the `--full` flag.\n'
         )
 
     else:
@@ -137,7 +145,7 @@ def storage_maintain(full, dry_run):
             '\nThis command will perform all maintenance operations on the internal storage that can be safely '
             'executed while still running AiiDA. '
             'However, not all operations that are required to fully optimize disk usage and future performance '
-            'can be done in this way. '
+            'can be done in this way.\n'
             'Whenever you find the time or opportunity, please consider running `verdi repository maintenance '
             '--full` for a more complete optimization.\n'
         )
@@ -146,5 +154,5 @@ def storage_maintain(full, dry_run):
         if not click.confirm('Are you sure you want continue in this mode?'):
             return
 
-    repository_maintain(full=full, dry_run=dry_run)
+    storage.maintain(full=full, dry_run=dry_run)
     echo.echo_success('Requested maintenance procedures finished.')

@@ -7,38 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.storage.control` module."""
+# pylint: disable=import-error,no-name-in-module,no-member,protected-access
+"""Testing the general methods of the psql_dos backend."""
 import pytest
 
 from aiida.manage import get_manager
-
-
-class MockRepositoryBackend():
-    """Mock of the RepositoryBackend for testing purposes."""
-
-    # pylint: disable=no-self-use
-
-    def get_info(self, *args, **kwargs):  # pylint: disable=unused-argument
-        """Method to return information."""
-        return 'this is information about the repo'
-
-    def delete_objects(self, *args, **kwargs):  # pylint: disable=unused-argument
-        """Method to delete objects."""
-
-    def maintain(self, live=True, dry_run=False, **kwargs):
-        """Method to perform maintainance operations."""
-
-        if live:
-            raise ValueError('Signal that live=True')
-
-        elif dry_run:
-            raise ValueError('Signal that dry_run=True')
-
-        elif len(kwargs) > 0:
-            raise ValueError('Signal that kwargs were passed')
-
-        else:
-            raise ValueError('Signal that live and dry_run are False')
 
 
 @pytest.fixture(scope='function')
@@ -65,10 +38,11 @@ def test_get_unreferenced_keyset():
     from io import BytesIO
 
     from aiida import orm
-    from aiida.storage.control import get_unreferenced_keyset
+
+    storage_backend = get_manager().get_profile_storage()
 
     # Coverage code pass
-    unreferenced_keyset = get_unreferenced_keyset()
+    unreferenced_keyset = storage_backend.get_unreferenced_keyset()
     assert unreferenced_keyset == set()
 
     # Error catching: put a file, get the keys from the aiida db, manually delete the keys
@@ -83,16 +57,19 @@ def test_get_unreferenced_keyset():
     repository_backend = aiida_backend.get_repository()
     repository_backend.delete_objects(keys)
 
-    with pytest.raises(
-        RuntimeError, match='There are objects referenced in the database that are not present in the repository'
-    ) as exc:
-        get_unreferenced_keyset()
+    expected_error = 'There are objects referenced in the database that are not present in the repository'
+    with pytest.raises(RuntimeError, match=expected_error) as exc:
+        storage_backend.get_unreferenced_keyset()
     assert 'aborting' in str(exc.value).lower()
 
 
 #yapf: disable
-@pytest.mark.parametrize(('kwargs', 'logged_texts'), (
+@pytest.mark.parametrize(
     (
+        'kwargs',
+        'logged_texts'
+    ),
+    ((
         {},
         [' > live: True', ' > dry_run: False']
     ),
@@ -107,11 +84,11 @@ def test_get_unreferenced_keyset():
 ))
 # yapf: enable
 @pytest.mark.usefixtures('clear_storage_before_test')
-def test_repository_maintain(caplog, monkeypatch, kwargs, logged_texts):
-    """Test the ``repository_maintain`` method."""
+def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
+    """Test the ``maintain`` method."""
     import logging
 
-    from aiida.storage.control import repository_maintain
+    storage_backend = get_manager().get_profile_storage()
 
     def mock_maintain(self, live=True, dry_run=False, **kwargs):  # pylint: disable=unused-argument
         logmsg = 'keywords provided:\n'
@@ -125,16 +102,17 @@ def test_repository_maintain(caplog, monkeypatch, kwargs, logged_texts):
     monkeypatch.setattr(RepoBackendClass, 'maintain', mock_maintain)
 
     with caplog.at_level(logging.INFO):
-        repository_maintain(**kwargs)
+        storage_backend.maintain(**kwargs)
 
     message_list = caplog.records[0].msg.splitlines()
     for text in logged_texts:
         assert text in message_list
 
 
-def test_repository_info(monkeypatch):
-    """Test the ``repository_info`` method."""
-    from aiida.storage.control import get_repository_info
+def test_get_info(monkeypatch):
+    """Test the ``get_info`` method."""
+
+    storage_backend = get_manager().get_profile_storage()
 
     def mock_get_info(self, statistics=False, **kwargs):  # pylint: disable=unused-argument
         output = {'value': 42}
@@ -145,12 +123,12 @@ def test_repository_info(monkeypatch):
     RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # pylint: disable=invalid-name
     monkeypatch.setattr(RepoBackendClass, 'get_info', mock_get_info)
 
-    repository_info_out = get_repository_info()
+    repository_info_out = storage_backend.get_info()
     assert 'value' in repository_info_out
     assert 'extra_value' not in repository_info_out
     assert repository_info_out['value'] == 42
 
-    repository_info_out = get_repository_info(statistics=True)
+    repository_info_out = storage_backend.get_info(statistics=True)
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42

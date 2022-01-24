@@ -243,3 +243,26 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
         :raises: `KeyError` if the setting does not exist
         """
+
+    @abc.abstractmethod
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
+        """Performs maintenance tasks on the storage.
+
+        If `full == True`, then this method may attempt to block the profile associated with the
+        storage to guarantee the safety of its procedures. This will not only prevent any other
+        subsequent process from accessing that profile, but will also first check if there is
+        already any process using it and raise if that is the case. The user will have to manually
+        stop any processes that is currently accessing the profile themselves or wait for it to
+        finish on its own.
+
+        :param full:
+            flag to perform operations that require to stop using the profile to be maintained.
+
+        :param dry_run:
+            flag to only print the actions that would be taken without actually executing them.
+
+        """
+
+    @abc.abstractmethod
+    def get_info(self, statistics: bool = False) -> dict:
+        """Returns general information on the storage."""

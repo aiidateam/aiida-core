@@ -281,7 +281,7 @@ def test_maintain_logging(caplog, populated_repository, do_vacuum):
     list_of_logmsg = []
     for record in caplog.records:
         assert record.levelname == 'REPORT'
-        assert record.name == 'aiida.maintain.disk_object_store'
+        assert record.name.endswith('.disk_object_store')
         list_of_logmsg.append(record.msg)
 
     assert 'packing' in list_of_logmsg[0].lower()
